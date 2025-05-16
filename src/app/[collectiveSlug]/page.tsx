@@ -1,8 +1,8 @@
 import { cookies } from "next/headers";
-import { createServerClient, type CookieOptions } from "@supabase/ssr";
+import { createServerClient } from "@supabase/ssr";
 import type { Database } from "@/lib/database.types";
 import { notFound } from "next/navigation";
-import PostCard from "@/components/PostCard"; // Assuming this will be created
+import PostCard from "@/components/app/posts/molecules/PostCard";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import SubscribeButton from "@/components/SubscribeButton"; // Import the new button
@@ -30,17 +30,17 @@ interface CollectivePageProps {
 }
 
 export default async function CollectivePage({ params }: CollectivePageProps) {
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   const supabase = createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        get: (name: string) => cookieStore.get(name)?.value,
-        set: (name: string, value: string, options: CookieOptions) =>
-          cookieStore.set(name, value, options),
-        remove: (name: string, options: CookieOptions) =>
-          cookieStore.delete(name, options),
+        get(name: string) {
+          return cookieStore.get(name)?.value;
+        },
+        set() {},
+        remove() {},
       },
     }
   );
@@ -49,7 +49,7 @@ export default async function CollectivePage({ params }: CollectivePageProps) {
     data: { user },
   } = await supabase.auth.getUser(); // Get user early for like status
 
-  const { collectiveSlug } = params;
+  const { collectiveSlug } = await params;
 
   // Fetch collective details by slug
   const { data: collective, error: collectiveError } = await supabase

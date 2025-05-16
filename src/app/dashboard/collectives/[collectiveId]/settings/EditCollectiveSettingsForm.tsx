@@ -222,7 +222,7 @@ export default function EditCollectiveSettingsForm({
             </p>
           )}
           {successMessage && (
-            <p className="text-sm text-green-600 dark:text-green-500 p-3 bg-green-600/10 rounded-md">
+            <p className="text-sm text-primary p-3 bg-primary/10 rounded-md">
               {successMessage}
             </p>
           )}

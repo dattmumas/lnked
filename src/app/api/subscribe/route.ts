@@ -23,7 +23,7 @@ interface StripeErrorLike {
 }
 
 export async function POST(request: Request) {
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
 
   // Using createServerClient instead of createRouteHandlerClient
   const supabase = createServerClient<Database>(
@@ -34,6 +34,7 @@ export async function POST(request: Request) {
         get(name: string) {
           return cookieStore.get(name)?.value;
         },
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         set(_name: string, _value: string, _options: CookieOptions) {
           // For Route Handlers, NextRequest's cookies are read-only.
           // To set cookies, you must return them in the NextResponse.
@@ -42,6 +43,7 @@ export async function POST(request: Request) {
           // this part requires more complex handling with NextResponse.
           // console.warn('Supabase client attempted to set cookie in Route Handler via createServerClient.');
         },
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         remove(_name: string, _options: CookieOptions) {
           // Similar to set, direct removal isn't standard here without NextResponse manipulation.
           // console.warn('Supabase client attempted to remove cookie in Route Handler via createServerClient.');

@@ -1,5 +1,5 @@
 import { cookies } from "next/headers";
-import { createServerClient, type CookieOptions } from "@supabase/ssr";
+import { createServerClient } from "@supabase/ssr";
 import type { Database } from "@/lib/database.types";
 import { notFound } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -24,22 +24,22 @@ const formatDate = (dateString: string | null): string => {
 };
 
 export default async function PostPage({ params }: PostPageProps) {
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   const supabase = createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        get: (name: string) => cookieStore.get(name)?.value,
-        set: (name: string, value: string, options: CookieOptions) =>
-          cookieStore.set(name, value, options),
-        remove: (name: string, options: CookieOptions) =>
-          cookieStore.delete(name, options),
+        get(name: string) {
+          return cookieStore.get(name)?.value;
+        },
+        set() {},
+        remove() {},
       },
     }
   );
 
-  const { collectiveSlug, postId } = params;
+  const { collectiveSlug, postId } = await params;
   const {
     data: { user },
   } = await supabase.auth.getUser();

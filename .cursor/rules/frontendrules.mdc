@@ -1,0 +1,131 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# cursor.frontend_rules.yml
+# Lnked ‑ Front‑End Coding Rule Set
+# ────────────────────────────────
+# All “MUST” rules are hard constraints; Cursor must not violate them.
+# “SHOULD” rules are strong recommendations; Cursor should follow them unless a clear reason is provided.
+
+version: 1.0.0
+rules:
+  # ── Framework & Language ───────────────────────────────────────────
+  - id: FE‑001
+    level: MUST
+    description: "All code is TypeScript + React within Next.js (App Router)."
+
+  - id: FE‑002
+    level: MUST
+    description: "No alternative SPA/meta frameworks (Vue, Svelte, Remix, etc.) without explicit directive."
+
+  # ── Component Architecture ────────────────────────────────────────
+  - id: FE‑010
+    level: MUST
+    description: "Follow Atomic Design—atoms, molecules, organisms—each in its own file/folder."
+
+  - id: FE‑011
+    level: MUST
+    description: "All interactive/headless components build on Radix UI primitives; presentational styling via Tailwind."
+
+  - id: FE‑012
+    level: SHOULD
+    description: "Use composition (children / slots) over deep prop drilling or inheritance."
+
+  # ── Styling & Theming ─────────────────────────────────────────────
+  - id: FE‑020
+    level: MUST
+    description: "Use Tailwind for all styling; prohibit hard‑coded hex / inline styles outside utility escape classes."
+
+  - id: FE‑021
+    level: MUST
+    description: "Reference only CSS‑variable design tokens (bg‑primary, text‑foreground, etc.)."
+
+  - id: FE‑022
+    level: MUST
+    description: "Dark‑mode parity required (`dark:` variants or variable toggles)."
+
+  # ── UI Library Consistency ────────────────────────────────────────
+  - id: FE‑030
+    level: MUST
+    description: "Use existing Shadcn UI components; do not mix in a second UI kit."
+
+  - id: FE‑031
+    level: MUST
+    description: "Extend components via `class-variance-authority` variants—not by cloning new components."
+
+  # ── State, Data, Realtime ─────────────────────────────────────────
+  - id: FE‑040
+    level: MUST
+    description: "Default to Server Components / Route Handlers for data; no heavy client `useEffect` fetches."
+
+  - id: FE‑041
+    level: SHOULD
+    description: "Global state minimal—React context only for auth/theme; prefer React‑Query/SWR for cache."
+
+  - id: FE‑042
+    level: MUST
+    description: "Realtime updates through a single Supabase Realtime channel; prohibit polling when push is available."
+
+  # ── Forms & Validation ────────────────────────────────────────────
+  - id: FE‑050
+    level: MUST
+    description: "Use React‑Hook‑Form + Zod resolver for every form."
+
+  - id: FE‑051
+    level: MUST
+    description: "Provide inline error + success feedback via Shadcn Alert/Toast components."
+
+  # ── Media & Performance ───────────────────────────────────────────
+  - id: FE‑060
+    level: MUST
+    description: "Lazy‑load heavy editors, players; dynamic import or React lazy with fallback."
+
+  - id: FE‑061
+    level: MUST
+    description: "All images via Next `<Image>` with responsive sizes."
+
+  - id: FE‑062
+    level: SHOULD
+    description: "Use list virtualization (`react‑window` or equivalent) for feeds >100 rows."
+
+  # ── Security & Access Control ─────────────────────────────────────
+  - id: FE‑070
+    level: MUST
+    description: "Protect `/dashboard/**` and any auth‑required routes via Next middleware + server checks."
+
+  - id: FE‑071
+    level: MUST
+    description: "Render action buttons conditionally by role; never trust client alone—mirror backend RLS."
+
+  - id: FE‑072
+    level: MUST
+    description: "No secrets or PII in client bundles; redact or fetch from server."
+
+  # ── Package & Tooling ─────────────────────────────────────────────
+  - id: FE‑080
+    level: MUST
+    description: "Lint & Prettier clean (`npm run lint` must pass)."
+
+  - id: FE‑081
+    level: SHOULD
+    description: "Stay within two minor versions of latest Next.js, React, Supabase clients."
+
+  # ── Testing & CI ─────────────────────────────────────────────────
+  - id: FE‑090
+    level: SHOULD
+    description: "Provide Playwright e2e tests for auth, create‑post, subscribe flows."
+
+  # ── Future‑Proofing ──────────────────────────────────────────────
+  - id: FE‑100
+    level: SHOULD
+    description: "Design tokens/theme via CSS variables to enable future white‑label overrides."
+
+  - id: FE‑101
+    level: SHOULD
+    description: "Abstract shared logic (schemas, hooks) into `src/lib` for reuse by future mobile clients."
+
+meta:
+  owner: "Lnked Engineering"
+  last_updated: "2025‑05‑15"

@@ -199,15 +199,10 @@ export default function AuthForm({
               </Alert>
             )}
             {message && mode === "signUp" && (
-              <Alert
-                variant="default"
-                className="mt-4 bg-green-100 dark:bg-green-900 border-green-300 dark:border-green-700"
-              >
-                <Terminal className="h-4 w-4 text-green-700 dark:text-green-300" />
-                <AlertTitle className="text-green-800 dark:text-green-200">
-                  Success
-                </AlertTitle>
-                <AlertDescription className="text-green-700 dark:text-green-300">
+              <Alert variant="default" className="mt-4 bg-primary/10">
+                <Terminal className="h-4 w-4 text-primary" />
+                <AlertTitle className="text-primary">Success</AlertTitle>
+                <AlertDescription className="text-primary">
                   {message}
                 </AlertDescription>
               </Alert>

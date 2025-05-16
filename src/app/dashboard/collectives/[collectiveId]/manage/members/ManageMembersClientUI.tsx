@@ -1,78 +1,114 @@
 "use client";
 
-import React from "react";
-import type { MemberWithDetails } from "./page"; // Assuming type is exported from page.tsx
+import React, { useState } from "react";
+import { useRouter } from "next/navigation";
+import type { MemberWithDetails } from "./page";
+import InviteMemberForm from "./InviteMemberForm";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  UserPlus,
+  Edit3,
+  Trash2,
+  ShieldCheck,
+  ShieldAlert,
+} from "lucide-react";
 
 interface ManageMembersClientUIProps {
   collectiveId: string;
-  collectiveName: string;
   initialMembers: MemberWithDetails[];
   isOwner: boolean;
 }
 
 export default function ManageMembersClientUI({
   collectiveId,
-  collectiveName,
-  initialMembers,
+  initialMembers: initialMembersProp,
   isOwner,
 }: ManageMembersClientUIProps) {
-  // TODO: Implement UI for inviting users, listing members, changing roles, removing members
-  // This will involve forms, server action calls, and state management for the list of members.
+  const router = useRouter();
+  const [members] = useState<MemberWithDetails[]>(initialMembersProp);
+  const [showInviteForm, setShowInviteForm] = useState(false);
 
-  console.log("ManageMembersClientUI Props:", {
-    collectiveId,
-    collectiveName,
-    initialMembers,
-    isOwner,
-  });
+  const handleInviteSuccess = () => {
+    setShowInviteForm(false);
+    router.refresh(); // Re-fetches server components, including member list
+  };
+
+  const getRoleIcon = (role: string | null | undefined) => {
+    if (role === "owner")
+      return <ShieldCheck className="h-4 w-4 text-primary mr-1" />;
+    if (role === "editor")
+      return <Edit3 className="h-4 w-4 text-accent mr-1" />;
+    if (role === "contributor")
+      return <UserPlus className="h-4 w-4 text-foreground mr-1" />;
+    return <ShieldAlert className="h-4 w-4 text-muted-foreground mr-1" />;
+  };
 
   return (
-    <div>
-      <h2 className="text-xl font-semibold mb-4">
-        Members of {collectiveName}
-      </h2>
+    <div className="space-y-8">
       {isOwner && (
-        <div className="mb-4">
-          <p className="text-sm text-muted-foreground">
-            Placeholder for Invite User Form (Owners only)
-          </p>
-          {/* <InviteUserForm collectiveId={collectiveId} /> */}
-        </div>
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <UserPlus className="mr-2 h-5 w-5" /> Invite New Member
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {showInviteForm ? (
+              <InviteMemberForm
+                collectiveId={collectiveId}
+                onSuccess={handleInviteSuccess}
+              />
+            ) : (
+              <Button onClick={() => setShowInviteForm(true)} variant="outline">
+                <UserPlus className="mr-2 h-4 w-4" /> Invite Member
+              </Button>
+            )}
+          </CardContent>
+        </Card>
       )}
-      {initialMembers.length > 0 ? (
-        <ul>
-          {initialMembers.map((member) => (
-            <li
-              key={member.id}
-              className="border-b py-2 flex justify-between items-center"
-            >
-              <div>
-                <span className="font-medium">
-                  {member.user?.full_name || "Unknown User"}
-                </span>
-                <span className="text-sm text-muted-foreground ml-2">
-                  (Role: {member.role})
-                </span>
-              </div>
-              {isOwner &&
-                member.user?.id !==
-                  /* current user ID, if different from owner */ "" && (
-                  <div>
-                    {/* Placeholder for Change Role / Remove buttons */}
-                    <button className="text-xs text-blue-500 hover:underline mr-2">
-                      Change Role
-                    </button>
-                    <button className="text-xs text-destructive hover:underline">
-                      Remove
-                    </button>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Current Members ({members.length})</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {members.length > 0 ? (
+            <ul className="divide-y divide-border">
+              {members.map((member) => (
+                <li
+                  key={member.id}
+                  className="py-4 flex flex-col sm:flex-row justify-between sm:items-center space-y-2 sm:space-y-0"
+                >
+                  <div className="flex items-center">
+                    {getRoleIcon(member.role)}
+                    <span className="font-medium">
+                      {member.user?.full_name || "Unknown User"}
+                    </span>
+                    <span className="text-xs text-muted-foreground ml-2 capitalize">
+                      ({member.role})
+                    </span>
                   </div>
-                )}
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <p className="text-muted-foreground">No members found.</p>
-      )}
+                  {isOwner && member.user?.id && (
+                    <div className="flex space-x-2 self-end sm:self-center">
+                      <Button variant="outline" size="sm" disabled>
+                        <Edit3 className="h-3 w-3 mr-1" /> Change Role
+                      </Button>
+                      <Button variant="destructive" size="sm" disabled>
+                        <Trash2 className="h-3 w-3 mr-1" /> Remove
+                      </Button>
+                    </div>
+                  )}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-muted-foreground py-4">
+              No members found for this collective.
+            </p>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

@@ -70,7 +70,7 @@ export default function RecommendationFeedbackButtons({
     (state.message === "Feedback recorded successfully." ||
       state.message === "Feedback already recorded.")
   ) {
-    return <p className="text-xs text-green-600 mt-1">{state.message}</p>;
+    return <p className="text-xs text-primary mt-1">{state.message}</p>;
   }
 
   return (

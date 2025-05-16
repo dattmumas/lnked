@@ -1,5 +1,5 @@
 import { cookies } from "next/headers";
-import { createServerClient, type CookieOptions } from "@supabase/ssr";
+import { createServerClient } from "@supabase/ssr";
 import type { Database } from "@/lib/database.types";
 import { redirect } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -10,18 +10,25 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-  CardFooter,
 } from "@/components/ui/card";
+import StatCard from "@/components/app/dashboard/molecules/stat-card";
+import {
+  Users,
+  FileText,
+  Library,
+  MailOpen,
+  Package,
+  Settings,
+  Rss,
+  PlusCircle,
+  AlertTriangle,
+  Info,
+  List,
+} from "lucide-react";
+import RecentPostRow from "@/components/app/dashboard/molecules/RecentPostRow";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
-// Helper to format date (can be moved to utils)
-const formatDate = (dateString: string | null): string => {
-  if (!dateString) return "Date not available";
-  return new Date(dateString).toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
-};
+const MAX_RECENT_PERSONAL_POSTS_DISPLAY = 3;
 
 export default async function DashboardManagementPage() {
   const cookieStore = await cookies();
@@ -33,20 +40,8 @@ export default async function DashboardManagementPage() {
         get(name: string) {
           return cookieStore.get(name)?.value;
         },
-        set(name: string, value: string, options: CookieOptions) {
-          try {
-            cookieStore.set({ name, value, ...options });
-          } catch (e) {
-            console.warn("Failed to set cookie in Server Component", e);
-          }
-        },
-        remove(name: string, options: CookieOptions) {
-          try {
-            cookieStore.set({ name, value: "", ...options });
-          } catch (e) {
-            console.warn("Failed to remove cookie in Server Component", e);
-          }
-        },
+        set() {},
+        remove() {},
       },
     }
   );
@@ -88,140 +83,167 @@ export default async function DashboardManagementPage() {
     console.error("Error fetching personal posts:", personalPostsError.message);
 
   return (
-    <div className="container mx-auto p-4 md:p-6 space-y-10">
-      <header className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
-        <h1 className="text-3xl font-bold">Management Dashboard</h1>
-        <Button asChild variant="outline">
-          <Link href="/dashboard/profile/edit">Edit Profile</Link>
-        </Button>
-      </header>
-
-      {/* Section for Individual Newsletter Management */}
-      <section>
-        <div className="flex flex-col sm:flex-row justify-between sm:items-center mb-4 gap-2">
-          <h2 className="text-2xl font-semibold">My Individual Newsletter</h2>
-          <div className="flex flex-wrap gap-2">
-            <Button asChild variant="secondary">
-              <Link href="/dashboard/new-personal-post">Write New Post</Link>
-            </Button>
-            <Button asChild variant="outline">
-              <Link href={`/newsletters/${currentUser.id}`}>
-                View My Public Newsletter
-              </Link>
-            </Button>
-            <Button asChild variant="ghost">
-              <Link href="/dashboard/my-newsletter/subscribers">
-                View Subscribers
-              </Link>
-            </Button>
-          </div>
+    <>
+      {/* Dashboard Page Header - Sticky within the scrollable area defined in DashboardShell */}
+      {/* The DashboardShell provides p-4 md:p-6. This sticky header will live INSIDE that padding. */}
+      {/* top-0 here means top of the scrollable container. */}
+      <div className="sticky top-0 z-30 bg-background py-4 border-b border-border mb-6 flex flex-col md:flex-row items-center justify-between">
+        <div>
+          <h1 className="text-3xl md:text-4xl font-bold font-serif tracking-tight text-foreground">
+            Dashboard
+          </h1>
         </div>
-        {personalPosts && personalPosts.length > 0 ? (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {personalPosts.map((post) => (
-              <Card key={post.id}>
-                <CardHeader>
-                  <CardTitle className="truncate">{post.title}</CardTitle>
-                  <CardDescription>
-                    Status: {post.published_at ? "Published" : "Draft"} (
-                    {post.is_public ? "Public" : "Private"})
-                    <br />
-                    Created: {formatDate(post.created_at)}
-                    {post.published_at &&
-                      `, Published: ${formatDate(post.published_at)}`}
-                  </CardDescription>
-                </CardHeader>
-                <CardFooter className="flex justify-end space-x-2">
-                  {/* TODO: <Link href={`/posts/${post.id}`}>View</Link> */}
-                  <Button variant="outline" size="sm" asChild>
-                    <Link href={`/dashboard/posts/${post.id}/edit`}>Edit</Link>
-                  </Button>
-                </CardFooter>
-              </Card>
-            ))}
-          </div>
-        ) : (
-          <p className="text-muted-foreground">
-            You haven&apos;t written any personal posts yet.
-          </p>
-        )}
-      </section>
-
-      {/* Section for Owned Collectives Management */}
-      <section>
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-2xl font-semibold">My Owned Collectives</h2>
-          <Button asChild>
-            <Link href="/dashboard/collectives/new">Create New Collective</Link>
+        <div className="flex items-center gap-3 mt-4 md:mt-0">
+          <Button asChild variant="outline" size="sm">
+            <Link href="/dashboard/profile/edit">
+              <Settings className="h-4 w-4 mr-2" /> Edit Profile
+            </Link>
           </Button>
         </div>
-        {ownedCollectives && ownedCollectives.length > 0 ? (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {ownedCollectives.map((collective) => (
-              <Card key={collective.id}>
-                <CardHeader>
-                  <CardTitle>{collective.name}</CardTitle>
-                  <CardDescription className="truncate h-10">
-                    {collective.description || "No description provided."}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="flex flex-col space-y-2 mt-2">
-                  <Button asChild variant="outline" size="sm">
-                    <Link href={`/collectives/${collective.slug}`}>
-                      View Public Page
-                    </Link>
-                  </Button>
-                  <Button asChild size="sm">
-                    <Link href={`/dashboard/${collective.id}/new-post`}>
-                      Add Post to Collective
-                    </Link>
-                  </Button>
-                  <Button
-                    asChild
-                    variant="ghost"
-                    size="sm"
-                    className="w-full justify-start pl-3"
-                  >
-                    <Link
-                      href={`/dashboard/collectives/${collective.id}/subscribers`}
-                    >
-                      View Subscribers
-                    </Link>
-                  </Button>
-                  <Button
-                    asChild
-                    variant="ghost"
-                    size="sm"
-                    className="w-full justify-start pl-3"
-                  >
-                    <Link
-                      href={`/dashboard/collectives/${collective.id}/manage/members`}
-                    >
-                      Manage Members
-                    </Link>
-                  </Button>
-                  <Button
-                    asChild
-                    variant="ghost"
-                    size="sm"
-                    className="w-full justify-start pl-3"
-                  >
-                    <Link
-                      href={`/dashboard/collectives/${collective.id}/settings`}
-                    >
-                      Collective Settings
-                    </Link>
-                  </Button>
-                </CardContent>
-              </Card>
-            ))}
+      </div>
+
+      {/* Main content sections below the sticky header */}
+      {/* Add pt-6 or similar to the first section if space-y on parent was removed, or manage spacing per section */}
+      <div className="space-y-6">
+        {/* Quick Stats */}
+        <section>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <StatCard
+              label="Subscribers"
+              value={123}
+              trend={12}
+              icon={<Users className="h-5 w-5 text-muted-foreground" />}
+            />
+            <StatCard
+              label="Total Posts"
+              value={personalPosts?.length || 0}
+              trend={3}
+              icon={<FileText className="h-5 w-5 text-muted-foreground" />}
+            />
+            <StatCard
+              label="Collectives"
+              value={ownedCollectives?.length || 0}
+              icon={<Library className="h-5 w-5 text-muted-foreground" />}
+            />
+            <StatCard
+              label="Avg. Open Rate"
+              value="45%"
+              trend={-2}
+              icon={<MailOpen className="h-5 w-5 text-muted-foreground" />}
+            />
           </div>
-        ) : (
-          <p className="text-muted-foreground">
-            You don&apos;t own any collectives yet.
-          </p>
-        )}
-      </section>
-    </div>
+        </section>
+
+        {/* Individual Newsletter */}
+        <section className="space-y-4">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-2">
+            <h2 className="text-2xl font-serif font-semibold flex items-center">
+              <Rss className="h-5 w-5 mr-2 text-primary" /> My Individual
+              Newsletter
+            </h2>
+
+            <div className="flex flex-wrap gap-2">
+              <Button asChild size="sm">
+                <Link href="/dashboard/new-personal-post">
+                  <PlusCircle className="h-4 w-4 mr-2" /> Write New Post
+                </Link>
+              </Button>
+              <Button asChild variant="outline" size="sm">
+                <Link href={`/newsletters/${currentUser.id}`}>
+                  View Newsletter
+                </Link>
+              </Button>
+              <Button asChild variant="ghost" size="sm">
+                <Link href="/dashboard/my-newsletter/subscribers">
+                  Subscribers
+                </Link>
+              </Button>
+            </div>
+          </div>
+          {personalPosts && personalPosts.length > 0 ? (
+            <Card className="border-border shadow-sm">
+              <CardContent className="p-0">
+                <div className="divide-y divide-border">
+                  {personalPosts
+                    .slice(0, MAX_RECENT_PERSONAL_POSTS_DISPLAY)
+                    .map((post) => (
+                      <RecentPostRow key={post.id} post={post} />
+                    ))}
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <Alert>
+              <Info className="h-4 w-4" />
+              <AlertTitle>No Personal Posts Yet</AlertTitle>
+              <AlertDescription>
+                You haven&apos;t written any personal posts. Click &quot;Write
+                New Post&quot; to get started!
+              </AlertDescription>
+            </Alert>
+          )}
+          {personalPosts &&
+            personalPosts.length > MAX_RECENT_PERSONAL_POSTS_DISPLAY && (
+              <div className="mt-4 text-center">
+                <Button asChild variant="outline" size="sm">
+                  <Link href="/dashboard/posts">
+                    <List className="h-4 w-4 mr-2" /> View All My Posts
+                  </Link>
+                </Button>
+              </div>
+            )}
+        </section>
+
+        {/* Owned Collectives */}
+        <section className="space-y-4">
+          <div className="flex items-center justify-between gap-2">
+            <h2 className="text-2xl font-serif font-semibold flex items-center">
+              <Library className="h-5 w-5 mr-2 text-primary" /> My Owned
+              Collectives
+            </h2>
+            <Button asChild size="sm">
+              <Link href="/dashboard/collectives/new">
+                <PlusCircle className="h-4 w-4 mr-2" /> Create Collective
+              </Link>
+            </Button>
+          </div>
+          {ownedCollectives && ownedCollectives.length > 0 ? (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {ownedCollectives.map((collective) => (
+                <Card key={collective.id} className="flex flex-col">
+                  <CardHeader className="flex-grow">
+                    <div className="flex items-center gap-3 mb-2">
+                      <Package className="h-5 w-5 text-primary" />
+                      <CardTitle>{collective.name}</CardTitle>
+                    </div>
+                    <CardDescription className="truncate h-10">
+                      {collective.description || "No description provided."}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="mt-auto pt-0">
+                    <Button asChild size="sm" className="w-full mt-2">
+                      <Link
+                        href={`/dashboard/collectives/${collective.id}/manage/members`}
+                      >
+                        Manage Collective
+                      </Link>
+                    </Button>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <Alert>
+              <AlertTriangle className="h-4 w-4" />
+              <AlertTitle>No Collectives Owned</AlertTitle>
+              <AlertDescription>
+                You don&apos;t own any collectives yet. Click &quot;Create
+                Collective&quot; to start one!
+              </AlertDescription>
+            </Alert>
+          )}
+        </section>
+      </div>
+    </>
   );
 }

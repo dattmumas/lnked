@@ -1,0 +1,117 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+User Discovery Essentials
+
+Data Sources
+
+Profile Attributes: Topics of interest, bio keywords, tags/roles.
+
+Interaction History: Follows, likes, comments, shares, direct messages—logged in an “events” table.
+
+Social Graph: Explicit connections (follows/friends) and implicit (mutuals, common interactions).
+
+Recommendation Triggers
+
+New user onboarding surveys to collect initial preferences (cold‑start mitigation).
+
+Real‑time event streams (e.g., Debounced writes to a Supabase “interactions” table).
+
+Periodic batch jobs or triggers to update suggestion scores.
+
+Core Recommendation Methods
+
+Content‑Based Filtering
+
+Matches user profile vectors against other users’ profile vectors (e.g., interests ∩ interests).
+
+Implement with full‑text search or weighted tag‑matching in Postgres (Supabase). 
+Knight First Amendment Institute
+
+Collaborative Filtering
+
+Identifies users with similar interaction patterns (“users who interacted with A also interacted with B”).
+
+Matrix factorization or nearest‑neighbor search on user‑item interaction matrix 
+Medium
+
+Graph‑Based Recommendations
+
+Exploits the social graph: second‑degree connections, mutual engagement clusters.
+
+Use recursive CTEs or a graph extension in Postgres, optionally Neo4j for scale. 
+Brookings
+
+Hybrid Approaches
+
+Blend content‑based, collaborative, and graph signals to improve accuracy and diversity.
+
+Weight signals dynamically based on user maturity (cold vs. power users).
+
+Enhancements & Next‑Gen Techniques
+
+Embeddings & Semantic Search
+
+Leverage vector embeddings (e.g., OpenAI embeddings) stored in pgvector for semantic similarity.
+
+Supabase now supports pgvector—ideal for “find users like X” queries.
+
+Machine‑Learned Rankers
+
+Train a simple Gradient Boosted Tree or linear model on logged interactions (features: common tags, mutual follows, embedding cosine similarity).
+
+Deploy inference in Supabase Edge Functions for low latency.
+
+Personalization Controls
+
+Let users “boost” or “mute” topics, adjust their own recommendation weightings.
+
+Store preferences in profile metadata.
+
+Recommended Implementation with Next.js & Supabase
+
+Schema Design
+
+users table with profile fields & vector column (embedding VECTOR(1536)),
+
+interactions table logging (user_id, target_user_id, type, timestamp),
+
+follows table for explicit connections.
+
+Ingestion Pipeline
+
+Capture client events (e.g., clicks, follows) to Supabase via Edge Functions or client SDK.
+
+Normalize and upsert profile embeddings nightly via a scheduled Edge Function.
+
+Precompute Recommendations
+
+Batch job (cron) that runs SQL:
+
+sql
+Copy
+Edit
+INSERT INTO recommendations
+  SELECT u.id AS user_id,
+         other.id AS suggested_user_id,
+         cosine_distance(u.embedding, other.embedding) AS score
+  FROM users u
+  JOIN users other ON u.id != other.id
+  ORDER BY score ASC
+  LIMIT 50;
+Use cursor‑based pagination for API endpoints.
+
+API & Frontend
+
+Next.js API route /api/recommendations?cursor=… calls Supabase, returns paginated suggestions.
+
+Client renders suggestions, captures “interested/not interested” feedback to refine models.
+
+Iterate & Monitor
+
+Instrument A/B tests: compare pure content vs. hybrid models.
+
+Track engagement lift (CTR on suggestions, follow‑through rate).
+

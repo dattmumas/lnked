@@ -47,7 +47,6 @@ lnked-project/
 - [Supabase Account](https://supabase.com/dashboard)
 - [Stripe Account](https://dashboard.stripe.com/register)
 
-
 ### 1. Clone the Repository (if applicable)
 
 ```bash
@@ -187,4 +186,5 @@ Row Level Security (RLS) is enabled on all tables to protect data.
 ---
 
 This README provides a starting point. Feel free to expand it as the project grows.
+
 # lnked

@@ -1,8 +1,8 @@
 import { cookies } from "next/headers";
-import { createServerClient, type CookieOptions } from "@supabase/ssr";
+import { createServerClient } from "@supabase/ssr";
 import type { Database } from "@/lib/database.types";
 import { notFound } from "next/navigation";
-import PostCard from "@/components/PostCard";
+import PostCard from "@/components/app/posts/molecules/PostCard";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import SubscribeButton from "@/components/SubscribeButton";
@@ -24,7 +24,7 @@ export default async function IndividualNewsletterPage({
   params,
 }: IndividualNewsletterPageProps) {
   const { userId: authorId } = params;
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   const supabase = createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -33,20 +33,8 @@ export default async function IndividualNewsletterPage({
         get(name: string) {
           return cookieStore.get(name)?.value;
         },
-        set(name: string, value: string, options: CookieOptions) {
-          try {
-            cookieStore.set({ name, value, ...options });
-          } catch {
-            /* Server Components cannot set cookies */
-          }
-        },
-        remove(name: string, options: CookieOptions) {
-          try {
-            cookieStore.set({ name, value: "", ...options });
-          } catch {
-            /* Server Components cannot delete cookies */
-          }
-        },
+        set() {},
+        remove() {},
       },
     }
   );

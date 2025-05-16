@@ -1,4 +1,4 @@
-import CollectiveCard from "@/components/CollectiveCard";
+import CollectiveCard from "@/components/app/collectives/molecules/CollectiveCard";
 // import { cookies } from "next/headers"; // No longer needed directly here
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Terminal } from "lucide-react";

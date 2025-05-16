@@ -1,5 +1,5 @@
 import { cookies } from "next/headers";
-import { createServerClient, type CookieOptions } from "@supabase/ssr";
+import { createServerClient } from "@supabase/ssr";
 import type { Database, Enums } from "@/lib/database.types";
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
@@ -33,17 +33,19 @@ export default async function CollectiveSubscribersPage({
   params,
 }: CollectiveSubscribersPageProps) {
   const { collectiveId } = params;
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   const supabase = createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        get: (name: string) => cookieStore.get(name)?.value,
-        set: (name: string, value: string, options: CookieOptions) =>
-          cookieStore.set(name, value, options),
-        remove: (name: string, options: CookieOptions) =>
-          cookieStore.delete(name, options),
+        get(name: string) {
+          return cookieStore.get(name)?.value;
+        },
+        // In a Server Component we cannot mutate cookies directly; supabase will attempt it
+        // but we safely no-op to satisfy the interface.
+        set() {},
+        remove() {},
       },
     }
   );
@@ -154,13 +156,13 @@ export default async function CollectiveSubscribersPage({
                       className={`px-2 py-1 text-xs font-medium rounded-full 
                       ${
                         sub.status === "active"
-                          ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
+                          ? "bg-primary/10 text-primary"
                           : sub.status === "trialing"
-                          ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200"
+                          ? "bg-accent/10 text-accent-foreground"
                           : sub.status === "canceled" ||
                             sub.cancel_at_period_end
-                          ? "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
-                          : "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200"
+                          ? "bg-destructive/10 text-destructive"
+                          : "bg-muted text-foreground"
                       }
                     `}
                     >

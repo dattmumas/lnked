@@ -6,6 +6,9 @@ import { useEffect, useState } from "react";
 import { createSupabaseBrowserClient } from "@/lib/supabase";
 import type { User } from "@supabase/supabase-js";
 import { Button } from "./ui/button";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Menu } from "lucide-react";
+import ModeToggle from "@/components/app/nav/ModeToggle";
 
 export default function Navbar() {
   const supabase = createSupabaseBrowserClient();
@@ -66,7 +69,7 @@ export default function Navbar() {
               <Link href="/pricing" className="text-muted-foreground hover:text-foreground transition-colors">Pricing</Link>
             </div> */}
           </div>
-          <div className="flex items-center space-x-3">
+          <div className="hidden md:flex items-center space-x-3">
             {isLoading ? (
               <div className="h-8 w-20 bg-muted rounded animate-pulse"></div> // Skeleton loader
             ) : user ? (
@@ -99,6 +102,58 @@ export default function Navbar() {
                 <Button onClick={() => router.push("/sign-up")}>Sign Up</Button>
               </>
             )}
+          </div>
+
+          {/* Mobile hamburger */}
+          <div className="md:hidden flex items-center space-x-2">
+            <ModeToggle />
+            <Sheet>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="icon" aria-label="Open menu">
+                  <Menu className="size-5" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="left" className="p-6 space-y-4">
+                {isLoading ? (
+                  <div className="h-8 w-20 bg-muted rounded animate-pulse" />
+                ) : user ? (
+                  <div className="flex flex-col space-y-4">
+                    <Button
+                      variant="ghost"
+                      onClick={() => router.push("/discover")}
+                    >
+                      Feed
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      onClick={() => router.push("/dashboard")}
+                    >
+                      Dashboard
+                    </Button>
+                    <Button variant="outline" onClick={handleSignOut}>
+                      Sign Out
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="flex flex-col space-y-4">
+                    <Button
+                      variant="ghost"
+                      onClick={() => router.push("/sign-in")}
+                    >
+                      Sign In
+                    </Button>
+                    <Button onClick={() => router.push("/sign-up")}>
+                      Sign Up
+                    </Button>
+                  </div>
+                )}
+              </SheetContent>
+            </Sheet>
+          </div>
+
+          {/* Desktop theme toggle */}
+          <div className="hidden md:block">
+            <ModeToggle />
           </div>
         </div>
       </div>

@@ -105,7 +105,9 @@ export default function PostLikeButton({
       >
         <Heart
           className={`w-5 h-5 ${
-            userHasLiked ? "fill-red-500 text-red-500" : "text-muted-foreground"
+            userHasLiked
+              ? "fill-destructive text-destructive"
+              : "text-muted-foreground"
           }`}
         />
         <span>{userHasLiked ? "Liked" : "Like"}</span>

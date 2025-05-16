@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 import RecommendationFeedbackButtons from "@/app/discover/RecommendationFeedbackButtons";
 
@@ -19,11 +21,11 @@ export default function CollectiveCard({
   showFeedbackButtons = false,
 }: CollectiveCardProps) {
   return (
-    <div className="rounded-lg border bg-card text-card-foreground shadow-sm p-4 flex flex-col gap-2">
+    <div className="rounded-lg border bg-card text-card-foreground shadow-sm p-4 flex flex-col gap-2 hover:shadow-md transition-shadow">
       <div className="flex items-center justify-between">
         <Link
           href={`/${collective.slug}`}
-          className="text-lg font-semibold hover:underline"
+          className="text-lg font-semibold hover:text-primary"
         >
           {collective.name}
         </Link>
