@@ -11,6 +11,7 @@ interface EditorLayoutProps {
   pageTitle: string;
   onPublish: () => void;
   isPublishing: boolean;
+  publishButtonText?: string; // Optional prop for dynamic button text
   // editor prop is removed, as toolbar is now part of mainContent passed by parent
 }
 
@@ -20,6 +21,7 @@ const EditorLayout: React.FC<EditorLayoutProps> = ({
   pageTitle,
   onPublish,
   isPublishing,
+  publishButtonText, // Destructure the new prop
 }) => {
   return (
     <div className="flex flex-col h-full">
@@ -37,7 +39,9 @@ const EditorLayout: React.FC<EditorLayoutProps> = ({
             }}
             disabled={isPublishing}
           >
-            {isPublishing ? "Publishing..." : "Publish Post"}
+            {isPublishing
+              ? "Processing..."
+              : publishButtonText || "Publish Post"}
           </Button>
         </div>
       </header>

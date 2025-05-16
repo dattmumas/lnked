@@ -6,30 +6,47 @@ import type {
   Database,
   TablesInsert,
   TablesUpdate,
+  Enums,
 } from "@/lib/database.types"; // Using generated types
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 
-const PostFormSchema = z.object({
+// Base schema for common post fields (title, content, collectiveId)
+const BasePostSchema = z.object({
   title: z
     .string()
     .min(3, "Title must be at least 3 characters")
     .max(200, "Title must be 200 characters or less"),
   content: z.string().min(10, "Content must be at least 10 characters"),
-  is_public: z.boolean().default(true),
-  collectiveId: z.string().uuid().optional(), // Optional: For posting to a specific collective
+  collectiveId: z.string().uuid().optional(),
 });
 
-type PostFormValues = z.infer<typeof PostFormSchema>;
+// Schema for creating a post - includes is_public for initial state
+const CreatePostSchema = BasePostSchema.extend({
+  is_public: z.boolean().default(true),
+  published_at: z.string().datetime({ offset: true }).optional().nullable(),
+});
+
+type CreatePostFormValues = z.infer<typeof CreatePostSchema>;
+
+// Schema for updating a post - receives is_public and published_at from client logic
+// All fields are optional for an update.
+const UpdatePostServerSchema = BasePostSchema.partial().extend({
+  is_public: z.boolean().optional(),
+  published_at: z.string().datetime({ offset: true }).optional().nullable(), // Expect ISO string or null
+});
+
+// This type is what updatePost action will receive from the client (EditPostForm)
+export type UpdatePostClientValues = z.infer<typeof UpdatePostServerSchema>;
 
 interface CreatePostResult {
   data?: {
     postId: string;
     postSlug: string;
-    collectiveSlug?: string | null; // Slug of the collective if post belongs to one
+    collectiveSlug?: string | null;
   };
   error?: string;
-  fieldErrors?: Partial<Record<keyof PostFormValues, string[]>>;
+  fieldErrors?: Partial<Record<keyof CreatePostFormValues, string[]>>;
 }
 
 const generateSlug = (title: string): string => {
@@ -43,23 +60,41 @@ const generateSlug = (title: string): string => {
     .substring(0, 75);
 };
 
-export async function createPost(
-  formData: PostFormValues
-): Promise<CreatePostResult> {
-  const cookieStore = cookies();
-  const supabase = createServerClient<Database>(
+// Helper function to create Supabase client with correct cookie handling for Server Actions
+async function createSupabaseServerClientInternal() {
+  const cookieStore = await cookies();
+  return createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        get: (name: string) => cookieStore.get(name)?.value,
-        set: (name: string, value: string, options: CookieOptions) =>
-          cookieStore.set(name, value, options),
-        remove: (name: string, options: CookieOptions) =>
-          cookieStore.delete(name, options),
+        get(name: string) {
+          return cookieStore.get(name)?.value;
+        },
+        set(name: string, value: string, options: CookieOptions) {
+          try {
+            cookieStore.set(name, value, options);
+          } catch (error) {
+            // In Server Actions, direct cookie setting might be restricted.
+            // Supabase client might try to set cookies during session refresh.
+            // This error handling prevents the action from crashing.
+            // console.warn("Supabase client: Failed to set cookie from Server Action", error);
+          },
+        remove(name: string, options: CookieOptions) {
+          try {
+            cookieStore.set(name, "", { ...options, maxAge: 0 });
+          } catch (error) {
+            // console.warn("Supabase client: Failed to remove cookie from Server Action", error);
+          },
       },
     }
   );
+}
+
+export async function createPost(
+  formData: CreatePostFormValues
+): Promise<CreatePostResult> {
+  const supabase = await createSupabaseServerClientInternal();
 
   const {
     data: { user },
@@ -70,7 +105,7 @@ export async function createPost(
     return { error: "You must be logged in to create a post." };
   }
 
-  const validatedFields = PostFormSchema.safeParse(formData);
+  const validatedFields = CreatePostSchema.safeParse(formData);
 
   if (!validatedFields.success) {
     return {
@@ -79,16 +114,19 @@ export async function createPost(
     };
   }
 
-  const { title, content, is_public, collectiveId } = validatedFields.data;
+  const { title, content, is_public, collectiveId, published_at } =
+    validatedFields.data;
   let collectiveSlug: string | null = null;
 
-  // If posting to a collective, verify user is owner or member
+  type CollectiveData = { id: string; owner_id: string; slug: string };
+  type MembershipData = { role: Enums<"collective_member_role"> };
+
   if (collectiveId) {
     const { data: collectiveData, error: collectiveCheckError } = await supabase
       .from("collectives")
       .select("id, owner_id, slug")
-      .eq("id", collectiveId)
-      .single();
+      .eq("id", collectiveId as string) // Cast if needed, though UUID should be fine
+      .single<CollectiveData>();
 
     if (collectiveCheckError || !collectiveData) {
       return {
@@ -104,14 +142,15 @@ export async function createPost(
       const { data: membership, error: memberCheckError } = await supabase
         .from("collective_members")
         .select("role")
-        .eq("collective_id", collectiveId)
-        .eq("user_id", user.id)
-        .maybeSingle();
+        .eq("collective_id", collectiveId as string)
+        .eq("user_id", user.id as string) // Cast if needed
+        .maybeSingle<MembershipData>();
       if (memberCheckError) {
         return { error: "Error checking collective membership." };
       }
       isMember =
-        !!membership && ["admin", "editor", "author"].includes(membership.role);
+        !!membership &&
+        ["admin", "editor", "author"].includes(membership.role as string);
     }
 
     if (!isOwner && !isMember) {
@@ -124,20 +163,28 @@ export async function createPost(
 
   const postSlug = generateSlug(title);
 
+  let final_published_at: string | null = null;
+  if (published_at) {
+    final_published_at = new Date(published_at).toISOString();
+  } else if (is_public) {
+    final_published_at = new Date().toISOString();
+  }
+
   const postToInsert: TablesInsert<"posts"> = {
     author_id: user.id,
     title,
     content,
     is_public,
     collective_id: collectiveId || null,
-    published_at: is_public ? new Date().toISOString() : null,
+    published_at: final_published_at,
   };
 
+  type NewPostId = { id: string };
   const { data: newPost, error: insertError } = await supabase
     .from("posts")
-    .insert(postToInsert)
+    .insert(postToInsert) // Type for postToInsert should be TablesInsert<"posts">
     .select("id")
-    .single();
+    .single<NewPostId>();
 
   if (insertError) {
     console.error("Error inserting post:", insertError);
@@ -148,19 +195,15 @@ export async function createPost(
     return { error: "Failed to create post for an unknown reason." };
   }
 
-  // Revalidate paths
   revalidatePath("/dashboard");
   if (collectiveSlug) {
     revalidatePath(`/collectives/${collectiveSlug}`);
-    revalidatePath(`/collectives/${collectiveSlug}/${postSlug}`); // Assuming post slug is part of URL
+    revalidatePath(`/collectives/${collectiveSlug}/${postSlug}`);
     if (collectiveId)
-      revalidatePath(`/dashboard/[collectiveId]/new-post`, "page"); // if coming from specific collective new post page
+      revalidatePath(`/dashboard/[collectiveId]/new-post`, "page");
   } else {
-    // Revalidate user's personal newsletter page (e.g. /newsletters/[userId] or /[username])
-    // This path needs to be defined. For now, revalidate a general posts path or dashboard.
-    // revalidatePath(`/newsletters/${user.id}`);
+    revalidatePath(`/newsletters/${user.id}`);
   }
-  // Revalidate the post page itself via its ID (more robust if slugs change)
   revalidatePath(`/posts/${newPost.id}`);
 
   return {
@@ -172,15 +215,6 @@ export async function createPost(
   };
 }
 
-const UpdatePostFormSchema = PostFormSchema.partial().extend({
-  // postId is not part of form data, but passed directly to action
-  // We ensure at least one field is being updated if we want to enforce that,
-  // but partial() means all fields from PostFormSchema are optional.
-  // For simplicity, we'll allow updating any subset of fields.
-});
-
-type UpdatePostFormValues = z.infer<typeof UpdatePostFormSchema>;
-
 interface UpdatePostResult {
   data?: {
     postId: string;
@@ -188,27 +222,14 @@ interface UpdatePostResult {
     collectiveSlug?: string | null;
   };
   error?: string;
-  fieldErrors?: Partial<Record<keyof UpdatePostFormValues, string[]>>;
+  fieldErrors?: Partial<Record<keyof UpdatePostClientValues, string[]>>;
 }
 
 export async function updatePost(
   postId: string,
-  formData: UpdatePostFormValues
+  formData: UpdatePostClientValues
 ): Promise<UpdatePostResult> {
-  const cookieStore = cookies();
-  const supabase = createServerClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get: (name: string) => cookieStore.get(name)?.value,
-        set: (name: string, value: string, options: CookieOptions) =>
-          cookieStore.set(name, value, options),
-        remove: (name: string, options: CookieOptions) =>
-          cookieStore.delete(name, options),
-      },
-    }
-  );
+  const supabase = await createSupabaseServerClientInternal();
 
   const {
     data: { user },
@@ -219,14 +240,20 @@ export async function updatePost(
     return { error: "You must be logged in to update a post." };
   }
 
-  // Fetch the existing post to check ownership and get collective_id if present
+  type ExistingPostData = {
+    id: string;
+    author_id: string;
+    collective_id: string | null;
+    published_at: string | null;
+    collective: { slug: string; owner_id: string } | null;
+  };
   const { data: existingPost, error: fetchError } = await supabase
     .from("posts")
     .select(
       "id, author_id, collective_id, published_at, collective:collectives!collective_id(slug, owner_id)"
     )
     .eq("id", postId)
-    .single();
+    .single<ExistingPostData>();
 
   if (fetchError || !existingPost) {
     return { error: "Post not found or error fetching post data." };
@@ -238,13 +265,14 @@ export async function updatePost(
     if (existingPost.collective.owner_id === user.id) {
       isCollectiveOwnerOrMember = true;
     } else {
+      type MembershipRole = { role: Enums<"collective_member_role"> };
       const { data: membership, error: memberCheckError } = await supabase
         .from("collective_members")
         .select("role")
-        .eq("collective_id", existingPost.collective_id)
-        .eq("user_id", user.id)
+        .eq("collective_id", existingPost.collective_id as string)
+        .eq("user_id", user.id as string)
         .in("role", ["admin", "editor"])
-        .maybeSingle();
+        .maybeSingle<MembershipRole>();
       if (memberCheckError)
         return { error: "Error checking collective membership for edit." };
       if (membership) {
@@ -257,7 +285,7 @@ export async function updatePost(
     return { error: "You do not have permission to update this post." };
   }
 
-  const validatedFields = UpdatePostFormSchema.safeParse(formData);
+  const validatedFields = UpdatePostServerSchema.safeParse(formData);
   if (!validatedFields.success) {
     return {
       error: "Invalid input for update. Please check the fields.",
@@ -265,10 +293,9 @@ export async function updatePost(
     };
   }
 
-  const { title, content, is_public, collectiveId } = validatedFields.data;
+  const { title, content, is_public, published_at, collectiveId } =
+    validatedFields.data;
 
-  // Prevent changing collectiveId for an existing post for simplicity in MVP
-  // If collectiveId is in formData and differs from existingPost.collective_id, it's an issue or complex move operation.
   if (
     collectiveId !== undefined &&
     collectiveId !== existingPost.collective_id
@@ -284,26 +311,30 @@ export async function updatePost(
   if (content !== undefined) updateData.content = content;
   if (is_public !== undefined) {
     updateData.is_public = is_public;
-    if (is_public && !existingPost.published_at) {
-      updateData.published_at = new Date().toISOString();
-    } else if (!is_public && existingPost.published_at) {
-      updateData.published_at = null;
-    }
   }
-  // We are not allowing collectiveId to change here, so it's not in updateData.
-  // If title changes, postSlug might need to change. Regenerate if so.
-  const postSlug = title ? generateSlug(title) : undefined; // generateSlug is from existing createPost
-
-  if (Object.keys(updateData).length === 0) {
-    return { error: "No changes to update." }; // Or return success if no-op is fine
+  if (published_at !== undefined) {
+    updateData.published_at = published_at;
   }
 
+  const postSlug = title ? generateSlug(title) : undefined;
+
+  if (
+    Object.keys(updateData).length === 0 &&
+    title === undefined &&
+    content === undefined &&
+    is_public === undefined &&
+    published_at === undefined
+  ) {
+    return { error: "No changes to update." };
+  }
+
+  type UpdatedPostId = { id: string };
   const { data: updatedPost, error: updateError } = await supabase
     .from("posts")
-    .update(updateData)
+    .update(updateData) // Type for updateData should be Partial<TablesUpdate<"posts">>
     .eq("id", postId)
-    .select("id") // Could select more if needed by return type
-    .single();
+    .select("id")
+    .single<UpdatedPostId>();
 
   if (updateError) {
     console.error("Error updating post:", updateError);
@@ -314,7 +345,6 @@ export async function updatePost(
     return { error: "Failed to update post for an unknown reason." };
   }
 
-  // Revalidate paths
   revalidatePath("/dashboard");
   if (existingPost.collective?.slug) {
     revalidatePath(`/collectives/${existingPost.collective.slug}`);
@@ -322,7 +352,7 @@ export async function updatePost(
       `/collectives/${existingPost.collective.slug}/${
         postSlug || existingPost.id
       }`
-    ); // Use new or old slug/id
+    );
   } else if (existingPost.author_id) {
     revalidatePath(`/newsletters/${existingPost.author_id}`);
   }
@@ -331,7 +361,7 @@ export async function updatePost(
   return {
     data: {
       postId: updatedPost.id,
-      postSlug: postSlug || "slug-not-changed", // This needs refinement if slug is part of URL and changes
+      postSlug: postSlug || "slug-not-changed",
       collectiveSlug: existingPost.collective?.slug,
     },
   };
@@ -344,20 +374,7 @@ interface DeletePostResult {
 }
 
 export async function deletePost(postId: string): Promise<DeletePostResult> {
-  const cookieStore = cookies();
-  const supabase = createServerClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get: (name: string) => cookieStore.get(name)?.value,
-        set: (name: string, value: string, options: CookieOptions) =>
-          cookieStore.set(name, value, options),
-        remove: (name: string, options: CookieOptions) =>
-          cookieStore.delete(name, options),
-      },
-    }
-  );
+  const supabase = await createSupabaseServerClientInternal();
 
   const {
     data: { user },
@@ -368,14 +385,19 @@ export async function deletePost(postId: string): Promise<DeletePostResult> {
     return { success: false, error: "You must be logged in to delete a post." };
   }
 
-  // Fetch the existing post to check ownership and get collective_id for revalidation
+  type ExistingPostForDelete = {
+    id: string;
+    author_id: string;
+    collective_id: string | null;
+    collective: { slug: string } | null;
+  };
   const { data: existingPost, error: fetchError } = await supabase
     .from("posts")
     .select(
       "id, author_id, collective_id, collective:collectives!collective_id(slug)"
     )
     .eq("id", postId)
-    .single();
+    .single<ExistingPostForDelete>();
 
   if (fetchError || !existingPost) {
     return {
@@ -387,19 +409,17 @@ export async function deletePost(postId: string): Promise<DeletePostResult> {
   const isAuthor = existingPost.author_id === user.id;
   let isCollectiveOwnerOrMember = false;
   if (existingPost.collective_id && existingPost.collective) {
-    // For deletion, typically owner of collective or author of post can delete.
-    // More granular member roles for deletion can be added if needed.
+    type CollectiveOwnerData = { owner_id: string };
     const { data: collectiveOwner, error: ownerCheckError } = await supabase
       .from("collectives")
       .select("owner_id")
-      .eq("id", existingPost.collective_id)
-      .single();
+      .eq("id", existingPost.collective_id as string)
+      .single<CollectiveOwnerData>();
     if (ownerCheckError)
       return { success: false, error: "Error checking collective ownership." };
     if (collectiveOwner?.owner_id === user.id) {
       isCollectiveOwnerOrMember = true;
     }
-    // Could also check collective_members for 'admin' role if members can delete
   }
 
   if (!isAuthor && !isCollectiveOwnerOrMember) {
@@ -422,17 +442,15 @@ export async function deletePost(postId: string): Promise<DeletePostResult> {
     };
   }
 
-  // Determine redirect path after successful deletion
-  let redirectPath = "/dashboard"; // Default redirect
+  let redirectPath = "/dashboard";
   if (existingPost.collective?.slug) {
     revalidatePath(`/collectives/${existingPost.collective.slug}`);
     redirectPath = `/collectives/${existingPost.collective.slug}`;
   } else if (existingPost.author_id) {
     revalidatePath(`/newsletters/${existingPost.author_id}`);
-    // redirectPath = `/newsletters/${existingPost.author_id}`; // Or back to dashboard
   }
   revalidatePath("/dashboard");
-  revalidatePath("/"); // Revalidate feed
+  revalidatePath("/");
 
   return { success: true, redirectPath };
 }
