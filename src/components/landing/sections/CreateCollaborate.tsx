@@ -22,7 +22,7 @@ export default function CreateCollaborate() {
   return (
     <motion.section
       ref={ref}
-      className="w-full py-16 md:py-20 bg-muted/50 border-b"
+      className="w-full py-12 md:py-16 bg-white text-[#1F1F1F] border-b-2 border-[#E50914]/10"
       initial="hidden"
       animate={isInView ? "visible" : "hidden"}
       variants={sectionVariants}
@@ -83,19 +83,23 @@ export default function CreateCollaborate() {
 
         {/* Copy */}
         <div className="space-y-6">
-          <h2 className="text-2xl md:text-3xl font-serif font-semibold">
-            Create&nbsp;Your <span className="text-primary">Channel</span>
+          <h2 className="text-3xl md:text-4xl font-extrabold">
+            Create&nbsp;Your <span className="text-[#E50914]">Channel</span>
           </h2>
-          <p className="text-lg text-muted-foreground">
+          <p className="text-lg text-[#1F1F1F]/80">
             Launch a newsletter in minutes. Invite peers, editors or an entire
             collective to co-author. Every post can be solo or collaborative—
             you decide.
           </p>
-          <p className="text-lg text-muted-foreground">
+          <p className="text-lg text-[#1F1F1F]/80">
             Readers see a single, organised feed; collaborators share drafts,
             comments and revenue splits behind the scenes.
           </p>
-          <Button asChild size="lg">
+          <Button
+            asChild
+            size="lg"
+            className="bg-[#E50914] hover:bg-[#FFCA28] text-white font-bold transition-colors border-none shadow-lg"
+          >
             <Link href="/sign-up">Start Writing</Link>
           </Button>
         </div>

@@ -86,166 +86,154 @@ export default function Navbar() {
   const isDashboardPath = pathname.startsWith("/dashboard");
 
   return (
-    <nav className="bg-background border-b fixed top-0 inset-x-0 z-50">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
-          <div className="flex items-center">
+    <nav className="w-full">
+      <div className="flex items-center justify-end space-x-3">
+        {isLoading ? (
+          <div className="h-8 w-20 bg-muted rounded animate-pulse"></div>
+        ) : user ? (
+          <>
+            <Button
+              variant={pathname === "/discover" ? "secondary" : "ghost"}
+              className="text-white font-bold hover:text-[#FFCA28] transition-colors"
+              onClick={() => router.push("/discover")}
+            >
+              Feed
+            </Button>
+            <Button
+              variant={isDashboardPath ? "secondary" : "ghost"}
+              className="text-white font-bold hover:text-[#FFCA28] transition-colors"
+              onClick={() => router.push("/dashboard")}
+            >
+              Dashboard
+            </Button>
+            <Button
+              variant="outline"
+              className="text-white font-bold hover:text-[#FFCA28] transition-colors"
+              onClick={handleSignOut}
+              disabled={isLoading}
+            >
+              Sign Out
+            </Button>
+          </>
+        ) : (
+          <>
+            <Button
+              variant="ghost"
+              className="text-white font-bold hover:text-[#FFCA28] transition-colors"
+              onClick={() => router.push("/sign-in")}
+            >
+              Sign In
+            </Button>
+            <Button
+              className="text-white font-bold hover:text-[#FFCA28] transition-colors"
+              onClick={() => router.push("/sign-up")}
+            >
+              Sign Up
+            </Button>
+          </>
+        )}
+        <ModeToggle />
+      </div>
+      {/* Mobile hamburger */}
+      <div className="md:hidden flex items-center space-x-2">
+        <ModeToggle />
+        <Sheet>
+          <SheetTrigger asChild>
+            <Button variant="ghost" size="icon" aria-label="Open menu">
+              <Menu className="size-5" />
+            </Button>
+          </SheetTrigger>
+          <SheetContent
+            side="left"
+            className="p-6 space-y-1 w-[250px] sm:w-[300px]"
+          >
             <Link
               href="/"
-              className="text-2xl font-bold text-primary hover:text-primary/80 transition-colors"
+              className="text-xl font-bold text-primary mb-4 block"
             >
               Lnked
             </Link>
-            {/* You can add more nav links here for different sections if needed */}
-            {/* <div className="hidden md:ml-6 md:flex md:space-x-8">
-              <Link href="/features" className="text-muted-foreground hover:text-foreground transition-colors">Features</Link>
-              <Link href="/pricing" className="text-muted-foreground hover:text-foreground transition-colors">Pricing</Link>
-            </div> */}
-          </div>
-          <div className="hidden md:flex items-center space-x-3">
             {isLoading ? (
-              <div className="h-8 w-20 bg-muted rounded animate-pulse"></div> // Skeleton loader
+              <div className="h-8 w-full bg-muted rounded animate-pulse mt-4" />
             ) : user ? (
-              <>
-                <Button
-                  variant={pathname === "/discover" ? "secondary" : "ghost"}
-                  onClick={() => router.push("/discover")}
-                >
-                  Feed
-                </Button>
-                <Button
-                  variant={isDashboardPath ? "secondary" : "ghost"}
-                  onClick={() => router.push("/dashboard")}
-                >
-                  Dashboard
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={handleSignOut}
-                  disabled={isLoading}
-                >
-                  Sign Out
-                </Button>
-              </>
+              <div className="flex flex-col space-y-1">
+                {isDashboardPath ? (
+                  <>
+                    {dashboardNavItems.map((item) => (
+                      <Button
+                        key={item.href}
+                        variant={pathname === item.href ? "secondary" : "ghost"}
+                        className="justify-start"
+                        onClick={() => router.push(item.href)}
+                      >
+                        {item.icon} {item.label}
+                      </Button>
+                    ))}
+                    <hr className="my-2" />
+                    <Button
+                      variant={pathname === "/discover" ? "secondary" : "ghost"}
+                      className="justify-start"
+                      onClick={() => router.push("/discover")}
+                    >
+                      <Newspaper className="size-4 mr-2" /> Discover
+                    </Button>
+                    <Button
+                      variant="outline"
+                      className="justify-start mt-4"
+                      onClick={handleSignOut}
+                    >
+                      <LogOut className="size-4 mr-2" /> Sign Out
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <Button
+                      variant={pathname === "/discover" ? "secondary" : "ghost"}
+                      className="justify-start"
+                      onClick={() => router.push("/discover")}
+                    >
+                      <Newspaper className="size-4 mr-2" /> Discover
+                    </Button>
+                    <Button
+                      variant={isDashboardPath ? "secondary" : "ghost"}
+                      className="justify-start"
+                      onClick={() => router.push("/dashboard")}
+                    >
+                      <LayoutDashboard className="size-4 mr-2" /> Dashboard
+                    </Button>
+                    <Button
+                      variant="outline"
+                      className="justify-start mt-4"
+                      onClick={handleSignOut}
+                    >
+                      <LogOut className="size-4 mr-2" /> Sign Out
+                    </Button>
+                  </>
+                )}
+              </div>
             ) : (
-              <>
-                <Button variant="ghost" onClick={() => router.push("/sign-in")}>
+              <div className="flex flex-col space-y-2">
+                <Button
+                  variant="ghost"
+                  className="justify-start"
+                  onClick={() => router.push("/sign-in")}
+                >
                   Sign In
                 </Button>
-                <Button onClick={() => router.push("/sign-up")}>Sign Up</Button>
-              </>
-            )}
-          </div>
-
-          {/* Mobile hamburger */}
-          <div className="md:hidden flex items-center space-x-2">
-            <ModeToggle />
-            <Sheet>
-              <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" aria-label="Open menu">
-                  <Menu className="size-5" />
-                </Button>
-              </SheetTrigger>
-              <SheetContent
-                side="left"
-                className="p-6 space-y-1 w-[250px] sm:w-[300px]"
-              >
-                <Link
-                  href="/"
-                  className="text-xl font-bold text-primary mb-4 block"
+                <Button
+                  className="w-full"
+                  onClick={() => router.push("/sign-up")}
                 >
-                  Lnked
-                </Link>
-                {isLoading ? (
-                  <div className="h-8 w-full bg-muted rounded animate-pulse mt-4" />
-                ) : user ? (
-                  <div className="flex flex-col space-y-1">
-                    {isDashboardPath ? (
-                      <>
-                        {dashboardNavItems.map((item) => (
-                          <Button
-                            key={item.href}
-                            variant={
-                              pathname === item.href ? "secondary" : "ghost"
-                            }
-                            className="justify-start"
-                            onClick={() => router.push(item.href)}
-                          >
-                            {item.icon} {item.label}
-                          </Button>
-                        ))}
-                        <hr className="my-2" />
-                        <Button
-                          variant={
-                            pathname === "/discover" ? "secondary" : "ghost"
-                          }
-                          className="justify-start"
-                          onClick={() => router.push("/discover")}
-                        >
-                          <Newspaper className="size-4 mr-2" /> Discover
-                        </Button>
-                        <Button
-                          variant="outline"
-                          className="justify-start mt-4"
-                          onClick={handleSignOut}
-                        >
-                          <LogOut className="size-4 mr-2" /> Sign Out
-                        </Button>
-                      </>
-                    ) : (
-                      <>
-                        <Button
-                          variant={
-                            pathname === "/discover" ? "secondary" : "ghost"
-                          }
-                          className="justify-start"
-                          onClick={() => router.push("/discover")}
-                        >
-                          <Newspaper className="size-4 mr-2" /> Discover
-                        </Button>
-                        <Button
-                          variant={isDashboardPath ? "secondary" : "ghost"}
-                          className="justify-start"
-                          onClick={() => router.push("/dashboard")}
-                        >
-                          <LayoutDashboard className="size-4 mr-2" /> Dashboard
-                        </Button>
-                        <Button
-                          variant="outline"
-                          className="justify-start mt-4"
-                          onClick={handleSignOut}
-                        >
-                          <LogOut className="size-4 mr-2" /> Sign Out
-                        </Button>
-                      </>
-                    )}
-                  </div>
-                ) : (
-                  <div className="flex flex-col space-y-2">
-                    <Button
-                      variant="ghost"
-                      className="justify-start"
-                      onClick={() => router.push("/sign-in")}
-                    >
-                      Sign In
-                    </Button>
-                    <Button
-                      className="w-full"
-                      onClick={() => router.push("/sign-up")}
-                    >
-                      Sign Up
-                    </Button>
-                  </div>
-                )}
-              </SheetContent>
-            </Sheet>
-          </div>
-
-          {/* Desktop theme toggle */}
-          <div className="hidden md:block">
-            <ModeToggle />
-          </div>
-        </div>
+                  Sign Up
+                </Button>
+              </div>
+            )}
+          </SheetContent>
+        </Sheet>
+      </div>
+      {/* Desktop theme toggle */}
+      <div className="hidden md:block">
+        <ModeToggle />
       </div>
     </nav>
   );

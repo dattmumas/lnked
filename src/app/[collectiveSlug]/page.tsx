@@ -88,38 +88,62 @@ export default async function CollectivePage({ params }: CollectivePageProps) {
     // Decide how to handle this - e.g., show an error message or empty state
   }
 
+  const allowedStatuses = ["draft", "active", "removed"] as const;
+  type StatusType = (typeof allowedStatuses)[number];
+
   const posts =
-    postsData?.map((p) => ({
-      ...(p as FetchedPostEntry), // Assert p to FetchedPostEntry (ensure FetchedPostEntry matches actual selected fields)
-      like_count: p.likes?.[0]?.count || 0,
-      // current_user_has_liked will be determined by PostLikeButton client-side
-    })) || [];
+    postsData?.map((p) => {
+      const entry = p as FetchedPostEntry & {
+        status?: string;
+        tsv?: unknown;
+        view_count?: number | null;
+      };
+      const status: StatusType = allowedStatuses.includes(
+        entry.status as StatusType
+      )
+        ? (entry.status as StatusType)
+        : "active";
+      return {
+        ...entry,
+        like_count: p.likes?.[0]?.count || 0,
+        status,
+        tsv: entry.tsv ?? null,
+        view_count: entry.view_count ?? 0,
+        // current_user_has_liked will be determined by PostLikeButton client-side
+      };
+    }) || [];
 
   // Check if current user is the owner of the collective to show edit/new post links
   const isOwner = user?.id === collective.owner_id;
 
   return (
     <div className="container mx-auto p-4 md:p-6">
-      <header className="mb-8 border-b pb-6">
-        <div className="flex flex-col sm:flex-row justify-between sm:items-start gap-4">
-          <div>
-            <h1 className="text-4xl font-bold tracking-tight mb-2">
-              {collective.name}
-            </h1>
-            {collective.description && (
-              <p className="text-lg text-muted-foreground">
-                {collective.description}
-              </p>
-            )}
+      <header className="mb-8 pb-6 border-b-2 border-[#E50914]/10 flex flex-col items-center">
+        <h1 className="text-5xl font-extrabold tracking-tight text-center flex items-center mb-4">
+          {collective.name}
+          <span
+            className="ml-2 text-[#E50914] text-5xl leading-none align-middle"
+            style={{ fontWeight: 900 }}
+          >
+            .
+          </span>
+        </h1>
+        {collective.description && (
+          <div className="bg-white shadow rounded-xl p-6 max-w-2xl w-full text-center mx-auto">
+            <p className="text-lg text-[#1F1F1F]/80">
+              {collective.description}
+            </p>
           </div>
-          {user?.id !== collective.owner_id && (
+        )}
+        {user?.id !== collective.owner_id && (
+          <div className="mt-4">
             <SubscribeButton
               targetEntityType="collective"
               targetEntityId={collective.id}
               targetName={collective.name}
             />
-          )}
-        </div>
+          </div>
+        )}
         {isOwner && (
           <div className="mt-4">
             <Button asChild variant="outline">
@@ -133,11 +157,11 @@ export default async function CollectivePage({ params }: CollectivePageProps) {
 
       <main>
         {posts && posts.length > 0 ? (
-          <div className="grid gap-6 md:gap-8 lg:gap-10">
+          <div className="grid gap-8">
             {posts.map((post) => (
               <PostCard
                 key={post.id}
-                post={post} // Should now align better with PostWithLikes in PostCard
+                post={post}
                 collectiveSlug={collectiveSlug}
               />
             ))}

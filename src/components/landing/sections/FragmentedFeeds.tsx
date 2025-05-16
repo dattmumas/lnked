@@ -39,7 +39,7 @@ export default function FragmentedFeeds() {
   return (
     <motion.section
       ref={ref}
-      className="w-full py-16 md:py-20 bg-background text-foreground border-b"
+      className="w-full py-12 md:py-16 bg-[#F7F7F7] text-[#1F1F1F] border-b-2 border-[#E50914]/10"
       initial="hidden"
       animate={isInView ? "visible" : "hidden"}
       variants={sectionVariants}
@@ -59,15 +59,14 @@ export default function FragmentedFeeds() {
 
         {/* Copy column */}
         <div className="order-1 md:order-2 flex flex-col justify-center space-y-4">
-          <h2 className="text-2xl md:text-3xl font-serif font-semibold">
-            Fragmented
-            <span className="text-primary"> Feeds</span>
+          <h2 className="text-3xl md:text-4xl font-extrabold">
+            Fragmented <span className="text-[#E50914]">Feeds</span>
           </h2>
-          <p className="text-muted-foreground text-lg">
+          <p className="text-lg text-[#1F1F1F]/80">
             Content arrives in isolation—different emails, tabs and apps.
             Keeping up feels like whiplash.
           </p>
-          <p className="text-muted-foreground text-lg">
+          <p className="text-lg text-[#1F1F1F]/80">
             Lnked weaves these voices together so you can follow ideas, not
             inboxes.
           </p>

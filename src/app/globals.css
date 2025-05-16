@@ -99,9 +99,20 @@
   */
 
   body {
-    background-color: hsl(var(--background));
-    color: hsl(var(--foreground));
+    background-color: #f7f7f7;
+    color: #1f1f1f;
     @apply antialiased;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    color: #1f1f1f;
+    font-weight: 800;
+    letter-spacing: -0.01em;
   }
 
   /* Prose style customizations REMOVED FOR NOW to restore base styling 
@@ -148,3 +159,17 @@
 /* Removed specific element overrides like .ProseMirror h1, .ProseMirror p etc. */
 /* Rely on the 'prose' classes applied via editorProps in TiptapEditor.tsx */
 /* and customize typography via tailwind.config.ts if needed */
+
+@layer utilities {
+  .bg-highlight {
+    background-color: #ffca28;
+  }
+  .text-highlight {
+    color: #ffca28;
+  }
+  .img-splash {
+    max-width: 100%;
+    box-shadow: 0 4px 24px 0 rgba(0, 0, 0, 0.08), 0 1.5px 0 0 #ffca28;
+    border-radius: 0.5rem;
+  }
+}

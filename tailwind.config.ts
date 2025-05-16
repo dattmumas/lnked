@@ -80,6 +80,27 @@ const config: Config = {
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
         },
+        brandPrimary: {
+          DEFAULT: "#E50914", // YouTube Red
+          dark: "#B0060F",
+        },
+        brandSecondary: {
+          DEFAULT: "#1F1F1F", // Deep Charcoal
+          dark: "#121212",
+        },
+        brandPaperBg: {
+          DEFAULT: "#F7F7F7", // Newspaper Light Gray
+          dark: "#232323",
+        },
+        brandHighlight: {
+          DEFAULT: "#FFCA28", // Gold Accent
+          dark: "#FFD54F",
+        },
+        // Utility for highlight backgrounds/text
+        highlight: {
+          DEFAULT: "#FFCA28",
+          fg: "#1F1F1F",
+        },
       },
       borderRadius: {
         lg: "var(--radius)",
@@ -112,11 +133,26 @@ const config: Config = {
                 textDecorationLine: "underline",
               },
             },
-            "h1, h2, h3, h4, h5, h6": {
-              fontFamily:
-                'var(--font-geist-mono), Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
-              color: "hsl(var(--foreground))",
+            h1: {
+              fontSize: "3rem",
+              fontWeight: "800",
+              lineHeight: "1.1",
+              color: "#1F1F1F",
+            },
+            h2: {
+              fontSize: "2.25rem",
               fontWeight: "700",
+              lineHeight: "1.15",
+              color: "#1F1F1F",
+            },
+            h3: {
+              fontSize: "1.5rem",
+              fontWeight: "700",
+              color: "#1F1F1F",
+            },
+            h4: {
+              fontWeight: "600",
+              color: "#1F1F1F",
             },
             strong: {
               color: "hsl(var(--foreground))",

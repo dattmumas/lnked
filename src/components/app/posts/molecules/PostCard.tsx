@@ -97,14 +97,19 @@ export default function PostCard({ post, collectiveSlug }: PostCardProps) {
   };
 
   return (
-    <article className="bg-card p-4 sm:p-6 rounded-lg shadow-sm border hover:shadow-md transition-shadow duration-200 flex flex-col">
+    <article className="bg-white border border-[#E50914]/20 rounded-xl shadow-md p-6 transition-all duration-200 hover:ring-2 hover:ring-[#FFCA28] hover:scale-[1.02] flex flex-col">
+      {/* Thumbnail or color block placeholder (if available) */}
+      {/* Uncomment and adapt if you have a post.image or cover field */}
+      {/* {post.image && (
+        <img src={post.image} alt="Post cover" className="img-splash mb-4" />
+      )} */}
       <Link href={postUrl} className="group mb-auto">
-        <h2 className="text-xl sm:text-2xl font-semibold mb-2 group-hover:text-primary transition-colors">
+        <h2 className="text-2xl font-bold mb-2 group-hover:text-[#E50914] transition-colors">
           {post.title}
         </h2>
       </Link>
 
-      <p className="text-xs sm:text-sm text-muted-foreground mb-3">
+      <p className="text-xs sm:text-sm text-[#1F1F1F]/60 mb-3">
         Published on {formattedDate}
       </p>
 
@@ -115,7 +120,7 @@ export default function PostCard({ post, collectiveSlug }: PostCardProps) {
       <div className="flex items-center justify-between mt-auto pt-4 border-t">
         <Link
           href={postUrl}
-          className="text-sm font-medium text-primary hover:underline"
+          className="text-sm font-medium text-[#E50914] hover:underline"
         >
           Read more &rarr;
         </Link>
@@ -132,12 +137,12 @@ export default function PostCard({ post, collectiveSlug }: PostCardProps) {
             <Heart
               className={`w-5 h-5 ${
                 optimisticUserHasLiked
-                  ? "fill-destructive text-destructive"
-                  : "text-muted-foreground"
+                  ? "fill-[#E50914] text-[#E50914]"
+                  : "text-[#1F1F1F]/40"
               }`}
             />
           </Button>
-          <span className="text-sm text-muted-foreground tabular-nums">
+          <span className="text-sm text-[#1F1F1F]/60 tabular-nums">
             {optimisticLikeCount} {optimisticLikeCount === 1 ? "like" : "likes"}
           </span>
         </div>

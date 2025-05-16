@@ -56,12 +56,28 @@ export default async function PostPage({ params }: PostPageProps) {
         },
         set(name: string, value: string, options: CookieOptions) {
           try {
-            (cookieStore as any).set(name, value, options);
+            (
+              cookieStore as unknown as {
+                set: (
+                  name: string,
+                  value: string,
+                  options: CookieOptions
+                ) => void;
+              }
+            ).set(name, value, options);
           } catch {}
         },
         remove(name: string, options: CookieOptions) {
           try {
-            (cookieStore as any).set(name, "", { ...options, maxAge: 0 });
+            (
+              cookieStore as unknown as {
+                set: (
+                  name: string,
+                  value: string,
+                  options: CookieOptions
+                ) => void;
+              }
+            ).set(name, "", { ...options, maxAge: 0 });
           } catch {}
         },
       },
@@ -170,12 +186,22 @@ export default async function PostPage({ params }: PostPageProps) {
         </ol>
       </nav>
 
-      <article className="prose dark:prose-invert lg:prose-xl max-w-none">
-        <header className="mb-8">
-          <h1 className="text-4xl font-extrabold tracking-tight lg:text-5xl mb-4">
+      <article className="bg-white shadow rounded-xl p-8 max-w-none">
+        {/* Hero image if available */}
+        {/* {post.image && (
+          <img src={post.image} alt="Post cover" className="img-splash mb-6" />
+        )} */}
+        <header className="mb-8 flex flex-col items-center">
+          <h1 className="text-5xl font-extrabold tracking-tight text-center flex items-center mb-4">
             {post.title}
+            <span
+              className="ml-2 text-[#E50914] text-5xl leading-none align-middle"
+              style={{ fontWeight: 900 }}
+            >
+              .
+            </span>
           </h1>
-          <div className="text-base text-muted-foreground flex flex-wrap items-center gap-x-3 gap-y-1">
+          <div className="text-base text-[#1F1F1F]/70 flex flex-wrap items-center gap-x-3 gap-y-1 justify-center">
             <span>
               Published on {formatDate(post.published_at || post.created_at)}
             </span>
@@ -184,7 +210,7 @@ export default async function PostPage({ params }: PostPageProps) {
                 by{" "}
                 <Link
                   href={`/newsletters/${post.author.id}`}
-                  className="hover:underline"
+                  className="hover:underline text-[#E50914]"
                 >
                   {authorName}
                 </Link>
@@ -197,21 +223,33 @@ export default async function PostPage({ params }: PostPageProps) {
               {viewCount} {viewCount === 1 ? "view" : "views"}
             </span>
           </div>
+          <div className="mt-4 flex justify-center">
+            <div className="!bg-[#FFCA28] !text-[#1F1F1F] !rounded-full !shadow-md hover:!bg-[#E50914] hover:!text-white transition-colors p-2">
+              <PostLikeButton
+                postId={post.id}
+                collectiveSlug={collective.slug}
+                initialLikes={initialLikeCount}
+                authorId={post.author.id}
+              />
+            </div>
+          </div>
         </header>
-
-        {/* Render post content here. For Markdown, you'd use a library like react-markdown */}
-        {/* For now, just rendering as pre-wrap to show structure */}
-        <div className="whitespace-pre-wrap break-words">{post.content}</div>
+        <div
+          className="prose dark:prose-invert lg:prose-xl max-w-none"
+          style={
+            {
+              "--tw-prose-blockquote-borders": "#FFCA28",
+            } as React.CSSProperties
+          }
+        >
+          {/* Main post content (HTML or markdown) */}
+          {/* If using HTML, use dangerouslySetInnerHTML. If markdown, render as children. */}
+          <div dangerouslySetInnerHTML={{ __html: post.content || "" }} />
+        </div>
       </article>
 
       <footer className="mt-12 pt-8 border-t">
         <div className="flex justify-between items-center">
-          <PostLikeButton
-            postId={post.id}
-            collectiveSlug={collective.slug}
-            initialLikes={initialLikeCount}
-            authorId={post.author.id}
-          />
           {isOwner && (
             <Button asChild variant="outline">
               <Link href={`/dashboard/posts/${post.id}/edit`}>Edit Post</Link>{" "}

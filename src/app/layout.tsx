@@ -5,6 +5,7 @@ import "./globals.css";
 import Navbar from "@/components/Navbar";
 import { ThemeProvider } from "next-themes";
 import SmoothScroll from "@/components/app/SmoothScroll";
+import Footer from "@/components/ui/Footer";
 
 export const metadata: Metadata = {
   title: "Lnked - Collaborative Newsletters",
@@ -22,7 +23,7 @@ export default function RootLayout({
       className={`${GeistSans.variable} ${GeistMono.variable}`}
       suppressHydrationWarning
     >
-      <body className="bg-background text-foreground font-sans antialiased">
+      <body className="bg-[#F7F7F7] text-[#1F1F1F] font-sans antialiased">
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
@@ -30,8 +31,22 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <SmoothScroll />
-          <Navbar />
-          <main className="pt-16">{children}</main>
+          <header className="bg-[#1F1F1F] border-b-2 border-[#E50914] px-4 h-20 flex items-center justify-between sticky top-0 z-50">
+            <span className="text-2xl md:text-3xl font-extrabold text-white tracking-tight flex items-center h-full">
+              Lnked
+              <span
+                className="ml-1 text-[#E50914] text-3xl md:text-4xl leading-none self-center"
+                style={{ fontWeight: 900 }}
+              >
+                .
+              </span>
+            </span>
+            <div className="flex-1 flex justify-end items-center h-full">
+              <Navbar />
+            </div>
+          </header>
+          <main className="mx-auto max-w-3xl px-4 py-8">{children}</main>
+          <Footer />
         </ThemeProvider>
       </body>
     </html>

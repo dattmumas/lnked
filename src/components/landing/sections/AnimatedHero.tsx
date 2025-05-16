@@ -66,23 +66,23 @@ const AnimatedHero = () => {
 
   return (
     <motion.section
-      className="z-10 flex flex-col items-center text-center space-y-8 py-16 md:py-20"
+      className="z-10 flex flex-col items-center text-center space-y-8 pt-8 md:pt-12 pb-12 md:pb-16 w-full relative overflow-hidden"
       variants={heroContainerVariants}
       initial="hidden"
       animate="visible"
     >
       <motion.h1
-        className="text-5xl md:text-7xl font-bold font-serif tracking-tight"
+        className="text-6xl md:text-7xl font-extrabold font-serif tracking-tight text-[#1F1F1F] drop-shadow-lg relative"
         variants={titleItemVariants}
       >
         Lnked
-        <motion.span variants={titleItemVariants} className="text-primary">
+        <motion.span variants={titleItemVariants} className="text-[#E50914]">
           .
         </motion.span>
       </motion.h1>
 
       <motion.p
-        className="text-xl md:text-2xl text-muted-foreground max-w-2xl"
+        className="text-2xl md:text-3xl text-[#1F1F1F] max-w-2xl font-semibold"
         variants={wordContainerVariants}
       >
         {taglineWords.map((word, index) => (
@@ -97,16 +97,22 @@ const AnimatedHero = () => {
       </motion.p>
 
       <motion.p
-        className="text-lg text-muted-foreground max-w-xl"
+        className="text-lg text-[#1F1F1F] max-w-xl"
         variants={textItemVariants}
       >
-        Unearth unique newsletters. Forge collaborative collectives. Own your
-        narrative.
+        Unearth unique newsletters. Forge{" "}
+        <span className="text-[#E50914] font-bold">
+          collaborative collectives
+        </span>
+        . Own your narrative.
       </motion.p>
 
       <motion.div variants={buttonItemVariants}>
         <Link href="/discover">
-          <Button size="lg" variant="default">
+          <Button
+            size="lg"
+            className="bg-[#E50914] hover:bg-[#FFCA28] text-white font-bold transition-colors border-none shadow-lg"
+          >
             Explore Now
           </Button>
         </Link>
