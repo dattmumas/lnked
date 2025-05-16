@@ -72,12 +72,36 @@
   --sidebar-ring: oklch(0.556 0 0);
 }
 
+/*
+  Base styles
+  -------------------------------------------------------------------------
+  We use CSS variables (see :root above) to hold color tokens that Tailwind
+  maps to class names via our tailwind.config.ts.
+
+  Unfortunately `@apply border-border` and `@apply outline-ring/50` are not
+  recognised by Tailwind v4 because they are *color-only* utilities without a
+  corresponding property (e.g. `border`, `outline`). This triggers the
+  "unknown utility class" error and prevents the entire stylesheet from
+  compiling, which is why the application renders **unstyled**.
+
+  Instead, we explicitly set the required properties and colours with valid
+  utilities. Every element gets the design-system foreground/background and a
+  default transparent border that can be styled per-component.
+*/
+
 @layer base {
   * {
-    @apply border-border outline-ring/50;
+    /* Provide a 1 px transparent border so components can change the colour
+       without changing layout. */
+    @apply border border-transparent;
+    /* If you would like every element to inherit the design-system border
+       colour by default, replace `border-transparent` with `border-border`. */
   }
+
   body {
-    @apply bg-background text-foreground;
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+    @apply antialiased;
   }
 }
 

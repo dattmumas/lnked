@@ -22,7 +22,7 @@ export async function fetchRecommendations(
   cursor?: string,
   limit = 10
 ): Promise<{ recommendations: Recommendation[]; nextCursor: string | null }> {
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   const cookieHeader = cookieStore.toString(); // Construct header if needed by API
 
   const params = new URLSearchParams();

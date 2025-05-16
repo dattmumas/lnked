@@ -72,8 +72,8 @@ export default function Navbar() {
             ) : user ? (
               <>
                 <Button
-                  variant={pathname === "/" ? "secondary" : "ghost"}
-                  onClick={() => router.push("/")}
+                  variant={pathname === "/discover" ? "secondary" : "ghost"}
+                  onClick={() => router.push("/discover")}
                 >
                   Feed
                 </Button>

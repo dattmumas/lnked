@@ -16,14 +16,127 @@ import { useRouter } from "next/navigation";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Terminal } from "lucide-react";
 
+// Types
 interface AuthFormProps {
   mode: "signIn" | "signUp";
   onSubmit: (formData: Record<string, string>) => Promise<void>;
   isLoading: boolean;
   error: string | null;
-  message?: string | null; // Optional: for sign-up success messages
+  message?: string | null;
 }
 
+interface AuthFormFieldsProps {
+  mode: "signIn" | "signUp";
+  isLoading: boolean;
+  email: string;
+  setEmail: (value: string) => void;
+  password: string;
+  setPassword: (value: string) => void;
+  fullName?: string;
+  setFullName?: (value: string) => void;
+}
+
+interface AuthFormHeaderProps {
+  title: string;
+  description: string;
+}
+
+interface AuthFormFooterProps {
+  isLoading: boolean;
+  promptText: string;
+  linkText: string;
+  linkHref: string;
+}
+
+// Sub-components
+const AuthFormHeaderComponent: React.FC<AuthFormHeaderProps> = ({
+  title,
+  description,
+}) => (
+  <CardHeader className="text-center">
+    <CardTitle className="text-2xl">{title}</CardTitle>
+    <CardDescription>{description}</CardDescription>
+  </CardHeader>
+);
+
+const AuthFormFieldsComponent: React.FC<AuthFormFieldsProps> = ({
+  mode,
+  isLoading,
+  email,
+  setEmail,
+  password,
+  setPassword,
+  fullName,
+  setFullName,
+}) => (
+  <>
+    {mode === "signUp" && setFullName && (
+      <div className="space-y-2">
+        <Label htmlFor="fullName">Full Name</Label>
+        <Input
+          id="fullName"
+          type="text"
+          placeholder="Your Name"
+          required
+          value={fullName}
+          onChange={(e) => setFullName(e.target.value)}
+          disabled={isLoading}
+        />
+      </div>
+    )}
+    <div className="space-y-2">
+      <Label htmlFor="email">Email</Label>
+      <Input
+        id="email"
+        type="email"
+        placeholder="m@example.com"
+        required
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        disabled={isLoading}
+      />
+    </div>
+    <div className="space-y-2">
+      <Label htmlFor="password">Password</Label>
+      <Input
+        id="password"
+        type="password"
+        placeholder={mode === "signUp" ? "••••••••" : undefined}
+        required
+        minLength={mode === "signUp" ? 6 : undefined}
+        value={password}
+        onChange={(e) => setPassword(e.target.value)}
+        disabled={isLoading}
+      />
+    </div>
+  </>
+);
+
+const AuthFormFooterComponent: React.FC<AuthFormFooterProps> = ({
+  isLoading,
+  promptText,
+  linkText,
+  linkHref,
+}) => {
+  const router = useRouter();
+  return (
+    <CardFooter className="flex flex-col items-center space-y-2 text-sm">
+      <p className="text-muted-foreground">
+        {promptText}
+        <Button
+          variant="link"
+          className="pl-1"
+          onClick={() => router.push(linkHref)}
+          disabled={isLoading}
+        >
+          {linkText}
+        </Button>
+      </p>
+    </CardFooter>
+  );
+};
+
+// Main AuthForm Component
 export default function AuthForm({
   mode,
   onSubmit,
@@ -31,10 +144,9 @@ export default function AuthForm({
   error,
   message,
 }: AuthFormProps) {
-  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [fullName, setFullName] = useState(""); // Only for sign-up
+  const [fullName, setFullName] = useState("");
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -45,67 +157,40 @@ export default function AuthForm({
     onSubmit(formData);
   };
 
-  const title = mode === "signIn" ? "Sign In" : "Create an Account";
-  const description =
-    mode === "signIn"
-      ? "Enter your email and password to access your account."
-      : "Enter your details to get started.";
-  const buttonText = mode === "signIn" ? "Sign In" : "Create Account";
-  const loadingButtonText =
-    mode === "signIn" ? "Signing In..." : "Creating Account...";
-  const switchLinkText = mode === "signIn" ? "Sign Up" : "Sign In";
-  const switchPromptText =
-    mode === "signIn" ? "Don't have an account?" : "Already have an account?";
-  const switchLinkHref = mode === "signIn" ? "/sign-up" : "/sign-in";
+  const content = {
+    title: mode === "signIn" ? "Sign In" : "Create an Account",
+    description:
+      mode === "signIn"
+        ? "Enter your email and password to access your account."
+        : "Enter your details to get started.",
+    buttonText: mode === "signIn" ? "Sign In" : "Create Account",
+    loadingButtonText:
+      mode === "signIn" ? "Signing In..." : "Creating Account...",
+    switchLinkText: mode === "signIn" ? "Sign Up" : "Sign In",
+    switchPromptText:
+      mode === "signIn" ? "Don't have an account?" : "Already have an account?",
+    switchLinkHref: mode === "signIn" ? "/sign-up" : "/sign-in",
+  };
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-muted/40 p-4 md:p-6">
       <Card className="w-full max-w-sm">
-        <CardHeader className="text-center">
-          <CardTitle className="text-2xl">{title}</CardTitle>
-          <CardDescription>{description}</CardDescription>
-        </CardHeader>
+        <AuthFormHeaderComponent
+          title={content.title}
+          description={content.description}
+        />
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
-            {mode === "signUp" && (
-              <div className="space-y-2">
-                <Label htmlFor="fullName">Full Name</Label>
-                <Input
-                  id="fullName"
-                  type="text"
-                  placeholder="Your Name"
-                  required
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  disabled={isLoading}
-                />
-              </div>
-            )}
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="m@example.com"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                disabled={isLoading}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                placeholder={mode === "signUp" ? "••••••••" : undefined}
-                required
-                minLength={mode === "signUp" ? 6 : undefined} // Supabase default min password length for sign-up
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                disabled={isLoading}
-              />
-            </div>
+            <AuthFormFieldsComponent
+              mode={mode}
+              isLoading={isLoading}
+              email={email}
+              setEmail={setEmail}
+              password={password}
+              setPassword={setPassword}
+              fullName={mode === "signUp" ? fullName : undefined}
+              setFullName={mode === "signUp" ? setFullName : undefined}
+            />
             {error && (
               <Alert variant="destructive" className="mt-4">
                 <Terminal className="h-4 w-4" />
@@ -128,23 +213,16 @@ export default function AuthForm({
               </Alert>
             )}
             <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? loadingButtonText : buttonText}
+              {isLoading ? content.loadingButtonText : content.buttonText}
             </Button>
           </form>
         </CardContent>
-        <CardFooter className="flex flex-col items-center space-y-2 text-sm">
-          <p className="text-muted-foreground">
-            {switchPromptText}
-            <Button
-              variant="link"
-              className="pl-1"
-              onClick={() => router.push(switchLinkHref)}
-              disabled={isLoading}
-            >
-              {switchLinkText}
-            </Button>
-          </p>
-        </CardFooter>
+        <AuthFormFooterComponent
+          isLoading={isLoading}
+          promptText={content.switchPromptText}
+          linkText={content.switchLinkText}
+          linkHref={content.switchLinkHref}
+        />
       </Card>
     </div>
   );
