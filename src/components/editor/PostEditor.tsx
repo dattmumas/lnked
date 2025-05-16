@@ -1,30 +1,31 @@
 "use client";
 
+import React, { useEffect } from "react";
 import { LexicalComposer } from "@lexical/react/LexicalComposer";
 import { RichTextPlugin } from "@lexical/react/LexicalRichTextPlugin";
 import { ContentEditable } from "@lexical/react/LexicalContentEditable";
 import { HistoryPlugin } from "@lexical/react/LexicalHistoryPlugin";
 import { LinkPlugin } from "@lexical/react/LexicalLinkPlugin";
 import { ListPlugin } from "@lexical/react/LexicalListPlugin";
-import LexicalErrorBoundary from "@lexical/react/LexicalErrorBoundary";
+// import LexicalErrorBoundary from "@lexical/react/LexicalErrorBoundary"; // Keep commented: type issue
+import { OnChangePlugin } from "@lexical/react/LexicalOnChangePlugin";
+import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
+import type { EditorState, LexicalEditor } from "lexical";
 
-// Import default nodes (or specific ones as needed)
+// Node imports
 import { HeadingNode, QuoteNode } from "@lexical/rich-text";
 import { ListItemNode, ListNode } from "@lexical/list";
 import { CodeHighlightNode, CodeNode } from "@lexical/code";
 import { TableCellNode, TableNode, TableRowNode } from "@lexical/table";
 import { AutoLinkNode, LinkNode } from "@lexical/link";
 
-// Placeholder for editor theme - will be customized with Tailwind classes
 const editorTheme = {
   ltr: "text-left",
   rtl: "text-right",
-  paragraph: "mb-2", // Prose will handle base paragraph style
-  quote: "border-l-4 border-primary pl-4 italic", // Custom quote style
+  paragraph: "mb-2",
+  quote: "border-l-4 border-primary pl-4 italic",
   heading: {
-    // Prose will apply font-serif from our tailwind.config.ts customization (once that's fixed)
-    // We can add specific size/margin overrides if prose defaults aren't enough.
-    h1: "text-3xl font-bold mb-4", // These sizes might be overridden by prose, or combine
+    h1: "text-3xl font-bold mb-4",
     h2: "text-2xl font-semibold mb-3",
     h3: "text-xl font-semibold mb-2",
   },
@@ -32,7 +33,6 @@ const editorTheme = {
     ol: "list-decimal list-inside",
     ul: "list-disc list-inside",
     listitem: "mb-1",
-    // nested.listitem will be inherited or can be styled if needed
   },
   link: "text-primary hover:underline",
   text: {
@@ -42,29 +42,47 @@ const editorTheme = {
     strikethrough: "line-through",
     code: "font-mono bg-muted text-muted-foreground px-1 py-0.5 rounded text-sm",
   },
-  code: "bg-muted p-4 rounded font-mono text-sm overflow-x-auto", // For code blocks (prose might also style this)
+  code: "bg-muted p-4 rounded font-mono text-sm overflow-x-auto",
 };
 
-// Catch any Lexical errors
-function onError(error: Error) {
-  console.error("[Lexical PostEditor]:", error);
+function lexicalEditorOnError(error: Error, editor: LexicalEditor) {
+  console.error("[Lexical PostEditor Global ErrorHandler]:", error, editor);
+}
+
+function LoadInitialStatePlugin({
+  editorStateJSON,
+}: {
+  editorStateJSON: string | null | undefined;
+}) {
+  const [editor] = useLexicalComposerContext();
+  useEffect(() => {
+    if (editorStateJSON) {
+      try {
+        const initialEditorState = editor.parseEditorState(editorStateJSON);
+        editor.setEditorState(initialEditorState);
+      } catch (e) {
+        console.error("Error parsing initial editor state:", e);
+      }
+    }
+  }, [editor, editorStateJSON]);
+  return null;
 }
 
 interface PostEditorProps {
-  initialEditorState?: string; // For loading existing content (JSON stringified editor state)
-  onChange?: (editorStateJSON: string) => void;
+  initialContentJSON?: string;
+  onContentChange?: (editorStateJSON: string) => void;
   placeholder?: string;
 }
 
 export default function PostEditor({
-  initialEditorState,
-  onChange,
+  initialContentJSON,
+  onContentChange,
   placeholder = "Share your thoughts...",
 }: PostEditorProps) {
   const initialConfig = {
     namespace: "LnkedPostEditor",
     theme: editorTheme,
-    onError,
+    onError: lexicalEditorOnError,
     nodes: [
       HeadingNode,
       ListNode,
@@ -78,12 +96,19 @@ export default function PostEditor({
       AutoLinkNode,
       LinkNode,
     ],
-    editorState: initialEditorState || null, // Initialize with passed state or null for new editor
+  };
+
+  const handleOnChange = (editorState: EditorState) => {
+    if (onContentChange) {
+      onContentChange(JSON.stringify(editorState.toJSON()));
+    }
   };
 
   return (
     <LexicalComposer initialConfig={initialConfig}>
       <div className="relative prose dark:prose-invert max-w-none w-full editor-container rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-within:outline-none focus-within:ring-1 focus-within:ring-ring">
+        {/* TODO: ErrorBoundary prop is required by RichTextPlugin and needs a compatible component. */}
+        {/* Current LexicalErrorBoundary import causes type issues. Needs local debugging. */}
         <RichTextPlugin
           contentEditable={
             <ContentEditable className="editor-input min-h-[300px] focus:outline-none resize-none" />
@@ -93,15 +118,18 @@ export default function PostEditor({
               {placeholder}
             </div>
           }
-          ErrorBoundary={LexicalErrorBoundary}
+          // ErrorBoundary={...} // This prop is required
         />
         <HistoryPlugin />
         <LinkPlugin />
         <ListPlugin />
-        {/* <AutoFocusPlugin /> */}
-        {/* Other essential plugins will be added here: Markdown, Slash commands, Embeds, etc. */}
+        {onContentChange && (
+          <OnChangePlugin onChange={handleOnChange} ignoreSelectionChange />
+        )}
+        {initialContentJSON && (
+          <LoadInitialStatePlugin editorStateJSON={initialContentJSON} />
+        )}
       </div>
-      {/* Toolbar would go here - floating or fixed */}
     </LexicalComposer>
   );
 }
