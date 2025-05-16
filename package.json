@@ -11,6 +11,12 @@
   },
   "dependencies": {
     "@hookform/resolvers": "^5.0.1",
+    "@lexical/code": "^0.31.1",
+    "@lexical/link": "^0.31.1",
+    "@lexical/list": "^0.31.1",
+    "@lexical/markdown": "^0.31.1",
+    "@lexical/rich-text": "^0.31.1",
+    "@lexical/table": "^0.31.1",
     "@radix-ui/react-dialog": "^1.1.13",
     "@radix-ui/react-label": "^2.1.6",
     "@radix-ui/react-select": "^2.2.4",
