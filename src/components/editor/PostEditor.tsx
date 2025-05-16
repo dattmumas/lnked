@@ -1,18 +1,22 @@
 "use client";
 
 import React, { useEffect } from "react";
-import {
-  LexicalComposer,
-  RichTextPlugin,
-  ContentEditable,
-  HistoryPlugin,
-  LinkPlugin,
-  ListPlugin,
-  OnChangePlugin,
-  LexicalErrorBoundary,
-  useLexicalComposerContext,
-} from "@lexical/react";
-import type { EditorState, LexicalEditor } from "lexical";
+import { LexicalComposer } from "@lexical/react/LexicalComposer";
+import { RichTextPlugin } from "@lexical/react/LexicalRichTextPlugin";
+import { ContentEditable } from "@lexical/react/LexicalContentEditable";
+import { HistoryPlugin } from "@lexical/react/LexicalHistoryPlugin";
+import { LinkPlugin } from "@lexical/react/LexicalLinkPlugin";
+import { ListPlugin } from "@lexical/react/LexicalListPlugin";
+import { OnChangePlugin } from "@lexical/react/LexicalOnChangePlugin";
+// import LexicalErrorBoundary from "@lexical/react/LexicalErrorBoundary"; // Keep commented, type issue
+import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
+
+import type {
+  EditorState,
+  LexicalEditor,
+  Klass,
+  LexicalNode as LexicalNodeType,
+} from "lexical";
 
 // Node imports
 import { HeadingNode, QuoteNode } from "@lexical/rich-text";
@@ -49,6 +53,8 @@ const editorTheme = {
 
 function lexicalEditorOnError(error: Error, editor: LexicalEditor) {
   console.error("[Lexical PostEditor Global ErrorHandler]:", error, editor);
+  // Re-throw the error to be caught by the LexicalErrorBoundary
+  throw error;
 }
 
 function LoadInitialStatePlugin({
@@ -76,6 +82,20 @@ interface PostEditorProps {
   placeholder?: string;
 }
 
+const editorNodes: Array<Klass<LexicalNodeType>> = [
+  HeadingNode,
+  ListNode,
+  ListItemNode,
+  QuoteNode,
+  CodeNode,
+  CodeHighlightNode,
+  TableNode,
+  TableCellNode,
+  TableRowNode,
+  AutoLinkNode,
+  LinkNode,
+];
+
 export default function PostEditor({
   initialContentJSON,
   onContentChange,
@@ -85,19 +105,7 @@ export default function PostEditor({
     namespace: "LnkedPostEditor",
     theme: editorTheme,
     onError: lexicalEditorOnError,
-    nodes: [
-      HeadingNode,
-      ListNode,
-      ListItemNode,
-      QuoteNode,
-      CodeNode,
-      CodeHighlightNode,
-      TableNode,
-      TableCellNode,
-      TableRowNode,
-      AutoLinkNode,
-      LinkNode,
-    ],
+    nodes: editorNodes,
   };
 
   const handleOnChange = (editorState: EditorState) => {
@@ -109,6 +117,12 @@ export default function PostEditor({
   return (
     <LexicalComposer initialConfig={initialConfig}>
       <div className="relative prose dark:prose-invert max-w-none w-full editor-container rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-within:outline-none focus-within:ring-1 focus-within:ring-ring">
+        {/* 
+          TODO: RichTextPlugin requires an ErrorBoundary prop.
+          Passing LexicalErrorBoundary (from @lexical/react/LexicalErrorBoundary) directly results in a type error.
+          This needs local debugging to determine the correct type/usage for your Lexical version (0.31.1).
+          Example: ErrorBoundary={LexicalErrorBoundary} or a compatible custom boundary.
+        */}
         <RichTextPlugin
           contentEditable={
             <ContentEditable className="editor-input min-h-[300px] focus:outline-none resize-none" />
