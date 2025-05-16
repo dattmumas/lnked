@@ -39,8 +39,10 @@ export default async function DiscoverPage() {
   }
 
   return (
-    <main className="max-w-2xl mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-6">Discover Collectives</h1>
+    <section className="max-w-2xl mx-auto p-4">
+      <h1 className="text-3xl font-bold font-serif tracking-tight mb-6">
+        Discover Collectives
+      </h1>
       <div className="space-y-4">
         {recommendations.length === 0 ? (
           <div className="text-muted-foreground">
@@ -65,6 +67,6 @@ export default async function DiscoverPage() {
           </p>
         </div>
       )}
-    </main>
+    </section>
   );
 }

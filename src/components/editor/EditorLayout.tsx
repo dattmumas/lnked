@@ -24,8 +24,8 @@ const EditorLayout: React.FC<EditorLayoutProps> = ({
   return (
     <div className="flex flex-col h-full">
       {/* Header specific to the editor layout */}
-      <header className="bg-background border-b p-4 flex justify-between items-center sticky top-16 z-10">
-        {/* Assuming main navbar is h-16 (4rem), so this editor header is sticky below it */}
+      <header className="bg-background border-b p-4 flex justify-between items-center sticky top-0 z-10 h-16 flex-shrink-0">
+        {/* Changed to top-0, added h-16 and flex-shrink-0 for explicit height */}
         <h1 className="text-xl font-semibold">{pageTitle}</h1>
         <div className="flex space-x-2">
           {/* <Button variant="outline">Preview</Button> */}
@@ -43,17 +43,18 @@ const EditorLayout: React.FC<EditorLayoutProps> = ({
       </header>
 
       <div className="flex flex-1 overflow-hidden">
-        {/* Sidebar: fixed width, scrolls independently. Height calculation assumes it starts below the editor header. */}
+        {/* Sidebar: scrolls independently */}
         <aside
           className="w-72 md:w-80 bg-background border-r p-6 overflow-y-auto 
-                       flex flex-col space-y-6 
-                       h-[calc(100vh-theme(space.16)-theme(space.16))] "
+                       flex flex-col space-y-6"
+          // Removed h-[calc(...)] - should now fill available height due to parent flex structure
         >
           {settingsSidebar}
         </aside>
 
-        {/* Main Editor Area: takes remaining space, scrolls independently */}
-        <main className="flex-1 p-6 md:p-8 lg:p-10 overflow-y-auto h-[calc(100vh-theme(space.16)-theme(space.16))]">
+        {/* Main Editor Area: scrolls independently */}
+        <main className="flex-1 p-6 md:p-8 lg:p-10 overflow-y-auto">
+          {/* Removed h-[calc(...)] - should now fill available height */}
           {mainContent}
         </main>
       </div>

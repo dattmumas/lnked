@@ -12,7 +12,7 @@ export default function DashboardSidebar() {
           </h1>
         </Link>
       </div>
-      <nav className="flex-1 px-3 py-4 space-y-1.5">
+      <nav className="flex-1 px-3 py-4 space-y-1.5 overflow-y-auto">
         <SidebarLink
           href="/dashboard"
           icon={<LayoutDashboard className="h-5 w-5" />}

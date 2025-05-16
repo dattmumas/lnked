@@ -1,6 +1,6 @@
 import type { Config } from "tailwindcss";
-import typography from "@tailwindcss/typography";
-import animate from "tailwindcss-animate";
+import typographyPlugin from "@tailwindcss/typography";
+import animatePlugin from "tailwindcss-animate";
 
 const config: Config = {
   darkMode: "class",
@@ -101,10 +101,44 @@ const config: Config = {
         // customFadeInLetter: "customFadeInLetter 0.5s forwards", // Removed
         // customFadeInUp: "customFadeInUp 0.6s forwards", // Removed
       },
+      typography: {
+        DEFAULT: {
+          css: {
+            color: "hsl(var(--foreground))",
+            a: {
+              color: "hsl(var(--primary))",
+              textDecorationLine: "none",
+              "&:hover": {
+                textDecorationLine: "underline",
+              },
+            },
+            "h1, h2, h3, h4, h5, h6": {
+              fontFamily:
+                'var(--font-geist-mono), Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
+              color: "hsl(var(--foreground))",
+              fontWeight: "700",
+            },
+            strong: {
+              color: "hsl(var(--foreground))",
+              fontWeight: "600",
+            },
+            blockquote: {
+              color: "hsl(var(--muted-foreground))",
+              borderLeftColor: "hsl(var(--border))",
+            },
+            // Other elements like code blocks, etc., can be customized here too.
+            // Example for code:
+            // code: { color: "hsl(var(--foreground))", backgroundColor: "hsl(var(--muted))", padding: '0.2em 0.4em', borderRadius: '0.25rem' },
+            // 'code::before': { content: 'none' }, // Remove backticks from inline code
+            // 'code::after': { content: 'none' },
+            // pre: { backgroundColor: "hsl(var(--muted))" },
+          },
+        },
+      },
       // ... your existing theme extensions ...
       // shadcn/ui usually adds its theme variables here or in globals.css
     },
   },
-  plugins: [typography, animate],
+  plugins: [typographyPlugin, animatePlugin],
 };
 export default config;

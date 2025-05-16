@@ -1,9 +1,32 @@
+"use client";
+
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import { motion } from "framer-motion";
+import { useInView } from "framer-motion";
+import { useRef } from "react";
+
+const sectionVariants = {
+  hidden: { opacity: 0, y: 50 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.6, ease: "easeOut", delay: 0.2 }, // Added a small delay
+  },
+};
 
 export default function CreateCollaborate() {
+  const ref = useRef(null);
+  const isInView = useInView(ref, { once: true, amount: 0.2 });
+
   return (
-    <section className="w-full py-20 md:py-28 bg-muted/50 border-b">
+    <motion.section
+      ref={ref}
+      className="w-full py-16 md:py-20 bg-muted/50 border-b"
+      initial="hidden"
+      animate={isInView ? "visible" : "hidden"}
+      variants={sectionVariants}
+    >
       <div className="container mx-auto grid md:grid-cols-2 gap-12 px-4 items-center">
         {/* Illustration – two column feeds flowing into one channel */}
         <div className="w-full h-full flex items-center justify-center">
@@ -60,7 +83,7 @@ export default function CreateCollaborate() {
 
         {/* Copy */}
         <div className="space-y-6">
-          <h2 className="text-3xl md:text-4xl font-serif font-semibold">
+          <h2 className="text-2xl md:text-3xl font-serif font-semibold">
             Create&nbsp;Your <span className="text-primary">Channel</span>
           </h2>
           <p className="text-lg text-muted-foreground">
@@ -77,6 +100,6 @@ export default function CreateCollaborate() {
           </Button>
         </div>
       </div>
-    </section>
+    </motion.section>
   );
 }

@@ -4,6 +4,7 @@ import { GeistMono } from "geist/font/mono";
 import "./globals.css";
 import Navbar from "@/components/Navbar";
 import { ThemeProvider } from "next-themes";
+import SmoothScroll from "@/components/app/SmoothScroll";
 
 export const metadata: Metadata = {
   title: "Lnked - Collaborative Newsletters",
@@ -28,6 +29,7 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
+          <SmoothScroll />
           <Navbar />
           <main className="pt-16">{children}</main>
         </ThemeProvider>

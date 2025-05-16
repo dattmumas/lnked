@@ -1,4 +1,9 @@
+"use client";
+
 import SlideInCard from "../SlideInCard";
+import { motion } from "framer-motion";
+import { useInView } from "framer-motion";
+import { useRef } from "react";
 
 const feeds = [
   {
@@ -18,9 +23,27 @@ const feeds = [
   },
 ];
 
+const sectionVariants = {
+  hidden: { opacity: 0, y: 50 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.6, ease: "easeOut" },
+  },
+};
+
 export default function FragmentedFeeds() {
+  const ref = useRef(null);
+  const isInView = useInView(ref, { once: true, amount: 0.2 });
+
   return (
-    <section className="w-full py-20 md:py-28 bg-background text-foreground border-b">
+    <motion.section
+      ref={ref}
+      className="w-full py-16 md:py-20 bg-background text-foreground border-b"
+      initial="hidden"
+      animate={isInView ? "visible" : "hidden"}
+      variants={sectionVariants}
+    >
       <div className="container mx-auto grid md:grid-cols-2 gap-12 px-4">
         {/* Cards column */}
         <div className="space-y-6 order-2 md:order-1">
@@ -36,7 +59,7 @@ export default function FragmentedFeeds() {
 
         {/* Copy column */}
         <div className="order-1 md:order-2 flex flex-col justify-center space-y-4">
-          <h2 className="text-3xl md:text-4xl font-serif font-semibold">
+          <h2 className="text-2xl md:text-3xl font-serif font-semibold">
             Fragmented
             <span className="text-primary"> Feeds</span>
           </h2>
@@ -50,6 +73,6 @@ export default function FragmentedFeeds() {
           </p>
         </div>
       </div>
-    </section>
+    </motion.section>
   );
 }

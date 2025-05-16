@@ -7,7 +7,8 @@ interface DashboardShellProps {
 
 export default function DashboardShell({ children }: DashboardShellProps) {
   return (
-    <div className="flex h-screen bg-background text-foreground">
+    <div className="flex h-[calc(100vh-4rem)] bg-background text-foreground">
+      {/* Adjusted height to account for global navbar (4rem = 16 * 0.25rem) */}
       {/* Sidebar – hidden on mobile, fixed on desktop */}
       <DashboardSidebar />
 

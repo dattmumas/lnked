@@ -6,6 +6,7 @@
 
 :root {
   --radius: 0.625rem;
+  --spacing: 0.25rem;
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
@@ -19,7 +20,7 @@
   --accent: oklch(0.72 0.15 203);
   --accent-foreground: oklch(0.145 0.02 203);
   --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
+  --border: oklch(0.88 0 0);
   --input: oklch(0.922 0 0);
   --ring: var(--primary);
   --chart-1: oklch(0.646 0.222 41.116);
@@ -55,7 +56,7 @@
   --accent: oklch(0.8 0.13 203);
   --accent-foreground: oklch(0.145 0.03 203);
   --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
+  --border: oklch(0.3 0 0);
   --input: oklch(1 0 0 / 15%);
   --ring: var(--primary);
   --chart-1: oklch(0.488 0.243 264.376);
@@ -91,19 +92,37 @@
 */
 
 @layer base {
+  /* Removed global transparent border on all elements
   * {
-    /* Provide a 1 px transparent border so components can change the colour
-       without changing layout. */
     @apply border border-transparent;
-    /* If you would like every element to inherit the design-system border
-       colour by default, replace `border-transparent` with `border-border`. */
   }
+  */
 
   body {
     background-color: hsl(var(--background));
     color: hsl(var(--foreground));
     @apply antialiased;
   }
+
+  /* Prose style customizations REMOVED FOR NOW to restore base styling 
+  .prose {
+    h1, h2, h3, h4, h5, h6 {
+      @apply font-serif text-foreground;
+    }
+    a {
+      @apply text-primary hover:underline;
+    }
+  }
+
+  .prose-invert {
+    h1, h2, h3, h4, h5, h6 {
+      @apply font-serif text-foreground;
+    }
+    a {
+      @apply text-primary hover:underline;
+    }
+  }
+  */
 }
 
 /* Tiptap Editor Minimal Styling */
