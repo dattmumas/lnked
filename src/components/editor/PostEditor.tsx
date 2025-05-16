@@ -1,15 +1,17 @@
 "use client";
 
 import React, { useEffect } from "react";
-import { LexicalComposer } from "@lexical/react/LexicalComposer";
-import { RichTextPlugin } from "@lexical/react/LexicalRichTextPlugin";
-import { ContentEditable } from "@lexical/react/LexicalContentEditable";
-import { HistoryPlugin } from "@lexical/react/LexicalHistoryPlugin";
-import { LinkPlugin } from "@lexical/react/LexicalLinkPlugin";
-import { ListPlugin } from "@lexical/react/LexicalListPlugin";
-// import LexicalErrorBoundary from "@lexical/react/LexicalErrorBoundary"; // Keep commented: type issue
-import { OnChangePlugin } from "@lexical/react/LexicalOnChangePlugin";
-import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
+import {
+  LexicalComposer,
+  RichTextPlugin,
+  ContentEditable,
+  HistoryPlugin,
+  LinkPlugin,
+  ListPlugin,
+  OnChangePlugin,
+  LexicalErrorBoundary,
+  useLexicalComposerContext,
+} from "@lexical/react";
 import type { EditorState, LexicalEditor } from "lexical";
 
 // Node imports
@@ -107,8 +109,6 @@ export default function PostEditor({
   return (
     <LexicalComposer initialConfig={initialConfig}>
       <div className="relative prose dark:prose-invert max-w-none w-full editor-container rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-within:outline-none focus-within:ring-1 focus-within:ring-ring">
-        {/* TODO: ErrorBoundary prop is required by RichTextPlugin and needs a compatible component. */}
-        {/* Current LexicalErrorBoundary import causes type issues. Needs local debugging. */}
         <RichTextPlugin
           contentEditable={
             <ContentEditable className="editor-input min-h-[300px] focus:outline-none resize-none" />
@@ -118,7 +118,7 @@ export default function PostEditor({
               {placeholder}
             </div>
           }
-          // ErrorBoundary={...} // This prop is required
+          ErrorBoundary={LexicalErrorBoundary}
         />
         <HistoryPlugin />
         <LinkPlugin />
