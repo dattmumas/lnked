@@ -100,15 +100,15 @@ export default function DashboardCollectiveCard({
         {role === "Owner" && (
           <div className="space-y-1.5 text-xs text-muted-foreground pt-2 mt-2 border-t border-border">
             <div className="flex items-center">
-              <Users2 className="h-3.5 w-3.5 mr-1.5 text-primary" />{" "}
+              <Users2 className="h-3.5 w-3.5 mr-1.5 text-sky-600 dark:text-sky-400" />{" "}
               Subscribers:{" "}
               <span className="font-semibold ml-1 text-foreground">
                 {subscriberCount ?? "0"}
               </span>
             </div>
             <div className="flex items-center">
-              <TrendingUp className="h-3.5 w-3.5 mr-1.5 text-accent" /> Monthly
-              Revenue:{" "}
+              <TrendingUp className="h-3.5 w-3.5 mr-1.5 text-emerald-600 dark:text-emerald-400" />{" "}
+              Monthly Revenue:{" "}
               <span className="font-semibold ml-1 text-foreground">
                 {formatCurrency(monthlyRevenue, currency)}
               </span>

@@ -170,12 +170,12 @@ export default async function PostPage({ params }: PostPageProps) {
         </ol>
       </nav>
 
-      <article className="prose dark:prose-invert lg:prose-xl">
+      <article className="prose dark:prose-invert lg:prose-xl max-w-none">
         <header className="mb-8">
-          <h1 className="text-4xl font-extrabold tracking-tight lg:text-5xl mb-4 font-serif">
+          <h1 className="text-4xl font-extrabold tracking-tight lg:text-5xl mb-4">
             {post.title}
           </h1>
-          <div className="text-sm text-muted-foreground flex flex-wrap items-center gap-x-3 gap-y-1">
+          <div className="text-base text-muted-foreground flex flex-wrap items-center gap-x-3 gap-y-1">
             <span>
               Published on {formatDate(post.published_at || post.created_at)}
             </span>
@@ -184,7 +184,7 @@ export default async function PostPage({ params }: PostPageProps) {
                 by{" "}
                 <Link
                   href={`/newsletters/${post.author.id}`}
-                  className="hover:underline text-primary"
+                  className="hover:underline"
                 >
                   {authorName}
                 </Link>

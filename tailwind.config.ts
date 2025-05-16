@@ -12,8 +12,18 @@ const config: Config = {
   theme: {
     extend: {
       fontFamily: {
-        sans: ["var(--font-sans)"],
-        serif: ["var(--font-serif)"],
+        sans: [
+          "var(--font-geist-sans)",
+          "system-ui",
+          "-apple-system",
+          "BlinkMacSystemFont",
+          "Segoe UI",
+          "Roboto",
+          "Helvetica Neue",
+          "Arial",
+          "Noto Sans",
+          "sans-serif",
+        ],
         mono: [
           "var(--font-geist-mono)",
           "Menlo",
@@ -91,7 +101,7 @@ const config: Config = {
         // customFadeInLetter: "customFadeInLetter 0.5s forwards", // Removed
         // customFadeInUp: "customFadeInUp 0.6s forwards", // Removed
       },
-      typography: (theme: any) => ({
+      typography: {
         DEFAULT: {
           css: {
             color: "hsl(var(--foreground))",
@@ -103,7 +113,8 @@ const config: Config = {
               },
             },
             "h1, h2, h3, h4, h5, h6": {
-              fontFamily: theme("fontFamily.serif").join(","),
+              fontFamily:
+                'var(--font-geist-mono), Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
               color: "hsl(var(--foreground))",
               fontWeight: "700",
             },
@@ -115,22 +126,15 @@ const config: Config = {
               color: "hsl(var(--muted-foreground))",
               borderLeftColor: "hsl(var(--border))",
             },
-            maxWidth: "75ch",
+            // Other elements like code blocks, etc., can be customized here too.
+            // Example for code:
+            // code: { color: "hsl(var(--foreground))", backgroundColor: "hsl(var(--muted))", padding: '0.2em 0.4em', borderRadius: '0.25rem' },
+            // 'code::before': { content: 'none' }, // Remove backticks from inline code
+            // 'code::after': { content: 'none' },
+            // pre: { backgroundColor: "hsl(var(--muted))" },
           },
         },
-        dark: {
-          css: {
-            color: "hsl(var(--foreground))",
-            a: { color: "hsl(var(--primary))" },
-            "h1, h2, h3, h4, h5, h6": { color: "hsl(var(--foreground))" },
-            strong: { color: "hsl(var(--foreground))" },
-            blockquote: {
-              color: "hsl(var(--muted-foreground))",
-              borderLeftColor: "hsl(var(--border))",
-            },
-          },
-        },
-      }),
+      },
       // ... your existing theme extensions ...
       // shadcn/ui usually adds its theme variables here or in globals.css
     },

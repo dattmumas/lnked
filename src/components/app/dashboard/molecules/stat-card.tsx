@@ -19,7 +19,7 @@ export default function StatCard({
   return (
     <div
       className={cn(
-        "rounded-lg border bg-card text-card-foreground p-4 flex flex-col gap-2",
+        "rounded-lg border shadow-sm bg-card text-card-foreground p-4 flex flex-col gap-2",
         className
       )}
     >
@@ -29,7 +29,7 @@ export default function StatCard({
         </span>
         {icon}
       </div>
-      <div className="text-3xl font-bold">{value}</div>
+      <div className="text-3xl font-bold font-serif">{value}</div>
       {typeof trend === "number" && (
         <span
           className={cn(

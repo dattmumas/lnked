@@ -86,7 +86,7 @@ export default function Navbar() {
   const isDashboardPath = pathname.startsWith("/dashboard");
 
   return (
-    <nav className="bg-background border-b border-border fixed top-0 inset-x-0 z-50">
+    <nav className="bg-background border-b fixed top-0 inset-x-0 z-50">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           <div className="flex items-center">
@@ -111,7 +111,7 @@ export default function Navbar() {
                   variant={pathname === "/discover" ? "secondary" : "ghost"}
                   onClick={() => router.push("/discover")}
                 >
-                  Discover
+                  Feed
                 </Button>
                 <Button
                   variant={isDashboardPath ? "secondary" : "ghost"}

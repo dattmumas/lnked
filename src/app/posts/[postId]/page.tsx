@@ -118,7 +118,7 @@ export default async function IndividualPostViewPage({
         aria-label="Breadcrumb"
         className="mb-6 text-sm text-muted-foreground"
       >
-        <ol className="flex space-x-2 flex-wrap">
+        <ol className="flex space-x-2">
           <li>
             <Link href="/" className="hover:underline">
               Home
@@ -136,18 +136,18 @@ export default async function IndividualPostViewPage({
           <li>
             <span className="mx-1">/</span>
           </li>
-          <li className="font-medium line-clamp-1" aria-current="page">
-            {typedPost.title}
+          <li>
+            <span className="font-medium line-clamp-1">{typedPost.title}</span>
           </li>
         </ol>
       </nav>
 
-      <article className="prose dark:prose-invert lg:prose-xl">
+      <article className="prose dark:prose-invert lg:prose-xl max-w-none">
         <header className="mb-8">
-          <h1 className="text-4xl font-extrabold tracking-tight lg:text-5xl mb-4 font-serif">
+          <h1 className="text-4xl font-extrabold tracking-tight lg:text-5xl mb-4">
             {typedPost.title}
           </h1>
-          <div className="text-sm text-muted-foreground flex flex-wrap items-center gap-x-3 gap-y-1">
+          <div className="text-base text-muted-foreground flex flex-wrap items-center gap-x-3 gap-y-1">
             <span>
               Published on{" "}
               {formatDate(typedPost.published_at || typedPost.created_at)}
