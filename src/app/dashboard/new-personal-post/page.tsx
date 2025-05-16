@@ -8,14 +8,17 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import TiptapEditorDisplay from "@/components/editor/TiptapEditor";
 import EditorLayout from "@/components/editor/EditorLayout";
-import { createPost } from "@/app/actions/postActions"; // Shared server action
-import { useState, useTransition, useEffect } from "react";
+import { createPost, updatePost } from "@/app/actions/postActions";
+import { useState, useTransition, useEffect, useCallback } from "react";
 
 import { useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
 import Underline from "@tiptap/extension-underline";
 import TiptapToolbar from "@/components/editor/TiptapToolbar";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Info } from "lucide-react";
+import PostFormFields from "@/components/app/editor/form-fields/PostFormFields";
 
 const newPostSchema = z
   .object({
@@ -51,8 +54,10 @@ type NewPostFormValues = z.infer<typeof newPostSchema>;
 
 export default function NewPersonalPostPage() {
   const router = useRouter();
-  const [isPending, startTransition] = useTransition();
+  const [isProcessing, startTransition] = useTransition();
   const [serverError, setServerError] = useState<string | null>(null);
+  const [autosaveStatus, setAutosaveStatus] = useState<string>("");
+  const [createdPostId, setCreatedPostId] = useState<string | null>(null);
 
   const form = useForm<NewPostFormValues>({
     resolver: zodResolver(newPostSchema),
@@ -68,14 +73,16 @@ export default function NewPersonalPostPage() {
   const {
     register,
     handleSubmit,
-    formState: { errors, isSubmitting },
+    formState: { errors, isSubmitting, isDirty },
     reset,
     setValue,
     watch,
+    getValues,
   } = form;
 
   const currentStatus = watch("status");
-  const watchedContent = watch("content"); // Watch only content for editor sync
+  const currentTitle = watch("title");
+  const currentContent = watch("content");
 
   const editor = useEditor({
     extensions: [
@@ -83,10 +90,12 @@ export default function NewPersonalPostPage() {
       Placeholder.configure({ placeholder: "Share your thoughts..." }),
       Underline,
     ],
-    content: form.getValues("content"),
+    content: getValues("content"),
     onUpdate: ({ editor: updatedEditor }) => {
-      const html = updatedEditor.getHTML();
-      setValue("content", html, { shouldValidate: true, shouldDirty: true });
+      setValue("content", updatedEditor.getHTML(), {
+        shouldValidate: true,
+        shouldDirty: true,
+      });
     },
     editorProps: {
       attributes: {
@@ -96,12 +105,70 @@ export default function NewPersonalPostPage() {
     },
   });
 
-  // Sync editor with form state for content changes (e.g., if reset or setValue is called elsewhere)
+  const watchedFormContent = watch("content");
   useEffect(() => {
-    if (editor && !editor.isDestroyed && editor.getHTML() !== watchedContent) {
-      editor.commands.setContent(watchedContent || "<p></p>", false);
+    if (
+      editor &&
+      !editor.isDestroyed &&
+      editor.getHTML() !== watchedFormContent
+    ) {
+      editor.commands.setContent(watchedFormContent || "<p></p>", false);
     }
-  }, [watchedContent, editor]);
+  }, [watchedFormContent, editor]);
+
+  const performAutosave = useCallback(async () => {
+    if (!isDirty && !createdPostId) return;
+    if (currentStatus !== "draft" && createdPostId) return;
+
+    setAutosaveStatus("Saving draft...");
+    const data = getValues();
+    const payload = {
+      title: data.title,
+      content: data.content,
+      is_public: false,
+      published_at:
+        data.status === "scheduled" && data.published_at
+          ? new Date(data.published_at).toISOString()
+          : null,
+      collectiveId: undefined,
+    };
+
+    try {
+      let result;
+      if (createdPostId) {
+        result = await updatePost(createdPostId, payload);
+      } else {
+        if (
+          data.title.trim().length < 1 ||
+          data.content.replace(/<[^>]+>/g, "").trim().length < 10
+        ) {
+          setAutosaveStatus("Please add title & content to save draft.");
+          return;
+        }
+        result = await createPost(payload);
+        if (result.data?.postId) {
+          setCreatedPostId(result.data.postId);
+        }
+      }
+      if (result.error) {
+        setAutosaveStatus(`Autosave failed: ${result.error.substring(0, 100)}`);
+      } else {
+        setAutosaveStatus("Draft saved.");
+        reset(data);
+      }
+    } catch (error) {
+      setAutosaveStatus("Autosave error.");
+      console.error("Autosave exception:", error);
+    }
+  }, [isDirty, currentStatus, getValues, createdPostId, reset, router]);
+
+  useEffect(() => {
+    const isDrafting = currentStatus === "draft";
+    if (isDirty && isDrafting) {
+      const handler = setTimeout(performAutosave, 5000);
+      return () => clearTimeout(handler);
+    }
+  }, [currentTitle, currentContent, isDirty, currentStatus, performAutosave]);
 
   useEffect(() => {
     return () => {
@@ -111,15 +178,12 @@ export default function NewPersonalPostPage() {
 
   const onSubmit: SubmitHandler<NewPostFormValues> = async (data) => {
     setServerError(null);
+    setAutosaveStatus("");
 
-    if (
-      data.content === "<p></p>" ||
-      data.content.replace(/<[^>]+>/g, "").trim().length < 10
-    ) {
+    if (data.content.replace(/<[^>]+>/g, "").trim().length < 10) {
       form.setError("content", {
         type: "manual",
-        message:
-          "Content must have meaningful text (at least 10 characters excluding HTML tags).",
+        message: "Content must be at least 10 characters...",
       });
       return;
     }
@@ -137,20 +201,27 @@ export default function NewPersonalPostPage() {
       } else {
         form.setError("published_at", {
           type: "manual",
-          message: "Publish date is required for scheduled posts.",
+          message: "Publish date required for scheduled posts.",
         });
         return;
       }
     }
 
     startTransition(async () => {
-      const result = await createPost({
+      let result;
+      const payload = {
         title: data.title,
         content: data.content,
         is_public: is_public_for_action,
         published_at: published_at_for_action,
         collectiveId: undefined,
-      });
+      };
+
+      if (createdPostId) {
+        result = await updatePost(createdPostId, payload);
+      } else {
+        result = await createPost(payload);
+      }
 
       if (result.error) {
         let errorMsg = result.error;
@@ -166,7 +237,7 @@ export default function NewPersonalPostPage() {
           });
         }
         setServerError(errorMsg);
-      } else if (result.data) {
+      } else if (result.data?.postId) {
         reset();
         editor?.commands.setContent("<p></p>");
         router.push(`/posts/${result.data.postId}`);
@@ -176,88 +247,41 @@ export default function NewPersonalPostPage() {
   };
 
   const primaryButtonText =
-    isPending || isSubmitting
+    isProcessing || isSubmitting
       ? "Processing..."
       : currentStatus === "scheduled"
       ? "Schedule Post"
       : currentStatus === "draft"
-      ? "Save Draft"
-      : "Create & Publish Post";
+      ? createdPostId
+        ? "Save Draft"
+        : "Create Draft"
+      : "Publish Post";
 
   const settingsSidebarNode = (
     <div className="space-y-6">
-      <div>
-        <Label
-          htmlFor="title"
-          className="mb-1 block text-sm font-medium text-foreground"
+      <PostFormFields
+        register={register}
+        errors={errors}
+        currentStatus={currentStatus}
+        isSubmitting={isProcessing || isSubmitting}
+        titlePlaceholder="My Awesome Post"
+      />
+      {autosaveStatus && (
+        <Alert
+          variant={
+            autosaveStatus.includes("failed") ||
+            autosaveStatus.includes("Error")
+              ? "destructive"
+              : "default"
+          }
+          className="mt-4 text-xs"
         >
-          Post Title
-        </Label>
-        <Input
-          id="title"
-          {...register("title")}
-          placeholder="My Awesome Post"
-          disabled={isPending || isSubmitting}
-          className={errors.title ? "border-destructive" : ""}
-        />
-        {errors.title && (
-          <p className="text-sm text-destructive mt-1">
-            {errors.title.message}
-          </p>
-        )}
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="status" className="text-sm font-medium text-foreground">
-          Post Status
-        </Label>
-        <select
-          id="status"
-          {...register("status")}
-          disabled={isPending || isSubmitting}
-          className="block w-full p-2 border border-input bg-background rounded-md shadow-sm focus:ring-primary focus:border-primary sm:text-sm"
-        >
-          <option value="draft">Draft</option>
-          <option value="published">Publish Immediately</option>
-          <option value="scheduled">Schedule for Later</option>
-        </select>
-        {errors.status && (
-          <p className="text-sm text-destructive mt-1">
-            {errors.status.message}
-          </p>
-        )}
-      </div>
-
-      {currentStatus === "scheduled" && (
-        <div className="space-y-2">
-          <Label
-            htmlFor="published_at"
-            className="text-sm font-medium text-foreground"
-          >
-            Publish Date & Time
-          </Label>
-          <Input
-            id="published_at"
-            type="datetime-local"
-            {...register("published_at")}
-            disabled={isPending || isSubmitting}
-            className={errors.published_at ? "border-destructive" : ""}
-          />
-          {errors.published_at && (
-            <p className="text-sm text-destructive mt-1">
-              {errors.published_at.message}
-            </p>
-          )}
-        </div>
+          <Info className="h-4 w-4" />
+          <AlertDescription>{autosaveStatus}</AlertDescription>
+        </Alert>
       )}
       {serverError && (
-        <p className="text-sm text-destructive rounded-md bg-destructive/10 p-3">
-          {serverError.split("\n").map((line, i) => (
-            <span key={i}>
-              {line}
-              <br />
-            </span>
-          ))}
-        </p>
+        <p className="text-sm text-destructive mt-1">{serverError}</p>
       )}
     </div>
   );
@@ -277,7 +301,7 @@ export default function NewPersonalPostPage() {
       mainContent={mainContentNode}
       pageTitle="Create Personal Post"
       onPublish={handleSubmit(onSubmit)}
-      isPublishing={isPending || isSubmitting}
+      isPublishing={isProcessing || isSubmitting}
       publishButtonText={primaryButtonText}
     />
   );

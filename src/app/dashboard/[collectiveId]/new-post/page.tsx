@@ -1,15 +1,15 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
-import { useForm, SubmitHandler, Controller } from "react-hook-form";
+import { useForm, SubmitHandler } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import TiptapEditorDisplay from "@/components/editor/TiptapEditor";
 import EditorLayout from "@/components/editor/EditorLayout";
-import { createPost } from "@/app/actions/postActions";
-import { useState, useTransition, useEffect } from "react";
+import { createPost, updatePost } from "@/app/actions/postActions";
+import { useState, useTransition, useEffect, useCallback } from "react";
 import { createSupabaseBrowserClient } from "@/lib/supabase";
 
 import { useEditor } from "@tiptap/react";
@@ -17,14 +17,42 @@ import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
 import Underline from "@tiptap/extension-underline";
 import TiptapToolbar from "@/components/editor/TiptapToolbar";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Info } from "lucide-react";
+import PostFormFields from "@/components/app/editor/form-fields/PostFormFields";
 
-const postSchema = z.object({
-  title: z.string().min(1, "Title is required").max(200),
-  content: z.string().min(15, "Content (HTML) must be at least 15 characters"),
-  is_public: z.boolean(),
-});
+// Schema for new collective post, similar to new personal post
+const newCollectivePostSchema = z
+  .object({
+    title: z.string().min(1, "Title is required").max(200),
+    content: z
+      .string()
+      .refine(
+        (value) =>
+          value !== "<p></p>" &&
+          value.replace(/<[^>]+>/g, "").trim().length >= 10,
+        {
+          message:
+            "Content must have meaningful text (at least 10 characters excluding HTML tags).",
+        }
+      ),
+    status: z.enum(["draft", "published", "scheduled"]),
+    published_at: z.string().optional().nullable(),
+  })
+  .refine(
+    (data) => {
+      if (data.status === "scheduled" && !data.published_at) {
+        return false;
+      }
+      return true;
+    },
+    {
+      message: "Publish date is required for scheduled posts.",
+      path: ["published_at"],
+    }
+  );
 
-type PostFormValues = z.infer<typeof postSchema>;
+type NewCollectivePostFormValues = z.infer<typeof newCollectivePostSchema>;
 
 export default function NewCollectivePostPage() {
   const router = useRouter();
@@ -32,9 +60,10 @@ export default function NewCollectivePostPage() {
   const collectiveId = params.collectiveId as string;
   const [collectiveName, setCollectiveName] = useState<string>("Collective");
   const [isFetchingName, setIsFetchingName] = useState(true);
-
-  const [isPending, startTransition] = useTransition();
+  const [isProcessing, startTransition] = useTransition();
   const [serverError, setServerError] = useState<string | null>(null);
+  const [autosaveStatus, setAutosaveStatus] = useState<string>("");
+  const [createdPostId, setCreatedPostId] = useState<string | null>(null);
 
   const supabase = createSupabaseBrowserClient();
 
@@ -55,12 +84,13 @@ export default function NewCollectivePostPage() {
     fetchCollectiveName();
   }, [collectiveId, supabase]);
 
-  const form = useForm<PostFormValues>({
-    resolver: zodResolver(postSchema),
+  const form = useForm<NewCollectivePostFormValues>({
+    resolver: zodResolver(newCollectivePostSchema),
     defaultValues: {
       title: "",
       content: "<p></p>",
-      is_public: true,
+      status: "draft",
+      published_at: "",
     },
     mode: "onBlur",
   });
@@ -68,11 +98,16 @@ export default function NewCollectivePostPage() {
   const {
     register,
     handleSubmit,
-    control,
-    formState: { errors, isSubmitting },
+    formState: { errors, isSubmitting, isDirty },
     reset,
     setValue,
+    watch,
+    getValues,
   } = form;
+
+  const currentStatus = watch("status");
+  const currentTitle = watch("title");
+  const currentContent = watch("content");
 
   const editor = useEditor({
     extensions: [
@@ -82,7 +117,7 @@ export default function NewCollectivePostPage() {
       }),
       Underline,
     ],
-    content: form.getValues("content"),
+    content: getValues("content"),
     onUpdate: ({ editor: updatedEditor }) => {
       setValue("content", updatedEditor.getHTML(), {
         shouldValidate: true,
@@ -98,18 +133,72 @@ export default function NewCollectivePostPage() {
   });
 
   useEffect(() => {
-    const subscription = form.watch((value, { name }) => {
-      if (
-        name === "content" &&
-        editor &&
-        !editor.isDestroyed &&
-        editor.getHTML() !== value.content
-      ) {
-        editor.commands.setContent(value.content || "<p></p>", false);
+    if (editor && !editor.isDestroyed && editor.getHTML() !== currentContent) {
+      editor.commands.setContent(currentContent || "<p></p>", false);
+    }
+  }, [currentContent, editor]);
+
+  const performAutosave = useCallback(async () => {
+    if (!isDirty && !createdPostId) return;
+    if (currentStatus !== "draft" && createdPostId) return;
+
+    setAutosaveStatus("Saving draft...");
+    const data = getValues();
+    const payload = {
+      title: data.title,
+      content: data.content,
+      is_public: false,
+      published_at:
+        data.status === "scheduled" && data.published_at
+          ? new Date(data.published_at).toISOString()
+          : null,
+      collectiveId: collectiveId,
+    };
+
+    try {
+      let result;
+      if (createdPostId) {
+        result = await updatePost(createdPostId, payload);
+      } else {
+        if (
+          data.title.trim().length < 1 ||
+          data.content.replace(/<[^>]+>/g, "").trim().length < 10
+        ) {
+          setAutosaveStatus("Please add title & content to save draft.");
+          return;
+        }
+        result = await createPost(payload);
+        if (result.data?.postId) {
+          setCreatedPostId(result.data.postId);
+        }
       }
-    });
-    return () => subscription.unsubscribe();
-  }, [form, editor]);
+      if (result.error) {
+        setAutosaveStatus(`Autosave failed: ${result.error.substring(0, 100)}`);
+      } else {
+        setAutosaveStatus("Draft saved.");
+        reset(data);
+      }
+    } catch (error) {
+      setAutosaveStatus("Autosave error.");
+      console.error("Autosave exception:", error);
+    }
+  }, [
+    isDirty,
+    currentStatus,
+    getValues,
+    createdPostId,
+    collectiveId,
+    reset,
+    router,
+  ]);
+
+  useEffect(() => {
+    const isDrafting = currentStatus === "draft";
+    if (isDirty && isDrafting) {
+      const handler = setTimeout(performAutosave, 5000);
+      return () => clearTimeout(handler);
+    }
+  }, [currentTitle, currentContent, isDirty, currentStatus, performAutosave]);
 
   useEffect(() => {
     return () => {
@@ -117,25 +206,59 @@ export default function NewCollectivePostPage() {
     };
   }, [editor]);
 
-  const onSubmit: SubmitHandler<PostFormValues> = async (data) => {
+  const onSubmit: SubmitHandler<NewCollectivePostFormValues> = async (data) => {
     setServerError(null);
-    if (data.content === "<p></p>" || data.content.length < 15) {
+    setAutosaveStatus("");
+
+    if (data.content.replace(/<[^>]+>/g, "").trim().length < 10) {
       form.setError("content", {
         type: "manual",
-        message: "Content is too short or appears empty.",
+        message: "Content must have meaningful text...",
       });
       return;
     }
 
+    let is_public_for_action = false;
+    let published_at_for_action: string | null = null;
+
+    if (data.status === "published") {
+      is_public_for_action = true;
+      published_at_for_action = new Date().toISOString();
+    } else if (data.status === "scheduled") {
+      is_public_for_action = true;
+      if (data.published_at && data.published_at.trim() !== "") {
+        published_at_for_action = new Date(data.published_at).toISOString();
+      } else {
+        form.setError("published_at", {
+          type: "manual",
+          message: "Publish date required for scheduled posts.",
+        });
+        return;
+      }
+    }
+
     startTransition(async () => {
-      const formDataForAction = { ...data, collectiveId };
-      const result = await createPost(formDataForAction);
+      let result;
+      const payload = {
+        title: data.title,
+        content: data.content,
+        is_public: is_public_for_action,
+        published_at: published_at_for_action,
+        collectiveId: collectiveId,
+      };
+
+      if (createdPostId) {
+        result = await updatePost(createdPostId, payload);
+      } else {
+        result = await createPost(payload);
+      }
+
       if (result.error) {
         let errorMsg = result.error;
         if (result.fieldErrors) {
           Object.entries(result.fieldErrors).forEach(([field, messages]) => {
             if (messages && messages.length > 0) {
-              form.setError(field as keyof PostFormValues, {
+              form.setError(field as keyof NewCollectivePostFormValues, {
                 type: "server",
                 message: messages.join(", "),
               });
@@ -144,7 +267,7 @@ export default function NewCollectivePostPage() {
           });
         }
         setServerError(errorMsg);
-      } else if (result.data) {
+      } else if (result.data?.postId) {
         reset();
         editor?.commands.setContent("<p></p>");
         router.push(
@@ -155,64 +278,44 @@ export default function NewCollectivePostPage() {
     });
   };
 
-  // Form elements for the sidebar
+  const primaryButtonText =
+    isProcessing || isSubmitting
+      ? "Processing..."
+      : currentStatus === "scheduled"
+      ? "Schedule Post"
+      : currentStatus === "draft"
+      ? createdPostId
+        ? "Save Draft"
+        : "Create Draft"
+      : "Publish Post";
+
   const settingsSidebarNode = (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-      <div>
-        <Label
-          htmlFor="title"
-          className="mb-1 block text-sm font-medium text-foreground"
+    <div className="space-y-6">
+      <PostFormFields
+        register={register}
+        errors={errors}
+        currentStatus={currentStatus}
+        isSubmitting={isProcessing || isSubmitting}
+        titlePlaceholder={`New post in ${collectiveName}`}
+      />
+
+      {autosaveStatus && (
+        <Alert
+          variant={
+            autosaveStatus.includes("failed") ||
+            autosaveStatus.includes("Error")
+              ? "destructive"
+              : "default"
+          }
+          className="mt-4 text-xs"
         >
-          Post Title
-        </Label>
-        <Input
-          id="title"
-          {...register("title")}
-          placeholder={`New post for ${collectiveName}`}
-          disabled={isPending || isSubmitting}
-          className={errors.title ? "border-destructive" : ""}
-        />
-        {errors.title && (
-          <p className="text-sm text-destructive mt-1">
-            {errors.title.message}
-          </p>
-        )}
-      </div>
-      <div className="space-y-1">
-        <Label className="text-sm font-medium text-foreground">
-          Visibility
-        </Label>
-        <div className="flex items-center space-x-2 bg-muted p-2 rounded-md">
-          <Controller
-            name="is_public"
-            control={control}
-            render={({ field }) => (
-              <input
-                type="checkbox"
-                id="is_public"
-                checked={field.value}
-                onChange={field.onChange}
-                onBlur={field.onBlur}
-                disabled={isPending || isSubmitting}
-                className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
-              />
-            )}
-          />
-          <Label
-            htmlFor="is_public"
-            className="text-sm font-normal text-muted-foreground"
-          >
-            Make this post publicly visible?
-          </Label>
-        </div>
-        {errors.is_public && (
-          <p className="text-sm text-destructive mt-1">
-            {errors.is_public.message}
-          </p>
-        )}
-      </div>
+          <Info className="h-4 w-4" />
+          <AlertDescription>{autosaveStatus}</AlertDescription>
+        </Alert>
+      )}
+
       {serverError && (
-        <p className="text-sm text-destructive rounded-md bg-destructive/10 p-3">
+        <p className="text-sm text-destructive mt-1">
           {serverError.split("\n").map((line, i) => (
             <span key={i}>
               {line}
@@ -221,10 +324,9 @@ export default function NewCollectivePostPage() {
           ))}
         </p>
       )}
-    </form>
+    </div>
   );
 
-  // Editor and its toolbar for the main content area
   const mainContentNode = (
     <div className="bg-card shadow-sm rounded-lg flex flex-col h-full">
       <TiptapToolbar editor={editor} />
@@ -248,7 +350,8 @@ export default function NewCollectivePostPage() {
       mainContent={mainContentNode}
       pageTitle={`New Post in ${collectiveName}`}
       onPublish={handleSubmit(onSubmit)}
-      isPublishing={isPending || isSubmitting}
+      isPublishing={isProcessing || isSubmitting}
+      publishButtonText={primaryButtonText}
     />
   );
 }

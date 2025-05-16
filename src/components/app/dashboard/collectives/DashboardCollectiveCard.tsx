@@ -11,11 +11,11 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Settings, Users, Eye, LogOut } from "lucide-react";
+import { Settings, Users, Eye, LogOut, TrendingUp, Users2 } from "lucide-react";
 import type { Database } from "@/lib/database.types";
 import { useTransition } from "react";
-// import { removeUserFromCollective } from "@/app/actions/collectiveActions"; // Assuming this action exists
 import { useRouter } from "next/navigation";
+import { removeUserFromCollective } from "@/app/actions/collectiveActions";
 
 type Collective = Database["public"]["Tables"]["collectives"]["Row"];
 export type CollectiveMemberRole =
@@ -25,18 +25,24 @@ interface DashboardCollectiveCardProps {
   collective: Collective;
   role: "Owner" | CollectiveMemberRole;
   memberId?: string; // For leave action, if user is not owner
+  subscriberCount?: number;
+  monthlyRevenue?: number;
+  currency?: string;
 }
 
 export default function DashboardCollectiveCard({
   collective,
   role,
   memberId,
+  subscriberCount,
+  monthlyRevenue,
+  currency,
 }: DashboardCollectiveCardProps) {
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
 
   const handleLeaveCollective = async () => {
-    if (role === "Owner") return; // Owners cannot leave this way
+    if (role === "Owner") return;
     if (!memberId) {
       console.error("Member ID is required to leave a collective.");
       alert("Error: Could not leave collective. Member ID missing.");
@@ -45,20 +51,29 @@ export default function DashboardCollectiveCard({
     if (
       window.confirm(`Are you sure you want to leave "${collective.name}"?`)
     ) {
-      // TODO: Implement actual leave collective logic using a server action
-      // startTransition(async () => {
-      //   const result = await removeUserFromCollective(collective.id, memberId);
-      //   if (result.success) {
-      //     router.refresh();
-      //     // toast({ title: "Successfully left collective." });
-      //   } else {
-      //     // toast({ title: "Failed to leave collective", description: result.error, variant: "destructive" });
-      //   }
-      // });
-      alert(
-        "Leave collective functionality to be implemented with a server action."
-      );
+      startTransition(async () => {
+        const result = await removeUserFromCollective(collective.id, memberId);
+        if (result.success) {
+          alert(result.message || "Successfully left collective.");
+          router.refresh();
+        } else {
+          alert(
+            `Failed to leave collective: ${result.error || "Unknown error"}`
+          );
+        }
+      });
     }
+  };
+
+  const formatCurrency = (
+    amount: number | undefined,
+    curr: string | undefined
+  ) => {
+    if (typeof amount !== "number" || !curr) return "TBD";
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: curr,
+    }).format(amount);
   };
 
   return (
@@ -82,20 +97,26 @@ export default function DashboardCollectiveCard({
         )}
       </CardHeader>
       <CardContent className="flex-grow text-sm">
-        {/* Placeholder for future stats like members, subscribers, revenue */}
         {role === "Owner" && (
-          <div className="text-xs text-muted-foreground space-y-1">
-            <p>
-              Subscribers: <span className="font-medium">TBD</span>
-            </p>
-            <p>
-              Monthly Revenue: <span className="font-medium">TBD</span>
-            </p>
-            {/* TODO: Add members count here if desired */}
+          <div className="space-y-1.5 text-xs text-muted-foreground pt-2 mt-2 border-t border-border">
+            <div className="flex items-center">
+              <Users2 className="h-3.5 w-3.5 mr-1.5 text-primary" />{" "}
+              Subscribers:{" "}
+              <span className="font-semibold ml-1 text-foreground">
+                {subscriberCount ?? "0"}
+              </span>
+            </div>
+            <div className="flex items-center">
+              <TrendingUp className="h-3.5 w-3.5 mr-1.5 text-accent" /> Monthly
+              Revenue:{" "}
+              <span className="font-semibold ml-1 text-foreground">
+                {formatCurrency(monthlyRevenue, currency)}
+              </span>
+            </div>
           </div>
         )}
       </CardContent>
-      <CardFooter className="flex flex-col sm:flex-row flex-wrap items-stretch gap-2 pt-4 border-t">
+      <CardFooter className="flex flex-col sm:flex-row flex-wrap items-stretch gap-2 pt-4 border-t mt-auto">
         <Button
           variant="outline"
           size="sm"

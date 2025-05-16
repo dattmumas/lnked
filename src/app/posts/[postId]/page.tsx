@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import PostLikeButton from "@/components/PostLikeButton";
+import PostViewTracker from "@/components/app/posts/PostViewTracker";
 
 interface IndividualPostPageProps {
   params: {
@@ -21,20 +22,31 @@ const formatDate = (dateString: string | null): string => {
   });
 };
 
+function calculateReadingTime(htmlContent: string | null): string {
+  if (!htmlContent) return "0 min read";
+  const textContent = htmlContent.replace(/<[^>]+>/g, "");
+  const words = textContent.trim().split(/\s+/).length;
+  const wordsPerMinute = 200;
+  const minutes = Math.ceil(words / wordsPerMinute);
+  return `${minutes} min read`;
+}
+
 // Define the expected shape of items in postsData
-type PostWithAuthorAndLikes = Database["public"]["Tables"]["posts"]["Row"] & {
-  author:
-    | Database["public"]["Tables"]["users"]["Row"]
-    | { id: string; full_name: string | null }
-    | null; // Be more specific about author structure from join
-  likes: { count: number }[] | null;
-};
+type PostWithAuthorLikesAndViews =
+  Database["public"]["Tables"]["posts"]["Row"] & {
+    author:
+      | Database["public"]["Tables"]["users"]["Row"]
+      | { id: string; full_name: string | null }
+      | null; // Be more specific about author structure from join
+    likes: { count: number }[] | null;
+    view_count: number | null;
+  };
 
 export default async function IndividualPostViewPage({
   params,
 }: IndividualPostPageProps) {
   const { postId } = params;
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
 
   const supabase = createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -42,10 +54,16 @@ export default async function IndividualPostViewPage({
     {
       cookies: {
         get: (name: string) => cookieStore.get(name)?.value,
-        set: (name: string, value: string, options: CookieOptions) =>
-          cookieStore.set(name, value, options),
-        remove: (name: string, options: CookieOptions) =>
-          cookieStore.delete(name, options),
+        set: (name: string, value: string, options: CookieOptions) => {
+          try {
+            cookieStore.set(name, value, options);
+          } catch {}
+        },
+        remove: (name: string, options: CookieOptions) => {
+          try {
+            cookieStore.set(name, "", { ...options, maxAge: 0 });
+          } catch {}
+        },
       },
     }
   );
@@ -62,7 +80,8 @@ export default async function IndividualPostViewPage({
       `
       *,
       author:users!author_id(id, full_name),
-      likes(count)
+      likes(count),
+      view_count
     `
     )
     .eq("id", postId)
@@ -72,7 +91,7 @@ export default async function IndividualPostViewPage({
     // If it must be an individual post, add: .is('collective_id', null)
     .single();
 
-  const typedPost = postResult as PostWithAuthorAndLikes | null;
+  const typedPost = postResult as PostWithAuthorLikesAndViews | null;
 
   if (postError || !typedPost) {
     console.error(`Error fetching post ${postId}:`, postError?.message);
@@ -85,16 +104,21 @@ export default async function IndividualPostViewPage({
     // Handle as appropriate, e.g. show 'Unknown Author' or notFound()
   }
 
+  const authorName = typedPost.author?.full_name || "Anonymous";
+  const readingTime = calculateReadingTime(typedPost.content);
+  const viewCount = typedPost.view_count || 0;
+
   const initialLikeCount = typedPost.likes?.[0]?.count || 0;
   const isOwner = currentUser?.id === typedPost.author?.id;
 
   return (
     <div className="container mx-auto max-w-3xl p-4 md:p-6">
+      <PostViewTracker postId={typedPost.id} />
       <nav
         aria-label="Breadcrumb"
         className="mb-6 text-sm text-muted-foreground"
       >
-        <ol className="flex space-x-2">
+        <ol className="flex space-x-2 flex-wrap">
           <li>
             <Link href="/" className="hover:underline">
               Home
@@ -107,22 +131,45 @@ export default async function IndividualPostViewPage({
             <span className="mx-1">/</span>
           </li>
           <li>
-            <span className="font-medium">{typedPost.title}</span>
+            <Link href="#">Posts</Link>
+          </li>
+          <li>
+            <span className="mx-1">/</span>
+          </li>
+          <li className="font-medium line-clamp-1" aria-current="page">
+            {typedPost.title}
           </li>
         </ol>
       </nav>
 
-      <article className="prose dark:prose-invert lg:prose-xl max-w-none">
+      <article className="prose dark:prose-invert lg:prose-xl">
         <header className="mb-8">
-          <h1 className="text-4xl font-extrabold tracking-tight lg:text-5xl mb-4">
+          <h1 className="text-4xl font-extrabold tracking-tight lg:text-5xl mb-4 font-serif">
             {typedPost.title}
           </h1>
-          <p className="text-lg text-muted-foreground">
-            Published on{" "}
-            {formatDate(typedPost.published_at || typedPost.created_at)}
-            {typedPost.author &&
-              ` by ${typedPost.author.full_name || "Anonymous"}`}
-          </p>
+          <div className="text-sm text-muted-foreground flex flex-wrap items-center gap-x-3 gap-y-1">
+            <span>
+              Published on{" "}
+              {formatDate(typedPost.published_at || typedPost.created_at)}
+            </span>
+            {typedPost.author && (
+              <span>
+                by{" "}
+                <Link
+                  href={`/newsletters/${typedPost.author.id}`}
+                  className="hover:underline"
+                >
+                  {authorName}
+                </Link>
+              </span>
+            )}
+            <span>·</span>
+            <span>{readingTime}</span>
+            <span>·</span>
+            <span>
+              {viewCount} {viewCount === 1 ? "view" : "views"}
+            </span>
+          </div>
         </header>
 
         <div className="whitespace-pre-wrap break-words">
@@ -134,9 +181,9 @@ export default async function IndividualPostViewPage({
         <div className="flex justify-between items-center">
           <PostLikeButton
             postId={typedPost.id}
-            collectiveSlug={null} // No collective context for this page by default
+            collectiveSlug={null}
             initialLikes={initialLikeCount}
-            authorId={typedPost.author_id} // Pass authorId for like action revalidation
+            authorId={typedPost.author_id}
           />
           {isOwner && (
             <Button asChild variant="outline">

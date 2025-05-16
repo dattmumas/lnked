@@ -16,6 +16,11 @@ interface JoinedCollectiveMembership {
   collective: CollectiveRow & { owner_id: string };
 }
 
+// Extend CollectiveRow for owned collectives to include subscriber count
+interface OwnedCollectiveWithStats extends CollectiveRow {
+  subscriptions: { count: number }[] | null; // Supabase returns count as an array
+}
+
 export default async function MyCollectivesPage() {
   const cookieStore = await cookies();
   const supabase = createServerClient<Database>(
@@ -43,17 +48,28 @@ export default async function MyCollectivesPage() {
 
   const userId = session.user.id;
 
-  // 1. Fetch collectives OWNED by the user
-  const { data: ownedCollectives, error: ownedError } = await supabase
+  // 1. Fetch collectives OWNED by the user, including active subscriber count
+  const { data: ownedCollectivesData, error: ownedError } = await supabase
     .from("collectives")
-    .select("id, name, slug, description") // Add more fields as needed for DashboardCollectiveCard
+    .select("id, name, slug, description, subscriptions(count)") // Assuming RLS allows count on subscriptions or it's a public view/join
+    // Ideally, filter subscriptions by status='active' here if possible with Supabase syntax,
+    // e.g., subscriptions!inner(count, status.eq.active). Or filter post-fetch.
+    // For now, fetching all subscriptions and assuming we might filter or that count implies active.
     .eq("owner_id", userId)
     .order("name", { ascending: true });
+
+  const ownedCollectives = ownedCollectivesData as
+    | OwnedCollectiveWithStats[]
+    | null;
 
   if (ownedError) {
     console.error("Error fetching owned collectives:", ownedError.message);
     // Handle error appropriately
   }
+
+  // Fetch subscription price (e.g., from env or DB). For now, assume a fixed price in cents.
+  const STRIPE_PRICE_CENTS = parseInt(process.env.STRIPE_PRICE_CENTS || "500"); // Default to $5.00 (500 cents) if not set
+  const STRIPE_CURRENCY = process.env.STRIPE_CURRENCY || "USD";
 
   // 2. Fetch collectives JOINED by the user (where they are a member but not owner)
   const { data: joinedMembershipsData, error: joinedError } = await supabase
@@ -119,13 +135,23 @@ export default async function MyCollectivesPage() {
         <section>
           <h2 className="text-xl font-semibold mb-4">Collectives I Own</h2>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {ownedCollectives.map((collective) => (
-              <DashboardCollectiveCard
-                key={collective.id}
-                collective={collective}
-                role="Owner"
-              />
-            ))}
+            {ownedCollectives.map((collective) => {
+              const subscriberCount = collective.subscriptions?.[0]?.count || 0;
+              // Note: This assumes all subscriptions are active. For accuracy, filter by status='active'.
+              // If subscriptions is null or empty array, count is 0.
+              const monthlyRevenue =
+                (subscriberCount * STRIPE_PRICE_CENTS) / 100; // Convert cents to dollars
+              return (
+                <DashboardCollectiveCard
+                  key={collective.id}
+                  collective={collective}
+                  role="Owner"
+                  subscriberCount={subscriberCount}
+                  monthlyRevenue={monthlyRevenue}
+                  currency={STRIPE_CURRENCY}
+                />
+              );
+            })}
           </div>
         </section>
       )}

@@ -4,22 +4,24 @@ import { useRouter } from "next/navigation";
 import { useForm, SubmitHandler } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import TiptapEditorDisplay from "@/components/editor/TiptapEditor";
 import EditorLayout from "@/components/editor/EditorLayout";
-import { updatePost, deletePost } from "@/app/actions/postActions";
-import { useState, useTransition, useEffect } from "react";
-import type { Tables } from "@/lib/database.types"; // For PostDataType
-
+import {
+  updatePost,
+  deletePost,
+  UpdatePostClientValues,
+} from "@/app/actions/postActions";
+import { useState, useTransition, useEffect, useCallback } from "react";
+import type { Tables } from "@/lib/database.types";
 import { useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
 import Underline from "@tiptap/extension-underline";
 import TiptapToolbar from "@/components/editor/TiptapToolbar";
 import { Button } from "@/components/ui/button";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Info } from "lucide-react";
+import PostFormFields from "@/components/app/editor/form-fields/PostFormFields";
 
 const editPostSchema = z
   .object({
@@ -86,7 +88,7 @@ export default function EditPostForm({
   pageTitleInfo,
 }: EditPostFormProps) {
   const router = useRouter();
-  const [isPending, startTransition] = useTransition();
+  const [isProcessing, startTransition] = useTransition();
   const [serverError, setServerError] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [autosaveStatus, setAutosaveStatus] = useState<string>("");
@@ -151,56 +153,37 @@ export default function EditPostForm({
     editor?.commands.setContent(initialData.content || "<p></p>", false);
   }, [initialData, reset, editor]);
 
-  useEffect(() => {
-    const autosave = async () => {
-      if (isDirty && currentStatus === "draft") {
-        setAutosaveStatus("Saving draft...");
-        const dataToSave = getValues();
-        const autosavePayload = {
-          title: dataToSave.title,
-          content: dataToSave.content,
-          is_public: false,
-          published_at:
-            dataToSave.status === "scheduled" && dataToSave.published_at
-              ? new Date(dataToSave.published_at).toISOString()
-              : null,
-        };
-        const result = await updatePost(postId, autosavePayload);
-        if (result.error) {
-          setAutosaveStatus(`Autosave failed: ${result.error}`);
-        } else {
-          setAutosaveStatus("Draft saved.");
-          reset(getValues());
-        }
-      }
+  const performAutosave = useCallback(async () => {
+    if (!isDirty) return;
+    if (currentStatus !== "draft") return; // Only autosave actual drafts
+
+    setAutosaveStatus("Saving draft...");
+    const dataToSave = getValues();
+    const autosavePayload: UpdatePostClientValues = {
+      title: dataToSave.title,
+      content: dataToSave.content,
+      is_public: false,
+      published_at:
+        dataToSave.status === "scheduled" && dataToSave.published_at
+          ? new Date(dataToSave.published_at).toISOString()
+          : null,
     };
-
-    const debouncedAutosave = setTimeout(autosave, 5000);
-    return () => clearTimeout(debouncedAutosave);
-  }, [
-    currentTitle,
-    currentContent,
-    isDirty,
-    currentStatus,
-    getValues,
-    postId,
-    reset,
-    initialData.collective_id,
-  ]);
+    const result = await updatePost(postId, autosavePayload);
+    if (result.error) {
+      setAutosaveStatus(`Autosave failed: ${result.error.substring(0, 100)}`);
+    } else {
+      setAutosaveStatus("Draft saved.");
+      reset(dataToSave); // Reset dirty state with current values
+    }
+  }, [isDirty, currentStatus, getValues, postId, reset, updatePost]);
 
   useEffect(() => {
-    const subscription = form.watch((value, { name }) => {
-      if (
-        name === "content" &&
-        editor &&
-        !editor.isDestroyed &&
-        editor.getHTML() !== value.content
-      ) {
-        editor.commands.setContent(value.content || "<p></p>", false);
-      }
-    });
-    return () => subscription.unsubscribe();
-  }, [form, editor]);
+    const isDrafting = currentStatus === "draft";
+    if (isDirty && isDrafting) {
+      const handler = setTimeout(performAutosave, 5000);
+      return () => clearTimeout(handler);
+    }
+  }, [currentTitle, currentContent, isDirty, currentStatus, performAutosave]);
 
   useEffect(() => {
     return () => {
@@ -212,35 +195,34 @@ export default function EditPostForm({
     setServerError(null);
     setAutosaveStatus("");
 
-    const payloadForUpdatePost: Partial<Tables<"posts">> & {
-      title: string;
-      content: string;
-    } = {
+    const payloadForUpdate: UpdatePostClientValues = {
       title: data.title,
       content: data.content,
     };
 
     if (data.status === "published") {
-      payloadForUpdatePost.is_public = true;
-      payloadForUpdatePost.published_at = new Date().toISOString();
+      payloadForUpdate.is_public = true;
+      payloadForUpdate.published_at = new Date().toISOString();
     } else if (data.status === "scheduled") {
-      payloadForUpdatePost.is_public = true;
-      if (data.published_at) {
-        payloadForUpdatePost.published_at = new Date(
+      payloadForUpdate.is_public = true;
+      if (data.published_at && data.published_at.trim() !== "") {
+        payloadForUpdate.published_at = new Date(
           data.published_at
         ).toISOString();
+      } else {
+        form.setError("published_at", {
+          type: "manual",
+          message: "Publish date is required for scheduled posts.",
+        });
+        return;
       }
     } else {
-      payloadForUpdatePost.is_public = false;
-      payloadForUpdatePost.published_at = null;
+      payloadForUpdate.is_public = false;
+      payloadForUpdate.published_at = null;
     }
 
     startTransition(async () => {
-      const result = await updatePost(
-        postId,
-        payloadForUpdatePost as EditPostFormValues
-      );
-
+      const result = await updatePost(postId, payloadForUpdate);
       if (result.error) {
         setServerError(result.error);
       } else if (result.data) {
@@ -275,92 +257,34 @@ export default function EditPostForm({
   };
 
   const primaryButtonText =
-    isPending || isSubmitting
+    isProcessing || isSubmitting
       ? "Processing..."
       : currentStatus === "scheduled"
       ? "Schedule Post"
       : currentStatus === "draft"
       ? "Save Draft"
-      : "Publish Post";
+      : "Update Post";
 
   const formControlsNode = (
     <div className="space-y-6">
-      <div>
-        <Label
-          htmlFor="title"
-          className="mb-1 block text-sm font-medium text-foreground"
-        >
-          Post Title
-        </Label>
-        <Input
-          id="title"
-          {...register("title")}
-          disabled={isPending || isSubmitting || isDeleting}
-          className={errors.title ? "border-destructive" : ""}
-        />
-        {errors.title && (
-          <p className="text-sm text-destructive mt-1">
-            {errors.title.message}
-          </p>
-        )}
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="status" className="text-sm font-medium text-foreground">
-          Post Status
-        </Label>
-        <select
-          id="status"
-          {...register("status")}
-          disabled={isPending || isSubmitting || isDeleting}
-          className="block w-full p-2 border border-input bg-background rounded-md shadow-sm focus:ring-primary focus:border-primary sm:text-sm"
-        >
-          <option value="draft">Draft</option>
-          <option value="published">Publish Immediately</option>
-          <option value="scheduled">Schedule for Later</option>
-        </select>
-        {errors.status && (
-          <p className="text-sm text-destructive mt-1">
-            {errors.status.message}
-          </p>
-        )}
-      </div>
-      {currentStatus === "scheduled" && (
-        <div className="space-y-2">
-          <Label
-            htmlFor="published_at"
-            className="text-sm font-medium text-foreground"
-          >
-            Publish Date & Time
-          </Label>
-          <Input
-            id="published_at"
-            type="datetime-local"
-            {...register("published_at")}
-            disabled={isPending || isSubmitting || isDeleting}
-            className={errors.published_at ? "border-destructive" : ""}
-          />
-          {errors.published_at && (
-            <p className="text-sm text-destructive mt-1">
-              {errors.published_at.message}
-            </p>
-          )}
-        </div>
-      )}
+      <PostFormFields
+        register={register}
+        errors={errors}
+        currentStatus={currentStatus}
+        isSubmitting={isProcessing || isSubmitting || isDeleting}
+        titlePlaceholder="Edit Post Title"
+      />
       {autosaveStatus && (
         <Alert
           variant={
-            autosaveStatus.startsWith("Autosave failed")
+            autosaveStatus.includes("failed") ||
+            autosaveStatus.includes("Error")
               ? "destructive"
               : "default"
           }
-          className="mt-4"
+          className="mt-4 text-xs"
         >
           <Info className="h-4 w-4" />
-          <AlertTitle>
-            {autosaveStatus.startsWith("Autosave failed")
-              ? "Autosave Error"
-              : "Autosave"}
-          </AlertTitle>
           <AlertDescription>{autosaveStatus}</AlertDescription>
         </Alert>
       )}
@@ -383,7 +307,7 @@ export default function EditPostForm({
           type="button"
           variant="destructive"
           onClick={handleDelete}
-          disabled={isDeleting || isPending || isSubmitting}
+          disabled={isDeleting || isProcessing || isSubmitting}
           className="w-full"
         >
           {isDeleting ? "Deleting..." : "Delete Post"}
@@ -407,7 +331,7 @@ export default function EditPostForm({
       mainContent={mainContentNode}
       pageTitle={pageTitleInfo}
       onPublish={handleSubmit(onSubmit)}
-      isPublishing={isPending || isSubmitting}
+      isPublishing={isProcessing || isSubmitting}
       publishButtonText={primaryButtonText}
     />
   );

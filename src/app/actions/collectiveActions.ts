@@ -25,14 +25,11 @@ interface CollectiveActionResult {
   fieldErrors?: CollectiveActionError["fieldErrors"];
 }
 
-// --- Invite User to Collective ---
-export async function inviteUserToCollective(
-  collectiveId: string,
-  inviteeEmail: string,
-  role: Enums<"collective_member_role">
-): Promise<CollectiveActionResult> {
-  const cookieStore = cookies();
-  const supabase = createServerClient<Database>(
+type CollectiveRow = Database["public"]["Tables"]["collectives"]["Row"];
+
+async function createSupabaseClientForCollectiveActions() {
+  const cookieStore = await cookies();
+  return createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
@@ -42,21 +39,30 @@ export async function inviteUserToCollective(
         },
         set(name: string, value: string, options: CookieOptions) {
           try {
-            cookieStore.set({ name, value, ...options });
+            (cookieStore as any).set(name, value, options);
           } catch {
-            // Server Components cannot set cookies. Action will likely fail if session requires update.
+            /* Intentionally empty, see comments in function body */
           }
         },
         remove(name: string, options: CookieOptions) {
           try {
-            cookieStore.set({ name, value: "", ...options }); // Using set with empty value
+            (cookieStore as any).set(name, "", { ...options, maxAge: 0 });
           } catch {
-            // Server Components cannot delete cookies. Action will likely fail if session requires update.
+            /* Intentionally empty */
           }
         },
       },
     }
   );
+}
+
+// --- Invite User to Collective ---
+export async function inviteUserToCollective(
+  collectiveId: string,
+  inviteeEmail: string,
+  role: Enums<"collective_member_role">
+): Promise<CollectiveActionResult> {
+  const supabase = await createSupabaseClientForCollectiveActions();
 
   const {
     data: { user: currentUser },
@@ -177,20 +183,7 @@ export async function removeUserFromCollective(
   collectiveId: string, // To verify ownership and for revalidation
   membershipId: string // The ID of the collective_members record
 ): Promise<CollectiveActionResult> {
-  const cookieStore = cookies();
-  const supabase = createServerClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get: (name: string) => cookieStore.get(name)?.value,
-        set: (name: string, value: string, options: CookieOptions) =>
-          cookieStore.set(name, value, options),
-        remove: (name: string, options: CookieOptions) =>
-          cookieStore.delete(name, options),
-      },
-    }
-  );
+  const supabase = await createSupabaseClientForCollectiveActions();
 
   const {
     data: { user: currentUser },
@@ -200,14 +193,21 @@ export async function removeUserFromCollective(
     return { success: false, error: "User not authenticated." };
   }
 
-  // 1. Verify current user owns the collective associated with this membershipId
+  // Define the expected type for memberRecord.collective more accurately
+  type FetchedCollectiveForMember = Pick<CollectiveRow, "owner_id">; // Only need owner_id from the nested collective
+  type MemberRecordWithCollective = {
+    collective_id: string;
+    user_id: string;
+    collective: FetchedCollectiveForMember | null;
+  };
+
   const { data: memberRecord, error: memberFetchError } = await supabase
     .from("collective_members")
     .select(
       "collective_id, user_id, collective:collectives!collective_id(owner_id)"
     )
     .eq("id", membershipId)
-    .single();
+    .single<MemberRecordWithCollective>();
 
   if (memberFetchError || !memberRecord || !memberRecord.collective) {
     return { success: false, error: "Membership record not found or invalid." };
@@ -261,20 +261,7 @@ export async function updateMemberRole(
   membershipId: string, // The ID of the collective_members record to update
   newRole: Enums<"collective_member_role">
 ): Promise<CollectiveActionResult> {
-  const cookieStore = cookies();
-  const supabase = createServerClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get: (name: string) => cookieStore.get(name)?.value,
-        set: (name: string, value: string, options: CookieOptions) =>
-          cookieStore.set(name, value, options),
-        remove: (name: string, options: CookieOptions) =>
-          cookieStore.delete(name, options),
-      },
-    }
-  );
+  const supabase = await createSupabaseClientForCollectiveActions();
 
   const {
     data: { user: currentUser },
@@ -398,20 +385,7 @@ export async function updateCollectiveSettings(
   collectiveId: string,
   formData: RawCollectiveSettingsFormInput
 ): Promise<UpdateCollectiveSettingsResult> {
-  const cookieStore = cookies();
-  const supabase = createServerClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get: (name: string) => cookieStore.get(name)?.value,
-        set: (name: string, value: string, options: CookieOptions) =>
-          cookieStore.set(name, value, options),
-        remove: (name: string, options: CookieOptions) =>
-          cookieStore.delete(name, options),
-      },
-    }
-  );
+  const supabase = await createSupabaseClientForCollectiveActions();
 
   const {
     data: { user: currentUser },

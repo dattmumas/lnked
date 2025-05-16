@@ -7,7 +7,7 @@ import type {
   TablesInsert,
   TablesUpdate,
   Enums,
-} from "@/lib/database.types"; // Using generated types
+} from "@/lib/database.types";
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 
@@ -21,7 +21,7 @@ const BasePostSchema = z.object({
   collectiveId: z.string().uuid().optional(),
 });
 
-// Schema for creating a post - includes is_public for initial state
+// Schema for creating a post - includes is_public and optional scheduled publish time
 const CreatePostSchema = BasePostSchema.extend({
   is_public: z.boolean().default(true),
   published_at: z.string().datetime({ offset: true }).optional().nullable(),
@@ -29,14 +29,12 @@ const CreatePostSchema = BasePostSchema.extend({
 
 type CreatePostFormValues = z.infer<typeof CreatePostSchema>;
 
-// Schema for updating a post - receives is_public and published_at from client logic
-// All fields are optional for an update.
+// Schema for updating a post - all fields optional
 const UpdatePostServerSchema = BasePostSchema.partial().extend({
   is_public: z.boolean().optional(),
-  published_at: z.string().datetime({ offset: true }).optional().nullable(), // Expect ISO string or null
+  published_at: z.string().datetime({ offset: true }).optional().nullable(),
 });
 
-// This type is what updatePost action will receive from the client (EditPostForm)
 export type UpdatePostClientValues = z.infer<typeof UpdatePostServerSchema>;
 
 interface CreatePostResult {
@@ -49,8 +47,8 @@ interface CreatePostResult {
   fieldErrors?: Partial<Record<keyof CreatePostFormValues, string[]>>;
 }
 
-const generateSlug = (title: string): string => {
-  return title
+const generateSlug = (title: string): string =>
+  title
     .toLowerCase()
     .trim()
     .replace(/[^a-z0-9\s-]/g, "")
@@ -58,9 +56,8 @@ const generateSlug = (title: string): string => {
     .replace(/-+/g, "-")
     .replace(/^-+|-+$/g, "")
     .substring(0, 75);
-};
 
-// Helper function to create Supabase client with correct cookie handling for Server Actions
+// Helper to instantiate Supabase client in Server Actions
 async function createSupabaseServerClientInternal() {
   const cookieStore = await cookies();
   return createServerClient<Database>(
@@ -73,19 +70,15 @@ async function createSupabaseServerClientInternal() {
         },
         set(name: string, value: string, options: CookieOptions) {
           try {
-            cookieStore.set(name, value, options);
-          } catch (error) {
-            // In Server Actions, direct cookie setting might be restricted.
-            // Supabase client might try to set cookies during session refresh.
-            // This error handling prevents the action from crashing.
-            // console.warn("Supabase client: Failed to set cookie from Server Action", error);
-          },
+            // Readonly in this context; catch to avoid crash
+            (cookieStore as any).set(name, value, options);
+          } catch {}
+        },
         remove(name: string, options: CookieOptions) {
           try {
-            cookieStore.set(name, "", { ...options, maxAge: 0 });
-          } catch (error) {
-            // console.warn("Supabase client: Failed to remove cookie from Server Action", error);
-          },
+            (cookieStore as any).set(name, "", { ...options, maxAge: 0 });
+          } catch {}
+        },
       },
     }
   );
@@ -118,16 +111,12 @@ export async function createPost(
     validatedFields.data;
   let collectiveSlug: string | null = null;
 
-  type CollectiveData = { id: string; owner_id: string; slug: string };
-  type MembershipData = { role: Enums<"collective_member_role"> };
-
   if (collectiveId) {
     const { data: collectiveData, error: collectiveCheckError } = await supabase
       .from("collectives")
       .select("id, owner_id, slug")
-      .eq("id", collectiveId as string) // Cast if needed, though UUID should be fine
-      .single<CollectiveData>();
-
+      .eq("id", collectiveId as string)
+      .single<{ id: string; owner_id: string; slug: string }>();
     if (collectiveCheckError || !collectiveData) {
       return {
         error: "Collective not found or error fetching it.",
@@ -135,7 +124,6 @@ export async function createPost(
       };
     }
     collectiveSlug = collectiveData.slug;
-
     const isOwner = collectiveData.owner_id === user.id;
     let isMember = false;
     if (!isOwner) {
@@ -143,14 +131,13 @@ export async function createPost(
         .from("collective_members")
         .select("role")
         .eq("collective_id", collectiveId as string)
-        .eq("user_id", user.id as string) // Cast if needed
-        .maybeSingle<MembershipData>();
+        .eq("user_id", user.id as string)
+        .maybeSingle<{ role: string }>();
       if (memberCheckError) {
         return { error: "Error checking collective membership." };
       }
       isMember =
-        !!membership &&
-        ["admin", "editor", "author"].includes(membership.role as string);
+        !!membership && ["admin", "editor", "author"].includes(membership.role);
     }
 
     if (!isOwner && !isMember) {
@@ -163,11 +150,13 @@ export async function createPost(
 
   const postSlug = generateSlug(title);
 
-  let final_published_at: string | null = null;
-  if (published_at) {
-    final_published_at = new Date(published_at).toISOString();
-  } else if (is_public) {
-    final_published_at = new Date().toISOString();
+  let db_status: "draft" | "active" = "draft";
+  if (is_public) {
+    if (published_at && new Date(published_at) > new Date()) {
+      db_status = "draft";
+    } else {
+      db_status = "active";
+    }
   }
 
   const postToInsert: TablesInsert<"posts"> = {
@@ -176,15 +165,17 @@ export async function createPost(
     content,
     is_public,
     collective_id: collectiveId || null,
-    published_at: final_published_at,
+    published_at: published_at,
+    status: db_status,
+    view_count: 0,
+    like_count: 0,
   };
 
-  type NewPostId = { id: string };
   const { data: newPost, error: insertError } = await supabase
     .from("posts")
-    .insert(postToInsert) // Type for postToInsert should be TablesInsert<"posts">
+    .insert(postToInsert)
     .select("id")
-    .single<NewPostId>();
+    .single<{ id: string }>();
 
   if (insertError) {
     console.error("Error inserting post:", insertError);
@@ -209,8 +200,8 @@ export async function createPost(
   return {
     data: {
       postId: newPost.id,
-      postSlug: postSlug,
-      collectiveSlug: collectiveSlug,
+      postSlug,
+      collectiveSlug,
     },
   };
 }
@@ -235,22 +226,24 @@ export async function updatePost(
     data: { user },
     error: authError,
   } = await supabase.auth.getUser();
-
   if (authError || !user) {
     return { error: "You must be logged in to update a post." };
   }
 
+  // Ensure ExistingPostData includes status and is_public
   type ExistingPostData = {
     id: string;
     author_id: string;
     collective_id: string | null;
     published_at: string | null;
+    is_public: boolean;
+    status: Enums<"post_status_type">;
     collective: { slug: string; owner_id: string } | null;
   };
   const { data: existingPost, error: fetchError } = await supabase
     .from("posts")
     .select(
-      "id, author_id, collective_id, published_at, collective:collectives!collective_id(slug, owner_id)"
+      "id, author_id, collective_id, published_at, is_public, status, collective:collectives!collective_id(slug, owner_id)"
     )
     .eq("id", postId)
     .single<ExistingPostData>();
@@ -309,11 +302,28 @@ export async function updatePost(
   const updateData: Partial<TablesUpdate<"posts">> = {};
   if (title !== undefined) updateData.title = title;
   if (content !== undefined) updateData.content = content;
-  if (is_public !== undefined) {
-    updateData.is_public = is_public;
-  }
+  if (is_public !== undefined) updateData.is_public = is_public;
   if (published_at !== undefined) {
     updateData.published_at = published_at;
+  }
+
+  if (is_public !== undefined || published_at !== undefined) {
+    let db_status: Enums<"post_status_type"> = existingPost.status;
+    const final_is_public =
+      is_public === undefined ? existingPost.is_public : is_public;
+    const final_published_at =
+      published_at === undefined ? existingPost.published_at : published_at;
+
+    if (final_is_public) {
+      if (final_published_at && new Date(final_published_at) > new Date()) {
+        db_status = "draft";
+      } else {
+        db_status = "active";
+      }
+    } else {
+      db_status = "draft";
+    }
+    updateData.status = db_status;
   }
 
   const postSlug = title ? generateSlug(title) : undefined;
@@ -331,7 +341,7 @@ export async function updatePost(
   type UpdatedPostId = { id: string };
   const { data: updatedPost, error: updateError } = await supabase
     .from("posts")
-    .update(updateData) // Type for updateData should be Partial<TablesUpdate<"posts">>
+    .update(updateData)
     .eq("id", postId)
     .select("id")
     .single<UpdatedPostId>();
@@ -380,77 +390,54 @@ export async function deletePost(postId: string): Promise<DeletePostResult> {
     data: { user },
     error: authError,
   } = await supabase.auth.getUser();
-
   if (authError || !user) {
     return { success: false, error: "You must be logged in to delete a post." };
   }
 
-  type ExistingPostForDelete = {
-    id: string;
-    author_id: string;
-    collective_id: string | null;
-    collective: { slug: string } | null;
-  };
-  const { data: existingPost, error: fetchError } = await supabase
+  const { data: existingPost, error: fetchErr } = await supabase
     .from("posts")
-    .select(
-      "id, author_id, collective_id, collective:collectives!collective_id(slug)"
-    )
+    .select("collective:collectives!collective_id(slug)")
     .eq("id", postId)
-    .single<ExistingPostForDelete>();
-
-  if (fetchError || !existingPost) {
-    return {
-      success: false,
-      error: "Post not found or error fetching post data.",
-    };
+    .single<{ collective: { slug: string } | null }>();
+  if (fetchErr) {
+    return { success: false, error: "Post not found." };
   }
 
-  const isAuthor = existingPost.author_id === user.id;
-  let isCollectiveOwnerOrMember = false;
-  if (existingPost.collective_id && existingPost.collective) {
-    type CollectiveOwnerData = { owner_id: string };
-    const { data: collectiveOwner, error: ownerCheckError } = await supabase
-      .from("collectives")
-      .select("owner_id")
-      .eq("id", existingPost.collective_id as string)
-      .single<CollectiveOwnerData>();
-    if (ownerCheckError)
-      return { success: false, error: "Error checking collective ownership." };
-    if (collectiveOwner?.owner_id === user.id) {
-      isCollectiveOwnerOrMember = true;
-    }
-  }
-
-  if (!isAuthor && !isCollectiveOwnerOrMember) {
-    return {
-      success: false,
-      error: "You do not have permission to delete this post.",
-    };
-  }
-
-  const { error: deleteError } = await supabase
+  const { error: deleteErr } = await supabase
     .from("posts")
     .delete()
     .eq("id", postId);
-
-  if (deleteError) {
-    console.error("Error deleting post:", deleteError);
-    return {
-      success: false,
-      error: `Failed to delete post: ${deleteError.message}`,
-    };
+  if (deleteErr) {
+    return { success: false, error: deleteErr.message };
   }
 
+  revalidatePath("/dashboard");
   let redirectPath = "/dashboard";
-  if (existingPost.collective?.slug) {
+  if (existingPost.collective) {
     revalidatePath(`/collectives/${existingPost.collective.slug}`);
     redirectPath = `/collectives/${existingPost.collective.slug}`;
-  } else if (existingPost.author_id) {
-    revalidatePath(`/newsletters/${existingPost.author_id}`);
   }
-  revalidatePath("/dashboard");
-  revalidatePath("/");
-
   return { success: true, redirectPath };
+}
+
+export async function incrementPostViewCount(
+  postId: string
+): Promise<{ success: boolean; error?: string }> {
+  if (!postId) {
+    return { success: false, error: "Post ID is required." };
+  }
+  try {
+    const supabase = await createSupabaseServerClientInternal();
+    const { error } = await supabase.rpc("increment_view_count", {
+      post_id_to_increment: postId,
+    });
+    if (error) {
+      console.error("RPC error:", error);
+      return { success: false, error: error.message };
+    }
+    return { success: true };
+  } catch (e: any) {
+    console.error("Unexpected error incrementing view count:", e);
+    return { success: false, error: e.message || "Unexpected error." };
+  }
 }

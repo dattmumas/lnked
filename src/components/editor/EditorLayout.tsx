@@ -46,12 +46,14 @@ const EditorLayout: React.FC<EditorLayoutProps> = ({
         </div>
       </header>
 
-      <div className="flex flex-1 overflow-hidden">
+      {/* Apply flex-col for mobile and md:flex-row for medium screens and up */}
+      <div className="flex flex-col md:flex-row flex-1 overflow-hidden">
         {/* Sidebar: scrolls independently */}
         <aside
-          className="w-72 md:w-80 bg-background border-r p-6 overflow-y-auto 
-                       flex flex-col space-y-6"
-          // Removed h-[calc(...)] - should now fill available height due to parent flex structure
+          className="w-full md:w-72 lg:w-80 bg-background border-b md:border-b-0 md:border-r p-6 overflow-y-auto 
+                       flex flex-col space-y-6 flex-shrink-0"
+          // Added w-full for mobile, adjusted md/lg widths, added flex-shrink-0
+          // Added border-b for mobile separation, md:border-b-0 to remove it on larger screens
         >
           {settingsSidebar}
         </aside>

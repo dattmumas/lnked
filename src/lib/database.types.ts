@@ -60,6 +60,7 @@ export type Database = {
           owner_id: string
           slug: string
           tags: string[] | null
+          tsv: unknown | null
         }
         Insert: {
           created_at?: string
@@ -69,6 +70,7 @@ export type Database = {
           owner_id: string
           slug: string
           tags?: string[] | null
+          tsv?: unknown | null
         }
         Update: {
           created_at?: string
@@ -78,6 +80,7 @@ export type Database = {
           owner_id?: string
           slug?: string
           tags?: string[] | null
+          tsv?: unknown | null
         }
         Relationships: [
           {
@@ -145,6 +148,44 @@ export type Database = {
           },
         ]
       }
+      interactions: {
+        Row: {
+          created_at: string
+          entity_id: string
+          entity_type: Database["public"]["Enums"]["interaction_entity_type"]
+          id: string
+          interaction_type: Database["public"]["Enums"]["interaction_type"]
+          metadata: Json | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          entity_id: string
+          entity_type: Database["public"]["Enums"]["interaction_entity_type"]
+          id?: string
+          interaction_type: Database["public"]["Enums"]["interaction_type"]
+          metadata?: Json | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          entity_id?: string
+          entity_type?: Database["public"]["Enums"]["interaction_entity_type"]
+          id?: string
+          interaction_type?: Database["public"]["Enums"]["interaction_type"]
+          metadata?: Json | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "interactions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       likes: {
         Row: {
           created_at: string
@@ -186,8 +227,12 @@ export type Database = {
           created_at: string
           id: string
           is_public: boolean
+          like_count: number
           published_at: string | null
+          status: Database["public"]["Enums"]["post_status_type"]
           title: string
+          tsv: unknown | null
+          view_count: number | null
         }
         Insert: {
           author_id: string
@@ -196,8 +241,12 @@ export type Database = {
           created_at?: string
           id?: string
           is_public?: boolean
+          like_count?: number
           published_at?: string | null
+          status?: Database["public"]["Enums"]["post_status_type"]
           title: string
+          tsv?: unknown | null
+          view_count?: number | null
         }
         Update: {
           author_id?: string
@@ -206,8 +255,12 @@ export type Database = {
           created_at?: string
           id?: string
           is_public?: boolean
+          like_count?: number
           published_at?: string | null
+          status?: Database["public"]["Enums"]["post_status_type"]
           title?: string
+          tsv?: unknown | null
+          view_count?: number | null
         }
         Relationships: [
           {
@@ -279,6 +332,7 @@ export type Database = {
       products: {
         Row: {
           active: boolean | null
+          collective_id: string | null
           description: string | null
           id: string
           metadata: Json | null
@@ -286,6 +340,7 @@ export type Database = {
         }
         Insert: {
           active?: boolean | null
+          collective_id?: string | null
           description?: string | null
           id: string
           metadata?: Json | null
@@ -293,12 +348,21 @@ export type Database = {
         }
         Update: {
           active?: boolean | null
+          collective_id?: string | null
           description?: string | null
           id?: string
           metadata?: Json | null
           name?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "products_collective_id_fkey"
+            columns: ["collective_id"]
+            isOneToOne: false
+            referencedRelation: "collectives"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       recommendations: {
         Row: {
@@ -418,6 +482,7 @@ export type Database = {
           id: string
           role: string | null
           tags: string[] | null
+          tsv: unknown | null
         }
         Insert: {
           bio?: string | null
@@ -426,6 +491,7 @@ export type Database = {
           id: string
           role?: string | null
           tags?: string[] | null
+          tsv?: unknown | null
         }
         Update: {
           bio?: string | null
@@ -434,12 +500,22 @@ export type Database = {
           id?: string
           role?: string | null
           tags?: string[] | null
+          tsv?: unknown | null
         }
         Relationships: []
       }
     }
     Views: {
-      [_ in never]: never
+      search_documents: {
+        Row: {
+          content_preview: string | null
+          document_id: string | null
+          document_type: string | null
+          title: string | null
+          tsv_document: unknown | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       binary_quantize: {
@@ -494,6 +570,10 @@ export type Database = {
       hnswhandler: {
         Args: { "": unknown }
         Returns: unknown
+      }
+      increment_view_count: {
+        Args: { post_id_to_increment: string }
+        Returns: undefined
       }
       ivfflat_bit_support: {
         Args: { "": unknown }
@@ -553,7 +633,15 @@ export type Database = {
       }
     }
     Enums: {
-      collective_member_role: "admin" | "editor" | "author"
+      collective_member_role: "admin" | "editor" | "author" | "owner"
+      interaction_entity_type: "collective" | "post" | "user"
+      interaction_type:
+        | "like"
+        | "unlike"
+        | "recommended_interested"
+        | "recommended_not_interested"
+        | "view"
+      post_status_type: "draft" | "active" | "removed"
       price_interval: "month" | "year" | "week" | "day"
       price_type: "recurring" | "one_time"
       subscription_status:
@@ -681,7 +769,16 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      collective_member_role: ["admin", "editor", "author"],
+      collective_member_role: ["admin", "editor", "author", "owner"],
+      interaction_entity_type: ["collective", "post", "user"],
+      interaction_type: [
+        "like",
+        "unlike",
+        "recommended_interested",
+        "recommended_not_interested",
+        "view",
+      ],
+      post_status_type: ["draft", "active", "removed"],
       price_interval: ["month", "year", "week", "day"],
       price_type: ["recurring", "one_time"],
       subscription_status: [
