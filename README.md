@@ -46,8 +46,7 @@ lnked-project/
 - [npm](https://www.npmjs.com/) (or [yarn](https://yarnpkg.com/)/[pnpm](https://pnpm.io/))
 - [Supabase Account](https://supabase.com/dashboard)
 - [Stripe Account](https://dashboard.stripe.com/register)
-- [Supabase CLI](https://supabase.com/docs/guides/cli)
-- [Stripe CLI](https://stripe.com/docs/stripe-cli)
+
 
 ### 1. Clone the Repository (if applicable)
 

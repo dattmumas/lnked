@@ -43,14 +43,14 @@ export async function inviteUserToCollective(
         set(name: string, value: string, options: CookieOptions) {
           try {
             cookieStore.set({ name, value, ...options });
-          } catch (_error) {
+          } catch {
             // Server Components cannot set cookies. Action will likely fail if session requires update.
           }
         },
         remove(name: string, options: CookieOptions) {
           try {
             cookieStore.set({ name, value: "", ...options }); // Using set with empty value
-          } catch (_error) {
+          } catch {
             // Server Components cannot delete cookies. Action will likely fail if session requires update.
           }
         },

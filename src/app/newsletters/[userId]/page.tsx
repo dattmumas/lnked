@@ -36,14 +36,14 @@ export default async function IndividualNewsletterPage({
         set(name: string, value: string, options: CookieOptions) {
           try {
             cookieStore.set({ name, value, ...options });
-          } catch (_e) {
+          } catch {
             /* Server Components cannot set cookies */
           }
         },
         remove(name: string, options: CookieOptions) {
           try {
             cookieStore.set({ name, value: "", ...options });
-          } catch (_e) {
+          } catch {
             /* Server Components cannot delete cookies */
           }
         },
@@ -98,10 +98,6 @@ export default async function IndividualNewsletterPage({
 
   let initialIsFollowing = false;
   if (currentUser && author && currentUser.id !== author.id) {
-    interface FollowCountResult {
-      count: number;
-    }
-
     // Corrected select for head count query
     const { count, error: followError } = await supabase
       .from("follows")
