@@ -1,103 +1,140 @@
-import Image from "next/image";
+import Link from "next/link";
+import { ArrowDown } from "lucide-react";
+import SnippetCard from "@/components/landing/SnippetCard";
+import AnimatedBackground from "@/components/landing/AnimatedBackground";
 
-export default function Home() {
+// Removed unused imports and variables related to the old feed page
+// import { cookies } from "next/headers";
+// import { createServerClient, type CookieOptions } from "@supabase/ssr";
+// import type { Database } from "@/lib/database.types";
+// import PostCard from "@/components/PostCard";
+// import { Button } from "@/components/ui/button";
+
+// type ActualFeedItem =
+//   Database["public"]["Functions"]["get_user_feed"]["Returns"][number];
+
+// const WelcomeContent = () => ( ... );
+
+// Sample data for snippet cards - use iconName (string) instead of direct component
+const sampleSnippets = [
+  {
+    id: "1",
+    headline: "The Quantum Entanglement of Thought",
+    iconName: "Brain",
+    categoryHint: "Metaphysics",
+    abstract:
+      "Exploring the interconnectedness of consciousness and reality through the lens of quantum mechanics.",
+    delay: "0.1s",
+  },
+  {
+    id: "2",
+    headline: "Ephemeral Cities: A Cartography of Dreams",
+    iconName: "Globe",
+    categoryHint: "Urban Futures",
+    abstract:
+      "Mapping the ever-changing landscapes of cities that exist only in collective imagination and memory.",
+    delay: "0.2s",
+  },
+  {
+    id: "3",
+    headline: "The Syntax of Silence: Unspoken Narratives",
+    iconName: "Feather",
+    categoryHint: "Literary Theory",
+    abstract:
+      "Delving into the profound meanings conveyed by what remains unsaid in literature and art.",
+    delay: "0.3s",
+  },
+  {
+    id: "4",
+    headline: "AI, Ancient Myths, and Algorithmic Archetypes",
+    iconName: "Code",
+    categoryHint: "Tech & Culture",
+    abstract:
+      "Investigating how modern AI echoes ancient mythological structures and archetypal patterns.",
+    delay: "0.15s",
+  },
+  {
+    id: "5",
+    headline: "Bio-Luminescent Botany: The Future of Light",
+    iconName: "Leaf",
+    categoryHint: "Speculative Bio",
+    abstract:
+      "Unveiling the potential of genetically engineered plants as sustainable, living light sources.",
+    delay: "0.25s",
+  },
+  {
+    id: "6",
+    headline: "Decentralized Chronicles: Histories Reimagined",
+    iconName: "BookOpen",
+    categoryHint: "New Media",
+    abstract:
+      "How blockchain and distributed ledgers are enabling new forms of recording and validating historical narratives.",
+    delay: "0.35s",
+  },
+];
+
+export default function LandingPage() {
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+    <>
+      <div className="min-h-screen text-white flex flex-col items-center justify-center p-4 relative overflow-hidden bg-almost-black">
+        {/* Animated SVG Blobs and Noise Overlay */}
+        <AnimatedBackground />
+        {/* Main Content */}
+        <main className="z-10 flex flex-col items-center text-center space-y-8 py-20">
+          <h1 className="text-5xl md:text-7xl font-bold font-sans">
+            <span className="text-gray-100">l</span>
+            <span className="text-gray-100">n</span>
+            <span className="text-gray-100">k</span>
+            <span className="text-gray-100">e</span>
+            <span className="text-gray-100">d</span>
+            <span className="text-blue-400">.</span>
+          </h1>
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+          <p className="text-xl md:text-2xl text-gray-300 max-w-2xl font-sans">
+            The Future of Your Feed, Forged by You.
+          </p>
+
+          <p className="text-lg text-gray-400 max-w-xl font-sans">
+            Unearth unique newsletters. Forge collaborative collectives. Own
+            your narrative.
+          </p>
+
+          <Link
+            href="/discover"
+            className="mt-8 px-8 py-3 bg-transparent border-2 border-white text-white text-lg font-semibold rounded-lg hover:bg-white hover:text-almost-black transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-white focus:ring-opacity-50 font-sans"
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+            Explore Now
+          </Link>
+        </main>
+
+        <div className="absolute bottom-10 left-1/2 -translate-x-1/2 z-10 flex flex-col items-center space-y-1 animate-bounce">
+          <span className="text-sm text-gray-400 font-sans">Scroll</span>
+          <ArrowDown className="w-5 h-5 text-gray-400" />
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
+      </div>
+
+      {/* Stream of Consciousness Section */}
+      <section
+        id="stream"
+        className="w-full py-16 md:py-24 bg-true-black text-white"
+      >
+        <div className="container mx-auto px-4">
+          <h2 className="text-3xl md:text-4xl font-bold font-sans text-center mb-12 md:mb-16">
+            A Glimpse Into the Flow...
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
+            {sampleSnippets.map((snippet) => (
+              <SnippetCard
+                key={snippet.id}
+                headline={snippet.headline}
+                iconName={snippet.iconName}
+                categoryHint={snippet.categoryHint}
+                abstract={snippet.abstract}
+              />
+            ))}
+          </div>
+        </div>
+      </section>
+    </>
   );
 }
