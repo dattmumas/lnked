@@ -17,7 +17,6 @@ import {
   FileText,
   Library,
   MailOpen,
-  Package,
   Settings,
   Rss,
   PlusCircle,
@@ -27,6 +26,11 @@ import {
 } from "lucide-react";
 import RecentPostRow from "@/components/app/dashboard/molecules/RecentPostRow";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import {
+  Collapsible,
+  CollapsibleTrigger,
+  CollapsibleContent,
+} from "@/components/ui/Collapsible";
 
 const MAX_RECENT_PERSONAL_POSTS_DISPLAY = 3;
 
@@ -102,147 +106,173 @@ export default async function DashboardManagementPage() {
         </div>
       </div>
 
-      {/* Main content sections below the sticky header */}
-      {/* Add pt-6 or similar to the first section if space-y on parent was removed, or manage spacing per section */}
-      <div className="space-y-6">
-        {/* Quick Stats */}
-        <section>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <StatCard
-              label="Subscribers"
-              value={123}
-              trend={12}
-              icon={<Users className="h-5 w-5 text-muted-foreground" />}
+      {/* Main content sections in a grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
+        {/* Quick Stats - full width */}
+        <div className="md:col-span-2 w-full">
+          <Collapsible defaultOpen>
+            <CollapsibleTrigger
+              icon={<Users className="h-5 w-5" />}
+              title={
+                <span className="text-2xl font-serif font-semibold mb-2">
+                  Quick Stats
+                </span>
+              }
             />
-            <StatCard
-              label="Total Posts"
-              value={personalPosts?.length || 0}
-              trend={3}
-              icon={<FileText className="h-5 w-5 text-muted-foreground" />}
-            />
-            <StatCard
-              label="Collectives"
-              value={ownedCollectives?.length || 0}
-              icon={<Library className="h-5 w-5 text-muted-foreground" />}
-            />
-            <StatCard
-              label="Avg. Open Rate"
-              value="45%"
-              trend={-2}
-              icon={<MailOpen className="h-5 w-5 text-muted-foreground" />}
-            />
-          </div>
-        </section>
+            <CollapsibleContent>
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 pt-4 w-full">
+                <StatCard
+                  label="Subscribers"
+                  value={123}
+                  trend={12}
+                  icon={<Users className="h-5 w-5 text-muted-foreground" />}
+                />
+                <StatCard
+                  label="Total Posts"
+                  value={personalPosts?.length || 0}
+                  trend={3}
+                  icon={<FileText className="h-5 w-5 text-muted-foreground" />}
+                />
+                <StatCard
+                  label="Collectives"
+                  value={ownedCollectives?.length || 0}
+                  icon={<Library className="h-5 w-5 text-muted-foreground" />}
+                />
+                <StatCard
+                  label="Avg. Open Rate"
+                  value="45%"
+                  trend={-2}
+                  icon={<MailOpen className="h-5 w-5 text-muted-foreground" />}
+                />
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
+        </div>
 
         {/* Individual Newsletter */}
-        <section className="space-y-4">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-2">
-            <h2 className="text-2xl font-serif font-semibold flex items-center">
-              <Rss className="h-5 w-5 mr-2 text-primary" /> My Individual
-              Newsletter
-            </h2>
-
-            <div className="flex flex-wrap gap-2">
-              <Button asChild size="sm">
-                <Link href="/dashboard/new-personal-post">
-                  <PlusCircle className="h-4 w-4 mr-2" /> Write New Post
-                </Link>
-              </Button>
-              <Button asChild variant="outline" size="sm">
-                <Link href={`/newsletters/${currentUser.id}`}>
-                  View Newsletter
-                </Link>
-              </Button>
-              <Button asChild variant="ghost" size="sm">
-                <Link href="/dashboard/my-newsletter/subscribers">
-                  Subscribers
-                </Link>
-              </Button>
-            </div>
-          </div>
-          {personalPosts && personalPosts.length > 0 ? (
-            <Card className="border-border shadow-sm">
-              <CardContent className="p-0">
-                <div className="divide-y divide-border">
-                  {personalPosts
-                    .slice(0, MAX_RECENT_PERSONAL_POSTS_DISPLAY)
-                    .map((post) => (
-                      <RecentPostRow key={post.id} post={post} />
-                    ))}
+        <div className="w-full">
+          <Collapsible defaultOpen>
+            <CollapsibleTrigger
+              icon={<Rss className="h-5 w-5" />}
+              title={
+                <span className="text-2xl font-serif font-semibold mb-2">
+                  My Individual Newsletter
+                </span>
+              }
+            />
+            <CollapsibleContent>
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 pt-4 w-full">
+                <div className="flex flex-wrap gap-2">
+                  <Button asChild size="sm">
+                    <Link href="/dashboard/new-personal-post">
+                      <PlusCircle className="h-4 w-4 mr-2" /> Write New Post
+                    </Link>
+                  </Button>
+                  <Button asChild variant="outline" size="sm">
+                    <Link href={`/newsletters/${currentUser.id}`}>
+                      View Newsletter
+                    </Link>
+                  </Button>
+                  <Button asChild variant="ghost" size="sm">
+                    <Link href="/dashboard/my-newsletter/subscribers">
+                      Subscribers
+                    </Link>
+                  </Button>
                 </div>
-              </CardContent>
-            </Card>
-          ) : (
-            <Alert>
-              <Info className="h-4 w-4" />
-              <AlertTitle>No Personal Posts Yet</AlertTitle>
-              <AlertDescription>
-                You haven&apos;t written any personal posts. Click &quot;Write
-                New Post&quot; to get started!
-              </AlertDescription>
-            </Alert>
-          )}
-          {personalPosts &&
-            personalPosts.length > MAX_RECENT_PERSONAL_POSTS_DISPLAY && (
-              <div className="mt-4 text-center">
-                <Button asChild variant="outline" size="sm">
-                  <Link href="/dashboard/posts">
-                    <List className="h-4 w-4 mr-2" /> View All My Posts
+              </div>
+              {personalPosts && personalPosts.length > 0 ? (
+                <Card className="border-border shadow-sm mt-4">
+                  <CardContent className="p-0">
+                    <div className="divide-y divide-border">
+                      {personalPosts
+                        .slice(0, MAX_RECENT_PERSONAL_POSTS_DISPLAY)
+                        .map((post) => (
+                          <RecentPostRow key={post.id} post={post} />
+                        ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              ) : (
+                <Alert className="mt-4">
+                  <Info className="h-4 w-4" />
+                  <AlertTitle>No Personal Posts Yet</AlertTitle>
+                  <AlertDescription>
+                    You haven&apos;t written any personal posts. Click
+                    &quot;Write New Post&quot; to get started!
+                  </AlertDescription>
+                </Alert>
+              )}
+              {personalPosts &&
+                personalPosts.length > MAX_RECENT_PERSONAL_POSTS_DISPLAY && (
+                  <div className="mt-4 text-center">
+                    <Button asChild variant="outline" size="sm">
+                      <Link href="/dashboard/posts">
+                        <List className="h-4 w-4 mr-2" /> View All My Posts
+                      </Link>
+                    </Button>
+                  </div>
+                )}
+            </CollapsibleContent>
+          </Collapsible>
+        </div>
+
+        {/* Owned Collectives */}
+        <div className="w-full">
+          <Collapsible defaultOpen>
+            <CollapsibleTrigger
+              icon={<Library className="h-5 w-5" />}
+              title={
+                <span className="text-2xl font-serif font-semibold mb-2">
+                  My Owned Collectives
+                </span>
+              }
+            />
+            <CollapsibleContent>
+              <div className="flex items-center justify-between gap-2 pt-4 w-full">
+                <Button asChild size="sm">
+                  <Link href="/dashboard/collectives/new">
+                    <PlusCircle className="h-4 w-4 mr-2" /> Create Collective
                   </Link>
                 </Button>
               </div>
-            )}
-        </section>
-
-        {/* Owned Collectives */}
-        <section className="space-y-4">
-          <div className="flex items-center justify-between gap-2">
-            <h2 className="text-2xl font-serif font-semibold flex items-center">
-              <Library className="h-5 w-5 mr-2 text-primary" /> My Owned
-              Collectives
-            </h2>
-            <Button asChild size="sm">
-              <Link href="/dashboard/collectives/new">
-                <PlusCircle className="h-4 w-4 mr-2" /> Create Collective
-              </Link>
-            </Button>
-          </div>
-          {ownedCollectives && ownedCollectives.length > 0 ? (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {ownedCollectives.map((collective) => (
-                <Card key={collective.id} className="flex flex-col">
-                  <CardHeader className="flex-grow">
-                    <div className="flex items-center gap-3 mb-2">
-                      <Package className="h-5 w-5 text-primary" />
-                      <CardTitle>{collective.name}</CardTitle>
-                    </div>
-                    <CardDescription className="truncate h-10">
-                      {collective.description || "No description provided."}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="mt-auto pt-0">
-                    <Button asChild size="sm" className="w-full mt-2">
-                      <Link
-                        href={`/dashboard/collectives/${collective.id}/manage/members`}
-                      >
-                        Manage Collective
-                      </Link>
-                    </Button>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          ) : (
-            <Alert>
-              <AlertTriangle className="h-4 w-4" />
-              <AlertTitle>No Collectives Owned</AlertTitle>
-              <AlertDescription>
-                You don&apos;t own any collectives yet. Click &quot;Create
-                Collective&quot; to start one!
-              </AlertDescription>
-            </Alert>
-          )}
-        </section>
+              {ownedCollectives && ownedCollectives.length > 0 ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full mt-4">
+                  {ownedCollectives.map((collective) => (
+                    <Card
+                      key={collective.id}
+                      className="flex flex-col min-w-[220px] w-full"
+                    >
+                      <CardHeader>
+                        <CardTitle className="font-serif text-lg font-semibold truncate">
+                          {collective.name}
+                        </CardTitle>
+                        <CardDescription className="truncate">
+                          {collective.description}
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent className="mt-auto pt-0">
+                        <Button asChild size="sm" className="w-full">
+                          <Link href={`/${collective.slug}`}>
+                            View Collective
+                          </Link>
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              ) : (
+                <Alert className="mt-4">
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertTitle>No Collectives Yet</AlertTitle>
+                  <AlertDescription>
+                    You don&apos;t own any collectives. Click &quot;Create
+                    Collective&quot; to start one!
+                  </AlertDescription>
+                </Alert>
+              )}
+            </CollapsibleContent>
+          </Collapsible>
+        </div>
       </div>
     </>
   );

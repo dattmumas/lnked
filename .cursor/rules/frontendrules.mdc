@@ -129,3 +129,77 @@ rules:
 meta:
   owner: "Lnked Engineering"
   last_updated: "2025‑05‑15"
+
+
+Never Apply Tailwind Utilities Directly to the * (Universal) Selector
+
+Do not do something like:
+
+css
+Copy
+* {
+  @apply border-border outline-ring/50;
+}
+This will likely break Tailwind’s compiler because those color-based classes require a base property (e.g., border, outline) that isn’t universal.
+
+Use Utility Classes Only in Component/Element-Specific Context
+
+If you want all <img> tags to have a border, do something like:
+
+css
+Copy
+img {
+  @apply border border-transparent;
+}
+Avoid universal usage. Always target a specific HTML element or apply a Tailwind class in JSX/TSX whenever possible.
+
+Do Not Reintroduce the Global Transparent Border
+
+If you want a default border or outline style for focus or design, implement it on specific components.
+
+Example:
+
+css
+Copy
+button:focus {
+  @apply ring-2 ring-primary/50;
+}
+This approach ensures the code is valid and won’t break the build.
+
+Keep the New Tailwind Config Changes (Colors, Typography, Fonts)
+
+The updated color palette, border radius, and typography plugin configuration in tailwind.config.js are valid.
+
+They do not cause errors; do not roll them back.
+
+Manage Dark Mode Properly
+
+Continue to rely on .dark class toggling (as set in tailwind.config.js → darkMode: 'class').
+
+Do not reintroduce a “custom variant” approach for dark mode. The standard .dark usage is stable.
+
+If You Need Additional Base Styles, Write Them in Plain CSS
+
+For a universal reset, you can do:
+
+css
+Copy
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+But do not use @apply with color or border/ring classes at the universal level.
+
+Validate Frequently
+
+After any CSS changes, run npm run dev (or your build script) to ensure no Tailwind compilation errors appear.
+
+If an error occurs about unknown utilities, remove or rewrite the offending @apply.
+
+Rely on Components for Animations
+
+If you re-add custom animations, define them in tailwind.config.js under theme.extend.keyframes and theme.extend.animation, and use them in component classes.
+
+Do not apply them globally unless you genuinely need them on the entire site.
+

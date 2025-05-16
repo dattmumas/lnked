@@ -4,7 +4,7 @@ import SidebarLink from "../atoms/sidebar-link";
 
 export default function DashboardSidebar() {
   return (
-    <aside className="hidden md:flex md:flex-col w-64 bg-sidebar text-sidebar-foreground border-r-2 border-border flex-shrink-0">
+    <aside className="hidden md:flex md:flex-col w-56 md:w-64 max-w-xs bg-sidebar text-sidebar-foreground border-r-2 border-border flex-shrink-0">
       <div className="px-4 h-16 flex items-center border-b border-border">
         <Link href="/dashboard" className="flex items-center gap-2">
           <h1 className="text-xl font-semibold tracking-tight text-primary">
