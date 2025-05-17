@@ -45,7 +45,7 @@ export default function RootLayout({
               <Navbar />
             </div>
           </header>
-          <main className="mx-auto max-w-3xl px-4 py-8">{children}</main>
+          <main className="w-full px-4 py-8">{children}</main>
           <Footer />
         </ThemeProvider>
       </body>
