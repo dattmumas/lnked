@@ -47,7 +47,7 @@ export type CollectivePostViewData =
   };
 
 export default async function PostPage({ params }: PostPageProps) {
-  const { collectiveSlug, postId } = await params;
+  const { collectiveSlug, postId } = params;
   const cookieStore = await cookies();
   const supabase = createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
