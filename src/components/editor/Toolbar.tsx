@@ -25,6 +25,8 @@ import {
   AlignCenter,
   AlignRight,
   Link as LinkIcon,
+  PictureInPicture2 as ExcalidrawIcon,
+  FileImage as GifIcon,
 } from "lucide-react";
 import type { JSX } from "react";
 import { $setBlocksType } from "@lexical/selection";
@@ -38,6 +40,7 @@ import {
 } from "lexical";
 import { TOGGLE_LINK_COMMAND } from "@lexical/link";
 import { $isLinkNode } from "@lexical/link";
+import { INSERT_EXCALIDRAW_COMMAND } from "./PostEditor";
 
 const BLOCK_TYPES = [
   { type: "paragraph", label: "Paragraph" },
@@ -48,7 +51,11 @@ const BLOCK_TYPES = [
   { type: "code", label: "Code Block" },
 ];
 
-function Toolbar(): JSX.Element {
+interface ToolbarProps {
+  onInsertGif: () => void;
+}
+
+function Toolbar({ onInsertGif }: ToolbarProps): JSX.Element {
   const [editor] = useLexicalComposerContext();
   // Local state for active inline formatting and current block type/attributes
   const [blockType, setBlockType] = useState<string>("paragraph");
@@ -183,7 +190,29 @@ function Toolbar(): JSX.Element {
   }, [editor, isLink]);
 
   return (
-    <div className="toolbar">
+    <div className="toolbar sticky top-0 z-20 flex items-center gap-2 bg-background px-2 py-1 border-b dark:bg-background/80">
+      {/* Quick-insert: GIF */}
+      <button
+        type="button"
+        onClick={onInsertGif}
+        className="toolbar-item spaced"
+        aria-label="Insert GIF"
+        title="Insert GIF"
+      >
+        <GifIcon className="format" />
+      </button>
+      {/* Quick-insert: Excalidraw */}
+      <button
+        type="button"
+        onClick={() =>
+          editor.dispatchCommand(INSERT_EXCALIDRAW_COMMAND, undefined)
+        }
+        className="toolbar-item spaced"
+        aria-label="Insert Excalidraw Canvas"
+        title="Insert Excalidraw Canvas"
+      >
+        <ExcalidrawIcon className="format" />
+      </button>
       {/* Undo/Redo */}
       <button
         type="button"

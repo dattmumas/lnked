@@ -18,25 +18,19 @@ import { TRANSFORMERS } from "@lexical/markdown";
 import { LexicalErrorBoundary } from "@lexical/react/LexicalErrorBoundary";
 import {
   $getSelection,
-  $createParagraphNode,
   LexicalEditor,
   EditorState,
   createCommand,
-  TextNode,
-  RangeSelection,
 } from "lexical";
-import { $setBlocksType } from "@lexical/selection";
-import {
-  HeadingNode,
-  $createHeadingNode,
-  $createQuoteNode,
-  QuoteNode,
-  HeadingTagType,
-} from "@lexical/rich-text";
+import { HeadingNode, QuoteNode } from "@lexical/rich-text";
 import { ListNode, ListItemNode } from "@lexical/list";
-import { CodeNode, CodeHighlightNode, $createCodeNode } from "@lexical/code";
+import { CodeNode, CodeHighlightNode } from "@lexical/code";
 import { TableNode, TableRowNode, TableCellNode } from "@lexical/table";
 import { LinkNode, AutoLinkNode } from "@lexical/link";
+import {
+  AutoLinkPlugin,
+  createLinkMatcherWithRegExp,
+} from "@lexical/react/LexicalAutoLinkPlugin";
 // Import custom nodes
 import { PollNode } from "./nodes/PollNode";
 import { ExcalidrawNode } from "./nodes/ExcalidrawNode";
@@ -51,6 +45,9 @@ import { LayoutItemNode } from "./nodes/LayoutItemNode";
 import { HorizontalRuleNode } from "@lexical/react/LexicalHorizontalRuleNode";
 import Toolbar from "./Toolbar";
 import FloatingLinkEditorPlugin from "./plugins/FloatingLinkEditorPlugin";
+import CodeHighlightPlugin from "./plugins/CodeHighlightPlugin";
+import { GIFNode, GifPicker } from "./nodes/GIFNode";
+import SlashMenuPlugin from "./plugins/SlashMenuPlugin";
 
 const editorNodes = [
   HeadingNode,
@@ -62,6 +59,7 @@ const editorNodes = [
   TableNode,
   TableRowNode,
   TableCellNode,
+  HorizontalRuleNode,
   LinkNode,
   AutoLinkNode,
   // Custom nodes
@@ -75,6 +73,7 @@ const editorNodes = [
   PageBreakNode, // Page break
   LayoutContainerNode, // Columns container
   LayoutItemNode, // Column item
+  GIFNode, // GIF block
 ];
 
 // Custom insert commands
@@ -103,6 +102,16 @@ export const INSERT_TABLE_COMMAND = createCommand("INSERT_TABLE_COMMAND");
 export const INSERT_HR_COMMAND = createCommand("INSERT_HR_COMMAND");
 export const INSERT_GIF_COMMAND = createCommand("INSERT_GIF_COMMAND");
 
+// URL and email matchers for AutoLinkPlugin
+const URL_MATCHER = createLinkMatcherWithRegExp(
+  /https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)/gi
+);
+const EMAIL_MATCHER = createLinkMatcherWithRegExp(
+  /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/gi,
+  (text: string) => `mailto:${text}`
+);
+const MATCHERS = [URL_MATCHER, EMAIL_MATCHER];
+
 function lexicalEditorOnError(error: Error) {
   console.error("Lexical editor error:", error);
 }
@@ -130,285 +139,16 @@ function LoadInitialHtmlPlugin({ html }: { html: string }) {
   return null;
 }
 
-function CustomCommandPlugin() {
-  const [editor] = useLexicalComposerContext();
-  useEffect(() => {
-    function removeSlashNode(selection: RangeSelection | null) {
-      if (!selection) return;
-      const anchor = selection.anchor;
-      const node = anchor.getNode();
-      if (
-        node instanceof TextNode &&
-        node.getTextContent() === "/" &&
-        anchor.offset === 1
-      ) {
-        node.remove();
-      }
-    }
-    // Register Poll
-    const removePoll = editor.registerCommand(
-      INSERT_POLL_COMMAND,
-      () => {
-        editor.update(() => {
-          const selection = $getSelection();
-          removeSlashNode(selection as RangeSelection);
-          const pollNode = new PollNode("Poll question", [
-            { text: "Option 1", uid: "1", votes: [] },
-            { text: "Option 2", uid: "2", votes: [] },
-          ]);
-          selection?.insertNodes([pollNode]);
-        });
-        return true;
-      },
-      0
-    );
-    // Register Excalidraw
-    const removeExcalidraw = editor.registerCommand(
-      INSERT_EXCALIDRAW_COMMAND,
-      () => {
-        editor.update(() => {
-          const selection = $getSelection();
-          removeSlashNode(selection as RangeSelection);
-          const node = new ExcalidrawNode();
-          selection?.insertNodes([node]);
-        });
-        return true;
-      },
-      0
-    );
-    // Register Sticky
-    const removeSticky = editor.registerCommand(
-      INSERT_STICKY_COMMAND,
-      () => {
-        editor.update(() => {
-          const selection = $getSelection();
-          removeSlashNode(selection as RangeSelection);
-          const node = new StickyNode();
-          selection?.insertNodes([node]);
-        });
-        return true;
-      },
-      0
-    );
-    // Register Image
-    const removeImage = editor.registerCommand(
-      INSERT_IMAGE_COMMAND,
-      () => {
-        const url = window.prompt("Image URL:");
-        if (!url) return true;
-        editor.update(() => {
-          const selection = $getSelection();
-          removeSlashNode(selection as RangeSelection);
-          const node = new ImageNode(url, "Image");
-          selection?.insertNodes([node]);
-        });
-        return true;
-      },
-      0
-    );
-    // Register Inline Image
-    const removeInlineImage = editor.registerCommand(
-      INSERT_INLINE_IMAGE_COMMAND,
-      () => {
-        const url = window.prompt("Inline Image URL:");
-        if (!url) return true;
-        editor.update(() => {
-          const selection = $getSelection();
-          removeSlashNode(selection as RangeSelection);
-          const node = new InlineImageNode(url, "Inline Image");
-          selection?.insertNodes([node]);
-        });
-        return true;
-      },
-      0
-    );
-    // Register Tweet
-    const removeTweet = editor.registerCommand(
-      INSERT_TWEET_COMMAND,
-      () => {
-        const url = window.prompt("Tweet URL:");
-        if (!url) return true;
-        editor.update(() => {
-          const selection = $getSelection();
-          removeSlashNode(selection as RangeSelection);
-          const node = new TweetNode(url); // To be implemented
-          selection?.insertNodes([node]);
-        });
-        return true;
-      },
-      0
-    );
-    // Register YouTube
-    const removeYouTube = editor.registerCommand(
-      INSERT_YOUTUBE_COMMAND,
-      () => {
-        const url = window.prompt("YouTube URL:");
-        if (!url) return true;
-        editor.update(() => {
-          const selection = $getSelection();
-          removeSlashNode(selection as RangeSelection);
-          const node = new YouTubeNode(url); // To be implemented
-          selection?.insertNodes([node]);
-        });
-        return true;
-      },
-      0
-    );
-    // Register Page Break
-    const removePageBreak = editor.registerCommand(
-      INSERT_PAGE_BREAK_COMMAND,
-      () => {
-        editor.update(() => {
-          const selection = $getSelection();
-          removeSlashNode(selection as RangeSelection);
-          const node = new PageBreakNode();
-          selection?.insertNodes([node]);
-        });
-        return true;
-      },
-      0
-    );
-    // Register Layout (Columns)
-    const removeLayout = editor.registerCommand(
-      INSERT_LAYOUT_COMMAND,
-      () => {
-        editor.update(() => {
-          const selection = $getSelection();
-          removeSlashNode(selection as RangeSelection);
-          const container = new LayoutContainerNode();
-          // TODO: add LayoutItemNode children to container
-          selection?.insertNodes([container]);
-        });
-        return true;
-      },
-      0
-    );
-    // Register Headings, Paragraph, Quote, Code, Table, HR, GIF
-    const removeHeading = editor.registerCommand(
-      INSERT_HEADING_COMMAND,
-      (payload: { level: 1 | 2 | 3 }) => {
-        editor.update(() => {
-          const selection = $getSelection();
-          removeSlashNode(selection as RangeSelection);
-          const tag: HeadingTagType = `h${payload.level}` as HeadingTagType;
-          if (selection) {
-            $setBlocksType(selection, () => $createHeadingNode(tag));
-          }
-        });
-        return true;
-      },
-      0
-    );
-    const removeParagraph = editor.registerCommand(
-      INSERT_PARAGRAPH_COMMAND,
-      () => {
-        editor.update(() => {
-          const selection = $getSelection();
-          removeSlashNode(selection as RangeSelection);
-          if (selection) {
-            $setBlocksType(selection, () => $createParagraphNode());
-          }
-        });
-        return true;
-      },
-      0
-    );
-    const removeQuote = editor.registerCommand(
-      INSERT_QUOTE_COMMAND,
-      () => {
-        editor.update(() => {
-          const selection = $getSelection();
-          removeSlashNode(selection as RangeSelection);
-          if (selection) {
-            $setBlocksType(selection, () => $createQuoteNode());
-          }
-        });
-        return true;
-      },
-      0
-    );
-    const removeCode = editor.registerCommand(
-      INSERT_CODE_COMMAND,
-      () => {
-        editor.update(() => {
-          const selection = $getSelection();
-          removeSlashNode(selection as RangeSelection);
-          if (selection) {
-            $setBlocksType(selection, () => $createCodeNode());
-          }
-        });
-        return true;
-      },
-      0
-    );
-    const removeTable = editor.registerCommand(
-      INSERT_TABLE_COMMAND,
-      () => {
-        editor.update(() => {
-          const selection = $getSelection();
-          removeSlashNode(selection as RangeSelection);
-          const node = new TableNode();
-          selection?.insertNodes([node]);
-        });
-        return true;
-      },
-      0
-    );
-    const removeHR = editor.registerCommand(
-      INSERT_HR_COMMAND,
-      () => {
-        editor.update(() => {
-          const selection = $getSelection();
-          removeSlashNode(selection as RangeSelection);
-          const node = new HorizontalRuleNode();
-          selection?.insertNodes([node]);
-        });
-        return true;
-      },
-      0
-    );
-    const removeGIF = editor.registerCommand(
-      INSERT_GIF_COMMAND,
-      () => {
-        const url = window.prompt("GIF URL:");
-        if (!url) return true;
-        editor.update(() => {
-          const selection = $getSelection();
-          removeSlashNode(selection as RangeSelection);
-          const node = new ImageNode(url, "GIF");
-          selection?.insertNodes([node]);
-        });
-        return true;
-      },
-      0
-    );
-    return () => {
-      removePoll();
-      removeExcalidraw();
-      removeSticky();
-      removeImage();
-      removeInlineImage();
-      removeTweet();
-      removeYouTube();
-      removePageBreak();
-      removeLayout();
-      removeHeading();
-      removeParagraph();
-      removeQuote();
-      removeCode();
-      removeTable();
-      removeHR();
-      removeGIF();
-    };
-  }, [editor]);
-  return null;
-}
-
 export default function PostEditor({
   initialContentHTML,
   placeholder = "Share your thoughts...",
   onContentChange,
 }: PostEditorProps) {
+  const [showGifPicker, setShowGifPicker] = React.useState(false);
+  const gifInsertRef = React.useRef<
+    ((url: string, alt: string) => void) | null
+  >(null);
+
   const initialConfig: InitialConfigType = {
     namespace: "LnkedPostEditor",
     onError: lexicalEditorOnError,
@@ -442,10 +182,39 @@ export default function PostEditor({
     [onContentChange]
   );
 
+  // CustomCommandPlugin with GIF picker integration
+  function CustomCommandPluginWithGif() {
+    const [editor] = useLexicalComposerContext();
+    React.useEffect(() => {
+      const removeGIF = editor.registerCommand(
+        INSERT_GIF_COMMAND,
+        () => {
+          setShowGifPicker(true);
+          gifInsertRef.current = (url: string, alt: string) => {
+            setShowGifPicker(false);
+            editor.update(() => {
+              const selection = $getSelection();
+              if (selection) {
+                const node = new GIFNode(url, alt);
+                selection.insertNodes([node]);
+              }
+            });
+          };
+          return true;
+        },
+        0
+      );
+      return () => {
+        removeGIF();
+      };
+    }, [editor]);
+    return null;
+  }
+
   return (
     <LexicalComposer initialConfig={initialConfig}>
       <div className="flex flex-col h-full">
-        <Toolbar />
+        <Toolbar onInsertGif={() => setShowGifPicker(true)} />
         <div className="relative flex-1">
           <RichTextPlugin
             contentEditable={<ContentEditable className="editor-input" />}
@@ -457,13 +226,22 @@ export default function PostEditor({
           <HistoryPlugin />
           <ListPlugin />
           <LinkPlugin />
+          <AutoLinkPlugin matchers={MATCHERS} />
+          <CodeHighlightPlugin />
           <OnChangePlugin onChange={handleOnChange} ignoreSelectionChange />
           <MarkdownShortcutPlugin transformers={TRANSFORMERS} />
           {initialContentHTML && (
             <LoadInitialHtmlPlugin html={initialContentHTML} />
           )}
-          <CustomCommandPlugin />
+          <CustomCommandPluginWithGif />
           <FloatingLinkEditorPlugin />
+          <SlashMenuPlugin />
+          {showGifPicker && (
+            <GifPicker
+              onSelect={(url, alt) => gifInsertRef.current?.(url, alt)}
+              onClose={() => setShowGifPicker(false)}
+            />
+          )}
         </div>
       </div>
     </LexicalComposer>

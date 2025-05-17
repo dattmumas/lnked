@@ -40,6 +40,43 @@ export class YouTubeNode extends DecoratorNode<JSX.Element> {
     return false;
   }
   decorate(): JSX.Element {
-    return <div>[YouTube: {this.__videoUrl}]</div>;
+    return <YouTubeEmbed videoUrl={this.__videoUrl} />;
   }
+}
+
+function YouTubeEmbed({ videoUrl }: { videoUrl: string }) {
+  // Extract YouTube video ID from various URL formats
+  const match = videoUrl.match(
+    /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?|shorts)\/|.*[?&]v=)|youtu\.be\/)([\w-]{11})/
+  );
+  const videoId = match ? match[1] : null;
+  if (!videoId) {
+    return <a href={videoUrl}>{videoUrl}</a>;
+  }
+  return (
+    <div
+      style={{
+        position: "relative",
+        paddingBottom: "56.25%",
+        height: 0,
+        overflow: "hidden",
+        maxWidth: 640,
+      }}
+    >
+      <iframe
+        src={`https://www.youtube.com/embed/${videoId}`}
+        frameBorder={0}
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+        allowFullScreen
+        title="YouTube video"
+        style={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          width: "100%",
+          height: "100%",
+        }}
+      />
+    </div>
+  );
 }
