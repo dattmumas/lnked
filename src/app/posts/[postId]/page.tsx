@@ -32,20 +32,18 @@ function calculateReadingTime(htmlContent: string | null): string {
 }
 
 // Define the expected shape of items in postsData
-type PostWithAuthorLikesAndViews =
-  Database["public"]["Tables"]["posts"]["Row"] & {
-    author:
-      | Database["public"]["Tables"]["users"]["Row"]
-      | { id: string; full_name: string | null }
-      | null; // Be more specific about author structure from join
-    likes: { count: number }[] | null;
-    view_count: number | null;
-  };
+type PostWithAuthorViews = Database["public"]["Tables"]["posts"]["Row"] & {
+  author:
+    | Database["public"]["Tables"]["users"]["Row"]
+    | { id: string; full_name: string | null }
+    | null;
+  view_count: number | null;
+};
 
 export default async function IndividualPostViewPage({
   params,
 }: IndividualPostPageProps) {
-  const { postId } = params;
+  const { postId } = await params;
   const cookieStore = await cookies();
 
   const supabase = createServerClient<Database>(
@@ -80,18 +78,13 @@ export default async function IndividualPostViewPage({
       `
       *,
       author:users!author_id(id, full_name),
-      likes(count),
       view_count
     `
     )
     .eq("id", postId)
-    // Ensure it IS an individual post for this route, or that this route can handle both.
-    // For a dedicated /posts/[postId] route, we might expect collective_id to be null OR just fetch any post by ID.
-    // Let's assume this page is for ANY post, and collective context is secondary or handled by breadcrumbs if present.
-    // If it must be an individual post, add: .is('collective_id', null)
     .single();
 
-  const typedPost = postResult as PostWithAuthorLikesAndViews | null;
+  const typedPost = postResult as PostWithAuthorViews | null;
 
   if (postError || !typedPost) {
     console.error(`Error fetching post ${postId}:`, postError?.message);
@@ -108,7 +101,7 @@ export default async function IndividualPostViewPage({
   const readingTime = calculateReadingTime(typedPost.content);
   const viewCount = typedPost.view_count || 0;
 
-  const initialLikeCount = typedPost.likes?.[0]?.count || 0;
+  const initialLikeCount = typedPost.like_count || 0;
   const isOwner = currentUser?.id === typedPost.author?.id;
 
   return (

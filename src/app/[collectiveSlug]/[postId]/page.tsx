@@ -4,7 +4,9 @@ import type { Database } from "@/lib/database.types";
 import { notFound } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import PostLikeButton from "@/components/PostLikeButton";
+import PostReactionButtons from "@/components/app/posts/molecules/PostReactionButtons";
+import BookmarkButton from "@/components/app/posts/molecules/BookmarkButton";
+import CommentsSection from "@/components/app/posts/molecules/CommentsSection";
 import PostViewTracker from "@/components/app/posts/PostViewTracker";
 
 interface PostPageProps {
@@ -132,6 +134,9 @@ export default async function PostPage({ params }: PostPageProps) {
   const readingTime = calculateReadingTime(post.content);
   const viewCount = post.view_count || 0;
   const initialLikeCount = post.likes?.[0]?.count || 0;
+  const initialDislikeCount = post.dislike_count || 0;
+  const initialUserReaction = null;
+  const initialBookmarked = false;
   const isOwner =
     user?.id === collective.owner_id || user?.id === post.author?.id;
 
@@ -223,15 +228,19 @@ export default async function PostPage({ params }: PostPageProps) {
               {viewCount} {viewCount === 1 ? "view" : "views"}
             </span>
           </div>
-          <div className="mt-4 flex justify-center">
-            <div className="!bg-[#FFCA28] !text-[#1F1F1F] !rounded-full !shadow-md hover:!bg-[#E50914] hover:!text-white transition-colors p-2">
-              <PostLikeButton
-                postId={post.id}
-                collectiveSlug={collective.slug}
-                initialLikes={initialLikeCount}
-                authorId={post.author.id}
-              />
-            </div>
+          <div className="mt-4 flex flex-row gap-4 justify-center items-center">
+            <PostReactionButtons
+              postId={post.id}
+              initialLikeCount={initialLikeCount}
+              initialDislikeCount={initialDislikeCount}
+              initialUserReaction={initialUserReaction}
+              disabled={!user?.id}
+            />
+            <BookmarkButton
+              postId={post.id}
+              initialBookmarked={initialBookmarked}
+              disabled={!user?.id}
+            />
           </div>
         </header>
         <div
@@ -252,11 +261,11 @@ export default async function PostPage({ params }: PostPageProps) {
         <div className="flex justify-between items-center">
           {isOwner && (
             <Button asChild variant="outline">
-              <Link href={`/dashboard/posts/${post.id}/edit`}>Edit Post</Link>{" "}
-              {/* TODO: Edit post page */}
+              <Link href={`/dashboard/posts/${post.id}/edit`}>Edit Post</Link>
             </Button>
           )}
         </div>
+        <CommentsSection postId={post.id} currentUserId={user?.id ?? null} />
       </footer>
     </div>
   );

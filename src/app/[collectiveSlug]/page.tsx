@@ -7,22 +7,6 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import SubscribeButton from "@/components/SubscribeButton"; // Import the new button
 
-// Define an interim type for the expected shape of posts after the complex select
-// This helps avoid 'any' and provides some level of type safety.
-// This should align with how you process the data in `postsData?.map`
-interface FetchedPostEntry {
-  id: string;
-  title: string;
-  content: string | null;
-  created_at: string;
-  author_id: string;
-  is_public: boolean;
-  collective_id: string;
-  published_at: string | null;
-  likes: { count: number }[] | null;
-  // user_likes field is removed as we simplify the query
-}
-
 interface CollectivePageProps {
   params: {
     collectiveSlug: string;
@@ -66,18 +50,12 @@ export default async function CollectivePage({ params }: CollectivePageProps) {
     notFound(); // Or redirect to a generic error page or a 404 page
   }
 
-  // Simplified: Fetch posts for this collective with only total like count
+  // Fetch posts for this collective using denormalized like/dislike counts
   const { data: postsData, error: postsError } = await supabase
     .from("posts")
-    .select(
-      `
-      *,
-      likes(count)
-    `
-    )
+    .select(`*, view_count`)
     .eq("collective_id", collective.id)
     .eq("is_public", true)
-    // .not('published_at', 'is', null) // Consider if only published posts should be shown
     .order("created_at", { ascending: false });
 
   if (postsError) {
@@ -88,30 +66,13 @@ export default async function CollectivePage({ params }: CollectivePageProps) {
     // Decide how to handle this - e.g., show an error message or empty state
   }
 
-  const allowedStatuses = ["draft", "active", "removed"] as const;
-  type StatusType = (typeof allowedStatuses)[number];
-
   const posts =
-    postsData?.map((p) => {
-      const entry = p as FetchedPostEntry & {
-        status?: string;
-        tsv?: unknown;
-        view_count?: number | null;
-      };
-      const status: StatusType = allowedStatuses.includes(
-        entry.status as StatusType
-      )
-        ? (entry.status as StatusType)
-        : "active";
-      return {
-        ...entry,
-        like_count: p.likes?.[0]?.count || 0,
-        status,
-        tsv: entry.tsv ?? null,
-        view_count: entry.view_count ?? 0,
-        // current_user_has_liked will be determined by PostLikeButton client-side
-      };
-    }) || [];
+    postsData?.map((p) => ({
+      ...p,
+      like_count: p.like_count ?? 0,
+      dislike_count: p.dislike_count ?? 0,
+      current_user_has_liked: undefined, // Will be determined client-side
+    })) || [];
 
   // Check if current user is the owner of the collective to show edit/new post links
   const isOwner = user?.id === collective.owner_id;

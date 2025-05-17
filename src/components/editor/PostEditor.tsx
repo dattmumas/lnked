@@ -146,11 +146,14 @@ function LoadInitialJsonPlugin({ json }: { json: string }) {
   const [editor] = useLexicalComposerContext();
   useEffect(() => {
     if (!json) return;
-    try {
-      editor.setEditorState(editor.parseEditorState(json));
-    } catch (error) {
-      console.error("Error parsing initial JSON content:", error);
-    }
+    // Defer setEditorState to avoid flushSync error
+    setTimeout(() => {
+      try {
+        editor.setEditorState(editor.parseEditorState(json));
+      } catch (error) {
+        console.error("Error parsing initial JSON content:", error);
+      }
+    }, 0);
     // No cleanup needed
   }, [editor, json]);
   return null;
