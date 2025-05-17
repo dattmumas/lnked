@@ -1,5 +1,5 @@
 import { cookies } from "next/headers";
-import { createServerClient, type CookieOptions } from "@supabase/ssr";
+import { createServerClient } from "@supabase/ssr";
 import type { Database } from "@/lib/database.types";
 import { notFound } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -52,39 +52,7 @@ export default async function PostPage({ params }: PostPageProps) {
   const supabase = createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value;
-        },
-        set(name: string, value: string, options: CookieOptions) {
-          try {
-            (
-              cookieStore as unknown as {
-                set: (
-                  name: string,
-                  value: string,
-                  options: CookieOptions
-                ) => void;
-              }
-            ).set(name, value, options);
-          } catch {}
-        },
-        remove(name: string, options: CookieOptions) {
-          try {
-            (
-              cookieStore as unknown as {
-                set: (
-                  name: string,
-                  value: string,
-                  options: CookieOptions
-                ) => void;
-              }
-            ).set(name, "", { ...options, maxAge: 0 });
-          } catch {}
-        },
-      },
-    }
+    { cookies: cookieStore }
   );
 
   const {

@@ -18,7 +18,7 @@ export default async function CollectivePage({ params }: CollectivePageProps) {
     data: { user },
   } = await supabase.auth.getUser(); // Get user early for like status
 
-  const { collectiveSlug } = await params;
+  const { collectiveSlug } = params;
 
   // Fetch collective details by slug
   const { data: collective, error: collectiveError } = await supabase

@@ -13,7 +13,7 @@ interface EditPostPageServerProps {
 export default async function EditPostPageServer({
   params,
 }: EditPostPageServerProps) {
-  const { postId } = await params;
+  const { postId } = params;
   const cookieStore = await cookies();
   const supabase = createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,

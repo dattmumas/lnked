@@ -13,7 +13,7 @@ interface CollectiveSettingsPageProps {
 export default async function CollectiveSettingsPage({
   params,
 }: CollectiveSettingsPageProps) {
-  const { collectiveId } = await params;
+  const { collectiveId } = params;
   const cookieStore = await cookies();
   const supabase = createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,

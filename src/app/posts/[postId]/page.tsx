@@ -35,7 +35,7 @@ type PostWithAuthorViews = Database["public"]["Tables"]["posts"]["Row"] & {
 export default async function IndividualPostViewPage({
   params,
 }: IndividualPostPageProps) {
-  const { postId } = await params;
+  const { postId } = params;
   const cookieStore = await cookies();
 
   const supabase = createServerClient<Database>(

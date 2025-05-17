@@ -23,7 +23,7 @@ type PostWithLikesData = Database["public"]["Tables"]["posts"]["Row"] & {
 export default async function IndividualNewsletterPage({
   params,
 }: IndividualNewsletterPageProps) {
-  const { userId: authorId } = await params;
+  const { userId: authorId } = params;
   const cookieStore = await cookies();
   const supabase = createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
