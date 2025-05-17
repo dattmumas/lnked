@@ -17,12 +17,13 @@ import { MarkdownShortcutPlugin } from "@lexical/react/LexicalMarkdownShortcutPl
 import { TRANSFORMERS } from "@lexical/markdown";
 import { LexicalErrorBoundary } from "@lexical/react/LexicalErrorBoundary";
 import {
-  FORMAT_TEXT_COMMAND,
   $getSelection,
-  $isRangeSelection,
   $createParagraphNode,
   LexicalEditor,
   EditorState,
+  createCommand,
+  TextNode,
+  RangeSelection,
 } from "lexical";
 import { $setBlocksType } from "@lexical/selection";
 import {
@@ -30,36 +31,26 @@ import {
   $createHeadingNode,
   $createQuoteNode,
   QuoteNode,
+  HeadingTagType,
 } from "@lexical/rich-text";
-import {
-  ListNode,
-  ListItemNode,
-  INSERT_UNORDERED_LIST_COMMAND,
-  INSERT_ORDERED_LIST_COMMAND,
-} from "@lexical/list";
+import { ListNode, ListItemNode } from "@lexical/list";
 import { CodeNode, CodeHighlightNode, $createCodeNode } from "@lexical/code";
 import { TableNode, TableRowNode, TableCellNode } from "@lexical/table";
-import { LinkNode, AutoLinkNode, TOGGLE_LINK_COMMAND } from "@lexical/link";
-import {
-  Bold,
-  Italic,
-  Underline as UnderlineIcon,
-  Strikethrough,
-  Code2,
-  Heading1,
-  Heading2,
-  Heading3,
-  List as ListIcon,
-  ListOrdered,
-  Quote,
-  Link as LinkIcon,
-  Link2Off,
-  Image as ImageIcon,
-  Table as TableIcon,
-  Redo2,
-  Undo2,
-} from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { LinkNode, AutoLinkNode } from "@lexical/link";
+// Import custom nodes
+import { PollNode } from "./nodes/PollNode";
+import { ExcalidrawNode } from "./nodes/ExcalidrawNode";
+import { StickyNode } from "./nodes/StickyNode";
+import { ImageNode } from "./nodes/ImageNode";
+import { InlineImageNode } from "./nodes/InlineImageNode";
+import { TweetNode } from "./nodes/TweetNode";
+import { YouTubeNode } from "./nodes/YouTubeNode";
+import { PageBreakNode } from "./nodes/PageBreakNode";
+import { LayoutContainerNode } from "./nodes/LayoutContainerNode";
+import { LayoutItemNode } from "./nodes/LayoutItemNode";
+import { HorizontalRuleNode } from "@lexical/react/LexicalHorizontalRuleNode";
+import Toolbar from "./Toolbar";
+import FloatingLinkEditorPlugin from "./plugins/FloatingLinkEditorPlugin";
 
 const editorNodes = [
   HeadingNode,
@@ -73,7 +64,44 @@ const editorNodes = [
   TableCellNode,
   LinkNode,
   AutoLinkNode,
+  // Custom nodes
+  PollNode, // Poll block
+  ExcalidrawNode, // Excalidraw drawing
+  StickyNode, // Sticky note
+  ImageNode, // Block image
+  InlineImageNode, // Inline image
+  TweetNode, // Tweet embed
+  YouTubeNode, // YouTube embed
+  PageBreakNode, // Page break
+  LayoutContainerNode, // Columns container
+  LayoutItemNode, // Column item
 ];
+
+// Custom insert commands
+export const INSERT_POLL_COMMAND = createCommand("INSERT_POLL_COMMAND");
+export const INSERT_EXCALIDRAW_COMMAND = createCommand(
+  "INSERT_EXCALIDRAW_COMMAND"
+);
+export const INSERT_STICKY_COMMAND = createCommand("INSERT_STICKY_COMMAND");
+export const INSERT_IMAGE_COMMAND = createCommand("INSERT_IMAGE_COMMAND");
+export const INSERT_INLINE_IMAGE_COMMAND = createCommand(
+  "INSERT_INLINE_IMAGE_COMMAND"
+);
+export const INSERT_TWEET_COMMAND = createCommand("INSERT_TWEET_COMMAND");
+export const INSERT_YOUTUBE_COMMAND = createCommand("INSERT_YOUTUBE_COMMAND");
+export const INSERT_PAGE_BREAK_COMMAND = createCommand(
+  "INSERT_PAGE_BREAK_COMMAND"
+);
+export const INSERT_LAYOUT_COMMAND = createCommand("INSERT_LAYOUT_COMMAND");
+export const INSERT_HEADING_COMMAND = createCommand("INSERT_HEADING_COMMAND");
+export const INSERT_PARAGRAPH_COMMAND = createCommand(
+  "INSERT_PARAGRAPH_COMMAND"
+);
+export const INSERT_QUOTE_COMMAND = createCommand("INSERT_QUOTE_COMMAND");
+export const INSERT_CODE_COMMAND = createCommand("INSERT_CODE_COMMAND");
+export const INSERT_TABLE_COMMAND = createCommand("INSERT_TABLE_COMMAND");
+export const INSERT_HR_COMMAND = createCommand("INSERT_HR_COMMAND");
+export const INSERT_GIF_COMMAND = createCommand("INSERT_GIF_COMMAND");
 
 function lexicalEditorOnError(error: Error) {
   console.error("Lexical editor error:", error);
@@ -102,282 +130,278 @@ function LoadInitialHtmlPlugin({ html }: { html: string }) {
   return null;
 }
 
-function Toolbar() {
+function CustomCommandPlugin() {
   const [editor] = useLexicalComposerContext();
-  // Helper to dispatch block type changes
-  const setBlockType = useCallback(
-    (type: "paragraph" | "h1" | "h2" | "h3" | "quote" | "code") => {
-      editor.update(() => {
-        const selection = $getSelection();
-        if ($isRangeSelection(selection)) {
-          switch (type) {
-            case "h1":
-              $setBlocksType(selection, () => $createHeadingNode("h1"));
-              break;
-            case "h2":
-              $setBlocksType(selection, () => $createHeadingNode("h2"));
-              break;
-            case "h3":
-              $setBlocksType(selection, () => $createHeadingNode("h3"));
-              break;
-            case "quote":
-              $setBlocksType(selection, () => $createQuoteNode());
-              break;
-            case "code":
-              $setBlocksType(selection, () => $createCodeNode());
-              break;
-            default:
-              $setBlocksType(selection, () => $createParagraphNode());
-          }
-        }
-      });
-    },
-    [editor]
-  );
-
-  // Insert image by URL
-  const insertImage = useCallback(() => {
-    const url = window.prompt("Enter image URL:");
-    if (!url) return;
-    editor.update(() => {
-      const selection = $getSelection();
-      if ($isRangeSelection(selection)) {
-        // Insert as HTML (Lexical will treat as generic element)
-        const img = document.createElement("img");
-        img.src = url;
-        img.alt = "Image";
-        const root = editor.getRootElement();
-        if (root) {
-          root.appendChild(img);
-        }
+  useEffect(() => {
+    function removeSlashNode(selection: RangeSelection | null) {
+      if (!selection) return;
+      const anchor = selection.anchor;
+      const node = anchor.getNode();
+      if (
+        node instanceof TextNode &&
+        node.getTextContent() === "/" &&
+        anchor.offset === 1
+      ) {
+        node.remove();
       }
-    });
-  }, [editor]);
-
-  // Insert a basic 2x2 table
-  const insertTable = useCallback(() => {
-    editor.update(() => {
-      // This is a minimal approach; for full-featured tables, a custom node/plugin is needed
-      const root = editor.getRootElement();
-      if (root) {
-        const table = document.createElement("table");
-        table.className = "table-auto border border-border my-2";
-        for (let i = 0; i < 2; i++) {
-          const row = document.createElement("tr");
-          for (let j = 0; j < 2; j++) {
-            const cell = document.createElement("td");
-            cell.className = "border border-border px-2 py-1";
-            cell.innerText = "";
-            row.appendChild(cell);
-          }
-          table.appendChild(row);
-        }
-        root.appendChild(table);
-      }
-    });
-  }, [editor]);
-
-  // Insert horizontal rule
-  const insertHorizontalRule = useCallback(() => {
-    editor.update(() => {
-      const root = editor.getRootElement();
-      if (root) {
-        const hr = document.createElement("hr");
-        hr.className = "my-4 border-t border-border";
-        root.appendChild(hr);
-      }
-    });
-  }, [editor]);
-
-  // Insert link
-  const insertLink = useCallback(() => {
-    const url = window.prompt("Enter URL for link:");
-    if (url) {
-      editor.dispatchCommand(TOGGLE_LINK_COMMAND, { url });
     }
+    // Register Poll
+    const removePoll = editor.registerCommand(
+      INSERT_POLL_COMMAND,
+      () => {
+        editor.update(() => {
+          const selection = $getSelection();
+          removeSlashNode(selection as RangeSelection);
+          const pollNode = new PollNode("Poll question", [
+            { text: "Option 1", uid: "1", votes: [] },
+            { text: "Option 2", uid: "2", votes: [] },
+          ]);
+          selection?.insertNodes([pollNode]);
+        });
+        return true;
+      },
+      0
+    );
+    // Register Excalidraw
+    const removeExcalidraw = editor.registerCommand(
+      INSERT_EXCALIDRAW_COMMAND,
+      () => {
+        editor.update(() => {
+          const selection = $getSelection();
+          removeSlashNode(selection as RangeSelection);
+          const node = new ExcalidrawNode();
+          selection?.insertNodes([node]);
+        });
+        return true;
+      },
+      0
+    );
+    // Register Sticky
+    const removeSticky = editor.registerCommand(
+      INSERT_STICKY_COMMAND,
+      () => {
+        editor.update(() => {
+          const selection = $getSelection();
+          removeSlashNode(selection as RangeSelection);
+          const node = new StickyNode();
+          selection?.insertNodes([node]);
+        });
+        return true;
+      },
+      0
+    );
+    // Register Image
+    const removeImage = editor.registerCommand(
+      INSERT_IMAGE_COMMAND,
+      () => {
+        const url = window.prompt("Image URL:");
+        if (!url) return true;
+        editor.update(() => {
+          const selection = $getSelection();
+          removeSlashNode(selection as RangeSelection);
+          const node = new ImageNode(url, "Image");
+          selection?.insertNodes([node]);
+        });
+        return true;
+      },
+      0
+    );
+    // Register Inline Image
+    const removeInlineImage = editor.registerCommand(
+      INSERT_INLINE_IMAGE_COMMAND,
+      () => {
+        const url = window.prompt("Inline Image URL:");
+        if (!url) return true;
+        editor.update(() => {
+          const selection = $getSelection();
+          removeSlashNode(selection as RangeSelection);
+          const node = new InlineImageNode(url, "Inline Image");
+          selection?.insertNodes([node]);
+        });
+        return true;
+      },
+      0
+    );
+    // Register Tweet
+    const removeTweet = editor.registerCommand(
+      INSERT_TWEET_COMMAND,
+      () => {
+        const url = window.prompt("Tweet URL:");
+        if (!url) return true;
+        editor.update(() => {
+          const selection = $getSelection();
+          removeSlashNode(selection as RangeSelection);
+          const node = new TweetNode(url); // To be implemented
+          selection?.insertNodes([node]);
+        });
+        return true;
+      },
+      0
+    );
+    // Register YouTube
+    const removeYouTube = editor.registerCommand(
+      INSERT_YOUTUBE_COMMAND,
+      () => {
+        const url = window.prompt("YouTube URL:");
+        if (!url) return true;
+        editor.update(() => {
+          const selection = $getSelection();
+          removeSlashNode(selection as RangeSelection);
+          const node = new YouTubeNode(url); // To be implemented
+          selection?.insertNodes([node]);
+        });
+        return true;
+      },
+      0
+    );
+    // Register Page Break
+    const removePageBreak = editor.registerCommand(
+      INSERT_PAGE_BREAK_COMMAND,
+      () => {
+        editor.update(() => {
+          const selection = $getSelection();
+          removeSlashNode(selection as RangeSelection);
+          const node = new PageBreakNode();
+          selection?.insertNodes([node]);
+        });
+        return true;
+      },
+      0
+    );
+    // Register Layout (Columns)
+    const removeLayout = editor.registerCommand(
+      INSERT_LAYOUT_COMMAND,
+      () => {
+        editor.update(() => {
+          const selection = $getSelection();
+          removeSlashNode(selection as RangeSelection);
+          const container = new LayoutContainerNode();
+          // TODO: add LayoutItemNode children to container
+          selection?.insertNodes([container]);
+        });
+        return true;
+      },
+      0
+    );
+    // Register Headings, Paragraph, Quote, Code, Table, HR, GIF
+    const removeHeading = editor.registerCommand(
+      INSERT_HEADING_COMMAND,
+      (payload: { level: 1 | 2 | 3 }) => {
+        editor.update(() => {
+          const selection = $getSelection();
+          removeSlashNode(selection as RangeSelection);
+          const tag: HeadingTagType = `h${payload.level}` as HeadingTagType;
+          if (selection) {
+            $setBlocksType(selection, () => $createHeadingNode(tag));
+          }
+        });
+        return true;
+      },
+      0
+    );
+    const removeParagraph = editor.registerCommand(
+      INSERT_PARAGRAPH_COMMAND,
+      () => {
+        editor.update(() => {
+          const selection = $getSelection();
+          removeSlashNode(selection as RangeSelection);
+          if (selection) {
+            $setBlocksType(selection, () => $createParagraphNode());
+          }
+        });
+        return true;
+      },
+      0
+    );
+    const removeQuote = editor.registerCommand(
+      INSERT_QUOTE_COMMAND,
+      () => {
+        editor.update(() => {
+          const selection = $getSelection();
+          removeSlashNode(selection as RangeSelection);
+          if (selection) {
+            $setBlocksType(selection, () => $createQuoteNode());
+          }
+        });
+        return true;
+      },
+      0
+    );
+    const removeCode = editor.registerCommand(
+      INSERT_CODE_COMMAND,
+      () => {
+        editor.update(() => {
+          const selection = $getSelection();
+          removeSlashNode(selection as RangeSelection);
+          if (selection) {
+            $setBlocksType(selection, () => $createCodeNode());
+          }
+        });
+        return true;
+      },
+      0
+    );
+    const removeTable = editor.registerCommand(
+      INSERT_TABLE_COMMAND,
+      () => {
+        editor.update(() => {
+          const selection = $getSelection();
+          removeSlashNode(selection as RangeSelection);
+          const node = new TableNode();
+          selection?.insertNodes([node]);
+        });
+        return true;
+      },
+      0
+    );
+    const removeHR = editor.registerCommand(
+      INSERT_HR_COMMAND,
+      () => {
+        editor.update(() => {
+          const selection = $getSelection();
+          removeSlashNode(selection as RangeSelection);
+          const node = new HorizontalRuleNode();
+          selection?.insertNodes([node]);
+        });
+        return true;
+      },
+      0
+    );
+    const removeGIF = editor.registerCommand(
+      INSERT_GIF_COMMAND,
+      () => {
+        const url = window.prompt("GIF URL:");
+        if (!url) return true;
+        editor.update(() => {
+          const selection = $getSelection();
+          removeSlashNode(selection as RangeSelection);
+          const node = new ImageNode(url, "GIF");
+          selection?.insertNodes([node]);
+        });
+        return true;
+      },
+      0
+    );
+    return () => {
+      removePoll();
+      removeExcalidraw();
+      removeSticky();
+      removeImage();
+      removeInlineImage();
+      removeTweet();
+      removeYouTube();
+      removePageBreak();
+      removeLayout();
+      removeHeading();
+      removeParagraph();
+      removeQuote();
+      removeCode();
+      removeTable();
+      removeHR();
+      removeGIF();
+    };
   }, [editor]);
-
-  // Remove link
-  const removeLink = useCallback(() => {
-    editor.dispatchCommand(TOGGLE_LINK_COMMAND, null);
-  }, [editor]);
-
-  // Undo/Redo
-  const undo = useCallback(() => {
-    // @ts-expect-error: Lexical allows string commands for built-in undo
-    editor.dispatchCommand("history-undo", undefined);
-  }, [editor]);
-  const redo = useCallback(() => {
-    // @ts-expect-error: Lexical allows string commands for built-in redo
-    editor.dispatchCommand("history-redo", undefined);
-  }, [editor]);
-
-  return (
-    <div className="flex flex-wrap items-center gap-1 p-2 border-b bg-background rounded-t-md sticky top-0 z-10">
-      <Button variant="ghost" size="icon" onClick={undo} title="Undo">
-        <Undo2 size={18} />
-      </Button>
-      <Button variant="ghost" size="icon" onClick={redo} title="Redo">
-        <Redo2 size={18} />
-      </Button>
-      <div className="h-6 w-px bg-border mx-1" />
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={() => editor.dispatchCommand(FORMAT_TEXT_COMMAND, "bold")}
-        title="Bold"
-      >
-        <Bold size={18} />
-      </Button>
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={() => editor.dispatchCommand(FORMAT_TEXT_COMMAND, "italic")}
-        title="Italic"
-      >
-        <Italic size={18} />
-      </Button>
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={() => editor.dispatchCommand(FORMAT_TEXT_COMMAND, "underline")}
-        title="Underline"
-      >
-        <UnderlineIcon size={18} />
-      </Button>
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={() =>
-          editor.dispatchCommand(FORMAT_TEXT_COMMAND, "strikethrough")
-        }
-        title="Strikethrough"
-      >
-        <Strikethrough size={18} />
-      </Button>
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={() => editor.dispatchCommand(FORMAT_TEXT_COMMAND, "code")}
-        title="Inline Code"
-      >
-        <Code2 size={18} />
-      </Button>
-      <div className="h-6 w-px bg-border mx-1" />
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={() => setBlockType("h1")}
-        title="Heading 1"
-      >
-        <Heading1 size={18} />
-      </Button>
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={() => setBlockType("h2")}
-        title="Heading 2"
-      >
-        <Heading2 size={18} />
-      </Button>
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={() => setBlockType("h3")}
-        title="Heading 3"
-      >
-        <Heading3 size={18} />
-      </Button>
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={() => setBlockType("paragraph")}
-        title="Paragraph"
-      >
-        P
-      </Button>
-      <div className="h-6 w-px bg-border mx-1" />
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={() =>
-          editor.dispatchCommand(INSERT_UNORDERED_LIST_COMMAND, undefined)
-        }
-        title="Bullet List"
-      >
-        <ListIcon size={18} />
-      </Button>
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={() =>
-          editor.dispatchCommand(INSERT_ORDERED_LIST_COMMAND, undefined)
-        }
-        title="Ordered List"
-      >
-        <ListOrdered size={18} />
-      </Button>
-      <div className="h-6 w-px bg-border mx-1" />
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={() => setBlockType("quote")}
-        title="Blockquote"
-      >
-        <Quote size={18} />
-      </Button>
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={() => setBlockType("code")}
-        title="Code Block"
-      >
-        <Code2 size={18} />
-      </Button>
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={insertHorizontalRule}
-        title="Horizontal Rule"
-      >
-        ─
-      </Button>
-      <div className="h-6 w-px bg-border mx-1" />
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={insertLink}
-        title="Insert Link"
-      >
-        <LinkIcon size={18} />
-      </Button>
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={removeLink}
-        title="Remove Link"
-      >
-        <Link2Off size={18} />
-      </Button>
-      <div className="h-6 w-px bg-border mx-1" />
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={insertImage}
-        title="Insert Image"
-      >
-        <ImageIcon size={18} />
-      </Button>
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={insertTable}
-        title="Insert Table"
-      >
-        <TableIcon size={18} />
-      </Button>
-    </div>
-  );
+  return null;
 }
 
 export default function PostEditor({
@@ -419,6 +443,8 @@ export default function PostEditor({
           {initialContentHTML && (
             <LoadInitialHtmlPlugin html={initialContentHTML} />
           )}
+          <CustomCommandPlugin />
+          <FloatingLinkEditorPlugin />
         </div>
       </div>
     </LexicalComposer>
