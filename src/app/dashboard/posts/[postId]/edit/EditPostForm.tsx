@@ -21,17 +21,28 @@ import PostEditor from "@/components/editor/PostEditor";
 const editPostSchema = z
   .object({
     title: z.string().min(1, "Title is required").max(200),
-    content: z
-      .string()
-      .refine(
-        (value) =>
-          value !== "<p></p>" &&
-          value.replace(/<[^>]+>/g, "").trim().length >= 10,
-        {
-          message:
-            "Content must have meaningful text (at least 10 characters excluding HTML tags).",
+    content: z.string().refine(
+      (value) => {
+        try {
+          const json = JSON.parse(value);
+          function extractText(node: any) {
+            if (!node) return "";
+            if (node.type === "text" && typeof node.text === "string")
+              return node.text;
+            if (Array.isArray(node.children))
+              return node.children.map(extractText).join("");
+            return "";
+          }
+          const text = extractText(json.root);
+          return text.trim().length >= 10;
+        } catch {
+          return false;
         }
-      ),
+      },
+      {
+        message: "Content must have meaningful text (at least 10 characters).",
+      }
+    ),
     status: z.enum(["draft", "published", "scheduled"]),
     published_at: z.string().optional().nullable(),
   })
@@ -88,11 +99,30 @@ export default function EditPostForm({
   const [isDeleting, setIsDeleting] = useState(false);
   const [autosaveStatus, setAutosaveStatus] = useState<string>("");
 
+  const EMPTY_LEXICAL_STATE = JSON.stringify({
+    root: {
+      children: [
+        {
+          type: "paragraph",
+          children: [],
+          direction: null,
+          format: "",
+          indent: 0,
+          version: 1,
+        },
+      ],
+      direction: null,
+      format: "",
+      indent: 0,
+      type: "root",
+      version: 1,
+    },
+  });
   const form = useForm<EditPostFormValues>({
     resolver: zodResolver(editPostSchema),
     defaultValues: {
       title: initialData.title || "",
-      content: initialData.content || "<p></p>",
+      content: initialData.content || EMPTY_LEXICAL_STATE,
       status: getInitialStatus(initialData),
       published_at: initialData.published_at
         ? formatDateForInput(initialData.published_at)
@@ -118,7 +148,7 @@ export default function EditPostForm({
   useEffect(() => {
     reset({
       title: initialData.title || "",
-      content: initialData.content || "<p></p>",
+      content: initialData.content || EMPTY_LEXICAL_STATE,
       status: getInitialStatus(initialData),
       published_at: initialData.published_at
         ? formatDateForInput(initialData.published_at)
@@ -285,10 +315,10 @@ export default function EditPostForm({
 
   const mainContentNode = (
     <PostEditor
-      initialContentHTML={getValues("content")}
+      initialContentJSON={getValues("content")}
       placeholder="Continue writing..."
-      onContentChange={(html) =>
-        setValue("content", html, { shouldValidate: true, shouldDirty: true })
+      onContentChange={(json) =>
+        setValue("content", json, { shouldValidate: true, shouldDirty: true })
       }
     />
   );

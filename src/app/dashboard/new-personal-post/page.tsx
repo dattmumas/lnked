@@ -15,17 +15,29 @@ import PostEditor from "@/components/editor/PostEditor";
 const newPostSchema = z
   .object({
     title: z.string().min(1, "Title is required").max(200),
-    content: z
-      .string()
-      .refine(
-        (value) =>
-          value !== "<p></p>" &&
-          value.replace(/<[^>]+>/g, "").trim().length >= 10,
-        {
-          message:
-            "Content must have meaningful text (at least 10 characters excluding HTML tags).",
+    content: z.string().refine(
+      (value) => {
+        try {
+          const json = JSON.parse(value);
+          // Traverse the Lexical JSON to extract all text nodes
+          function extractText(node: any) {
+            if (!node) return "";
+            if (node.type === "text" && typeof node.text === "string")
+              return node.text;
+            if (Array.isArray(node.children))
+              return node.children.map(extractText).join("");
+            return "";
+          }
+          const text = extractText(json.root);
+          return text.trim().length >= 10;
+        } catch {
+          return false;
         }
-      ),
+      },
+      {
+        message: "Content must have meaningful text (at least 10 characters).",
+      }
+    ),
     status: z.enum(["draft", "published", "scheduled"]),
     published_at: z.string().optional().nullable(),
   })
@@ -51,11 +63,30 @@ export default function NewPersonalPostPage() {
   const [autosaveStatus, setAutosaveStatus] = useState<string>("");
   const [createdPostId, setCreatedPostId] = useState<string | null>(null);
 
+  const EMPTY_LEXICAL_STATE = JSON.stringify({
+    root: {
+      children: [
+        {
+          type: "paragraph",
+          children: [],
+          direction: null,
+          format: "",
+          indent: 0,
+          version: 1,
+        },
+      ],
+      direction: null,
+      format: "",
+      indent: 0,
+      type: "root",
+      version: 1,
+    },
+  });
   const form = useForm<NewPostFormValues>({
     resolver: zodResolver(newPostSchema),
     defaultValues: {
       title: "",
-      content: "<p></p>",
+      content: EMPTY_LEXICAL_STATE,
       status: "draft",
       published_at: "",
     },
@@ -133,14 +164,6 @@ export default function NewPersonalPostPage() {
   const onSubmit: SubmitHandler<NewPostFormValues> = async (data) => {
     setServerError(null);
     setAutosaveStatus("");
-
-    if (data.content.replace(/<[^>]+>/g, "").trim().length < 10) {
-      form.setError("content", {
-        type: "manual",
-        message: "Content must be at least 10 characters...",
-      });
-      return;
-    }
 
     let is_public_for_action = false;
     let published_at_for_action: string | null = null;
@@ -241,10 +264,10 @@ export default function NewPersonalPostPage() {
 
   const mainContentNode = (
     <PostEditor
-      initialContentHTML={getValues("content")}
+      initialContentJSON={getValues("content")}
       placeholder="Share your thoughts..."
-      onContentChange={(html) =>
-        setValue("content", html, { shouldValidate: true, shouldDirty: true })
+      onContentChange={(json) =>
+        setValue("content", json, { shouldValidate: true, shouldDirty: true })
       }
     />
   );

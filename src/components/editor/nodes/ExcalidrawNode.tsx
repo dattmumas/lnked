@@ -4,7 +4,7 @@
  */
 import { DecoratorNode, NodeKey } from "lexical";
 import type { JSX } from "react";
-import React, { useCallback, useRef, useState } from "react";
+import React, { useCallback, useRef } from "react";
 import dynamic from "next/dynamic";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import type {
@@ -13,6 +13,7 @@ import type {
   BinaryFiles,
 } from "@excalidraw/excalidraw/dist/types/excalidraw/types";
 import type { OrderedExcalidrawElement } from "@excalidraw/excalidraw/dist/types/excalidraw/element/types";
+import { $getNodeByKey } from "lexical";
 
 // Dynamically import Excalidraw to avoid SSR issues
 const Excalidraw = dynamic(
@@ -75,7 +76,6 @@ interface ExcalidrawComponentProps {
 
 function ExcalidrawComponent({ data, nodeKey }: ExcalidrawComponentProps) {
   const initialData = data ? JSON.parse(data) : undefined;
-  const [value, setValue] = useState<object | undefined>(initialData);
   const [editor] = useLexicalComposerContext();
   const excalidrawRef = useRef<ExcalidrawImperativeAPI>(null);
 
@@ -87,23 +87,22 @@ function ExcalidrawComponent({ data, nodeKey }: ExcalidrawComponentProps) {
       files: BinaryFiles
     ) => {
       const newData = JSON.stringify({ elements, appState, files });
-      setValue({ elements, appState, files });
-      if (editor) {
+      // Only update if data is different
+      if (newData !== data) {
         editor.update(() => {
-          const node = editor._editorState._nodeMap.get(nodeKey);
-          if (node && "__data" in node) {
-            node.__data = newData;
+          const node = $getNodeByKey(nodeKey);
+          if (node && typeof node.getWritable === "function") {
+            (node.getWritable() as ExcalidrawNode).__data = newData;
           }
         });
       }
     },
-    [editor, nodeKey]
+    [editor, nodeKey, data]
   );
 
-  // Excalidraw props
   const excalidrawProps = {
     ref: excalidrawRef,
-    initialData: value,
+    initialData,
     onChange: handleChange,
     style: {
       minHeight: 300,

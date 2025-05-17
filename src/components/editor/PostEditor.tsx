@@ -16,12 +16,7 @@ import { OnChangePlugin } from "@lexical/react/LexicalOnChangePlugin";
 import { MarkdownShortcutPlugin } from "@lexical/react/LexicalMarkdownShortcutPlugin";
 import { TRANSFORMERS } from "@lexical/markdown";
 import { LexicalErrorBoundary } from "@lexical/react/LexicalErrorBoundary";
-import {
-  $getSelection,
-  LexicalEditor,
-  EditorState,
-  createCommand,
-} from "lexical";
+import { $getSelection, createCommand } from "lexical";
 import { HeadingNode, QuoteNode } from "@lexical/rich-text";
 import { ListNode, ListItemNode } from "@lexical/list";
 import { CodeNode, CodeHighlightNode } from "@lexical/code";
@@ -32,8 +27,8 @@ import {
   createLinkMatcherWithRegExp,
 } from "@lexical/react/LexicalAutoLinkPlugin";
 // Import custom nodes
-import { PollNode } from "./nodes/PollNode";
-import { ExcalidrawNode } from "./nodes/ExcalidrawNode";
+import { PollNode, $createPollNode } from "./nodes/PollNode";
+import { ExcalidrawNode, $createExcalidrawNode } from "./nodes/ExcalidrawNode";
 import { StickyNode } from "./nodes/StickyNode";
 import { ImageNode } from "./nodes/ImageNode";
 import { InlineImageNode } from "./nodes/InlineImageNode";
@@ -48,6 +43,9 @@ import FloatingLinkEditorPlugin from "./plugins/FloatingLinkEditorPlugin";
 import CodeHighlightPlugin from "./plugins/CodeHighlightPlugin";
 import { GIFNode, GifPicker } from "./nodes/GIFNode";
 import SlashMenuPlugin from "./plugins/SlashMenuPlugin";
+import { CollapsibleContainerNode } from "./nodes/CollapsibleContainerNode";
+import { HashtagNode } from "./nodes/HashtagNode";
+import { STICKY_COLORS } from "./nodes/StickyNode";
 
 const editorNodes = [
   HeadingNode,
@@ -74,6 +72,8 @@ const editorNodes = [
   LayoutContainerNode, // Columns container
   LayoutItemNode, // Column item
   GIFNode, // GIF block
+  CollapsibleContainerNode, // Collapsible section
+  HashtagNode, // Hashtag text
 ];
 
 // Custom insert commands
@@ -112,35 +112,262 @@ const EMAIL_MATCHER = createLinkMatcherWithRegExp(
 );
 const MATCHERS = [URL_MATCHER, EMAIL_MATCHER];
 
+// --- Node creation helpers for consistency ---
+function $createStickyNode(text = "", color = STICKY_COLORS[0]) {
+  return new StickyNode(text, color);
+}
+function $createTweetNode(tweetUrl = "") {
+  return new TweetNode(tweetUrl);
+}
+function $createYouTubeNode(videoUrl = "") {
+  return new YouTubeNode(videoUrl);
+}
+function $createImageNode(src = "", alt = "Image") {
+  return new ImageNode(src, alt);
+}
+function $createInlineImageNode(src = "", alt = "Inline Image") {
+  return new InlineImageNode(src, alt);
+}
+function $createCollapsibleContainerNode(collapsed = false) {
+  return new CollapsibleContainerNode(collapsed);
+}
+
 function lexicalEditorOnError(error: Error) {
   console.error("Lexical editor error:", error);
 }
 
 interface PostEditorProps {
-  initialContentHTML?: string;
+  initialContentJSON?: string;
   placeholder?: string;
-  onContentChange?: (html: string) => void;
+  onContentChange?: (json: string) => void;
 }
 
-function LoadInitialHtmlPlugin({ html }: { html: string }) {
+function LoadInitialJsonPlugin({ json }: { json: string }) {
   const [editor] = useLexicalComposerContext();
   useEffect(() => {
-    if (!html) return;
+    if (!json) return;
     try {
-      // Insert HTML directly into the root node
-      editor.update(() => {
-        const root = editor.getRootElement();
-        if (root) root.innerHTML = html;
-      });
+      editor.setEditorState(editor.parseEditorState(json));
     } catch (error) {
-      console.error("Error parsing initial HTML content:", error);
+      console.error("Error parsing initial JSON content:", error);
     }
-  }, [editor, html]);
+    // No cleanup needed
+  }, [editor, json]);
+  return null;
+}
+
+function CustomInsertCommandsPlugin() {
+  const [editor] = useLexicalComposerContext();
+  React.useEffect(() => {
+    // Helper to remove "/" TextNode if present at selection
+    function removeSlashTrigger() {
+      editor.update(() => {
+        const selection = $getSelection();
+        if (selection && selection.isCollapsed && selection.isCollapsed()) {
+          const nodes = selection.getNodes();
+          if (nodes.length === 1) {
+            const node = nodes[0];
+            if (
+              typeof node.getTextContent === "function" &&
+              node.getTextContent() === "/"
+            ) {
+              node.remove();
+            }
+          }
+        }
+      });
+    }
+    // Poll
+    const removePoll = editor.registerCommand(
+      INSERT_POLL_COMMAND,
+      () => {
+        editor.update(() => {
+          const selection = $getSelection();
+          if (selection) {
+            selection.insertNodes([
+              $createPollNode("", [
+                { text: "", uid: Date.now().toString(), votes: [] },
+                { text: "", uid: (Date.now() + 1).toString(), votes: [] },
+              ]),
+            ]);
+          }
+        });
+        removeSlashTrigger();
+        return true;
+      },
+      0
+    );
+    // Sticky
+    const removeSticky = editor.registerCommand(
+      INSERT_STICKY_COMMAND,
+      () => {
+        editor.update(() => {
+          const selection = $getSelection();
+          if (selection) {
+            selection.insertNodes([$createStickyNode()]);
+          }
+        });
+        removeSlashTrigger();
+        return true;
+      },
+      0
+    );
+    // Excalidraw
+    const removeExcalidraw = editor.registerCommand(
+      INSERT_EXCALIDRAW_COMMAND,
+      () => {
+        editor.update(() => {
+          const selection = $getSelection();
+          if (selection) {
+            selection.insertNodes([$createExcalidrawNode("")]);
+          }
+        });
+        removeSlashTrigger();
+        return true;
+      },
+      0
+    );
+    // Table (3x3)
+    const removeTable = editor.registerCommand(
+      INSERT_TABLE_COMMAND,
+      () => {
+        editor.update(() => {
+          const selection = $getSelection();
+          if (selection) {
+            const table = new TableNode();
+            for (let i = 0; i < 3; i++) {
+              const row = new TableRowNode();
+              for (let j = 0; j < 3; j++) {
+                row.append(new TableCellNode());
+              }
+              table.append(row);
+            }
+            selection.insertNodes([table]);
+          }
+        });
+        removeSlashTrigger();
+        return true;
+      },
+      0
+    );
+    // Tweet
+    const removeTweet = editor.registerCommand(
+      INSERT_TWEET_COMMAND,
+      () => {
+        const url = window.prompt("Enter Tweet URL:");
+        if (!url) return true;
+        editor.update(() => {
+          const selection = $getSelection();
+          if (selection) {
+            selection.insertNodes([$createTweetNode(url)]);
+          }
+        });
+        removeSlashTrigger();
+        return true;
+      },
+      0
+    );
+    // YouTube
+    const removeYouTube = editor.registerCommand(
+      INSERT_YOUTUBE_COMMAND,
+      () => {
+        const url = window.prompt("Enter YouTube URL:");
+        if (!url) return true;
+        editor.update(() => {
+          const selection = $getSelection();
+          if (selection) {
+            selection.insertNodes([$createYouTubeNode(url)]);
+          }
+        });
+        removeSlashTrigger();
+        return true;
+      },
+      0
+    );
+    // Image
+    const removeImage = editor.registerCommand(
+      INSERT_IMAGE_COMMAND,
+      () => {
+        const url = window.prompt("Enter image URL:");
+        if (!url) return true;
+        editor.update(() => {
+          const selection = $getSelection();
+          if (selection) {
+            selection.insertNodes([$createImageNode(url, "Image")]);
+          }
+        });
+        removeSlashTrigger();
+        return true;
+      },
+      0
+    );
+    // Inline Image
+    const removeInlineImage = editor.registerCommand(
+      INSERT_INLINE_IMAGE_COMMAND,
+      () => {
+        const url = window.prompt("Enter inline image URL:");
+        if (!url) return true;
+        editor.update(() => {
+          const selection = $getSelection();
+          if (selection) {
+            selection.insertNodes([
+              $createInlineImageNode(url, "Inline Image"),
+            ]);
+          }
+        });
+        removeSlashTrigger();
+        return true;
+      },
+      0
+    );
+    // HR
+    const removeHR = editor.registerCommand(
+      INSERT_HR_COMMAND,
+      () => {
+        editor.update(() => {
+          const selection = $getSelection();
+          if (selection) {
+            selection.insertNodes([new HorizontalRuleNode()]);
+          }
+        });
+        removeSlashTrigger();
+        return true;
+      },
+      0
+    );
+    // Collapsible
+    const removeCollapsible = editor.registerCommand(
+      createCommand("INSERT_COLLAPSIBLE_COMMAND"),
+      () => {
+        editor.update(() => {
+          const selection = $getSelection();
+          if (selection) {
+            selection.insertNodes([$createCollapsibleContainerNode(false)]);
+          }
+        });
+        removeSlashTrigger();
+        return true;
+      },
+      0
+    );
+    return () => {
+      removePoll();
+      removeSticky();
+      removeExcalidraw();
+      removeTable();
+      removeTweet();
+      removeYouTube();
+      removeImage();
+      removeInlineImage();
+      removeHR();
+      removeCollapsible();
+    };
+  }, [editor]);
   return null;
 }
 
 export default function PostEditor({
-  initialContentHTML,
+  initialContentJSON,
   placeholder = "Share your thoughts...",
   onContentChange,
 }: PostEditorProps) {
@@ -173,11 +400,9 @@ export default function PostEditor({
   };
 
   const handleOnChange = useCallback(
-    (editorState: EditorState, editor: LexicalEditor) => {
-      editorState.read(() => {
-        const html = editor.getRootElement()?.innerHTML || "";
-        onContentChange?.(html);
-      });
+    (editorState: import("lexical").EditorState) => {
+      const json = JSON.stringify(editorState.toJSON());
+      onContentChange?.(json);
     },
     [onContentChange]
   );
@@ -230,10 +455,11 @@ export default function PostEditor({
           <CodeHighlightPlugin />
           <OnChangePlugin onChange={handleOnChange} ignoreSelectionChange />
           <MarkdownShortcutPlugin transformers={TRANSFORMERS} />
-          {initialContentHTML && (
-            <LoadInitialHtmlPlugin html={initialContentHTML} />
+          {initialContentJSON && (
+            <LoadInitialJsonPlugin json={initialContentJSON} />
           )}
           <CustomCommandPluginWithGif />
+          <CustomInsertCommandsPlugin />
           <FloatingLinkEditorPlugin />
           <SlashMenuPlugin />
           {showGifPicker && (

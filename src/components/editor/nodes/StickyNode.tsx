@@ -7,7 +7,7 @@ import type { JSX } from "react";
 import React, { useState } from "react";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 
-const STICKY_COLORS = [
+export const STICKY_COLORS = [
   "#fff475", // yellow
   "#fbbc04", // orange
   "#ccff90", // green
