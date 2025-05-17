@@ -5,20 +5,16 @@ import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import ManageMembersClientUI from "./ManageMembersClientUI"; // New client component
 
-interface ManageCollectiveMembersPageProps {
-  params: {
-    collectiveId: string;
-  };
-}
-
 export type MemberWithDetails = Tables<"collective_members"> & {
   user: Pick<Tables<"users">, "id" | "full_name"> | null; // Removed email
 };
 
 export default async function ManageCollectiveMembersPage({
   params,
-}: ManageCollectiveMembersPageProps) {
-  const { collectiveId } = params;
+}: {
+  params: Promise<{ collectiveId: string }>;
+}) {
+  const { collectiveId } = await params;
   const cookieStore = await cookies();
   const supabase = createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,

@@ -9,13 +9,6 @@ import BookmarkButton from "@/components/app/posts/molecules/BookmarkButton";
 import CommentsSection from "@/components/app/posts/molecules/CommentsSection";
 import PostViewTracker from "@/components/app/posts/PostViewTracker";
 
-interface PostPageProps {
-  params: {
-    collectiveSlug: string;
-    postId: string; // Assuming postId is a UUID string
-  };
-}
-
 // Helper function to format dates, can be moved to a utils file
 const formatDate = (dateString: string | null): string => {
   if (!dateString) return "Date not available";
@@ -46,8 +39,12 @@ export type CollectivePostViewData =
     view_count: number | null; // Add view_count as optional to align with DB schema (can be null or number)
   };
 
-export default async function PostPage({ params }: PostPageProps) {
-  const { collectiveSlug, postId } = params;
+export default async function PostPage({
+  params,
+}: {
+  params: Promise<{ collectiveSlug: string; postId: string }>;
+}) {
+  const { collectiveSlug, postId } = await params;
   const cookieStore = await cookies();
   const supabase = createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,

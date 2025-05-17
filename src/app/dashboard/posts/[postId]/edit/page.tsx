@@ -4,16 +4,12 @@ import type { Database } from "@/lib/database.types";
 import { notFound, redirect } from "next/navigation";
 import EditPostForm, { type PostDataType } from "./EditPostForm"; // Import the client form component
 
-interface EditPostPageServerProps {
-  params: {
-    postId: string;
-  };
-}
-
-export default async function EditPostPageServer({
+export default async function EditPostPage({
   params,
-}: EditPostPageServerProps) {
-  const { postId } = params;
+}: {
+  params: Promise<{ postId: string }>;
+}) {
+  const { postId } = await params;
   const cookieStore = await cookies();
   const supabase = createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,

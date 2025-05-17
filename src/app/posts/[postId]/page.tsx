@@ -8,34 +8,12 @@ import PostLikeButton from "@/components/PostLikeButton";
 import PostViewTracker from "@/components/app/posts/PostViewTracker";
 import { formatDate } from "@/lib/utils";
 
-interface IndividualPostPageProps {
-  params: {
-    postId: string; // Assuming postId is a UUID string
-  };
-}
-
-function calculateReadingTime(htmlContent: string | null): string {
-  if (!htmlContent) return "0 min read";
-  const textContent = htmlContent.replace(/<[^>]+>/g, "");
-  const words = textContent.trim().split(/\s+/).length;
-  const wordsPerMinute = 200;
-  const minutes = Math.ceil(words / wordsPerMinute);
-  return `${minutes} min read`;
-}
-
-// Define the expected shape of items in postsData
-type PostWithAuthorViews = Database["public"]["Tables"]["posts"]["Row"] & {
-  author:
-    | Database["public"]["Tables"]["users"]["Row"]
-    | { id: string; full_name: string | null }
-    | null;
-  view_count: number | null;
-};
-
 export default async function IndividualPostViewPage({
   params,
-}: IndividualPostPageProps) {
-  const { postId } = params;
+}: {
+  params: Promise<{ postId: string }>;
+}) {
+  const { postId } = await params;
   const cookieStore = await cookies();
 
   const supabase = createServerClient<Database>(
@@ -191,3 +169,21 @@ export default async function IndividualPostViewPage({
     </div>
   );
 }
+
+function calculateReadingTime(htmlContent: string | null): string {
+  if (!htmlContent) return "0 min read";
+  const textContent = htmlContent.replace(/<[^>]+>/g, "");
+  const words = textContent.trim().split(/\s+/).length;
+  const wordsPerMinute = 200;
+  const minutes = Math.ceil(words / wordsPerMinute);
+  return `${minutes} min read`;
+}
+
+// Define the expected shape of items in postsData
+type PostWithAuthorViews = Database["public"]["Tables"]["posts"]["Row"] & {
+  author:
+    | Database["public"]["Tables"]["users"]["Row"]
+    | { id: string; full_name: string | null }
+    | null;
+  view_count: number | null;
+};

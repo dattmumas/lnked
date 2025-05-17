@@ -23,12 +23,12 @@ const formatDate = (dateString: string | null | undefined): string => {
   });
 };
 
-export default async function CollectiveSubscribersPage({
+export default async function SubscribersPage({
   params,
 }: {
-  params: { collectiveId: string };
+  params: Promise<{ collectiveId: string }>;
 }) {
-  const { collectiveId } = params;
+  const { collectiveId } = await params;
   const cookieStore = await cookies();
   const supabase = createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,

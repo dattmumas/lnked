@@ -5,20 +5,17 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import SubscribeButton from "@/components/SubscribeButton"; // Import the new button
 
-interface CollectivePageProps {
-  params: {
-    collectiveSlug: string;
-  };
-}
-
-export default async function CollectivePage({ params }: CollectivePageProps) {
+export default async function Page({
+  params,
+}: {
+  params: Promise<{ collectiveSlug: string }>;
+}) {
+  const { collectiveSlug } = await params;
   const supabase = await createSupabaseServerClient();
 
   const {
     data: { user },
   } = await supabase.auth.getUser(); // Get user early for like status
-
-  const { collectiveSlug } = params;
 
   // Fetch collective details by slug
   const { data: collective, error: collectiveError } = await supabase

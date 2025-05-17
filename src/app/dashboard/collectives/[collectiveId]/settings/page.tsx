@@ -4,16 +4,12 @@ import type { Database } from "@/lib/database.types";
 import { redirect, notFound } from "next/navigation";
 import EditCollectiveSettingsForm from "./EditCollectiveSettingsForm"; // Client component for the form
 
-interface CollectiveSettingsPageProps {
-  params: {
-    collectiveId: string;
-  };
-}
-
 export default async function CollectiveSettingsPage({
   params,
-}: CollectiveSettingsPageProps) {
-  const { collectiveId } = params;
+}: {
+  params: Promise<{ collectiveId: string }>;
+}) {
+  const { collectiveId } = await params;
   const cookieStore = await cookies();
   const supabase = createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,

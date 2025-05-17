@@ -9,21 +9,17 @@ import SubscribeButton from "@/components/SubscribeButton";
 import FollowButton from "@/components/FollowButton";
 // We'll need a subscribe button component here eventually
 
-interface IndividualNewsletterPageProps {
-  params: {
-    userId: string; // This will be the user ID of the newsletter author
-  };
-}
-
 // Define the expected shape of items in postsData
-type PostWithLikesData = Database["public"]["Tables"]["posts"]["Row"] & {
+export type PostWithLikesData = Database["public"]["Tables"]["posts"]["Row"] & {
   likes: { count: number }[] | null;
 };
 
 export default async function IndividualNewsletterPage({
   params,
-}: IndividualNewsletterPageProps) {
-  const { userId: authorId } = params;
+}: {
+  params: Promise<{ userId: string }>;
+}) {
+  const { userId } = await params;
   const cookieStore = await cookies();
   const supabase = createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -47,11 +43,11 @@ export default async function IndividualNewsletterPage({
   const { data: author, error: authorError } = await supabase
     .from("users")
     .select("id, full_name, role") // Add any other public user details you want to display
-    .eq("id", authorId)
+    .eq("id", userId)
     .single();
 
   if (authorError || !author) {
-    console.error(`Error fetching author ${authorId}:`, authorError);
+    console.error(`Error fetching author ${userId}:`, authorError);
     notFound();
   }
 
