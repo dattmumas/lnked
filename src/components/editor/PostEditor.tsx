@@ -413,6 +413,23 @@ export default function PostEditor({
     namespace: "LnkedPostEditor",
     onError: lexicalEditorOnError,
     nodes: editorNodes,
+    theme: {
+      paragraph: "editor-paragraph",
+      quote: "editor-quote",
+      heading: {
+        h1: "editor-heading-h1",
+        h2: "editor-heading-h2",
+        h3: "editor-heading-h3",
+      },
+      code: "editor-code",
+      list: {
+        ul: "editor-list-ul",
+        ol: "editor-list-ol",
+        listitem: "editor-list-item",
+      },
+      link: "link",
+      placeholder: "editor-placeholder",
+    },
   };
 
   const handleOnChange = useCallback(
@@ -427,12 +444,14 @@ export default function PostEditor({
 
   return (
     <LexicalComposer initialConfig={initialConfig}>
-      <div>
+      <div className="flex flex-col h-full">
         <Toolbar />
-        <div>
+        <div className="relative flex-1">
           <RichTextPlugin
-            contentEditable={<ContentEditable />}
-            placeholder={<div>{placeholder}</div>}
+            contentEditable={<ContentEditable className="editor-input" />}
+            placeholder={
+              <div className="editor-placeholder">{placeholder}</div>
+            }
             ErrorBoundary={LexicalErrorBoundary}
           />
           <HistoryPlugin />

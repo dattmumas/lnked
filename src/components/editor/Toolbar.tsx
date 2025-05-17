@@ -13,19 +13,31 @@ import {
   $createHeadingNode,
   $createQuoteNode,
 } from "@lexical/rich-text";
-import { TOGGLE_LINK_COMMAND } from "@lexical/link";
 import {
   Bold,
   Italic,
   Underline as UnderlineIcon,
   Strikethrough,
   Code2,
+  Undo,
+  Redo,
+  AlignLeft,
+  AlignCenter,
+  AlignRight,
   Link as LinkIcon,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import type { JSX } from "react";
 import { $setBlocksType } from "@lexical/selection";
 import { $createParagraphNode, type TextFormatType } from "lexical";
+import {
+  CAN_UNDO_COMMAND,
+  CAN_REDO_COMMAND,
+  UNDO_COMMAND,
+  REDO_COMMAND,
+  FORMAT_ELEMENT_COMMAND,
+} from "lexical";
+import { TOGGLE_LINK_COMMAND } from "@lexical/link";
+import { $isLinkNode } from "@lexical/link";
 
 const BLOCK_TYPES = [
   { type: "paragraph", label: "Paragraph" },
@@ -36,28 +48,42 @@ const BLOCK_TYPES = [
   { type: "code", label: "Code Block" },
 ];
 
-const FONT_FAMILIES = ["Arial", "Serif", "Monospace"];
-const FONT_SIZES = [12, 14, 16, 18, 24, 32];
-const ALIGN_OPTIONS = [
-  { value: "left", label: "Left" },
-  { value: "center", label: "Center" },
-  { value: "right", label: "Right" },
-];
-
 function Toolbar(): JSX.Element {
   const [editor] = useLexicalComposerContext();
   // Local state for active inline formatting and current block type/attributes
   const [blockType, setBlockType] = useState<string>("paragraph");
-  const [fontFamily, setFontFamily] = useState<string | null>(null);
-  const [fontSize, setFontSize] = useState<number | null>(null);
-  const [align, setAlign] = useState<string>("left");
   const [isBold, setIsBold] = useState(false);
   const [isItalic, setIsItalic] = useState(false);
   const [isUnderline, setIsUnderline] = useState(false);
   const [isStrikethrough, setIsStrikethrough] = useState(false);
   const [isCode, setIsCode] = useState(false);
+  const [canUndo, setCanUndo] = useState(false);
+  const [canRedo, setCanRedo] = useState(false);
+  const [isLink, setIsLink] = useState(false);
 
-  // Helper: update toolbar state based on selection
+  // Listen for undo/redo availability
+  useEffect(() => {
+    return editor.registerCommand(
+      CAN_UNDO_COMMAND,
+      (payload) => {
+        setCanUndo(payload);
+        return false;
+      },
+      0
+    );
+  }, [editor]);
+  useEffect(() => {
+    return editor.registerCommand(
+      CAN_REDO_COMMAND,
+      (payload) => {
+        setCanRedo(payload);
+        return false;
+      },
+      0
+    );
+  }, [editor]);
+
+  // Update isLink state
   const updateToolbar = useCallback(() => {
     const selection = $getSelection();
     if ($isRangeSelection(selection)) {
@@ -75,11 +101,18 @@ function Toolbar(): JSX.Element {
       setIsUnderline(selection.hasFormat("underline"));
       setIsStrikethrough(selection.hasFormat("strikethrough"));
       setIsCode(selection.hasFormat("code"));
-      // Font family/size: placeholder for now
-      setFontFamily(null);
-      setFontSize(null);
-      // Alignment: placeholder for now
-      setAlign("left");
+      // Link
+      let node = selection.anchor.getNode();
+      while (node != null) {
+        if ($isLinkNode(node)) {
+          setIsLink(true);
+          return;
+        }
+        const parent = node.getParent();
+        if (!parent) break;
+        node = parent;
+      }
+      setIsLink(false);
     }
   }, [editor]);
 
@@ -118,7 +151,6 @@ function Toolbar(): JSX.Element {
               $setBlocksType(selection, () => $createQuoteNode());
               break;
             default:
-              // Use paragraph node if available, else fallback to h1
               if (typeof $createParagraphNode !== "undefined") {
                 $setBlocksType(selection, () => $createParagraphNode());
               } else {
@@ -136,29 +168,47 @@ function Toolbar(): JSX.Element {
     editor.dispatchCommand(FORMAT_TEXT_COMMAND, format);
   };
 
-  // Alignment handler (placeholder)
-  const applyAlignment = (align: string) => {
-    setAlign(align);
-    // TODO: implement alignment logic
+  // Alignment handlers
+  const formatAlign = (align: "left" | "center" | "right") => {
+    editor.dispatchCommand(FORMAT_ELEMENT_COMMAND, align);
   };
 
-  // Font family and size handlers (placeholder)
-  const applyFontFamily = (family: string) => {
-    setFontFamily(family);
-    // TODO: implement font family logic
-  };
-  const applyFontSize = (size: number) => {
-    setFontSize(size);
-    // TODO: implement font size logic
-  };
+  // Link handler
+  const insertLink = useCallback(() => {
+    if (!isLink) {
+      editor.dispatchCommand(TOGGLE_LINK_COMMAND, "https://");
+    } else {
+      editor.dispatchCommand(TOGGLE_LINK_COMMAND, null);
+    }
+  }, [editor, isLink]);
 
   return (
-    <div className="flex flex-wrap items-center gap-2 p-2 border-b bg-gray-50 sticky top-0 z-10">
+    <div className="toolbar">
+      {/* Undo/Redo */}
+      <button
+        type="button"
+        onClick={() => editor.dispatchCommand(UNDO_COMMAND, undefined)}
+        className="toolbar-item spaced"
+        aria-label="Undo"
+        disabled={!canUndo}
+      >
+        <Undo className="format" />
+      </button>
+      <button
+        type="button"
+        onClick={() => editor.dispatchCommand(REDO_COMMAND, undefined)}
+        className="toolbar-item spaced"
+        aria-label="Redo"
+        disabled={!canRedo}
+      >
+        <Redo className="format" />
+      </button>
+      <div className="divider" />
       {/* Block format dropdown */}
       <select
         value={blockType}
         onChange={(e) => formatBlock(e.target.value)}
-        className="border rounded px-2 py-1 mr-2"
+        className="toolbar-item block-controls"
       >
         {BLOCK_TYPES.map((option) => (
           <option key={option.type} value={option.type}>
@@ -166,103 +216,82 @@ function Toolbar(): JSX.Element {
           </option>
         ))}
       </select>
-      {/* Font family dropdown (placeholder) */}
-      <select
-        value={fontFamily || ""}
-        onChange={(e) => applyFontFamily(e.target.value)}
-        className="border rounded px-2 py-1 mr-2"
+      {/* Alignment buttons */}
+      <button
+        type="button"
+        onClick={() => formatAlign("left")}
+        className="toolbar-item spaced"
+        aria-label="Align Left"
       >
-        <option value="">Font</option>
-        {FONT_FAMILIES.map((font) => (
-          <option key={font} value={font} style={{ fontFamily: font }}>
-            {font}
-          </option>
-        ))}
-      </select>
-      {/* Font size dropdown (placeholder) */}
-      <select
-        value={fontSize || ""}
-        onChange={(e) => applyFontSize(Number(e.target.value))}
-        className="border rounded px-2 py-1 mr-2"
+        <AlignLeft className="format" />
+      </button>
+      <button
+        type="button"
+        onClick={() => formatAlign("center")}
+        className="toolbar-item spaced"
+        aria-label="Align Center"
       >
-        <option value="">Size</option>
-        {FONT_SIZES.map((size) => (
-          <option key={size} value={size}>
-            {size}px
-          </option>
-        ))}
-      </select>
-      {/* Alignment dropdown (placeholder) */}
-      <select
-        value={align}
-        onChange={(e) => applyAlignment(e.target.value)}
-        className="border rounded px-2 py-1 mr-2"
+        <AlignCenter className="format" />
+      </button>
+      <button
+        type="button"
+        onClick={() => formatAlign("right")}
+        className="toolbar-item spaced"
+        aria-label="Align Right"
       >
-        {ALIGN_OPTIONS.map((opt) => (
-          <option key={opt.value} value={opt.value}>
-            {opt.label}
-          </option>
-        ))}
-      </select>
+        <AlignRight className="format" />
+      </button>
+      <div className="divider" />
       {/* Inline formatting buttons */}
-      <Button
-        variant="ghost"
-        size="icon"
+      <button
+        type="button"
         onClick={() => toggleFormat("bold")}
-        title="Bold"
-        className={isBold ? "bg-gray-300" : ""}
+        className={"toolbar-item spaced " + (isBold ? "active" : "")}
+        aria-label="Format Bold"
       >
-        <Bold size={16} />
-      </Button>
-      <Button
-        variant="ghost"
-        size="icon"
+        <Bold className="format" />
+      </button>
+      <button
+        type="button"
         onClick={() => toggleFormat("italic")}
-        title="Italic"
-        className={isItalic ? "bg-gray-300" : ""}
+        className={"toolbar-item spaced " + (isItalic ? "active" : "")}
+        aria-label="Format Italic"
       >
-        <Italic size={16} />
-      </Button>
-      <Button
-        variant="ghost"
-        size="icon"
+        <Italic className="format" />
+      </button>
+      <button
+        type="button"
         onClick={() => toggleFormat("underline")}
-        title="Underline"
-        className={isUnderline ? "bg-gray-300" : ""}
+        className={"toolbar-item spaced " + (isUnderline ? "active" : "")}
+        aria-label="Format Underline"
       >
-        <UnderlineIcon size={16} />
-      </Button>
-      <Button
-        variant="ghost"
-        size="icon"
+        <UnderlineIcon className="format" />
+      </button>
+      <button
+        type="button"
         onClick={() => toggleFormat("strikethrough")}
-        title="Strikethrough"
-        className={isStrikethrough ? "bg-gray-300" : ""}
+        className={"toolbar-item spaced " + (isStrikethrough ? "active" : "")}
+        aria-label="Format Strikethrough"
       >
-        <Strikethrough size={16} />
-      </Button>
-      <Button
-        variant="ghost"
-        size="icon"
+        <Strikethrough className="format" />
+      </button>
+      <button
+        type="button"
         onClick={() => toggleFormat("code")}
-        title="Inline Code"
-        className={isCode ? "bg-gray-300" : ""}
+        className={"toolbar-item spaced " + (isCode ? "active" : "")}
+        aria-label="Format Inline Code"
       >
-        <Code2 size={16} />
-      </Button>
-      {/* Link insert button (optional) */}
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={() => {
-          const url = prompt("Enter URL:");
-          if (url) editor.dispatchCommand(TOGGLE_LINK_COMMAND, url);
-        }}
-        title="Insert Link"
+        <Code2 className="format" />
+      </button>
+      {/* Link button */}
+      <button
+        type="button"
+        onClick={insertLink}
+        className={"toolbar-item spaced " + (isLink ? "active" : "")}
+        aria-label="Insert link"
       >
-        <LinkIcon size={16} />
-      </Button>
-      {/* Image, table insert are now via slash menu, so not included here */}
+        <LinkIcon className="format" />
+      </button>
     </div>
   );
 }

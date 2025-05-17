@@ -173,3 +173,117 @@
     border-radius: 0.5rem;
   }
 }
+
+/* Lexical Playground Editor Styles */
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  padding: 8px 12px;
+  background: #f9f9f9;
+  border-bottom: 1px solid #e0e0e0;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+.toolbar-item {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px 8px;
+  margin-right: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #555;
+}
+.toolbar-item.spaced {
+  margin-right: 8px;
+}
+.toolbar-item.active {
+  background: #d0d0d0;
+}
+.toolbar-item:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.divider {
+  width: 1px;
+  height: 20px;
+  background-color: #ccc;
+  margin: 0 8px;
+}
+.toolbar-item .format {
+  width: 16px;
+  height: 16px;
+}
+
+.editor-input {
+  outline: none;
+  padding: 12px;
+  width: 100%;
+  min-height: 150px;
+  height: 100%;
+  box-sizing: border-box;
+  background: #fff;
+}
+.editor-placeholder {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  color: #888;
+  font-style: italic;
+  pointer-events: none;
+}
+.editor-paragraph,
+.editor-paragraph:last-child {
+  margin: 0;
+}
+.editor-heading-h1 {
+  font-size: 1.5em;
+  font-weight: bold;
+  margin: 0;
+}
+.editor-heading-h2 {
+  font-size: 1.25em;
+  font-weight: bold;
+  margin: 0;
+}
+.editor-heading-h3 {
+  font-size: 1.1em;
+  font-weight: bold;
+  margin: 0;
+}
+.editor-quote {
+  margin: 0;
+  padding-left: 1em;
+  border-left: 4px solid #ccc;
+  color: #666;
+}
+.editor-code {
+  margin: 0;
+  padding: 4px;
+  background: #f2f2f2;
+  font-family: monospace;
+  white-space: pre;
+  border-radius: 4px;
+}
+.editor-list-ul,
+.editor-list-ol {
+  margin: 0 0 0 1.5em;
+  padding: 0;
+}
+.editor-list-item {
+  margin: 0;
+  padding: 0;
+}
+.text-align-left {
+  text-align: left;
+}
+.text-align-center {
+  text-align: center;
+}
+.text-align-right {
+  text-align: right;
+}
