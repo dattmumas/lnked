@@ -1,21 +1,19 @@
 import Stripe from "stripe";
 
-if (!process.env.STRIPE_SECRET_KEY) {
-  throw new Error(
-    "STRIPE_SECRET_KEY is not set in the environment variables. Please ensure it is defined in your .env.local or server environment."
-  );
-}
+let _stripe: Stripe | null = null;
 
-export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: "2025-04-30.basil", // Updated to version suggested by TS error
-  typescript: true, // Leverage Stripe's TypeScript bindings.
-  // Optionally, you can configure other settings like httpAgent for proxies, telemetry, etc.
-  // appInfo: { // Example: Useful for Stripe to identify your application
-  //   name: 'Lnked Platform',
-  //   version: '0.1.0',
-  //   url: 'https://your-app-url.com' // Replace with your actual app URL
-  // }
-});
+export function getStripe(): Stripe | null {
+  if (_stripe !== null) return _stripe; // cached
+
+  const key = process.env.STRIPE_SECRET_KEY;
+  if (!key) {
+    // No key yet – return null instead of throwing
+    return null;
+  }
+
+  _stripe = new Stripe(key, { apiVersion: "2025-04-30.basil" });
+  return _stripe;
+}
 
 /**
  * ----------------------------------------------------------------------------

@@ -3,6 +3,8 @@ import Stripe from "stripe";
 import { stripe } from "@/lib/stripe"; // Your Stripe SDK instance
 import { supabaseAdmin } from "@/lib/supabaseAdmin"; // Updated import path
 import type { Database } from "@/lib/database.types";
+import { headers } from "next/headers";
+import { getStripe } from "@/lib/stripe";
 
 const relevantEvents = new Set([
   "checkout.session.completed",
@@ -11,12 +13,25 @@ const relevantEvents = new Set([
   "customer.subscription.deleted",
 ]);
 
-export async function POST(request: Request) {
-  const body = await request.text();
-  const signature = request.headers.get("stripe-signature");
+export const runtime = "nodejs"; // or 'edge' if you want Edge runtime
+
+export async function POST(req: Request) {
+  const stripe = getStripe();
+
+  if (!stripe) {
+    // Stripe not set up: acknowledge so Stripe won't retry (HTTP 200)
+    return NextResponse.json(
+      { ignored: true, reason: "Stripe not configured" },
+      { status: 200 }
+    );
+  }
+
+  const sig = headers().get("stripe-signature")!;
+  const rawBody = await req.text();
+
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
-  if (!signature || !webhookSecret) {
+  if (!sig || !webhookSecret) {
     console.error("Stripe webhook error: Missing signature or secret.");
     return NextResponse.json(
       { error: "Webhook signature or secret missing." },
@@ -26,7 +41,7 @@ export async function POST(request: Request) {
 
   let event: Stripe.Event;
   try {
-    event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
+    event = stripe.webhooks.constructEvent(rawBody, sig, webhookSecret);
   } catch (err: unknown) {
     const errorMessage =
       err instanceof Error ? err.message : "Unknown webhook signature error";
