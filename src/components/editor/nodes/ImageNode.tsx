@@ -4,6 +4,7 @@
  */
 import { DecoratorNode, NodeKey } from "lexical";
 import type { JSX } from "react";
+import Image from "next/image";
 
 // TODO: Implement ImageNode logic, import/export, and React component
 export class ImageNode extends DecoratorNode<JSX.Element> {
@@ -46,7 +47,15 @@ export class ImageNode extends DecoratorNode<JSX.Element> {
   }
   decorate(): JSX.Element {
     return (
-      <img src={this.__src} alt={this.__alt} style={{ maxWidth: "100%" }} />
+      <Image
+        src={this.__src}
+        alt={this.__alt}
+        style={{ maxWidth: "100%" }}
+        width={500}
+        height={500}
+        unoptimized={true}
+        loading="lazy"
+      />
     );
   }
 }

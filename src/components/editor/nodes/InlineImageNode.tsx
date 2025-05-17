@@ -4,6 +4,7 @@
  */
 import { DecoratorNode, NodeKey } from "lexical";
 import type { JSX } from "react";
+import Image from "next/image";
 
 export class InlineImageNode extends DecoratorNode<JSX.Element> {
   __src: string;
@@ -46,10 +47,14 @@ export class InlineImageNode extends DecoratorNode<JSX.Element> {
   }
   decorate(): JSX.Element {
     return (
-      <img
+      <Image
         src={this.__src}
         alt={this.__alt}
         style={{ maxWidth: "100%", display: "inline-block" }}
+        width={300}
+        height={300}
+        unoptimized={true}
+        loading="lazy"
       />
     );
   }

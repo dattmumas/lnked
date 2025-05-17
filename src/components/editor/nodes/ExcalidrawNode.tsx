@@ -7,12 +7,6 @@ import type { JSX } from "react";
 import React, { useCallback, useRef } from "react";
 import dynamic from "next/dynamic";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
-import type {
-  ExcalidrawImperativeAPI,
-  AppState,
-  BinaryFiles,
-} from "@excalidraw/excalidraw/dist/types/excalidraw/types";
-import type { OrderedExcalidrawElement } from "@excalidraw/excalidraw/dist/types/excalidraw/element/types";
 import { $getNodeByKey } from "lexical";
 
 // Dynamically import Excalidraw to avoid SSR issues
@@ -26,6 +20,11 @@ export type SerializedExcalidrawNode = {
   version: 1;
   data: string; // JSON string of drawing data
 };
+
+// Workaround: ExcalidrawImperativeAPI type cannot be imported due to package export issues
+// https://github.com/excalidraw/excalidraw/issues/4867
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type ExcalidrawImperativeAPI = any;
 
 // TODO: Implement ExcalidrawNode logic, import/export, and React component
 export class ExcalidrawNode extends DecoratorNode<JSX.Element> {
@@ -81,11 +80,7 @@ function ExcalidrawComponent({ data, nodeKey }: ExcalidrawComponentProps) {
 
   // Save drawing data to node
   const handleChange = useCallback(
-    (
-      elements: readonly OrderedExcalidrawElement[],
-      appState: AppState,
-      files: BinaryFiles
-    ) => {
+    (elements: readonly unknown[], appState: unknown, files: unknown) => {
       const newData = JSON.stringify({ elements, appState, files });
       // Only update if data is different
       if (newData !== data) {

@@ -121,7 +121,7 @@ function Toolbar({ onInsertGif }: ToolbarProps): JSX.Element {
       }
       setIsLink(false);
     }
-  }, [editor]);
+  }, []);
 
   useEffect(() => {
     // Register a listener for selection changes and update toolbar

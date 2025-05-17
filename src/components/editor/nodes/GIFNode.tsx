@@ -1,6 +1,7 @@
 import { DecoratorNode, NodeKey } from "lexical";
 import type { JSX } from "react";
 import React, { useState } from "react";
+import Image from "next/image";
 
 export type SerializedGIFNode = {
   type: "gif";
@@ -53,10 +54,13 @@ export class GIFNode extends DecoratorNode<JSX.Element> {
 
 function GIFComponent({ url, alt }: { url: string; alt: string }) {
   return (
-    <img
+    <Image
       src={url}
       alt={alt}
       style={{ maxWidth: "100%", display: "block" }}
+      width={500}
+      height={500}
+      unoptimized={true}
       loading="lazy"
     />
   );
@@ -125,10 +129,13 @@ export function GifPicker({
                 onSelect(gif.images.fixed_width.url, gif.title || "GIF")
               }
             >
-              <img
+              <Image
                 src={gif.images.fixed_width.url}
                 alt={gif.title || "GIF"}
                 className="rounded w-full h-auto"
+                width={200}
+                height={200}
+                unoptimized={true}
                 loading="lazy"
               />
             </button>

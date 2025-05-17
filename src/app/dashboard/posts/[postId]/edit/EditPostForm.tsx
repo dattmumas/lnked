@@ -92,6 +92,26 @@ const formatDateForInput = (date: Date | string | null): string => {
   return localDate.toISOString().slice(0, 16);
 };
 
+const EMPTY_LEXICAL_STATE = JSON.stringify({
+  root: {
+    children: [
+      {
+        type: "paragraph",
+        children: [],
+        direction: null,
+        format: "",
+        indent: 0,
+        version: 1,
+      },
+    ],
+    direction: null,
+    format: "",
+    indent: 0,
+    type: "root",
+    version: 1,
+  },
+});
+
 export default function EditPostForm({
   postId,
   initialData,
@@ -103,25 +123,6 @@ export default function EditPostForm({
   const [isDeleting, setIsDeleting] = useState(false);
   const [autosaveStatus, setAutosaveStatus] = useState<string>("");
 
-  const EMPTY_LEXICAL_STATE = JSON.stringify({
-    root: {
-      children: [
-        {
-          type: "paragraph",
-          children: [],
-          direction: null,
-          format: "",
-          indent: 0,
-          version: 1,
-        },
-      ],
-      direction: null,
-      format: "",
-      indent: 0,
-      type: "root",
-      version: 1,
-    },
-  });
   const form = useForm<EditPostFormValues>({
     resolver: zodResolver(editPostSchema),
     defaultValues: {
@@ -158,7 +159,7 @@ export default function EditPostForm({
         ? formatDateForInput(initialData.published_at)
         : "",
     });
-  }, [initialData, reset]);
+  }, [initialData, reset, EMPTY_LEXICAL_STATE]);
 
   const performAutosave = useCallback(async () => {
     if (!isDirty) return;
