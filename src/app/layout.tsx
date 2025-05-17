@@ -23,7 +23,7 @@ export default function RootLayout({
       className={`${GeistSans.variable} ${GeistMono.variable}`}
       suppressHydrationWarning
     >
-      <body className="bg-[#F7F7F7] text-[#1F1F1F] font-sans antialiased">
+      <body className="bg-background text-foreground font-sans antialiased">
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
@@ -31,11 +31,11 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <SmoothScroll />
-          <header className="bg-[#1F1F1F] border-b-2 border-[#E50914] px-4 h-20 flex items-center justify-between sticky top-0 z-50">
-            <span className="text-2xl md:text-3xl font-extrabold text-white tracking-tight flex items-center h-full">
+          <header className="bg-card border-b-2 border-primary px-4 h-20 flex items-center justify-between sticky top-0 z-50">
+            <span className="text-2xl md:text-3xl font-extrabold text-foreground tracking-tight flex items-center h-full">
               Lnked
               <span
-                className="ml-1 text-[#E50914] text-3xl md:text-4xl leading-none self-center"
+                className="ml-1 text-primary text-3xl md:text-4xl leading-none self-center"
                 style={{ fontWeight: 900 }}
               >
                 .

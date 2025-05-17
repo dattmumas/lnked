@@ -92,16 +92,15 @@
 */
 
 @layer base {
-  /* Removed global transparent border on all elements
+  /* Removed global transparent border on all elements */
+  /*
   * {
     @apply border border-transparent;
   }
   */
 
   body {
-    background-color: #f7f7f7;
-    color: #1f1f1f;
-    @apply antialiased;
+    @apply bg-background text-foreground antialiased;
   }
 
   h1,
@@ -110,30 +109,11 @@
   h4,
   h5,
   h6 {
-    color: #1f1f1f;
-    font-weight: 800;
-    letter-spacing: -0.01em;
+    @apply text-foreground font-extrabold tracking-tight;
   }
 
-  /* Prose style customizations REMOVED FOR NOW to restore base styling 
-  .prose {
-    h1, h2, h3, h4, h5, h6 {
-      @apply font-serif text-foreground;
-    }
-    a {
-      @apply text-primary hover:underline;
-    }
-  }
-
-  .prose-invert {
-    h1, h2, h3, h4, h5, h6 {
-      @apply font-serif text-foreground;
-    }
-    a {
-      @apply text-primary hover:underline;
-    }
-  }
-  */
+  /* Prose style customizations REMOVED FOR NOW to restore base styling */
+  /* ...existing comments... */
 }
 
 /* Tiptap Editor Minimal Styling */

@@ -59,6 +59,7 @@ export type Database = {
           name: string
           owner_id: string
           slug: string
+          stripe_account_id: string | null
           tags: string[] | null
           tsv: unknown | null
         }
@@ -69,6 +70,7 @@ export type Database = {
           name: string
           owner_id: string
           slug: string
+          stripe_account_id?: string | null
           tags?: string[] | null
           tsv?: unknown | null
         }
@@ -79,6 +81,7 @@ export type Database = {
           name?: string
           owner_id?: string
           slug?: string
+          stripe_account_id?: string | null
           tags?: string[] | null
           tsv?: unknown | null
         }

@@ -1,10 +1,9 @@
 import { NextResponse } from "next/server";
-import Stripe from "stripe";
-import { stripe } from "@/lib/stripe"; // Your Stripe SDK instance
-import { supabaseAdmin } from "@/lib/supabaseAdmin"; // Updated import path
+import { getStripe } from "@/lib/stripe";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import type Stripe from "stripe";
 import type { Database } from "@/lib/database.types";
 import { headers } from "next/headers";
-import { getStripe } from "@/lib/stripe";
 
 const relevantEvents = new Set([
   "checkout.session.completed",
@@ -13,7 +12,7 @@ const relevantEvents = new Set([
   "customer.subscription.deleted",
 ]);
 
-export const runtime = "nodejs"; // or 'edge' if you want Edge runtime
+export const runtime = "nodejs";
 
 export async function POST(req: Request) {
   const stripe = getStripe();
@@ -26,7 +25,7 @@ export async function POST(req: Request) {
     );
   }
 
-  const sig = headers().get("stripe-signature")!;
+  const sig = headers().get("stripe-signature");
   const rawBody = await req.text();
 
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
@@ -183,41 +182,23 @@ export async function POST(req: Request) {
           const { error: upsertErr } = await supabaseAdmin
             .from("subscriptions")
             .upsert(subscriptionData, { onConflict: "id" });
-
           if (upsertErr) {
             console.error(
               `Error upserting subscription ${subscriptionObject.id} (Next API):`,
               upsertErr.message
             );
-            return NextResponse.json(
-              { error: "DB error processing subscription" },
-              { status: 500 }
+          } else {
+            console.log(
+              `Subscription ${subscriptionObject.id} upserted for user ${subscriberUserId} (Next API).`
             );
           }
-          console.log(
-            `Subscription ${subscriptionObject.id} processed for user ${subscriberUserId}, target: ${targetEntityTypeFromMeta} - ${targetEntityIdFromMeta} (Next API).`
-          );
           break;
         }
-        default:
-          console.warn(
-            `Unhandled relevant event type: ${event.type} (Next API)`
-          );
       }
-    } catch (error: unknown) {
-      const errorMessage =
-        error instanceof Error
-          ? error.message
-          : "Unknown webhook processing error";
-      const eventType =
-        (event as { type: string })?.type || "unknown_event_type";
-      console.error(
-        `Error processing event ${eventType} (Next API):`,
-        errorMessage,
-        error
-      );
+    } catch (err) {
+      console.error("Error handling Stripe webhook event:", err);
       return NextResponse.json(
-        { error: `Webhook handler failed: ${errorMessage}` },
+        { error: "Error handling Stripe webhook event." },
         { status: 500 }
       );
     }

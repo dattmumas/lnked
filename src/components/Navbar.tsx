@@ -6,7 +6,12 @@ import { useEffect, useState } from "react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import type { User } from "@supabase/supabase-js";
 import { Button } from "./ui/button";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import {
+  Sheet,
+  SheetContent,
+  SheetTrigger,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import {
   Menu,
   LayoutDashboard,
@@ -147,6 +152,9 @@ export default function Navbar() {
             side="left"
             className="p-6 space-y-1 w-[250px] sm:w-[300px]"
           >
+            <SheetTitle>
+              <span className="sr-only">Main Menu</span>
+            </SheetTitle>
             <Link
               href="/"
               className="text-xl font-bold text-primary mb-4 block"

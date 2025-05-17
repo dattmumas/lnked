@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   LexicalComposer,
   type InitialConfigType,
@@ -374,6 +374,8 @@ export default function PostEditor({
   placeholder = "Share your thoughts...",
   onContentChange,
 }: PostEditorProps) {
+  // Store initial content only once
+  const [initialContent] = useState(initialContentJSON);
   const [showGifPicker, setShowGifPicker] = React.useState(false);
   const gifInsertRef = React.useRef<
     ((url: string, alt: string) => void) | null
@@ -458,9 +460,8 @@ export default function PostEditor({
           <CodeHighlightPlugin />
           <OnChangePlugin onChange={handleOnChange} ignoreSelectionChange />
           <MarkdownShortcutPlugin transformers={TRANSFORMERS} />
-          {initialContentJSON && (
-            <LoadInitialJsonPlugin json={initialContentJSON} />
-          )}
+          {/* Only load initial content once on mount */}
+          {initialContent && <LoadInitialJsonPlugin json={initialContent} />}
           <CustomCommandPluginWithGif />
           <CustomInsertCommandsPlugin />
           <FloatingLinkEditorPlugin />

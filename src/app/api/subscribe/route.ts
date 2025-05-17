@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
-import { stripe } from "@/lib/stripe";
+import { getStripe } from "@/lib/stripe";
 import Stripe from "stripe"; // Explicitly import Stripe namespace
 import { supabaseAdmin } from "@/lib/supabaseAdmin"; // Updated import path
 import type { Database } from "@/lib/database.types";
@@ -51,6 +51,14 @@ export async function POST(request: Request) {
       },
     }
   );
+
+  const stripe = getStripe();
+  if (!stripe) {
+    return NextResponse.json(
+      { error: "Stripe not configured" },
+      { status: 500 }
+    );
+  }
 
   try {
     const {
@@ -168,6 +176,24 @@ export async function POST(request: Request) {
       redirectPath.startsWith("/") ? redirectPath : "/" + redirectPath
     }`;
 
+    // --- Stripe Connect logic for collectives ---
+    let transferData: { destination: string } | undefined = undefined;
+    if (targetEntityType === "collective") {
+      // Fetch the collective's stripe_account_id
+      const { data: collective, error: collectiveError } = await supabaseAdmin
+        .from("collectives")
+        .select("stripe_account_id")
+        .eq("id", targetEntityId)
+        .single();
+      if (collectiveError || !collective?.stripe_account_id) {
+        return NextResponse.json(
+          { error: "Collective is not onboarded to Stripe." },
+          { status: 400 }
+        );
+      }
+      transferData = { destination: collective.stripe_account_id };
+    }
+
     // 4. Create Stripe Checkout Session for the subscription.
     const checkoutSessionParams: Stripe.Checkout.SessionCreateParams = {
       customer: stripeCustomerId,
@@ -185,6 +211,7 @@ export async function POST(request: Request) {
           targetEntityType: targetEntityType, // What they are subscribing to
           targetEntityId: targetEntityId, // The ID of what they are subscribing to
         },
+        ...(transferData ? { transfer_data: transferData } : {}),
       },
       success_url: successUrl,
       cancel_url: cancelUrl,
