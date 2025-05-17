@@ -113,11 +113,7 @@ export default async function DashboardManagementPage() {
           <Collapsible defaultOpen>
             <CollapsibleTrigger
               icon={<Users className="h-5 w-5" />}
-              title={
-                <span className="text-2xl font-serif font-semibold mb-2">
-                  Quick Stats
-                </span>
-              }
+              title="Quick Stats"
             />
             <CollapsibleContent>
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 pt-4 w-full">
@@ -154,11 +150,7 @@ export default async function DashboardManagementPage() {
           <Collapsible defaultOpen>
             <CollapsibleTrigger
               icon={<Rss className="h-5 w-5" />}
-              title={
-                <span className="text-2xl font-serif font-semibold mb-2">
-                  My Individual Newsletter
-                </span>
-              }
+              title="My Individual Newsletter"
             />
             <CollapsibleContent>
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 pt-4 w-full">
@@ -221,11 +213,7 @@ export default async function DashboardManagementPage() {
           <Collapsible defaultOpen>
             <CollapsibleTrigger
               icon={<Library className="h-5 w-5" />}
-              title={
-                <span className="text-2xl font-serif font-semibold mb-2">
-                  My Owned Collectives
-                </span>
-              }
+              title="My Owned Collectives"
             />
             <CollapsibleContent>
               <div className="flex items-center justify-between gap-2 pt-4 w-full">

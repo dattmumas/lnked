@@ -47,6 +47,7 @@ export type CollectivePostViewData =
   };
 
 export default async function PostPage({ params }: PostPageProps) {
+  const { collectiveSlug, postId } = await params;
   const cookieStore = await cookies();
   const supabase = createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -86,7 +87,6 @@ export default async function PostPage({ params }: PostPageProps) {
     }
   );
 
-  const { collectiveSlug, postId } = await params;
   const {
     data: { user },
   } = await supabase.auth.getUser();

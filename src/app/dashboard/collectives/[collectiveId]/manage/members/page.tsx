@@ -18,7 +18,7 @@ export type MemberWithDetails = Tables<"collective_members"> & {
 export default async function ManageCollectiveMembersPage({
   params,
 }: ManageCollectiveMembersPageProps) {
-  const { collectiveId } = params;
+  const { collectiveId } = await params;
   const cookieStore = await cookies();
   const supabase = createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -120,7 +120,6 @@ export default async function ManageCollectiveMembersPage({
       </header>
       <ManageMembersClientUI
         collectiveId={collective.id}
-        collectiveName={collective.name}
         initialMembers={(members as MemberWithDetails[]) || []}
         isOwner={currentUser.id === collective.owner_id}
       />

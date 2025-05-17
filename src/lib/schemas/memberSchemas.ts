@@ -19,7 +19,7 @@ export type InviteMemberServerValues = z.infer<typeof InviteMemberServerSchema>;
 
 // Client-side schema can have a default for the form UX
 export const InviteMemberClientSchema = InviteMemberServerSchema.extend({
-  role: z.enum(COLLECTIVE_MEMBER_ROLES).default("contributor"),
+  role: z.enum(COLLECTIVE_MEMBER_ROLES),
 });
 
 export type InviteMemberClientFormValues = z.infer<

@@ -4,7 +4,7 @@ import React from "react";
 // Example: Fetch collective data by slug, extract theme (e.g., primaryColor, coverImageUrl)
 // and apply them as CSS variables to a wrapper div or via a <style> tag.
 
-export default async function CollectiveSlugLayout({
+export default async function CollectiveLayout({
   children,
   params,
 }: {

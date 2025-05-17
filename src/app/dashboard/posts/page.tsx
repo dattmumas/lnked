@@ -10,7 +10,8 @@ import Link from "next/link";
 // Use a type alias for DashboardPost
 export type DashboardPost = Database["public"]["Tables"]["posts"]["Row"] & {
   collective?: { id: string; name: string; slug: string } | null;
-  likes?: { count: number }[] | null;
+  post_reactions?: { count: number; type?: string }[] | null;
+  likeCount?: number;
 };
 
 // Type for collectives user can post to
@@ -53,7 +54,7 @@ export default async function MyPostsPage() {
       `
       *,
       collective:collectives!collective_id(id, name, slug),
-      likes(count)
+      post_reactions:post_reactions!post_id(count)
     `
     )
     .eq("author_id", userId)
@@ -112,6 +113,14 @@ export default async function MyPostsPage() {
     });
   }
 
+  // Map posts to include likeCount (count only 'like' reactions)
+  const postsWithLikeCount = (posts as DashboardPost[]).map((post) => ({
+    ...post,
+    likeCount: Array.isArray(post.post_reactions)
+      ? post.post_reactions.filter((r) => r.type === "like").length
+      : 0,
+  }));
+
   const renderNewPostButton = () => {
     return (
       <Button asChild size="sm" className="w-full md:w-auto">
@@ -129,7 +138,7 @@ export default async function MyPostsPage() {
         {renderNewPostButton()}
       </div>
       <div className="overflow-x-auto rounded-lg border border-border bg-card">
-        {posts && posts.length > 0 ? (
+        {postsWithLikeCount && postsWithLikeCount.length > 0 ? (
           <table className="min-w-full text-sm divide-y divide-border">
             <thead>
               <tr className="bg-muted/50 text-muted-foreground">
@@ -151,7 +160,7 @@ export default async function MyPostsPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {(posts as DashboardPost[]).map((post) => (
+              {postsWithLikeCount.map((post) => (
                 <PostListItem key={post.id} post={post} />
               ))}
             </tbody>

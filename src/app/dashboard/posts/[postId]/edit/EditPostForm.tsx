@@ -25,12 +25,16 @@ const editPostSchema = z
       (value) => {
         try {
           const json = JSON.parse(value);
-          function extractText(node: any) {
-            if (!node) return "";
-            if (node.type === "text" && typeof node.text === "string")
-              return node.text;
-            if (Array.isArray(node.children))
-              return node.children.map(extractText).join("");
+          function extractText(node: unknown): string {
+            if (!node || typeof node !== "object" || node === null) return "";
+            const n = node as {
+              type?: string;
+              text?: string;
+              children?: unknown[];
+            };
+            if (n.type === "text" && typeof n.text === "string") return n.text;
+            if (Array.isArray(n.children))
+              return n.children.map(extractText).join("");
             return "";
           }
           const text = extractText(json.root);

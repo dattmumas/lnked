@@ -1,5 +1,5 @@
 import { cookies } from "next/headers";
-import { createServerClient, type CookieOptions } from "@supabase/ssr";
+import { createServerClient } from "@supabase/ssr";
 import type { Database } from "@/lib/database.types";
 import { redirect, notFound } from "next/navigation";
 import EditCollectiveSettingsForm from "./EditCollectiveSettingsForm"; // Client component for the form
@@ -13,20 +13,12 @@ interface CollectiveSettingsPageProps {
 export default async function CollectiveSettingsPage({
   params,
 }: CollectiveSettingsPageProps) {
-  const { collectiveId } = params;
-  const cookieStore = cookies();
+  const { collectiveId } = await params;
+  const cookieStore = await cookies();
   const supabase = createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get: (name: string) => cookieStore.get(name)?.value,
-        set: (name: string, value: string, options: CookieOptions) =>
-          cookieStore.set(name, value, options),
-        remove: (name: string, options: CookieOptions) =>
-          cookieStore.delete(name, options),
-      },
-    }
+    { cookies: cookieStore }
   );
 
   const {
@@ -67,6 +59,10 @@ export default async function CollectiveSettingsPage({
     description: collective.description || "",
     tags_string: (collective.tags as string[] | null)?.join(", ") || "",
   };
+
+  if ("id" in collective) {
+    // safe to access collective.id, collective.name, etc.
+  }
 
   return (
     <div className="container mx-auto p-4 md:p-6 max-w-2xl">

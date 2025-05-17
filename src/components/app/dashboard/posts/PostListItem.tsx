@@ -13,6 +13,8 @@ type PostRow = Database["public"]["Tables"]["posts"]["Row"];
 interface DashboardPost extends PostRow {
   collective?: { id: string; name: string; slug: string } | null;
   likes?: { count: number }[] | null;
+  post_reactions?: { count: number; type?: string }[] | null;
+  likeCount?: number;
 }
 
 interface PostListItemProps {
@@ -36,7 +38,10 @@ export default function PostListItem({ post }: PostListItemProps) {
       : status === "Scheduled"
       ? "secondary"
       : "default";
-  const likes = post.likes?.[0]?.count || 0;
+  const likes =
+    typeof post.likeCount === "number"
+      ? post.likeCount
+      : post.likes?.[0]?.count || post.post_reactions?.[0]?.count || 0;
   const publishDate = post.published_at || post.created_at;
   const postUrl = post.collective
     ? `/collectives/${post.collective.slug}/${post.id}`

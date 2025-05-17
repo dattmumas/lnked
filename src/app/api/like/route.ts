@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { createServerClient, type CookieOptions } from "@supabase/ssr";
+import { createServerClient } from "@supabase/ssr";
 import type { Database } from "@/lib/database.types";
 
 interface LikeRequestBody {
@@ -9,23 +9,11 @@ interface LikeRequestBody {
 
 // POST /api/like - Toggles a like for a post by the authenticated user
 export async function POST(request: Request) {
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   const supabase = createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value;
-        },
-        set(name: string, value: string, options: CookieOptions) {
-          cookieStore.set(name, value, options);
-        },
-        remove(name: string, options: CookieOptions) {
-          cookieStore.delete(name, options);
-        },
-      },
-    }
+    { cookies: cookieStore }
   );
 
   const {
@@ -51,8 +39,9 @@ export async function POST(request: Request) {
 
     // Check for existing like
     const { data: existingLike, error: checkError } = await supabase
-      .from("likes")
+      .from("post_reactions")
       .select("*")
+      .eq("type", "like")
       .eq("post_id", postId)
       .eq("user_id", user.id)
       .maybeSingle();
@@ -65,7 +54,7 @@ export async function POST(request: Request) {
     if (existingLike) {
       // Unlike
       const { error: deleteError } = await supabase
-        .from("likes")
+        .from("post_reactions")
         .delete()
         .match({ post_id: postId, user_id: user.id });
       if (deleteError) {
@@ -78,7 +67,7 @@ export async function POST(request: Request) {
     } else {
       // Like
       const { error: insertError } = await supabase
-        .from("likes")
+        .from("post_reactions")
         .insert({ post_id: postId, user_id: user.id });
       if (insertError) {
         console.error("Error liking post:", insertError.message);
@@ -91,7 +80,7 @@ export async function POST(request: Request) {
 
     // Get new like count
     const { count, error: countError } = await supabase
-      .from("likes")
+      .from("post_reactions")
       .select("*_count_placeholder_*", { count: "exact", head: true })
       .eq("post_id", postId);
 

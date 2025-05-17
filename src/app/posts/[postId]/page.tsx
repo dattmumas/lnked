@@ -6,21 +6,13 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import PostLikeButton from "@/components/PostLikeButton";
 import PostViewTracker from "@/components/app/posts/PostViewTracker";
+import { formatDate } from "@/lib/utils";
 
 interface IndividualPostPageProps {
   params: {
     postId: string; // Assuming postId is a UUID string
   };
 }
-
-const formatDate = (dateString: string | null): string => {
-  if (!dateString) return "Date not available";
-  return new Date(dateString).toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
-};
 
 function calculateReadingTime(htmlContent: string | null): string {
   if (!htmlContent) return "0 min read";
@@ -94,7 +86,16 @@ export default async function IndividualPostViewPage({
   if (!typedPost.author) {
     // Check if author object exists after join
     console.error(`Author data missing for post ${postId}`);
-    // Handle as appropriate, e.g. show 'Unknown Author' or notFound()
+    notFound();
+  }
+
+  // Access control: Only show if public and published, or if current user is the author
+  const isPublic = typedPost.is_public;
+  const isPublished =
+    !typedPost.published_at || new Date(typedPost.published_at) <= new Date();
+  const isAuthor = currentUser?.id === typedPost.author_id;
+  if (!(isPublic && isPublished) && !isAuthor) {
+    notFound();
   }
 
   const authorName = typedPost.author?.full_name || "Anonymous";
@@ -165,8 +166,8 @@ export default async function IndividualPostViewPage({
           </div>
         </header>
 
-        <div className="whitespace-pre-wrap break-words">
-          {typedPost.content}
+        <div className="prose dark:prose-invert lg:prose-xl max-w-none">
+          <div dangerouslySetInnerHTML={{ __html: typedPost.content || "" }} />
         </div>
       </article>
 

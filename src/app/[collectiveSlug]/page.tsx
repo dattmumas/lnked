@@ -1,6 +1,4 @@
-import { cookies } from "next/headers";
-import { createServerClient } from "@supabase/ssr";
-import type { Database } from "@/lib/database.types";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
 import PostCard from "@/components/app/posts/molecules/PostCard";
 import { Button } from "@/components/ui/button";
@@ -14,20 +12,7 @@ interface CollectivePageProps {
 }
 
 export default async function CollectivePage({ params }: CollectivePageProps) {
-  const cookieStore = await cookies();
-  const supabase = createServerClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value;
-        },
-        set() {},
-        remove() {},
-      },
-    }
-  );
+  const supabase = await createSupabaseServerClient();
 
   const {
     data: { user },

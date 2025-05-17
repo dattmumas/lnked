@@ -4,7 +4,7 @@ import { useState, useTransition, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { UserPlus, UserMinus, Loader2 } from "lucide-react";
 import { followUser, unfollowUser } from "@/app/actions/followActions";
-import { createSupabaseBrowserClient } from "@/lib/supabase";
+import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { useRouter, usePathname } from "next/navigation";
 
 interface FollowButtonProps {

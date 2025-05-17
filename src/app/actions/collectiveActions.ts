@@ -41,7 +41,11 @@ async function createSupabaseClientForCollectiveActions() {
           try {
             (
               cookieStore as {
-                set: (name: string, value: string, options?: any) => void;
+                set: (
+                  name: string,
+                  value: string,
+                  options?: CookieOptions
+                ) => void;
               }
             ).set(name, value, options);
           } catch {
@@ -52,7 +56,11 @@ async function createSupabaseClientForCollectiveActions() {
           try {
             (
               cookieStore as {
-                set: (name: string, value: string, options?: any) => void;
+                set: (
+                  name: string,
+                  value: string,
+                  options?: CookieOptions
+                ) => void;
               }
             ).set(name, "", { ...options, maxAge: 0 });
           } catch {

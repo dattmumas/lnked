@@ -1,7 +1,7 @@
 "use server";
 
 import { cookies } from "next/headers";
-import { createServerClient, type CookieOptions } from "@supabase/ssr";
+import { createServerClient } from "@supabase/ssr";
 import type { Database } from "@/lib/database.types";
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
@@ -36,23 +36,11 @@ interface CreateCollectiveResult {
 export async function createCollective(
   inputData: unknown // Raw input from the form, to be parsed by Zod
 ): Promise<CreateCollectiveResult> {
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   const supabase = createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value;
-        },
-        set(name: string, value: string, options: CookieOptions) {
-          cookieStore.set(name, value, options);
-        },
-        remove(name: string, options: CookieOptions) {
-          cookieStore.delete(name, options);
-        },
-      },
-    }
+    { cookies: cookieStore }
   );
 
   const {

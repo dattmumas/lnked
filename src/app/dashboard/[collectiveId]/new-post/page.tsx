@@ -7,7 +7,7 @@ import { z } from "zod";
 import EditorLayout from "@/components/editor/EditorLayout";
 import { createPost, updatePost } from "@/app/actions/postActions";
 import { useState, useTransition, useEffect, useCallback } from "react";
-import { createSupabaseBrowserClient } from "@/lib/supabase";
+import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Info } from "lucide-react";
 import PostFormFields from "@/components/app/editor/form-fields/PostFormFields";
@@ -17,17 +17,33 @@ import PostEditor from "@/components/editor/PostEditor";
 const newCollectivePostSchema = z
   .object({
     title: z.string().min(1, "Title is required").max(200),
-    content: z
-      .string()
-      .refine(
-        (value) =>
-          value !== "<p></p>" &&
-          value.replace(/<[^>]+>/g, "").trim().length >= 10,
-        {
-          message:
-            "Content must have meaningful text (at least 10 characters excluding HTML tags).",
+    content: z.string().refine(
+      (value) => {
+        try {
+          const json = JSON.parse(value);
+          // Traverse the Lexical JSON to extract all text nodes
+          function extractText(node: unknown): string {
+            if (!node || typeof node !== "object" || node === null) return "";
+            const n = node as {
+              type?: string;
+              text?: string;
+              children?: unknown[];
+            };
+            if (n.type === "text" && typeof n.text === "string") return n.text;
+            if (Array.isArray(n.children))
+              return n.children.map(extractText).join("");
+            return "";
+          }
+          const text = extractText(json.root);
+          return text.trim().length >= 10;
+        } catch {
+          return false;
         }
-      ),
+      },
+      {
+        message: "Content must have meaningful text (at least 10 characters).",
+      }
+    ),
     status: z.enum(["draft", "published", "scheduled"]),
     published_at: z.string().optional().nullable(),
   })
@@ -277,10 +293,10 @@ export default function NewCollectivePostPage() {
 
   const mainContentNode = (
     <PostEditor
-      initialContentHTML={getValues("content")}
+      initialContentJSON={getValues("content")}
       placeholder={`Share your collective's next big story...`}
-      onContentChange={(html) =>
-        setValue("content", html, { shouldValidate: true, shouldDirty: true })
+      onContentChange={(json) =>
+        setValue("content", json, { shouldValidate: true, shouldDirty: true })
       }
     />
   );

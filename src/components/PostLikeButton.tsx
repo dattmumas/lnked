@@ -4,7 +4,7 @@ import { useState, useTransition, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Heart } from "lucide-react";
 import { togglePostLike } from "@/app/actions/likeActions";
-import { createSupabaseBrowserClient } from "@/lib/supabase";
+import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 // import type { User } from "@supabase/supabase-js"; // User type is not strictly needed here
 
 interface PostLikeButtonProps {
@@ -41,10 +41,11 @@ export default function PostLikeButton({
 
       if (user && initialUserHasLiked === undefined) {
         const { data: like, error } = await supabase
-          .from("likes")
+          .from("post_reactions")
           .select("user_id") // Only need to check existence
           .eq("post_id", postId)
           .eq("user_id", user.id)
+          .eq("type", "like")
           .maybeSingle();
         if (error) {
           console.error("Error fetching initial like state:", error.message);

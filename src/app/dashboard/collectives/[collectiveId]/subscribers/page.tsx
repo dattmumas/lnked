@@ -23,16 +23,12 @@ const formatDate = (dateString: string | null | undefined): string => {
   });
 };
 
-interface CollectiveSubscribersPageProps {
-  params: {
-    collectiveId: string;
-  };
-}
-
 export default async function CollectiveSubscribersPage({
   params,
-}: CollectiveSubscribersPageProps) {
-  const { collectiveId } = params;
+}: {
+  params: { collectiveId: string };
+}) {
+  const { collectiveId } = await params;
   const cookieStore = await cookies();
   const supabase = createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,

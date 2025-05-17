@@ -1,5 +1,5 @@
 import { cookies } from "next/headers";
-import { createServerClient, type CookieOptions } from "@supabase/ssr";
+import { createServerClient } from "@supabase/ssr";
 import type { Database } from "@/lib/database.types";
 import { notFound, redirect } from "next/navigation";
 import EditPostForm, { type PostDataType } from "./EditPostForm"; // Import the client form component
@@ -13,20 +13,12 @@ interface EditPostPageServerProps {
 export default async function EditPostPageServer({
   params,
 }: EditPostPageServerProps) {
-  const { postId } = params;
-  const cookieStore = cookies();
+  const { postId } = await params;
+  const cookieStore = await cookies();
   const supabase = createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get: (name: string) => cookieStore.get(name)?.value,
-        set: (name: string, value: string, options: CookieOptions) =>
-          cookieStore.set(name, value, options),
-        remove: (name: string, options: CookieOptions) =>
-          cookieStore.delete(name, options),
-      },
-    }
+    { cookies: cookieStore }
   );
 
   const {
@@ -50,6 +42,10 @@ export default async function EditPostPageServer({
       postFetchError?.message
     );
     notFound();
+  }
+
+  if ("id" in postData) {
+    // safe to access postData.id, postData.author_id, etc.
   }
 
   // Permission check: User must be author or owner of the collective (if it's a collective post)

@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Heart } from "lucide-react";
 import { useState, useTransition, useEffect } from "react";
 import { togglePostLike } from "@/app/actions/likeActions";
-import { createSupabaseBrowserClient } from "@/lib/supabase";
+import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 
 type PostWithLikes = Database["public"]["Tables"]["posts"]["Row"] & {
   like_count?: number;

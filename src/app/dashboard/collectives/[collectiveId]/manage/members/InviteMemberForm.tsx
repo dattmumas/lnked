@@ -2,10 +2,7 @@
 
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import {
-  InviteMemberClientSchema,
-  type InviteMemberClientFormValues,
-} from "@/lib/schemas/memberSchemas";
+import { InviteMemberClientSchema } from "@/lib/schemas/memberSchemas";
 import { inviteMemberToCollective } from "@/app/actions/memberActions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,6 +25,7 @@ import {
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Terminal, Loader2 } from "lucide-react";
 import { useState, useTransition } from "react";
+import { z } from "zod";
 
 interface InviteMemberFormProps {
   collectiveId: string;
@@ -42,16 +40,16 @@ export default function InviteMemberForm({
   const [formError, setFormError] = useState<string | null>(null);
   const [formSuccess, setFormSuccess] = useState<string | null>(null);
 
-  const form = useForm<InviteMemberClientFormValues>({
+  const form = useForm<z.infer<typeof InviteMemberClientSchema>>({
     resolver: zodResolver(InviteMemberClientSchema),
     defaultValues: {
-      collectiveId: collectiveId,
       email: "",
-      role: "contributor", // Default role from client schema
+      collectiveId,
+      role: "contributor", // always provide a default
     },
   });
 
-  const onSubmit = async (values: InviteMemberClientFormValues) => {
+  const onSubmit = async (values: z.infer<typeof InviteMemberClientSchema>) => {
     setFormError(null);
     setFormSuccess(null);
 
@@ -66,10 +64,13 @@ export default function InviteMemberForm({
         if (result.fieldErrors) {
           Object.entries(result.fieldErrors).forEach(([field, errors]) => {
             if (errors && errors.length > 0) {
-              form.setError(field as keyof InviteMemberClientFormValues, {
-                type: "server",
-                message: errors.join(", "),
-              });
+              form.setError(
+                field as keyof z.infer<typeof InviteMemberClientSchema>,
+                {
+                  type: "server",
+                  message: errors.join(", "),
+                }
+              );
             }
           });
         }
