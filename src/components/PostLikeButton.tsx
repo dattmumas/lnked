@@ -42,7 +42,7 @@ export default function PostLikeButton({
       if (user && initialUserHasLiked === undefined) {
         const { data: like, error } = await supabase
           .from("post_reactions")
-          .select("user_id") // Only need to check existence
+          .select("user_id")
           .eq("post_id", postId)
           .eq("user_id", user.id)
           .eq("type", "like")

@@ -51,7 +51,6 @@ export async function togglePostLike(
     .maybeSingle();
 
   if (likeCheckError && likeCheckError.code !== "PGRST116") {
-    // PGRST116 (no rows) is fine
     console.error("Error checking for existing like:", likeCheckError);
     return { success: false, message: "Database error checking like status." };
   }
@@ -59,7 +58,7 @@ export async function togglePostLike(
   let userHadLikedInitially = !!existingLike;
 
   if (existingLike) {
-    // User has liked, so unlike (delete the like)
+    // Unlike
     const { error: deleteError } = await supabase
       .from("post_reactions")
       .delete()
@@ -73,10 +72,11 @@ export async function togglePostLike(
     }
     userHadLikedInitially = false; // After unliking
   } else {
-    // User has not liked, so like (insert the like)
+    // Like
     const { error: insertError } = await supabase
       .from("post_reactions")
-      .insert({ post_id: postId, user_id: user.id, type: "like" });
+      .insert({ post_id: postId, user_id: user.id, type: "like" })
+      .single();
 
     if (insertError) {
       console.error("Error liking post:", insertError);
@@ -88,13 +88,12 @@ export async function togglePostLike(
   // Get the new like count for the post
   const { count, error: countError } = await supabase
     .from("post_reactions")
-    .select("*_count_placeholder_*", { count: "exact", head: true })
+    .select("*", { count: "exact", head: true })
     .eq("post_id", postId)
     .eq("type", "like");
 
   if (countError) {
     console.error("Error fetching new like count:", countError);
-    // Non-critical, proceed with success if like/unlike was okay
   }
 
   // Revalidation logic
