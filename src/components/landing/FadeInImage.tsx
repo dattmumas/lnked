@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 
 interface FadeInImageProps extends ImageProps {
   className?: string;
+  alt: string;
 }
 
 export default function FadeInImage({ className, ...props }: FadeInImageProps) {
@@ -31,7 +32,7 @@ export default function FadeInImage({ className, ...props }: FadeInImageProps) {
         className
       )}
     >
-      <Image {...props} />
+      <Image {...props} alt={props.alt} />
     </div>
   );
 }

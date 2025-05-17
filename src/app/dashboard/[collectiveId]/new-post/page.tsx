@@ -4,22 +4,14 @@ import { useParams, useRouter } from "next/navigation";
 import { useForm, SubmitHandler } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import TiptapEditorDisplay from "@/components/editor/TiptapEditor";
 import EditorLayout from "@/components/editor/EditorLayout";
 import { createPost, updatePost } from "@/app/actions/postActions";
 import { useState, useTransition, useEffect, useCallback } from "react";
 import { createSupabaseBrowserClient } from "@/lib/supabase";
-
-import { useEditor } from "@tiptap/react";
-import StarterKit from "@tiptap/starter-kit";
-import Placeholder from "@tiptap/extension-placeholder";
-import Underline from "@tiptap/extension-underline";
-import TiptapToolbar from "@/components/editor/TiptapToolbar";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Info } from "lucide-react";
 import PostFormFields from "@/components/app/editor/form-fields/PostFormFields";
+import PostEditor from "@/components/editor/PostEditor";
 
 // Schema for new collective post, similar to new personal post
 const newCollectivePostSchema = z
@@ -109,35 +101,6 @@ export default function NewCollectivePostPage() {
   const currentTitle = watch("title");
   const currentContent = watch("content");
 
-  const editor = useEditor({
-    extensions: [
-      StarterKit.configure(),
-      Placeholder.configure({
-        placeholder: `Share your collective's next big story...`,
-      }),
-      Underline,
-    ],
-    content: getValues("content"),
-    onUpdate: ({ editor: updatedEditor }) => {
-      setValue("content", updatedEditor.getHTML(), {
-        shouldValidate: true,
-        shouldDirty: true,
-      });
-    },
-    editorProps: {
-      attributes: {
-        class:
-          "prose dark:prose-invert prose-sm sm:prose-base focus:outline-none max-w-none",
-      },
-    },
-  });
-
-  useEffect(() => {
-    if (editor && !editor.isDestroyed && editor.getHTML() !== currentContent) {
-      editor.commands.setContent(currentContent || "<p></p>", false);
-    }
-  }, [currentContent, editor]);
-
   const performAutosave = useCallback(async () => {
     if (!isDirty && !createdPostId) return;
     if (currentStatus !== "draft" && createdPostId) return;
@@ -182,15 +145,7 @@ export default function NewCollectivePostPage() {
       setAutosaveStatus("Autosave error.");
       console.error("Autosave exception:", error);
     }
-  }, [
-    isDirty,
-    currentStatus,
-    getValues,
-    createdPostId,
-    collectiveId,
-    reset,
-    router,
-  ]);
+  }, [isDirty, currentStatus, getValues, createdPostId, collectiveId, reset]);
 
   useEffect(() => {
     const isDrafting = currentStatus === "draft";
@@ -199,12 +154,6 @@ export default function NewCollectivePostPage() {
       return () => clearTimeout(handler);
     }
   }, [currentTitle, currentContent, isDirty, currentStatus, performAutosave]);
-
-  useEffect(() => {
-    return () => {
-      editor?.destroy();
-    };
-  }, [editor]);
 
   const onSubmit: SubmitHandler<NewCollectivePostFormValues> = async (data) => {
     setServerError(null);
@@ -269,7 +218,6 @@ export default function NewCollectivePostPage() {
         setServerError(errorMsg);
       } else if (result.data?.postId) {
         reset();
-        editor?.commands.setContent("<p></p>");
         router.push(
           `/collectives/${result.data.collectiveSlug}/${result.data.postId}`
         );
@@ -328,12 +276,13 @@ export default function NewCollectivePostPage() {
   );
 
   const mainContentNode = (
-    <div className="bg-card shadow-sm rounded-lg flex flex-col h-full">
-      <TiptapToolbar editor={editor} />
-      <div className="p-1 flex-grow overflow-y-auto">
-        <TiptapEditorDisplay editor={editor} className="h-full" />
-      </div>
-    </div>
+    <PostEditor
+      initialContentHTML={getValues("content")}
+      placeholder={`Share your collective's next big story...`}
+      onContentChange={(html) =>
+        setValue("content", html, { shouldValidate: true, shouldDirty: true })
+      }
+    />
   );
 
   if (isFetchingName) {

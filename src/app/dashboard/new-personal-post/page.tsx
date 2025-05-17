@@ -4,21 +4,13 @@ import { useRouter } from "next/navigation";
 import { useForm, SubmitHandler } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import TiptapEditorDisplay from "@/components/editor/TiptapEditor";
 import EditorLayout from "@/components/editor/EditorLayout";
 import { createPost, updatePost } from "@/app/actions/postActions";
 import { useState, useTransition, useEffect, useCallback } from "react";
-
-import { useEditor } from "@tiptap/react";
-import StarterKit from "@tiptap/starter-kit";
-import Placeholder from "@tiptap/extension-placeholder";
-import Underline from "@tiptap/extension-underline";
-import TiptapToolbar from "@/components/editor/TiptapToolbar";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Info } from "lucide-react";
 import PostFormFields from "@/components/app/editor/form-fields/PostFormFields";
+import PostEditor from "@/components/editor/PostEditor";
 
 const newPostSchema = z
   .object({
@@ -75,46 +67,14 @@ export default function NewPersonalPostPage() {
     handleSubmit,
     formState: { errors, isSubmitting, isDirty },
     reset,
-    setValue,
     watch,
     getValues,
+    setValue,
   } = form;
 
   const currentStatus = watch("status");
   const currentTitle = watch("title");
   const currentContent = watch("content");
-
-  const editor = useEditor({
-    extensions: [
-      StarterKit.configure(),
-      Placeholder.configure({ placeholder: "Share your thoughts..." }),
-      Underline,
-    ],
-    content: getValues("content"),
-    onUpdate: ({ editor: updatedEditor }) => {
-      setValue("content", updatedEditor.getHTML(), {
-        shouldValidate: true,
-        shouldDirty: true,
-      });
-    },
-    editorProps: {
-      attributes: {
-        class:
-          "prose dark:prose-invert prose-sm sm:prose-base focus:outline-none max-w-none",
-      },
-    },
-  });
-
-  const watchedFormContent = watch("content");
-  useEffect(() => {
-    if (
-      editor &&
-      !editor.isDestroyed &&
-      editor.getHTML() !== watchedFormContent
-    ) {
-      editor.commands.setContent(watchedFormContent || "<p></p>", false);
-    }
-  }, [watchedFormContent, editor]);
 
   const performAutosave = useCallback(async () => {
     if (!isDirty && !createdPostId) return;
@@ -160,7 +120,7 @@ export default function NewPersonalPostPage() {
       setAutosaveStatus("Autosave error.");
       console.error("Autosave exception:", error);
     }
-  }, [isDirty, currentStatus, getValues, createdPostId, reset, router]);
+  }, [isDirty, currentStatus, getValues, createdPostId, reset]);
 
   useEffect(() => {
     const isDrafting = currentStatus === "draft";
@@ -169,12 +129,6 @@ export default function NewPersonalPostPage() {
       return () => clearTimeout(handler);
     }
   }, [currentTitle, currentContent, isDirty, currentStatus, performAutosave]);
-
-  useEffect(() => {
-    return () => {
-      editor?.destroy();
-    };
-  }, [editor]);
 
   const onSubmit: SubmitHandler<NewPostFormValues> = async (data) => {
     setServerError(null);
@@ -239,7 +193,6 @@ export default function NewPersonalPostPage() {
         setServerError(errorMsg);
       } else if (result.data?.postId) {
         reset();
-        editor?.commands.setContent("<p></p>");
         router.push(`/posts/${result.data.postId}`);
         router.refresh();
       }
@@ -287,12 +240,13 @@ export default function NewPersonalPostPage() {
   );
 
   const mainContentNode = (
-    <div className="bg-card shadow-sm rounded-lg flex flex-col h-full">
-      <TiptapToolbar editor={editor} />
-      <div className="p-1 flex-grow overflow-y-auto">
-        <TiptapEditorDisplay editor={editor} className="h-full" />
-      </div>
-    </div>
+    <PostEditor
+      initialContentHTML={getValues("content")}
+      placeholder="Share your thoughts..."
+      onContentChange={(html) =>
+        setValue("content", html, { shouldValidate: true, shouldDirty: true })
+      }
+    />
   );
 
   return (

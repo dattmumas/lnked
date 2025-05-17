@@ -46,7 +46,6 @@ export default function PostViewTracker({ postId }: PostViewTrackerProps) {
           }
         });
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [postId]);
 
   return null; // This component does not render anything visually

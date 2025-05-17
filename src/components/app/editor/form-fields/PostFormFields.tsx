@@ -2,7 +2,12 @@
 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { UseFormRegister, FieldErrors, FieldError } from "react-hook-form";
+import {
+  UseFormRegister,
+  FieldErrors,
+  FieldError,
+  Path,
+} from "react-hook-form";
 import { z } from "zod";
 
 // This Zod schema can be used by parent forms to validate these specific fields.
@@ -32,6 +37,7 @@ export const postFormFieldsSchema = z
 export type PostFormFieldsValues = z.infer<typeof postFormFieldsSchema>;
 
 // Use a generic type that extends the base fields this component manages
+// TFormValues must include at least 'title', 'status', and 'published_at'
 interface PostFormFieldsProps<TFormValues extends PostFormFieldsValues> {
   register: UseFormRegister<TFormValues>;
   errors: FieldErrors<TFormValues>;
@@ -67,7 +73,7 @@ export default function PostFormFields<
         </Label>
         <Input
           id="title"
-          {...register("title" as any)}
+          {...register("title" as Path<TFormValues>)}
           placeholder={titlePlaceholder}
           disabled={isSubmitting}
           className={errors.title ? "border-destructive" : ""}
@@ -85,7 +91,7 @@ export default function PostFormFields<
         </Label>
         <select
           id="status"
-          {...register("status" as any)}
+          {...register("status" as Path<TFormValues>)}
           disabled={isSubmitting}
           className="block w-full p-2 border border-input bg-background rounded-md shadow-sm focus:ring-primary focus:border-primary sm:text-sm"
         >
@@ -111,7 +117,7 @@ export default function PostFormFields<
           <Input
             id="published_at"
             type="datetime-local"
-            {...register("published_at" as any)}
+            {...register("published_at" as Path<TFormValues>)}
             disabled={isSubmitting}
             className={errors.published_at ? "border-destructive" : ""}
           />

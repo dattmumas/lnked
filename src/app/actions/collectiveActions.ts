@@ -39,14 +39,22 @@ async function createSupabaseClientForCollectiveActions() {
         },
         set(name: string, value: string, options: CookieOptions) {
           try {
-            (cookieStore as any).set(name, value, options);
+            (
+              cookieStore as {
+                set: (name: string, value: string, options?: any) => void;
+              }
+            ).set(name, value, options);
           } catch {
             /* Intentionally empty, see comments in function body */
           }
         },
         remove(name: string, options: CookieOptions) {
           try {
-            (cookieStore as any).set(name, "", { ...options, maxAge: 0 });
+            (
+              cookieStore as {
+                set: (name: string, value: string, options?: any) => void;
+              }
+            ).set(name, "", { ...options, maxAge: 0 });
           } catch {
             /* Intentionally empty */
           }

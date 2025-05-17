@@ -4,7 +4,6 @@ import { useRouter } from "next/navigation";
 import { useForm, SubmitHandler } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import TiptapEditorDisplay from "@/components/editor/TiptapEditor";
 import EditorLayout from "@/components/editor/EditorLayout";
 import {
   updatePost,
@@ -13,15 +12,11 @@ import {
 } from "@/app/actions/postActions";
 import { useState, useTransition, useEffect, useCallback } from "react";
 import type { Tables } from "@/lib/database.types";
-import { useEditor } from "@tiptap/react";
-import StarterKit from "@tiptap/starter-kit";
-import Placeholder from "@tiptap/extension-placeholder";
-import Underline from "@tiptap/extension-underline";
-import TiptapToolbar from "@/components/editor/TiptapToolbar";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Info } from "lucide-react";
 import PostFormFields from "@/components/app/editor/form-fields/PostFormFields";
+import PostEditor from "@/components/editor/PostEditor";
 
 const editPostSchema = z
   .object({
@@ -120,27 +115,6 @@ export default function EditPostForm({
   const currentTitle = watch("title");
   const currentContent = watch("content");
 
-  const editor = useEditor({
-    extensions: [
-      StarterKit.configure(),
-      Placeholder.configure({ placeholder: "Continue writing..." }),
-      Underline,
-    ],
-    content: initialData.content || "<p></p>",
-    onUpdate: ({ editor: updatedEditor }) => {
-      setValue("content", updatedEditor.getHTML(), {
-        shouldValidate: true,
-        shouldDirty: true,
-      });
-    },
-    editorProps: {
-      attributes: {
-        class:
-          "prose dark:prose-invert prose-sm sm:prose-base focus:outline-none max-w-none",
-      },
-    },
-  });
-
   useEffect(() => {
     reset({
       title: initialData.title || "",
@@ -150,8 +124,7 @@ export default function EditPostForm({
         ? formatDateForInput(initialData.published_at)
         : "",
     });
-    editor?.commands.setContent(initialData.content || "<p></p>", false);
-  }, [initialData, reset, editor]);
+  }, [initialData, reset]);
 
   const performAutosave = useCallback(async () => {
     if (!isDirty) return;
@@ -175,7 +148,7 @@ export default function EditPostForm({
       setAutosaveStatus("Draft saved.");
       reset(dataToSave); // Reset dirty state with current values
     }
-  }, [isDirty, currentStatus, getValues, postId, reset, updatePost]);
+  }, [isDirty, currentStatus, getValues, postId, reset]);
 
   useEffect(() => {
     const isDrafting = currentStatus === "draft";
@@ -184,12 +157,6 @@ export default function EditPostForm({
       return () => clearTimeout(handler);
     }
   }, [currentTitle, currentContent, isDirty, currentStatus, performAutosave]);
-
-  useEffect(() => {
-    return () => {
-      editor?.destroy();
-    };
-  }, [editor]);
 
   const onSubmit: SubmitHandler<EditPostFormValues> = async (data) => {
     setServerError(null);
@@ -317,12 +284,13 @@ export default function EditPostForm({
   );
 
   const mainContentNode = (
-    <div className="bg-card shadow-sm rounded-lg flex flex-col h-full">
-      <TiptapToolbar editor={editor} />
-      <div className="p-4 flex-grow overflow-y-auto">
-        <TiptapEditorDisplay editor={editor} className="h-full" />
-      </div>
-    </div>
+    <PostEditor
+      initialContentHTML={getValues("content")}
+      placeholder="Continue writing..."
+      onContentChange={(html) =>
+        setValue("content", html, { shouldValidate: true, shouldDirty: true })
+      }
+    />
   );
 
   return (

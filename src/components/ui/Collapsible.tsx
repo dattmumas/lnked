@@ -31,7 +31,6 @@ export function Collapsible({
 
 // Use a type alias to avoid interface merging issues
 // and ensure 'title' is React.ReactNode
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type CollapsibleTriggerProps = React.ComponentProps<
   typeof RadixCollapsible.Trigger
 > & {

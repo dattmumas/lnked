@@ -69,15 +69,42 @@ async function createSupabaseServerClientInternal() {
           return cookieStore.get(name)?.value;
         },
         set(name: string, value: string, options: CookieOptions) {
-          try {
-            // Readonly in this context; catch to avoid crash
-            (cookieStore as any).set(name, value, options);
-          } catch {}
+          const store = cookieStore as unknown;
+          if (
+            typeof store === "object" &&
+            store !== null &&
+            "set" in store &&
+            typeof (store as { set: unknown }).set === "function"
+          ) {
+            (
+              store as {
+                set: (
+                  name: string,
+                  value: string,
+                  options?: Record<string, unknown>
+                ) => void;
+              }
+            ).set(name, value, options);
+          }
         },
         remove(name: string, options: CookieOptions) {
-          try {
-            (cookieStore as any).set(name, "", { ...options, maxAge: 0 });
-          } catch {}
+          const store = cookieStore as unknown;
+          if (
+            typeof store === "object" &&
+            store !== null &&
+            "set" in store &&
+            typeof (store as { set: unknown }).set === "function"
+          ) {
+            (
+              store as {
+                set: (
+                  name: string,
+                  value: string,
+                  options?: Record<string, unknown>
+                ) => void;
+              }
+            ).set(name, "", { ...options, maxAge: 0 });
+          }
         },
       },
     }
@@ -436,8 +463,11 @@ export async function incrementPostViewCount(
       return { success: false, error: error.message };
     }
     return { success: true };
-  } catch (e: any) {
+  } catch (e: unknown) {
     console.error("Unexpected error incrementing view count:", e);
-    return { success: false, error: e.message || "Unexpected error." };
+    return {
+      success: false,
+      error: e instanceof Error ? e.message : "Unexpected error.",
+    };
   }
 }
