@@ -1,156 +1,69 @@
 "use client";
 
-import {
-  LayoutDashboard,
-  FileText,
-  Users2,
-  UserSquare,
-  Newspaper,
-  PlusCircle,
-  ListFilter,
-} from "lucide-react";
-import { SidebarLink } from "../atoms/sidebar-link";
+import { PlusCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import type { CollectiveSummary } from "../template/dashboard-shell";
+import { SidebarNav } from "../molecules/SidebarNav";
 
 interface DashboardSidebarProps {
   className?: string;
-  // This could also accept user data for showing personal info
+  collectives: CollectiveSummary[];
+  collapsed?: boolean;
 }
 
-const mainNavItems = [
-  {
-    href: "/dashboard",
-    icon: LayoutDashboard,
-    label: "Overview",
-  },
-  {
-    href: "/dashboard/posts",
-    icon: FileText,
-    label: "My Posts",
-  },
-];
-
-const collectiveNavItems = [
-  {
-    href: "/dashboard/collectives",
-    icon: Users2,
-    label: "My Collectives",
-  },
-];
-
-const settingsNavItems = [
-  {
-    href: "/dashboard/profile/edit",
-    icon: UserSquare,
-    label: "Edit Profile",
-  },
-  {
-    href: "/dashboard/my-newsletter/subscribers",
-    icon: Newspaper,
-    label: "Newsletter",
-  },
-];
-
-export function DashboardSidebar({ className }: DashboardSidebarProps) {
+export function DashboardSidebar({
+  className,
+  collectives,
+  collapsed = false,
+}: DashboardSidebarProps) {
   return (
     <aside
       className={cn(
-        "bg-sidebar text-sidebar-foreground flex flex-col border-r border-sidebar-border h-full w-64 py-4 overflow-y-auto",
+        "bg-sidebar text-sidebar-foreground flex flex-col border-r border-sidebar-border h-full transition-all duration-200 overflow-y-auto",
+        collapsed ? "w-16" : "w-64 py-4",
         className
       )}
       aria-label="Dashboard sidebar"
     >
-      <div className="px-4 mb-6">
+      <div className={cn("px-4 mb-6", collapsed && "text-center px-0 mb-2")}>
         <Link
           href="/"
-          className="flex items-center gap-2 text-lg font-semibold"
+          className={cn(
+            "flex items-center gap-2 font-semibold",
+            collapsed ? "justify-center text-xl" : "text-lg"
+          )}
         >
-          <span className="text-sidebar-primary">Lnked</span>
+          <span className="text-sidebar-primary">
+            {collapsed ? "L" : "Lnked"}
+          </span>
         </Link>
       </div>
 
-      <div className="space-y-6 px-2">
-        <nav className="flex flex-col gap-1" aria-label="Main">
-          {mainNavItems.map((item) => (
-            <SidebarLink
-              key={item.href}
-              href={item.href}
-              icon={item.icon}
-              label={item.label}
-              exact={item.href === "/dashboard"}
-            />
-          ))}
-        </nav>
+      {/* Navigation sections */}
+      <SidebarNav collectives={collectives} collapsed={collapsed} />
 
-        <div>
-          <div className="px-3 py-2 flex items-center justify-between">
-            <h2 className="text-xs uppercase tracking-wider font-medium text-sidebar-foreground/50">
-              Collectives
-            </h2>
-            <div className="flex gap-1">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-6 w-6"
-                aria-label="Filter collectives"
-              >
-                <ListFilter className="size-3" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-6 w-6"
-                aria-label="Create new collective"
-                asChild
-              >
-                <Link href="/dashboard/collectives/new">
-                  <PlusCircle className="size-3" />
-                </Link>
-              </Button>
-            </div>
-          </div>
-
-          <nav className="flex flex-col gap-1" aria-label="Collectives">
-            {collectiveNavItems.map((item) => (
-              <SidebarLink
-                key={item.href}
-                href={item.href}
-                icon={item.icon}
-                label={item.label}
-              />
-            ))}
-          </nav>
-        </div>
-
-        <div>
-          <div className="px-3 py-2">
-            <h2 className="text-xs uppercase tracking-wider font-medium text-sidebar-foreground/50">
-              Settings
-            </h2>
-          </div>
-
-          <nav className="flex flex-col gap-1" aria-label="Settings">
-            {settingsNavItems.map((item) => (
-              <SidebarLink
-                key={item.href}
-                href={item.href}
-                icon={item.icon}
-                label={item.label}
-              />
-            ))}
-          </nav>
-        </div>
-      </div>
-
-      <div className="mt-auto px-4 py-4 flex justify-center">
-        <Button variant="outline" size="sm" asChild className="w-full">
-          <Link href="/dashboard/new-personal-post">
-            <PlusCircle className="size-4 mr-2" />
-            Create Post
-          </Link>
-        </Button>
+      <div
+        className={cn(
+          "mt-auto px-4 py-4 flex justify-center",
+          collapsed && "px-0 py-2"
+        )}
+      >
+        {collapsed ? (
+          <Button asChild variant="outline" size="icon">
+            <Link href="/dashboard/new-personal-post">
+              <PlusCircle className="h-5 w-5" aria-label="Create Post" />
+            </Link>
+          </Button>
+        ) : (
+          <Button variant="outline" size="sm" asChild className="w-full">
+            <Link href="/dashboard/new-personal-post">
+              <PlusCircle className="size-4 mr-2" />
+              Create Post
+            </Link>
+          </Button>
+        )}
       </div>
     </aside>
   );

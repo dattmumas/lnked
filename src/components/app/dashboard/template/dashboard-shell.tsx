@@ -1,20 +1,43 @@
-import React from "react";
+"use client";
+
+import React, { useState } from "react";
 import { DashboardSidebar } from "../organisms/dashboard-sidebar";
+import { DashboardNav } from "../nav/DashboardNav";
+
+export interface CollectiveSummary {
+  id: string;
+  name: string;
+  slug: string;
+}
 
 interface DashboardShellProps {
   children: React.ReactNode;
+  userCollectives: CollectiveSummary[];
 }
 
-export default function DashboardShell({ children }: DashboardShellProps) {
-  return (
-    <div className="flex min-h-screen h-full bg-background text-foreground">
-      {/* Sidebar – hidden on mobile, shown on larger screens */}
-      <DashboardSidebar className="hidden md:flex" />
+export default function DashboardShell({
+  children,
+  userCollectives,
+}: DashboardShellProps) {
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
-      {/* Main content area */}
-      <main className="flex-1 overflow-y-auto p-4 md:p-6">
-        <div className="container mx-auto max-w-5xl">{children}</div>
-      </main>
+  return (
+    <div className="flex flex-col min-h-screen h-full bg-background text-foreground">
+      <DashboardNav
+        sidebarCollapsed={sidebarCollapsed}
+        onToggleSidebar={() => setSidebarCollapsed((c) => !c)}
+        collectives={userCollectives}
+      />
+      <div className="flex flex-1 min-h-0">
+        <DashboardSidebar
+          className="hidden md:flex"
+          collectives={userCollectives}
+          collapsed={sidebarCollapsed}
+        />
+        <main className="flex-1 overflow-y-auto p-4 md:p-6">
+          <div className="mx-auto max-w-6xl">{children}</div>
+        </main>
+      </div>
     </div>
   );
 }

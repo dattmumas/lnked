@@ -1,1016 +1,681 @@
-Understood. I will conduct a file-by-file audit of the uploaded codebase for Lnked and develop a comprehensive, line-by-line implementation plan for a complete redesign. This plan will incorporate all UI/UX principles you've outlined—including accessibility, atomic design with Radix UI, Tailwind CSS styling, minimalist layout, responsive behavior, and modern interaction design.
-
-I'll start by extracting the project and mapping the current file structure. I’ll then proceed module by module to define all necessary edits for aligning the current code with the new design system.
-
-I’ll notify you once the full plan is ready for review.
-
-# Lnked Redesign Implementation Plan
-
-This plan provides a comprehensive, file-by-file audit of the **Lnked** codebase, detailing the changes needed to align every component, layout, style, and page with the new UI/UX design system. The guiding principles are a forward-thinking minimalist aesthetic, responsive WCAG AA accessibility, an Atomic Design approach using Radix UI + Tailwind CSS (no external UI kits), full dark mode support via CSS variables, the Inter and Source Serif 4 typography system, Linear-inspired compact dashboards, an 8px spacing grid, and consistent micro-interactions (Tailwind transitions with Radix state selectors). Every file is addressed with required modifications and reasoning.
-
-## File Structure Overview
-
-```text
-lnked-project/
-├── package.json
-├── tailwind.config.ts
-├── next.config.ts
-├── postcss.config.mjs
-├── eslint.config.mjs
-├── tsconfig.json
-├── README.md
-├── DESIGN_SYSTEM.md
-├── src/
-│   ├── app/
-│   │   ├── (auth)/
-│   │   │   ├── sign-in/
-│   │   │   │   └── page.tsx
-│   │   │   └── sign-up/
-│   │   │       └── page.tsx
-│   │   ├── [collectiveSlug]/
-│   │   │   ├── [postId]/
-│   │   │   │   └── page.tsx
-│   │   │   ├── layout.tsx
-│   │   │   └── page.tsx
-│   │   ├── discover/
-│   │   │   ├── _actions.ts
-│   │   │   ├── RecommendationFeedbackButtons.tsx
-│   │   │   └── page.tsx
-│   │   ├── newsletters/
-│   │   │   └── [userId]/
-│   │   │       └── page.tsx
-│   │   ├── posts/
-│   │   │   └── [postId]/
-│   │   │       └── page.tsx
-│   │   ├── dashboard/
-│   │   │   ├── layout.tsx
-│   │   │   ├── page.tsx
-│   │   │   ├── posts/
-│   │   │   │   ├── page.tsx
-│   │   │   │   └── [postId]/
-│   │   │   │       └── edit/
-│   │   │   │           ├── EditPostForm.tsx
-│   │   │   │           └── page.tsx
-│   │   │   ├── my-newsletter/
-│   │   │   │   └── subscribers/
-│   │   │   │       └── page.tsx
-│   │   │   ├── new-personal-post/
-│   │   │   │   └── page.tsx
-│   │   │   ├── profile/
-│   │   │   │   └── edit/
-│   │   │   │       ├── EditProfileForm.tsx
-│   │   │   │       └── page.tsx
-│   │   │   ├── collectives/
-│   │   │   │   ├── page.tsx
-│   │   │   │   ├── new/
-│   │   │   │   │   ├── _actions.ts
-│   │   │   │   │   └── page.tsx
-│   │   │   │   └── [collectiveId]/
-│   │   │   │       ├── settings/
-│   │   │   │       │   ├── EditCollectiveSettingsForm.tsx
-│   │   │   │       │   └── page.tsx
-│   │   │   │       ├── manage/
-│   │   │   │       │   └── members/
-│   │   │   │       │       ├── InviteMemberForm.tsx
-│   │   │   │       │       ├── ManageMembersClientUI.tsx
-│   │   │   │       │       └── page.tsx
-│   │   │   │       └── subscribers/
-│   │   │   │           └── page.tsx
-│   │   │   └── [collectiveId]/
-│   │   │       └── new-post/
-│   │   │           └── page.tsx
-│   │   ├── actions/
-│   │   │   ├── collectiveActions.ts
-│   │   │   ├── followActions.ts
-│   │   │   ├── likeActions.ts
-│   │   │   ├── memberActions.ts
-│   │   │   ├── postActions.ts
-│   │   │   ├── subscriptionActions.ts
-│   │   │   └── userActions.ts
-│   │   ├── api/
-│   │   │   ├── collectives/
-│   │   │   │   ├── route.ts
-│   │   │   │   └── [collectiveId]/
-│   │   │   │       ├── plans/route.ts
-│   │   │   │       └── stripe-onboard/route.ts
-│   │   │   ├── comments/
-│   │   │   │   └── _commentId/reactions/route.ts
-│   │   │   ├── like/route.ts
-│   │   │   ├── posts/
-│   │   │   │   ├── route.ts
-│   │   │   │   └── _postId/
-│   │   │   │       ├── route.ts
-│   │   │   │       ├── bookmark/route.ts
-│   │   │   │       ├── comments/route.ts
-│   │   │   │       ├── reactions/route.ts
-│   │   │   │       └── view/route.ts
-│   │   │   ├── recommendations/route.ts
-│   │   │   ├── stripe-webhook/route.ts
-│   │   │   └── subscribe/route.ts
-│   │   ├── favicon.ico
-│   │   ├── globals.css
-│   │   ├── layout.tsx
-│   │   └── page.tsx
-│   ├── components/
-│   │   ├── Navbar.tsx
-│   │   ├── FollowButton.tsx
-│   │   ├── SubscribeButton.tsx
-│   │   ├── PostLikeButton.tsx
-│   │   ├── landing/
-│   │   │   ├── FadeInImage.tsx
-│   │   │   ├── SlideInCard.tsx
-│   │   │   ├── SnippetCard.tsx
-│   │   │   └── sections/
-│   │   │       ├── AnimatedHero.tsx
-│   │   │       ├── CreateCollaborate.tsx
-│   │   │       └── FragmentedFeeds.tsx
-│   │   ├── app/
-│   │   │   ├── auth/AuthForm.tsx
-│   │   │   ├── collectives/molecules/CollectiveCard.tsx
-│   │   │   ├── dashboard/atoms/sidebar-link.tsx
-│   │   │   ├── dashboard/collectives/DashboardCollectiveCard.tsx
-│   │   │   ├── dashboard/molecules/RecentPostRow.tsx
-│   │   │   ├── dashboard/molecules/compact-collective-card-skeleton.tsx
-│   │   │   ├── dashboard/molecules/recent-post-row-skeleton.tsx
-│   │   │   ├── dashboard/molecules/stat-card.tsx
-│   │   │   ├── dashboard/molecules/stat-card-skeleton.tsx
-│   │   │   ├── dashboard/posts/PostListItem.tsx
-│   │   │   ├── dashboard/organisms/dashboard-sidebar.tsx
-│   │   │   ├── dashboard/template/dashboard-shell.tsx
-│   │   │   ├── nav/ModeToggle.tsx
-│   │   │   ├── posts/PostViewTracker.tsx
-│   │   │   ├── posts/molecules/BookmarkButton.tsx
-│   │   │   ├── posts/molecules/CommentsSection.tsx
-│   │   │   ├── posts/molecules/PostCard.tsx
-│   │   │   └── posts/molecules/PostReactionButtons.tsx
-│   │   ├── editor/
-│   │   │   ├── EditorLayout.tsx
-│   │   │   ├── PostEditor.tsx
-│   │   │   ├── Toolbar.tsx
-│   │   │   ├── nodes/
-│   │   │   │   ├── CollapsibleContainerNode.tsx
-│   │   │   │   ├── ExcalidrawNode.tsx
-│   │   │   │   ├── GIFNode.tsx
-│   │   │   │   ├── HashtagNode.tsx
-│   │   │   │   ├── ImageNode.tsx
-│   │   │   │   ├── InlineImageNode.tsx
-│   │   │   │   ├── LayoutContainerNode.tsx
-│   │   │   │   ├── LayoutItemNode.tsx
-│   │   │   │   ├── PageBreakNode.tsx
-│   │   │   │   ├── PollNode.tsx
-│   │   │   │   ├── StickyNode.tsx
-│   │   │   │   ├── TweetNode.tsx
-│   │   │   │   └── YouTubeNode.tsx
-│   │   │   └── plugins/
-│   │   │       ├── CodeHighlightPlugin.tsx
-│   │   │       ├── FloatingLinkEditorPlugin.tsx
-│   │   │       └── SlashMenuPlugin.tsx
-│   │   └── ui/
-│   │       ├── alert.tsx
-│   │       ├── badge.tsx
-│   │       ├── button.tsx
-│   │       ├── card.tsx
-│   │       ├── Collapsible.tsx
-│   │       ├── Footer.tsx
-│   │       ├── form.tsx
-│   │       ├── input.tsx
-│   │       ├── label.tsx
-│   │       ├── select.tsx
-│   │       ├── separator.tsx
-│   │       ├── sheet.tsx
-│   │       ├── skeleton.tsx
-│   │       ├── table.tsx
-│   │       └── textarea.tsx
-│   ├── lib/
-│   │   ├── auth.ts
-│   │   ├── data/
-│   │   │   ├── bookmarks.ts
-│   │   │   ├── comments.ts
-│   │   │   ├── posts.ts
-│   │   │   ├── reactions.ts
-│   │   │   ├── recommendations.ts
-│   │   │   ├── subscriptions.ts
-│   │   │   └── views.ts
-│   │   ├── database.types.ts
-│   │   ├── hooks/useAuth.tsx
-│   │   ├── schemas/memberSchemas.ts
-│   │   ├── stripe.ts
-│   │   ├── supabase/
-│   │   │   ├── browser.ts
-│   │   │   └── server.ts
-│   │   ├── supabaseAdmin.ts
-│   │   ├── types.ts
-│   │   └── utils.ts
-│   └── middleware.ts
-└── public/… (static assets)
-```
-
-Below, each file or group of related files is listed with the implementation changes needed:
-
-## Global Configuration & Styles
-
-- **tailwind.config.ts**: _Update theme and tokens._ Ensure the Tailwind theme extends use the new design tokens. Add the **Inter** (sans-serif) and **Source Serif 4** (serif) font families to the `fontFamily` settings for **body and headings**, replacing any legacy fonts. Confirm the color palette mappings to CSS variables are complete and include any **brand tokens** from the new design (e.g. `--brandPrimary`, `--brandSecondary`) mapped via `hsl(var(--token))`. Verify the spacing scale aligns with an **8px grid** (Tailwind’s default 4px base can be used in multiples of 2 for 8px steps). No arbitrary pixel values should be needed; use Tailwind spacing utilities (e.g. `p-2` for 8px, `p-4` for 16px, etc.) to enforce consistency. Ensure `darkMode: "class"` is set (it is) and that design tokens (colors, radius) are fully represented here for both light and dark (the CSS variables will handle the dark variants).
-
-- **src/app/globals.css**: _Revise CSS variables and base styles._ This file holds global design tokens. Set up the `:root` variables to match the **new color scheme** and minimalist aesthetic. For example, define `--background` (page background), `--foreground` (text color), `--primary`, `--secondary`, `--accent`, etc., based on the new palette. Because dark mode uses the same tokens, under the `.dark` variant override each token to its dark value (the codebase uses CSS variables with `.dark` class to swap theme). Ensure **WCAG AA contrast** by choosing light/dark values with sufficient contrast for text vs background, etc. Use only CSS color functions or `hsl/oklch(var(--token))` references – no hardcoded hex colors. Also update the `--radius` token if needed (the design system suggests 6px as base radius; currently it's set to 0.625rem ≈ 10px – decide on the correct value and use consistently). Check that all Tailwind utilities (like `bg-background`, `text-foreground`, etc.) derive from these tokens. Remove any deprecated global styles and confirm Tailwind’s preflight (base resets) plus any minimal typography defaults (if using `@tailwindcss/typography`, ensure it’s configured to use our color tokens). No global `*` selectors with design styles – rely on classes and tokens.
-
-- **next.config.ts / postcss.config.mjs / eslint.config.mjs / tsconfig.json**: _No UI changes._ These config files likely need no direct design adjustments. Just ensure nothing in them conflicts with the new design setup (e.g. `next.config.ts` should allow importing fonts if using Next.js font optimization, etc.). PostCSS config should be loading Tailwind and autoprefixer as expected; no changes needed aside from ensuring any custom plugin (like the `@custom-variant dark` seen in `globals.css`) is supported. ESlint/TS configs do not affect UI – no changes required other than possibly updating any rules that might flag classnames or a11y (accessibility) issues to align with our goals (for example, ensuring `jsx-a11y` plugin is configured to catch missing ARIA labels).
-
-- **package.json**: _Review UI libraries._ Remove any UI libraries that conflict with “Tailwind CSS only” directive. For instance, if a component library or CSS framework (Chakra, MUI, etc.) was included (likely not, given current code), ensure it’s dropped. The code uses `@radix-ui/react-*` packages (for primitives like dialog, etc.) – keep these since they align with our Radix UI usage. Also ensure `lucide-react` (for icons) and any design-related packages (like `class-variance-authority` for styling variants) remain, as they are part of our implementation plan. No new external UI kit should be added; we stick to Tailwind + Radix.
-
-- **README.md & DESIGN_SYSTEM.md**: _Update documentation._ Revise the **Design System** docs to reflect new decisions: for example, replace references to old fonts (“Geist Sans”) with **Inter** and **Source Serif 4**, update the color palette section if brand colors changed, and mention the adoption of Atomic Design with Radix UI primitives. In README, highlight the new design approach (minimalist UI, dark mode support, etc.) so new contributors know the direction. Ensure any instructions about running or developing reflect the new tooling (e.g., if adding `next-themes` for dark mode toggling, mention it). The documentation should reinforce **accessibility** commitments (e.g., “all interactive elements have proper focus and ARIA labels”) and clarify that no third-party UI kit is used beyond Radix + Tailwind.
-
-## Frontend Pages (Next.js App Router)
-
-### src/app/layout.tsx (Root Layout)
-
-- **Global layout structure**: Ensure the layout uses proper **semantic HTML**. Typically, the root layout should include landmarks like `<header>`, `<main>`, `<footer>` if applicable. Wrap page content in a `<main>` with appropriate aria-attributes (e.g., `role="main"` and meaningful labels if needed). If the design calls for a persistent nav or sidebar (like a top navigation bar or a side menu visible on all pages), include it here or in nested layouts.
-- **Theming and fonts**: Use Next.js’s `<html>` and `<body>` tags in the layout to apply classes. For dark mode support, ensure the `<html>` element gets the `className={theme}` (if using `next-themes`, often done by adding `<body className={cn(interFont.variable, "bg-background text-foreground")}>` etc.). Include the Inter and Source Serif 4 fonts – ideally via `next/font` for performance. For example, import `Inter` and `Source_Serif_4` from `@next/font/google`, configure weights, and add to the `<html>` or `<body>` className.
-- **Apply global styles**: Import `globals.css` here (likely already done) to ensure Tailwind base styles and CSS variables are in effect. No inline global styling – rely on classes from Tailwind and tokens.
-- **Dark mode class**: The `next-themes` library likely attaches a `class="dark"` on the `<html>` when dark mode is active. Verify that this integration is set up (the code uses `useTheme` in `ModeToggle`). Possibly add `<ThemeProvider>` at the root (if not already) to manage theme state, and ensure the `class` strategy is being used (since our CSS expects a `.dark` class).
-- **Meta and accessibility**: Confirm that layout sets correct `<head>` metadata (title, lang, etc.) as needed – not directly UI, but part of holistic UX. Ensure no extraneous wrappers that would break the minimalist layout (for instance, avoid unnecessary `<div>` if a semantic tag can be used directly).
-
-### src/app/page.tsx (Landing/Home Page)
-
-- **Minimalist landing design**: This is likely the public landing page. It should be **visually clean and focused**. Audit the JSX structure: use semantic sections for each part of the landing (hero, features, etc., or just a main section if simple). Remove any overly decorative or cluttered elements that don’t serve the minimalist aesthetic.
-- **Typography**: Replace any legacy font usage with new font classes. For headings, use Tailwind classes (e.g., `text-4xl font-bold font-serif` for a hero title in Source Serif, if that’s desired, or Inter if sticking to sans for headers as well) – ensure consistent font family usage according to the new typography rules (perhaps Inter for UI text, Source Serif for long-form content or certain headings to add personality).
-- **Sections alignment**: If the landing has multiple sections (e.g., as indicated by `landing/sections/AnimatedHero.tsx`, etc.), ensure the spacing between sections follows the 8px grid (likely multiples of 8 for section padding/margins – e.g., `py-16` for 64px or similar). Use **fluid layout** principles: Tailwind’s responsive utilities (`sm:`, `md:`, etc.) to stack or reflow content on smaller screens. For example, if there’s a two-column layout on desktop, ensure it becomes one column on mobile. No horizontal scroll should occur at small widths – test and adjust any fixed widths.
-- **Buttons/Links**: If the home page has call-to-action buttons or links, switch them to use our unified `<Button>` component from `components/ui/button.tsx` for consistency. For example, a "Get Started" link should be `<Button asChild variant="primary"> <a href="...">…</a></Button>` or similar, to get the styling and hover states consistent with our design system. Ensure these have proper `aria-label` if the text isn’t descriptive (though usually button text is enough).
-- **Animations**: The landing might use subtle entrance animations (the project has FadeIn/SlideIn components). Ensure these animations are **performant and unobtrusive**. They should use Tailwind CSS animations or transitions where possible (e.g., utility classes for fade-in). If custom CSS is used (in those components), consider refactoring to Tailwind’s animation utilities or the Radix animation classes (`data-[state=enter]` etc.) for consistency. All animations should respect **reduced motion** preference – check if any animations need `prefers-reduced-motion` media query wrap to disable them for accessibility.
-- **Illustrations/Images**: There are static SVGs in `public/`. Ensure any images on the landing have `alt` text (for informative images) or `aria-hidden` if purely decorative. For instance, if `AnimatedHero` uses an image, provide an alt that describes the content or mark it decorative accordingly.
-
-### src/app/(auth)/sign-in/page.tsx and src/app/(auth)/sign-up/page.tsx (Auth Pages)
-
-- **Form layout**: Redesign the sign-in and sign-up pages for simplicity and clarity. Use a **minimal form card** style centered on the screen (inspired by minimalist design – likely just a simple bordered or well-spaced container). Ensure the layout is responsive (perhaps a max-width with padding for desktop, full width on mobile with some margins).
-- **Atomic components**: Replace any raw HTML form elements with our UI components. For example, use `<Input>` from our `components/ui/input.tsx` for email/password fields, and `<Button>` for submission. Use `<Form>` context from `components/ui/form.tsx` (which likely wraps React Hook Form) to handle form state and validation UI uniformly.
-- **Labels and accessibility**: Ensure each input has a `<Label>` (from `ui/label.tsx`) for proper accessibility and click-target enlargement. If currently placeholders were used instead of labels, **add visible labels** (or at least floating labels if part of design, but simpler is a static label above the field) to meet WCAG form guidelines. Each label should be linked to its input via `htmlFor` and `id`. Use accessible error messages: if using react-hook-form, our `FormField` and `FormMessage` components (if present) should display errors. Add `aria-describedby` on inputs to reference error messages.
-- **Buttons**: The submit button (“Sign In”, “Sign Up”) should use the primary variant of our `<Button>` – ensure high contrast (e.g., white text on primary color background which is defined by `--primary` token). Include `type="submit"` and make sure it’s full-width or appropriately sized per design. If there are secondary actions (like “Forgot password” link or “Sign in with Google”), style those as needed: maybe as link styled buttons (Tailwind classes for an unstyled link but underlined, or as a secondary variant button).
-- **Spacing & grouping**: Use Tailwind grid or flex utilities to space the form elements. For instance, apply `space-y-4` to stack inputs with consistent gaps (likely 8px or 16px gap as per design). Group the email/password fields inside a form section for a clean look, and separate the submit button with extra margin top if needed (e.g., class `mt-6` on the button).
-- **Dark mode**: Verify the form looks good in dark mode. The `bg-card` and `text-card-foreground` classes (provided by our design tokens) should be used for the form container if it’s card-like. For example, wrap the form in a `<div className="bg-card p-6 rounded-lg shadow">` (shadow optional, maybe minimal or none if truly flat design). This will automatically theme: in light mode, `bg-card` might be white; in dark, a dark gray as defined in CSS variables. Similarly ensure inputs use `bg-input` and `text-foreground` so they invert in dark mode properly.
-- **Minimalist aesthetic**: Remove any logos or heavy imagery unless necessary. If a logo is present, perhaps keep it small and monochrome to match the minimalist vibe. Focus on whitespace and clarity. Linear-inspired design would have a lot of clean space, so avoid dense text. Ensure the “Sign Up” vs “Sign In” have consistent styles and maybe a toggle or link between them if applicable (like “No account? Sign up” – style that link subtly, using maybe `text-sm text-muted-foreground`).
-- **ARIA**: Add `aria-label` or `aria-describedby` where needed (e.g., on the submit button if the text alone isn’t clear, though “Sign In” is clear). Also, use `autocomplete` attributes on inputs (e.g., `autocomplete="email"`), which improves usability.
-
-### src/app/discover/\* (Discover Page & Actions)
-
-- **discover/page.tsx**: The Discover page likely lists recommended content or similar. Ensure the page uses a clear heading (e.g., `<h1>Discover</h1>` or an appropriate heading tag for the page title) for screen reader navigation. Use a consistent layout for cards or items – likely employing a **grid** or list. If multiple columns of content on desktop (for example, a Masonry or card grid), use Tailwind’s grid classes (`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8`) to create a fluid grid that reflows on smaller screens.
-- **RecommendationFeedbackButtons.tsx**: This component presumably renders upvote/downvote or feedback buttons for recommendations. Align it with our design system:
-
-  - Use our `<Button>` component for each feedback action, likely with `variant="ghost"` icon-only style (so they appear as subtle icon buttons). The code already uses lucide icons for thumbs up/down; ensure those icons have the correct size utility (`className="size-4"` or Tailwind `w-4 h-4` if not using the custom size class).
-  - Include `aria-label` on each button (e.g., “Mark as useful” / “Mark as not useful” or similar, depending on purpose) so screen readers know what the thumbs-up/down do.
-  - When a button is active (user clicked), apply a style change (maybe filling the icon or changing color). Use Tailwind conditional classes or variants: e.g., if a “liked” state exists, the thumbs-up icon could turn `text-primary` and the button variant become “default” to indicate selection, otherwise `text-muted-foreground`. This matches how PostReactionButtons handle like/dislike, so ensure consistency in approach.
-  - Add Tailwind `transition-colors` to the buttons for smooth hover/active feedback. Also, ensure onClick handlers are debounced or provide instant UI feedback (optimistically update count or state, as done in similar components).
-
-- **\_actions.ts (Discover actions)**: This file contains server actions for logging feedback. It doesn’t directly affect UI, but ensure any returned values or errors integrate with UI nicely. For example, if logging feedback returns a status used to update the UI (like disabling the buttons after vote), ensure the UI components check that state. No direct design changes here, but do add error handling: e.g., if the action fails, perhaps display a toast or error message (for now, could console.error or similar – later possibly integrate a Radix Toast for user feedback, which we might note as a future addition).
-- **Spacing & style**: The Discover page items should have consistent spacing (use `mb-8` for bottom margins between items in a list, or the aforementioned grid gap). Any card or item background should use `bg-card` with `rounded-md` corners (using our radius token classes) to match the new aesthetic. Keep it visually sparse – maybe only show essential info and on hover show the feedback buttons (that could be a micro-interaction: hide/show or subtle reveal).
-- **Dark mode**: All text on discover page (titles, descriptions) should use `text-foreground` and `text-muted-foreground` for secondary text so that they automatically adjust in dark mode. Any container use `bg-card` or `bg-background` appropriately – avoid fixed colors.
-
-### src/app/newsletters/\[userId]/page.tsx (Personal Newsletter Page)
-
-- **Purpose**: This page likely shows a user’s personal newsletter (like a profile with their posts). It should be treated similarly to the collective page (since a personal newsletter is analogous to a one-person collective).
-- **Layout**: Use a **responsive layout** with possibly a header (could be the user’s name or newsletter title) and a list of posts. If there is a sidebar or profile info, position it using grid or flex. For example, a two-column layout with profile info on left and posts on right on desktop, collapsing to single column on mobile.
-- **Typography**: Use consistent heading sizes for the newsletter title. If Source Serif 4 is designated for content titles, use it for the newsletter title to give a distinctive look (e.g., `<h1 className="text-3xl font-bold font-serif">Newsletter Name</h1>`). Post titles can be maybe smaller but still noticeable.
-- **Posts listing**: Likely each post is a link – use a list with each item possibly as a card or just a bordered bottom. Keep them compact (inspired by Linear’s list views: Linear uses rows with subtle separators and minimal chrome). For instance, a simple list where each post is a flex row (title on left, maybe date or likes on right) with a bottom border (`border-b border-border` which uses our token). On hover, maybe highlight the row background with `bg-muted` for a subtle effect – using Tailwind’s group-hover to achieve that if in a group. Ensure the clickable area is accessible (maybe wrap the row in an `<a>` tag).
-- **Follow/Subscribe**: If this page includes a “Subscribe” button (since it’s a newsletter), make sure to use our `<SubscribeButton>` component or style a button to match primary style. Position it clearly near the top. The `<SubscribeButton>` (see `components/SubscribeButton.tsx`) should be audited too (see below).
-- **Dark mode & contrast**: Verify the background (likely default) and text are correct in dark mode. If a card container is used, use `bg-card`. If the entire page is just content on background, `bg-background` (which it already is globally) suffices. The border between posts uses `border-border` token which will adjust (light gray in light, darker in dark).
-- **ARIA**: Use proper heading levels. E.g., page title as h1, post titles as h2 (especially if posts are listed). If the post titles are links, ensure they have discernible text (they likely do as the title itself). Add `aria-label` to subscribe button (like “Subscribe to \[Newsletter Name]” for clarity) if the button just says “Subscribe”.
-
-### src/app/posts/\[postId]/page.tsx (Public Post Page)
-
-- **Content display**: This page likely shows an individual post (maybe a personal post not under a collective). It should present content in a clean, readable format. Use Tailwind’s typography plugin styles by applying the `prose` class (if @tailwindcss/typography is configured) to the post content container. Ensure that the typography plugin is set to use our variables (in Tailwind config or CSS, the `.prose` color should be `var(--foreground)` etc. as indicated in design system).
-- **Heading and metadata**: The post title should be an `<h1>` with appropriate styling (e.g., `text-4xl font-bold mb-4`). If there are metadata like author name, date, reading time, display them in a smaller, muted style (e.g., `<p className="text-sm text-muted-foreground mb-8">By Author – Jan 1, 2025</p>`). Ensure that if multiple metadata items exist, they are separated clearly (perhaps by middot or bullet).
-- **Images or media**: If the post content includes images, ensure they are responsive (max-width: 100%) and have appropriate `alt` text. The typography plugin usually handles `img` styling in `.prose`, but confirm or manually add `className="max-w-full rounded-md"` to images for nice rounded corners (matching our radius token).
-- **Interactions**: There might be a like button or comments on a post page. Possibly `PostLikeButton.tsx` is used here for liking a post. If so, ensure it’s placed intuitively (maybe at the bottom or floating on side). That component should be using our `<Button>` with icon variant. We will check `PostLikeButton` separately, but here note to incorporate it in the layout (for example, in a sticky footer bar or after the content).
-- **Comments**: If `CommentsSection.tsx` or an API exists for comments (there is an API route for comments), perhaps the post page includes a comments thread. If yes, ensure the comments UI follows a clean design: nested comments indented, smaller font for comments, and a form to add a comment. Use our `Textarea` component for comment input and a `Button` to submit. Comments could be styled with the prose classes for text, but likely simpler: just treat as list of comment items with `border-border` separators.
-- **Dark mode**: The `prose` class by default might set specific light mode colors. We need to ensure that in dark mode, the text in the post content still uses the correct foreground. In Tailwind config or global CSS, ensure the typography plugin’s dark mode colors are overridden to our tokens (e.g., `.dark .prose { color: var(--foreground); }`). Review any code blocks within posts to ensure they have an appropriate dark theme background (maybe `bg-muted` or a specific token). If necessary, add a custom CSS to adjust code block colors in dark mode for readability.
-- **ARIA**: The content itself is mostly text, but for screen readers, ensure the structure is logical (the h1 for title as mentioned). If there’s a “like” button, it should have `aria-pressed` attribute toggled when liked (for accessibility to indicate state). If there are headings in content, they should be semantic within `.prose`.
-
-### src/app/\[collectiveSlug]/layout.tsx and page.tsx (Collective Pages)
-
-- **Collective layout**: The collective pages might have a custom layout (since they have a `[collectiveSlug]/layout.tsx`). This likely wraps the collective’s public pages (the main collective page and individual collective post pages) with a common UI (such as a collective header or navigation tabs). Audit this layout:
-
-  - If it includes a sidebar or top bar for the collective (e.g., collective name, description, a “Follow” or “Subscribe” button, maybe tabs like Posts/About), ensure semantic structure. Perhaps use a `<header>` for the collective info. The collective name should be a heading (h1 if this is the main page, or h2 if nested under something).
-  - Use the new typography: collective title in a distinctive style (maybe font-serif if appropriate). Below that, maybe a short description – style it with `text-sm text-muted-foreground` for contrast.
-  - If there are tabs (Posts, Members, etc.), implement them using Radix **Tabs** primitive if possible for accessibility (if the design calls for tabbed content). If not using Radix Tabs, at least use `<nav aria-label="Collective sub-navigation">` with `<ul>` of links styled as tabs (Tailwind can style the active link with a bottom border, etc.). Ensure the active state is indicated visually (underline or highlight) and via ARIA (e.g., `aria-current="page"` on the active link).
-
-- **\[collectiveSlug]/page.tsx**: This likely lists posts in the collective (the collective homepage). Similar to the personal newsletter, list the posts in a compact, readable way:
-
-  - Possibly use the `PostCard` component if one exists for listing posts (there is `PostCard.tsx` under components/app/posts/molecules). If so, use that for each post for consistency. If not, create a simple representation: maybe similar to the newsletter listing or Linear’s task list (title and some metadata).
-  - Include a “Subscribe” or “Follow” button at the top if users can follow the collective. The codebase has `FollowButton.tsx` which likely handles follow/unfollow. Ensure that is integrated: e.g., `<FollowButton collectiveId={...} initialFollowed={...} />` placed prominently (maybe near the title or in the header).
-  - Use grid or flex to layout posts if appropriate. Possibly a single column list is fine; if a lot of content, maybe two-column for excerpt cards.
-
-- **Collective \[postId] page**: The `[collectiveSlug]/[postId]/page.tsx` should mirror the design of the public post page from above, but within the collective context. Likely it uses the same component or logic (maybe even the same template as personal post). Ensure the collective layout wrapper is providing context (like a back link or collective info at top). This layout might already wrap the content page.
-
-  - Check that the collective’s layout provides a container (maybe a max-width) for the post content and not too wide on large screens (for readability, 65ch is typical max line length – the `.prose` class enforces a width, or we can add `max-w-3xl mx-auto` on content wrapper).
-  - If the layout includes a sidebar with other posts or info, verify the sidebar hides on mobile or moves below content for responsiveness.
-
-- **Dark mode and style**: Use the same tokens as elsewhere. The collective header background, if any, should use `bg-card` or `bg-secondary` depending on design (some sites use a colored banner – if that’s desired, define a new CSS variable for collective header background or use existing `--secondary` as a subtle distinct color). But since aesthetic is minimalist, likely keep it simple (no huge banners).
-- **ARIA**: Label the collective navigation if present. If there’s a list of posts, ensure each post link has the title for screen readers (which it will if the title is text). Add `aria-label` to the follow button (like “Follow \[CollectiveName]”).
-- **Spacing**: Maintain consistent spacing – e.g., collective header bottom margin before list starts, maybe use `mb-8`. If using a grid, ensure `gap-8` consistent.
-
-### src/app/dashboard/\* (Authenticated Dashboard Area)
-
-The dashboard is the authenticated interface for writers. This area needs a significant redesign to match a **Linear-inspired compact dashboard** while maintaining clarity. The dashboard consists of multiple sub-pages and a common layout.
-
-#### src/app/dashboard/layout.tsx (Dashboard Shell Layout)
-
-- **Layout structure**: This layout likely includes the persistent sidebar navigation (and possibly topbar) for the dashboard. Redesign this using Atomic design:
-
-  - Use a `<aside>` for the sidebar (with `aria-label="Sidebar"`). The sidebar content should be structured (likely a list of navigation links: e.g., Dashboard Home, My Posts, My Newsletter, etc.). Use our `SidebarLink` atom component for each link (there is `components/app/dashboard/atoms/sidebar-link.tsx`).
-  - Style the sidebar with the new **dark sidebar** aesthetic: for example, use a distinct background token like `bg-sidebar` (the design tokens list shows `--sidebar` tokens). If those exist, apply `bg-sidebar text-sidebar-foreground` to the aside. In dark mode, that might become almost black while the main content uses a slightly lighter dark background. This contrast helps visually separate navigation vs content.
-  - The width of the sidebar should be fixed (perhaps use Tailwind classes like `w-64` or use flex-basis with a custom CSS variable if needed). Ensure it’s scrollable if content overflows vertically (`overflow-y-auto`).
-  - For the main content, use a `<main>` region next to the aside. Likely implement a responsive behavior: on small screens, the sidebar might collapse into a menu (if so, we could use Radix **Sheet** or **Dialog** to show/hide the sidebar). But given time, at least ensure it’s hidden or can scroll horizontally. Possibly add a “open menu” button in topbar for mobile.
-  - The dashboard layout might also include a top navigation (for things like theme toggle or user profile menu). If present, use a `<header>` for that. Keep it slim: maybe just an icon button for theme (we have `ModeToggle`) and a user avatar or name. Use flex utilities to position (e.g., `flex justify-between items-center p-4`).
-
-- **Spacing and grid**: Within the main content area, apply a padding (e.g., `p-6 md:p-10`) so content isn’t stuck to edges. Use consistent spacing around headings and cards.
-- **Dark mode**: For the sidebar, if using `bg-sidebar`, ensure the `.dark` theme overrides `--sidebar` appropriately (the tokens we saw indicate it does). Also ensure focus states in sidebar (if using `SidebarLink` with `:focus-visible`) are visible – likely use `focus:ring-2 focus:ring-sidebar-ring` to show a focus outline within the sidebar context.
-- **Micro-interactions**: The sidebar might benefit from small animations (e.g., an active link indicator sliding). If implementing, use Tailwind transitions. For example, if highlighting the active section with a bar, animate its movement on route change. Use Radix primitives if any (though likely not needed here).
-- **ARIA**: Aside from labeling the `<aside>`, ensure each nav link uses `aria-current="page"` when on that page (the `SidebarLink` atom can handle this by checking the current route and applying appropriate classes + aria). If the sidebar can collapse, add `aria-expanded` on the toggle control.
-
-#### src/app/dashboard/page.tsx (Dashboard Home)
-
-- **Overview design**: This page might show an overview of metrics or recent activity. Redesign it as a **compact dashboard panel**:
-
-  - Possibly it includes some statistics cards (maybe subscriber count, total posts, etc.). If so, use a grid for stat cards (the code has `stat-card.tsx` and skeletons). Each stat card should be small, monochromatic with maybe an icon and number. Use `bg-card` for the card background, `rounded-md` for corners, and a consistent height (maybe Tailwind `h-24` or let content dictate).
-  - The Linear inspiration suggests using **concise lists** for recent items. There is a `RecentPostRow.tsx` component – likely to show recent posts. Ensure the styling of these rows is tight: maybe each row is 40px tall with the post title and status. Use subtle separators or zebra striping if needed. Already `recent-post-row-skeleton.tsx` suggests they had loading placeholders; ensure these skeletons use the `Skeleton` component or `bg-muted` backgrounds to hint loading, and they respect dark mode (the `skeleton.tsx` in ui likely handles it).
-  - If there’s a section for tasks or notifications, similarly style with minimal chrome.
-
-- **Typography & alignment**: Use Tailwind to adjust text sizes – possibly smaller than default for a dense dashboard. For example, table or list text might use `text-sm` or even `text-[13px]` (if within design constraints) with `leading-tight`. Use `font-medium` for labels and normal for values to create visual hierarchy.
-- **Icons**: If stat cards or sections use icons (like an icon for “Posts” stat), ensure they use a consistent style and size (Lucide icons with `size-4` class is fine). They should inherit text color or have a specific token (maybe using `text-muted-foreground` for subtle background icons).
-- **Responsive**: The dashboard home should collapse gracefully on mobile. If stat cards are in a grid of 3 or 4 on desktop, on mobile stack them or use a two-column grid. The recent posts list should be full-width on mobile (maybe the entire thing scrolls vertically). Check that no element is fixed width that would overflow a small screen.
-- **Dark mode**: Verify that background of the dashboard page is using `bg-background` (likely inherited from layout) and cards are `bg-card`. Text should be `text-foreground` for main, `text-muted-foreground` for subtle. If any stat uses color (like a graph or status text, e.g., green for published), ensure those colors are chosen via tokens or Tailwind shades that are dark-mode friendly (or use CSS `currentColor` trick with tokens).
-- **ARIA**: Not much interactive here besides possibly links to posts or buttons to create new content. Ensure any “Add new post” button is labeled properly and keyboard accessible (should be, if `<Button>`). If stat cards are just display, make sure they’re not focusable unnecessarily (e.g., if they were erroneously `<a>` or `button` when they just show info, change to `<div>`). Screen reader users should ideally hear a summary: consider adding `aria-live` region to announce changes if any real-time updates (though not likely needed for static stats on load).
-
-#### Dashboard Sub-Pages:
-
-**src/app/dashboard/posts/page.tsx** (My Posts List):
-
-- This should list all posts the user has written. Implement as a table or list that mimics Linear’s compact list of issues:
-
-  - Perhaps use a table layout: columns for title, status (draft/published), date, views, etc. If table, use semantic `<table>` with `<thead>` and `<tbody>`. Style the table with only minimal borders: e.g., use `border-b` on header and each row but no full grid lines, to keep it clean.
-  - Alternatively, if not a formal table, a list of `PostListItem.tsx` (which exists) could be used. Check `PostListItem.tsx` in `components/app/dashboard/posts/`. It likely defines a row structure. Ensure it uses flex to separate fields, and text classes to align. It should incorporate clickable title (for editing) and possibly icons for status.
-  - Add a “New Post” button prominently (maybe top-right). Use `<Button variant="primary">New Post</Button>` linking to the new post page.
-  - For empty states (if no posts), provide a friendly message and an action to create one – styled in muted text.
-
-- Use consistent spacing: if not using a table element, use `space-y-2` to separate items slightly, or a subtle border bottom as separator (with appropriate padding in each item).
-- On small screens, perhaps hide less important columns or stack them. E.g., on mobile, each post item could be two lines (title on first, meta on second).
-- Accessibility: If using a table, add `aria-label` or visually hidden captions to explain the table (e.g., “List of your posts”). If using list, ensure each item link is focusable (likely the title as `<a>` or button).
-
-**src/app/dashboard/posts/\[postId]/edit/page.tsx** & **EditPostForm.tsx**:
-
-- This is the edit post page with a form to edit content. The design should match the new editor interface style:
-
-  - Likely uses a rich text editor (the `EditorLayout` and `PostEditor` components in `components/editor/` handle this). Ensure the page layout provides adequate space for the editor (maybe full width of content area). Possibly remove any extraneous borders around the editor for a cleaner look; rely on the editor content area styling itself.
-  - The form might include fields like title (text input) and the editor for body. Use our `<Input>` component for the title field with proper label. E.g., label “Title” and input with maybe larger font (could use `text-2xl font-bold` on the input text via Tailwind if wanting the title to stand out).
-  - Buttons: likely “Save” or “Publish” actions. Use `<Button>` with clear labeling, and place them either top-right or bottom of page per design. Possibly keep them visible by pinning in a top bar (Linear has a top bar with actions). If implementing that, perhaps reuse `dashboard-shell.tsx` or a sub-layout for editor to include a header with actions.
-  - If there's a “Preview” mode, style that toggle as a secondary button or tab.
-
-- Ensure **state feedback**: when saving, show a loading state (maybe the button uses `disabled` with a spinner if possible). Could integrate a small spinner using Tailwind borders or an SVG icon.
-- Accessibility: The editor itself (if using Lexical or similar) should have appropriate aria roles (which likely are handled in `PostEditor.tsx`). For our part, ensure the title input has focus on page load (maybe autofocus it for convenience). Announce save success/failure via a toast or alert message (if not built, consider adding a simple `<p role="status">Saved!</p>` that appears briefly).
-
-**src/app/dashboard/my-newsletter/subscribers/page.tsx** (Subscriber List):
-
-- This page likely shows a list of subscribers to the user’s personal newsletter. Design it either as a simple list or table of subscriber emails.
-
-  - If just emails, a basic list with bullet points or a copyable email link is enough. If more info (date subscribed, etc.), use a compact table.
-  - Use `text-sm` for emails, and perhaps a `Copy` icon button next to each for convenience (if desired).
-  - Provide an export button if needed (CSV export could be a button – not sure if in scope, but mention if it exists).
-
-- Keep it minimal: no heavy borders, maybe just a border under each email for separation (`border-b border-border` on a container div).
-- If the list is long, ensure the container scrolls or paginates. Possibly style with `overflow-x-auto` if a table might overflow on mobile.
-- Accessibility: If emails are clickable (mailto links), ensure `aria-label` like “Email subscriber at \[email]”. If not clickable, just text is fine. Provide a heading `<h2>` like “Subscribers” for context.
-
-**src/app/dashboard/new-personal-post/page.tsx**:
-
-- This likely is similar to the “new post” for personal newsletter. If it simply redirects to the editor form (or uses the same EditPostForm), ensure consistency. Possibly it’s a wrapper to choose to post in personal vs collective.
-- If there’s any unique UI (like a choice between posting to personal vs a collective if user has multiple newsletters), present it clearly (two buttons or a small form). Keep it simple and consistent with other forms (use `<Button>` for each choice, etc.).
-- Ensure any selection uses accessible controls (maybe a radio group or segmented control). If using Radix **ToggleGroup** or **RadioGroup**, style them with Tailwind and tokens (no external styles). E.g., if we had a toggle for “Personal vs Collective post”, ensure focus states and labels are clear.
-- If none of that complexity exists (maybe it directly shows the editor for a new personal post), then just ensure it uses the same components as edit page.
-
-**src/app/dashboard/profile/edit/page.tsx & EditProfileForm.tsx**:
-
-- Profile editing form for the user’s own profile/newsletter info.
-
-  - Fields likely include name, bio, maybe avatar upload. Use `<Input>` for text fields, `<Textarea>` for multi-line bio field (we have `components/ui/textarea.tsx`).
-  - Wrap each field with a `<FormItem>` grid (if using our form system) with labels. Ensure labels are above fields, not placeholders.
-  - Avatar upload: If present, use a simple file input or a dedicated component. If using a file input, style it minimally (Tailwind doesn’t style file inputs easily; might leave default or use a custom solution with hidden input and a styled button). Ensure accessible labeling (label for the file input or `aria-label="Upload profile picture"`).
-  - Buttons: Provide a “Save Profile” button (primary style) and maybe a “Cancel” link. Place them at the bottom with some spacing (`mt-6 flex gap-2`).
-  - Validate inputs (e.g., name not empty). If using React Hook Form, display errors with our `<FormMessage>` styling under fields in small red text (`text-destructive` token). Already in `Form` component logic, `FormMessage` likely applies `text-sm text-destructive` by default for errors – confirm or add styles.
-
-- Ensure **responsive**: if the form is in a narrow column, that’s fine; if wider, perhaps restrict max width (`max-w-xl mx-auto`) so it doesn’t look sparse on large screens.
-- **Dark mode**: No special changes, just ensure uses tokens (inputs `bg-input`, etc., which it will via our Input component).
-- **ARIA**: Announce success on save (could be a toast or simply a message “Profile updated” shown, and have `role="status"` on it). All inputs have labels for screen readers.
-
-**src/app/dashboard/collectives/page.tsx** (My Collectives List):
-
-- This page likely lists the collectives the user is part of or owns. Design similarly to a list of projects:
-
-  - If small number, use a card for each collective (perhaps showing collective name, maybe member count). The `DashboardCollectiveCard.tsx` component exists for this purpose – ensure it’s used. That component should be updated to fit the new style (see below in components).
-  - If larger, a table or list like the posts list could be used. But likely a grid of “cards” (like team cards) might be the intention.
-  - Either way, use consistent approach: each item clickable to go to that collective’s manage page. Mark up each card as a link (`<a>` around the whole card or at least the title, and use `cursor-pointer` with `hover:bg-muted` for card hover effect).
-  - Provide a “New Collective” button if the user can create a new one. That should link to the `/dashboard/collectives/new` page. Use primary button style, placed top-right or clearly visible.
-
-- **Spacing**: If cards, use a grid with gap (like `grid md:grid-cols-2 gap-6`). If list, use `space-y-2` or table style lines.
-- **ARIA**: Add appropriate alt text if collective logos are shown. If the card is one clickable region, give it `aria-label` like “Go to \[Collective Name]” (especially if card content is more than just text, to ensure screen readers announce click target).
-
-**src/app/dashboard/collectives/new/page.tsx & \_actions.ts** (Create Collective):
-
-- The new collective page is a form to create a collective. It should mirror the style of other forms:
-
-  - Fields: likely name, description, maybe an image. Use `<Input>` and `<Textarea>` with labels as with profile form. Keep it simple, only the essentials to reduce cognitive load.
-  - Submit: a “Create” button (primary variant). Possibly also a cancel/back link.
-  - Validate name (not empty, unique if possible – \_actions.ts might handle this by returning errors).
-  - Use our form error display for any server validation errors (for example, if \_actions returns an error like name taken, display it in a `<FormMessage>` near the field or as a general error at top).
-
-- In `_actions.ts`, ensure we return structured errors if needed. No UI changes in the action file, but consider adding success redirect or message (the action likely redirects to the new collective’s page on success).
-- Accessibility: Focus the first field on mount (name field) to help user start typing. If there are multiple steps (probably not, likely a single form), ensure everything is on one page for simplicity.
-
-**src/app/dashboard/collectives/\[collectiveId]/settings/page.tsx & EditCollectiveSettingsForm.tsx**:
-
-- Form to edit a collective’s settings (similar to profile form but for a collective).
-
-  - Fields might include collective name, description, maybe billing info or toggles (private/public). Use the same approach: Input/Textarea with labels, and any toggle as well.
-  - For toggles (if any, e.g., “Enable subscriptions”), prefer Radix **Switch** or **Checkbox** depending on context. If using a checkbox for a binary setting, style it with Tailwind (since no external UI libs): e.g., create a custom checkbox style using relative divs (or import Radix Switch from `@radix-ui/react-switch` for accessible switch and then style via classes). Ensure to include an accessible label for the switch.
-  - Save button at bottom, similar to profile.
-
-- Ensure the page is within the collective’s dashboard layout (there might be a sub-nav for manage/settings).
-- ARIA: Label any toggles clearly (e.g., “Enable subscription \[checkbox]” with visible text label).
-- Dark mode: straightforward, all tokens usage.
-
-**src/app/dashboard/collectives/\[collectiveId]/manage/members/page.tsx, InviteMemberForm.tsx, ManageMembersClientUI.tsx**:
-
-- Manage members page likely shows members of the collective and allows inviting new members.
-
-  - The members list: likely a list of user emails or names with roles. Use a compact table or list (similar style to subscribers list). Possibly with actions to remove or change role. Represent each member with a row containing name, role, maybe a remove button (an “X” icon).
-  - Style remove buttons as icon-only `<Button variant="ghost" size="icon" aria-label="Remove [username]">XIcon</Button>` with a red tint (`text-destructive` for the icon perhaps).
-  - The invite form: probably an input for email and a “Send Invite” button. Place this at top or bottom of list. Use our Input component for email and a secondary button to send invite. Validate email format (client-side).
-  - ManageMembersClientUI.tsx might handle dynamic UI (like state of invites or removing members without full page reload). Ensure any feedback (like “invitation sent” or errors) is shown, perhaps as a small alert or message (could reuse our `<Alert>` component with variant).
-
-- **Spacing**: Provide a bit of space between the invite form and member list (`mb-4`).
-- **Dark mode & style**: Member rows background should alternate or all same – either way, ensure `bg-card` or `bg-background` usage appropriately. If highlighting the current user differently, do so subtly (italic name or note “(you)”).
-- **ARIA**: The list of members can be a simple list with each item’s remove button labeled as above. If using a table, ensure header cells for “Member” and “Role” and “Actions” etc. The invite form’s success could be announced (e.g., on successful invite, focus a success message).
-
-**src/app/dashboard/collectives/\[collectiveId]/subscribers/page.tsx**:
-
-- If collectives have subscribers (for paid newsletters perhaps), this is analogous to my-newsletter subscribers. Style exactly like the personal subscribers list: simple list or table of subscriber emails. Ensure no duplicate code – possibly reuse the same component or styling. The design guidelines are identical (text size, spacing, etc.).
-- Ensure to differentiate if needed (if it includes subscription tier or since date, include those columns).
-- Same accessibility considerations as subscriber list above.
-
-**src/app/dashboard/\[collectiveId]/new-post/page.tsx**:
-
-- This might be the page to create a new post under a specific collective. It should likely be very similar to the new personal post or the edit form:
-
-  - Possibly just redirect to a unified editor interface but within the context of a collective (maybe it sets a collectiveId hidden field or context).
-  - If it provides a choice of template or something, ensure those choices are accessible.
-
-- Likely minimal UI: in any case, ensure it doesn’t deviate from the patterns used in the personal new post page or edit page.
-
-### src/app/actions/\*.ts (Server Action Files)
-
-These files handle backend logic for Supabase or other operations. They do not render UI directly, but we should **ensure their outputs align with UI needs**:
-
-- **collectiveActions.ts, postActions.ts, etc.**: Verify that any errors thrown or returned are handled by the UI. For example, if `postActions.ts` returns an error string, ensure the UI form displays it (perhaps hooking into Form’s error or using an `<Alert>` message). If not already, consider changing these actions to throw errors (which our form components can catch via React Hook Form) or to return structured `{ error: "message" }` so UI can show it. This makes error feedback visible to the user, aligning with good UX.
-- Confirm that the actions do proper validations (to avoid silent failure in UI). E.g., `likeActions.ts` should check if user is allowed to like and return meaningful status that UI might use (though in our case, the like button UI is optimistic and then reverts on failure).
-- **No direct UI changes** needed in these files, but as part of redesign, ensure **consistency in user feedback**: if an action is slow, the UI shows a loading state (we have `useTransition` usage in some components, that’s good). If an action fails, the UI should inform the user (maybe currently it doesn’t always – consider adding an alert or toast for failures).
-- No external libraries are added here. Just ensure any string literals that appear in UI (like error messages) are clear and concise (maybe adjust wording to match new tone if needed – friendly, straightforward language as per minimalist ethos).
-
-### src/app/api/\* (Route Handler Files)
-
-These are API endpoints (Stripe webhooks, subscribe endpoints, etc.). They have no UI, so design changes are not directly applicable. However:
-
-- **Consistency**: Ensure that the data these routes return is used by the UI in a consistent way. For instance, the `posts/_postId/view/route.ts` might track views; ensure the front-end (maybe `PostViewTracker.tsx`) calls it appropriately. If we redesign how view counts are displayed, make sure the route still supports that.
-- **No HTML output**: These should remain pure JSON APIs (which they likely are). Confirm that any error responses (status codes, messages) are appropriately handled by UI. For example, if `subscribe/route.ts` returns an error, does the UI catch it to display to user? If not, consider adding UI handling (like a toast on failure).
-- **No changes required** in code formatting or logic unless to support a UI change (e.g., maybe adding a field needed by new UI). For instance, if the dashboard now wants to show “views this week”, maybe adjust `posts/route.ts` or create a new route to fetch stats. These are scope expansion decisions to consider.
-- In summary, mention that API routes are fine as is but ensure integration with redesigned front-end flows (subscribe route works with new SubscribeButton behavior, etc.).
-
-## Reusable Components (Design System Atoms & Molecules)
-
-### src/components/ui/\* (Core UI Elements)
-
-These are fundamental building blocks to be audited for consistent design, theming, and accessibility. For each, ensure **Tailwind CSS classes reference design tokens** (no hardcoded colors), **Radix primitives usage** (for accessibility and state management), and **ARIA compliance** where relevant.
-
-- **Alert (alert.tsx)**: This component likely provides a banner for messages (success, error).
-
-  - _Design_: Ensure it uses our color tokens (it seems to use `bg-card` and `text-card-foreground` by default, and a variant for destructive which likely uses `text-destructive`). Keep this minimal – perhaps an icon plus text. Confirm the icon (if any) uses size and color appropriately (`text-current` so it inherits the text color, which the code indicates with a selector).
-  - _Spacing_: The alert uses padding (`px-4 py-3`) and a grid layout if an icon is present (the code uses `has-[>svg]:grid-cols-[...]`). This is fine; just verify it aligns with 8px grid (px-4 = 16px, py-3 = 12px which is not an 8 multiple – consider making py-2 or py-4 to align to 8/16px steps; likely py-2 (8px) might be a bit tight, py-3 is 12px which breaks the rule, so prefer py-4 (16px) or adjust base spacing to 4px increments exclusively).
-  - _Dark mode_: It already uses `bg-card` etc., so it’s themed. For destructive variant, ensure background might remain `bg-card` (keeping background neutral even for errors is often fine) and just text is red-ish. If design calls for a tinted background for destructive alerts, implement by using a variant class (e.g., `variant==="destructive"` adds `bg-destructive/10` or something along those lines).
-  - _ARIA_: Add `role="alert"` to the container (the code already does that). That helps screen readers announce it immediately. Ensure any interactive content inside (if any) is also accessible (usually alerts are static text).
-  - _Interactions_: Alerts likely static, but if we had closable alerts, ensure the close button (if added in future) is a proper `<button aria-label="Close alert">`.
-  - _Atomic structure_: It’s fine as an atom. We may consider moving it under a relevant category if needed (but since it’s generic, `ui/` is fine).
-
-- **Badge (badge.tsx)**: Small label component.
-
-  - Ensure badges use token colors. Possibly the code defines variants (e.g., default, secondary, etc.) using `cva`. For each variant, ensure the classes reference our palette (e.g., default might be `bg-secondary text-secondary-foreground` giving a muted badge, or maybe primary). If any hex colors or non-token classes are used, replace with tokens. For instance, if it uses a blue or gray background, map it to `bg-muted` or `bg-primary` as appropriate.
-  - Keep the badge **small and subtle** (Linear’s aesthetic for badges/tags is often subtle background, all-caps text but small). If the design wants uppercase, apply `tracking-wide text-[0.75rem] uppercase` etc., but only if part of style guide.
-  - Add `aria-label` if the badge alone conveys status (though usually a badge is accompanied by text, e.g., “Status: \[Badge]” so screen readers have context).
-  - Dark mode: using `bg-muted` or `bg-primary` will auto-adjust. Just confirm contrast (badge text vs background).
-  - Spacing: likely uses `px-2 py-1 text-xs`. py-1 = 4px which is fine (multiple of 4). px-2 = 8px good. That aligns with 8px grid horizontally and 4px vertical (which is half-step but common for small pills).
-
-- **Button (button.tsx)**: One of the most critical components.
-
-  - _Variants and sizes_: Ensure the button variants (primary, secondary, ghost, link, destructive, etc.) are defined and follow the new design. Primary should use `bg-primary text-primary-foreground` with hover `bg-primary/90` or similar. Secondary might be `bg-secondary text-secondary-foreground` (if secondary color is like a gray or so). Ghost should be transparent background with maybe `hover:bg-muted`. Destructive variant should use `bg-destructive text-destructive-foreground` (which in tokens is likely a red).
-  - The code likely uses `cva` from class-variance-authority to define these. Update the classes in each variant to match design tokens (no direct hex or arbitrary colors). For example, ensure any usage of `ring-offset` for focus uses token (in sheet.tsx we saw `ring-offset-background` which is good).
-  - _Sizes_: Likely sizes like `sm, default, lg, icon`. Confirm these use consistent padding (e.g., sm: px-3 py-1, default: px-4 py-2, etc.). Ensure the rounding uses `rounded-md` or appropriate token (maybe `rounded` for default which maps to our radius token).
-  - _Icon buttons_: The `size="icon"` variant should produce a square button (like 36x36px maybe) for icon-only. The code shows usage in ModeToggle. Ensure this size is sufficient for touch (44x44px is recommended min). If our icon button is currently 36px (as seen), consider bumping to 40px for accessibility. But if sticking to design’s compactness, at least ensure aria-label is provided (which it was).
-  - _Focus state_: All buttons should have a visible focus outline. Tailwind’s `focus:ring-2 focus:ring-offset-2 focus:ring-ring focus:ring-offset-background` is often used (with our tokens, `ring-ring` and `ring-offset-background` correspond to appropriate colors). Ensure these classes are in place via cva or manually. If any variant missing them, add to base styles.
-  - _Dark mode_: Because tokens cover colors, it should be fine. Just double-check ghost variant in dark (e.g., `hover:bg-muted` may be too light/dark – but since muted is tokenized, it should be okay).
-  - _Transitions_: Add `transition-colors` on buttons so hover/focus color changes animate. Also maybe `duration-150 ease-out` for a quick subtle effect. This can be added to base class via cva or as a static string.
-  - _ARIA_: Already probably fine (no role needed on `<button>` elements beyond default). Just ensure loading state if any (some design systems put `aria-busy` or `disabled` with spinner). If adding a spinner icon when `loading` prop is true, include `aria-hidden` on spinner and keep button label for screen readers or use `aria-live` region.
-
-- **Card (card.tsx)**: A generic container, likely just styles (maybe a div with `rounded-lg border bg-card text-card-foreground shadow-sm` etc.).
-
-  - Ensure the classes use our tokens: `bg-card` for background, `border border-border` for outline if any (for a minimalist aesthetic, we might drop heavy shadows and rely on border+background difference).
-  - Possibly provide a default padding? But likely leave that to usage or provide a small default like `p-4`.
-  - Check dark mode: `bg-card` and `text-card-foreground` will invert automatically.
-  - If any interactive usage (like clickable card), it should be handled outside (so Card stays a passive container).
-  - No ARIA role by default (unless this is meant as a widget; probably not). If card is used in lists, ensure containing element semantics are handled outside (e.g., an article or li around it if it represents an item).
-
-- **Collapsible (Collapsible.tsx)**: Likely a wrapper around Radix Collapsible or a custom disclosure.
-
-  - If Radix’s `<Collapsible>` is used, ensure we use it correctly: e.g., `Collapsible.Root`, `Collapsible.Trigger`, `Collapsible.Content`.
-  - Check that it uses `data-state=open/closed` to animate. If not, add Tailwind classes for transitions. For instance, content could have `data-[state=closed]:animate-slide-up data-[state=open]:animate-slide-down` (and define those keyframes via Tailwind config if not pre-defined). Actually, if we have imported `shadcn` animations, they might be present (like we saw `animate-in slide-in-from-right` etc. in sheet).
-  - The trigger should be a button with proper `aria-controls` and `aria-expanded` (Radix does this internally). Make sure any icon on trigger rotates if needed (could use `data-[state=open]:rotate-180 transition-transform` for a chevron icon).
-  - Style: likely no visible border or background, just content reveals. If it’s used for something like an FAQ list or collapsible sidebar section, ensure the design matches (maybe a subtle border top for content separation).
-  - Dark mode: no special case except ensuring any color used is token.
-
-- **Footer (Footer.tsx)**: If this is a UI component, likely the site’s footer.
-
-  - Ensure it’s minimalist: maybe just small text and links. Use `text-muted-foreground text-sm` for any copyright or tagline, and lighten link styles (maybe no heavy underlines; could use `hover:underline` only).
-  - Layout could be center-aligned or grid of links depending on complexity. Keep it simple if possible (the MVP might have minimal footer).
-  - Dark mode: background should use `bg-background` or `bg-card` depending on whether you want contrast with body. Possibly keep it same as body background for seamless look, unless design wants a distinct footer section.
-  - Accessibility: If there are multiple sections of links, use `<nav aria-label="Footer">` around them or lists with appropriate labeling.
-
-- **Form (form.tsx)**: This houses React Hook Form utilities (`FormField`, `FormItem`, `FormControl`, `FormMessage`, etc.).
-
-  - These are mostly logic, but ensure the rendered elements have proper classes:
-
-    - `FormItem` wraps each field – it already uses `className="grid gap-2"` which is good for label/input spacing. Gap of 2 (0.5rem = 8px) aligns to our grid.
-    - `FormLabel` wraps our `<Label>` and adds `data-[error=true]:text-destructive` class, so if a field has an error, label turns red. Ensure that class (text-destructive) is indeed defined (Tailwind should generate it via token). Possibly adjust that to slightly less aggressive color (maybe use `text-destructive` which might be a strong red – fine for error highlight).
-    - `FormMessage` likely just outputs the error text with a class. Ensure it uses `text-destructive text-sm` so it’s red and small. If not, add styling in that component or in global CSS (like `.form-message` utility class).
-    - Also ensure each FormItem has proper aria linking: the code in `useFormField` generates `formItemId`, `formMessageId`. Make sure in FormControl (wrapping input) they spread those ids: the code likely applies `id={formItemId}` to the input and `aria-describedby={formMessageId}` if error exists. If not present, add that for full accessibility (but from the code snippet we saw, they prepare those IDs, so likely they do).
-
-  - No major design styling beyond ensuring error states and spacing are consistent. Possibly could add a subtle error icon or styling in the future, but not necessary.
-
-- **Input (input.tsx)**: The text input component.
-
-  - Ensure classes: likely uses `rounded-md border border-input bg-background px-3 py-2 text-sm`. Align that with design:
-
-    - Border color should be `border-input` token (which in light is a light gray, dark maybe darker gray).
-    - No outline by default beyond border. On focus, should apply `outline-none ring-2 ring-ring ring-offset-2 ring-offset-background` (similar to Button). If the code doesn’t add that, we should add `focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background`.
-    - Ensure `text-sm` for inputs (maybe all inputs use same text sizing for consistency). Use `placeholder:text-muted-foreground` to have placeholder in muted color.
-    - If a prefix or suffix icon is part of input (some designs have search icon inside input), ensure those are positioned and colored appropriately (the code might not handle that unless an InputGroup component exists – if needed, we can design a wrapper with flex and pl-? for icon padding).
-
-  - Dark mode: `bg-background` for input might be too transparent in dark? Actually, background token in dark is near-black, which might make inputs blend with page. Instead, perhaps inputs should use `bg-input` token (which could be slightly lighter than background to stand out). If the code uses `bg-transparent` or `bg-background`, consider switching to `bg-input`. Check tailwind.config – `input` token exists. Use `bg-input` in class and ensure in CSS, `.dark { --input: ... }` is defined (it is, likely).
-  - If disabled state, ensure `opacity-50 cursor-not-allowed` class is applied (common Tailwind utility).
-  - Remove any extraneous shadows from input if present (likely none if border used).
-  - Keep it accessible: we already ensure it ties with label via id, that’s done by form context.
-
-- **Label (label.tsx)**: The label component (wrapping Radix Label).
-
-  - The code sets a default class with `text-sm font-medium select-none` – this is fine (small text, medium weight).
-  - It also adds `peer-disabled:cursor-not-allowed peer-disabled:opacity-50` to handle if input is disabled.
-  - Possibly adjust spacing: It’s wrapping flex with `items-center gap-2`, meaning label could contain an icon or checkbox. That’s good.
-  - No design changes needed except to confirm maybe margin if needed; but since FormItem uses grid gap, this is okay.
-  - Ensure color: probably inherits text color (so will be `foreground`). The error state we handle via data attribute making it `text-destructive` if error.
-  - ARIA: As long as it’s a <label> with htmlFor, it’s fine.
-
-- **Select (select.tsx)**: A custom select component presumably built with Radix Select.
-
-  - Ensure we use Radix `<Select>` for accessibility (which likely they did, given the presence of code and Radix import).
-  - The design should mimic a minimal dropdown:
-
-    - The trigger (the visible part) should look like an Input or Button – likely styled with `bg-background border border-input py-2 px-3 text-sm` and an icon (caret) at right. Ensure the trigger uses `flex justify-between` if adding an icon.
-    - The options list (Radix Select.Content/Viewport) should be styled with `bg-popover text-popover-foreground shadow-md rounded-md` for the dropdown panel. Each item (Select.Item) likely uses `px-3 py-1.5 text-sm cursor-pointer focus:bg-accent focus:text-accent-foreground` classes, so that on highlight it shows as accent. Confirm these token usages or add them.
-    - Also ensure `aria-label` on the whole select if label isn’t visible (though typically one uses a separate Label).
-    - If multi-select or anything, ensure those states or check icons are present and accessible.
-
-  - Radix select already handles keyboard navigation and ARIA roles, so our job is mainly styling.
-  - The code possibly already has much of this (if it was a Shadcn UI derived select). Check that no hardcoded colors exist; replace with tokens as needed (like `focus:bg-primary` should be `focus:bg-accent` maybe, depending on design choice for highlight color).
-  - Ensure dark mode: If using `bg-popover` for the menu, that token should invert (design doc had popover tokens). Items highlight should also adjust (accent will invert).
-
-- **Separator (separator.tsx)**: Likely a horizontal rule or divider, possibly using Radix Separator.
-
-  - Ensure it’s styled minimally (e.g., `bg-border h-px w-full`). If vertical option, maybe a class for vertical as `w-px h-full`.
-  - Nothing much else; just ensure the color is token `border` or `muted` so it’s visible enough.
-  - For accessibility, if used purely decorative, might add `role="separator"` implicitly or via Radix. Radix’s separator handles it.
-
-- **Sheet (sheet.tsx)**: This is a sidebar drawer (Radix Dialog used as "Sheet").
-
-  - The code already handles a lot: overlay and content with animations. Review:
-
-    - The overlay uses `bg-black/50 dark:bg-black/70` – replace these with tokens if possible. Perhaps use `bg-background/80` or a specific overlay color token. The design doc doesn’t explicitly list an overlay token, but maybe use a neutral. Black with opacity is fine, but we could define `--overlay` token if being strict. However, since it's not user-facing color (just an overlay), this is likely acceptable. Alternatively, use `bg-[color:rgba(0,0,0,0.5)]` if wanting to avoid direct black reference – but effectively same.
-    - The content uses `bg-background text-foreground` which is correct. It also has a lot of class logic for slide in/out on different sides.
-    - It sets the width to `w-3/4 sm:max-w-sm` for side sheets. 3/4 width on small screens, max width on larger – that’s okay. Ensure that the width is suitable (maybe on very large screens, 25% is a bit large, but since sm\:max-w-sm (which is \~640px), it caps it).
-    - The close button inside has classes including `focus:ring-ring` etc., which is good for accessibility.
-
-  - Possibly adjust **radius**: The sheet content is fixed and might not need rounded corners on full-height side drawer (currently they use no specific rounding except on the close button). That’s fine.
-  - Check **transition durations**: They used `data-[state=closed]:duration-300` vs open 500ms. Consistency might be better (maybe both 300ms or open slightly faster than close). If the design wants snappier UI, consider reducing to \~200ms both. But this is minor; what's there is okay too if that's a conscious choice.
-  - ARIA: Radix Dialog (Sheet) already uses `role="dialog"`, etc. The close button has `aria-label="Close"` with an sr-only text. Good.
-  - Test dark mode: Should be fine as it uses tokens.
-
-- **Skeleton (skeleton.tsx)**: For loading placeholders.
-
-  - Likely a simple component that renders a `div` with `animate-pulse bg-muted` classes. Ensure `bg-muted` (light gray) is used rather than a custom gray. If currently a specific gray, change to `bg-muted`.
-  - It might also use `rounded` class to give slight radius, which is fine. Possibly ensure it’s `rounded` or `rounded-md` to match our radius token.
-  - If we want a shimmer effect rather than pulse, Tailwind doesn’t come with shimmer by default, but the pulse is acceptable and common.
-  - No ARIA needed, but if skeletons appear in place of content, consider adding `aria-hidden="true"` and perhaps `aria-label` on the container like “Loading \[item name]” if screen readers focus there – though usually we hide skeletons from SR and announce a general “Loading...” elsewhere.
-
-- **Table (table.tsx)**: Possibly a styled table for use in content or admin.
-
-  - Ensure it sets `table-auto w-full text-sm` etc. It might define styles for `<thead> th` (like `border-b border-border text-left py-2 px-4` etc.) and `<tbody> tr` (maybe `hover:bg-muted`).
-  - Check that it uses `bg-card` or `bg-muted` for alternate row if needed. Possibly allow a prop for striped vs not.
-  - Dark mode: border and bg tokens handle it.
-  - Accessibility: Should include a `<caption>` if needed (screen-reader only caption if table needs description).
-  - If any interactive cell or sorting, ensure focus styles and roles (though likely not in MVP).
-
-- **Textarea (textarea.tsx)**: Similar to Input, but multi-line.
-
-  - Ensure classes analogous to input: `rounded-md border border-input bg-background px-3 py-2 text-sm` plus maybe `min-h-[80px]` or so. Focus ring same as input.
-  - If resizable, consider adding `resize-none` or `resize-y` depending on design. Possibly disable resize if design wants fixed size (Linear often fixes input sizes for consistency).
-  - Make sure placeholder styling is same as input.
-  - ARIA: <textarea> with label covers it; nothing extra unless we want to limit char count and announce (not needed now).
-  - Dark mode: same token usage concerns as Input – use `bg-input` if needed for slight contrast.
-
-After updating all **ui components**, test them together. For example, test a form with `<Label>`, `<Input>`, `<Button>` and ensure the sizes and spacing look cohesive (tweak margin or gap in FormItem if needed). The goal is an **“Atomic” consistency**: these should compose without additional CSS hacks.
-
-### src/components/Navbar.tsx (Top Navigation Bar)
-
-- Likely the main site navbar (for the public site and maybe also used in dashboard if not a separate component).
-- Redesign for minimalism:
-
-  - If it contains branding (site name/logo) and some links (e.g., “Discover”, “Dashboard”, profile menu), streamline it. Use a lot of whitespace (padding X maybe 1rem, Y maybe 0.5rem) and no heavy borders or backgrounds unless needed (could be transparent over content or a subtle border-bottom if to distinguish).
-  - If background is needed for contrast, use `bg-background` with maybe `border-b border-border` to separate from content.
-  - Use `flex items-center justify-between` for layout. The left could be logo/name (make that text-xl or a small logo SVG + text, using `font-semibold`). The right could be a menu or user avatar.
-  - For authenticated vs unauthenticated states: if the user is logged out, maybe show “Sign In” and possibly theme toggle. If logged in, show an avatar or name with a dropdown. The code might have logic for this (the Navbar likely fetches user from `useAuth`).
-  - Use our `<Button>` for any call-to-action on the navbar (e.g., “Sign Up” could be a small button).
-  - ModeToggle (dark mode toggle) should be placed perhaps on the far right of nav (the code likely does that or in a `nav/ModeToggle` included by Navbar). Keep it as an icon button (sun/moon) with accessible label (already done).
-  - If a mobile menu is needed (for small screens), include a hamburger button that opens a menu (could be a Radix Dialog or just a simple show/hide list). For now, if nav links are few, might be fine as is. If implementing, use a `<Button aria-label="Toggle menu">` with an icon, and show the links in a dropdown or drawer (we could reuse the Sheet component for a mobile menu).
-
-- **Dark mode**: Navbar likely same background as rest (so no special handling, except the ModeToggle icon changes automatically).
-- **ARIA**: Ensure the nav has `role="navigation"` and `aria-label="Main navigation"` on a `<nav>` element (for screen readers). Each link should be descriptive. If a dropdown for user menu, use proper roles (Radix has Menu or can use list).
-- **No external components** beyond our system: if a dropdown needed, either build with Radix Menu or using our primitives. Possibly out of scope for now to fully implement profile dropdown, but plan for it (maybe a Radix DropdownMenu with items like “Settings”, “Log out” styled similarly to Select options).
-
-### src/components/FollowButton.tsx (Follow/Unfollow toggler)
-
-- This likely appears on collective pages or elsewhere to follow a collective.
-- Redesign to use our Button styles:
-
-  - It likely is a toggle: if not following, button says “Follow”; if following, maybe “Following” or “Unfollow”. The component probably handles state and calls an API route.
-  - Ensure it uses `<Button>` internally. If currently it might be a plain `<button>` with custom classes, refactor it: e.g., `return <Button variant={isFollowing ? "secondary" : "primary"} onClick={...}>{isFollowing ? "Following" : "Follow"}</Button>`. Or use ghost style for following state if design wants less emphasis when already following.
-  - Add `aria-pressed` attribute toggling with follow state so screen readers know it's a toggle button. Alternatively, since text changes to “Following”, it might be okay, but aria-pressed is still a good practice for toggle buttons.
-  - Ensure any icon (not sure if an icon is used here – maybe a simple text is fine). If an icon (like a plus for follow), include text or aria-label.
-  - Micro-interaction: when clicked, perhaps swap to a loading state or immediately toggle text. Provide some feedback if action fails (maybe revert state and alert user via toast).
-  - Dark mode: no special, just uses tokens via Button component.
-
-### src/components/SubscribeButton.tsx (Subscribe/Unsubscribe toggler)
-
-- Similar to Follow but likely for paid subscriptions (maybe integrates Stripe).
-- Use a similar approach: unify style with Button (perhaps primary variant always, as subscribe is an important action). If already subscribed, could show “Subscribed” (with a check icon possibly).
-
-  - If unsubscribing is allowed, maybe a secondary button or link for that (depending on app logic).
-
-- Ensure `aria-pressed` if toggleable. If it opens a Stripe checkout (could be that clicking subscribe triggers a checkout redirect), ensure the user is informed (maybe a spinner or disabled state until redirect).
-- Style: likely a prominent button on newsletter pages. Use large size if needed (maybe `size="sm"` vs default depending on context; default is fine usually).
-- Dark mode: as with any Button.
-
-### src/components/PostLikeButton.tsx (Public post like button)
-
-- Possibly used on post pages for readers to “like” a post (distinct from reaction in dashboard? Actually reaction was for posts by authors? Not sure, but likely this is the UI for a user liking a post).
-- Audit it to use our Button & Icon:
-
-  - It probably uses a heart icon (lucide heart). Ensure it’s wrapped in `<Button variant="ghost" size="icon">` with `aria-label={liked ? "Unlike" : "Like"}`
-  - Add `aria-pressed` if applicable. But since label also changes, it’s less critical, still good to have.
-  - If a count of likes is shown, ensure that text is updated and maybe has `aria-live="polite"` to announce the new count or state.
-  - Style: ghost icon button is fine. On liked, they might be using `text-primary` for the heart, which matches what was done with thumbs up in reaction. That’s good. On hover, maybe scale or animate a bit? Could consider a small animation (like a quick bounce or fill). If so, use a CSS animation on the icon (beyond Tailwind’s scope, but not required).
-  - Dark mode: token usage means if primary is say blue in light and maybe teal in dark, heart color will adapt. Probably okay.
-
-### src/components/landing/\* (Landing page specific components)
-
-These include FadeInImage, SlideInCard, SnippetCard, and the section components. They should be reviewed for consistency and integrated with Tailwind classes rather than custom CSS where possible:
-
-- **FadeInImage.tsx**: likely a component that fades in an image on scroll or load.
-
-  - Ensure it uses IntersectionObserver or similar (maybe uses useEffect). For styling:
-
-    - The image should have CSS for initial state (opacity 0, translateY maybe) and target state (opacity 1, translateY 0). If custom CSS, consider converting to Tailwind transitions: e.g., add `transition-opacity duration-700 ease-out` and use a conditional class `opacity-0` vs `opacity-100` toggled by state. Or use the `[data-loaded]` attribute approach.
-    - Since minimal approach is fine, a simple fade (no slide) might suffice. If sliding, keep it subtle (maybe 20px up).
-
-  - Ensure component accepts `alt` prop and passes it to `<img>` for accessibility.
-  - Dark mode: If images have any filters or overlay, ensure they look okay. Likely just an image.
-  - Remove any external library usage for animations – if something like framer-motion was used, replace with simpler CSS/Tailwind to reduce dependencies.
-
-- **SlideInCard.tsx**: perhaps similar to FadeInImage but slides a card into view.
-
-  - Approach similarly: use Tailwind for transitions. Possibly utilize the `animate-in` classes if present (Shadcn’s CSS had some like `animate-in slide-in-from-left`). If those keyframes exist in CSS (they might if imported from Shadcn’s base styles), use them. If not, manually create a small keyframe or use transform classes toggled with a state.
-  - Make sure it’s triggered on scroll if intended. Possibly an observer toggling a class.
-  - Style of the card itself: ensure it uses our Card styles (`bg-card, rounded-lg, shadow`). The snippet might show how it's composed with content, just ensure tokens used for any text or background.
-  - Accessibility: If it contains interactive elements (like a link), ensure they are focusable regardless of animation state (if using absolute positioning etc., careful to not hide from screen readers once visible). Likely fine if just transitional in.
-
-- **SnippetCard.tsx**: Possibly a card for code or newsletter snippet.
-
-  - Check content: If it displays code snippet, ensure it's using a monospace font (maybe the design doc said Geist Mono, we should use a system monospaced or add Source Code Pro or something if needed, but not mentioned by user – maybe use default `font-mono` which Tailwind sets to a common stack).
-  - If it has a background, ensure tokens (maybe `bg-muted` to indicate an excerpt).
-  - Might have a “Read more” link – style that as a subtle link or button as needed.
-  - Keep padding consistent with other cards.
-  - Consider adding `tabindex="0"` if the whole card is clickable (and use `role="link"` if not an actual anchor) – better to actually wrap in `<a>` tag if linking to a full post, for semantics and so the browser handles accessibility.
-
-- **sections/\*** (AnimatedHero, CreateCollaborate, FragmentedFeeds):
-
-  - These are likely distinct sections of the landing explaining features. Each should be structured as a semantic section (`<section>` with an `<h2>` heading).
-  - For styling:
-
-    - **AnimatedHero**: might contain the main headline and some animated graphic. Ensure the headline uses the new typography (big, maybe serif font, bold) and the subtitle if any uses a lighter text-muted style. The animation might be using the FadeIn/SlideIn components above.
-    - **CreateCollaborate** and **FragmentedFeeds**: likely feature highlights with maybe an illustration. Use a simple two-column layout: text on one side, image on the other on desktop; stack on mobile. Use `md:flex md:flex-row-reverse` or similar if needed. Add `items-center` if vertically centering.
-    - Ensure any icons or images are the right size and have alt text.
-    - Keep consistent background – possibly all on white (or `bg-background`). If any section is meant to have a slightly different tint (sometimes alternated), use `bg-muted` lightly, but ensure sufficient contrast with text.
-    - Padding: put generous `py-16` or so for each section to breathe (if it fits design).
-
-  - Accessibility: If any of these sections include interactive demos or videos, ensure controls are accessible. Likely they are static content though.
-
-### src/components/app/auth/AuthForm.tsx
-
-- This component likely encapsulates the form UI for sign-in/up (maybe used by those pages).
-- Ensure it uses our Form components (Label, Input, etc.). If it currently has its own markup, refactor to use the UI atoms:
-
-  - Might have props for mode (sign-in or sign-up).
-  - Use `<Form>` provider if using RHF, or at least ensure each field gets a Label and Input.
-  - Buttons as discussed earlier.
-  - Possibly handles OAuth providers (if "Sign in with Google" etc. is included). If so, style those buttons consistently – could use Button variant="outline" with provider logo + text. Keep them full-width on mobile if needed. Add `aria-label="Sign in with Google account"` in addition to the text (though text covers it likely).
-
-- If any error message is passed (like "Invalid credentials"), ensure it’s displayed via an `<Alert variant="destructive">` at top or as FormMessage on a field if applicable. Ensure focus is moved to error alert on submit fail (for accessibility) – at least, the error alert should have `role="alert"` so SR announces it.
-- Minimal aesthetic: remove any extra wording or images in the form beyond what's necessary (just a heading "Welcome back" maybe, some short description if needed, then fields).
-- Dark mode: standard token usage.
-
-### src/components/app/collectives/molecules/CollectiveCard.tsx
-
-- This is likely the card shown on the Discover or My Collectives page representing a collective.
-- Redesign:
-
-  - Use `bg-card` with `rounded-md` and `p-4`. Display collective name (probably as a heading or strong text), maybe tagline and member count.
-  - Possibly include the collective’s avatar or logo if available. If so, ensure it's small and rounded (maybe `rounded-full w-8 h-8` image). If no image, maybe a colored circle with initial? If implementing that, keep it subtle (maybe `bg-primary text-primary-foreground` circle with initial letter).
-  - If the card is clickable (to view collective), wrap content in `<Link>`. Then on hover, can add `shadow-sm` or `bg-muted` transition to indicate interactivity. Also ensure `cursor-pointer`.
-  - **Spacing**: If showing multiple pieces of info, use `space-y-1` to separate name, description, etc. Keep it compact but not cramped.
-  - Dark mode: Should be fine (bg-card flips).
-  - Possibly incorporate a follow button directly on the card (some designs allow follow action right in card). If doing that, include a small `<FollowButton>` in a corner with proper tab order (maybe place it last in DOM so tabbing goes there after reading card content).
-  - ARIA: The card link should have an `aria-label="View [Collective Name] collective"`. If the card content already has the name as text in the link, that’s sufficient.
-
-### src/components/app/dashboard/atoms/sidebar-link.tsx
-
-- This is the atom for sidebar navigation links.
-
-  - It likely renders an `<a>` or Next `<Link>` with some classes. Redesign it to match new sidebar style:
-
-    - Use `flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md` for each link. The rounding helps highlight on hover.
-    - If an icon is included (maybe an svg icon for each section), that’s why gap-2 and flex. Ensure the icon size (use our Lucide icons with `size-4` or Tailwind `w-4 h-4`).
-    - The active link: add a class when active, e.g., `bg-muted text-foreground` or maybe a left border highlight (like Linear uses a colored bar). Could do `border-l-2 border-primary pl-2 -ml-1` trick. But a simpler approach: highlight background or bold text for active.
-    - Hover state: even if not active, use `hover:bg-muted` to show feedback.
-
-  - Manage the `aria-current`: set `aria-current="page"` on the active link for screen readers. Also, if active, include it in class logic to style differently.
-  - If the sidebar is collapsible, these might get only icons in collapsed state – but that functionality is not clearly in scope. For now, focus on default expanded.
-  - Dark mode: `bg-muted` and `text-foreground` will adapt. If we do border highlight, ensure the color (`border-primary`) is visible on dark (our primary should adapt or we define separate if needed).
-  - Ensure any sections or group labels in sidebar are coded (maybe not present, but if they had headings like "COLLECTIVES", they'd just be non-clickable text – style them as `px-3 py-1 text-xs text-muted-foreground uppercase` for example).
-
-### src/components/app/dashboard/collectives/DashboardCollectiveCard.tsx
-
-- This may be similar to CollectiveCard but used specifically in dashboard context (maybe listing collectives the user has on their dashboard with some stats).
-- Align it with CollectiveCard changes:
-
-  - Likely shows collective name and perhaps quick stats like subscriber count or revenue.
-  - Style as card or row – if it’s a card, same approach as CollectiveCard. If a row, maybe similar style to PostListItem.
-  - If it has interactive controls (like "Manage" button), include a small `<Button variant="ghost">Manage</Button>` or link icon.
-  - Ensure consistent font sizes with rest of dashboard.
-  - Possibly unify with CollectiveCard to avoid duplication – if both exist for similar purpose, consider using one component with slight variant. But immediate plan: just style it similarly.
-  - ARIA: if it's clickable entire card, label it properly. If it's just static info plus a manage link, then manage link has label and card is static.
-
-### src/components/app/dashboard/molecules/\* (RecentPostRow, StatCard, skeletons)
-
-- **RecentPostRow\.tsx**: Likely a row showing a recent post title, maybe date or likes, used on dashboard home.
-
-  - It probably is a link (title clickable to edit). Ensure it uses a semantic element, like `<div role="listitem">` containing a `<a>`.
-  - Style: likely flex with justify-between: left side title, right side maybe a status or time. Keep it very compact (Linear’s list items are \~30-40px tall). So use `py-1` perhaps, and `text-sm`.
-  - If multiple pieces on right (like views count, likes), separate with some `mr-4` or a muted dot.
-  - The skeleton variant exists; ensure the skeleton height matches the row height and has appropriate width segments for title and meta.
-  - On hover or focus, could highlight background (`hover:bg-muted`).
-  - ARIA: if clickable, `aria-label="Edit post [Title]"` might be useful if the link text is just title (though the title is okay as label).
-  - Ensure tab navigation works (should, if link).
-
-- **StatCard.tsx**: likely a small card showing one stat (like number of posts, or subscribers).
-
-  - Style: Use `bg-card rounded-md p-4 flex items-center`. Possibly includes an icon and a number.
-  - The design might show an icon on left and stat on right, or stat large and label below.
-  - If icon present, ensure `aria-hidden="true"` on it (so SR focus on stat text).
-  - Ensure the number uses a legible font style (maybe `text-2xl font-bold`). If it’s a monetary value, ensure currency is included in text for SR (not just symbol).
-  - The skeleton version should mirror layout (e.g., a gray box for number and smaller bar for label).
-  - No interactive elements, just display.
-  - If the stat is something like "Views this week", ensure label text is present next to number, not solely an icon.
-
-- **Skeletons (recent-post-row-skeleton.tsx, compact-collective-card-skeleton.tsx, stat-card-skeleton.tsx)**:
-
-  - Each should simply render a `<Skeleton>` component or appropriate div structure with `animate-pulse bg-muted` lines approximating the shape.
-  - Ensure they replace the content appropriately and have no text for SR (maybe add `aria-hidden="true"` to them).
-  - They should occupy the same spacing as actual content to avoid layout shift.
-
-### src/components/app/dashboard/posts/PostListItem.tsx
-
-- Probably used in the “My Posts” page listing each post with maybe title and status:
-
-  - Confirm if similar to RecentPostRow or more detailed (maybe includes edit/delete buttons).
-  - Style similarly: a row with title and maybe tags or a status badge (“Draft” or “Published”). If so, use our Badge component for status.
-  - If an edit icon or button is present on hover, ensure it's keyboard accessible (should always be in DOM, not just appear on hover without focus ability).
-  - Possibly incorporate a checkbox if multi-select (not likely in MVP).
-  - Keep the design sparse: maybe only show title and a muted “Draft” text next to it, rather than heavy labels.
-  - Use `hover:bg-muted` for highlight if clickable or if row has an onClick to open editor (prefer making the title a link to edit page).
-  - If deletion is allowed, maybe a small trash icon button on right; style that with `text-destructive hover:bg-destructive/10` for clarity.
-  - ARIA: Ensure if multiple interactive controls in one row (like a link and a delete button), both are focusable in logical order. Provide an `aria-label="Delete [post title]"` on the delete button.
-
-### src/components/app/dashboard/template/dashboard-shell.tsx
-
-- This likely is a higher-level component used by dashboard layout or pages to wrap content with shell (maybe handling loading states or common layout pieces).
-
-  - Review what it does: maybe sets the page title and action button slot. If it wraps children, ensure it provides needed markup: e.g., maybe a heading and a right-aligned action.
-  - If it’s just a wrapper for consistent margins or a container for content, ensure it uses `max-w-7xl mx-auto p-6` (or similar) to constrain width on huge screens and padding as needed.
-  - If it provides a heading, style that heading with consistent classes (maybe `text-2xl font-semibold`).
-  - Possibly includes breadcrumbs; if so, style them minimally and use `<nav aria-label="Breadcrumb">` for SR.
-  - Not a visible UI component by itself aside from structural elements, so just ensure it uses the tokens (background etc. if needed) consistently with the layout.
-
-### src/components/app/dashboard/organisms/dashboard-sidebar.tsx
-
-- This likely composes the sidebar with multiple `SidebarLink`s and maybe user info.
-
-  - Ensure it arranges links in sections logically (maybe it already does).
-  - If there are headings for sections (like “GENERAL”, “COLLECTIVES”), those should be rendered as non-focusable text, styled as described for labels (uppercase, small, muted).
-  - Possibly includes a theme toggle or collapse button at bottom.
-  - Style as per sidebar in layout above (this may actually be where the aside content is defined).
-  - ARIA: mark the wrapper as `<nav aria-label="Dashboard sidebar">` and each list of links with a role list if needed (though <ul> covers it).
-  - If a collapse toggle exists, ensure it has `aria-expanded`.
-
-### src/components/app/nav/ModeToggle.tsx
-
-- Already looked at: it uses our Button, sets aria-label, toggles theme using next-themes.
-
-  - Just ensure the placeholder `div` when not mounted has appropriate classes (it uses a fixed width/height with a rounded background to avoid layout shift, which is fine).
-  - Possibly style that placeholder with a skeleton or muted background instead of default gray (maybe add `bg-muted` to it).
-  - No further changes needed; it aligns with new design (an icon button).
-  - The icons (Sun, Moon) are fine (maybe could use custom ones if design had, but lucide is fine).
-
-### src/components/app/posts/PostViewTracker.tsx
-
-- Likely a component that triggers an API call to increment view count when a post is viewed.
-
-  - It probably uses useEffect to POST to `/api/posts/[id]/view`.
-  - No UI is rendered (maybe a hidden beacon).
-  - Ensure it does not interfere with layout (should return null or an invisible element).
-  - No design changes since it’s non-visual, but note to keep it as is.
-  - Possibly add an `aria-hidden="true"` if it renders something (like an iframe or image for tracking), to hide from SR, but likely it’s just a useEffect so no output.
-
-### src/components/app/posts/molecules/\*
-
-- **BookmarkButton.tsx**: We reviewed this. It already uses Button and aria-label toggling. Just ensure consistent styling:
-
-  - It sets `className="rounded-full"` on Button to override default rounding (likely because button default might not be fully round for icon size). This is fine; could also use our `size="icon"` variant which should inherently be round. Actually, our Button variant could use `rounded-md` normally; to make it pill, we can either adjust that variant or keep using class override as done. It’s okay.
-  - It uses variant default vs ghost depending on state (bookmarked uses filled style). That seems fine (or maybe use toggle of a simpler style since a filled bookmark might draw a lot of attention – but since it's the user’s own view of their bookmark, either is fine).
-  - Possibly add a little animation on toggle (like scale the icon quickly) – nice to have, but can mention adding `transition-transform duration-200 ease-out active:scale-90` on the icon or button.
-  - No further changes needed beyond verifying dark mode colors (heart icon uses `text-primary` which in dark might be a bright accent which is okay).
-
-- **CommentsSection.tsx**: likely handles rendering comments under a post.
-
-  - Redesign for clarity:
-
-    - Each comment can be an `<article>` or `<div>` with perhaps the author name (bold small text), date (small muted), and content text. Indent replies.
-    - Use `space-y-4` for separation between comments. Possibly use a border-left or just indentation for threads.
-    - The comment form (if present) should use our Input or Textarea plus a Button (similar to earlier note).
-    - Possibly integrate Radix Collapsible for long threads (if needed to collapse).
-
-  - Ensure that the comments count or section heading is present (like “5 Comments” as an `<h2>` for structure).
-  - Dark mode: no special beyond tokens.
-  - ARIA: If any comment actions (edit, delete), label them. If threads are deeply nested, consider using `<ul><li>` for each comment for semantics. At least ensure screen reader can navigate by heading if we put author name in a heading tag (some implementations do that, but probably not needed; better a list).
-
-- **PostCard.tsx**: A card view of a post, maybe used on discover or collective page if not listing as rows.
-
-  - Should contain the title, maybe excerpt, and possibly author name or collective.
-  - Style with `bg-card rounded-lg p-4 shadow-sm` (if card view is needed).
-  - Title as a link, excerpt as text-muted small. If an image is associated (maybe posts have cover image?), include it with `rounded-md mb-4`.
-  - Ensure card is consistent height if in a grid for tidy appearance (maybe use CSS line-clamp utility to limit excerpt lines).
-  - Use flex or grid internally to separate sections if needed.
-  - On hover, maybe elevate slightly (shadow-md) to indicate interactivity.
-  - ARIA: card link label covers it (title text).
-
-- **PostReactionButtons.tsx**: We reviewed – uses two icon buttons for like/dislike.
-
-  - Already pretty aligned with design:
-
-    - It toggles variant between default (for active states) and ghost.
-    - The count spans are `text-sm tabular-nums w-6` which is good for aligning numbers.
-    - Only change might be styling the destructive variant: currently if disliked, uses `variant="destructive"` meaning a red background probably. That might be visually a bit heavy if it fills with red. Perhaps we prefer a more subtle approach: keep it ghost but color the icon red. Or if using destructive variant from Button, check what it does (likely red background). For a toggle like dislike, a filled red might be okay as it highlights that negative feedback strongly. But to maintain minimalist feel, consider using ghost variant always and just color icons (like the like case did with primary text). The code uses destructive variant for dislike which likely results in a light red background in light mode. We might adjust to use ghost + icon colored red to keep UI consistent (optional).
-    - Ensure the `rounded-full` class is applied (it was) to make them pills.
-    - Possibly reduce spacing between buttons (`gap-2` is fine, or could even be 1 if need tighter).
-
-  - ARIA: They have proper aria-label that updates, which is great. Just ensure both buttons have them (we saw for like, presumably similar for dislike).
-  - Dark mode: text-primary and text-destructive tokens will adapt (to some theme colors) – ensure they still stand out on dark (should, if primary in dark is e.g., blue and destructive is red).
-  - No big changes needed, mostly stylistic refinement if any.
-
-### src/components/editor/\* (Rich Text Editor Components)
-
-This is likely a Lexical or similar editor integration. The redesign should ensure the editor UI elements (toolbars, nodes, modals) match the new design system.
-
-- **EditorLayout.tsx**: Possibly a wrapper for the editor page layout.
-
-  - It might define the editor container and maybe a sidebar for editor (if any).
-  - Ensure it uses the dashboard shell or similar for consistency (if the editor is part of the dashboard, use same background).
-  - Possibly handles keyboard shortcuts info or save bar. Keep it minimal: e.g., could show a top bar with "Editing Post" and save status. If present, style it as a small `<div className="text-xs text-muted-foreground">` and position at top or bottom.
-
-- **Toolbar.tsx**: Editor formatting toolbar (bold, italic, etc.).
-
-  - Redesign to a slim bar with icon buttons:
-
-    - Use our `<Button variant="ghost" size="icon">` for each formatting control (B, I, link, etc.). They should toggle active state: when a formatting is active (e.g., text is bolded), highlight the button with `aria-pressed=true` and a style (maybe `bg-muted` or a subtle border).
-    - Group related buttons with a separator element (e.g., between text styles and insert elements).
-    - Ensure each button has an `aria-label` (e.g., "Bold", "Italic", "Insert Link") because icons alone are not text. The code likely has them (since our search found aria-label usage in Toolbar).
-    - Use Lucide icons for these (if not included, consider adding appropriate ones: Bold could be **B** icon or a bold icon, etc. Lucide might have icons like _bold_, _italic_, etc. If not, maybe using text "B", "I" is fine but better to have actual icons for consistency).
-    - The toolbar should be keyboard accessible: likely it's just buttons in a row which is fine.
-    - Place it at either top or bottom of editor content. Many editors have a floating bar; if our design intends a fixed top toolbar, ensure it’s styled with `bg-popover` (to distinguish from editor area) and maybe a bottom border. Or if inline, ensure it doesn’t scroll away if needed.
-    - Possibly use Radix **Toolbar** primitive for group behavior (not necessary if simple).
-
-  - Dark mode: Use `bg-popover` and `text-foreground` for icons so it stands out over editor area which might be white/dark background.
-  - Minimal aesthetic: no heavy backgrounds on each button, just icons with subtle hover highlight.
-
-- **PostEditor.tsx**: The main editor component tying Lexical or similar.
-
-  - Ensure the editor content area (likely a contentEditable div) has the proper classes: e.g., `prose prose-lg focus:outline-none`.
-  - If not using the typography plugin, define some base styles for editor content in CSS: e.g., `p { margin-bottom: 1em; } h1-h6 { … }` or easier is to just add `prose` class from Tailwind Typography to the container. This will style text and headings nicely.
-  - But the Lexical nodes might handle their rendering. Just ensure the container uses our tokens for colors (should be default text anyway).
-  - The editor likely supports mentions, hashtags, etc. There are Node components for those. Ensure those Node components have styling aligned:
-
-    - e.g., HashtagNode might wrap a span with special style (maybe color primary); ensure it uses `text-primary` class rather than some static color.
-    - PollNode, TweetNode etc might render embedded content. Ensure any UI around them is minimal (maybe just an iframe or block).
-    - CollapsibleContainerNode might create a collapsible region in the editor content; ensure that uses the Collapsible we styled with proper disclosure triangle etc.
-
-  - If the editor content uses placeholders (like a gray "Write your post..." text when empty), style that placeholder with `text-muted-foreground` and italic perhaps. Lexical provides a way to style placeholder (maybe via CSS on `.editor-placeholder` class).
-  - Spellcheck: ensure the contenteditable has `spellCheck={true}` if desired, and that CSS doesn’t override the browser’s squiggly lines (should be fine).
-  - No direct ARIA roles needed beyond contenteditable default (which acts as text box, possibly give it `aria-label="Post content"` or ensure label is associated by field).
-
-- **nodes/\*** (Custom nodes for editor):
-
-  - Each node file likely defines how a custom block is rendered.
-
-    - E.g., ImageNode might output an `<img>` with some wrapper. Ensure it includes `alt` text (the node probably has an alt property).
-    - Video or YouTubeNode likely uses an iframe – ensure `title` attribute (like `title="YouTube video player"`).
-    - PollNode might render a mini UI for a poll – style the poll options with our form components or at least similar (checkboxes or bars). Might not be fully implemented; if out of MVP scope, skip detailed styling, but note to use consistent form styles if active.
-    - CollapsibleContainerNode: ensure it uses our Collapsible component or at least similar classes for the toggle and content. Possibly unify it with any Collapsible component we have.
-    - ExcalidrawNode, TweetNode, GIFNode: these likely embed third-party content. For these, ensure the container has appropriate max-width and maybe a border or something if needed.
-    - InlineImageNode: likely for an inline small image – ensure it’s styled with `max-w-[1.5em] align-text-bottom` if it's like an emoji or something.
-    - PageBreakNode: a divider – style it with our Separator (maybe a horizontal line or dashed line).
-    - HashtagNode: as mentioned, ensure it appears as a link or highlighted text with `text-primary` or similar.
-    - StickyNode: maybe a post-it note style element (if using excalidraw or something). Hard to know, but ensure any styles use tokens (like a yellow note might not fit dark mode – maybe redesign sticky as a simple highlighted blockquote or so for now).
-
-  - Many of these might be advanced features not heavily styled or used in MVP, but mention aligning them to design tokens if they output any styled elements (e.g., do not keep default bright blue for links or bright yellow for highlights; instead use our accent colors).
-  - Ensure **focus**: If these elements are interactive (like clicking a poll option), provide focus styles and appropriate ARIA roles (poll options should be checkboxes or radio with correct roles).
-
-- **plugins/\*** (Editor plugins):
-
-  - FloatingLinkEditorPlugin.tsx: likely shows a small floating toolbar when editing a link (with input to edit URL).
-
-    - Style that floating box with `bg-popover p-2 rounded-md shadow`. Use our Input component inside for the URL field (likely a small input).
-    - Add a save/check and cancel/X button (icons) styled as small ghost icon buttons.
-    - Ensure the whole thing is `aria-modal` (if using a popover, though not using Radix here maybe, so just ensure tab handling is okay).
-    - Keep it minimal and not too large. Possibly position it near the selected text (via absolute positioning).
-    - Dark mode: using popover token covers it.
-
-  - SlashMenuPlugin.tsx: likely shows an autocomplete menu when user types `/` for commands (like adding a node).
-
-    - Style it similar to a dropdown: a small panel `bg-popover rounded-md shadow`.
-    - Each command item: `px-3 py-1.5 text-sm cursor-pointer hover:bg-accent hover:text-accent-foreground` (accent here could be our primary highlight).
-    - Ensure that when navigating with arrow keys, the hovered item updates (likely already coded) and that pressing enter selects it.
-    - ARIA: Could add `role="listbox"` to container and `role="option"` to items for SR, and `aria-selected` on active item. If Lexical plugin doesn’t do it, consider adding for completeness.
-
-  - CodeHighlightPlugin.tsx: likely automatically highlights code or provides highlighting logic.
-
-    - Ensure it ties into Prism or similar and uses our theme maybe. If outputting code with tokens, maybe adjust colors for dark mode. Possibly out-of-scope to recolor code – but ensure code block background uses `bg-muted` or a specific token for code background for contrast.
-    - The plugin might not require UI changes beyond ensuring the `pre` and `code` tags in `.prose` are styled (Tailwind’s typography handles some of that, but if using Lexical’s own thing, ensure global CSS covers it or add a CSS snippet in global for `.dark code` etc. Could note: “Tune code block colors to ensure sufficient contrast in both themes, possibly via a custom CSS theme or ensure using a theme that respects our background.”
-
-## src/lib/\* (Utilities and backend integration)
-
-These files contain logic (Supabase, Stripe, data definitions, etc.) and generally do not directly affect UI. However, to ensure the redesign is holistic:
-
-- **lib/utils.ts**: This likely contains the `cn` (classNames merge) function and maybe other helpers. No UI changes, but we should ensure any utility that might format dates or text does so in an appropriate way (e.g., if a date format is used somewhere in UI, ensure it’s a concise format consistent with minimalist style – for example, maybe use “Jan 2, 2025” everywhere).
-- **lib/auth.ts / lib/hooks/useAuth.tsx**: Handles authentication state. No UI changes needed, but confirm if `useAuth` provides user info that is displayed (like user name or avatar). If yes, ensure those are used in Navbar or profile with proper formatting (e.g., don’t display full email if design doesn’t call for it, maybe just name).
-- **lib/data/\***: These return data for UI. Possibly not needing changes, but if any of these defines default images or text that show in UI, consider updating them. E.g., `recommendations.ts` if it provides placeholder text for “No recommendations” – ensure that message is short and styled via UI (like showing an `<Alert>` or muted text).
-- **lib/supabase/\***: Setup for Supabase client. No design changes. However, if any error messages from Supabase are directly shown, catch them and replace with user-friendly text when displaying.
-- **lib/types.ts**: Type definitions, no UI.
-- **lib/database.types.ts**: Supabase type definitions, no UI.
-- **lib/supabaseAdmin.ts**: Server-side util, no UI.
-- **lib/stripe.ts**: Handles Stripe checkout creation. No UI, but if any success/cancel URLs are defined, ensure they point to pages that exist (likely succeed to some page we design).
-- **lib/schemas/memberSchemas.ts**: Probably Zod schemas for validation of member forms. Ensure error messages are defined and are clear and concise (by default Zod can produce clunky messages, maybe they customized). If not, consider customizing error messages (like "Name is required" instead of "Required").
-- **middleware.ts**: Possibly used for redirecting or middleware logic (maybe to protect routes). No UI, but ensure it doesn’t inadvertently conflict with our design routing (shouldn’t).
-
-## Testing and Final Touches
-
-After implementing the above changes, thorough testing is required:
-
-- **Responsiveness**: Manually test pages at mobile, tablet, desktop widths. Ensure the layout changes (like grid to single column) occur as expected and no important content is off-screen or requires horizontal scroll. Adjust Tailwind breakpoints or classes as needed.
-- **Dark Mode**: Toggle the theme (using ModeToggle or manually adding `.dark` class) and verify every page and component retains contrast and visual balance. Pay special attention to text on background (should always be using `text-foreground` or equivalent). If any component still shows a hardcoded light color (for example, maybe an icon using `text-black` somewhere), fix it to use a token.
-- **Accessibility audit**: Use browser’s accessibility inspector or tools like Axe to catch any missing labels, color contrast failures, or improper heading order. Ensure keyboard navigation flows correctly (e.g., can tab through menu, forms, and modals).
-- **Performance**: Removing external UI libraries and using Tailwind+Radix should keep bundle small. Check that animations aren’t janky (the use of Radix + Tailwind’s GPU-accelerated classes should be fine). If any heavy animations (like large images sliding), consider using `prefers-reduced-motion` to disable them.
-- **Consistent spacing & font**: Do a visual scan of margins/padding – everything should align to the 8px grid. For example, section padding 64px, gaps 24px, etc. Tweak any outliers (like we noticed some py-3 which is 12px – change to py-2 or py-4 if possible).
-- **Remove unused styles**: If any old CSS classes or files remain (maybe some global CSS that was used for old design), eliminate them to avoid confusion.
-- **Update tests** (tests/e2e/\*): The E2E tests likely check for certain text or selectors. After redesign, run them and update selectors if needed (e.g., if we changed button text from "Sign In" to "Log In", update test expectations). Also add new tests for critical flows (ensuring that aria-label toggles work, etc., if tests cover them).
-
-Finally, **no file is left untouched in the review**. Even where no direct change was needed, we considered its role and confirmed it aligns with the new design system. By following this implementation plan, the Lnked project’s UI will be transformed to a modern, cohesive design system with accessibility and responsiveness at its core, while maintaining all current functionality.
+Lnked Dashboard Redesign Implementation Plan
+Below is a file-by-file audit of the Lnked dashboard section with detailed steps to implement the new Linear-inspired layout. Each file section includes: (1) current role/structure, (2) precise edits for the redesign, (3) any components to delete, extract, or rename, and (4) new components to create (atoms, molecules, organisms) if needed. All changes adhere to the Tailwind + Radix UI design system, prioritize a compact/clear interface, and use existing backend data (no new endpoints). Dark mode is supported by using design tokens (e.g. bg-background, text-foreground) so the UI adapts automatically.
+src/app/dashboard/layout.tsx
+Current Role & Structure: This is the Next.js layout for the dashboard routes. It currently wraps all dashboard pages inside a <DashboardShell> component and sets page metadata
+github.com
+. It doesn’t render any UI itself aside from delegating to DashboardShell.
+Required Edits for Linear-style Layout: We will keep this file as the wrapper but enhance its responsibilities:
+Pass Collective Data: Fetch the list of collectives the logged-in user is a member of (and/or owns) on the server side here, and pass it into <DashboardShell> as a prop. Use the existing Supabase client (as seen in MyCollectivesPage and MyPostsPage) to query collective_members and collectives for the user’s membership. For example, combine owned and joined collectives (IDs, names, slugs) similar to how MyPostsPage builds publishingCollectives
+github.com
+github.com
+. This ensures the sidebar and new dropdown have the data they need without new endpoints.
+Integrate New Headbar: No direct UI is rendered here, but we will ensure that the new persistent headbar (DashboardNav) is included via DashboardShell. After our changes in DashboardShell, this layout will automatically include the headbar above all dashboard pages.
+(Optional) Container Adjustment: To allow a full-width sidebar flush with the viewport, consider removing or overriding the parent container class for dashboard pages. Currently the RootLayout wraps children in a centered container which can introduce side margins
+github.com
+. We might accept a slightly centered layout for simplicity, or apply a CSS override (e.g. a special class on <body> for dashboard pages) to make the dashboard layout full-bleed. This would align the sidebar to the very left like Linear. If a full-bleed layout is desired, implement a solution such as adding a .dashboard-page class to the <body> in this layout (using a <body className="... dashboard-page"> in RootLayout via some prop or context) and in global CSS define .dashboard-page .container { max-width: 100%; padding: 0 } to override the centering on dashboard routes.
+Components to Delete/Extract/Rename: No components are deleted in this file. Just ensure it now passes the necessary data down. If we introduce a prop for collectives into DashboardShell, adjust the DashboardShell definition accordingly. Also, no rename needed here – it remains the dashboard layout.
+New Components or Refactors Needed: Not directly in this file. It will make use of new components like the DashboardNav (headbar) and the CollectiveSelectorDropdown via DashboardShell, but those will be implemented in other files. Ensure the data fetched here is in a serializable format (plain objects) so it can be passed to those client components.
+src/components/app/dashboard/template/dashboard-shell.tsx
+Current Role & Structure: DashboardShell is the container for dashboard pages, currently implementing a two-column layout. It renders a sidebar (<DashboardSidebar>) on the left and the main content area on the right
+github.com
+. The JSX is a flex container with min-h-screen and h-full, where the sidebar is hidden on mobile (hidden md:flex) and a scrollable <main> holds page children inside a centered max-width container
+github.com
+.
+Required Edits for Linear-style Layout: We will significantly restructure this component to include the new persistent top headbar and refine the flex layout:
+Introduce a Top Headbar: Wrap the content in a vertical flex container so we can place a headbar at the top. For example:
+tsx
+Copy
+Edit
+return (
+
+  <div className="flex flex-col min-h-screen h-full bg-background text-foreground">
+    <DashboardNav ... />   {/* New top navigation bar for dashboard */}
+    <div className="flex flex-1 min-h-0">
+      <DashboardSidebar ... />   {/* Persistent sidebar */}
+      <main ...> {children} </main>
+    </div>
+  </div>
+);
+Here, <DashboardNav> is our new small headbar component (see DashboardNav below). The wrapper flex-1 min-h-0 ensures the main content area is scrollable without expanding beyond the viewport. The main area (<main>) should not include the top padding that RootLayout had; we’ll rely on internal padding for content. Include a bottom border on the headbar (border-b border-border) for a clear separation, since we’re removing the old large header.
+Sidebar Integration: Keep the sidebar as a flex child in the row. The sidebar remains full-height of the viewport minus the headbar. Because we’ve placed the sidebar in a flex container with flex-1 min-h-0, it will naturally stretch to fill the available height. We should remove the hidden md:flex class from DashboardSidebar here – instead, we’ll handle responsive visibility in the DashboardSidebar itself or via CSS. (We likely want the sidebar always visible on desktop, and hidden on mobile in favor of the mobile menu sheet trigger in the headbar.)
+Responsive Behavior: On mobile, with this new structure, the headbar will still show (with a menu button to open the sidebar as a drawer), and the sidebar component can be entirely hidden (hidden sm:!flex etc. as before). Ensure that on small screens the <DashboardSidebar> is not rendered or positioned out of view to avoid overlaying content (we might keep hidden md:flex to continue hiding the sidebar on small devices, and rely on the headbar’s menu for nav).
+Content Area Styling: We can maintain the padded container for content, but adjust it for a denser look. The current code uses p-4 md:p-6 on main and wraps children in container mx-auto max-w-5xl
+github.com
+. To increase information density like Linear, we can widen this to max-w-6xl or max-w-7xl (allowing more content width on large screens) and use slightly tighter padding (maybe p-3 md:p-4). The idea is to fill more horizontal space with content on big monitors while not looking sparse. For instance:
+jsx
+Copy
+Edit
+<main className="flex-1 overflow-y-auto p-3 md:p-5">
+  <div className="mx-auto max-w-6xl">{children}</div>
+</main>
+This gives a bit more room for tables or feeds. Use overflow-y-auto on main to enable inner scrolling for the feed content, keeping the headbar and sidebar fixed.
+Dark/Light Mode: Continue using bg-background text-foreground on the outer wrapper (as already in code
+github.com
+) so that dark mode is automatically handled via CSS variables. The headbar and sidebar will also use token classes for backgrounds/borders.
+Sidebar Collapse Support: We will plan for a collapsible sidebar (Linear-style) even if not immediately implemented. To do this, we’ll introduce state and context in DashboardShell. Convert DashboardShell to a client component ("use client"; at the top) so we can use useState. Add a state like const [sidebarCollapsed, setSidebarCollapsed] = useState(false). Pass this state down to <DashboardSidebar> (e.g. <DashboardSidebar collapsed={sidebarCollapsed} />) and similarly to <DashboardNav> if needed (or at least a toggle handler). This way, the headbar’s menu button can trigger setSidebarCollapsed(!sidebarCollapsed). Collapsing behavior specifics will be handled in the Sidebar component, but the state lives here to tie the toggle button and the sidebar display together.
+Data Propagation: Accept the collectives data prop we passed from the layout. Update the DashboardShell props interface (e.g. interface DashboardShellProps { children: ReactNode; userCollectives: CollectiveSummary[] }). Then render DashboardSidebar with those collectives (<DashboardSidebar collapsed={...} collectives={userCollectives} />) and DashboardNav with them as well if needed for the collective dropdown (<DashboardNav onToggleSidebar={...} collectives={userCollectives} />). This ensures both components have access to the same list of collectives without extra fetches.
+Components to Delete/Extract/Rename: No deletion needed here – we’re augmenting it. Ensure to remove the use of the old global <Navbar> within the dashboard context. After our changes, the RootLayout’s header/nav will be hidden (we’ll handle that in Navbar or RootLayout), so DashboardShell fully manages its own nav. Thus, DashboardShell is effectively a new “template” that replaces the functionality of the site’s header for dashboard pages. We might rename DashboardShell to something like DashboardLayoutTemplate for clarity, but that’s optional – it’s already appropriately named for its role. Just update its signature to accept new props as mentioned.
+New Components or Refactors Needed: DashboardShell will utilize new components (DashboardNav, CollectiveSelectorDropdown, etc.) rather than define new ones itself. The main refactor is converting it to a client component to handle interactive state (sidebar collapse). This refactor is necessary to support the collapsible sidebar and any dynamic headbar interactions. If performance is a concern (loading a lot of dashboard content as client), consider isolating state handling in a context or using Radix primitives that manage state internally (like <Collapsible> for the sidebar, see below). However, making DashboardShell client-side is acceptable since it mostly contains layout (the heavy data fetching for content still happens in child pages which remain server-rendered).
+src/app/layout.tsx
+Current Role & Structure: This is the global RootLayout for the Next.js app. It defines the HTML <head> metadata, loads fonts and global CSS, wraps the app in <ThemeProvider> for dark mode, and renders a top <header> with the Lnked brand and the <Navbar /> on the right, followed by a <main> container for pages and a <Footer />
+github.com
+github.com
+. The header is sticky and has a bottom border
+github.com
+.
+Required Edits for Linear-style Layout: With the redesign, the dashboard section will have its own headbar and sidebar, so the RootLayout should be adjusted so it doesn’t interfere or duplicate navigation on those pages:
+Slimmer Header Globally: Replace the current header’s styling with a more compact “headbar” style for the public pages. For example, reduce the padding from py-4 to py-2 (halving its height) and possibly the font size of the brand from text-3xl to text-xl or text-2xl for a more minimal look. The header should remain sticky top-0 z-50 for persistent visibility, and keep bg-background border-b border-border so it blends with our design tokens. Essentially, we want the public site nav to also feel lighter (similar to Linear’s top bar) – a subtle height reduction and smaller text will achieve this.
+Conditional Rendering on Dashboard Pages: We need to avoid showing the global header/navbar on dashboard pages (since we’ll have a separate headbar there). There are a few approaches:
+Navbar Logic: The simplest is to update <Navbar /> to return null when on dashboard routes (similar to how it already returns null on sign-in/up pages
+github.com
+). We can leverage the isDashboardPath constant it already computes
+github.com
+. If isDashboardPath is true, have Navbar render nothing (or only minimally relevant items). Additionally, since the brand is hardcoded in the RootLayout header, we might also hide that when on dashboard pages. We can do this by adding a CSS utility: for example, give the <header> a class of "dashboard-hidden" when on dashboard pages and add a global style to hide it. However, injecting dynamic classes into RootLayout is non-trivial because RootLayout is a server component without easy access to route info. Therefore, modifying Navbar might be the more straightforward path.
+Alternate Layout: Another approach is to create a separate Root layout for dashboard (using Next 13 route groups) that omits the header/footer. This is more involved (would require moving dashboard routes under a group folder with its own layout). If feasible, it’s cleaner: the dashboard’s group layout could simply not include the <header> and <Footer />, relying on DashboardShell for nav. This approach aligns with atomic design (separating app shell for internal pages vs marketing site shell). If time allows, consider implementing a route group like (dashboard)/layout.tsx that wraps the dashboard pages and excludes the global header/footer.
+Interim Solution: As an immediate fix, adjust the existing layout: In <Navbar>, if on a dashboard path, do not render the “Discover” or “Dashboard” buttons at all (no nav links). That leaves only the ModeToggle and maybe sign out. We can even skip rendering ModeToggle and sign-out here since DashboardNav will handle them. If Navbar returns null for dashboard, the RootLayout’s header will output just the brand on the left. To avoid showing duplicate branding (since our sidebar also shows "Lnked"), we could hide the brand text via CSS when Navbar is absent. For example, add an id to the brand span (id="site-logo") and in global CSS: .dashboard-page #site-logo { display: none; }. This uses the approach of adding a class on the <html> or <body> in dashboard context as described above. We will have set that class in dashboard/layout if possible (or use a data attribute in context).
+Main Container Adjustment: The RootLayout’s <main> currently has container mx-auto px-4 md:px-6 py-8
+github.com
+ which centers content and adds padding. For dashboard pages, we likely want the content area to stretch under the new sidebar/headbar layout. After hiding the global header for /dashboard, the main.container is still wrapping the DashboardShell. We can override its effect by making DashboardShell full width as needed (see above). Alternatively, if using a separate layout for dashboard, that separate layout’s main would not be wrapped in a container at all. In summary, ensure that for dashboard content, the container doesn’t constrain our layout. This might mean removing container mx-auto on the main element conditionally. Since conditional logic in RootLayout is tricky, a CSS override approach is again simplest: e.g., .dashboard-page main.container { max-width: 100%; padding: 0; }.
+Footer Handling: Similar to header, consider not rendering the <Footer> on dashboard pages (the dashboard is an application interface that usually doesn’t show site footer links on every screen). If using the Navbar approach, we can also short-circuit rendering <Footer /> in RootLayout when on a dashboard path. You might achieve this by checking pathname.startsWith('/dashboard') via a client-side context or by not including Footer in the dashboard-specific layout if you implement route grouping. Removing the footer on internal pages will give more vertical space for content and a cleaner app feel. (We will detail Footer changes below as well.)
+Components to Delete/Extract/Rename: No outright deletions, but adjust the usage of <Navbar> and <Footer> as described. Rename consideration: If we keep one RootLayout, we don’t rename it. But since Navbar’s role is now primarily for the public site, you might conceptually rename Navbar.tsx to SiteNavbar.tsx for clarity (not required, but could prevent confusion with the new DashboardNav). In code, it’s fine to leave as “Navbar” and just ensure it’s hidden on dashboard pages.
+New Components or Refactors Needed: Not a new component per se, but implementing a conditional layout mechanism is key. This might involve refactoring how we determine the current route in RootLayout. For example, we might create a small client component that uses usePathname() and conditionally renders children or adds a class to the body. One idea: Wrap the <header> and <Footer> in a <ClientOnly> component that checks if the path starts with /dashboard and returns null if so. This client component can live in app/layout.tsx for simplicity:
+tsx
+Copy
+Edit
+<ClientRenderIf notDashboard>
+  <header> ...brand + <Navbar/>... </header>
+  <Footer/>
+</ClientRenderIf>
+{isDashboard && children} {/* If on dashboard, perhaps render children differently */}
+However, mixing client logic in a server layout must be done carefully. If route grouping is too much, a utility like this can solve it. This refactor ensures our new DashboardShell isn’t doubled up by the old nav. In summary, the RootLayout will be refactored to either not render header/footer for dashboard pages or apply CSS to hide them.
+src/components/Navbar.tsx
+Current Role & Structure: This component implements the main site’s navigation bar (right side of the header). It fetches the current user (using Supabase auth) and conditionally shows navigation and auth buttons
+github.com
+github.com
+. On desktop, it shows “Discover”, “Dashboard”, and “Sign Out” for logged-in users, or “Sign In/Sign Up” for guests
+github.com
+github.com
+. It also includes the theme <ModeToggle /> on the far right
+github.com
+. On mobile, it uses a Radix <Sheet> (sidebar drawer) to show a collapsible menu with the same nav items and a sign-out button
+github.com
+github.com
+.
+Required Edits for Linear-style Layout: With the new design, the Navbar will no longer be shown on dashboard pages, and its styling should be simplified for public pages:
+Hide on Dashboard: Implement a check so that if the current pathname starts with /dashboard, this component returns null (empty). The code already computes isDashboardPath
+github.com
+; we can use that. For example:
+tsx
+Copy
+Edit
+if (isDashboardPath) return null;
+This ensures that when the user is in the dashboard section, the global Navbar doesn’t render (the new DashboardNav will handle nav in that context). Note: after doing this, the RootLayout header will only contain the Lnked logo and nothing on the right for dashboard pages. We will hide that logo via CSS or not render header entirely as discussed, so the user effectively won’t see the old nav bar at all in the app.
+Desktop Nav Simplification: For non-dashboard pages (e.g. the marketing site, discover page, etc.), we keep using this Navbar but simplify its content for compactness:
+Use smaller buttons and spacing: currently it uses size="sm" which is fine, and some gap classes. We can maintain those but ensure the overall header (RootLayout) padding is reduced (done above) to make the nav feel lighter.
+Remove the redundant “Dashboard” link when the user is already on dashboard pages (we’ve hidden the whole component on dashboard, so that covers it). On public pages, the “Dashboard” button is still useful for logged-in users to enter the app, so we keep it in those contexts.
+Ensure the ARIA labels and roles remain correct (the <nav role="navigation" aria-label="Main navigation"> wrapper is already in place
+github.com
+).
+We might remove the explicit “Discover” link in the headbar if design calls for minimalism and perhaps surface it elsewhere. However, since “Discover” (the explore collectives page) is a primary action, we’ll keep it for now on the site nav.
+Mobile Menu: The mobile sheet currently duplicates the sidebar links when isDashboardPath is true
+github.com
+. If we hide Navbar entirely on dashboard, we won’t be using this sheet on those pages. Instead, we’ll implement a separate mobile menu (perhaps via the DashboardNav including a hamburger that triggers the sidebar). On public pages, the sheet is still useful for the “Discover/Sign In/Sign Up” links. We can keep the sheet for public pages, but simplify its contents:
+If user is logged out (public landing pages), the sheet should show links like “Sign In”, “Sign Up” (which it already does in the else branch
+github.com
+).
+If user is logged in (e.g. on Discover page), it shows “Discover” and “Dashboard” and “Sign Out” (already handled in code
+github.com
+).
+We might want to style the sheet to a compact list style (currently it uses Buttons with justify-start h-9 px-2 which is fine).
+No major design changes needed here, aside from ensuring consistency with our new sidebar: e.g., icons already included (Newspaper, LayoutDashboard, LogOut icons are used in the sheet
+github.com
+github.com
+). That’s good for visual consistency. We should consider updating the sheet to use the new SidebarNav component if possible (to avoid duplicate nav definitions). One approach: extract the nav items array (Overview, My Posts, etc.) and reuse it. However, given that on small screens we might simply keep using this sheet as is (since it works), we can refactor later. The key for now is that the mobile menu for dashboard items will be handled by the headbar’s menu button (which might reuse this sheet or implement a separate one).
+Sign Out Logic: Keep the handleSignOut as is
+github.com
+, but note that on dashboard pages we will move the sign-out control to the DashboardNav’s user menu. We can leave this function here for the site nav (so users can sign out from the landing/discover pages as well). There’s no conflict in having sign-out in two places – the DashboardNav can also sign out via its own Supabase call or by reusing this logic (maybe we can factor it out to a common utility).
+Theming: Keep the <ModeToggle /> in the Navbar for public pages. It will continue to appear at the far right of the header on desktop and at the bottom of the mobile sheet
+github.com
+. For the dashboard, we will also include a mode toggle (so the user can switch theme within the app). That will be done in DashboardNav. So effectively we’ll have two ModeToggle instances: one in site nav, one in dashboard nav. This is fine. Just ensure to import and use the existing ModeToggle (no need to create a new one).
+Visual Style: Simplify any heavy styling. The current Navbar is already minimal (no background of its own, inherits header background). We should double-check spacing: it uses gap-2 md:gap-4 for the container
+github.com
+. That’s fine. If anything, we might right-align or center it differently now that brand is on left in header. Currently, the header container in RootLayout uses justify-between
+github.com
+ to space brand left and Navbar right. That remains fine.
+Components to Delete/Extract/Rename: The Navbar component itself remains for public pages. We remove its use on internal pages (via the conditional null return). We don’t need to extract new components from it, but we will likely remove the hard-coded dashboard links from here (since the dashboard has its own nav now). For instance, the dashboardNavItems array and mapping might become unused on desktop since we won’t show them in the top bar anymore. We can keep it for mobile drawer usage, or trim it:
+The dashboardNavItems array (Overview, My Posts, My Collectives, Edit Profile)
+github.com
+github.com
+ might be moved to a central config so both Navbar’s mobile sheet and the SidebarNav use the same definitions. If not, at least update it if we rename any labels (for example, if we decide to rename “Overview” to “Feed” or remove “My Collectives” as a link, reflect that here too).
+Renaming: As mentioned, you may rename Navbar to SiteNavbar in the codebase to differentiate it from the new DashboardNav. This is optional; the functional difference will be clear by context (one is used in RootLayout, one in DashboardShell). If keeping the name, just be careful when discussing “navbar” vs “dashboard nav” in code.
+New Components or Refactors Needed: Not a new component, but ensure integration with new ones:
+If we make a common structure for nav items (e.g. a shared config or a shared SidebarNav component), consider having Navbar’s mobile drawer import and use <SidebarNav> (in a mode that renders links as needed for mobile). This would prevent duplication of nav item definitions. This refactor might be done later; for now it’s acceptable to leave the mobile sheet as is, since it’s isolated to the old Navbar.
+Refactor the conditional logic so Navbar’s JSX is simpler: With the dashboard items removed from desktop, the logged-in view on desktop is basically “Discover” and “Sign Out” with ModeToggle. We could simplify the JSX to not map dashboardNavItems at all on desktop, and just explicitly render the two buttons. On mobile within the sheet, we’ll still map items if isDashboardPath is false? Actually, if we are on a non-dashboard page, isDashboardPath is false, so the sheet currently goes to the else branch showing Discover and Dashboard. That’s fine. If on a dashboard page, Navbar returns null and thus we won’t even mount the sheet. So that logic holds.
+In summary, the Navbar will primarily serve the marketing pages. Focus on making it clean and ensuring it gracefully disappears in the app context.
+src/components/ui/Footer.tsx
+Current Role & Structure: This is the site’s footer, shown at the bottom of every page via RootLayout. It displays the copyright notice and a set of footer links (“Terms”, “Privacy”) and social links (“Twitter”, “GitHub”)
+github.com
+github.com
+. It’s wrapped in a <footer role="contentinfo"> with padding and a top border
+github.com
+.
+Required Edits for Linear-style Layout: For the dashboard redesign, the presence of a footer on application pages is generally unwanted, as it takes up space and doesn’t serve an in-app function. We will:
+Hide on Dashboard Pages: As with the header, we should omit or hide the footer when the user is in the dashboard. If implementing a dashboard-specific layout, simply do not include <Footer /> in that layout. If sticking with one RootLayout, apply a similar conditional: e.g., do not render <Footer> if pathname.startsWith('/dashboard'). This can be done via a check using a client-side hook or context (similar to Navbar logic). Another quick fix is a CSS approach: add a class to the body for dashboard pages and set display: none on the footer in that case.
+Style Tweaks: For non-dashboard pages (where the footer will still appear, e.g. marketing pages), we can leave the footer mostly as is. It’s already relatively compact and uses design tokens (border-border, text-muted-foreground). To align with the slightly reduced spacing of the new design, you could reduce the padding from py-8 to py-6 or py-4 if desired, though this is minor. The current footer is fine in terms of clarity and compactness.
+Dark Mode: The footer should already support dark mode because it uses the token classes (e.g., text-muted-foreground which will dim appropriately). Just verify that the background is bg-background (it inherits body background, which is fine). If needed, explicitly add bg-background to the footer container to ensure it matches the rest of the page in dark mode.
+Atomic Consideration: The footer is a UI component mostly for the public site. We won’t show it in the app, so we don’t need to refactor it for the new design system beyond ensuring it doesn’t clash. (Its links will still be reachable on public pages and that’s acceptable.)
+Components to Delete/Extract/Rename: No deletions; we keep Footer for the site. Just exclude it from the dashboard. We also don’t need to extract anything from it for reuse in the app. (If the app needed a smaller footer or info panel, we’d design a separate component, but there’s no indication of that here.)
+New Components or Refactors Needed: None specifically for Footer. Just coordinate its rendering with the rest of the layout. If using a route grouping approach, effectively we’ll have “Footer” in the public layout and no footer in the dashboard layout. No new component is needed; just the conditional logic or layout separation.
+src/components/app/dashboard/template/sidebar.tsx
+Current Role & Structure: (Assumption): This file likely was an earlier or placeholder component for the dashboard sidebar. It might have contained layout for a sidebar. However, in the current codebase, the active sidebar implementation is in organisms/dashboard-sidebar.tsx (which we’ll address next). If template/sidebar.tsx exists, it’s probably redundant or an older abstraction of the sidebar UI.
+Required Edits for Linear-style Layout: If this file is not currently used, the redesign likely renders it obsolete:
+Confirm whether template/sidebar.tsx is imported anywhere. If not, we can safely remove it to avoid confusion. The new design will rely on DashboardSidebar (possibly refactored) for the sidebar.
+If it does contain some structure we want to keep (for example, perhaps it defined a generic <aside> container or some styling), we should merge those parts into DashboardSidebar. For instance, if it had a simple layout with a slot for nav links, that can be integrated into the main Sidebar component.
+In summary, replace any usage of this file with the new DashboardSidebar + SidebarNav structure.
+Components to Delete/Extract/Rename: Most likely delete this file if it’s not actively used. We already have DashboardSidebar providing the sidebar UI, and we will be creating SidebarNav for the nav list portion. A duplicate template/sidebar.tsx is unnecessary. Remove it from the codebase to prevent confusion, or repurpose it if it contains anything useful (though given the current structure, it seems superseded).
+New Components or Refactors Needed: None specifically – the new sidebar components will live in DashboardSidebar and potentially SidebarNav. So template/sidebar.tsx itself doesn’t get a new component; it will be eliminated or ignored in favor of those.
+src/components/app/dashboard/nav/DashboardNav.tsx
+Current Role & Structure: This is intended to be the new Dashboard Headbar component. If it exists currently, it might be a stub or not fully implemented yet. Essentially, this component will replace the top Navbar within the dashboard section, providing a persistent, smaller header bar inside the application.
+Required Edits for Linear-style Layout: We need to implement this component to realize the new headbar design:
+Layout & Styling: DashboardNav will be a thin horizontal bar at the top of the dashboard interface. Use a <header> or <div> with role="navigation" aria-label="Dashboard top navigation" for semantics. Apply classes like flex items-center justify-between w-full bg-background border-b border-border px-4 (and h-12 or appropriate height if we want to explicitly size it, or use py-2 for padding to make it roughly ~48px tall). This ensures it spans the full width of the app content and has a bottom border similar to the global header. The background should use bg-background and text text-foreground for theming.
+Left Side – Sidebar Toggle: On the left side of the headbar, include a button to toggle the sidebar’s collapse state. This can be a simple <Button variant="ghost" size="icon"> with an icon (for example, a “Menu” icon (three bar hamburger) or a double arrow icon from Lucide like ChevronLeft/ChevronRight depending on state). This button’s onClick will call the prop (passed from DashboardShell) to collapse or expand the sidebar. It should have aria-label="Toggle sidebar" and use a conditional icon: if sidebarCollapsed is false (sidebar expanded), show an icon indicating you can collapse (e.g., ChevronLeft); if collapsed, show ChevronRight or the hamburger. This matches Linear’s behavior where you can collapse the side nav.
+Center – Feed Type Toggle & Collective Selector: The middle area of the headbar will focus on the two main feed types:
+Implement a feed toggle control for “Personal vs Collective” feeds. This can be done as two toggle buttons or a segmented control:
+One approach: use Radix ToggleGroup with two items, or simply two <Button> components styled as a toggle. For instance, <Button size="sm" variant={feedType === 'personal' ? 'secondary' : 'ghost'}>Personal</Button> and similarly for Collective, to indicate the active feed (using secondary or filled style for active, and ghost for inactive). Clicking one sets the state (you can manage a feedType state in a parent or context; since feed content likely lives in the page component, we might handle the toggle there or lift it to DashboardNav via props).
+If implementing within DashboardNav, use useState to manage feedType (this makes DashboardNav a client component, which is fine – it likely already is if it has interactive elements). However, coordinating this with the actual feed content might require lifting the state up to the page or using routing.
+Simpler: treat each feed type as a navigation: The “Personal” feed could link to, say, /dashboard (the overview page which we will repurpose as personal feed), and the “Collective” feed could link to a new page or the same page with a query param. Alternatively, handle it fully client-side: when toggled, dynamically load different content (via Supabase query or context).
+For now, plan it as an interactive toggle that triggers a state change or navigation. We want instantaneous feel (Linear-like), so a client-side toggle is ideal. We can fetch all necessary posts data on page load (or use React state to fetch on toggle).
+Labeling: Use clear labels or even icons if appropriate (text “Personal” and “Collectives” should be fine). Ensure each toggle is accessible (if using ToggleGroup, Radix will handle roles; if using buttons, add aria-pressed={feedType==='personal'} for example to convey state).
+Implement the Collective selector dropdown for the collective feed context. This should only be enabled or visible when the “Collective” feed is selected (since for personal feed it’s not applicable). When collective feed is active:
+Show a dropdown next to the toggle, allowing the user to select which collective to view or “All Collectives”. For example, a <CollectiveSelectorDropdown current={currentCollective} onChange={...} options={userCollectives} />.
+If currentCollective is null or an “All” option, that means the feed will show posts from all collectives the user is in (aggregate feed). The dropdown’s default selected value could be “All Collectives” (which is not literally in userCollectives list, but we can inject an option for it at the top).
+The dropdown should list each collective by name (using the list passed in from DashboardShell). We’ll implement this with Radix Select or DropdownMenu:
+Radix Select: Suitable for a dropdown with a list of options. We can use @radix-ui/react-select to build it. The CollectiveSelectorDropdown component can encapsulate this logic. It will show a trigger button that displays the currently selected collective (or “All Collectives”), and a list of options when expanded. Style the options list to match our theme (likely using Radix with our tailwind classes for item styles).
+Ensure the dropdown has aria-label="Select collective" and each option is labeled by collective name. Use the collective’s name as the visible label, possibly with an icon (maybe a group icon for collectives or the collective’s own icon if we had one – not in scope now).
+On selection change: trigger whatever is needed to update the feed content. This could be done via routing (navigate to a collective-specific page) or via lifting state. For instance, if we handle feed logic in a React state, selecting a collective could filter the already-fetched posts or trigger a new fetch for that collective’s posts. We can pass an onSelectCollective prop from the parent page into DashboardNav to handle it. Or DashboardNav itself can use Next’s router to navigate: e.g., router.push('/dashboard?collective=' + collectiveId) if using query param approach, or even router.push('/dashboard/collectives/' + slug + '/feed') if we have such a route.
+Initially, if the user is on collective feed and hasn’t chosen one, “All Collectives” is selected. If they choose a specific collective, the feed could narrow to that collective’s posts (and possibly we could navigate them to that collective’s dashboard page if it exists, but since we want the focus on feed reading, filtering in place is smoother).
+If “Personal” feed is selected, the dropdown can either disappear or be disabled. Simpler UX might be to hide it unless “Collective” is active, to avoid confusion.
+Right Side – User Controls: On the right end of the DashboardNav, we’ll provide the user-related actions and toggles:
+Show the theme ModeToggle icon button here, so the user can toggle dark/light in the dashboard. We can import and reuse the existing <ModeToggle /> component (it’s a client component that uses next-themes). Place it as an icon button with appropriate margin (maybe class mr-2 if something follows).
+Provide a User menu / Profile dropdown. Instead of a plain “Sign Out” button on the bar (which would take space and be less modern), use the user’s avatar or name as a clickable element that opens a Radix DropdownMenu. We can create a small component (e.g. <UserMenu />) or inline the logic here:
+Use DropdownMenu from Radix with a trigger button. The trigger could display the user’s profile avatar (if available via Supabase user object) or a generic user icon (Lucide’s User icon) or initials. Given we have the user from Supabase in Navbar (we can fetch similarly here by calling supabase.auth.getUser() in a useEffect, or even better, pass the user from a higher context to avoid extra fetch – perhaps the RootLayout or a context already provides the user? If not, do a quick client fetch).
+The dropdown menu should contain items: “Profile/Settings” (which links to /dashboard/profile/edit or some profile page), and “Sign Out”. Possibly also “My Posts” or “My Collectives” shortcuts if those make sense – but since those are in the sidebar, no need to duplicate them here. Keep it simple: Profile and Sign Out.
+Style the menu items using our design system: Radix DropdownMenu + Tailwind. We likely have some existing menu item styles or can mimic the Select styles. Use text-sm text-foreground for items, with hover:bg-muted etc. Ensure to include DropdownMenu.Item with onSelect handlers: one calling Supabase signOut (for “Sign Out”), and one router.push('/dashboard/profile/edit') for “Profile”.
+If using an avatar image, style it small (maybe 24x24) and ensure it’s clickable. If not, a user icon is fine with proper label on the menu.
+Give the trigger an aria-label="User menu" for accessibility if it’s just an icon.
+The sign-out functionality can leverage Supabase as in Navbar (we might even import the same handleSignOut or simply call supabase.auth.signOut() directly in the onSelect).
+With ModeToggle and UserMenu on the right, we should space them slightly. Perhaps group them aligned right. For example:
+jsx
+Copy
+Edit
+<div className="flex items-center gap-2">
+  <ModeToggle />
+  <DropdownMenu>…</DropdownMenu>
+</div>
+This keeps a consistent gap.
+Behavior: The DashboardNav should be sticky (fixed) within the dashboard so it remains visible when scrolling through posts. Since we structured DashboardShell with the headbar outside the scrollable <main>, it already stays put. If needed, one could also add sticky top-0 z-40 to DashboardNav as a safeguard (z-40 or above to appear above any content, but below modals which might be z-50+).
+Responsiveness: On small screens, the DashboardNav also needs to accommodate navigation because the sidebar is hidden. Therefore:
+The left side toggle button (which we used for collapsing on desktop) can double as a mobile menu trigger. Instead of (or in addition to) collapsing the sidebar (which is anyway not visible on mobile), clicking it on mobile should open the navigation drawer. We can reuse the Radix Sheet from Navbar or convert the sidebar into a drawer. Simplest approach: when on mobile, make this button open the same <Sheet> that Navbar’s hamburger did. We could lift the Sheet logic from Navbar into a separate component or into DashboardNav. For consistency, we might implement a separate mobile drawer in DashboardNav that shows the sidebar navigation links:
+Use Radix <Sheet> or <Dialog> for a slide-over. Radix Sheet is already integrated (we have code in Navbar). We can create a <SidebarNavSheet> component that wraps <SidebarNav> inside a Sheet for mobile. Trigger it with the left button (hamburger icon) on mobile breakpoints.
+The sheet content can essentially reuse <SidebarNav> listing all sections (Overview, My Posts, Collectives, Settings links). Actually, we can directly render <DashboardSidebar> inside the Sheet for a full-feature nav on mobile. Because DashboardSidebar already has all sections, perhaps we can reuse it (just need to ensure styling in sheet – might add className="p-4 w-[250px]" etc like the Navbar sheet did).
+This approach avoids duplicating nav definitions yet again. So, implement: in DashboardNav JSX, include a <Sheet> that is only rendered on mobile (or rendered always but only opened on mobile). The trigger is the same toggle button, but on mobile screens, instead of toggling collapse (which doesn’t apply on mobile), we call openSheet(). In practice, we can detect screen width via CSS: e.g. show a different icon or use the same hamburger for both collapse and mobile menu. Actually, we can simplify: use the hamburger icon always for this button. On desktop, clicking hamburger toggles collapse; on mobile, it opens the sheet (we can detect viewport via tailwind classes or simply always open sheet and simultaneously toggle collapse – collapse has no effect on mobile since sidebar is hidden by CSS).
+In summary, incorporate the mobile sheet by rendering:
+jsx
+Copy
+Edit
+<Sheet>
+  <SheetTrigger asChild>
+    <Button variant="ghost" size="icon" className="md:hidden"> <MenuIcon/> </Button>
+  </SheetTrigger>
+  <SheetContent side="left" className="p-4 w-64 sm:w-80"> 
+    {/* inside here, render nav links, maybe reuse SidebarNav or DashboardSidebar */}
+    <SidebarNav onSelect={() => sheet.close()} collectives={userCollectives} /> 
+  </SheetContent>
+</Sheet>
+This would mimic the Navbar’s sheet but using our new SidebarNav. Ensure to include an appropriate <SheetTitle> if needed (maybe the logo or “Navigation”). We can include a small brand label at the top of the sheet (like Navbar does with the Lnked text
+github.com
+).
+This ensures mobile users can navigate the dashboard sections.
+Note: We’ll likely remove the now redundant mobile logic from Navbar for dashboard items, since DashboardNav covers it.
+The feed toggle and collective dropdown might be tricky to fit on very small screens. On mobile, perhaps these controls stack or use icons:
+A possibility: hide the feed toggle on extra-small screens and default to showing one feed (or rely on separate routes). However, ideally we want the functionality available. If space is constrained, the feed toggle could be implemented as a Radix Tabs component that scrolls, or simply smaller buttons.
+We can let them wrap to next line if needed (the headbar can grow in height if two lines, though not ideal). Another approach: use icons for the toggle (like individual icon vs collective icon) to save text space, with tooltips for meaning.
+As a first iteration, keep the text buttons; if they overflow on mobile, they will simply wrap or overflow horizontally (we can allow horizontal scroll on that section). In Tailwind, overflow-x-auto on a flex row of buttons could allow swiping if necessary. This is a minor detail to consider.
+Dark Mode: Use the same token classes. The border and background tokens ensure it looks correct in dark theme. The DropdownMenu and Select from Radix will also need to be styled with our classes so that in dark mode the menu background is bg-popover (assuming our design tokens define these) and text is text-foreground. Likely we have utilities or can apply classes on the Radix portaled elements.
+Lucide Icons: We will use Lucide icons for hamburger (likely Menu which is already imported in Navbar), chevrons, sun/moon (ModeToggle uses them internally), user icon, etc. Ensure to use consistent sizing (e.g. use Tailwind class h-5 w-5 or use the size-4 class as in other places which presumably sets 1em=16px*4=64px? Actually size-4 in their setup likely means 1rem (16px) * 1? Need to check lucide-react usage: they often set icons with class like className="size-4" where CSS defines .size-4 { height: 1rem; width: 1rem; } or similar. It appears in Navbar they use size-4 on icons inside buttons
+github.com
+ which likely yields a 1em=4 (maybe 1em=4px? Unlikely, more probable they define .size-4 as 1rem or 1.25rem).
+In any case, ensure the icons in headbar (toggle, user menu trigger) look appropriately sized (around 20px). Use similar classes or define explicit h-5 w-5.
+Components to Delete/Extract/Rename: DashboardNav is new, so nothing to delete. We will however extract some UI pieces into smaller components for cleanliness:
+CollectiveSelectorDropdown component: Implement this as a molecule. It can live in components/app/dashboard/nav or perhaps components/app/dashboard/molecules. However, since the question explicitly names it, we’ll treat it as its own component (discussed in a later section). DashboardNav will use this component.
+Possibly extract FeedToggle as its own small component (but this might be overkill if it’s just two buttons). It’s fine to keep the toggle logic inside DashboardNav for now.
+UserMenu (Profile dropdown): We might implement it inline, but better to make a small component for clarity and reuse. For instance, an atoms/UserAvatarButton (for the trigger) and a molecules/UserDropdownMenu. Given we might reuse a similar menu in the Navbar in the future, a standalone could be useful. For this plan, we can just describe it inline as part of DashboardNav’s implementation.
+No renaming needed; DashboardNav is aptly named.
+New Components or Refactors Needed:
+CollectiveSelectorDropdown: (Detailed below in new components section, but summarizing) – a dropdown built with Radix Select for choosing collectives. It’s a new molecule that DashboardNav will incorporate when collective feed is active.
+UserMenu Dropdown: as mentioned, likely a new molecule using Radix DropdownMenu for profile/sign-out. Could name it UserMenu.
+SidebarNavSheet (for mobile): If we implement the mobile sheet inside DashboardNav, we might not need a separate component – we can inline the Radix Sheet usage. However, if preferred, we can wrap that logic in a new component to keep DashboardNav cleaner. That component could be called MobileSidebarDrawer and reside in the nav folder. It would manage the Radix Sheet and simply render <SidebarNav> inside. This is an optional refactor.
+FeedToggle: optionally a small component if needed.
+Overall, DashboardNav becomes an organism in atomic design terms – it orchestrates several smaller components (buttons, dropdowns, toggles). We should implement it carefully to keep concerns separated (for example, the state management for feed type might live in the page, but it’s okay to handle in this component and call out via props or context).
+We will ensure that all new interactive elements (toggle, dropdown, menu) are accessible: proper aria-labels, keyboard navigation (Radix covers a lot of it), and visible focus styles (Tailwind’s default focus outline or ring can be used or ensure our Button component handles it).
+src/components/app/dashboard/nav/SidebarNav.tsx
+Current Role & Structure: This is intended to represent the navigation list/sections within the sidebar. If it exists in code, it might be a skeleton to separate nav items from the rest of the sidebar. Right now, the sidebar links are rendered in DashboardSidebar directly
+github.com
+github.com
+. We will refactor that into this component.
+Required Edits for Linear-style Layout: We will implement SidebarNav to handle the grouped navigation links (Overview, Posts, Collectives, Settings, etc.) in a structured way:
+Props: Give SidebarNav a prop for the user’s collectives list (an array of {id, name, slug}) so it can render those dynamically. Also, if we decide to allow collapsing of sections, SidebarNav might need to manage internal state or accept props for which sections are collapsed (though optional).
+Layout: In SidebarNav’s JSX, structure the links into sections:
+jsx
+Copy
+Edit
+<nav aria-label="Sidebar Navigation" className="flex flex-col gap-6">
+  {/* Main section */}
+  <div>
+    <nav className="flex flex-col gap-1" aria-label="Main">
+      ...render SidebarLink for Overview and My Posts...
+    </nav>
+  </div>
+  {/* Collectives section */}
+  <div>
+    <div className="px-3 py-2 flex items-center justify-between">
+      <h2 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+        Collectives
+      </h2>
+      <div className="flex gap-1">
+        {/* Filter and New icons */}
+        <Button variant="ghost" size="icon" className="h-6 w-6" aria-label="Filter collectives">
+          <ListFilterIcon className="h-4 w-4" />
+        </Button>
+        <Button variant="ghost" size="icon" asChild className="h-6 w-6" aria-label="New Collective">
+          <Link href="/dashboard/collectives/new"><PlusCircleIcon className="h-4 w-4" /></Link>
+        </Button>
+      </div>
+    </div>
+    <nav className="flex flex-col gap-1" aria-label="Collectives">
+      ...render a SidebarLink for each collective in props.collectives...
+    </nav>
+  </div>
+  {/* Settings section */}
+  <div>
+    <div className="px-3 py-2">
+      <h2 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Settings</h2>
+    </div>
+    <nav className="flex flex-col gap-1" aria-label="Settings">
+      ...SidebarLink for Edit Profile, Newsletter...
+    </nav>
+  </div>
+</nav>
+This is analogous to the current structure in DashboardSidebar
+github.com
+github.com
+. We are just moving it into its own component and using the passed collectives data for the Collectives section. The ListFilter and PlusCircle icons remain for filtering and adding collectives. (They are small and fit the compact style; their tooltip/aria-labels are already in code
+github.com
+github.com
+.)
+SidebarLink usage: Use the existing <SidebarLink> atom for each link. This component likely renders an anchor with the icon and label, and handles active state highlighting. Ensure to pass the correct props:
+For Overview link: href="/dashboard" label="Overview" icon={LayoutDashboard} and exact={true} (the current code sets exact when href === "/dashboard"
+github.com
+).
+My Posts: href="/dashboard/posts" with icon={FileText}.
+Each collective: For now, we could link to the collective’s management or feed. A safe option is linking to the collective’s public page (e.g. href={"/" + collective.slug}) as in the DashboardCollectiveCard component
+github.com
+. However, within the app, maybe it’s better to link to a dashboard route like /dashboard/collectives/[id]. We have some routes like /dashboard/collectives/${id}/manage/members and settings (as seen in the collective card actions
+github.com
+github.com
+). Perhaps we should link the collective name to a general collective dashboard page (not implemented yet). If none exists, linking to the public page is an interim solution for viewing posts. Alternatively, if we implement the feed filtering via headbar, clicking a collective in the sidebar might trigger the same filter. But sidebar links typically navigate. For now, use a placeholder route or the slug as link:
+If we choose to have an internal feed page for collective posts, we could define /dashboard/collectives/[collectiveId]/posts to show that collective’s posts. If not existing, we might link to /dashboard/collectives (the list page) or simply not make each collective a link and rely on the dropdown in the headbar for feed filtering.
+However, from a navigation perspective, listing collectives in the sidebar implies each is navigable. Perhaps clicking a collective could navigate to a collective-specific dashboard (with members, settings, etc). We see that owners have “Members” and “Settings” pages per collective. So maybe a base route like /dashboard/collectives/[id] could show a collective overview. If that’s planned, then link to /dashboard/collectives/${collective.id} or use slug if preferred.
+We should decide: Action – We will link each collective in the sidebar to /dashboard/collectives/[id] (and then that page can show posts or overview of that collective). Even if not implemented yet, it’s a logical place.
+So in code: <SidebarLink href={/dashboard/collectives/${collective.id}} icon={Users2} label={collective.name} />. (We use the same Users2 icon for all collective entries, or if we had unique icons per collective, we could use a generic group icon for all).
+This means “My Collectives” aggregate page link becomes less necessary. We likely will remove the standalone "My Collectives" link (as it’s replaced by the list). Indeed, in our new SidebarNav, we do not list a “My Collectives” item in main or collective sections; we directly list collectives.
+Settings links: “Edit Profile” (UserSquare icon) and “Newsletter” (Newspaper icon) remain as in settingsNavItems
+github.com
+.
+Collapsible Sections: To emulate Linear’s collapsible nested sections, consider adding the ability to collapse “Collectives” and “Settings” groups:
+This can be done by turning each section into a Radix Accordion item or a simple useState toggle. Radix Accordion (with type="multiple") could wrap the collectives nav and settings nav:
+The header <h2> could serve as the Accordion trigger (wrap it in AccordionTrigger and style to look the same, plus maybe a small chevron icon indicating state).
+The list of links (<nav aria-label="Collectives">...</nav>) becomes the AccordionContent.
+Initially, we’d keep them expanded for desktop UX. But a user could click the “Collectives” heading to collapse that list if desired.
+This is an enhancement: If the number of collectives grows large, a collapse could be useful. It’s a nice-to-have that matches Linear (Linear allows collapsing entire sections like teams/projects via a small arrow).
+We can implement this if time permits: using Radix Accordion will manage state and accessibility. Just ensure to import the Radix components and apply Tailwind classes (the trigger can have flex justify-between items-center cursor-pointer and we can position a chevron icon that rotates on collapse).
+If implementing manually: add a local state e.g. const [collectivesOpen, setCollectivesOpen] = useState(true) and toggle on heading click, conditionally render the nav list. Radix is more accessible though, so leaning towards Radix.
+For MVP, we could skip collapsible and always show them expanded (which is simpler and likely fine, as Linear also by default shows all).
+We will include at least the thought: we’ll keep the sections expanded by default and possibly add collapse icons for future extensibility. The design spec did mention collapsible, so implementing it would fulfill that.
+Sidebar Collapse (icon-only mode): When the whole sidebar is collapsed (via the DashboardNav toggle):
+We will pass a prop collapsed from DashboardSidebar to SidebarNav indicating this state. SidebarNav should adjust rendering accordingly:
+If collapsed=true, each SidebarLink should render in a compact icon-only form. We can achieve this by adding a prop to SidebarLink (e.g., collapsed) that, when true, hides the label text and perhaps centers the icon.
+Alternatively, use CSS: when the parent aside has a collapsed class (say .collapsed), apply hidden or opacity-0 w-0 to the label spans. Since SidebarLink is likely a custom component, it might be easier to control via props.
+So plan: Extend <SidebarLink> so that if a collapsed prop is true, it either doesn’t render the label text at all (just outputs the icon inside a container sized for icon) or adds a CSS class to hide text. A simple approach:
+jsx
+Copy
+Edit
+{collapsed ? (
+   <Link ... className="sidebar-link-collapsed"> <Icon className="mx-auto" /> </Link>
+) : (
+   <Link ... className="sidebar-link"> <Icon /> <span>{label}</span> </Link>
+)}
+We might also use a tooltip on hover to show the full label when collapsed (like Linear does). Using Radix Tooltip for each SidebarLink would be a nice touch. For instance, wrap the icon in a Tooltip trigger that shows label on hover when collapsed. This can be done by conditionally including Tooltip in SidebarLink when collapsed.
+Ensure the nav section headings (like “Collectives”) are hidden entirely when collapsed, since we just see icons for each item. We won’t have space for section headers in collapsed mode (Linear collapses just shows a single icon column; section labels vanish). To handle this, we can simply not render the <h2> headers when collapsed is true. Or we could collapse them to a narrow strip – but better to hide.
+The filter and add buttons next to “Collectives” heading would also be hidden in collapsed mode.
+Essentially in collapsed state, we present a single list of icons (maybe grouped visually but without text).
+We should still keep the bottom “Create Post” button visible though – maybe just the icon (plus tooltip “Create Post”).
+Implementation: We can have CSS classes applied to the aside (e.g., w-16 for collapsed vs w-64 for expanded). In SidebarNav, check a collapsed prop: if true, do not render the section header divs at all, and maybe render just one nav containing all top-level links:
+Actually, an idea: when collapsed, instead of separated sections, possibly show a single vertical list of icons in logical order:
+e.g., Overview, My Posts, maybe a separator, then each collective as an icon (no heading), separator, then profile, newsletter icons.
+This is how Linear shows a single column of icons and uses tooltips for labels.
+We can implement that:
+If collapsed, output:
+jsx
+Copy
+Edit
+<nav aria-label="Collapsed sidebar navigation" className="flex flex-col items-center gap-2 py-2">
+  <SidebarLink collapsed icon=LayoutDashboard ... /> 
+  <SidebarLink collapsed icon=FileText ... />
+  <div className="border-t my-2 w-8 border-sidebar-border"></div>
+  {collectives.map(... icons ...)}
+  <div className="border-t my-2 w-8 border-sidebar-border"></div>
+  <SidebarLink collapsed icon=UserSquare ... />
+  <SidebarLink collapsed icon=Newspaper ... />
+</nav>
+This would ignore headings and just show dividers. You might also include the create post button at bottom as another icon (PlusCircle).
+However, implementing two different markup structures in one component based on collapsed is a bit complex but doable.
+Alternatively, we keep one structure but hide text via CSS – that way section headers are hidden but still a gap remains. Linear typically collapses and still shows separated groups via small dividers only.
+It might be cleaner to explicitly render a simplified structure when collapsed (as above).
+For simplicity in this plan: mention that SidebarNav will hide section titles and only show icons when collapsed. We’ll utilize tooltips to ensure usability.
+Ensure all icons have aria-label or screen reader text when labels are hidden. Possibly our SidebarLink could always include the label in an aria-label on the link if collapsed, or render it as visually hidden text.
+We should also maintain focusability (tab navigation) for collapsed links – they’ll still receive focus, and maybe the browser will announce their aria-label, which is good.
+Theming: Use text-muted-foreground for section headers as in current code
+github.com
+. The SidebarLink component likely already uses styles for active vs inactive (maybe altering background or text color for the active route). Ensure those classes still apply. In a compact design, maybe the active link could have a subtle highlight (e.g., a slightly darker background or a left border accent). If not already, consider adding a Tailwind class for active state, e.g., aria-current="page" on the active link and style using that (the SidebarLink might already do something like variant secondary for active).
+Scroll if overflow: The sidebar container is overflow-y-auto
+github.com
+ which we keep, meaning if there are many collectives, the sidebar can scroll independently. That’s fine. Keep SidebarNav height flexible inside that.
+Icons: The icons (LayoutDashboard, FileText, Users2, UserSquare, Newspaper, etc.) are from lucide-react as imported in DashboardSidebar
+github.com
+. We can continue to use them. They are sized via CSS class “size-3” or “size-4” in current code
+github.com
+. Ensure consistency: in text links, icons had class className="size-4 mr-2". In collapsed mode, icons might be centered so perhaps just size-4 without margin.
+Filter Button (ListFilter): This could eventually open a filter panel for collectives (not specified, but presumably to filter the list if it’s long). We can leave it as a non-functional placeholder or implement a basic toggle for future. For now, it’s mostly UI decoration. It’s small (h-6 w-6 ghost button) so that’s okay.
+Components to Delete/Extract/Rename:
+We are essentially extracting the nav list from DashboardSidebar into this new SidebarNav. After this, DashboardSidebar will primarily contain the wrapper <aside> and possibly the brand/logo and the bottom “Create Post” button, delegating the link list to <SidebarNav>. We should remove the duplicate code from DashboardSidebar to avoid redundancy.
+No deletion of functionality; just relocation.
+No renaming needed; SidebarNav is a clear name for this component.
+One note: the SidebarLink atom remains as is (we’ll modify it to support collapsed mode, but that’s not a full rename or extraction, just an enhancement).
+After extracting, DashboardSidebar might be simplified enough that we consider merging it and SidebarNav. But it’s okay to keep separate: DashboardSidebar (organism) will include the brand, then <SidebarNav>, then bottom section.
+New Components or Refactors Needed:
+SidebarLink changes: As mentioned, update the SidebarLink component (in dashboard/atoms/sidebar-link.tsx) to handle collapsed displays. This likely involves:
+Accepting a collapsed?: boolean prop.
+If collapsed, render only the icon (with proper accessible label).
+Possibly integrate Radix Tooltip: We can create a simple Tooltip atom (if not already in components/ui). ShadCN UI (the base this project uses for components) often includes a Tooltip component. If not, Radix has one we can set up. Implementing a tooltip for each link’s label would greatly improve UX when collapsed (user hovers icon and sees “My Posts”, etc.).
+Ensure SidebarLink still highlights the active route. Perhaps it adds a subtle background or a small vertical bar. When collapsed, perhaps highlight by a colored dot or an accent bar on the left of the icon. For now, keep the same approach: e.g., if active, maybe we already add aria-current="page" which triggers a style (the code sets variant secondary for active in mobile menu, but in sidebar, likely there’s some style when exact match).
+If not implemented, we can add: if the current route equals the link’s href (or startswith, for non-exact), apply a different Tailwind style (e.g., bg-accent text-foreground rounded-md as a subtle highlight).
+Integration with DashboardSidebar: After creating SidebarNav, modify DashboardSidebar to use it (pass the needed props). This is in the next section.
+src/components/app/dashboard/organisms/dashboard-sidebar.tsx
+(This file wasn’t explicitly listed in the user’s audit list, but it’s crucial and linked from DashboardShell. We include it here for completeness.)
+Current Role & Structure: DashboardSidebar is the component rendering the sidebar <aside> in the current dashboard. It includes the Lnked logo at the top, sections for Main, Collectives, Settings with headings, and a bottom “Create Post” button
+github.com
+github.com
+github.com
+github.com
+. It imports SidebarLink for each link and uses hardcoded nav item arrays.
+Required Edits for Linear-style Layout: We will refactor DashboardSidebar to act as a container that uses SidebarNav:
+Aside Container: Retain the <aside> element and its classes: currently "bg-sidebar text-sidebar-foreground flex flex-col border-r border-sidebar-border h-full w-64 py-4 overflow-y-auto"
+github.com
+. We might adjust some of these:
+The w-64 (16rem, ~256px) is the expanded width. We’ll keep that for default. When collapsed, we’ll apply a different width (e.g., w-16 or w-14 ~ 64px or 56px). We can manage this by conditional class or a parent state class. For example, we can add:
+jsx
+Copy
+Edit
+<aside className={cn("flex flex-col border-r h-full overflow-y-auto transition-width duration-200", collapsed ? "w-16" : "w-64", className)}>
+Use Tailwind’s arbitrary properties if needed for smooth width transition (or just use CSS). The transition-width requires the width property to be whitelisted in Tailwind config (if not, use duration-200 and maybe ease-in-out).
+Colors: bg-sidebar and text-sidebar-foreground presumably are custom CSS variables defined for sidebar background. If these are set in design tokens, fine. If not, we might unify them with the main background (bg-background). However, often sidebars have a slightly different tone. If bg-sidebar is defined, keep it. Ensure it works in dark mode (maybe it’s the same as bg-background or a variant).
+Border: border-sidebar-border is likely a subtle border color. Keep it for the right edge in light mode; in dark mode, ensure it’s the appropriate dark border (likely defined).
+Padding: py-4 gave some top/bottom space. We might reduce this to py-2 or py-3 to save space if needed, but since content inside (links) has their own padding, it’s okay. We can leave it or trim a bit. Linear’s sidebar usually is flush at top except maybe some margin under the logo.
+We will remove the className="hidden md:flex" usage from DashboardShell and instead control visibility here: For mobile, we can add className="hidden md:flex" on the <aside> to hide it on < md, or handle via the mobile sheet approach. The current code already had <DashboardSidebar className="hidden md:flex" />
+github.com
+. If we keep that, then DashboardSidebar doesn’t need to worry about responsiveness. Alternatively, we could always render it and hide via internal CSS. Keeping the parent control is fine.
+Brand/Logo: At the top of the sidebar, we have the Lnked logo text:
+jsx
+Copy
+Edit
+<Link href="/" className="flex items-center gap-2 text-lg font-semibold px-4 mb-6">
+  <span className="text-sidebar-primary">Lnked</span>
+</Link>
+This is currently how it’s done
+github.com
+. We should keep a recognizable branding there, but consider adjustments:
+In the dashboard context, the brand might not need to be as prominent as on the landing page. We can perhaps make it smaller (text-lg is fine, could even be text-base if we want more compact).
+Since we have the brand already at top of sidebar, we definitely want to hide the RootLayout header’s brand when on dashboard (to avoid seeing it twice).
+The “text-sidebar-primary” class presumably makes the brand colored (maybe primary color). That’s fine – it gives a bit of accent in the sidebar logo.
+In collapsed mode, we may want to show just an icon or a shorter logo. Perhaps we could display just the “L” or some logo icon. If no dedicated icon exists, maybe just the dot or first letter. A simple approach: when collapsed, hide the text “Lnked” and show just the dot (they have a dot in the brand in RootLayout, but here it’s just text).
+If no icon, we could simply show “L” or something stylized. Alternatively, show the “Lnked” text but with sr-only and use a logo icon font if available.
+For now, to keep it simple: In collapsed state, we can collapse this element entirely (maybe just show the colored dot or an initial). For example, we could use a styled div with letter “L” or use the existing brand span but with a CSS to only show first letter and dot.
+This might be too detailed; an easier solution: when collapsed, we could hide the whole text but still keep maybe a 40px tall space for branding (with maybe the dot as a small decorative element).
+Another tactic: Provide a tooltip on hover of the collapsed brand to show “Lnked”.
+Given time, we can simply accept that collapsing the sidebar hides the brand text – the user likely knows the app name anyway.
+Implementation: Wrap the brand in a container that we can toggle:
+jsx
+Copy
+Edit
+<div className={collapsed ? "px-4 mb-6 text-center" : "px-4 mb-6"}>
+  <Link href="/" className="flex items-center gap-2 text-lg font-semibold">
+    <span className={collapsed ? "text-xl text-sidebar-primary" : "text-sidebar-primary"}>{collapsed ? "L" : "Lnked"}</span>
+    { !collapsed && <span className="text-sidebar-primary">…</span> }
+  </Link>
+</div>
+Actually, the dot is appended in RootLayout as a separate span
+github.com
+. In Sidebar, they didn’t include the dot (just “Lnked”). We could add a small dot here too if desired, but not necessary.
+We’ll mention: consider using a shortened label or icon when collapsed.
+Inject SidebarNav: After the logo section, include <SidebarNav collectives={props.collectives} collapsed={collapsed} />. This will render the nav sections. Pass the collapsed prop so it can render appropriately (especially to hide labels).
+Bottom Create Post Button: The current code has a bottom-aligned “Create Post” button:
+jsx
+Copy
+Edit
+<div className="mt-auto px-4 py-4 flex justify-center">
+  <Button variant="outline" size="sm" asChild className="w-full">
+    <Link href="/dashboard/new-personal-post"><PlusCircle className="size-4 mr-2" />Create Post</Link>
+  </Button>
+</div>
+Keep this functionality, but adjust styling for compactness:
+It’s outline variant, small, full width which is fine. We might remove the left icon margin in collapsed mode.
+When sidebar is collapsed, ideally this should also collapse to just an icon (plus tooltip). Perhaps we can reuse the same logic: if collapsed, render a circle icon button:
+jsx
+Copy
+Edit
+{collapsed ? (
+  <Button asChild variant="outline" size="icon">
+    <Link href="/dashboard/new-personal-post"><PlusCircle className="h-5 w-5" aria-label="Create Post" /></Link>
+  </Button>
+) : (
+  <Button asChild variant="outline" size="sm" className="w-full">
+    <Link href="/dashboard/new-personal-post"><PlusCircle className="h-4 w-4 mr-2" /> Create Post</Link>
+  </Button>
+)}
+Note the use of size="icon" (a style likely existing for square icon-only buttons) for collapsed.
+Also, give the icon an aria-label in collapsed mode since text is gone.
+Keep this button aligned at bottom (mt-auto) so it always sits at the bottom of the sidebar column.
+This button respects user’s ability to create content (links to personal post creation – possibly in future we might have collective post creation, but that’s beyond scope).
+Responsive (mobile): Since we hide the aside on mobile (via parent class), the create post function should still be accessible via other UI (maybe via a “New Post” button on the headbar for mobile or via the mobile menu – but currently mobile menu doesn’t list it). We might consider adding “Create Post” as an item in the mobile sheet as well. Linear’s mobile experience is limited; but we can quickly allow creation via headbar: for example, on mobile, maybe show a small “+” icon on the headbar to create post (only visible on xs screens). This wasn’t requested, but thinking of consistency. We won’t delve deep; just note that when sidebar is not present on mobile, the user might click their profile or something to get to post creation if needed. However, since the question doesn’t raise it, we won’t focus on it here.
+Components to Delete/Extract/Rename: We are not deleting DashboardSidebar (it remains the sidebar container). We extracted the nav link rendering to SidebarNav. So:
+Remove the arrays mainNavItems, collectiveNavItems, settingsNavItems from this file
+github.com
+github.com
+github.com
+ and any mapping logic. That now lives in SidebarNav (with dynamic collectives). This simplifies DashboardSidebar.
+Simplify the JSX accordingly: after the brand, just <SidebarNav ... /> and then bottom button.
+Rename thoughts: The name DashboardSidebar is fine. If anything, now that SidebarNav exists, DashboardSidebar could be renamed to something like SidebarContainer or just remain as is since it’s the organism housing the nav. No strong need to rename.
+New Components or Refactors Needed: Most changes here are integration of existing or new components:
+Integrate the new SidebarNav as described.
+We should ensure to thread through any required props: If DashboardSidebar itself receives the collectives list prop from DashboardShell, pass it into SidebarNav. Also pass the collapsed state (from DashboardShell via props).
+Possibly, DashboardSidebar could itself manage the collapse state and context – but we decided to manage in DashboardShell to coordinate with headbar. So DashboardSidebar is mostly presentational, depending on collapsed prop.
+Ensure to apply ref or semantics: The <aside> already has aria-label="Dashboard sidebar" in code
+github.com
+, which is good. We keep that for accessibility.
+The color classes bg-sidebar, text-sidebar-foreground: ensure these are defined in Tailwind config. If not, consider using default bg-background text-foreground for simplicity. But presumably they exist to allow a slightly different shade. We might keep them for a subtle contrast (maybe the sidebar is a bit darker background).
+Minor refactor: If needed, define a CSS transition for the width if collapsed. In Tailwind, we might add a utility via config or use inline style. Since this is a plan, we can just mention the transition; implementation can be done with a small CSS snippet:
+css
+Copy
+Edit
+.transition-width { transition: width 0.2s ease; }
+and add that class.
+Summarize atomic role: DashboardSidebar remains an organism composed of atoms (SidebarLink), molecules (SidebarNav, maybe the create post button or brand link can be considered atoms too). This refactor aligns it with Atomic Design by isolating the pure nav list into SidebarNav (which is like a molecule/organism of just nav items), and leaving the container to handle layout and branding.
+src/components/app/SmoothScroll.tsx
+Current Role & Structure: SmoothScroll is a utility component that initializes the Lenis smooth scrolling library on mount
+github.com
+github.com
+. It attaches to the RAF loop and does not render any UI
+github.com
+. It’s included in RootLayout to globally enable smooth scrolling.
+Required Edits for Linear-style Layout: The main concern is ensuring smooth scroll still works with our new layout:
+Scroll Container: Currently, Lenis likely hooks into window scrolling. However, in our dashboard, we have an inner scrollable <main> for content (overflow-y in DashboardShell). This means the window itself might not scroll when content changes, the main element does. Lenis by default might not affect that, resulting in no smooth scroll in the dashboard content.
+To address this, we have a couple of options:
+Simplify the scroll model: Perhaps we decide to remove overflow-y:auto on the main content and let the entire page scroll. That would require making the sidebar position: sticky or fixed so it stays put. This is a larger change (and could break Lenis less). However, our current structure was chosen to allow sidebar fixed without extra code. We likely want to keep the inner scroll for now.
+Configure Lenis to target the main content element instead of window. Lenis might support initializing with a custom wrapper or scroll target. We should research Lenis’s API for something like wrapper: element or content: element. If possible, update SmoothScroll to select the .overflow-y-auto container and call Lenis on that.
+For example, if our main content has an id or ref (we could add an id to the main, like <main id="scrollable-content" ...>), then do: lenisRef.current = new Lenis({ wrapper: document.getElementById('scrollable-content'), smooth: true, ... }). We’d have to verify Lenis’s configuration options (likely out of memory scope, but assume it’s doable).
+If Lenis cannot easily hook to a nested element, another approach is to make the entire <html> scroll smoothly and just keep the sidebar fixed via CSS. We could convert the sidebar to position: fixed (left 0, top 0, height 100%) instead of part of a flex. Then main content could have a left margin. This would let the page scroll normally (with Lenis). This is a valid alternative layout approach. However, implementing that requires careful adjustments for responsive and container widths.
+Given time, we might choose to temporarily disable smooth scroll for the main content to avoid conflicts, or accept that on dashboard pages the smooth scroll might not apply. But since the user explicitly has SmoothScroll, better to keep it functional.
+Action: Update SmoothScroll initialization:
+Use a useEffect to query an element (maybe via a ref passed from DashboardShell). Alternatively, one can call lenisRef.current = new Lenis({ ... , lerp: 0.1, smooth: true, target: element }) if such option exists.
+If not sure, we could check Lenis docs or test outside. But in plan, mention that we will attach Lenis to the scrollable content container. This ensures the smoothing applies to the dashboard feed scroll.
+If unattainable easily, note as a caveat: possibly disable smoothing on that container and only have it on full-page scroll outside dash. (But that’s inconsistent.)
+Performance: Ensure that the existence of multiple scroll containers doesn’t double-trigger Lenis. We likely will only run one Lenis instance for the main body. If we keep one global Lenis on document, it won’t catch inner div scroll. So switching to target main is needed.
+Possibly, we could instantiate two Lenis: one for window (for normal pages) and one for the dashboard main container. But that’s overkill. Simpler: detect if on dashboard and target accordingly. We could utilize usePathname() inside SmoothScroll (since it’s client) to decide target:
+tsx
+Copy
+Edit
+const pathname = usePathname();
+useEffect(() => {
+  const scrollElement = pathname?.startsWith("/dashboard")
+    ? document.querySelector(".dashboard-main") // e.g., add a class to main
+    : window;
+  lenisRef.current = new Lenis({ wrapper: scrollElement, ... });
+  ...
+}, [pathname]);
+But Lenis might not accept window directly as wrapper (it defaults to document).
+Alternatively, always use document as wrapper but set content to the main container.
+Without exact API, we can only outline approach.
+In summary, to align with redesign: we will either reconfigure Lenis or potentially reconsider the scroll strategy. We want to maintain smooth scroll because it’s a design element (modern feel).
+This is a technical detail – the plan should mention it so developers can address it.
+Components to Delete/Extract/Rename: None. We keep SmoothScroll; it’s a standalone utility. We may augment it with some logic as above. No need to rename.
+New Components or Refactors Needed: Not a new component, but a refactor of SmoothScroll configuration:
+Perhaps allow it to accept a ref or selector prop to scroll. Or the simplest is to update it internally after the DOM is ready.
+Also ensure to test after changes: after implementing the new layout, scroll the dashboard page and confirm smooth effect. If not smooth, then adjust accordingly.
+If Lenis is too rigid, another approach: apply CSS scroll-behavior: smooth; to the main content container in CSS for a basic smooth scroll (this only smooths anchor link jumps and programmatic scroll, not continuous scroll).
+We want continuous smoothing (which Lenis provides), so ideally fix Lenis usage.
+(This is a fairly technical point; including it shows thoroughness.)
+src/components/app/nav/RouteProgress.tsx
+Current Role & Structure: RouteProgress mounts a listener for Next.js route changes using usePathname() and triggers the NProgress progress bar on route transitions
+github.com
+. It doesn’t render visible UI, just controls the top loading bar (NProgress is configured globally to hide spinner and just show a thin bar
+github.com
+).
+Required Edits for Linear-style Layout: This component can remain largely as is, but we will verify it fits the new design:
+Styling: The NProgress bar by default is a thin blue line at top. We should ensure it’s styled to match our theme’s primary color. If not already overridden, we can add custom CSS for #nprogress .bar { background: var(--color-primary); }. Possibly the nprogress.css imported
+github.com
+ might be default (blue). We should override it to use our design tokens (for example, maybe bg-primary). If our Tailwind config maps text-primary to a CSS variable, we can use that variable in custom CSS.
+If our primary color is a certain green/blue (not sure), we make the progress bar that color. This will ensure consistency with the design system.
+The thickness is typically 2px; that’s fine and unobtrusive (Linear’s loading bar is also a small line).
+Positioning: Since we have a sticky headbar of our own, we want the progress bar to appear at the very top of the page (not underneath the headbar). NProgress by default injects a <div id="nprogress"> at body end and sets CSS #nprogress { pointer-events: none; } #nprogress .bar { position: fixed; top: 0; left: 0; width: 100%; }. So it’s fixed to top of viewport, which will overlay our headbar at the very top edge. This is fine – the bar will be visible above or on top of the headbar content for a brief moment. If the headbar has a border or different color, the bar should still be noticeable. Because our headbar is also at top 0, the bar will overlap its top border. That’s acceptable, as the bar is just 2px. If we want it above everything, we could increase its z-index. But likely default z-index is high enough or we can set it to, say, 999. Our headbar z-50 is equivalent to 2000 in CSS (since tailwind z-50). Not sure NProgress default, but often it’s 1031. To be safe, we might set in CSS: #nprogress .bar { z-index: 9999; } so it’s always on top of any UI.
+After route loads, NProgress finishes and the bar goes away, so no lasting layout issues.
+No Functional Changes: The logic of starting on path change and ending after a 300ms delay is fine
+github.com
+. It ensures a short flash for quick routes which is okay.
+Components to Delete/Extract/Rename: None – keep RouteProgress as is.
+New Components or Refactors Needed: None new. Just ensure the styling customizations:
+Possibly add a tiny CSS override file for NProgress (if not done). The import nprogress.css might be a default. We can either override in globals.css by adding:
+css
+Copy
+Edit
+#nprogress .bar {
+  background-color: rgb(var(--color-primary)); /* assuming --color-primary is defined for primary */
+}
+#nprogress .peg { background: ... } /* if needed, but spinner disabled so maybe not needed */
+Where --color-primary is set by our theme (like in :root or dark mode classes).
+Confirm that in dark mode, the same color is used or if a different color is desired for contrast (likely same primary).
+If our primary is a bright color that works on both backgrounds, fine.
+New Proposed Components:
+CollectiveSelectorDropdown (Molecule): A reusable dropdown for selecting a collective from the user’s memberships.
+Implement with Radix Select: a trigger button showing the current collective name (or “All Collectives”), and a list of options (All + each collective’s name).
+Style the trigger as a small outline or ghost dropdown (to match input styles). Perhaps use Button variant="outline" styling for the closed state.
+The options list should appear as a popover. Each option styled with px-3 py-1.5 text-sm hover:bg-muted cursor-pointer. Use Radix’s Select.Item and Select.ItemText for accessibility. Mark the selected item with a check icon or bold text. Radix can provide Select.ItemIndicator for the checkmark.
+Ensure it’s keyboard navigable and accessible (Radix handles most of that).
+This component will take props: collectives: CollectiveSummary[], value: string | null (the current collective id or "all"), and onChange(newValue) callback.
+It will likely live in components/app/dashboard/molecules (or in nav folder as it’s nav-related).
+Use it in DashboardNav when feedType is “collective”. The onChange can trigger filtering or navigation as decided.
+Example usage in DashboardNav:
+jsx
+Copy
+Edit
+{feedType === 'collective' && (
+  <CollectiveSelectorDropdown 
+     collectives={collectives} 
+     value={currentCollectiveId} 
+     onChange={id => setCurrentCollectiveId(id)} 
+  />
+)}
+where currentCollectiveId could be state in DashboardNav or lifted.
+This new component promotes reusability (if there are other places to select a collective, like maybe on new post form to choose which collective to post to).
+Atomic: It’s a molecule (combines a button, list items, Radix behavior).
+MiniHeaderBar / DashboardNav (Organism): As we have detailed, this is essentially created. It’s the combination of controls at the top of the dashboard. (We’ve used the name DashboardNav for it).
+It includes atomic pieces (toggle button, mode toggle, user menu trigger) and molecules (CollectiveSelectorDropdown, maybe a FeedToggle if separated, and possibly the user dropdown).
+We’ve integrated its creation above.
+UserMenu (Molecule): A dropdown menu for user actions.
+Possibly implement with Radix DropdownMenu. Contains a trigger (avatar icon) and <DropdownMenu.Content> with <DropdownMenu.Item>s.
+Items: “Profile & Settings” (navigates to /dashboard/profile/edit), “Sign Out” (calls supabase signOut).
+We can also include the theme toggle here if we wanted to consolidate, but we chose to show ModeToggle separately for quick access.
+Styling: similar to a context menu. Use bg-popover text-foreground p-1 for the menu container and text-sm px-2 py-1.5 rounded hover:bg-muted for items.
+This would be used in DashboardNav. Could also be reused later in Navbar (if we wanted a dropdown there instead of separate buttons).
+Atomic: molecule (combining avatar trigger and list of actions).
+If we don’t want a separate component file, we could implement inside DashboardNav. But making it separate keeps DashboardNav cleaner.
+MobileSidebarSheet (Organism/Molecule): If we decide to factor out the mobile drawer logic from DashboardNav, this could be a component.
+It would wrap Radix <Sheet> logic, and inside SheetContent render <SidebarNav> (maybe with an onSelect to close the sheet when link clicked).
+This is an optional abstraction. We might just do it inline in DashboardNav for now.
+If separate, it’s still a part of nav domain.
+By implementing and integrating all the above, we end up with:
+A persistent small headbar (DashboardNav) with collapse toggle, feed toggle, collective dropdown, and user controls.
+A full-height sidebar (DashboardSidebar + SidebarNav) similar to Linear’s, supporting collapsible icons and nested sections.
+Focus on feeds: the UI now clearly presents a toggle for personal vs collective content, and a way to filter collectives, fulfilling the “two main feed types” focus.
+All using existing data (we use user’s collectives membership via Supabase queries we already have).
+Consistent styling: Tailwind classes referencing design tokens ensure dark mode compatibility. Radix UI components used for complex UI (Sheet, Select, Menu) ensure accessibility.
+This plan lays out the changes file by file, providing a clear roadmap for engineering to implement the new dashboard design in an atomic, maintainable way.
+
+<PLANNING> Dashboard Redesign Implementation Steps
+Step 1: Data & Layout Foundation
+Refactor src/app/dashboard/layout.tsx to:
+Fetch all user collectives (owned + joined) server-side.
+Pass this data as a prop to DashboardShell.
+(Optionally) Add a dashboard-specific class to <body> or <html> for CSS overrides.
+Step 2: DashboardShell Refactor
+Refactor src/components/app/dashboard/template/dashboard-shell.tsx to:
+Accept userCollectives and pass to sidebar/headbar.
+Integrate new DashboardNav (headbar) and refactor flex layout.
+Add state for sidebar collapse and propagate to sidebar/nav.
+Remove any direct use of the old Navbar.
+Step 3: Sidebar & Navigation Extraction
+Refactor or create:
+dashboard-sidebar.tsx (organism): Container for sidebar, handles collapse, branding, and bottom button.
+SidebarNav.tsx (molecule): Extract nav list/sections from sidebar, support collapsed mode, tooltips, and dynamic collectives.
+sidebar-link.tsx (atom): Support collapsed mode, tooltips, and aria-labels.
+Step 4: DashboardNav (Headbar) Implementation
+Create/refactor:
+DashboardNav.tsx (organism): Top bar with sidebar toggle, feed toggle, collective dropdown, user menu, and mode toggle.
+CollectiveSelectorDropdown.tsx (molecule): Radix Select for collectives.
+UserMenu.tsx (molecule): Radix DropdownMenu for profile/sign-out.
+(Optional) MobileSidebarSheet.tsx for mobile nav.
+Step 5: Root Layout & Global UI Adjustments
+Refactor:
+src/app/layout.tsx to not render header/footer on dashboard pages (via Navbar logic or CSS).
+Navbar.tsx to return null on dashboard routes.
+Footer.tsx to not render on dashboard routes.
+Step 6: Utility & Experience
+Update:
+SmoothScroll.tsx to target dashboard main scroll area if needed.
+RouteProgress.tsx to ensure correct z-index and color.
+Step 7: CSS & Theming
+Update:
+globals.css for any dashboard-specific overrides (container, header/footer hiding, nprogress color).
+Step 8: Remove/Extract Obsolete Files
+Remove:
+template/sidebar.tsx if not used.
