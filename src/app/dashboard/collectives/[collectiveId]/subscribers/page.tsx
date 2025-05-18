@@ -1,7 +1,6 @@
-import { cookies } from "next/headers";
-import { createServerClient } from "@supabase/ssr";
-import type { Database, Enums } from "@/lib/database.types";
-import { redirect, notFound } from "next/navigation";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { Enums } from "@/lib/database.types";
+import { redirect } from "next/navigation";
 import Link from "next/link";
 import {
   Table,
@@ -35,28 +34,23 @@ const getStatusBadgeVariant = (
   return "outline";
 };
 
+type Subscriber = { id: string; full_name: string | null };
+type SubscriptionRow = {
+  id: string;
+  status: string;
+  created: string;
+  current_period_end: string | null;
+  cancel_at_period_end: boolean;
+  subscriber: Subscriber | null;
+};
+
 export default async function SubscribersPage({
   params,
 }: {
   params: { collectiveId: string };
 }) {
   const { collectiveId } = params;
-  const cookieStore = await cookies();
-  const supabase = createServerClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value;
-        },
-        // In a Server Component we cannot mutate cookies directly; supabase will attempt it
-        // but we safely no-op to satisfy the interface.
-        set() {},
-        remove() {},
-      },
-    }
-  );
+  const supabase = await createServerSupabaseClient();
 
   const {
     data: { user: currentUser },
@@ -79,7 +73,7 @@ export default async function SubscribersPage({
       `Error fetching collective ${collectiveId}:`,
       collectiveError?.message
     );
-    notFound();
+    redirect("/not-found");
   }
 
   if (collective.owner_id !== currentUser.id) {
@@ -87,7 +81,7 @@ export default async function SubscribersPage({
     console.warn(
       `User ${currentUser.id} tried to access subscribers for collective ${collectiveId} they do not own.`
     );
-    notFound();
+    redirect("/not-found");
   }
 
   // 2. Fetch subscribers to this collective
@@ -148,11 +142,8 @@ export default async function SubscribersPage({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {subscriptions.map((sub) => {
-              const subscriber = sub.subscriber as {
-                id: string;
-                full_name: string | null;
-              } | null;
+            {subscriptions.map((sub: SubscriptionRow) => {
+              const subscriber = sub.subscriber as Subscriber | null;
               return (
                 <TableRow key={sub.id}>
                   <TableCell className="font-medium">

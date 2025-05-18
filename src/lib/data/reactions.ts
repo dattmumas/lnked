@@ -1,4 +1,5 @@
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import type { Database } from "@/lib/database.types";
 
 interface TogglePostReactionArgs {
   postId: string;
@@ -17,7 +18,7 @@ export async function togglePostReaction({
   userId,
   type,
 }: TogglePostReactionArgs) {
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
   const { data, error } = await supabase
     .from("post_reactions")
     .upsert([{ post_id: postId, user_id: userId, type }], {
@@ -34,7 +35,7 @@ export async function toggleCommentReaction({
   userId,
   type,
 }: ToggleCommentReactionArgs) {
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
   const { data, error } = await supabase
     .from("comment_reactions")
     .upsert([{ comment_id: commentId, user_id: userId, type }], {
@@ -47,7 +48,7 @@ export async function toggleCommentReaction({
 }
 
 export async function getReactionsForPost(postId: string) {
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
   const { data, error } = await supabase
     .from("post_reactions")
     .select("user_id, type, created_at")

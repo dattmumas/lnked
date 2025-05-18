@@ -1,24 +1,8 @@
-import { cookies } from "next/headers";
-import { createServerClient } from "@supabase/ssr";
-import type { Database } from "@/lib/database.types";
-import { redirect } from "next/navigation";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
 import EditProfileForm from "./EditProfileForm"; // Client component for the form
 
 export default async function EditProfilePage() {
-  const cookieStore = await cookies();
-  const supabase = createServerClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value;
-        },
-        set() {},
-        remove() {},
-      },
-    }
-  );
+  const supabase = createServerSupabaseClient();
 
   const {
     data: { user: authUser }, // Renamed to authUser to avoid conflict

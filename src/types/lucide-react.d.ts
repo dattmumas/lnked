@@ -13,6 +13,14 @@ declare module "lucide-react" {
   export const Newspaper: React.FC<any>;
   export const LogOut: React.FC<any>;
   export const Terminal: React.FC<any>;
+  export const BookOpen: React.FC<any>;
+  export const Mail: React.FC<any>;
+  export const Settings: React.FC<any>;
+  export const Rss: React.FC<any>;
+  export const Plus: React.FC<any>;
+  export const AlertCircle: React.FC<any>;
+  export const Info: React.FC<any>;
+  export const List: React.FC<any>;
   export type ElementType = any;
   const content: any;
   export = content;

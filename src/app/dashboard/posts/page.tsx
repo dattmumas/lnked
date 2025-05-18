@@ -1,6 +1,4 @@
-import { cookies } from "next/headers";
-import { createServerClient } from "@supabase/ssr";
-import type { Database, Enums } from "@/lib/database.types";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import PostListItem from "@/components/app/dashboard/posts/PostListItem";
 import { Button } from "@/components/ui/button";
@@ -21,20 +19,7 @@ type PublishingTargetCollective = Pick<
 >;
 
 export default async function MyPostsPage() {
-  const cookieStore = await cookies();
-  const supabase = createServerClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value;
-        },
-        set() {},
-        remove() {},
-      },
-    }
-  );
+  const supabase = createServerSupabaseClient();
 
   const {
     data: { session },

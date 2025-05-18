@@ -1,7 +1,5 @@
-import { cookies } from "next/headers";
-import { createServerClient } from "@supabase/ssr";
-import type { Database, Enums } from "@/lib/database.types";
-import { redirect } from "next/navigation";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { Enums } from "@/lib/database.types";
 import Link from "next/link";
 import {
   Table,
@@ -14,6 +12,7 @@ import {
 } from "@/components/ui/table"; // Ensure this path is correct after moving table.tsx
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { redirect } from "next/navigation";
 
 const formatDate = (dateString: string | null | undefined): string => {
   if (!dateString) return "N/A";
@@ -35,21 +34,18 @@ const getStatusBadgeVariant = (
   return "outline";
 };
 
+type Subscriber = { id: string; full_name: string | null };
+type SubscriptionRow = {
+  id: string;
+  status: string;
+  created: string;
+  current_period_end: string | null;
+  cancel_at_period_end: boolean;
+  subscriber: Subscriber | null;
+};
+
 export default async function MyNewsletterSubscribersPage() {
-  const cookieStore = await cookies();
-  const supabase = createServerClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value;
-        },
-        set() {},
-        remove() {},
-      },
-    }
-  );
+  const supabase = await createServerSupabaseClient();
 
   const {
     data: { user: currentUser },
@@ -114,11 +110,8 @@ export default async function MyNewsletterSubscribersPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {subscriptions.map((sub) => {
-              const subscriber = sub.subscriber as {
-                id: string;
-                full_name: string | null;
-              } | null;
+            {subscriptions.map((sub: SubscriptionRow) => {
+              const subscriber = sub.subscriber as Subscriber | null;
               return (
                 <TableRow key={sub.id}>
                   <TableCell className="font-medium">

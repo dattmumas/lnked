@@ -7,18 +7,20 @@ interface CookieKV {
   options?: Record<string, unknown>;
 }
 
-export function createServerSupabaseClient() {
-  const cookieStore = cookies();
+export async function createServerSupabaseClient() {
+  const cookieStore = await cookies();
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
         getAll: (): CookieKV[] =>
-          cookieStore.getAll().map((c: { name: string; value: string }) => ({
-            name: c.name,
-            value: c.value,
-          })),
+          cookieStore.getAll().map(
+            (c: { name: string; value: string }): CookieKV => ({
+              name: c.name,
+              value: c.value,
+            })
+          ),
         setAll: (newCookies: CookieKV[]): void => {
           newCookies.forEach(({ name, value, options }) => {
             cookieStore.set(name, value, options);

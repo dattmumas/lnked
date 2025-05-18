@@ -1,7 +1,4 @@
-import { cookies } from "next/headers";
-import { createServerClient } from "@supabase/ssr";
-import type { Database } from "@/lib/database.types";
-import { redirect } from "next/navigation";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import {
@@ -13,37 +10,42 @@ import {
 } from "@/components/ui/card";
 import StatCard from "@/components/app/dashboard/molecules/stat-card";
 import {
-  Users,
+  Users2,
   FileText,
-  Library,
-  MailOpen,
+  BookOpen,
+  Mail,
   Settings,
   Rss,
-  PlusCircle,
-  AlertTriangle,
+  Plus,
+  AlertCircle,
   Info,
   List,
 } from "lucide-react";
 import RecentPostRow from "@/components/app/dashboard/molecules/RecentPostRow";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { redirect } from "next/navigation";
 
 const MAX_RECENT_PERSONAL_POSTS_DISPLAY = 3;
 
+type PersonalPost = {
+  id: string;
+  title: string;
+  published_at: string | null;
+  created_at: string;
+  is_public: boolean;
+  collective_id: string | null;
+};
+type OwnedCollective = {
+  id: string;
+  name: string;
+  slug: string;
+  description: string;
+};
+
+export const dynamic = "force-dynamic";
+
 export default async function DashboardManagementPage() {
-  const cookieStore = await cookies();
-  const supabase = createServerClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value;
-        },
-        set() {},
-        remove() {},
-      },
-    }
-  );
+  const supabase = await createServerSupabaseClient();
 
   const {
     data: { session },
@@ -107,7 +109,7 @@ export default async function DashboardManagementPage() {
         <Card className="md:col-span-2 w-full bg-background text-foreground shadow-sm">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5" /> Quick Stats
+              <Users2 className="h-5 w-5" /> Quick Stats
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -116,7 +118,7 @@ export default async function DashboardManagementPage() {
                 title="Subscribers"
                 value={123}
                 trend={12}
-                icon={<Users className="h-5 w-5 text-muted-foreground" />}
+                icon={<Users2 className="h-5 w-5 text-muted-foreground" />}
               />
               <StatCard
                 title="Total Posts"
@@ -127,13 +129,13 @@ export default async function DashboardManagementPage() {
               <StatCard
                 title="Collectives"
                 value={ownedCollectives?.length || 0}
-                icon={<Library className="h-5 w-5 text-muted-foreground" />}
+                icon={<BookOpen className="h-5 w-5 text-muted-foreground" />}
               />
               <StatCard
                 title="Avg. Open Rate"
                 value="45%"
                 trend={-2}
-                icon={<MailOpen className="h-5 w-5 text-muted-foreground" />}
+                icon={<Mail className="h-5 w-5 text-muted-foreground" />}
               />
             </div>
           </CardContent>
@@ -151,7 +153,7 @@ export default async function DashboardManagementPage() {
               <div className="flex flex-wrap gap-2">
                 <Button asChild size="sm">
                   <Link href="/dashboard/new-personal-post">
-                    <PlusCircle className="h-4 w-4 mr-2" /> Write New Post
+                    <Plus className="h-4 w-4 mr-2" /> Write New Post
                   </Link>
                 </Button>
                 <Button asChild variant="outline" size="sm">
@@ -172,7 +174,7 @@ export default async function DashboardManagementPage() {
                   <div className="divide-y divide-border">
                     {personalPosts
                       .slice(0, MAX_RECENT_PERSONAL_POSTS_DISPLAY)
-                      .map((post) => (
+                      .map((post: PersonalPost) => (
                         <RecentPostRow
                           key={post.id}
                           id={post.id}
@@ -211,20 +213,20 @@ export default async function DashboardManagementPage() {
         <Card className="w-full bg-background text-foreground shadow-sm">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Library className="h-5 w-5" /> My Owned Collectives
+              <BookOpen className="h-5 w-5" /> My Owned Collectives
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-center justify-between gap-2 pt-4 w-full">
               <Button asChild size="sm">
                 <Link href="/dashboard/collectives/new">
-                  <PlusCircle className="h-4 w-4 mr-2" /> Create Collective
+                  <Plus className="h-4 w-4 mr-2" /> Create Collective
                 </Link>
               </Button>
             </div>
             {ownedCollectives && ownedCollectives.length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full mt-4">
-                {ownedCollectives.map((collective) => (
+                {ownedCollectives.map((collective: OwnedCollective) => (
                   <Card
                     key={collective.id}
                     className="flex flex-col min-w-[220px] w-full"
@@ -249,7 +251,7 @@ export default async function DashboardManagementPage() {
               </div>
             ) : (
               <Alert className="mt-4">
-                <AlertTriangle className="h-4 w-4" />
+                <AlertCircle className="h-4 w-4" />
                 <AlertTitle>No Collectives Yet</AlertTitle>
                 <AlertDescription>
                   You don&apos;t own any collectives. Click &quot;Create

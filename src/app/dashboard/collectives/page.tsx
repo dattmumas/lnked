@@ -1,10 +1,9 @@
-import { cookies } from "next/headers";
-import { createServerClient } from "@supabase/ssr";
-import type { Database } from "@/lib/database.types";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { Database } from "@/lib/database.types";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { PlusCircle } from "lucide-react";
+import { Plus } from "lucide-react";
 import DashboardCollectiveCard, {
   CollectiveMemberRole,
 } from "@/components/app/dashboard/collectives/DashboardCollectiveCard";
@@ -17,25 +16,13 @@ interface JoinedCollectiveMembership {
 }
 
 // Extend CollectiveRow for owned collectives to include subscriber count
-interface OwnedCollectiveWithStats extends CollectiveRow {
-  subscriptions: { count: number }[] | null; // Supabase returns count as an array
-}
+type OwnedCollectiveWithStats =
+  Database["public"]["Tables"]["collectives"]["Row"] & {
+    subscriptions: { count: number }[] | null; // Supabase returns count as an array
+  };
 
 export default async function MyCollectivesPage() {
-  const cookieStore = await cookies();
-  const supabase = createServerClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value;
-        },
-        set() {},
-        remove() {},
-      },
-    }
-  );
+  const supabase = await createServerSupabaseClient();
 
   const {
     data: { session },
@@ -92,7 +79,8 @@ export default async function MyCollectivesPage() {
 
   const joinedCollectives: JoinedCollectiveMembership[] =
     (joinedMembershipsData?.filter(
-      (member) => member.collective?.owner_id !== userId
+      (member: JoinedCollectiveMembership) =>
+        member.collective?.owner_id !== userId
     ) as JoinedCollectiveMembership[]) || [];
 
   const hasCollectives =
@@ -105,7 +93,7 @@ export default async function MyCollectivesPage() {
         <h1 className="text-2xl font-serif font-semibold">My Collectives</h1>
         <Button asChild size="sm" className="w-full md:w-auto">
           <Link href="/dashboard/collectives/new">
-            <PlusCircle className="h-4 w-4 mr-2" /> Create New Collective
+            <Plus className="h-4 w-4 mr-2" /> Create New Collective
           </Link>
         </Button>
       </div>
@@ -135,7 +123,7 @@ export default async function MyCollectivesPage() {
         <section>
           <h2 className="text-xl font-semibold mb-4">Collectives I Own</h2>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {ownedCollectives.map((collective) => {
+            {ownedCollectives.map((collective: OwnedCollectiveWithStats) => {
               const subscriberCount = collective.subscriptions?.[0]?.count || 0;
               // Note: This assumes all subscriptions are active. For accuracy, filter by status='active'.
               // If subscriptions is null or empty array, count is 0.
@@ -162,7 +150,7 @@ export default async function MyCollectivesPage() {
             Collectives I Contribute To
           </h2>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {joinedCollectives.map((membership) => (
+            {joinedCollectives.map((membership: JoinedCollectiveMembership) => (
               <DashboardCollectiveCard
                 key={membership.id}
                 collective={membership.collective}

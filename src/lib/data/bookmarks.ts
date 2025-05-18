@@ -1,4 +1,5 @@
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import type { Database } from "@/lib/database.types";
 
 interface ToggleBookmarkArgs {
   postId: string;
@@ -6,7 +7,7 @@ interface ToggleBookmarkArgs {
 }
 
 export async function toggleBookmark({ postId, userId }: ToggleBookmarkArgs) {
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
   // Check if bookmark exists
   const { data: existing } = await supabase
     .from("post_bookmarks")
@@ -37,7 +38,7 @@ export async function toggleBookmark({ postId, userId }: ToggleBookmarkArgs) {
 }
 
 export async function getBookmarksForUser(userId: string) {
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
   const { data, error } = await supabase
     .from("post_bookmarks")
     .select(`post_id, created_at, posts:posts(*)`)

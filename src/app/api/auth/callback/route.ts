@@ -4,7 +4,7 @@ import { NextResponse } from "next/server";
 
 export async function POST(request: Request) {
   const { event, session } = await request.json();
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
 
   if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
     await supabase.auth.setSession(session);

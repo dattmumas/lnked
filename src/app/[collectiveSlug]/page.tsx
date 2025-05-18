@@ -1,5 +1,5 @@
-import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { notFound } from "next/navigation";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { redirect } from "next/navigation";
 import PostCard from "@/components/app/posts/molecules/PostCard";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
@@ -11,7 +11,7 @@ export default async function Page({
   params: Promise<{ collectiveSlug: string }>;
 }) {
   const { collectiveSlug } = await params;
-  const supabase = await createSupabaseServerClient();
+  const supabase = createServerSupabaseClient();
 
   const {
     data: { user },
@@ -29,7 +29,7 @@ export default async function Page({
       `Error fetching collective ${collectiveSlug}:`,
       collectiveError
     );
-    notFound(); // Or redirect to a generic error page or a 404 page
+    redirect("/not-found");
   }
 
   // Fetch posts for this collective using denormalized like/dislike counts
@@ -48,8 +48,16 @@ export default async function Page({
     // Decide how to handle this - e.g., show an error message or empty state
   }
 
+  type RawPost = {
+    id: string;
+    title: string;
+    like_count?: number | null;
+    dislike_count?: number | null;
+    [key: string]: unknown;
+  };
+
   const posts =
-    postsData?.map((p) => ({
+    postsData?.map((p: RawPost) => ({
       ...p,
       like_count: p.like_count ?? 0,
       dislike_count: p.dislike_count ?? 0,
@@ -101,7 +109,7 @@ export default async function Page({
       <main>
         {posts && posts.length > 0 ? (
           <div className="grid gap-8">
-            {posts.map((post) => (
+            {posts.map((post: RawPost) => (
               <PostCard
                 key={post.id}
                 post={post}

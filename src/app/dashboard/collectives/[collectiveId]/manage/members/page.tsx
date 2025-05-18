@@ -1,7 +1,6 @@
-import { cookies } from "next/headers";
-import { createServerClient, type CookieOptions } from "@supabase/ssr";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
 import type { Database, Tables } from "@/lib/database.types";
-import { notFound, redirect } from "next/navigation";
+import { redirect } from "next/navigation";
 import Link from "next/link";
 import ManageMembersClientUI from "./ManageMembersClientUI"; // New client component
 
@@ -15,38 +14,7 @@ export default async function ManageCollectiveMembersPage({
   params: { collectiveId: string };
 }) {
   const { collectiveId } = params;
-  const cookieStore = await cookies();
-  const supabase = createServerClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value;
-        },
-        set(name: string, value: string, options: CookieOptions) {
-          try {
-            cookieStore.set({ name, value, ...options });
-          } catch (e) {
-            console.warn(
-              "Failed to set cookie in Server Component for manage members page",
-              e
-            );
-          }
-        },
-        remove(name: string, options: CookieOptions) {
-          try {
-            cookieStore.set({ name, value: "", ...options });
-          } catch (e) {
-            console.warn(
-              "Failed to remove cookie in Server Component for manage members page",
-              e
-            );
-          }
-        },
-      },
-    }
-  );
+  const supabase = createServerSupabaseClient();
 
   const {
     data: { user: currentUser },
@@ -68,7 +36,7 @@ export default async function ManageCollectiveMembersPage({
       `Error fetching collective ${collectiveId} for member management:`,
       collectiveError?.message
     );
-    notFound();
+    redirect("/not-found");
   }
 
   // Permission check: Only owner can manage members (for now, can be expanded to admin role members)
@@ -77,7 +45,7 @@ export default async function ManageCollectiveMembersPage({
       `User ${currentUser.id} attempted to manage members for collective ${collectiveId} without ownership.`
     );
     // redirect('/dashboard'); // Or a more specific unauthorized page
-    notFound();
+    redirect("/not-found");
   }
 
   const { data: members, error: membersError } = await supabase

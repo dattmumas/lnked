@@ -1,7 +1,5 @@
-import { cookies } from "next/headers";
-import { createServerClient } from "@supabase/ssr";
-import type { Database } from "@/lib/database.types";
-import { redirect, notFound } from "next/navigation";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { redirect } from "next/navigation";
 import EditCollectiveSettingsForm from "./EditCollectiveSettingsForm"; // Client component for the form
 
 export default async function CollectiveSettingsPage({
@@ -10,12 +8,7 @@ export default async function CollectiveSettingsPage({
   params: { collectiveId: string };
 }) {
   const { collectiveId } = params;
-  const cookieStore = await cookies();
-  const supabase = createServerClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    { cookies: cookieStore }
-  );
+  const supabase = createServerSupabaseClient();
 
   const {
     data: { user: authUser },
@@ -37,7 +30,7 @@ export default async function CollectiveSettingsPage({
       `Error fetching collective ${collectiveId} for settings:`,
       collectiveError?.message
     );
-    notFound();
+    redirect("/error");
   }
 
   // Authorization: Only owner can edit settings
@@ -46,7 +39,7 @@ export default async function CollectiveSettingsPage({
       `User ${authUser.id} attempted to access settings for collective ${collective.id} without ownership.`
     );
     // Or redirect to an unauthorized page or the dashboard
-    notFound();
+    redirect("/unauthorized");
   }
 
   const defaultValues = {

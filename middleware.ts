@@ -1,52 +1,43 @@
-"use server";
-
-import { NextResponse } from "next/server";
-import type { NextRequest } from "next/server";
-import { createServerClient } from "@supabase/ssr";
+import { NextResponse, type NextRequest } from "next/server";
+import { createServerClient, type CookieOptions } from "@supabase/ssr";
 
 export async function middleware(req: NextRequest) {
-  // Only run on dashboard routes
-  if (!req.nextUrl.pathname.startsWith("/dashboard")) {
-    return NextResponse.next();
-  }
+  const { pathname } = req.nextUrl;
+  const wantsDashboard = pathname.startsWith("/dashboard");
+  const isAuthPage = pathname === "/sign-in" || pathname === "/sign-up";
+
+  if (!wantsDashboard && !isAuthPage) return NextResponse.next();
 
   const res = NextResponse.next();
+
+  // Minimal cookie adapter: read-only
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
-      getRequestHeader: (key: string) => req.headers.get(key) ?? undefined,
       cookies: {
-        get: (key: string) => req.cookies.get(key)?.value,
-        set: (key: string, value: string, options: any) => {
-          res.cookies.set({ name: key, value, ...options });
+        get(name: string) {
+          return req.cookies.get(name)?.value;
         },
-        remove: (key: string, options: any) => {
-          res.cookies.set({
-            name: key,
-            value: "",
-            ...options,
-            expires: new Date(0),
-          });
-        },
+        // no-ops – Supabase won't call these in middleware after we read session
+        set(_name: string, _value: string, _opts?: CookieOptions) {},
+        remove(_name: string, _opts?: CookieOptions) {},
       },
     }
   );
+
   const {
     data: { session },
   } = await supabase.auth.getSession();
 
-  if (!session) {
-    const redirectUrl = new URL("/sign-in", req.url);
-    redirectUrl.searchParams.set("redirect", req.nextUrl.pathname);
-    return NextResponse.redirect(redirectUrl, { status: 302 });
+  if (!session && wantsDashboard) {
+    const url = req.nextUrl.clone();
+    url.pathname = "/sign-in";
+    url.searchParams.set("redirect", pathname);
+    return NextResponse.redirect(url);
   }
 
-  if (
-    session &&
-    (req.nextUrl.pathname.startsWith("/sign-in") ||
-      req.nextUrl.pathname.startsWith("/sign-up"))
-  ) {
+  if (session && isAuthPage) {
     const url = req.nextUrl.clone();
     url.pathname = "/dashboard";
     return NextResponse.redirect(url);
@@ -56,5 +47,5 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/dashboard/:path*"],
+  matcher: ["/dashboard/:path*", "/sign-in", "/sign-up"],
 };
