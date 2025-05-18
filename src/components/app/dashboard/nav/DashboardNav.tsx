@@ -8,7 +8,7 @@ import React, { useState, useEffect } from "react";
 import { CollectiveSelectorDropdown } from "../molecules/CollectiveSelectorDropdown";
 import { UserMenu } from "../molecules/UserMenu";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
-import type { Database } from "@/lib/database.types";
+import { getCurrentUserProfile } from "@/lib/supabase/actions";
 import { SidebarNav } from "../molecules/SidebarNav";
 import * as Sheet from "@radix-ui/react-dialog";
 
@@ -43,25 +43,44 @@ export function DashboardNav({
   const [sheetOpen, setSheetOpen] = useState<boolean>(false);
 
   useEffect(() => {
-    const supabase = createSupabaseBrowserClient();
-    supabase.auth.getUser().then(async ({ data }: { data: any }) => {
-      if (data.user) {
-        const { id, email } = data.user;
-        // Fetch the corresponding profile from the 'users' table
-        const { data: profile } = await supabase
-          .from("users")
-          .select("full_name, avatar_url")
-          .eq("id", id)
-          .single();
-        setUser({
-          email: email ?? undefined,
-          avatar_url: profile?.avatar_url || undefined,
-          full_name: profile?.full_name || undefined,
-        });
-      } else {
-        setUser(null);
+    const fetchUserData = async () => {
+      try {
+        // First try the server action
+        const result = await getCurrentUserProfile();
+
+        if (result?.user) {
+          setUser({
+            email: result.user.email || undefined,
+            avatar_url:
+              result.profile?.avatar_url ||
+              result.user.user_metadata?.avatar_url,
+            full_name:
+              result.profile?.full_name ||
+              result.user.user_metadata?.full_name ||
+              result.user.email?.split("@")[0],
+          });
+          return;
+        }
+
+        // Fall back to client-side auth if server action fails
+        const supabase = createSupabaseBrowserClient();
+        const { data: userData } = await supabase.auth.getUser();
+
+        if (userData?.user) {
+          setUser({
+            email: userData.user.email || undefined,
+            avatar_url: userData.user.user_metadata?.avatar_url,
+            full_name:
+              userData.user.user_metadata?.full_name ||
+              userData.user.email?.split("@")[0],
+          });
+        }
+      } catch (error) {
+        console.error("Error fetching user data:", error);
       }
-    });
+    };
+
+    fetchUserData();
   }, []);
 
   return (

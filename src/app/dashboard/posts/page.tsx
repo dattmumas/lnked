@@ -19,7 +19,7 @@ type PublishingTargetCollective = Pick<
 >;
 
 export default async function MyPostsPage() {
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
 
   const {
     data: { session },

@@ -7,7 +7,6 @@ import AuthForm from "@/components/app/auth/AuthForm";
 
 export default function SignInPage() {
   const router = useRouter();
-  const supabase = createSupabaseBrowserClient();
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -15,18 +14,59 @@ export default function SignInPage() {
     setIsLoading(true);
     setError(null);
 
-    const { error: signInError } = await supabase.auth.signInWithPassword({
-      email: formData.email,
-      password: formData.password,
-    });
+    try {
+      console.log("Attempting sign in for:", formData.email);
+      // Create a fresh client instance for this request
+      const supabase = createSupabaseBrowserClient();
 
-    if (signInError) {
-      setError(signInError.message);
-    } else {
-      router.push("/dashboard");
-      router.refresh(); // Ensure the layout re-renders with the new auth state
+      const { data, error: signInError } =
+        await supabase.auth.signInWithPassword({
+          email: formData.email,
+          password: formData.password,
+        });
+
+      if (signInError) {
+        console.error("Sign in error:", signInError);
+        setError(signInError.message);
+        return;
+      }
+
+      if (!data?.session) {
+        setError("Authentication succeeded but no session was returned");
+        return;
+      }
+
+      console.log("Sign in successful, session established");
+
+      // Verify the session was actually stored
+      const { data: sessionCheck } = await supabase.auth.getSession();
+      console.log("Session verification after login:", !!sessionCheck.session);
+
+      if (!sessionCheck.session) {
+        console.error("Session verification failed - not redirecting");
+        setError("Session was not persisted properly. Please try again.");
+        return;
+      }
+
+      // Ensure the session is set before redirecting
+      router.refresh(); // Force a refresh of the router state
+
+      // Add a longer delay to ensure the session is properly registered
+      // This gives cookies time to be properly set across all contexts
+      setTimeout(() => {
+        console.log("Redirecting to dashboard after successful login");
+        router.push("/dashboard");
+      }, 1000);
+    } catch (err) {
+      console.error("Unexpected error during sign in:", err);
+      setError(
+        typeof err === "object" && err !== null && "message" in err
+          ? String(err.message)
+          : "An unexpected error occurred"
+      );
+    } finally {
+      setIsLoading(false);
     }
-    setIsLoading(false);
   };
 
   return (

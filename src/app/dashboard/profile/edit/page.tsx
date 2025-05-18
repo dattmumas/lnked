@@ -1,8 +1,9 @@
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import EditProfileForm from "./EditProfileForm"; // Client component for the form
+import { redirect } from "next/navigation";
 
 export default async function EditProfilePage() {
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
 
   const {
     data: { user: authUser }, // Renamed to authUser to avoid conflict
