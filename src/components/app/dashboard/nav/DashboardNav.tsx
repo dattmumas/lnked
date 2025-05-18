@@ -7,7 +7,7 @@ import type { CollectiveSummary } from "../template/dashboard-shell";
 import React, { useState, useEffect } from "react";
 import { CollectiveSelectorDropdown } from "../molecules/CollectiveSelectorDropdown";
 import { UserMenu } from "../molecules/UserMenu";
-import { createBrowserClient } from "@supabase/auth-helpers-nextjs";
+import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import type { Database } from "@/lib/database.types";
 import { SidebarNav } from "../molecules/SidebarNav";
 import * as Sheet from "@radix-ui/react-dialog";
@@ -43,7 +43,7 @@ export function DashboardNav({
   const [sheetOpen, setSheetOpen] = useState<boolean>(false);
 
   useEffect(() => {
-    const supabase = createBrowserClient<Database>();
+    const supabase = createSupabaseBrowserClient();
     supabase.auth.getUser().then(async ({ data }: { data: any }) => {
       if (data.user) {
         const { id, email } = data.user;

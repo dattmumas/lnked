@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { getStripe } from "@/lib/stripe";
 import Stripe from "stripe"; // Explicitly import Stripe namespace
 import { supabaseAdmin } from "@/lib/supabaseAdmin"; // Updated import path
@@ -23,7 +22,7 @@ interface StripeErrorLike {
 }
 
 export async function POST(request: Request) {
-  const supabase = createRouteHandlerClient<Database>({ cookies });
+  const supabase = createServerSupabaseClient();
 
   const stripe = getStripe();
   if (!stripe) {
