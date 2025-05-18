@@ -3,7 +3,7 @@
 import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
 import type { Database, Enums } from "@/lib/database.types";
-import { stripe } from "@/lib/stripe";
+import { getStripe } from "@/lib/stripe";
 import { revalidatePath } from "next/cache";
 
 interface SubscriptionStatusResult {
@@ -102,6 +102,8 @@ export async function unsubscribeFromEntity(
 
   try {
     // Option 1: Cancel at period end (recommended)
+    const stripe = getStripe();
+    if (!stripe) throw new Error("Stripe SDK not initialized");
     const updatedStripeSubscription = await stripe.subscriptions.update(
       stripeSubscriptionId,
       {
@@ -114,7 +116,7 @@ export async function unsubscribeFromEntity(
     );
 
     // Option 2: Delete immediately (more destructive)
-    // await stripe.subscriptions.del(stripeSubscriptionId);
+    // await getStripe().subscriptions.del(stripeSubscriptionId);
     // console.log('Stripe subscription deleted immediately:', stripeSubscriptionId);
 
     // Webhooks should handle the DB update. For immediate UI feedback, client can update optimistically.

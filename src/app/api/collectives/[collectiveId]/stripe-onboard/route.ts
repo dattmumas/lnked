@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
@@ -5,11 +6,8 @@ import { getStripe } from "@/lib/stripe";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import type { Database } from "@/lib/database.types";
 
-export async function POST(
-  req: Request,
-  { params }: { params: { collectiveId: string } }
-) {
-  const collectiveId = params.collectiveId;
+export async function POST(req: Request, context: any) {
+  const collectiveId = context.params.collectiveId;
   if (!collectiveId) {
     return NextResponse.json(
       { error: "Missing collectiveId" },
@@ -18,11 +16,17 @@ export async function POST(
   }
 
   // Auth: get user session
-  const cookieStore = await cookies();
+  const cookieStore = cookies() as any;
   const supabase = createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { cookies: () => cookieStore }
+    {
+      cookies: {
+        get: cookieStore.get.bind(cookieStore),
+        set: () => {}, // no-op for SSR
+        remove: () => {}, // no-op for SSR
+      },
+    }
   );
   const {
     data: { session },

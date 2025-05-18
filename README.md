@@ -1,6 +1,6 @@
 # Lnked - Collaborative Newsletter Platform (MVP)
 
-Lnked is a collaborative newsletter platform built with Next.js 13 (App Router), Supabase, Stripe, Tailwind CSS, and Shadcn UI.
+Lnked is a collaborative newsletter platform built with Next.js 13 (App Router), Supabase, Stripe, and Tailwind CSS.
 
 This MVP (Minimum Viable Product) focuses on core features: public collective pages with posts, an authenticated writer dashboard, Supabase-secured CRUD, Stripe single-tier subscriptions, and a basic "like" reaction.
 
@@ -9,7 +9,7 @@ This MVP (Minimum Viable Product) focuses on core features: public collective pa
 - **Framework**: [Next.js 13](https://nextjs.org/) (App Router, React Server Components, Route Handlers)
 - **Database & Auth**: [Supabase](https://supabase.io/) (PostgreSQL, Auth, RLS, Edge Functions)
 - **Payments**: [Stripe](https://stripe.com/) (Checkout, Webhooks)
-- **UI**: [Tailwind CSS](https://tailwindcss.com/) + [Shadcn UI](https://ui.shadcn.com/)
+- **UI**: [Tailwind CSS](https://tailwindcss.com/)
 - **Language**: [TypeScript](https://www.typescriptlang.org/)
 
 ## Project Structure
@@ -23,7 +23,7 @@ lnked-project/
 │   │   ├── [collectiveSlug]/    # Public collective & post pages
 │   │   └── api/                 # API Route Handlers
 │   ├── components/              # Reusable UI components
-│   │   └── ui/                  # Shadcn UI components
+│   │   └── ui/                  # Custom UI components
 │   ├── lib/                     # Helper modules (Supabase, Stripe, types, hooks)
 │   │   └── ... (other src files)
 │   ├── supabase/
@@ -188,4 +188,5 @@ Row Level Security (RLS) is enabled on all tables to protect data.
 This README provides a starting point. Feel free to expand it as the project grows.
 
 # lnked
+
 # lnked

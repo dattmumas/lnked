@@ -160,8 +160,8 @@
   flex-wrap: wrap;
   align-items: center;
   padding: 8px 12px;
-  background: #f9f9f9;
-  border-bottom: 1px solid #e0e0e0;
+  background: var(--background);
+  border-bottom: 1px solid hsl(var(--border));
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
   position: sticky;
   top: 0;
@@ -176,13 +176,13 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: #555;
+  color: hsl(var(--muted-foreground));
 }
 .toolbar-item.spaced {
   margin-right: 8px;
 }
 .toolbar-item.active {
-  background: #d0d0d0;
+  background: hsl(var(--muted));
 }
 .toolbar-item:disabled {
   opacity: 0.4;
@@ -191,7 +191,7 @@
 .divider {
   width: 1px;
   height: 20px;
-  background-color: #ccc;
+  background-color: hsl(var(--border));
   margin: 0 8px;
 }
 .toolbar-item .format {
@@ -206,13 +206,13 @@
   min-height: 150px;
   height: 100%;
   box-sizing: border-box;
-  background: #fff;
+  background: var(--background);
 }
 .editor-placeholder {
   position: absolute;
   top: 12px;
   left: 12px;
-  color: #888;
+  color: hsl(var(--muted-foreground));
   font-style: italic;
   pointer-events: none;
 }
@@ -224,27 +224,30 @@
   font-size: 1.5em;
   font-weight: bold;
   margin: 0;
+  color: hsl(var(--foreground));
 }
 .editor-heading-h2 {
   font-size: 1.25em;
   font-weight: bold;
   margin: 0;
+  color: hsl(var(--foreground));
 }
 .editor-heading-h3 {
   font-size: 1.1em;
   font-weight: bold;
   margin: 0;
+  color: hsl(var(--foreground));
 }
 .editor-quote {
   margin: 0;
   padding-left: 1em;
-  border-left: 4px solid #ccc;
-  color: #666;
+  border-left: 4px solid hsl(var(--border));
+  color: hsl(var(--muted-foreground));
 }
 .editor-code {
   margin: 0;
   padding: 4px;
-  background: #f2f2f2;
+  background: hsl(var(--muted));
   font-family: monospace;
   white-space: pre;
   border-radius: 4px;

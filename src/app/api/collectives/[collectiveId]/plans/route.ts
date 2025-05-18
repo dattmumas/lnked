@@ -14,11 +14,9 @@ interface PlanRequestBody {
   description?: string;
 }
 
-export async function POST(
-  req: Request,
-  { params }: { params: { collectiveId: string } }
-) {
-  const collectiveId = params.collectiveId;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function POST(req: Request, context: any) {
+  const collectiveId = context.params.collectiveId;
   if (!collectiveId) {
     return NextResponse.json(
       { error: "Missing collectiveId" },

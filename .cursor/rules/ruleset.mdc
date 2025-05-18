@@ -3,134 +3,270 @@ description:
 globs: 
 alwaysApply: true
 ---
-## **Cursor Refactor Rule Set — Lnked Codebase**
+Section 1: Global Conventions
 
-Use the following rules as the canonical guide when applying automated edits or generating new code for the **Lnked** repository.
-Rules are written in the RFC 2119 sense: **MUST**, **SHOULD**, **MAY**, **MUST NOT**.
+#
 
----
+Rule
 
-### 1. Global Conventions
+1.1
 
-| #   | Rule                                                                                                                                                                                                      |
-| --- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1.1 | **MUST** adopt Prettier + ESLint auto‑fix. Code left with lint errors or Prettier diffs is unacceptable.                                                                                                  |
-| 1.2 | **MUST** use **PascalCase** for React components and **camelCase** for variables/functions. Files in `src/components` and `src/lib` **MUST** match component or module names (e.g. `CollectiveCard.tsx`). |
-| 1.3 | **MUST NOT** leave `TODO`, commented‑out blocks, or Next.js boilerplate text in committed code. Remove or convert to GitHub Issues.                                                                       |
-| 1.4 | Functions or React components **SHOULD NOT** exceed **50 logical lines**. Extract helpers to `src/lib/**` or child components.                                                                            |
+MUST adopt Prettier + ESLint auto‑fix. Code left with lint errors or Prettier diffs is unacceptable.
 
----
+1.2
 
-### 2. Dependency & SDK Usage
+MUST use PascalCase for React components and camelCase for variables/functions. File names must match exports.
 
-| #   | Rule                                                                                                                                       |
-| --- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| 2.1 | **MUST** install and use `@supabase/supabase-js` (browser) and `@supabase/ssr` (server/Edge) instead of manual `fetch` calls.              |
-| 2.2 | **MUST** install and use **Stripe** official SDK in all webhook handlers (Edge or Next API). Manual HMAC verification **MUST NOT** remain. |
-| 2.3 | **SHOULD** keep all dependencies ≤ 30 days behind latest stable release, except when pinned to LTS for breakage.                           |
+1.3
 
----
+MUST NOT leave TODO, commented‑out blocks, or boilerplate in committed code. Convert to GitHub Issues or remove.
 
-### 3. File & Folder Structure
+1.4
 
-| #   | Rule                                                                                                                             |
-| --- | -------------------------------------------------------------------------------------------------------------------------------- |
-| 3.1 | Pages under `/dashboard/**` **MUST** share `dashboard/layout.tsx` with a sidebar nav. Public pages **MUST** use the root layout. |
-| 3.2 | Duplicate logic (e.g. auth forms, webhook handlers) **MUST** be consolidated. A single source of truth per concern.              |
-| 3.3 | **MUST** introduce `src/components/ui/` for reusable Shadcn components and `src/components/app/` for domain‑specific UI.         |
+SHOULD NOT allow functions or React components to exceed 50 logical lines. Extract helpers to src/lib/** or child components.
 
----
+Section 2: Build, CI, and Quality
 
-### 4. React & Next 13/14 App Router
+#
 
-| #   | Rule                                                                                                                      |
-| --- | ------------------------------------------------------------------------------------------------------------------------- |
-| 4.1 | Any component that reads/writes local state, uses effects, or handles events **MUST** start with `"use client"`.          |
-| 4.2 | Server data fetching **SHOULD** occur in Route Handlers (`src/app/api/**`) or Server Components, returning typed objects. |
-| 4.3 | **MUST** implement `middleware.ts` that redirects unauthenticated users away from `/dashboard/**`.                        |
+Rule
 
----
+2.1
 
-### 5. Theming & Styling
+MUST ensure pnpm run build passes before every commit or PR.
 
-| #   | Rule                                                                                                                                                                   |
-| --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 5.1 | **MUST** remove `@theme inline` hack in `globals.css`. Themes **MUST** be driven by CSS variables scoped by class on `<html>` (e.g. `.theme-default`, `.theme-ocean`). |
-| 5.2 | Collective‑level theme values (primary color, cover image) **MUST** be loaded in `collective/[slug]/layout.tsx` and applied via CSS variables.                         |
-| 5.3 | Tailwind arbitrary values **SHOULD** be replaced by config‑level tokens where possible (`theme.extend.spacing`, `colors`).                                             |
+2.2
 
----
+MUST run pnpm lint and pnpm test in CI. CI must enforce: install → lint → test → build.
 
-6. Data Model (Adjusted to ERD)
-#	Rule
-6.1	collective_members exists. Ensure the role column uses an ENUM collective_member_role with at least owner, editor, contributor. Add CHECK or migrate data if enum missing.
-6.2	MUST enforce unique composite index (collective_id, user_id) on collective_members to prevent duplicates.
-6.3	MUST add column status subscription_status to posts table (draft, active, removed) or equivalent soft‑delete flag to enable moderation.
-6.4	SHOULD add column collective_id → products (nullable) to map Stripe products directly to their collective
-▪ automated migration: back‑fill existing products if they represent global plans.
-6.5	subscriptions table already supports generic targets via (target_entity_type, target_entity_id). MUST validate that for collective subscriptions:
-▪ target_entity_type = 'collective'
-▪ target_entity_id = collectives.id
-▪ stripe_price_id matches a prices.id that references a product tied to the same collective.
-6.6	MUST index the following FKs for performance:
-▪ posts.collective_id, posts.author_id
-▪ likes.post_id, likes.user_id
-▪ follows.follower_id, follows.following_id
-▪ interactions.entity_id, interactions.user_id
-▪ subscriptions.user_id, subscriptions.target_entity_id
-6.7	Add Postgres materialized view or function to expose post_like_count to avoid N + 1 aggregate queries in feeds.
-6.8	SHOULD add partial index on recommendations (user_id, score DESC) WHERE score > 0.2 to accelerate personalized suggestions.
-6.9	MAY create search_documents view combining collectives.name, collectives.tags, users.full_name, posts.title using to_tsvector for full‑text search.
+2.3
 
+MUST reject any PR that fails lint, test, or build. Commits must not merge to main if CI fails.
 
-7. Security & Validation (Updated)
-#	Rule
-7.1	MUST audit RLS for all new/adjusted tables:
-▪ collective_members — only owner can promote roles; members can remove self.
-▪ posts — author_id and collective_members (role IN owner/editor) govern update/delete.
-7.2	MUST validate ENUM casts on inputs (interaction_type, subscription_status, etc.) to prevent injection of illegal text values.
-7.3	SHOULD hash any PII placed in metadata JSONB or store outside if possible.
+Section 3: Component & Directory Structure
 
----
+#
 
-### 8. Performance & Caching
+Rule
 
-| #   | Rule                                                                                                                                         |
-| --- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| 8.1 | Data‑heavy pages **MUST** use `fetch` with `{ next: { revalidate: <seconds> } }` or Supabase’s `cached()` helper to avoid double fetches.    |
-| 8.2 | Like counts and similar aggregates **SHOULD** be cached or denormalized into the `posts` table; avoid N+1 queries.                           |
-| 8.3 | Long‑running or batched tasks (e.g., payout calculations) **MUST** run in Supabase Edge Functions or cron‑triggered jobs, not in API routes. |
-8.4	MUST use Supabase storage CDN or Vercel blob storage for media; database UUIDs should reference files, not store blobs.
+3.1
 
----
+MUST place reusable UI in src/components/ui/.
 
-### 9. Testing & CI
+3.2
 
-| #   | Rule                                                                                                             |
-| --- | ---------------------------------------------------------------------------------------------------------------- |
-| 9.1 | **MUST** add at least one Playwright (or Cypress) e2e test covering: sign‑up → create collective → publish post. |
-| 9.2 | **MUST** configure GitHub Actions workflow: `pnpm install`, `pnpm lint`, `pnpm test`, then `pnpm build`.         |
-| 9.3 | Commits failing lint, build, or test steps **MUST NOT** merge to `main`.                                         |
+MUST place domain-specific components (e.g. posts, collectives) in src/components/app/.
 
----
+3.3
 
-### 10. Error Handling & Logging
+MUST colocate styles via Tailwind classes in the component. No standalone CSS files or style.module.css.
 
-| #    | Rule                                                                                                                               |
-| ---- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| 10.1 | External calls (Supabase, Stripe) **MUST** be wrapped in `try/catch`; on error log with `console.error` or `@vercel/og` edge logs. |
-| 10.2 | User‑visible errors **SHOULD** render via Shadcn `<Alert />` rather than silent failure or bare `alert()`.                         |
-| 10.3 | Errors caught in API routes **MUST** return JSON `{ error: "message" }` with appropriate HTTP status.                              |
+3.4
 
----
+MUST use dashboard layout in /dashboard/** via dashboard/layout.tsx. Public pages use the root layout.
 
-**Implementation priority:**
+Section 4: Tailwind & Styling Rules
 
-1. **Section 2** (SDK + dependency correctness)
-2. **Section 3** (structure consolidation)
-3. **Section 4 & 5** (functional UI + theme fixes)
-4. **Section 6** (data model for collaboration and revenue)
-5. Remaining sections in numeric order
+#
 
-Adhering to this rule set will unlock reliable agentic refactoring, reduce duplicate logic, enforce secure patterns, and prepare the codebase for social‑scale collaboration and revenue sharing.
+Rule
 
+4.1
+
+MUST NOT add tailwindcss to PostCSS directly. Use @tailwindcss/postcss + autoprefixer only.
+
+4.2
+
+MUST define design tokens as CSS variables under :root and .dark in src/app/globals.css. Use HSL format.
+
+4.3
+
+MUST theme Tailwind using hsl(var(--token) / <alpha-value>). No hex codes or raw HSL in components.
+
+4.4
+
+MUST use utility-first classes for all styling. Use class-variance-authority for variants.
+
+4.5
+
+MUST NOT use style={{...}}, except for computed dynamic values.
+
+4.6
+
+MUST NOT use CSS-in-JS or third-party UI kits. ShadCN, Chakra, MUI are banned.
+
+4.7
+
+MUST scope dark mode theming to .dark class (managed by next-themes).
+
+4.8
+
+MUST apply vertical rhythm and layout spacing via Tailwind spacing scale only (e.g. multiples of 4px or 8px).
+
+Section 5: Typography & Layout
+
+#
+
+Rule
+
+5.1
+
+MUST use semantic heading tags (<h1>, <h2>, etc.) and Tailwind text sizes.
+
+5.2
+
+MUST use @tailwindcss/typography plugin (prose) for longform content (posts, newsletters).
+
+5.3
+
+SHOULD NOT hardcode pixel font sizes. Use theme-based typography scale.
+
+5.4
+
+MUST NOT use box shadows on Cards unless specified in design tokens.
+
+Section 6: Dark Mode
+
+#
+
+Rule
+
+6.1
+
+MUST toggle dark mode via .dark class.
+
+6.2
+
+MUST style with bg-*, text-*, and token-based Tailwind classes that map to theme CSS variables.
+
+6.3
+
+MUST NOT use color logic or manual theme detection in components.
+
+Section 7: Icons & Accessibility
+
+#
+
+Rule
+
+7.1
+
+MUST use lucide-react icons only. No other icon libraries.
+
+7.2
+
+MUST label all meaningful icons with aria-label or adjacent visible text.
+
+7.3
+
+MUST use .size-4 or w-4 h-4 to standardize icon size.
+
+7.4
+
+MUST use semantic HTML (<button>, <main>, <form>) and accessible components (roles, labels, etc.).
+
+Section 8: Supabase & Stripe SDKs
+
+#
+
+Rule
+
+8.1
+
+MUST use @supabase/supabase-js (client) and @supabase/ssr (server/Edge).
+
+8.2
+
+MUST use Stripe official SDKs. Manual HMAC or custom webhook signing logic is banned.
+
+8.3
+
+MUST link all products, prices, and subscriptions via collective_id.
+
+8.4
+
+MUST validate stripe_price_id maps to a price that belongs to the correct collective.
+
+Section 9: Data Model
+
+#
+
+Rule
+
+9.1
+
+collective_members must enforce unique (collective_id, user_id) index. Use ENUM role.
+
+9.2
+
+posts table must include ENUM status column (draft, active, removed) or equivalent soft-delete flag.
+
+9.3
+
+subscriptions must enforce consistency across target_entity_type, target_entity_id, and stripe_price_id → product.collective_id.
+
+9.4
+
+SHOULD add materialized views for common aggregates (post_like_count).
+
+9.5
+
+SHOULD index foreign keys: posts.collective_id, likes.post_id, follows.follower_id, subscriptions.user_id.
+
+Section 10: Security
+
+#
+
+Rule
+
+10.1
+
+MUST restrict posts edit/delete to authors or collective editors via RLS.
+
+10.2
+
+MUST restrict collective_members role updates to owners only.
+
+10.3
+
+MUST validate all ENUM inputs server-side.
+
+10.4
+
+MUST NOT log or expose PII, secrets, or tokens.
+
+Section 11: Performance
+
+#
+
+Rule
+
+11.1
+
+MUST use fetch with { next: { revalidate: N } } or Supabase’s cached() helper to avoid duplicate fetching.
+
+11.2
+
+SHOULD denormalize counts (e.g. like totals) into posts table or use materialized views.
+
+11.3
+
+MUST use Supabase storage or Vercel Blob for media. DB must only store references, not raw files.
+
+Section 12: Testing & CI
+
+#
+
+Rule
+
+12.1
+
+MUST add Playwright e2e test covering: sign‑up → create collective → publish post.
+
+12.2
+
+MUST configure GitHub Actions: pnpm install, pnpm lint, pnpm test, pnpm build.
+
+12.3
+
+MUST block any PR that fails lint, test, or build from merging to main.

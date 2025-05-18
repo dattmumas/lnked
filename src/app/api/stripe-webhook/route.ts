@@ -25,7 +25,7 @@ export async function POST(req: Request) {
     );
   }
 
-  const sig = headers().get("stripe-signature");
+  const sig = (headers() as unknown as Headers).get("stripe-signature");
   const rawBody = await req.text();
 
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;

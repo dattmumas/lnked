@@ -137,22 +137,22 @@ const config: Config = {
               fontSize: "3rem",
               fontWeight: "800",
               lineHeight: "1.1",
-              color: "#1F1F1F",
+              color: "hsl(var(--foreground))",
             },
             h2: {
               fontSize: "2.25rem",
               fontWeight: "700",
               lineHeight: "1.15",
-              color: "#1F1F1F",
+              color: "hsl(var(--foreground))",
             },
             h3: {
               fontSize: "1.5rem",
               fontWeight: "700",
-              color: "#1F1F1F",
+              color: "hsl(var(--foreground))",
             },
             h4: {
               fontWeight: "600",
-              color: "#1F1F1F",
+              color: "hsl(var(--foreground))",
             },
             strong: {
               color: "hsl(var(--foreground))",
