@@ -9,30 +9,78 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      agreements: {
+        Row: {
+          agreement_type: Database["public"]["Enums"]["agreement_type"]
+          created_at: string
+          id: string
+          party_a_id: string
+          party_a_type: Database["public"]["Enums"]["member_entity_type"]
+          party_b_id: string
+          party_b_type: Database["public"]["Enums"]["member_entity_type"]
+          status: string
+          stripe_object_id: string | null
+          terms: Json | null
+          updated_at: string
+        }
+        Insert: {
+          agreement_type: Database["public"]["Enums"]["agreement_type"]
+          created_at?: string
+          id?: string
+          party_a_id: string
+          party_a_type: Database["public"]["Enums"]["member_entity_type"]
+          party_b_id: string
+          party_b_type: Database["public"]["Enums"]["member_entity_type"]
+          status?: string
+          stripe_object_id?: string | null
+          terms?: Json | null
+          updated_at?: string
+        }
+        Update: {
+          agreement_type?: Database["public"]["Enums"]["agreement_type"]
+          created_at?: string
+          id?: string
+          party_a_id?: string
+          party_a_type?: Database["public"]["Enums"]["member_entity_type"]
+          party_b_id?: string
+          party_b_type?: Database["public"]["Enums"]["member_entity_type"]
+          status?: string
+          stripe_object_id?: string | null
+          terms?: Json | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       collective_members: {
         Row: {
           collective_id: string
           created_at: string
           id: string
+          member_id: string
+          member_type: Database["public"]["Enums"]["member_entity_type"]
           role: Database["public"]["Enums"]["collective_member_role"]
+          share_percentage: number | null
           updated_at: string
-          user_id: string
         }
         Insert: {
           collective_id: string
           created_at?: string
           id?: string
+          member_id: string
+          member_type?: Database["public"]["Enums"]["member_entity_type"]
           role?: Database["public"]["Enums"]["collective_member_role"]
+          share_percentage?: number | null
           updated_at?: string
-          user_id: string
         }
         Update: {
           collective_id?: string
           created_at?: string
           id?: string
+          member_id?: string
+          member_type?: Database["public"]["Enums"]["member_entity_type"]
           role?: Database["public"]["Enums"]["collective_member_role"]
+          share_percentage?: number | null
           updated_at?: string
-          user_id?: string
         }
         Relationships: [
           {
@@ -44,7 +92,7 @@ export type Database = {
           },
           {
             foreignKeyName: "collective_members_user_id_fkey"
-            columns: ["user_id"]
+            columns: ["member_id"]
             isOneToOne: false
             referencedRelation: "users"
             referencedColumns: ["id"]
@@ -55,35 +103,47 @@ export type Database = {
         Row: {
           created_at: string
           description: string | null
+          governance_model: string | null
           id: string
           name: string
           owner_id: string
           slug: string
           stripe_account_id: string | null
+          stripe_account_type: string | null
+          stripe_customer_id: string | null
           tags: string[] | null
           tsv: unknown | null
+          updated_at: string | null
         }
         Insert: {
           created_at?: string
           description?: string | null
+          governance_model?: string | null
           id?: string
           name: string
           owner_id: string
           slug: string
           stripe_account_id?: string | null
+          stripe_account_type?: string | null
+          stripe_customer_id?: string | null
           tags?: string[] | null
           tsv?: unknown | null
+          updated_at?: string | null
         }
         Update: {
           created_at?: string
           description?: string | null
+          governance_model?: string | null
           id?: string
           name?: string
           owner_id?: string
           slug?: string
           stripe_account_id?: string | null
+          stripe_account_type?: string | null
+          stripe_customer_id?: string | null
           tags?: string[] | null
           tsv?: unknown | null
+          updated_at?: string | null
         }
         Relationships: [
           {
@@ -650,8 +710,13 @@ export type Database = {
           full_name: string | null
           id: string
           role: string | null
+          stripe_account_id: string | null
+          stripe_account_type: string | null
+          stripe_customer_id: string | null
           tags: string[] | null
+          terms_accepted_at: string | null
           tsv: unknown | null
+          updated_at: string | null
         }
         Insert: {
           bio?: string | null
@@ -659,8 +724,13 @@ export type Database = {
           full_name?: string | null
           id: string
           role?: string | null
+          stripe_account_id?: string | null
+          stripe_account_type?: string | null
+          stripe_customer_id?: string | null
           tags?: string[] | null
+          terms_accepted_at?: string | null
           tsv?: unknown | null
+          updated_at?: string | null
         }
         Update: {
           bio?: string | null
@@ -668,8 +738,13 @@ export type Database = {
           full_name?: string | null
           id?: string
           role?: string | null
+          stripe_account_id?: string | null
+          stripe_account_type?: string | null
+          stripe_customer_id?: string | null
           tags?: string[] | null
+          terms_accepted_at?: string | null
           tsv?: unknown | null
+          updated_at?: string | null
         }
         Relationships: []
       }
@@ -744,6 +819,10 @@ export type Database = {
         Args: { post_id_to_increment: string }
         Returns: undefined
       }
+      is_collective_owner: {
+        Args: { cid: string }
+        Returns: boolean
+      }
       ivfflat_bit_support: {
         Args: { "": unknown }
         Returns: unknown
@@ -802,6 +881,13 @@ export type Database = {
       }
     }
     Enums: {
+      agreement_type:
+        | "subscription"
+        | "one_time_payment"
+        | "revenue_share"
+        | "membership_fee"
+        | "ownership_transfer"
+        | "other"
       collective_member_role: "admin" | "editor" | "author" | "owner"
       interaction_entity_type: "collective" | "post" | "user"
       interaction_type:
@@ -810,6 +896,7 @@ export type Database = {
         | "recommended_interested"
         | "recommended_not_interested"
         | "view"
+      member_entity_type: "user" | "collective"
       post_status_type: "draft" | "active" | "removed"
       price_interval: "month" | "year" | "week" | "day"
       price_type: "recurring" | "one_time"
@@ -938,6 +1025,14 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      agreement_type: [
+        "subscription",
+        "one_time_payment",
+        "revenue_share",
+        "membership_fee",
+        "ownership_transfer",
+        "other",
+      ],
       collective_member_role: ["admin", "editor", "author", "owner"],
       interaction_entity_type: ["collective", "post", "user"],
       interaction_type: [
@@ -947,6 +1042,7 @@ export const Constants = {
         "recommended_not_interested",
         "view",
       ],
+      member_entity_type: ["user", "collective"],
       post_status_type: ["draft", "active", "removed"],
       price_interval: ["month", "year", "week", "day"],
       price_type: ["recurring", "one_time"],
