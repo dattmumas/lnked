@@ -1,78 +1,44 @@
-name: Lnked CI
+# .github/workflows/ci.yml  (or your existing file)
+name: test-and-build
 
-on:
-  push:
-    branches: ["main", "develop"] # Adjust branches as needed
-  pull_request:
-    branches: ["main", "develop"] # Adjust branches as needed
+on: [push, pull_request]
 
 jobs:
   test-and-build:
     runs-on: ubuntu-latest
 
-    defaults:
-      run:
-        working-directory: ./lnked-project # Assuming your project is in this subdirectory
-
     steps:
       - uses: actions/checkout@v4
 
-      - name: Use Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20" # Specify your Node.js version
-          cache: "pnpm"
-          cache-dependency-path: ./lnked-project/pnpm-lock.yaml # Path to your lock file
-
-      - name: Install pnpm
+      # ① Install PNPM (and enable Corepack)
+      - name: Set up PNPM
         uses: pnpm/action-setup@v3
         with:
-          version: 9 # Specify your pnpm version if needed, or let it use latest
-          run_install: false
+          version: 8 # lock to a specific major if you wish
+          run_install: false # we’ll call pnpm install manually
 
-      - name: Get pnpm store directory
-        id: pnpm-cache
-        shell: bash
-        run: |
-          echo "STORE_PATH=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
+      - name: Enable Corepack (makes pnpm available in $PATH)
+        run: corepack enable
 
-      - name: Setup pnpm cache
-        uses: actions/cache@v4
-        with:
-          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
-          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-pnpm-store-
-
-      - name: Install dependencies
+      # ② Install dependencies
+      - name: Install deps
         run: pnpm install --frozen-lockfile
 
-      - name: Run Lint
+      # ③ Lint, test, build
+      - name: Lint
         run: pnpm run lint
 
-      - name: Install Playwright Browsers
-        run: pnpm exec playwright install --with-deps
-        # For PNPM, playwright install needs to be run with pnpm exec or via a script
+      - name: Unit tests
+        run: pnpm run test
 
-      - name: Run E2E Tests
-        run: pnpm exec playwright test
-        # Using pnpm exec to ensure it uses the project's Playwright instance
-        # Add NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY as secrets in GitHub repo settings for tests if needed
-        env:
-          PLAYWRIGHT_BASE_URL: http://localhost:3000 # Make sure this matches your test server if you use webServer
-          # CI: true # Playwright typically detects CI environment automatically
-
-      - name: Build Project
+      - name: Build
         run: pnpm run build
-        env:
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }} # Example secret
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }} # Example secret
-          # Add other necessary build-time env vars from secrets
 
-      - name: Upload Playwright report
-        if: always() # Always run this step to upload report, even if tests fail
+      # ④ (Optional) Upload Playwright report
+      - name: Upload Playwright HTML report
+        if: always() # still upload on failures
         uses: actions/upload-artifact@v4
         with:
           name: playwright-report
-          path: playwright-report/ # Default Playwright HTML report output directory
-          retention-days: 30
+          path: playwright-report/
+          retention-days: 14
