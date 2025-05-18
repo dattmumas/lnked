@@ -113,24 +113,24 @@ export default async function DashboardManagementPage() {
           <CardContent>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 pt-2 w-full">
               <StatCard
-                label="Subscribers"
+                title="Subscribers"
                 value={123}
                 trend={12}
                 icon={<Users className="h-5 w-5 text-muted-foreground" />}
               />
               <StatCard
-                label="Total Posts"
+                title="Total Posts"
                 value={personalPosts?.length || 0}
                 trend={3}
                 icon={<FileText className="h-5 w-5 text-muted-foreground" />}
               />
               <StatCard
-                label="Collectives"
+                title="Collectives"
                 value={ownedCollectives?.length || 0}
                 icon={<Library className="h-5 w-5 text-muted-foreground" />}
               />
               <StatCard
-                label="Avg. Open Rate"
+                title="Avg. Open Rate"
                 value="45%"
                 trend={-2}
                 icon={<MailOpen className="h-5 w-5 text-muted-foreground" />}
@@ -173,7 +173,13 @@ export default async function DashboardManagementPage() {
                     {personalPosts
                       .slice(0, MAX_RECENT_PERSONAL_POSTS_DISPLAY)
                       .map((post) => (
-                        <RecentPostRow key={post.id} post={post} />
+                        <RecentPostRow
+                          key={post.id}
+                          id={post.id}
+                          title={post.title}
+                          status={post.is_public ? "published" : "draft"}
+                          date={post.published_at || post.created_at}
+                        />
                       ))}
                   </div>
                 </CardContent>

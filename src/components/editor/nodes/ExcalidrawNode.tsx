@@ -55,8 +55,8 @@ export class ExcalidrawNode extends DecoratorNode<JSX.Element> {
     el.className = "excalidraw-node";
     el.style.minHeight = "300px";
     el.style.width = "100%";
-    el.style.background = "#f8fafc";
-    el.style.border = "1px solid #e5e7eb";
+    el.style.background = "hsl(var(--muted))";
+    el.style.border = "1px solid hsl(var(--border))";
     el.style.display = "block";
     return el;
   }
@@ -102,8 +102,8 @@ function ExcalidrawComponent({ data, nodeKey }: ExcalidrawComponentProps) {
     style: {
       minHeight: 300,
       width: "100%",
-      background: "#f8fafc",
-      border: "1px solid #e5e7eb",
+      background: "hsl(var(--muted))",
+      border: "1px solid hsl(var(--border))",
       display: "block",
     },
   };

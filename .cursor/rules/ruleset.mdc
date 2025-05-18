@@ -9,6 +9,10 @@ Section 1: Global Conventions
 
 Rule
 
+MAIN - 
+
+You will always be responsible for implementing code - theres never a reason to ask. If you have been provided a plan, execute on that plan until it is finished or there is a critical differentiation where clarity is needed.
+
 1.1
 
 MUST adopt Prettier + ESLint auto‑fix. Code left with lint errors or Prettier diffs is unacceptable.

@@ -13,7 +13,9 @@ export default function ModeToggle() {
   }, []);
 
   if (!mounted) {
-    return <div className="rounded p-2 w-[36px] h-[36px]"></div>;
+    return (
+      <div className="w-10 h-10 rounded-md bg-muted/30 animate-pulse"></div>
+    );
   }
 
   const isDark = resolvedTheme === "dark";
@@ -23,9 +25,26 @@ export default function ModeToggle() {
       variant="ghost"
       size="icon"
       onClick={() => setTheme(isDark ? "light" : "dark")}
-      aria-label="Toggle theme"
+      aria-label={isDark ? "Switch to light theme" : "Switch to dark theme"}
+      className="relative"
     >
-      {isDark ? <Sun className="size-4" /> : <Moon className="size-4" />}
+      <Sun
+        className={`size-4 absolute transition-all duration-300 ${
+          isDark
+            ? "scale-100 opacity-100 rotate-0"
+            : "scale-0 opacity-0 rotate-90"
+        }`}
+      />
+      <Moon
+        className={`size-4 absolute transition-all duration-300 ${
+          !isDark
+            ? "scale-100 opacity-100 rotate-0"
+            : "scale-0 opacity-0 rotate-90"
+        }`}
+      />
+      <span className="sr-only">
+        {isDark ? "Switch to light theme" : "Switch to dark theme"}
+      </span>
     </Button>
   );
 }

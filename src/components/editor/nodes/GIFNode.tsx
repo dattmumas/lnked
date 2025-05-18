@@ -102,11 +102,11 @@ export function GifPicker({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-      <div className="bg-white rounded shadow-lg p-4 w-full max-w-lg">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-background bg-opacity-40">
+      <div className="bg-card rounded shadow-lg p-4 w-full max-w-lg">
         <form onSubmit={searchGiphy} className="flex mb-4">
           <input
-            className="flex-1 border rounded-l px-2 py-1"
+            className="flex-1 border rounded-l px-2 py-1 border-border"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search GIFs..."
@@ -114,7 +114,7 @@ export function GifPicker({
           />
           <button
             type="submit"
-            className="bg-blue-500 text-white px-4 py-1 rounded-r"
+            className="bg-primary text-primary-foreground px-4 py-1 rounded-r"
             disabled={isLoading}
           >
             {isLoading ? "Searching..." : "Search"}
@@ -141,10 +141,7 @@ export function GifPicker({
             </button>
           ))}
         </div>
-        <button
-          className="mt-4 w-full bg-gray-200 rounded py-2"
-          onClick={onClose}
-        >
+        <button className="mt-4 w-full bg-muted rounded py-2" onClick={onClose}>
           Close
         </button>
       </div>

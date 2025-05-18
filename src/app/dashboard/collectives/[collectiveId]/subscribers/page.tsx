@@ -13,6 +13,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 
 const formatDate = (dateString: string | null | undefined): string => {
   if (!dateString) return "N/A";
@@ -23,12 +24,23 @@ const formatDate = (dateString: string | null | undefined): string => {
   });
 };
 
+// Helper to map subscription status to badge variant
+const getStatusBadgeVariant = (
+  status: string,
+  cancelAtPeriodEnd: boolean
+): "default" | "secondary" | "destructive" | "outline" => {
+  if (status === "active" && !cancelAtPeriodEnd) return "default";
+  if (status === "trialing") return "secondary";
+  if (status === "canceled" || cancelAtPeriodEnd) return "destructive";
+  return "outline";
+};
+
 export default async function SubscribersPage({
   params,
 }: {
-  params: Promise<{ collectiveId: string }>;
+  params: { collectiveId: string };
 }) {
-  const { collectiveId } = await params;
+  const { collectiveId } = params;
   const cookieStore = await cookies();
   const supabase = createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -148,22 +160,15 @@ export default async function SubscribersPage({
                   </TableCell>
                   {/* <TableCell>{(subscriber as any)?.email || 'N/A'}</TableCell> */}
                   <TableCell>
-                    <span
-                      className={`px-2 py-1 text-xs font-medium rounded-full 
-                      ${
-                        sub.status === "active"
-                          ? "bg-primary/10 text-primary"
-                          : sub.status === "trialing"
-                          ? "bg-accent/10 text-accent-foreground"
-                          : sub.status === "canceled" ||
-                            sub.cancel_at_period_end
-                          ? "bg-destructive/10 text-destructive"
-                          : "bg-muted text-foreground"
-                      }
-                    `}
+                    <Badge
+                      variant={getStatusBadgeVariant(
+                        sub.status,
+                        sub.cancel_at_period_end
+                      )}
+                      className="capitalize"
                     >
                       {sub.status}
-                    </span>
+                    </Badge>
                     {sub.cancel_at_period_end && sub.status === "active" && (
                       <span className="text-xs text-muted-foreground ml-1">
                         (ends {formatDate(sub.current_period_end)})

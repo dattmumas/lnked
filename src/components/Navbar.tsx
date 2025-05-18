@@ -27,22 +27,22 @@ const dashboardNavItems = [
   {
     href: "/dashboard",
     label: "Overview",
-    icon: <LayoutDashboard className="size-4 mr-2" />,
+    icon: <LayoutDashboard className="size-4" />,
   },
   {
     href: "/dashboard/posts",
     label: "My Posts",
-    icon: <FileText className="size-4 mr-2" />,
+    icon: <FileText className="size-4" />,
   },
   {
     href: "/dashboard/collectives",
     label: "My Collectives",
-    icon: <Users2 className="size-4 mr-2" />,
+    icon: <Users2 className="size-4" />,
   },
   {
     href: "/dashboard/profile/edit",
     label: "Edit Profile",
-    icon: <UserSquare className="size-4 mr-2" />,
+    icon: <UserSquare className="size-4" />,
   },
 ];
 
@@ -91,29 +91,35 @@ export default function Navbar() {
   const isDashboardPath = pathname.startsWith("/dashboard");
 
   return (
-    <nav className="w-full">
-      <div className="flex items-center justify-end space-x-3">
+    <nav
+      className="flex items-center justify-end gap-2 md:gap-4"
+      role="navigation"
+      aria-label="Main navigation"
+    >
+      <div className="hidden md:flex items-center gap-2">
         {isLoading ? (
           <div className="h-8 w-20 bg-muted rounded animate-pulse"></div>
         ) : user ? (
           <>
             <Button
               variant={pathname === "/discover" ? "secondary" : "ghost"}
-              className="text-white font-bold hover:text-[#FFCA28] transition-colors"
+              size="sm"
+              aria-current={pathname === "/discover" ? "page" : undefined}
               onClick={() => router.push("/discover")}
             >
-              Feed
+              Discover
             </Button>
             <Button
               variant={isDashboardPath ? "secondary" : "ghost"}
-              className="text-white font-bold hover:text-[#FFCA28] transition-colors"
+              size="sm"
+              aria-current={isDashboardPath ? "page" : undefined}
               onClick={() => router.push("/dashboard")}
             >
               Dashboard
             </Button>
             <Button
               variant="outline"
-              className="text-white font-bold hover:text-[#FFCA28] transition-colors"
+              size="sm"
               onClick={handleSignOut}
               disabled={isLoading}
             >
@@ -124,13 +130,14 @@ export default function Navbar() {
           <>
             <Button
               variant="ghost"
-              className="text-white font-bold hover:text-[#FFCA28] transition-colors"
+              size="sm"
               onClick={() => router.push("/sign-in")}
             >
               Sign In
             </Button>
             <Button
-              className="text-white font-bold hover:text-[#FFCA28] transition-colors"
+              variant="default"
+              size="sm"
               onClick={() => router.push("/sign-up")}
             >
               Sign Up
@@ -139,28 +146,22 @@ export default function Navbar() {
         )}
         <ModeToggle />
       </div>
-      {/* Mobile hamburger */}
-      <div className="md:hidden flex items-center space-x-2">
-        <ModeToggle />
+
+      {/* Mobile menu */}
+      <div className="md:hidden flex items-center gap-2">
         <Sheet>
           <SheetTrigger asChild>
             <Button variant="ghost" size="icon" aria-label="Open menu">
-              <Menu className="size-5" />
+              <Menu className="size-4" />
             </Button>
           </SheetTrigger>
-          <SheetContent
-            side="left"
-            className="p-6 space-y-1 w-[250px] sm:w-[300px]"
-          >
-            <SheetTitle>
-              <span className="sr-only">Main Menu</span>
+          <SheetContent side="left" className="p-4 w-[250px] sm:w-[300px]">
+            <SheetTitle className="mb-4">
+              <Link href="/" className="text-xl font-bold text-primary">
+                Lnked
+              </Link>
             </SheetTitle>
-            <Link
-              href="/"
-              className="text-xl font-bold text-primary mb-4 block"
-            >
-              Lnked
-            </Link>
+
             {isLoading ? (
               <div className="h-8 w-full bg-muted rounded animate-pulse mt-4" />
             ) : user ? (
@@ -171,23 +172,29 @@ export default function Navbar() {
                       <Button
                         key={item.href}
                         variant={pathname === item.href ? "secondary" : "ghost"}
-                        className="justify-start"
+                        className="justify-start h-9 px-2"
+                        aria-current={
+                          pathname === item.href ? "page" : undefined
+                        }
                         onClick={() => router.push(item.href)}
                       >
-                        {item.icon} {item.label}
+                        <span className="mr-2">{item.icon}</span> {item.label}
                       </Button>
                     ))}
-                    <hr className="my-2" />
+                    <div className="my-2 h-px bg-border" />
                     <Button
                       variant={pathname === "/discover" ? "secondary" : "ghost"}
-                      className="justify-start"
+                      className="justify-start h-9 px-2"
+                      aria-current={
+                        pathname === "/discover" ? "page" : undefined
+                      }
                       onClick={() => router.push("/discover")}
                     >
                       <Newspaper className="size-4 mr-2" /> Discover
                     </Button>
                     <Button
                       variant="outline"
-                      className="justify-start mt-4"
+                      className="justify-start h-9 px-2 mt-4"
                       onClick={handleSignOut}
                     >
                       <LogOut className="size-4 mr-2" /> Sign Out
@@ -197,51 +204,58 @@ export default function Navbar() {
                   <>
                     <Button
                       variant={pathname === "/discover" ? "secondary" : "ghost"}
-                      className="justify-start"
+                      className="justify-start h-9 px-2"
+                      aria-current={
+                        pathname === "/discover" ? "page" : undefined
+                      }
                       onClick={() => router.push("/discover")}
                     >
                       <Newspaper className="size-4 mr-2" /> Discover
                     </Button>
                     <Button
                       variant={isDashboardPath ? "secondary" : "ghost"}
-                      className="justify-start"
+                      className="justify-start h-9 px-2"
+                      aria-current={isDashboardPath ? "page" : undefined}
                       onClick={() => router.push("/dashboard")}
                     >
                       <LayoutDashboard className="size-4 mr-2" /> Dashboard
                     </Button>
                     <Button
                       variant="outline"
-                      className="justify-start mt-4"
+                      className="justify-start h-9 px-2 mt-4"
                       onClick={handleSignOut}
                     >
                       <LogOut className="size-4 mr-2" /> Sign Out
                     </Button>
                   </>
                 )}
+                <div className="mt-4 flex justify-center">
+                  <ModeToggle />
+                </div>
               </div>
             ) : (
               <div className="flex flex-col space-y-2">
                 <Button
                   variant="ghost"
-                  className="justify-start"
+                  className="justify-start h-9 px-2"
                   onClick={() => router.push("/sign-in")}
                 >
                   Sign In
                 </Button>
                 <Button
+                  variant="default"
                   className="w-full"
                   onClick={() => router.push("/sign-up")}
                 >
                   Sign Up
                 </Button>
+                <div className="mt-4 flex justify-center">
+                  <ModeToggle />
+                </div>
               </div>
             )}
           </SheetContent>
         </Sheet>
-      </div>
-      {/* Desktop theme toggle */}
-      <div className="hidden md:block">
-        <ModeToggle />
       </div>
     </nav>
   );

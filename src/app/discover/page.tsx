@@ -1,4 +1,5 @@
 import CollectiveCard from "@/components/app/collectives/molecules/CollectiveCard";
+import LoadMoreButton from "@/components/app/discover/LoadMoreButton";
 // import { cookies } from "next/headers"; // No longer needed directly here
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Terminal } from "lucide-react";
@@ -10,13 +11,17 @@ import {
 // Recommendation interface might be moved to a shared types file eventually
 // For now, it's also exported from the lib file, or we can define it here if preferred.
 
-export default async function DiscoverPage() {
+export default async function DiscoverPage({
+  searchParams,
+}: {
+  searchParams: { cursor?: string };
+}) {
   let recommendations: Recommendation[] = [];
   let nextCursor: string | null = null;
 
   try {
     // const cookieHeader = (await cookies()).toString(); // Not needed if fetchRecommendations handles cookies internally
-    const data = await fetchRecommendations(); // Call without cookieHeader argument
+    const data = await fetchRecommendations(searchParams.cursor); // paginate
     recommendations = data.recommendations;
     nextCursor = data.nextCursor;
   } catch (error) {
@@ -61,10 +66,7 @@ export default async function DiscoverPage() {
       </div>
       {nextCursor && (
         <div className="mt-6 text-center">
-          <p className="text-sm text-muted-foreground">
-            More recommendations available...{" "}
-            {/* Implement LoadMoreButton here */}
-          </p>
+          <LoadMoreButton nextCursor={nextCursor} />
         </div>
       )}
     </section>

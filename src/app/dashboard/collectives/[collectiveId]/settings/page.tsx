@@ -7,9 +7,9 @@ import EditCollectiveSettingsForm from "./EditCollectiveSettingsForm"; // Client
 export default async function CollectiveSettingsPage({
   params,
 }: {
-  params: Promise<{ collectiveId: string }>;
+  params: { collectiveId: string };
 }) {
-  const { collectiveId } = await params;
+  const { collectiveId } = params;
   const cookieStore = await cookies();
   const supabase = createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,

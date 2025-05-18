@@ -83,7 +83,7 @@ const FloatingLinkEditorPlugin: React.FC = () => {
   const popup = (
     <div
       ref={popupRef}
-      className="link-editor-popup p-2 bg-white border shadow rounded flex items-center"
+      className="link-editor-popup p-2 bg-card border shadow rounded flex items-center"
       style={{
         position: "absolute",
         left: position.x,
@@ -110,7 +110,7 @@ const FloatingLinkEditorPlugin: React.FC = () => {
           />
           <button
             onClick={applyLink}
-            className="px-2 py-1 bg-blue-500 text-white rounded"
+            className="px-2 py-1 bg-primary text-primary-foreground rounded"
           >
             Save
           </button>
@@ -121,7 +121,7 @@ const FloatingLinkEditorPlugin: React.FC = () => {
             href={linkUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-blue-600 underline mr-2"
+            className="text-primary underline mr-2"
           >
             {linkUrl.length > 30 ? linkUrl.slice(0, 30) + "..." : linkUrl}
           </a>
@@ -133,7 +133,7 @@ const FloatingLinkEditorPlugin: React.FC = () => {
               setLinkUrl("");
               applyLink();
             }}
-            className="text-sm text-red-600"
+            className="text-sm text-destructive"
           >
             Remove
           </button>

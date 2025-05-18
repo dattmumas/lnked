@@ -72,17 +72,17 @@ const AnimatedHero = () => {
       animate="visible"
     >
       <motion.h1
-        className="text-6xl md:text-7xl font-extrabold font-serif tracking-tight text-[#1F1F1F] drop-shadow-lg relative"
+        className="text-6xl md:text-7xl font-extrabold font-serif tracking-tight text-foreground drop-shadow-lg relative"
         variants={titleItemVariants}
       >
         Lnked
-        <motion.span variants={titleItemVariants} className="text-[#E50914]">
+        <motion.span variants={titleItemVariants} className="text-primary">
           .
         </motion.span>
       </motion.h1>
 
       <motion.p
-        className="text-2xl md:text-3xl text-[#1F1F1F] max-w-2xl font-semibold"
+        className="text-2xl md:text-3xl text-foreground max-w-2xl font-semibold"
         variants={wordContainerVariants}
       >
         {taglineWords.map((word, index) => (
@@ -97,11 +97,11 @@ const AnimatedHero = () => {
       </motion.p>
 
       <motion.p
-        className="text-lg text-[#1F1F1F] max-w-xl"
+        className="text-lg text-muted-foreground max-w-xl"
         variants={textItemVariants}
       >
         Unearth unique newsletters. Forge{" "}
-        <span className="text-[#E50914] font-bold">
+        <span className="text-primary font-bold">
           collaborative collectives
         </span>
         . Own your narrative.
@@ -109,10 +109,7 @@ const AnimatedHero = () => {
 
       <motion.div variants={buttonItemVariants}>
         <Link href="/discover">
-          <Button
-            size="lg"
-            className="bg-[#E50914] hover:bg-[#FFCA28] text-white font-bold transition-colors border-none shadow-lg"
-          >
+          <Button size="lg" variant="default">
             Explore Now
           </Button>
         </Link>

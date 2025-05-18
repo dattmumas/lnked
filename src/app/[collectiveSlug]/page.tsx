@@ -61,19 +61,19 @@ export default async function Page({
 
   return (
     <div className="container mx-auto p-4 md:p-6">
-      <header className="mb-8 pb-6 border-b-2 border-[#E50914]/10 flex flex-col items-center">
+      <header className="mb-8 pb-6 border-b border-primary/10 flex flex-col items-center">
         <h1 className="text-5xl font-extrabold tracking-tight text-center flex items-center mb-4">
           {collective.name}
           <span
-            className="ml-2 text-[#E50914] text-5xl leading-none align-middle"
+            className="ml-2 text-primary text-5xl leading-none align-middle"
             style={{ fontWeight: 900 }}
           >
             .
           </span>
         </h1>
         {collective.description && (
-          <div className="bg-white shadow rounded-xl p-6 max-w-2xl w-full text-center mx-auto">
-            <p className="text-lg text-[#1F1F1F]/80">
+          <div className="bg-card shadow rounded-xl p-6 max-w-2xl w-full text-center mx-auto">
+            <p className="text-lg text-muted-foreground">
               {collective.description}
             </p>
           </div>

@@ -144,7 +144,7 @@ function StickyComponent({
             key={c}
             type="button"
             className={`w-5 h-5 rounded-full border-2 ${
-              localColor === c ? "border-blue-500" : "border-transparent"
+              localColor === c ? "border-primary" : "border-transparent"
             }`}
             style={{ background: c }}
             onClick={() => handleColorChange(c)}

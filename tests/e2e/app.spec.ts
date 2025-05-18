@@ -102,4 +102,90 @@ test.describe("Lnked E2E Flow", () => {
       "E2E flow: Sign-up, create collective, publish post completed successfully."
     );
   });
+
+  test("Newsletter subscription flow", async ({ page, context }) => {
+    // 1. Sign up as a new user
+    await page.goto("/sign-up");
+    const uniqueEmail = `e2e_subscriber_${Date.now()}@example.com`;
+    await page.fill("input[id=fullName]", "E2E Subscriber");
+    await page.fill("input[id=email]", uniqueEmail);
+    await page.fill("input[id=password]", "Password123!");
+    await page.click("button[type=submit]");
+    await expect(
+      page.getByText(
+        /Sign up successful! Redirecting...|Dashboard|Please check your email to confirm your account/
+      )
+    ).toBeVisible({ timeout: 15000 });
+    if (!page.url().includes("/dashboard")) {
+      await page.goto("/dashboard");
+    }
+    await expect(page.getByRole("heading", { name: /Dashboard/i })).toBeVisible(
+      { timeout: 10000 }
+    );
+
+    // 2. Visit another user's newsletter page (use a known userId or a test fixture)
+    // For this test, we'll use a static userId (replace with a real one in your test DB)
+    const testUserId = "test-newsletter-user-id"; // TODO: Replace with a real userId
+    await page.goto(`/newsletters/${testUserId}`);
+    await expect(
+      page.getByRole("heading", { name: /Newsletter/i })
+    ).toBeVisible({ timeout: 10000 });
+
+    // 3. Click the subscribe button
+    const subscribeButton = page.getByRole("button", { name: /Subscribe to/i });
+    await expect(subscribeButton).toBeVisible();
+    await subscribeButton.click();
+
+    // 4. Verify redirect to Stripe Checkout or a confirmation (depends on environment)
+    // If running locally, you may want to mock Stripe or check for a redirect URL
+    await page.waitForTimeout(2000); // Wait for redirect
+    expect(
+      page.url().includes("stripe.com") ||
+        page.url().includes("checkout") ||
+        page.url().includes("dashboard")
+    ).toBeTruthy();
+  });
+
+  test("Collective subscription flow", async ({ page }) => {
+    // 1. Sign up as a new user
+    await page.goto("/sign-up");
+    const uniqueEmail = `e2e_collective_sub_${Date.now()}@example.com`;
+    await page.fill("input[id=fullName]", "E2E Collective Subscriber");
+    await page.fill("input[id=email]", uniqueEmail);
+    await page.fill("input[id=password]", "Password123!");
+    await page.click("button[type=submit]");
+    await expect(
+      page.getByText(
+        /Sign up successful! Redirecting...|Dashboard|Please check your email to confirm your account/
+      )
+    ).toBeVisible({ timeout: 15000 });
+    if (!page.url().includes("/dashboard")) {
+      await page.goto("/dashboard");
+    }
+    await expect(page.getByRole("heading", { name: /Dashboard/i })).toBeVisible(
+      { timeout: 10000 }
+    );
+
+    // 2. Visit a known collective's public page (replace with a real slug or ID)
+    const testCollectiveSlug = "test-collective-slug"; // TODO: Replace with a real slug
+    await page.goto(`/${testCollectiveSlug}`);
+    await expect(
+      page.getByRole("heading", {
+        name: /Subscribers for|Newsletter|Collective/i,
+      })
+    ).toBeVisible({ timeout: 10000 });
+
+    // 3. Click the subscribe button
+    const subscribeButton = page.getByRole("button", { name: /Subscribe to/i });
+    await expect(subscribeButton).toBeVisible();
+    await subscribeButton.click();
+
+    // 4. Verify redirect to Stripe Checkout or a confirmation
+    await page.waitForTimeout(2000); // Wait for redirect
+    expect(
+      page.url().includes("stripe.com") ||
+        page.url().includes("checkout") ||
+        page.url().includes("dashboard")
+    ).toBeTruthy();
+  });
 });

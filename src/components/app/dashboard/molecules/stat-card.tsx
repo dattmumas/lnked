@@ -1,46 +1,63 @@
+"use client";
+
+import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-import { TrendingUp } from "lucide-react";
+import { ReactNode } from "react";
 
 interface StatCardProps {
-  label: string;
+  title: string;
   value: string | number;
-  icon?: React.ReactNode;
-  trend?: number; // percentage e.g. 12 => +12%
+  icon?: ReactNode;
+  description?: ReactNode;
   className?: string;
+  trend?: number;
 }
 
 export default function StatCard({
-  label,
+  title,
   value,
-  icon = <TrendingUp className="h-4 w-4" />,
-  trend,
+  icon,
+  description,
   className,
+  trend,
 }: StatCardProps) {
   return (
-    <div
-      className={cn(
-        "rounded-lg border shadow-sm bg-card text-card-foreground p-4 flex flex-col gap-2",
-        className
-      )}
-    >
-      <div className="flex items-center justify-between">
-        <span className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
-          {label}
-        </span>
-        {icon}
-      </div>
-      <div className="text-3xl font-bold font-serif">{value}</div>
-      {typeof trend === "number" && (
-        <span
-          className={cn(
-            "text-xs font-medium",
-            trend >= 0 ? "text-primary" : "text-destructive"
+    <Card className={cn("overflow-hidden", className)}>
+      <div className="flex flex-col p-4 h-full">
+        <div className="flex items-center justify-between gap-2 mb-2">
+          <h3 className="text-sm font-medium text-muted-foreground">{title}</h3>
+          {icon && (
+            <span className="size-4 text-muted-foreground" aria-hidden="true">
+              {icon}
+            </span>
           )}
-        >
-          {trend >= 0 ? "+" : ""}
-          {trend}% from last week
-        </span>
-      )}
-    </div>
+        </div>
+
+        <div className="flex items-baseline gap-2">
+          <span className="text-2xl font-bold tabular-nums">{value}</span>
+
+          {typeof trend === "number" && (
+            <span
+              className={cn(
+                "text-xs font-medium tabular-nums",
+                trend > 0
+                  ? "text-emerald-500 dark:text-emerald-400"
+                  : "text-destructive"
+              )}
+            >
+              {trend > 0 ? "+" : ""}
+              {Math.abs(trend)}%
+            </span>
+          )}
+        </div>
+
+        {description && (
+          <p className="mt-1 text-xs text-muted-foreground">{description}</p>
+        )}
+      </div>
+    </Card>
   );
 }
+
+// Also export named for convenience
+export { StatCard };

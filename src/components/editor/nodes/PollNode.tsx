@@ -142,7 +142,7 @@ function PollComponent({
   };
 
   return (
-    <div className="border rounded p-3 bg-gray-50">
+    <div className="border rounded p-3 bg-muted">
       <input
         className="font-semibold mb-2 w-full border-b bg-transparent outline-none"
         value={localQuestion}
@@ -160,7 +160,7 @@ function PollComponent({
             />
             <button
               type="button"
-              className="text-xs text-red-500 ml-1"
+              className="text-xs text-destructive ml-1"
               onClick={() => handleRemoveOption(idx)}
               disabled={localOptions.length <= 2}
               title="Remove option"
@@ -172,7 +172,7 @@ function PollComponent({
       </ul>
       <button
         type="button"
-        className="mt-2 px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs"
+        className="mt-2 px-2 py-1 bg-accent text-accent-foreground rounded text-xs"
         onClick={handleAddOption}
       >
         + Add Option

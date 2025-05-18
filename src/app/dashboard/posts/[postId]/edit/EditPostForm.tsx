@@ -159,7 +159,7 @@ export default function EditPostForm({
         ? formatDateForInput(initialData.published_at)
         : "",
     });
-  }, [initialData, reset, EMPTY_LEXICAL_STATE]);
+  }, [initialData, reset]);
 
   const performAutosave = useCallback(async () => {
     if (!isDirty) return;

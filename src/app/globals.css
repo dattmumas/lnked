@@ -5,8 +5,8 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  --radius: 0.625rem;
-  --spacing: 0.25rem;
+  --radius: 0.375rem;
+  --spacing: 0.5rem;
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
@@ -92,12 +92,10 @@
 */
 
 @layer base {
-  /* Removed global transparent border on all elements */
-  /*
-  * {
-    @apply border border-transparent;
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
-  */
 
   h1,
   h2,
@@ -108,8 +106,28 @@
     @apply text-foreground font-extrabold tracking-tight;
   }
 
-  /* Prose style customizations REMOVED FOR NOW to restore base styling */
-  /* ...existing comments... */
+  /* Additional base styles */
+  a {
+    @apply transition-colors duration-200;
+  }
+
+  /* Focus styles for accessibility */
+  *:focus-visible {
+    @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
+  }
+
+  /* Custom scrollbar for better UX */
+  ::-webkit-scrollbar {
+    @apply w-2 h-2;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-muted;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-muted-foreground/30 rounded-full hover:bg-muted-foreground/50 transition-colors;
+  }
 }
 
 /* Tiptap Editor Minimal Styling */
@@ -138,15 +156,15 @@
 
 @layer utilities {
   .bg-highlight {
-    background-color: #ffca28;
+    background-color: hsl(var(--accent) / 0.2);
   }
   .text-highlight {
-    color: #ffca28;
+    color: hsl(var(--accent));
   }
   .img-splash {
     max-width: 100%;
-    box-shadow: 0 4px 24px 0 rgba(0, 0, 0, 0.08), 0 1.5px 0 0 #ffca28;
-    border-radius: 0.5rem;
+    box-shadow: 0 4px 24px 0 rgba(0, 0, 0, 0.08);
+    border-radius: var(--radius);
   }
 }
 
@@ -248,14 +266,10 @@
   white-space: pre;
   border-radius: 4px;
 }
-.editor-list-ul,
-.editor-list-ol {
-  margin: 0 0 0 1.5em;
-  padding: 0;
-}
 .editor-list-item {
   margin: 0;
-  padding: 0;
+  padding-left: 16px;
+  list-style-position: inside;
 }
 .text-align-left {
   text-align: left;
@@ -268,5 +282,5 @@
 }
 
 body {
-  @apply bg-background text-foreground antialiased;
+  height: 100%;
 }

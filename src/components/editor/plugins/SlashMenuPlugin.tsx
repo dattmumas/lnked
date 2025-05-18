@@ -245,7 +245,7 @@ const SlashMenuPlugin: React.FC = () => {
   return ReactDOM.createPortal(
     <div
       ref={menuRef}
-      className="absolute z-50 bg-white border shadow rounded-md mt-2 w-64"
+      className="absolute z-50 bg-card border shadow rounded-md mt-2 w-64"
       style={{
         left: menuPosition.x,
         top: menuPosition.y,
@@ -256,7 +256,7 @@ const SlashMenuPlugin: React.FC = () => {
         <div
           key={opt.label}
           className={`px-4 py-2 cursor-pointer ${
-            i === highlighted ? "bg-gray-200" : ""
+            i === highlighted ? "bg-muted" : ""
           }`}
           onMouseEnter={() => setHighlighted(i)}
           onMouseDown={(e) => e.preventDefault()}
@@ -267,7 +267,7 @@ const SlashMenuPlugin: React.FC = () => {
         >
           <strong>{opt.label}</strong>
           {opt.description && (
-            <span className="ml-2 text-xs text-gray-500">
+            <span className="ml-2 text-muted-foreground text-xs">
               {opt.description}
             </span>
           )}

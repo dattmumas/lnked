@@ -2,46 +2,38 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import React from "react";
-
-// Tiny helper until we have a central utility
-function clsx(...classes: (string | undefined | null | false)[]) {
-  return classes.filter(Boolean).join(" ");
-}
+import { cn } from "@/lib/utils";
+import { LucideIcon } from "lucide-react";
 
 interface SidebarLinkProps {
   href: string;
-  icon?: React.ReactNode;
-  children: React.ReactNode;
+  icon?: LucideIcon;
+  label: string;
+  exact?: boolean;
 }
 
-// Radix primitive not needed for a simple anchor; interactive state is handled
-// by Tailwind state classes. Component marked as client because it relies on
-// `usePathname` (hook).
-export default function SidebarLink({
+export function SidebarLink({
   href,
-  icon,
-  children,
+  icon: Icon,
+  label,
+  exact = false,
 }: SidebarLinkProps) {
   const pathname = usePathname();
-  const active = pathname === href;
+  const isActive = exact ? pathname === href : pathname.startsWith(href);
 
   return (
     <Link
       href={href}
-      className={clsx(
-        "group flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors",
-        active
-          ? "bg-primary text-primary-foreground hover:bg-primary/90"
-          : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+      className={cn(
+        "flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md transition-colors",
+        isActive
+          ? "bg-sidebar-accent/10 text-sidebar-accent font-medium"
+          : "text-sidebar-foreground/80 hover:bg-sidebar-accent/5 hover:text-sidebar-foreground"
       )}
+      aria-current={isActive ? "page" : undefined}
     >
-      {icon && (
-        <span className="h-5 w-5" aria-hidden>
-          {icon}
-        </span>
-      )}
-      <span>{children}</span>
+      {Icon && <Icon className="size-4 shrink-0" />}
+      <span>{label}</span>
     </Link>
   );
 }

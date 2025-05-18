@@ -11,7 +11,12 @@ export function getStripe(): Stripe | null {
     return null;
   }
 
-  _stripe = new Stripe(key, { apiVersion: "2025-04-30.basil" });
+  _stripe = new Stripe(key, {
+    // Cast to any – acceptable until @types/stripe exposes newer version type
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    apiVersion: "2023-10-16" as any,
+    typescript: true,
+  });
   return _stripe;
 }
 

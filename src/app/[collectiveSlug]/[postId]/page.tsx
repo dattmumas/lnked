@@ -156,7 +156,7 @@ export default async function PostPage({
         </ol>
       </nav>
 
-      <article className="bg-white shadow rounded-xl p-8 max-w-none">
+      <article className="bg-card shadow rounded-xl p-8 max-w-none">
         {/* Hero image if available */}
         {/* {post.image && (
           <img src={post.image} alt="Post cover" className="img-splash mb-6" />
@@ -165,13 +165,13 @@ export default async function PostPage({
           <h1 className="text-5xl font-extrabold tracking-tight text-center flex items-center mb-4">
             {post.title}
             <span
-              className="ml-2 text-[#E50914] text-5xl leading-none align-middle"
+              className="ml-2 text-primary text-5xl leading-none align-middle"
               style={{ fontWeight: 900 }}
             >
               .
             </span>
           </h1>
-          <div className="text-base text-[#1F1F1F]/70 flex flex-wrap items-center gap-x-3 gap-y-1 justify-center">
+          <div className="text-base text-muted-foreground flex flex-wrap items-center gap-x-3 gap-y-1 justify-center">
             <span>
               Published on {formatDate(post.published_at || post.created_at)}
             </span>
@@ -180,7 +180,7 @@ export default async function PostPage({
                 by{" "}
                 <Link
                   href={`/newsletters/${post.author.id}`}
-                  className="hover:underline text-[#E50914]"
+                  className="hover:underline text-primary"
                 >
                   {authorName}
                 </Link>
@@ -212,7 +212,7 @@ export default async function PostPage({
           className="prose dark:prose-invert lg:prose-xl max-w-none"
           style={
             {
-              "--tw-prose-blockquote-borders": "#FFCA28",
+              "--tw-prose-blockquote-borders": "hsl(var(--accent))",
             } as React.CSSProperties
           }
         >
@@ -222,7 +222,7 @@ export default async function PostPage({
         </div>
       </article>
 
-      <footer className="mt-12 pt-8 border-t">
+      <footer className="mt-12 pt-8 border-t border-border">
         <div className="flex justify-between items-center">
           {isOwner && (
             <Button asChild variant="outline">
