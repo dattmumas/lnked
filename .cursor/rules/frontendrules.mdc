@@ -25,6 +25,8 @@ rules:
     level: MUST  
     description: "No alternative SPA/meta frameworks (Vue, Svelte, Remix, etc.) without explicit approval."
 
+    - 
+
   # ── Component Architecture ────────────────────────────────────────
   - id: FE-010  
     level: MUST  
@@ -166,6 +168,71 @@ rules:
   - id: FE-101  
     level: SHOULD  
     description: "Abstract shared logic into reusable modules. If certain validation, state management, or UI patterns will be reused on mobile or other platforms, put them in `src/lib` or a SDK package so they can be shared."
+
+    # ── Tailwind CSS – Hard-Stop Rules ─────────────────────────────────────────
+# All “MUST” items block CI; “SHOULD” items warn.
+
+version: 1.0.0
+rules:
+  - id: TW-001
+    level: MUST
+    description: |
+      Tailwind dependency version must remain at 3.x until a tracked
+      migration task explicitly upgrades the design-system to v4+.
+      • package.json must declare "tailwindcss": "^3."
+      • pnpm-lock or package-lock must not contain tailwindcss@4.
+      Rationale: v4 removes color-only utilities & the bundled CLI.
+
+  - id: TW-002
+    level: MUST
+    description: |
+      postcss.config.* must list `tailwindcss: {}` (not "@tailwindcss/postcss").
+      If a future v4+ upgrade is approved, rule TW-001 will be updated and
+      this check will be relaxed accordingly.
+
+  - id: TW-003
+    level: MUST
+    description: |
+      `.bin/tailwindcss` CLI must exist after `pnpm install`.
+      CI step: `test -x node_modules/.bin/tailwindcss`.
+      Prevents builds that silently miss the CLI when package layout changes.
+
+  - id: TW-010
+    level: MUST
+    description: |
+      No `@apply` calls may invoke *color-only* utilities
+      (border-*, outline-*, ring-*/opacity, text-* etc.) unless paired with
+      their required base property.  
+      Example:  
+        ✅ `@apply border border-border;`  
+        ❌ `@apply border-border;`
+      CI check: run `pnpm dlx @lnked/style-audit color-only-apply`.
+
+  - id: TW-011
+    level: MUST
+    description: |
+      Any new design-token utility (bg-*, text-*, border-*, ring-*)
+      **must** be referenced in at least one file matched by
+      tailwind.config.content OR be added to tailwind.config.safelist.
+      Prevents purge from stripping utilities later used via @apply.
+
+  - id: TW-020
+    level: SHOULD
+    description: |
+      When adding custom top-level colours in tailwind.config, use string
+      literals (`foreground: "#222"`) instead of object shorthand unless
+      you actually need a scale. Avoids accidental loss of simple utilities
+      in future v4 migration.
+
+  - id: TW-030
+    level: MUST
+    description: |
+      `pnpm run lint && pnpm run build` must be executed in CI for every PR.
+      Build errors like “unknown utility class” abort the pipeline.
+
+meta:
+  owner: "Frontend Platform"
+  last_updated: "2025-05-18"
 
 meta:
   owner: "Lnked Engineering"

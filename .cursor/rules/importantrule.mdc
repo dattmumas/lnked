@@ -1,0 +1,64 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+Cursor Rulesheet — Tailwind & Styling Guardrails
+Purpose: Prevent any automated edit that would again break styling by mis-using Tailwind, PostCSS, or design-token conventions in the lnked repo.
+Scope: Applies to all code generated or modified by Cursor AI in this repository.
+
+1 · Allowed / Forbidden Tailwind Usage
+Area	Mandatory Rule
+@apply	Only apply composite utilities (those that Tailwind documents as valid). Never @apply single-property tokens such as border-border, outline-ring/50, ring-foreground, etc.
+Token classes	Use token classes (bg-background, text-foreground, border-border, etc.) directly in the JSX/HTML class list—do not expand them in global CSS.
+Focus styles	Use Tailwind ring utilities (focus-visible:ring-*) instead of CSS outline for focus.
+Component borders	Add borders locally via className="border border-border"; never set a global border rule in globals.css.
+
+2 · Global CSS Rules
+Do not introduce new @apply statements inside src/app/globals.css.
+
+Any new design token must have both:
+
+A CSS variable in :root and .dark
+
+A matching entry in tailwind.config.ts.
+
+If you must add non-Tailwind CSS, wrap it in a clear comment block:
+
+css
+Copy
+Edit
+/* --- START: custom non-Tailwind CSS (explain purpose) --- */
+...
+/* --- END: custom non-Tailwind CSS --- */
+Never touch existing variables without explicit human approval.
+
+3 · PostCSS / Build Pipeline
+Keep postcss.config.mjs limited to
+
+
+plugins: { tailwindcss: {}, autoprefixer: {} }
+No new PostCSS plugins without written approval in the PR description.
+
+Do not rename or relocate tailwind.config.ts.
+
+4 · Dark-Mode Handling
+Use Tailwind’s dark: prefix—not runtime JS—to swap colors.
+
+Never duplicate light-theme classes inside .dark in global CSS; rely on utilities.
+
+5 · Content-Path Hygiene
+If a file contains Tailwind classes outside the existing src/app|pages|components paths, add the new path to content in tailwind.config.ts in the same commit.
+
+If you generate class names via string concatenation, add them to safelist.
+
+6 · Validation Before Commit
+Cursor must perform and pass all of:
+
+npm run lint
+
+npm run build (ensures Tailwind compiles without error)
+
+Visual diff check: styles of / and /sandbox pages must not show missing CSS.
+
+If any step fails, Cursor cancels the commit and surfaces the error.
