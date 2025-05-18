@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
 import type { Database } from "@/lib/database.types";
 // import { togglePostReaction } from '@/lib/data/reactions';
 // import { getCurrentUser } from '@/lib/auth'; // Implement as needed
@@ -10,7 +9,7 @@ export async function POST(
   { params }: { params: { _postId: string } }
 ) {
   const { _postId: postId } = params;
-  const supabase = createRouteHandlerClient<Database>({ cookies });
+  const supabase = createServerSupabaseClient();
 
   const {
     data: { user },

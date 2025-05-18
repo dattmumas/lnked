@@ -1,27 +1,28 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { createServerClient, type CookieOptions } from "@supabase/ssr";
+import { createServerClient } from "@supabase/ssr";
 
-export async function middleware(req: NextRequest) {
-  const { pathname } = req.nextUrl;
+export async function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl;
   const wantsDashboard = pathname.startsWith("/dashboard");
   const isAuthPage = pathname === "/sign-in" || pathname === "/sign-up";
 
   if (!wantsDashboard && !isAuthPage) return NextResponse.next();
 
-  const res = NextResponse.next();
+  let response = NextResponse.next({ request });
 
-  // Minimal cookie adapter: read-only
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        get(name: string) {
-          return req.cookies.get(name)?.value;
+        getAll() {
+          return request.cookies.getAll();
         },
-        // no-ops – Supabase won't call these in middleware after we read session
-        set(_name: string, _value: string, _opts?: CookieOptions) {},
-        remove(_name: string, _opts?: CookieOptions) {},
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value, options }) => {
+            response.cookies.set(name, value, options);
+          });
+        },
       },
     }
   );
@@ -31,19 +32,19 @@ export async function middleware(req: NextRequest) {
   } = await supabase.auth.getSession();
 
   if (!session && wantsDashboard) {
-    const url = req.nextUrl.clone();
+    const url = request.nextUrl.clone();
     url.pathname = "/sign-in";
     url.searchParams.set("redirect", pathname);
     return NextResponse.redirect(url);
   }
 
   if (session && isAuthPage) {
-    const url = req.nextUrl.clone();
+    const url = request.nextUrl.clone();
     url.pathname = "/dashboard";
     return NextResponse.redirect(url);
   }
 
-  return res;
+  return response;
 }
 
 export const config = {
