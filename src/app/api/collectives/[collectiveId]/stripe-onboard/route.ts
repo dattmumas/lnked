@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { createServerClient } from "@supabase/ssr";
+import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs";
 import { getStripe } from "@/lib/stripe";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import type { Database } from "@/lib/database.types";
@@ -16,18 +16,7 @@ export async function POST(req: Request, context: any) {
   }
 
   // Auth: get user session
-  const cookieStore = cookies() as any;
-  const supabase = createServerClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    {
-      cookies: {
-        get: cookieStore.get.bind(cookieStore),
-        set: () => {}, // no-op for SSR
-        remove: () => {}, // no-op for SSR
-      },
-    }
-  );
+  const supabase = createRouteHandlerClient<Database>({ cookies });
   const {
     data: { session },
     error: sessionError,

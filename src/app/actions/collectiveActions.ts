@@ -1,7 +1,6 @@
 "use server";
 
-import { cookies } from "next/headers";
-import { createServerClient, type CookieOptions } from "@supabase/ssr";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
 import type {
   Database,
   Enums,
@@ -27,50 +26,6 @@ interface CollectiveActionResult {
 
 type CollectiveRow = Database["public"]["Tables"]["collectives"]["Row"];
 
-async function createSupabaseClientForCollectiveActions() {
-  const cookieStore = await cookies();
-  return createServerClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value;
-        },
-        set(name: string, value: string, options: CookieOptions) {
-          try {
-            (
-              cookieStore as {
-                set: (
-                  name: string,
-                  value: string,
-                  options?: CookieOptions
-                ) => void;
-              }
-            ).set(name, value, options);
-          } catch {
-            /* Intentionally empty, see comments in function body */
-          }
-        },
-        remove(name: string, options: CookieOptions) {
-          try {
-            (
-              cookieStore as {
-                set: (
-                  name: string,
-                  value: string,
-                  options?: CookieOptions
-                ) => void;
-              }
-            ).set(name, "", { ...options, maxAge: 0 });
-          } catch {
-            /* Intentionally empty */
-          }
-        },
-      },
-    }
-  );
-}
 
 // --- Invite User to Collective ---
 export async function inviteUserToCollective(
@@ -78,7 +33,7 @@ export async function inviteUserToCollective(
   inviteeEmail: string,
   role: Enums<"collective_member_role">
 ): Promise<CollectiveActionResult> {
-  const supabase = await createSupabaseClientForCollectiveActions();
+  const supabase = await createServerSupabaseClient();
 
   const {
     data: { user: currentUser },
@@ -199,7 +154,7 @@ export async function removeUserFromCollective(
   collectiveId: string, // To verify ownership and for revalidation
   membershipId: string // The ID of the collective_members record
 ): Promise<CollectiveActionResult> {
-  const supabase = await createSupabaseClientForCollectiveActions();
+  const supabase = await createServerSupabaseClient();
 
   const {
     data: { user: currentUser },
@@ -277,7 +232,7 @@ export async function updateMemberRole(
   membershipId: string, // The ID of the collective_members record to update
   newRole: Enums<"collective_member_role">
 ): Promise<CollectiveActionResult> {
-  const supabase = await createSupabaseClientForCollectiveActions();
+  const supabase = await createServerSupabaseClient();
 
   const {
     data: { user: currentUser },
@@ -401,7 +356,7 @@ export async function updateCollectiveSettings(
   collectiveId: string,
   formData: RawCollectiveSettingsFormInput
 ): Promise<UpdateCollectiveSettingsResult> {
-  const supabase = await createSupabaseClientForCollectiveActions();
+  const supabase = await createServerSupabaseClient();
 
   const {
     data: { user: currentUser },

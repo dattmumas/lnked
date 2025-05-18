@@ -1,7 +1,6 @@
 "use server";
 
-import { cookies } from "next/headers";
-import { createServerClient, type CookieOptions } from "@supabase/ssr";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
 import type {
   Database,
   TablesInsert,
@@ -58,63 +57,11 @@ const generateSlug = (title: string): string =>
     .substring(0, 75);
 
 // Helper to instantiate Supabase client in Server Actions
-async function createSupabaseServerClientInternal() {
-  const cookieStore = await cookies();
-  return createServerClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value;
-        },
-        set(name: string, value: string, options: CookieOptions) {
-          const store = cookieStore as unknown;
-          if (
-            typeof store === "object" &&
-            store !== null &&
-            "set" in store &&
-            typeof (store as { set: unknown }).set === "function"
-          ) {
-            (
-              store as {
-                set: (
-                  name: string,
-                  value: string,
-                  options?: Record<string, unknown>
-                ) => void;
-              }
-            ).set(name, value, options);
-          }
-        },
-        remove(name: string, options: CookieOptions) {
-          const store = cookieStore as unknown;
-          if (
-            typeof store === "object" &&
-            store !== null &&
-            "set" in store &&
-            typeof (store as { set: unknown }).set === "function"
-          ) {
-            (
-              store as {
-                set: (
-                  name: string,
-                  value: string,
-                  options?: Record<string, unknown>
-                ) => void;
-              }
-            ).set(name, "", { ...options, maxAge: 0 });
-          }
-        },
-      },
-    }
-  );
-}
 
 export async function createPost(
   formData: CreatePostFormValues
 ): Promise<CreatePostResult> {
-  const supabase = await createSupabaseServerClientInternal();
+  const supabase = await createServerSupabaseClient();
 
   const {
     data: { user },
@@ -247,7 +194,7 @@ export async function updatePost(
   postId: string,
   formData: UpdatePostClientValues
 ): Promise<UpdatePostResult> {
-  const supabase = await createSupabaseServerClientInternal();
+  const supabase = await createServerSupabaseClient();
 
   const {
     data: { user },
@@ -411,7 +358,7 @@ interface DeletePostResult {
 }
 
 export async function deletePost(postId: string): Promise<DeletePostResult> {
-  const supabase = await createSupabaseServerClientInternal();
+  const supabase = await createServerSupabaseClient();
 
   const {
     data: { user },
@@ -454,7 +401,7 @@ export async function incrementPostViewCount(
     return { success: false, error: "Post ID is required." };
   }
   try {
-    const supabase = await createSupabaseServerClientInternal();
+    const supabase = await createServerSupabaseClient();
     const { error } = await supabase.rpc("increment_view_count", {
       post_id_to_increment: postId,
     });

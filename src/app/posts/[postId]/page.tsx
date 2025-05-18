@@ -1,5 +1,4 @@
-import { cookies } from "next/headers";
-import { createServerClient, type CookieOptions } from "@supabase/ssr";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
 import type { Database } from "@/lib/database.types";
 import { notFound } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -14,27 +13,7 @@ export default async function IndividualPostViewPage({
   params: Promise<{ postId: string }>;
 }) {
   const { postId } = await params;
-  const cookieStore = await cookies();
-
-  const supabase = createServerClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get: (name: string) => cookieStore.get(name)?.value,
-        set: (name: string, value: string, options: CookieOptions) => {
-          try {
-            cookieStore.set(name, value, options);
-          } catch {}
-        },
-        remove: (name: string, options: CookieOptions) => {
-          try {
-            cookieStore.set(name, "", { ...options, maxAge: 0 });
-          } catch {}
-        },
-      },
-    }
-  );
+  const supabase = await createServerSupabaseClient();
 
   const {
     data: { user: currentUser },

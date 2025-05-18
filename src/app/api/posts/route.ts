@@ -1,17 +1,12 @@
 import { NextResponse } from "next/server";
-import { createServerClient } from "@supabase/ssr";
+import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs";
 import { cookies } from "next/headers";
 import type { Database } from "@/lib/database.types";
 
 // GET /api/posts - Fetches posts, optionally filtered by collective_id
 // Example: /api/posts?collectiveId=uuid-of-collective
 export async function GET(request: Request) {
-  const cookieStore = await cookies();
-  const supabase = createServerClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    { cookies: cookieStore }
-  );
+  const supabase = createRouteHandlerClient<Database>({ cookies });
 
   const { searchParams } = new URL(request.url);
   const collectiveId = searchParams.get("collectiveId");

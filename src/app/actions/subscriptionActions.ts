@@ -1,7 +1,6 @@
 "use server";
 
-import { cookies } from "next/headers";
-import { createServerClient } from "@supabase/ssr";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
 import type { Database, Enums } from "@/lib/database.types";
 import { getStripe } from "@/lib/stripe";
 import { revalidatePath } from "next/cache";
@@ -18,12 +17,7 @@ export async function getSubscriptionStatus(
   targetEntityType: Enums<"subscription_target_type">,
   targetEntityId: string
 ): Promise<SubscriptionStatusResult | null> {
-  const cookieStore = await cookies();
-  const supabase = createServerClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    { cookies: cookieStore }
-  );
+  const supabase = await createServerSupabaseClient();
 
   const {
     data: { user },
@@ -68,12 +62,7 @@ export async function unsubscribeFromEntity(
   dbSubscriptionId: string, // ID from your public.subscriptions table
   stripeSubscriptionId: string
 ): Promise<UnsubscribeResult> {
-  const cookieStore = await cookies();
-  const supabase = createServerClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    { cookies: cookieStore }
-  );
+  const supabase = await createServerSupabaseClient();
   const {
     data: { user },
     error: authError,

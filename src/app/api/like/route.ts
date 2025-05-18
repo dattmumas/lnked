@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { createServerClient } from "@supabase/ssr";
+import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs";
 import type { Database } from "@/lib/database.types";
 
 interface LikeRequestBody {
@@ -9,12 +9,7 @@ interface LikeRequestBody {
 
 // POST /api/like - Toggles a like for a post by the authenticated user
 export async function POST(request: Request) {
-  const cookieStore = await cookies();
-  const supabase = createServerClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    { cookies: cookieStore }
-  );
+  const supabase = createRouteHandlerClient<Database>({ cookies });
 
   const {
     data: { user },

@@ -1,7 +1,6 @@
 "use server";
 
-import { cookies } from "next/headers";
-import { createServerClient } from "@supabase/ssr";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
 import type { Database, TablesUpdate } from "@/lib/database.types";
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
@@ -59,12 +58,7 @@ interface UpdateUserProfileResult {
 export async function updateUserProfile(
   formData: RawUserProfileFormInput // Use the raw input type for the function signature
 ): Promise<UpdateUserProfileResult> {
-  const cookieStore = await cookies();
-  const supabase = createServerClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    { cookies: cookieStore }
-  );
+  const supabase = await createServerSupabaseClient();
 
   const {
     data: { user },
