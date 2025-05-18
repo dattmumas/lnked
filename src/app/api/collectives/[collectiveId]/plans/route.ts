@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { createServerClient } from "@supabase/ssr";
+import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs";
 import { getStripe } from "@/lib/stripe";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import type { Database } from "@/lib/database.types";
@@ -25,12 +25,7 @@ export async function POST(req: Request, context: any) {
   }
 
   // Auth: get user session
-  const cookieStore = await cookies();
-  const supabase = createServerClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { cookies: { getAll: cookieStore.getAll } }
-  );
+  const supabase = createRouteHandlerClient<Database>({ cookies });
   const {
     data: { session },
     error: sessionError,

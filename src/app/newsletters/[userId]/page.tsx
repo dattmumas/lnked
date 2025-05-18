@@ -1,5 +1,4 @@
-import { cookies } from "next/headers";
-import { createServerClient } from "@supabase/ssr";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
 import type { Database } from "@/lib/database.types";
 import { notFound } from "next/navigation";
 import PostCard from "@/components/app/posts/molecules/PostCard";
@@ -20,20 +19,7 @@ export default async function IndividualNewsletterPage({
   params: Promise<{ userId: string }>;
 }) {
   const { userId } = await params;
-  const cookieStore = await cookies();
-  const supabase = createServerClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value;
-        },
-        set() {},
-        remove() {},
-      },
-    }
-  );
+  const supabase = await createServerSupabaseClient();
 
   const {
     data: { user: currentUser },

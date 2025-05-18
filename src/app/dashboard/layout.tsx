@@ -1,5 +1,4 @@
-import { cookies } from "next/headers";
-import { createServerClient } from "@supabase/ssr";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
 import type { Database } from "@/lib/database.types";
 import DashboardShell from "@/components/app/dashboard/template/dashboard-shell";
 import { Metadata } from "next";
@@ -15,12 +14,7 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const cookieStore = await cookies();
-  const supabase = createServerClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    { cookies: cookieStore }
-  );
+  const supabase = await createServerSupabaseClient();
 
   const {
     data: { session },
