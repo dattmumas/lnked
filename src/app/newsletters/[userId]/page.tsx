@@ -54,7 +54,7 @@ export default async function IndividualNewsletterPage({
   // 2. Fetch posts for this author (individual newsletter posts where collective_id IS NULL)
   //    and include like count for each post.
   //    RLS policies on 'posts' will handle public/subscriber access.
-  const { data: postsData, error: postsError } = await supabase
+  let postsQuery = supabase
     .from("posts")
     .select(
       `
@@ -63,10 +63,17 @@ export default async function IndividualNewsletterPage({
     `
     )
     .eq("author_id", author.id)
-    .is("collective_id", null) // Key filter for individual newsletter posts
-    .eq("is_public", true) // Initially, only show public posts; subscription check handled by RLS or could be added here
-    .not("published_at", "is", null) // Only show published posts
+    .is("collective_id", null) // individual newsletter posts only
     .order("published_at", { ascending: false });
+
+  // If the visiting user is NOT the owner, only show public + published posts
+  if (!currentUser || currentUser.id !== author.id) {
+    postsQuery = postsQuery
+      .eq("is_public", true)
+      .not("published_at", "is", null);
+  }
+
+  const { data: postsData, error: postsError } = await postsQuery;
 
   if (postsError) {
     console.error(`Error fetching posts for author ${author.id}:`, postsError);
