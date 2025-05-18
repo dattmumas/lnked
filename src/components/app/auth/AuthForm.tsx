@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, FormEvent } from "react";
+import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -79,7 +79,9 @@ const AuthFormFieldsComponent: React.FC<AuthFormFieldsProps> = ({
           placeholder="Your Name"
           required
           value={fullName}
-          onChange={(e) => setFullName(e.target.value)}
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+            setFullName(e.target.value)
+          }
           disabled={isLoading}
         />
       </div>
@@ -92,7 +94,9 @@ const AuthFormFieldsComponent: React.FC<AuthFormFieldsProps> = ({
         placeholder="m@example.com"
         required
         value={email}
-        onChange={(e) => setEmail(e.target.value)}
+        onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+          setEmail(e.target.value)
+        }
         disabled={isLoading}
       />
     </div>
@@ -105,7 +109,9 @@ const AuthFormFieldsComponent: React.FC<AuthFormFieldsProps> = ({
         required
         minLength={mode === "signUp" ? 6 : undefined}
         value={password}
-        onChange={(e) => setPassword(e.target.value)}
+        onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+          setPassword(e.target.value)
+        }
         disabled={isLoading}
       />
     </div>
@@ -144,11 +150,11 @@ export default function AuthForm({
   error,
   message,
 }: AuthFormProps) {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [fullName, setFullName] = useState("");
+  const [email, setEmail] = useState<string>("");
+  const [password, setPassword] = useState<string>("");
+  const [fullName, setFullName] = useState<string>("");
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const formData: Record<string, string> = { email, password };
     if (mode === "signUp") {
@@ -173,7 +179,7 @@ export default function AuthForm({
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-muted/40 p-4 md:p-6">
+    <div className="flex items-center justify-center p-4 md:p-6 bg-muted/40 min-h-full">
       <Card className="w-full max-w-sm">
         <AuthFormHeaderComponent
           title={content.title}

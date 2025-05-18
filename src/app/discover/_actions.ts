@@ -1,7 +1,6 @@
 "use server";
 
-import { createServerClient, type CookieOptions } from "@supabase/ssr"; // Corrected import
-import { cookies } from "next/headers";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
 // import { revalidatePath } from "next/cache"; // Removed as it's not used
 import { z } from "zod";
 
@@ -30,26 +29,7 @@ export async function logRecommendationFeedback(
   prevState: ActionResult | undefined,
   formData: FormData
 ): Promise<ActionResult> {
-  const cookieStore = await cookies(); // Correctly awaited
-
-  // Correct Supabase client initialization for Server Actions
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value;
-        },
-        set(name: string, value: string, options: CookieOptions) {
-          cookieStore.set(name, value, options);
-        },
-        remove(name: string, options: CookieOptions) {
-          cookieStore.set(name, "", options);
-        },
-      },
-    }
-  );
+  const supabase = createServerSupabaseClient();
 
   const {
     data: { user },

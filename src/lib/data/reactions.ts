@@ -1,5 +1,4 @@
-import { createServerClient } from "@supabase/ssr";
-import { cookies } from "next/headers";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 interface TogglePostReactionArgs {
   postId: string;
@@ -18,24 +17,7 @@ export async function togglePostReaction({
   userId,
   type,
 }: TogglePostReactionArgs) {
-  const cookieStore = await cookies();
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value;
-        },
-        set(name: string, value: string, options) {
-          cookieStore.set(name, value, options);
-        },
-        remove(name: string, options) {
-          cookieStore.set(name, "", options);
-        },
-      },
-    }
-  );
+  const supabase = createServerSupabaseClient();
   const { data, error } = await supabase
     .from("post_reactions")
     .upsert([{ post_id: postId, user_id: userId, type }], {
@@ -52,24 +34,7 @@ export async function toggleCommentReaction({
   userId,
   type,
 }: ToggleCommentReactionArgs) {
-  const cookieStore = await cookies();
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value;
-        },
-        set(name: string, value: string, options) {
-          cookieStore.set(name, value, options);
-        },
-        remove(name: string, options) {
-          cookieStore.set(name, "", options);
-        },
-      },
-    }
-  );
+  const supabase = createServerSupabaseClient();
   const { data, error } = await supabase
     .from("comment_reactions")
     .upsert([{ comment_id: commentId, user_id: userId, type }], {
@@ -77,6 +42,16 @@ export async function toggleCommentReaction({
     })
     .select()
     .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function getReactionsForPost(postId: string) {
+  const supabase = createServerSupabaseClient();
+  const { data, error } = await supabase
+    .from("post_reactions")
+    .select("user_id, type, created_at")
+    .eq("post_id", postId);
   if (error) throw error;
   return data;
 }

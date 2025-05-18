@@ -17,6 +17,12 @@ interface DashboardNavProps {
   collectives: CollectiveSummary[];
 }
 
+interface UserProfile {
+  email?: string;
+  avatar_url?: string;
+  full_name?: string;
+}
+
 export function DashboardNav({
   sidebarCollapsed,
   onToggleSidebar,
@@ -31,30 +37,31 @@ export function DashboardNav({
     null
   );
   // User state
-  const [user, setUser] = useState<{
-    email?: string;
-    avatar_url?: string;
-    full_name?: string;
-  } | null>(null);
+  const [user, setUser] = useState<UserProfile | null>(null);
   // Mobile sidebar sheet state
-  const [sheetOpen, setSheetOpen] = useState(false);
+  const [sheetOpen, setSheetOpen] = useState<boolean>(false);
 
   useEffect(() => {
     const supabase = createBrowserClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
     );
-    supabase.auth.getUser().then(({ data }) => {
-      if (data?.user) {
+    supabase.auth.getUser().then(async ({ data }: { data: any }) => {
+      if (data.user) {
+        const { id, email } = data.user;
+        // Fetch the corresponding profile from the 'users' table
+        const { data: profile } = await supabase
+          .from("users")
+          .select("full_name, avatar_url")
+          .eq("id", id)
+          .single();
         setUser({
-          email: data.user.email ?? undefined,
-          avatar_url:
-            (data.user.user_metadata && data.user.user_metadata.avatar_url) ||
-            undefined,
-          full_name:
-            (data.user.user_metadata && data.user.user_metadata.full_name) ||
-            undefined,
+          email: email ?? undefined,
+          avatar_url: profile?.avatar_url || undefined,
+          full_name: profile?.full_name || undefined,
         });
+      } else {
+        setUser(null);
       }
     });
   }, []);

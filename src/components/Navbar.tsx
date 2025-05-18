@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
+import supabase from "@/lib/supabase/browser";
 import type { User } from "@supabase/supabase-js";
 import { Button } from "./ui/button";
 import {
@@ -47,32 +47,33 @@ const dashboardNavItems = [
 ];
 
 export default function Navbar() {
-  const supabase = createSupabaseBrowserClient();
   const router = useRouter();
   const pathname = usePathname();
   const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
 
   useEffect(() => {
-    const getUser = async () => {
-      const {
-        data: { user: currentUser },
-      } = await supabase.auth.getUser();
+    // Fetch current user using shared Supabase client
+    supabase.auth.getUser().then(({ data: { user: currentUser } }) => {
       setUser(currentUser);
       setIsLoading(false);
-    };
-    getUser();
-
+    });
+    // Subscribe to auth changes on the singleton client
     const { data: authListener } = supabase.auth.onAuthStateChange(
-      (event, session) => {
+      (event: string, session: any) => {
         setUser(session?.user ?? null);
+        // Sync session to server cookie on sign-in/sign-out
+        fetch("/api/auth/callback", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ event, session }),
+        });
       }
     );
-
     return () => {
-      authListener?.subscription?.unsubscribe();
+      authListener.subscription.unsubscribe();
     };
-  }, [supabase.auth, router]);
+  }, []);
 
   const handleSignOut = async () => {
     setIsLoading(true);
