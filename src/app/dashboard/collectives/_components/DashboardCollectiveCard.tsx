@@ -17,6 +17,7 @@ import {
   Users2,
   Users,
   Eye,
+  Plus,
   TrendingUp,
 } from "lucide-react";
 import type { Database } from "@/lib/database.types";
@@ -137,6 +138,21 @@ export default function DashboardCollectiveCard({
             <Eye className="h-4 w-4 mr-1.5" /> View
           </Link>
         </Button>
+        {role === "Owner" && (
+          <Button
+            variant="outline"
+            size="sm"
+            asChild
+            className="flex-grow basis-1/3 sm:basis-auto"
+          >
+            <Link
+              href={`/dashboard/${collective.id}/new-post`}
+              className="flex items-center justify-center w-full"
+            >
+              <Plus className="h-4 w-4 mr-1.5" /> Add Post
+            </Link>
+          </Button>
+        )}
         {role === "Owner" ? (
           <>
             <Button
