@@ -6,6 +6,7 @@ import {
   Users2,
   UserSquare,
   Newspaper,
+  Settings as SettingsIcon,
 } from "lucide-react";
 import { SidebarLink } from "./SidebarLink";
 import type { CollectiveSummary } from "./DashboardShell";
@@ -38,6 +39,11 @@ const settingsNavItems = [
     href: "/dashboard/my-newsletter/subscribers",
     icon: Newspaper,
     label: "Newsletter",
+  },
+  {
+    href: "/settings",
+    icon: SettingsIcon,
+    label: "Account Settings",
   },
 ];
 

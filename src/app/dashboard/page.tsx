@@ -91,7 +91,7 @@ export default async function DashboardManagementPage() {
       <div className="sticky top-0 z-30 bg-background py-4 border-b border-border mb-6 flex flex-col md:flex-row items-center justify-between">
         <div>
           <h1 className="text-3xl md:text-4xl font-bold font-serif tracking-tight text-foreground">
-            Dashboard
+            Management Dashboard
           </h1>
         </div>
         <div className="flex items-center gap-3 mt-4 md:mt-0">
