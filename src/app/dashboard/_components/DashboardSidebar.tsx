@@ -4,8 +4,8 @@ import { PlusCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import type { CollectiveSummary } from "../template/dashboard-shell";
-import { SidebarNav } from "../molecules/SidebarNav";
+import type { CollectiveSummary } from "./DashboardShell";
+import { SidebarNav } from "./SidebarNav";
 
 interface DashboardSidebarProps {
   className?: string;

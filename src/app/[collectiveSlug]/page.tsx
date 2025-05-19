@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import PostCard from "@/components/app/posts/molecules/PostCard";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import SubscribeButton from "@/components/SubscribeButton"; // Import the new button
+import SubscribeButton from "@/app/newsletters/_components/SubscribeButton";
 
 export default async function Page({
   params,

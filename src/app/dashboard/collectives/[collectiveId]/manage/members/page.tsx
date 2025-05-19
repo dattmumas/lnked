@@ -1,5 +1,5 @@
 import { createServerSupabaseClient } from "@/lib/supabase/server";
-import type { Database, Tables } from "@/lib/database.types";
+import type { Tables } from "@/lib/database.types";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import ManageMembersClientUI from "./ManageMembersClientUI"; // New client component

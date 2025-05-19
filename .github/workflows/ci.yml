@@ -15,7 +15,7 @@ jobs:
         uses: pnpm/action-setup@v3
         with:
           version: 8 # lock to a specific major if you wish
-          run_install: false # we’ll call pnpm install manually
+          run_install: false # we'll call pnpm install manually
 
       - name: Enable Corepack (makes pnpm available in $PATH)
         run: corepack enable
@@ -42,3 +42,16 @@ jobs:
           name: playwright-report
           path: playwright-report/
           retention-days: 14
+
+      - name: Check changelog for code changes
+        run: |
+          git fetch origin ${{ github.base_ref }}
+          # Get list of changed files in src/ or app/ (excluding changelog itself)
+          CHANGED=$(git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -E '^(src/|app/)' | grep -v 'change_log.json' || true)
+          if [ -n "$CHANGED" ]; then
+            # If code files changed, ensure change_log.json is also changed
+            if ! git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -q 'change_log.json'; then
+              echo 'ERROR: You must update change_log.json for every code change.'
+              exit 1
+            fi
+          fi

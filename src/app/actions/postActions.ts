@@ -1,12 +1,7 @@
 "use server";
 
 import { createServerSupabaseClient } from "@/lib/supabase/server";
-import type {
-  Database,
-  TablesInsert,
-  TablesUpdate,
-  Enums,
-} from "@/lib/database.types";
+import type { TablesInsert, TablesUpdate, Enums } from "@/lib/database.types";
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 

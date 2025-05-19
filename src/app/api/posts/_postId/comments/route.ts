@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
-import type { Database } from "@/lib/database.types";
-import { getCommentsByPostId } from "@/lib/data/comments";
 // import { getCurrentUser } from '@/lib/auth'; // Implement as needed
 
 export async function GET(

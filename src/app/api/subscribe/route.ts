@@ -3,7 +3,6 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { getStripe } from "@/lib/stripe";
 import Stripe from "stripe"; // Explicitly import Stripe namespace
 import { supabaseAdmin } from "@/lib/supabaseAdmin"; // Updated import path
-import type { Database } from "@/lib/database.types";
 
 interface SubscribeRequestBody {
   priceId: string;

@@ -2,7 +2,7 @@
 
 import { z } from "zod";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
-import type { Database, Enums } from "@/lib/database.types";
+import type { Enums } from "@/lib/database.types";
 import {
   InviteMemberServerSchema,
   type InviteMemberServerValues,

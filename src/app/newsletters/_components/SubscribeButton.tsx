@@ -1,8 +1,10 @@
 "use client";
 
-import { useState, useTransition, useEffect } from "react";
+import { useState, useEffect } from "react";
+import * as React from "react";
 import { Button } from "@/components/ui/button";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
+import useRouter from "next/navigation";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import type { User } from "@supabase/supabase-js";
 
@@ -20,7 +22,7 @@ export default function SubscribeButton({
 }: SubscribeButtonProps) {
   const router = useRouter();
   const pathname = usePathname();
-  const [isPending, startTransition] = useTransition();
+  const [isPending, startTransition] = React.useTransition();
   const [isLoadingUser, setIsLoadingUser] = useState(true);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const supabase = createSupabaseBrowserClient();

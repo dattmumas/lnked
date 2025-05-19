@@ -1,7 +1,7 @@
 "use server";
 
 import { createServerSupabaseClient } from "@/lib/supabase/server";
-import type { Database, TablesUpdate } from "@/lib/database.types";
+import type { TablesUpdate } from "@/lib/database.types";
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 

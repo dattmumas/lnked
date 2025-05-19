@@ -2,13 +2,12 @@
 
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-import { ReactNode } from "react";
 
 interface StatCardProps {
   title: string;
   value: string | number;
-  icon?: ReactNode;
-  description?: ReactNode;
+  icon?: React.ReactNode;
+  description?: React.ReactNode;
   className?: string;
   trend?: number;
 }

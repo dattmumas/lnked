@@ -1,5 +1,5 @@
 import CollectiveCard from "@/components/app/collectives/molecules/CollectiveCard";
-import LoadMoreButton from "@/components/app/discover/LoadMoreButton";
+import LoadMoreButton from "@/app/discover/_components/LoadMoreButton";
 // import { cookies } from "next/headers"; // No longer needed directly here
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Terminal } from "lucide-react";

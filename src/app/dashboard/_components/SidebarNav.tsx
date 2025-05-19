@@ -7,8 +7,8 @@ import {
   UserSquare,
   Newspaper,
 } from "lucide-react";
-import { SidebarLink } from "../atoms/sidebar-link";
-import type { CollectiveSummary } from "../template/dashboard-shell";
+import { SidebarLink } from "./SidebarLink";
+import type { CollectiveSummary } from "./DashboardShell";
 
 interface SidebarNavProps {
   collectives: CollectiveSummary[];

@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { getStripe } from "@/lib/stripe";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
-import type { Database } from "@/lib/database.types";
 
 interface PlanRequestBody {
   name: string;

@@ -2,7 +2,7 @@
 
 import * as Select from "@radix-ui/react-select";
 import { Check, ChevronDown } from "lucide-react";
-import type { CollectiveSummary } from "../template/dashboard-shell";
+import type { CollectiveSummary } from "./DashboardShell";
 
 interface CollectiveSelectorDropdownProps {
   collectives: CollectiveSummary[];

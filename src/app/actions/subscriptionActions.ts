@@ -1,7 +1,7 @@
 "use server";
 
 import { createServerSupabaseClient } from "@/lib/supabase/server";
-import type { Database, Enums } from "@/lib/database.types";
+import type { Enums } from "@/lib/database.types";
 import { getStripe } from "@/lib/stripe";
 import { revalidatePath } from "next/cache";
 

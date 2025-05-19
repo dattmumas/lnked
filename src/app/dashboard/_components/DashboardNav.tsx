@@ -3,13 +3,13 @@
 import { Menu, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ModeToggle } from "@/components/ui/mode-toggle";
-import type { CollectiveSummary } from "../template/dashboard-shell";
+import type { CollectiveSummary } from "./DashboardShell";
 import React, { useState, useEffect } from "react";
-import { CollectiveSelectorDropdown } from "../molecules/CollectiveSelectorDropdown";
-import { UserMenu } from "../molecules/UserMenu";
+import { CollectiveSelectorDropdown } from "./CollectiveSelectorDropdown";
+import { UserMenu } from "@/app/dashboard/_components/UserMenu";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { getCurrentUserProfile } from "@/lib/supabase/actions";
-import { SidebarNav } from "../molecules/SidebarNav";
+import { SidebarNav } from "./SidebarNav";
 import * as Sheet from "@radix-ui/react-dialog";
 
 interface DashboardNavProps {

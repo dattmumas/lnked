@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import PostCard from "@/components/app/posts/molecules/PostCard";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import SubscribeButton from "@/components/SubscribeButton";
+import SubscribeButton from "@/app/newsletters/_components/SubscribeButton";
 import FollowButton from "@/components/FollowButton";
 // We'll need a subscribe button component here eventually
 
@@ -134,7 +134,7 @@ export default async function IndividualNewsletterPage({
               <PostCard
                 key={post.id}
                 post={post}
-                collectiveSlug={null} // No collective slug for individual posts, or pass author's slug/id if needed by PostCard
+                collectiveSlug={null} // No collective userId for individual posts, or pass author's userId if needed by PostCard
               />
             ))}
           </div>

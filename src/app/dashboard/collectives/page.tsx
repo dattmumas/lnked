@@ -5,8 +5,8 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import DashboardCollectiveCard, {
-  CollectiveMemberRole,
-} from "@/components/app/dashboard/collectives/DashboardCollectiveCard";
+  type CollectiveMemberRole,
+} from "@/app/dashboard/collectives/_components/DashboardCollectiveCard";
 
 type CollectiveRow = Database["public"]["Tables"]["collectives"]["Row"];
 interface JoinedCollectiveMembership {

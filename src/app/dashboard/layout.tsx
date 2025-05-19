@@ -1,5 +1,4 @@
 import { createServerSupabaseClient } from "@/lib/supabase/server";
-import type { Database } from "@/lib/database.types";
 import DashboardShell from "@/components/app/dashboard/template/dashboard-shell";
 import { Metadata } from "next";
 import { redirect } from "next/navigation";
@@ -47,23 +46,26 @@ export default async function DashboardLayout({
     Array.isArray(joinedMembershipsData)
       ? joinedMembershipsData
           .filter(
-            (member: unknown) =>
-              typeof member === "object" &&
-              member !== null &&
-              "collective" in member &&
-              (member as any).collective &&
-              (member as any).collective.owner_id !== userId
+            (member: {
+              collective: {
+                id: string;
+                name: string;
+                slug: string;
+                owner_id: string;
+              };
+            }) => member.collective && member.collective.owner_id !== userId
           )
-          .map((member: unknown) => {
-            const m = member as {
+          .map(
+            (member: {
               collective: { id: string; name: string; slug: string };
-            };
-            return {
-              id: m.collective.id,
-              name: m.collective.name,
-              slug: m.collective.slug,
-            };
-          })
+            }) => {
+              return {
+                id: member.collective.id,
+                name: member.collective.name,
+                slug: member.collective.slug,
+              };
+            }
+          )
       : []
   ) as { id: string; name: string; slug: string }[];
 

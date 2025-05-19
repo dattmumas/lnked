@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
-import type { Database } from "@/lib/database.types";
 
 // GET /api/collectives - Fetches all collectives (publicly readable)
 export async function GET() {

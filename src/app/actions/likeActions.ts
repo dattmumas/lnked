@@ -1,7 +1,6 @@
 "use server";
 
 import { createServerSupabaseClient } from "@/lib/supabase/server";
-import type { Database } from "@/lib/database.types";
 import { revalidatePath } from "next/cache";
 
 interface LikeActionResult {

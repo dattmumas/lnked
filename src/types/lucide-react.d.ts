@@ -1,4 +1,4 @@
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 declare module "lucide-react" {
   import * as React from "react";
   export const Menu: React.FC<any>;
