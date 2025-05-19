@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import supabase from "@/lib/supabase/browser";
-import type { User } from "@supabase/supabase-js";
+import type { User, Session } from "@supabase/supabase-js";
 import { Button } from "./ui/button";
 import {
   Sheet,
@@ -60,7 +60,7 @@ export default function Navbar() {
     });
     // Subscribe to auth changes on the singleton client
     const { data: authListener } = supabase.auth.onAuthStateChange(
-      (event: string, session: any) => {
+      (event: string, session: Session | null) => {
         setUser(session?.user ?? null);
         // Sync session to server cookie on sign-in/sign-out
         fetch("/api/auth/callback", {

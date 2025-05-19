@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
  
 declare module "next/navigation" {
   const content: any;
