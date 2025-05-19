@@ -1,7 +1,8 @@
 import { useEffect } from "react";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
-import { CodeNode, CodeHighlightNode } from "@lexical/code";
-// @ts-expect-error: No types for prismjs
+import { CodeNode } from "@lexical/code";
+import { $createTextNode } from "lexical";
+// @ts-ignore: No types for prismjs
 import Prism from "prismjs";
 import "prismjs/components/prism-javascript";
 import "prismjs/components/prism-typescript";
@@ -21,46 +22,42 @@ import "prismjs/components/prism-swift";
 import "prismjs/components/prism-kotlin";
 import "prismjs/components/prism-sql";
 
-function getLanguageFromNode(node: CodeNode | CodeHighlightNode): string {
-  if (node instanceof CodeNode) {
-    return typeof node.getLanguage === "function"
-      ? node.getLanguage() || "javascript"
-      : "javascript";
-  }
-  // CodeHighlightNode does not have getLanguage; fallback
-  return "javascript";
+function getLanguageFromNode(node: CodeNode): string {
+  return typeof node.getLanguage === "function"
+    ? node.getLanguage() || "javascript"
+    : "javascript";
 }
 
 export default function CodeHighlightPlugin() {
   const [editor] = useLexicalComposerContext();
 
   useEffect(() => {
-    return editor.registerNodeTransform(CodeHighlightNode, (node) => {
-      const language = getLanguageFromNode(node);
-      const text = node.getTextContent();
-      if (Prism.languages[language]) {
-        const html = Prism.highlight(text, Prism.languages[language], language);
-        // @ts-expect-error: __highlighted and setHighlight are not typed
-        if (node.getLatest().__highlighted !== html) {
-          // @ts-expect-error: setHighlight may not exist on CodeHighlightNode
-          node.setHighlight(html);
-        }
-      }
-    });
-  }, [editor]);
-
-  useEffect(() => {
     return editor.registerNodeTransform(CodeNode, (node) => {
       const language = getLanguageFromNode(node);
       const text = node.getTextContent();
-      if (Prism.languages[language]) {
-        const html = Prism.highlight(text, Prism.languages[language], language);
-        // @ts-expect-error: __highlighted and setHighlight are not typed
-        if (node.getLatest().__highlighted !== html) {
-          // @ts-expect-error: setHighlight may not exist on CodeNode
-          node.setHighlight?.(html);
+      if (!Prism.languages[language]) return;
+      const tokens = Prism.tokenize(text, Prism.languages[language]);
+      // Remove all children
+      node.getChildren().forEach((child) => child.remove());
+      // Convert Prism tokens to Lexical TextNodes
+      tokens.forEach((token: any) => {
+        if (typeof token === "string") {
+          node.append($createTextNode(token));
+        } else {
+          // Prism token: { type, content }
+          const content =
+            typeof token.content === "string"
+              ? token.content
+              : Array.isArray(token.content)
+              ? token.content.join("")
+              : String(token.content);
+          const textNode = $createTextNode(content);
+          // Set style/class for Prism token type
+          // Lexical theme should style .token.<type>
+          textNode.setStyle(`token ${token.type}`);
+          node.append(textNode);
         }
-      }
+      });
     });
   }, [editor]);
 

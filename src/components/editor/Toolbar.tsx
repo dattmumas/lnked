@@ -13,6 +13,7 @@ import {
   $createHeadingNode,
   $createQuoteNode,
 } from "@lexical/rich-text";
+import { CodeNode } from "@lexical/code";
 import {
   Bold,
   Italic,
@@ -136,7 +137,7 @@ function Toolbar({ onInsertGif }: ToolbarProps): JSX.Element {
   }, [editor, updateToolbar]);
 
   // Block format change handler
-  const formatBlock = useCallback(
+  const formatBlock = React.useCallback(
     (type: string) => {
       editor.update(() => {
         const selection = $getSelection();
@@ -155,14 +156,11 @@ function Toolbar({ onInsertGif }: ToolbarProps): JSX.Element {
               $setBlocksType(selection, () => $createQuoteNode());
               break;
             case "code":
-              $setBlocksType(selection, () => $createQuoteNode());
+              $setBlocksType(selection, () => new CodeNode());
               break;
+            case "paragraph":
             default:
-              if (typeof $createParagraphNode !== "undefined") {
-                $setBlocksType(selection, () => $createParagraphNode());
-              } else {
-                $setBlocksType(selection, () => $createHeadingNode("h1"));
-              }
+              $setBlocksType(selection, () => $createParagraphNode());
           }
         }
       });

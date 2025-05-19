@@ -1,4 +1,5 @@
-import React from "react";
+import * as React from "react";
+import Image from "next/image";
 
 interface LexicalNode {
   type: string;
@@ -72,7 +73,6 @@ export function LexicalRenderer({ contentJSON }: LexicalRendererProps) {
           (node as { tag?: string; tagName?: string }).tag ||
           (node as { tagName?: string }).tagName ||
           "h1";
-        const HeadingTag = level as keyof JSX.IntrinsicElements;
         const className =
           level === "h1"
             ? "editor-heading-h1"
@@ -81,10 +81,10 @@ export function LexicalRenderer({ contentJSON }: LexicalRendererProps) {
             : level === "h3"
             ? "editor-heading-h3"
             : "editor-heading-h1";
-        return (
-          <HeadingTag className={className}>
-            {renderChildren(node.children)}
-          </HeadingTag>
+        return React.createElement(
+          level,
+          { className },
+          renderChildren(node.children)
         );
       }
       case "quote":
@@ -105,14 +105,12 @@ export function LexicalRenderer({ contentJSON }: LexicalRendererProps) {
           (node as { tag?: string }).tag ||
           "bullet";
         const isOrdered = listType === "number" || listType === "ol";
-        const ListTag = (
-          isOrdered ? "ol" : "ul"
-        ) as keyof JSX.IntrinsicElements;
+        const ListTag = isOrdered ? "ol" : "ul";
         const className = isOrdered ? "editor-list-ol" : "editor-list-ul";
-        return (
-          <ListTag className={className}>
-            {renderChildren(node.children)}
-          </ListTag>
+        return React.createElement(
+          ListTag,
+          { className },
+          renderChildren(node.children)
         );
       }
       case "listitem":
@@ -155,30 +153,51 @@ export function LexicalRenderer({ contentJSON }: LexicalRendererProps) {
           </div>
         );
       }
-      case "image":
+      case "image": {
+        const src = (node as { src: string }).src;
+        const alt = (node as { alt?: string }).alt || "image";
         return (
-          <img
-            src={(node as { src: string }).src}
-            alt={(node as { alt?: string }).alt || "image"}
+          <Image
+            src={src}
+            alt={alt}
+            width={500}
+            height={500}
             style={{ maxWidth: "100%", display: "block" }}
+            loading="lazy"
+            unoptimized={true}
           />
         );
-      case "inlineimage":
+      }
+      case "inlineimage": {
+        const src = (node as { src: string }).src;
+        const alt = (node as { alt?: string }).alt || "image";
         return (
-          <img
-            src={(node as { src: string }).src}
-            alt={(node as { alt?: string }).alt || "image"}
+          <Image
+            src={src}
+            alt={alt}
+            width={300}
+            height={300}
             style={{ maxWidth: "100%", display: "inline-block" }}
+            loading="lazy"
+            unoptimized={true}
           />
         );
-      case "gif":
+      }
+      case "gif": {
+        const src = (node as { url: string }).url;
+        const alt = (node as { alt?: string }).alt || "gif";
         return (
-          <img
-            src={(node as { url: string }).url}
-            alt={(node as { alt?: string }).alt || "gif"}
+          <Image
+            src={src}
+            alt={alt}
+            width={500}
+            height={500}
             style={{ maxWidth: "100%", display: "block" }}
+            loading="lazy"
+            unoptimized={true}
           />
         );
+      }
       case "tweet": {
         const tweetUrl: string = (node as { tweetUrl: string }).tweetUrl;
         const match = tweetUrl.match(/status\/(\d+)/);
@@ -278,7 +297,9 @@ export function LexicalRenderer({ contentJSON }: LexicalRendererProps) {
   return (
     <>
       {Array.isArray(contentObj.root.children)
-        ? contentObj.root.children.map(renderNode)
+        ? contentObj.root.children.map((child: any, idx: number) => (
+            <React.Fragment key={idx}>{renderNode(child)}</React.Fragment>
+          ))
         : null}
     </>
   );

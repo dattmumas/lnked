@@ -36,18 +36,14 @@ const FloatingLinkEditorPlugin: React.FC = () => {
           if (linkNode && $isLinkNode(linkNode)) {
             setLinkUrl((linkNode as LinkNode).getURL());
             setVisible(true);
-            // Position popup near selection
-            setTimeout(() => {
-              const domSelection = window.getSelection();
-              if (domSelection && domSelection.rangeCount > 0) {
-                const range = domSelection.getRangeAt(0).cloneRange();
-                const rects = range.getClientRects();
-                if (rects.length > 0) {
-                  const rect = rects[0];
-                  setPosition({ x: rect.left, y: rect.bottom });
-                }
-              }
-            }, 0);
+            // Use Lexical's DOM util for position
+            const domElem = editor.getElementByKey(linkNode.getKey());
+            if (domElem) {
+              const rect = domElem.getBoundingClientRect();
+              setPosition({ x: rect.left, y: rect.bottom });
+            } else {
+              setPosition(null);
+            }
             return;
           }
         }
@@ -67,6 +63,13 @@ const FloatingLinkEditorPlugin: React.FC = () => {
     updatePopup();
     return () => removeListener();
   }, [editor]);
+
+  // Auto-focus input when editing
+  useEffect(() => {
+    if (editing) {
+      inputRef.current?.focus();
+    }
+  }, [editing]);
 
   const applyLink = () => {
     if (linkUrl === "") {

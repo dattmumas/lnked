@@ -4,7 +4,7 @@ import EditUserSettingsForm from "./_components/EditUserSettingsForm";
 import DeleteAccountSection from "./_components/DeleteAccountSection";
 
 export default async function UserSettingsPage() {
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
   const {
     data: { user: authUser },
     error: authError,

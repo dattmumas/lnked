@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   LexicalComposer,
   type InitialConfigType,
@@ -46,6 +46,7 @@ import SlashMenuPlugin from "./plugins/SlashMenuPlugin";
 import { CollapsibleContainerNode } from "./nodes/CollapsibleContainerNode";
 import { HashtagNode } from "./nodes/HashtagNode";
 import { STICKY_COLORS } from "./nodes/StickyNode";
+import EmbedUrlModal from "./EmbedUrlModal";
 
 const editorNodes = [
   HeadingNode,
@@ -159,7 +160,16 @@ function LoadInitialJsonPlugin({ json }: { json: string }) {
   return null;
 }
 
-function CustomInsertCommandsPlugin() {
+interface CustomInsertCommandsPluginProps {
+  openEmbedModal: (
+    type: "tweet" | "youtube" | "image" | "inlineimage",
+    onSubmit: (url: string) => void
+  ) => void;
+}
+
+function CustomInsertCommandsPlugin({
+  openEmbedModal,
+}: CustomInsertCommandsPluginProps) {
   const [editor] = useLexicalComposerContext();
   React.useEffect(() => {
     // Helper to remove "/" TextNode if present at selection
@@ -257,15 +267,15 @@ function CustomInsertCommandsPlugin() {
     const removeTweet = editor.registerCommand(
       INSERT_TWEET_COMMAND,
       () => {
-        const url = window.prompt("Enter Tweet URL:");
-        if (!url) return true;
-        editor.update(() => {
-          const selection = $getSelection();
-          if (selection) {
-            selection.insertNodes([$createTweetNode(url)]);
-          }
+        openEmbedModal("tweet", (url: string) => {
+          editor.update(() => {
+            const selection = $getSelection();
+            if (selection) {
+              selection.insertNodes([$createTweetNode(url)]);
+            }
+          });
+          removeSlashTrigger();
         });
-        removeSlashTrigger();
         return true;
       },
       0
@@ -274,15 +284,15 @@ function CustomInsertCommandsPlugin() {
     const removeYouTube = editor.registerCommand(
       INSERT_YOUTUBE_COMMAND,
       () => {
-        const url = window.prompt("Enter YouTube URL:");
-        if (!url) return true;
-        editor.update(() => {
-          const selection = $getSelection();
-          if (selection) {
-            selection.insertNodes([$createYouTubeNode(url)]);
-          }
+        openEmbedModal("youtube", (url: string) => {
+          editor.update(() => {
+            const selection = $getSelection();
+            if (selection) {
+              selection.insertNodes([$createYouTubeNode(url)]);
+            }
+          });
+          removeSlashTrigger();
         });
-        removeSlashTrigger();
         return true;
       },
       0
@@ -291,15 +301,15 @@ function CustomInsertCommandsPlugin() {
     const removeImage = editor.registerCommand(
       INSERT_IMAGE_COMMAND,
       () => {
-        const url = window.prompt("Enter image URL:");
-        if (!url) return true;
-        editor.update(() => {
-          const selection = $getSelection();
-          if (selection) {
-            selection.insertNodes([$createImageNode(url, "Image")]);
-          }
+        openEmbedModal("image", (url: string) => {
+          editor.update(() => {
+            const selection = $getSelection();
+            if (selection) {
+              selection.insertNodes([$createImageNode(url, "Image")]);
+            }
+          });
+          removeSlashTrigger();
         });
-        removeSlashTrigger();
         return true;
       },
       0
@@ -308,17 +318,17 @@ function CustomInsertCommandsPlugin() {
     const removeInlineImage = editor.registerCommand(
       INSERT_INLINE_IMAGE_COMMAND,
       () => {
-        const url = window.prompt("Enter inline image URL:");
-        if (!url) return true;
-        editor.update(() => {
-          const selection = $getSelection();
-          if (selection) {
-            selection.insertNodes([
-              $createInlineImageNode(url, "Inline Image"),
-            ]);
-          }
+        openEmbedModal("inlineimage", (url: string) => {
+          editor.update(() => {
+            const selection = $getSelection();
+            if (selection) {
+              selection.insertNodes([
+                $createInlineImageNode(url, "Inline Image"),
+              ]);
+            }
+          });
+          removeSlashTrigger();
         });
-        removeSlashTrigger();
         return true;
       },
       0
@@ -381,6 +391,13 @@ export default function PostEditor({
     ((url: string, alt: string) => void) | null
   >(null);
 
+  // Modal state for embed URLs
+  const [embedModal, setEmbedModal] = useState<{
+    type: "tweet" | "youtube" | "image" | "inlineimage";
+    open: boolean;
+    onSubmit: (url: string) => void;
+  } | null>(null);
+
   const initialConfig: InitialConfigType = {
     namespace: "LnkedPostEditor",
     onError: lexicalEditorOnError,
@@ -404,13 +421,10 @@ export default function PostEditor({
     },
   };
 
-  const handleOnChange = useCallback(
-    (editorState: import("lexical").EditorState) => {
-      const json = JSON.stringify(editorState.toJSON());
-      onContentChange?.(json);
-    },
-    [onContentChange]
-  );
+  const handleOnChange = (editorState: import("lexical").EditorState) => {
+    const json = JSON.stringify(editorState.toJSON());
+    onContentChange?.(json);
+  };
 
   // CustomCommandPlugin with GIF picker integration
   function CustomCommandPluginWithGif() {
@@ -441,13 +455,26 @@ export default function PostEditor({
     return null;
   }
 
+  // Helper to open the modal
+  const openEmbedModal = (
+    type: "tweet" | "youtube" | "image" | "inlineimage",
+    onSubmit: (url: string) => void
+  ) => {
+    setEmbedModal({ type, open: true, onSubmit });
+  };
+
+  // Helper to close the modal
+  const closeEmbedModal = () => setEmbedModal(null);
+
   return (
     <LexicalComposer initialConfig={initialConfig}>
       <div className="flex flex-col h-full">
         <Toolbar onInsertGif={() => setShowGifPicker(true)} />
-        <div className="relative flex-1">
+        <div className="relative flex-1 overflow-visible">
           <RichTextPlugin
-            contentEditable={<ContentEditable className="editor-input" />}
+            contentEditable={
+              <ContentEditable className="editor-input w-full min-h-[24rem] border border-border rounded-md p-4 prose dark:prose-invert focus:outline-none" />
+            }
             placeholder={
               <div className="editor-placeholder">{placeholder}</div>
             }
@@ -463,7 +490,7 @@ export default function PostEditor({
           {/* Only load initial content once on mount */}
           {initialContent && <LoadInitialJsonPlugin json={initialContent} />}
           <CustomCommandPluginWithGif />
-          <CustomInsertCommandsPlugin />
+          <CustomInsertCommandsPlugin openEmbedModal={openEmbedModal} />
           <FloatingLinkEditorPlugin />
           <SlashMenuPlugin />
           {showGifPicker && (
@@ -472,6 +499,25 @@ export default function PostEditor({
               onClose={() => setShowGifPicker(false)}
             />
           )}
+          <EmbedUrlModal
+            open={!!embedModal?.open}
+            label={
+              embedModal?.type === "tweet"
+                ? "Enter Tweet URL"
+                : embedModal?.type === "youtube"
+                ? "Enter YouTube URL"
+                : embedModal?.type === "image"
+                ? "Enter Image URL"
+                : embedModal?.type === "inlineimage"
+                ? "Enter Inline Image URL"
+                : "Enter URL"
+            }
+            onSubmit={(url) => {
+              embedModal?.onSubmit(url);
+              closeEmbedModal();
+            }}
+            onCancel={closeEmbedModal}
+          />
         </div>
       </div>
     </LexicalComposer>

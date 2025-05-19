@@ -47,7 +47,7 @@ const EditorLayout: React.FC<EditorLayoutProps> = ({
       </header>
 
       {/* Apply flex-col for mobile and md:flex-row for medium screens and up */}
-      <div className="flex flex-col md:flex-row flex-1 overflow-hidden">
+      <div className="flex flex-col md:flex-row flex-1">
         {/* Sidebar: scrolls independently */}
         <aside
           className="w-full md:w-72 lg:w-80 bg-background border-b md:border-b-0 md:border-r p-6 overflow-y-auto 
@@ -59,7 +59,7 @@ const EditorLayout: React.FC<EditorLayoutProps> = ({
         </aside>
 
         {/* Main Editor Area: scrolls independently */}
-        <main className="flex-1 p-6 md:p-8 lg:p-10 overflow-y-auto">
+        <main className="flex-1 p-6 md:p-8 lg:p-10">
           {/* Removed h-[calc(...)] - should now fill available height */}
           {mainContent}
         </main>

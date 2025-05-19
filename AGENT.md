@@ -1,298 +1,213 @@
-Lexical Content Renderer for Posts
-Overview: We will create a LexicalRenderer React component (e.g. in components/ui/LexicalRenderer.tsx) that takes a Lexical JSON string (the content stored in posts.content) and renders it as formatted HTML. This renderer will support all node types used by the project’s Lexical editor, ensuring the post viewer page (e.g. app/newsletters/[slug]/[postId]/page.tsx) displays content exactly as authored. The rendering will match the editor’s theme (using the same CSS classes and structure) so that things like headings, quotes, and lists appear consistently. We will also make the renderer largely SSR-compatible by avoiding browser-only APIs and producing static markup for the content. Component Implementation: The Lexical JSON format represents the document as a nested object tree. For example, a simple post might have a structure like: { root: { children: [ {type: "heading", tag: "h1", children: [ {type: "text", text: "Hello"} ]}, {type: "paragraph", children: [ {type: "text", text: "World!"} ]} ] } }. Our component will recursively traverse such a structure and output appropriate JSX for each node type. Pseudocode for the renderer’s core might look like:
-tsx
+Issues: The custom SlashMenuPlugin listens for a standalone “/” at the start of a new line and opens a suggestion menu
+github.com
+. It dispatches a series of custom insert commands (e.g. INSERT_HEADING_COMMAND, INSERT_IMAGE_COMMAND) based on the option selected
+github.com
+. This implementation was adapted from Lexical’s playground and introduces several non-native patterns:
+Overuse of update listeners: It uses editor.registerUpdateListener on every editor update to detect the “/” trigger
+github.com
+. This is inefficient and not the idiomatic way to handle key triggers in Lexical.
+Manual caret position via DOM API: The plugin queries window.getSelection().getRangeAt(0) to find the caret’s screen position
+github.com
+, instead of using Lexical’s native mechanisms for retrieving selection coordinates.
+No support for text filtering: As implemented, the menu only opens for a lone “/” and closes as soon as any other character is typed
+github.com
+. This prevents narrowing down options by typing (a limitation compared to typical slash menus).
+Custom insert commands for native block types: It defines custom commands for inserting headings, paragraphs, quotes, etc., but these aren’t handled in the plugin (no command handler is registered for them, so those options do nothing)
+github.com
+. This duplicates functionality Lexical can handle via native transforms (e.g. setting block type) and indicates incomplete integration.
+Correction Plan:
+Use Lexical key commands for “/” trigger: Replace the update-listener approach with Lexical’s native command for keyboard events. For example, register a low-priority key down command:
+ts
 Copy
 Edit
-import React from "react";
-
-interface LexicalNode {
-type: string;
-[key: string]: any;
-}
-
-export function LexicalRenderer({ contentJSON }: { contentJSON: string | object }) {
-// Accept either a JSON string or already-parsed object
-const contentObj = typeof contentJSON === "string" ? JSON.parse(contentJSON) : contentJSON;
-if (!contentObj || !contentObj.root) return null;
-
-// Recursive function to render a node and its children
-const renderNode = (node: LexicalNode): React.ReactNode => {
-switch (node.type) {
-case "paragraph":
-return <p className="editor-paragraph">{node.children?.map(renderNode)}</p>;
-
-      case "heading": {
-        // Lexical uses a "tag" or similar property to denote heading level
-        const level = node.tag || node.tagName || "h1";
-        const HeadingTag = level as keyof JSX.IntrinsicElements;
-        // Apply corresponding CSS class for the heading level
-        const className =
-          level === "h1" ? "editor-heading-h1" :
-          level === "h2" ? "editor-heading-h2" :
-          level === "h3" ? "editor-heading-h3" :
-          "editor-heading-h1";
-        return <HeadingTag className={className}>{node.children?.map(renderNode)}</HeadingTag>;
-      }
-
-      case "quote":
-        return <blockquote className="editor-quote">{node.children?.map(renderNode)}</blockquote>;
-
-      case "code":
-        // Render code blocks: wrap children text in <code> inside a preformatted block
-        return <pre className="editor-code"><code>{node.children?.map(renderNode)}</code></pre>;
-
-      case "list": {
-        // Lexical list nodes likely have a listType or tag for UL/OL
-        const listType = node.listType || node.tag || "bullet";
-        const isOrdered = listType === "number" || listType === "ol";
-        const ListTag = isOrdered ? "ol" : "ul";
-        const className = isOrdered ? "editor-list-ol" : "editor-list-ul";
-        return <ListTag className={className}>{node.children?.map(renderNode)}</ListTag>;
-      }
-
-      case "listitem":
-        return <li className="editor-list-item">{node.children?.map(renderNode)}</li>;
-
-      case "horizontalrule":
-        return <hr />;
-
-      case "text": {
-        // Base text node – apply formatting (bold, italic, etc.) if present
-        let text = node.text ?? "";
-        if (node.format) {
-          const formatFlags = node.format; // format is often a bitmask
-          if (formatFlags & 1) text = <strong>{text}</strong>;      // Bold
-          if (formatFlags & 2) text = <em>{text}</em>;              // Italic
-          if (formatFlags & 4) text = <u>{text}</u>;                // Underline
-          if (formatFlags & 8) text = <s>{text}</s>;                // Strikethrough
-          if (formatFlags & 16) text = <code>{text}</code>;         // Code
-        }
-        // If this text node has a "style" (inline styles), you could apply it here as well (e.g., color).
-        return text;
-      }
-
-      case "hashtag":
-        // HashtagNode extends TextNode but we’ll render as a span with a class for styling
-        return <span className="hashtag">#{node.text}</span>;
-
-      case "poll": {
-        // Poll node: display the question and options.
-        const question: string = node.question || "Untitled Poll";
-        const options: any[] = node.options || [];
-        return (
-          <div className="poll">
-            <p><strong>{question}</strong></p>
-            <ul>
-              {options.map((opt) => (
-                <li key={opt.uid}>{opt.text}</li>
-              ))}
-            </ul>
-          </div>
-        );
-      }
-
-      case "image":
-        // Image node (block image)
-        return <img src={node.src} alt={node.alt || "image"} style={{ maxWidth: "100%", display: "block" }} />;
-
-      case "inlineimage":
-        // Inline image (flows with text)
-        return <img src={node.src} alt={node.alt || "image"} style={{ maxWidth: "100%", display: "inline-block" }} />;
-
-      case "gif":
-        // GIF node – treated similar to an image
-        return <img src={node.url} alt={node.alt || "gif"} style={{ maxWidth: "100%", display: "block" }} />;
-
-      case "tweet": {
-        // Tweet embed: use a blockquote with a link to the tweet
-        const tweetUrl: string = node.tweetUrl;
-        const match = tweetUrl.match(/status\/(\d+)/);
-        if (!match) {
-          // If URL isn’t a valid tweet link, just render a hyperlink
-          return <a href={tweetUrl}>{tweetUrl}</a>;
-        }
-        return (
-          <blockquote className="twitter-tweet">
-            <a href={tweetUrl}>{tweetUrl}</a>
-          </blockquote>
-        );
-      }
-
-      case "youtube": {
-        const videoUrl: string = node.videoUrl;
-        // Extract YouTube video ID from various URL formats
-        const match = videoUrl.match(
-          /(?:youtube\.com\/(?:.*v=|.*\/)|youtu\.be\/)([A-Za-z0-9_-]{11})/
-        );
-        const videoId = match ? match[1] : null;
-        if (!videoId) {
-          return <a href={videoUrl}>{videoUrl}</a>;
-        }
-        // Responsive video embed (16:9 aspect ratio)
-        return (
-          <div style={{ position: "relative", paddingBottom: "56.25%", height: 0, overflow: "hidden", maxWidth: "100%" }}>
-            <iframe
-              src={`https://www.youtube.com/embed/${videoId}`}
-              style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%" }}
-              frameBorder="0"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
-              title="Embedded YouTube Video"
-            />
-          </div>
-        );
-      }
-
-      case "sticky": {
-        // Sticky note: render a colored note with text
-        const color: string = node.color || "#fff475"; // default yellow
-        const text = node.text || "";
-        return (
-          <div style={{
-            background: color,
-            padding: "1em",
-            borderRadius: "0.5em",
-            boxShadow: "0 2px 8px rgba(0,0,0,0.08)"
-          }}>
-            {text}
-          </div>
-        );
-      }
-
-      case "collapsible-container": {
-        // Collapsible section container
-        const collapsed: boolean = node.collapsed ?? false;
-        return (
-          <div className="collapsible-container" data-collapsed={collapsed ? "true" : "false"}>
-            {/* A trigger button to toggle (non-functional on static render, but shows state) */}
-            <button className="collapsible-trigger">
-              {collapsed ? "▶" : "▼"}
-            </button>
-            {/* Render children (they will be visible or hidden based on CSS/attribute) */}
-            <div style={{ display: collapsed ? "none" : "block" }}>
-              {node.children?.map(renderNode)}
-            </div>
-          </div>
-        );
-      }
-
-      case "layoutcontainer":
-        // Layout containers (columns) – if the editor supports multi-column, we could render a flex container
-        return <div className="layout-container">{node.children?.map(renderNode)}</div>;
-
-      case "layoutitem":
-        // Layout item – act as a column inside the container
-        return <div className="layout-item">{node.children?.map(renderNode)}</div>;
-
-      default:
-        return null;
+editor.registerCommand(KEY_DOWN_COMMAND, (event) => {
+if (event.key === "/" && $isRangeSelection($getSelection()) && $getSelection().isCollapsed()) {
+    // Check if at start of empty block:
+    const anchor = $getSelection().anchor;
+    const parent = anchor.getNode().getTopLevelElementOrThrow();
+    if (parent.getTextContent() === "") {
+      // Open slash menu
+      setOpen(true);
+      setHighlightedIndex(0);
+      // Prevent the "/" from actually inserting into the document
+      event.preventDefault();
     }
-
-};
-
-// Render all top-level children of the root
-return <>{contentObj.root.children.map(renderNode)}</>;
-}
-In the above code, every known Lexical node type is handled. We create appropriate HTML elements with the same classes the editor applies. For instance, paragraphs get the editor-paragraph class (which in the CSS ensures no extra margin is added
-github.com
-), headings use editor-heading-h1/h2/h3 (which define font sizes and margins
-github.com
-), quotes use editor-quote (styled with a left border to look like a blockquote
-github.com
-), and so on. By mirroring these classes, the rendered content will match the editor’s theming exactly. (These classes are defined in globals.css as part of the project’s design system.) For text formatting, we check node.format and wrap the text in the relevant tags. In Lexical’s model, formatting like bold/italic are stored as bit flags on text nodes. The example assumes a mapping (1=bold, 2=italic, 4=underline, 8=strikethrough, 16=code) – this aligns with Lexical’s internal constants. Thus, if a text node is bold and italic, format might be 3 (bits 1|2), and we’ll wrap it in <strong><em>...</em></strong>. This way, rich text styling is preserved in the output. (If needed, we could also parse the style field for things like custom color or background, but the current editor primarily uses classes for styling.) Handling Custom Nodes: The project’s editor includes custom nodes (Polls, GIFs, Tweets, YouTube, Sticky notes, Collapsible sections, etc.). We render each in a reasonable way:
-PollNode: We display the poll question in bold and list each option as a list item. (In the future, you could enhance this to show vote counts or interactive voting, but for static rendering we just show the poll content.)
-github.com
-GIFNode and ImageNode: We use a standard <img> tag with the stored URL and alt text, and apply inline styles to ensure responsiveness (max-width 100%)
-github.com
-. (Using Next.js’s <Image> is not necessary on the viewer; an <img> is fine for SSR and avoids requiring Next’s image loader.)
-TweetNode: We output a Twitter embed code: a <blockquote class="twitter-tweet"><a href="...">...</a></blockquote>. This mirrors what the editor’s TweetEmbed component does
-github.com
-. If the JSON has a valid Twitter status URL, the blockquote will allow Twitter’s script (if loaded on the client) to render an interactive embed. Even without the script, it provides a link to the tweet.
-YouTubeNode: We embed an <iframe> inside a responsive container (using an aspect-ratio trick with padding) to show the video player, similar to how the editor’s YouTubeEmbed renders it
-github.com
-github.com
-. If the URL is unrecognized, we fall back to a simple link.
-StickyNode: We render a <div> with the sticky note’s text and background color. The inline styles (background color, padding, drop shadow) replicate the appearance of a sticky note as in the editor
-github.com
-.
-CollapsibleContainerNode: Since this node is an ElementNode containing other nodes, we render it as a <div class="collapsible-container"> with a button inside and its children. We set a data-collapsed attribute and hide the children with CSS or inline style if collapsed is true
-github.com
-github.com
-. This produces a static representation: users can see whether the section is expanded or collapsed initially (and the arrow indicator), but to toggle it interactively would require client-side JS. Still, this approach ensures content is not lost – collapsed content is in the HTML (just initially hidden).
-LayoutContainer/Item: These were placeholder nodes for multi-column layouts. We output simple <div>s with classes (e.g., layout-container wrapping multiple layout-item divs). You can later add CSS (like display: flex) to these classes to achieve a column layout if needed. For now, they will just stack, which is acceptable as a first pass given the editor’s own implementation was incomplete
-github.com
-github.com
-.
-HorizontalRuleNode: Rendered as a plain <hr> rule. The Lexical HorizontalRuleNode is included in the editorNodes, so this covers that.
-SSR Compatibility: The LexicalRenderer component as written uses only React and JSON parsing – no browser APIs – so it can run during Server-Side Rendering. This means the post content is delivered as fully-formed HTML to the client. This is good for SEO and initial page load. Any interactive enhancements (like loading the Twitter script for tweet embeds, or making collapsible sections toggleable) can be added on the client side progressively, but the core content (text, images, embeds) is visible on first paint. This design follows the approach of other platforms using Lexical. For example, Ghost (which uses Lexical for its editor) implements a server-side renderer that converts Lexical JSON to HTML before delivering posts
-github.com
-. Our solution is analogous: we’ve effectively built a custom HTML renderer for our specific set of nodes. By prioritizing server-rendered output, we ensure even if JavaScript is disabled or slow to load, readers can still see the post content. Styling: Ensure the CSS for the editor’s classes is loaded on the viewer page. In this project, the styles for classes like editor-paragraph, editor-quote, etc., are in the global CSS (already included)
-github.com
-github.com
-. Thus, using the same class names yields the same look. If any styles are missing (for custom classes like .poll or .hashtag), you can add minimal CSS for them. For instance, you might add: .hashtag { color: var(--accent-foreground); } to style hashtags, or .poll ul { list-style: disc; margin-left: 1.5em; } to format poll options. But these are embellishments – the critical ones (headings, lists, etc.) are already styled by existing classes. Usage in Page Component: With LexicalRenderer implemented, using it in the post page is straightforward. In app/newsletters/[slug]/[postId]/page.tsx, fetch the post’s content and title (and any other needed fields) inside the page’s async function. Then pass the content to <LexicalRenderer />. For example:
-tsx
+  }
+  return false;
+}, COMMAND_PRIORITY_LOW);
+This way, the plugin opens when "/" is pressed at the start of an empty block, and the slash character is not inserted into the content (so no later removal needed). Using Lexical’s KEY_DOWN_COMMAND is more in line with official recommendations, as it avoids scanning on every update. It will improve performance and conform to Lexical’s event-driven paradigm.
+Leverage Lexical utilities for cursor positioning: Instead of using the DOM selection API directly, use Lexical’s editor methods to get element position. For instance, after determining the trigger node or its parent, call editor.getElementByKey(node.getKey()) to retrieve the DOM element of the text node or its block, and use its getBoundingClientRect() for coordinates. This ties the positioning logic to Lexical’s representation. If needed (for caret position within text), consider using Lexical’s built-in selection coordinates utilities (Lexical doesn’t provide one out-of-the-box, but measuring the caret via the editor root element is preferred over raw window.getSelection). This change will reduce reliance on the global selection and ensure the menu positions correctly even in nested scroll containers.
+Implement filtering in the slash menu: Keep the menu open when additional characters are typed after “/” and filter the options list based on the input. For example, if the user types “/hea”, the menu should remain open and show “Heading 1/2/3” options. To do this, adjust the update listener (or a text content listener) logic: if the selection is in the same text node that started with “/”, don’t immediately close the menu on additional input. Instead, read the current text (node.getTextContent()) and match it against option keywords. You might maintain the input string in state and update it on each selection change. This aligns with common Lexical patterns (similar to mention or hashtag plugins) where the plugin stays active as the trigger text is being typed.
+Remove or replace custom commands for native block types: The custom insert commands for headings, paragraphs, quotes, and code are unnecessary. Lexical’s native functionality can handle these: for headings/quotes, use $setBlocksType from @lexical/selection to transform the current paragraph into the desired node type (as done in the Toolbar) instead of dispatching an insert command. For example, when “Heading 1” is chosen, call:
+ts
 Copy
 Edit
-// Inside the [slug]/[postId]/page.tsx component:
-const supabase = createServerSupabaseClient();
-const { data: post, error } = await supabase
-.from("posts")
-.select("title, content, author_id")
-.eq("id", params.postId)
-.single();
-if (!post || error) {
-notFound();
-}
-
-return (
-
-  <article className="mx-auto max-w-2xl p-4">
-    <h1 className="text-3xl font-bold mb-4">{post.title}</h1>
-    <LexicalRenderer contentJSON={post.content} />
-  </article>
-);
-This will produce the full post content on the server. The <LexicalRenderer> will output a tree of HTML elements corresponding to the post’s Lexical state. For example, if the post had an H1, some paragraphs, and an image, the rendered HTML might be:
-html
+editor.update(() => {
+  const selection = $getSelection();
+  if ($isRangeSelection(selection)) {
+$setBlocksType(selection, () => $createHeadingNode("h1"));
+  }
+});
+This directly converts the current block to an <h1> node. Do the same for “Heading 2/3” and “Quote” (using $createQuoteNode()). For “Paragraph”, simply convert to a normal paragraph node ($setBlocksType(..., () => $createParagraphNode())). Removing these custom commands and using Lexical’s API makes the behavior compliant with Lexical’s documented approach for block formatting. It also fixes the current bug where those slash menu options do nothing (because no handlers were registered for them).
+Integrate slash menu with Lexical’s native command dispatching: For inserting non-native elements (polls, images, etc.), you can still dispatch custom commands, but ensure they are registered (see below in Insert Commands section). Alternatively, call the insertion logic directly in the slash menu onSelect. For simplicity and compliance, you might handle native types directly (as above) and only dispatch commands for truly custom elements. This keeps the plugin lean and focused on UI, while leveraging Lexical’s native capabilities for standard content.
+FloatingLinkEditorPlugin (Link Tooltip)
+Issues: This plugin provides an on-hover/selection tooltip to edit or remove links, similar to Lexical’s playground example
+github.com
+github.com
+. The integration mostly follows Lexical’s patterns, but a few aspects diverge from best practices:
+Manual DOM measurement: The plugin uses window.getSelection() and Range.getClientRects() to position the floating toolbar
+github.com
+. While this works, it bypasses Lexical’s abstractions. It may not account for scrolling offsets of the editor container (the calculation is relative to viewport). If the editor is within a scrollable container, the position might need adjustment.
+Focus management: There is no focus handling when switching into edit mode. The code sets editing=true to show an <input> for the URL, but does not automatically focus that input. This is a usability issue (the user must manually focus the field). It’s not directly a “Lexical compliance” problem, but the official examples ensure the input is focused for a smooth experience.
+Use of ReactDOM.createPortal to document.body: The plugin portals the link editor into the document body
+github.com
+. This is acceptable (Lexical’s examples do the same for floating elements), but it means styling must be globally available. It’s worth verifying that the portal approach doesn’t conflict with Lexical’s editing (it generally doesn’t, but you must remove the portal on unmount to avoid leaks, which the plugin does via React state cleanup).
+Correction Plan:
+Use Lexical element utilities for positioning: Instead of relying on the global selection’s bounding rect, use the link node’s DOM element for positioning. When a link is selected, you can get the LinkNode via $isLinkNode (already done) and then find its element:
+ts
 Copy
 Edit
-<article>
-  <h1 class="editor-heading-h1">Post Title</h1>
-  <p class="editor-paragraph">First paragraph of the post.</p>
-  <p class="editor-paragraph"><strong>Bold text</strong> and <em>italic text</em> in the second paragraph.</p>
-  <img src="https://.../image.png" alt="An image" style="max-width:100%; display:block;" />
-</article>
-All of which is styled appropriately by the CSS we have from the editor. Security Considerations: By constructing React elements (instead of using dangerouslySetInnerHTML), we avoid injecting raw HTML and mitigate XSS risks. The content JSON could theoretically contain malicious data (e.g., a script in a text node), but since we treat everything as plain text or vetted URLs for embeds, such content will be rendered innocuously (e.g., as text or as an iframe with safe src). It’s still wise to ensure that any user-generated URLs (for images, embeds) are sanitized or come from trusted sources. In our case, image URLs would likely be from Supabase storage or external links the user provided – you might consider validation or proxying for those if security is paramount. However, by not rendering any HTML from the JSON directly, we greatly reduce attack surface. Finally, map the implementation requirements to the solution:
-Server Components & Supabase (RLS) – We used a server-side page to fetch the user’s profile with createServerSupabaseClient, ensuring RLS policies allow only the current user’s data
+const linkElement = editor.getElementByKey(linkNode.getKey());
+if (linkElement) {
+  const rect = linkElement.getBoundingClientRect();
+  setPosition({ x: rect.left, y: rect.bottom });
+}
+This positions the toolbar at the bottom-left of the link text element, which is typically where the caret is. It’s a more direct measurement of the node in the editor. If you want the caret’s exact position (e.g. when selecting part of a link), you might still use the range method, but make sure to adjust for container scroll. Also, consider updating position on window scroll or editor scroll events (the current implementation updates on every selection change – you can add an event listener for scroll on the editor container to recalc getBoundingClientRect).
+Auto-focus the URL input on edit: When the user clicks “Edit” and editing state becomes true, use a React effect to focus the input. For example:
+ts
+Copy
+Edit
+useEffect(() => {
+  if (editing) {
+    inputRef.current?.focus();
+  }
+}, [editing]);
+This small change improves UX and mirrors Lexical’s examples where the focus is moved to the popup for typing the URL. It does not affect Lexical’s state, but aligns the integration with expected behavior.
+Use Lexical’s link command for toggling: The plugin already uses editor.dispatchCommand(TOGGLE_LINK_COMMAND, payload) for applying or removing links
 github.com
-. Sensitive fields are handled cautiously and not exposed to other users.
-Zod Validation – All profile fields are defined in a Zod schema (client and server). This schema is used with RHF’s zodResolver for client-side checks and again in the server action to validate/sanitize input
+. This is the correct native approach per Lexical docs. Continue to use this instead of any custom logic when the user clicks “Save” or “Remove”. Ensure that when removing a link (TOGGLE_LINK_COMMAND with null), the selection remains correct (Lexical will remove the LinkNode but keep its text). This is already handled by Lexical’s native command.
+Cleanup portal on unmount (if not already): When the editor is disposed or the plugin unmounts, React will remove the portal automatically. Just verify that no event listeners remain. The plugin registers a selection change command handler which is removed in the effect cleanup
 github.com
+ – this is good. No further action needed, but it’s noted to double-check memory leaks. Using Lexical’s command system (SELECTION_CHANGE_COMMAND) as done is the recommended practice
 github.com
-.
-React-Hook-Form Integration – We integrated RHF with the form, leveraging register and handleSubmit. The default values from the server populate the form, and any validation errors from Zod are displayed next to the respective fields
-github.com
-github.com
-.
-Server Actions for Updates – The form submission invokes updateUserProfile, a server action that checks the Supabase auth user and performs the update securely
-github.com
-github.com
-. It returns success or error states that our form uses to give feedback (e.g. showing “Settings updated successfully” on success)
-github.com
-.
-Type Safety & Data Integrity – By using generated types (TablesUpdate<"users">) and the user session, we ensure only valid fields are written and only to the current user’s row
-github.com
-. We also call revalidatePath on relevant pages to keep data in sync
-github.com
-. The Stripe connect flow is implemented such that the stripe_account_id field is set through verified external OAuth, not arbitrary input, preserving integrity of that linkage.
-Lexical Node Support – The LexicalRenderer covers all custom node types present in the editor (text, headings, lists, quotes, code, images, GIFs, embeds, poll, sticky, etc.), mapping each to appropriate HTML. We referenced the project’s node definitions to ensure accuracy (e.g., using the same class names and structure that the editor expects)
+, so the core integration here is sound.
+By making these adjustments, the floating link editor will be more aligned with Lexical’s native usage (using node-based positioning and proper focus control), while preserving the same functionality.
+CodeHighlightPlugin (Syntax Highlighting)
+Issues: The CodeHighlightPlugin applies Prism.js syntax highlighting to code blocks in the editor. It registers node transforms on Lexical’s CodeNode and CodeHighlightNode classes to update their content with highlighted HTML
 github.com
 github.com
-.
-Matching Editor Theming – We applied the editor’s Tailwind/CSS classes (like editor-heading-h2, editor-quote, editor-list-item) in the renderer’s output. This guarantees the viewer page looks the same as the editor preview
+. While this achieves highlighting, it does so by manipulating internal properties that are not officially exposed: the plugin accesses a __highlighted field and calls an untyped node.setHighlight() method on Lexical nodes
+github.com
+. These are marked with @ts-expect-error comments in the code, indicating they are not part of Lexical’s public API and may break with library updates. This approach is borrowed from an older Lexical example and is not fully compliant with current Lexical best practices. Specific problems include:
+Reliance on internal node state: The use of node.getLatest().__highlighted and node.setHighlight(html)
+github.com
+ reaches into Lexical’s internals. This is fragile — future Lexical versions might remove or change these internals, since they’re not documented.
+Missing official API usage: Lexical 0.31 may offer utilities or patterns for syntax highlighting (e.g. transforming tokens into TextNodes with CSS classes, or using a decorator node for code blocks) that would avoid directly injecting HTML strings into nodes.
+Incomplete language support/extensibility: The plugin hardcodes Prism languages and assumes every code node uses Prism’s highlighting. If Lexical’s CodeNode had a built-in way to store language or highlighted tokens, this plugin doesn’t leverage it beyond calling getLanguage() on the node (which is good)
+github.com
+. There might now be a more “Lexical-native” way to handle language-specific formatting (for example, via a custom element theme or data attribute) rather than storing raw HTML.
+Correction Plan:
+Use Lexical’s recommended transform approach: Confirm if the latest Lexical documentation provides a sanctioned method for syntax highlighting. If Lexical now provides a CodeHighlightPlugin or utility, adopt it. For instance, some integrations use $createTextNode with tokenized content. If no official plugin exists, continue with a transform but avoid internal fields. One approach is to remove CodeHighlightNode from the equation and treat CodeNode as a Decorator or specialized element:
+Option A: Split text into token TextNodes – When a code block updates, parse the text with Prism and then update the Lexical nodes: replace the code block’s children with a sequence of TextNodes, each styled via CSS classes (Prism gives spans with classes like "token keyword"). This would involve creating Lexical TextNodes for each token and applying a custom CSS class mapping in the theme. Lexical allows custom text styles via the theme object (for example, you can define classes for tokens). This avoids storing raw HTML in the state. You can use Lexical’s utilities like $createTextNode() and the node’s append() to rebuild the code block content.
+Option B: Extend Lexical’s CodeNode – Create a custom node (e.g. HighlightedCodeNode) that extends CodeNode and includes a property for highlighted HTML or tokens. Provide a public updateHighlight(html) method on it. Register that node in the editor and use it instead of the built-in CodeNode. This way, your setHighlight is officially part of your node’s API (TypeScript won’t complain). The transform can then call highlightedCodeNode.updateHighlight(html) without relying on private fields. The custom node’s exportJSON/importJSON can include the raw code text (and perhaps omit the highlight to avoid duplication), ensuring serialization remains clean.
+Both options aim to remove direct usage of __highlighted internal state. Option A is more in line with Lexical’s native usage (text nodes plus theme-based styling), whereas Option B encapsulates the highlighting but at the cost of deviating from Lexical’s built-in nodes. Choose the approach that fits the complexity you’re comfortable with; Option A is likely more “official”. Lexical’s documentation on custom text formatting or tokens can guide this decision.
+Eliminate ts-expect-error by using public APIs: If you implement Option A (tokenized TextNodes), you won’t need any internal properties – just create/update nodes via Lexical’s editor state. If you implement Option B (custom node), define the methods and properties on your node class with proper typings. In either case, remove the direct calls to node.getLatest() and node.setHighlight(). For example, in a tokenization approach:
+ts
+Copy
+Edit
+editor.registerNodeTransform(CodeNode, (codeNode) => {
+  const textContent = codeNode.getTextContent();
+  const language = codeNode.getLanguage() || "plaintext";
+  if (Prism.languages[language]) {
+    const tokens = Prism.tokenize(textContent, Prism.languages[language]);
+    // Convert tokens to Lexical nodes:
+    const children: LexicalNode[] = tokens.map(token => {
+      const content = typeof token === 'string' ? token : token.content;
+      const tokenNode = $createTextNode(content);
+      if (typeof token !== 'string' && token.types) {
+        // apply a CSS class based on token type
+        token.types.forEach(type => tokenNode.setStyle(`token ${type}`));
+      }
+      return tokenNode;
+    });
+    codeNode.getChildren().forEach(child => child.remove());
+    codeNode.append(...children);
+  }
+});
+In this pseudo-code, we replace the code node’s children on each transform with new text nodes carrying Prism token classes. The Lexical theme (CSS) would have definitions for .token.keyword, .token.string, etc., matching Prism’s classes. This approach stays within Lexical’s public API and state model (no raw HTML insertion). It is more complex than calling setHighlight(html), but it is safer and fully “Lexical native.”
+Align with Lexical’s serialization: Ensure that whatever highlighting approach you use doesn’t break saving or loading content. If using tokenized text nodes, the serialized JSON will naturally include the token text nodes (which is fine, as they’re just text). The styling is via CSS, not in the JSON. If using a custom HighlightedCodeNode, make sure its exportJSON returns just the plain code text (and language), not the highlighted HTML, so that re-importing yields unformatted code which will then be re-highlighted on mount. This matches Lexical’s philosophy: store the minimal data (just the code), and derive highlights on the fly.
+Keep Prism usage flexible: The current plugin imports many Prism language definitions upfront
+github.com
+. Consider lazy-loading languages or allowing dynamic language selection (Lexical’s CodeNode supports .getLanguage() which you already use
+github.com
+). If the Lexical docs suggest using a different highlighter or provide a hook for language registration, follow that. For example, Lexical might have added a utility to register language grammars. Using official hooks (if available) for extending language support will keep the integration future-proof.
+By refactoring the syntax highlighting as above, you remove the dependency on Lexical’s internal properties and adhere to the official API. The goal is that no @ts-expect-error comments are needed – meaning your plugin isn’t doing anything that Lexical’s type definitions disallow. This ensures compatibility with future Lexical upgrades and aligns with the documentation’s guidance for custom text formatting.
+Custom Insert Commands & Editor Integration (Polls, Embeds, etc.)
+Issues: The editor currently defines numerous custom insert commands in PostEditor for embedding media and custom nodes (polls, Excalidraw drawings, sticky notes, tweets, YouTube embeds, images, etc.)
+github.com
+. It also provides UI triggers: the slash menu options dispatch these commands
 github.com
 github.com
-. Layout and spacing mirror the editor’s because of these shared styles.
-SSR Compatibility – The renderer produces static HTML for the content, enabling full server-side rendering. Interactive elements (e.g., collapsibles) are rendered in a default state to avoid needing client JS, and external content (tweets, videos) are embedded via standard HTML (blockquote/iframe) that can be progressively enhanced. This approach is in line with best practices from 2023–2025 for rich text handling (similar to how Ghost outputs Lexical content to HTML on the server
+, and the Toolbar has buttons that call some of them (e.g. the Excalidraw button)
 github.com
-). It ensures even without client-side processing, the content is readable and indexed.
-Code Snippets & Placement – We provided a complete code outline for the LexicalRenderer component and an example of integrating it into the post page. The LexicalRenderer.tsx would reside in components/ui/ as a reusable server-capable component. The usage example in the post page demonstrates the drop-in nature: import and use it in the JSX, passing the JSON content. No further config is needed since the component itself handles parsing and rendering.
+. While this modular command approach is valid, a few implementations deviate from best practices:
+Blocking prompts for input: For some inserts, the handler uses window.prompt to get a URL (e.g. asking for an image URL or tweet link)
+github.com
+github.com
+. Blocking prompts interrupt the user experience and can cause focus/selection issues in the editor. Lexical doesn’t forbid this, but the official examples typically use non-blocking modals or UI panels for inputs. A prompt can also lead to lost editor focus or selection not being where expected after insertion.
+Not using Lexical’s insertion helpers: In the command handlers, insertion is done via selection.insertNodes([new CustomNode(...)]) directly
+github.com
+github.com
+. This can work, but if the selection is inside a text node or not at root, Lexical will attempt to split or nest nodes. The code doesn’t leverage Lexical’s $insertNodesToNearestRoot utility, which is designed to insert block nodes in the proper place (especially important for nodes that cannot be children of paragraphs, like block images or polls).
+Incomplete command coverage: As noted, commands for headings, quotes, etc., were defined but not handled. Also, some Toolbar actions for block formatting (like code block) were not correctly implemented – e.g., the toolbar’s “Code Block” button calls $createQuoteNode() instead of inserting a CodeNode
+github.com
+. These inconsistencies point to either typos or misunderstanding of Lexical’s intended usage for code blocks.
+Legacy code remnants: The EditorLayout component still has references to the old Tiptap editor (commented out)
+github.com
+. While not affecting functionality, it’s a sign that some integration pieces might not have been fully cleaned up when switching to Lexical. It’s important to remove or update such remnants to avoid confusion and ensure only Lexical’s patterns are used.
+Correction Plan:
+Use non-blocking UI for embed inputs: Replace window.prompt calls with a React-based modal or popover component. For example, when the slash menu or toolbar triggers an image insert, open a dialog component that allows the user to input or paste a URL (or even upload an image, if supported). Only once the user provides the URL and confirms, call the Lexical command to insert the node. This keeps the editor focus in React’s control and avoids the synchronous pause. It also gives an opportunity to validate URLs or provide feedback. Implement a small <ImageURLDialog onSubmit=(url)=>{…} /> that sets state in your component; when the URL is submitted, dispatch the insert command or directly insert the node. Do similarly for Tweet and YouTube embeds. This change doesn’t directly come from Lexical’s docs, but it aligns with modern UX and ensures the Lexical editor isn’t unexpectedly blurred by a prompt.
+Use $insertNodesToNearestRoot for block nodes: When inserting custom block nodes (those that should live at the top-level of the editor, not inside paragraphs), use Lexical’s utility function to ensure correct placement. Import $insertNodesToNearestRoot from @lexical/utils. Then in each insert command handler, do:
+ts
+Copy
+Edit
+editor.update(() => {
+  const node = $createPollNode(...);  // or any custom block node
+  $insertNodesToNearestRoot([node]);
+});
+This function will intelligently insert the node at the nearest block boundary, preventing issues like a poll node ending up inside a paragraph node. For inline nodes or nodes that can live in text (if any, like maybe the inline image), you can still use selection.insertNodes. But for elements like Poll, Table, YouTube (which likely are block embeds), the nearest-root insertion is more “native”. It effectively handles removing the leftover empty paragraph (which in your code you did manually via removeSlashTrigger()
+github.com
+github.com
+). Using Lexical’s helper means you might not need to manually remove the “/” trigger node – the empty paragraph will be replaced by the new node.
+Fix block format toggles in the Toolbar: In the Toolbar component, correct the logic for setting block types. For the “Code Block” button, it should create a Lexical CodeNode instead of a QuoteNode
+github.com
+. Since @lexical/code doesn’t export a ready-made $createCodeNode(), use the same approach as for headings:
+ts
+Copy
+Edit
+$setBlocksType(selection, () => new CodeNode());
+Ensure that CodeNode from @lexical/code is imported and that it’s included in the editor’s node list (it is). Similarly, verify the toolbar’s other formatting buttons: the alignment buttons use FORMAT_ELEMENT_COMMAND which is correct, and the bold/italic/etc use FORMAT_TEXT_COMMAND which is also correct. After this fix, test that clicking “Code Block” in the toolbar indeed converts a paragraph to a code block (and triggers the CodeHighlightPlugin to highlight it).
+Also, implement toolbar buttons for quote and headings if desired (the data is there in BLOCK_TYPES array
+github.com
+). For example, if a user selects “Heading 2” from a dropdown in the toolbar (if you implement one), call $setBlocksType with $createHeadingNode("h2"). This duplicates some slash menu functionality, but it’s useful for a full editor UI and demonstrates compliance with Lexical’s recommended block toggle approach (the Lexical docs encourage using $setBlocksType for block format changes).
+Register all custom insert commands: Ensure that every custom createCommand(...) you define has a matching editor.registerCommand in a plugin. Currently, CustomInsertCommandsPlugin handles most of them
+github.com
+github.com
+, but we noticed INSERT_HEADING_COMMAND, INSERT_PARAGRAPH_COMMAND, INSERT_QUOTE_COMMAND, and INSERT_CODE_COMMAND were not registered. If you keep these commands (assuming you want to trigger them from slash menu or elsewhere), add handlers for them. For headings/paragraph/quote, the handler can simply perform the block type change and return true. For example:
+ts
+Copy
+Edit
+editor.registerCommand(INSERT_QUOTE_COMMAND, () => {
+  editor.update(() => {
+    const selection = $getSelection();
+    if ($isRangeSelection(selection)) {
+$setBlocksType(selection, () => $createQuoteNode());
+}
+});
+return true;
+}, COMMAND_PRIORITY_LOW);
+However, given the earlier recommendation, you might remove these commands entirely and handle such inserts directly in the slash plugin or toolbar. If so, clean up their definitions to avoid confusion. The key is to not leave dangling commands that aren’t implemented, as that’s against Lexical’s best practices (each custom command should have at least one handler).
+Clean up legacy references: Remove or update any leftover code comments or structures from the previous editor (Tiptap). In EditorLayout, for instance, the props still mention “Tiptap Toolbar” in comments
+github.com
+. Update this to refer to Lexical if needed, or remove it since the toolbar is now inside PostEditor. This doesn’t affect functionality, but it ensures that future maintainers or contributors won’t be misled. All editor-related logic should now revolve around Lexical components only.
+By executing these steps, the custom insertion logic will better align with Lexical’s native workflows. In summary, use Lexical’s own APIs to insert and format nodes (avoiding manual DOM prompts and ensuring proper placement), and fully integrate all defined commands. The result will be a more maintainable editor that adheres to Lexical’s documented patterns and minimizes custom overrides of core behavior.
