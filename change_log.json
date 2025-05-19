@@ -3,7 +3,7 @@
     "src/app/dashboard/_components/DashboardShell.tsx": "Removed newly added DashboardShell file due to TypeScript issues; reverting to original component"
   },
   "a8a4a9d3-2327-4dca-9854-0f7f4e09a9f3": {
-    "src/app/dashboard/layout.tsx": "Revert DashboardShell import to original path"
+    "src/app/dashboard/layout.tsx": "Fix DashboardShell import to use new _components/DashboardShell location as per new app directory structure."
   },
   "b1e2c7a1-1f2a-4e3b-9c1a-1a2b3c4d5e6f": {
     "src/app/dashboard/_components/.keep": "Create _components directory for dashboard route as per new-structure.md"
@@ -145,8 +145,7 @@
   },
   "b1e2e2e0-6c7e-4e7e-9e2e-1a2b3c4d5e6f": {
     "src/app/posts/_components/PostCard.tsx": "Migrated full PostCard implementation from old molecules, replaced useTransition with manual isPending state, added fallback HeartIcon inline SVG, and fixed linter errors for type arguments."
-  }
-,
+  },
   "199f5f24-109a-4977-bd2e-1ebce12d1c4a": {
     "src/app/dashboard/collectives/_components/DashboardCollectiveCard.tsx": "Add missing icon imports and correct useRouter import"
   },
@@ -206,5 +205,8 @@
   },
   "723fc884-ac6f-4dec-8f54-b5cbf0265c87": {
     "src/types/next-navigation.d.ts": "Disable no-explicit-any lint rule"
+  },
+  "d7e9f8a0-1b2c-3d4e-5f6g-7h8i9j0k1l2m": {
+    "src/app/discover/page.tsx": "Fix CollectiveCard import to use new dashboard/collectives/_components/CollectiveCard location as per new app directory structure."
   }
 }

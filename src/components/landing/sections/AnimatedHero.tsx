@@ -100,11 +100,10 @@ const AnimatedHero = () => {
         className="text-lg text-muted-foreground max-w-xl"
         variants={textItemVariants}
       >
-        Unearth unique newsletters. Forge{" "}
-        <span className="text-primary font-bold">
-          collaborative collectives
-        </span>
-        . Own your narrative.
+        The future of social media is{" "}
+        <span className="text-primary font-bold">collective experience.</span>
+        <br />
+        Create your own.
       </motion.p>
 
       <motion.div variants={buttonItemVariants}>

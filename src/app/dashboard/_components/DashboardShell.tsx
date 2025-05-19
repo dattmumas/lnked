@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useState } from "react";
-import { DashboardSidebar } from "../organisms/dashboard-sidebar";
-import { DashboardNav } from "../nav/DashboardNav";
+import { DashboardSidebar } from "./DashboardSidebar";
+import { DashboardNav } from "./DashboardNav";
 
 export interface CollectiveSummary {
   id: string;
@@ -11,7 +11,7 @@ export interface CollectiveSummary {
 }
 
 interface DashboardShellProps {
-  children: React.ReactNode;
+  children: any;
   userCollectives: CollectiveSummary[];
 }
 
@@ -41,3 +41,5 @@ export default function DashboardShell({
     </div>
   );
 }
+
+export {};

@@ -1,4 +1,4 @@
-import CollectiveCard from "@/components/app/collectives/molecules/CollectiveCard";
+import CollectiveCard from "@/app/dashboard/collectives/_components/CollectiveCard";
 import LoadMoreButton from "@/app/discover/_components/LoadMoreButton";
 // import { cookies } from "next/headers"; // No longer needed directly here
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
