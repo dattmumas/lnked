@@ -11,10 +11,17 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Settings, LogOut, Users2 } from "lucide-react";
+import {
+  Settings,
+  LogOut,
+  Users2,
+  Users,
+  Eye,
+  TrendingUp,
+} from "lucide-react";
 import type { Database } from "@/lib/database.types";
 import * as React from "react";
-import useRouter from "next/navigation";
+import { useRouter } from "next/navigation";
 import { removeUserFromCollective } from "@/app/actions/collectiveActions";
 
 type Collective = Database["public"]["Tables"]["collectives"]["Row"];

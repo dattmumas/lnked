@@ -4,5 +4,10 @@ export interface UserMenuProps {
 }
 
 export function UserMenu({ user, onSignOut }: UserMenuProps) {
-  // ... existing code ...
+  if (!user) return null;
+  return (
+    <button onClick={onSignOut} className="text-sm">
+      {user.full_name || user.email || "User"}
+    </button>
+  );
 }

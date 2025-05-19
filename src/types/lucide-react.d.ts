@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
  
 declare module "lucide-react" {
   import * as React from "react";

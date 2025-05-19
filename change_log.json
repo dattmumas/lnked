@@ -146,4 +146,65 @@
   "b1e2e2e0-6c7e-4e7e-9e2e-1a2b3c4d5e6f": {
     "src/app/posts/_components/PostCard.tsx": "Migrated full PostCard implementation from old molecules, replaced useTransition with manual isPending state, added fallback HeartIcon inline SVG, and fixed linter errors for type arguments."
   }
+,
+  "199f5f24-109a-4977-bd2e-1ebce12d1c4a": {
+    "src/app/dashboard/collectives/_components/DashboardCollectiveCard.tsx": "Add missing icon imports and correct useRouter import"
+  },
+  "409b069c-6e39-4341-a062-f9a9fa614e91": {
+    "src/app/posts/_components/PostReactionButtons.tsx": "Remove stray characters causing syntax error"
+  },
+  "fb58684d-209c-4e6b-a32d-1498556ce9a3": {
+    "src/components/Navbar.tsx": "Type session parameter and import Session type"
+  },
+  "26f29467-6aab-43c6-9706-58c382b421fb": {
+    "src/app/dashboard/_components/UserMenu.tsx": "Implement basic component body to use props"
+  },
+  "93b59a71-c2ff-4012-9c01-de4877b6fc79": {
+    "src/app/dashboard/posts/%5BpostId%5D/edit/page.tsx": "Remove unused stub causing route conflict"
+  },
+  "4d4bf2fe-2e34-400c-adcd-11eaa8ae316b": {
+    "src/app/newsletters/[userId]/[postId]/[postId]/page.tsx": "Delete duplicate dynamic route to fix slug error"
+  },
+  "db0490af-80b7-4d33-bd7c-578fef242568": {
+    "src/lib/data/bookmarks.ts": "Remove unused Database import"
+  },
+  "f1ee43f4-c6ef-45c3-a93e-99f8ada87218": {
+    "src/lib/data/comments.ts": "Remove unused Database import"
+  },
+  "7e5662bc-1466-4ac2-9b1d-310a29f66ffb": {
+    "src/lib/data/posts.ts": "Remove unused Database import"
+  },
+  "7473276e-3e15-42c0-9bc2-dd9cf2cf5ca6": {
+    "src/lib/data/reactions.ts": "Remove unused Database import"
+  },
+  "f1f69e39-4748-4842-bf54-7b2e899f5293": {
+    "src/lib/data/subscriptions.ts": "Remove unused Database import"
+  },
+  "58f1d8d5-da32-4022-9a81-f789e03d86ea": {
+    "src/lib/data/views.ts": "Remove unused Database import"
+  },
+  "d8a0de83-0873-49ae-9965-f3c8ccfd24c3": {
+    "src/types/@components-ui-mode-toggle.d.ts": "Disable no-explicit-any lint rule"
+  },
+  "cd43ffe1-d338-49fa-aca2-5a72e3cd2c11": {
+    "src/types/@radix-ui__react-select.d.ts": "Disable no-explicit-any lint rule"
+  },
+  "ffa53b62-2b51-4874-a47a-a310cf3b3aa3": {
+    "src/types/@radix-ui__react-tooltip.d.ts": "Disable no-explicit-any lint rule"
+  },
+  "60a70348-e1c6-47cc-bac4-aeb04fb1dd65": {
+    "src/types/lucide-react.d.ts": "Disable no-explicit-any lint rule"
+  },
+  "10abdebc-a70a-4585-9805-f6ba6f5b631d": {
+    "src/types/next-headers.d.ts": "Disable no-explicit-any lint rule"
+  },
+  "9f6d8dcf-49fd-4253-bb49-23f4ae4865db": {
+    "src/types/next-link.d.ts": "Disable no-explicit-any lint rule"
+  },
+  "6d658dd7-efa5-47c0-b4a1-378c26051e6e": {
+    "src/types/next-metadata-interface.d.ts": "Disable no-explicit-any lint rule"
+  },
+  "723fc884-ac6f-4dec-8f54-b5cbf0265c87": {
+    "src/types/next-navigation.d.ts": "Disable no-explicit-any lint rule"
+  }
 }
