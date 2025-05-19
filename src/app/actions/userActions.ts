@@ -4,6 +4,8 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 import type { TablesUpdate } from "@/lib/database.types";
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { getStripe } from "@/lib/stripe";
 
 // Schema for validating user profile updates
 // Adjust fields and validation rules as necessary
@@ -116,4 +118,102 @@ export async function updateUserProfile(
   // revalidatePath(`/profile/${user.id}`); // Example if such a page exists
 
   return { success: true, message: "Profile updated successfully." };
+}
+
+export async function deleteUserAccount(): Promise<{
+  success: boolean;
+  error?: string;
+}> {
+  const supabase = await createServerSupabaseClient();
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+  if (authError || !user) {
+    return { success: false, error: "Not authenticated." };
+  }
+  const userId = user.id;
+  const userEmail = user.email;
+
+  // 1. Check if user is owner of any collectives
+  const { data: ownedCollectives } = await supabaseAdmin
+    .from("collectives")
+    .select("id, name")
+    .eq("owner_id", userId);
+  if (ownedCollectives && ownedCollectives.length > 0) {
+    return {
+      success: false,
+      error:
+        "You must transfer or delete all collectives you own before deleting your account.",
+    };
+  }
+
+  // 2. Cancel Stripe subscriptions (as subscriber)
+  const stripe = getStripe();
+  if (stripe) {
+    const { data: subscriptions } = await supabaseAdmin
+      .from("subscriptions")
+      .select("id, status")
+      .eq("user_id", userId)
+      .in("status", ["active", "trialing"]);
+    if (subscriptions) {
+      for (const sub of subscriptions) {
+        try {
+          await stripe.subscriptions.cancel(sub.id);
+        } catch (err) {
+          console.error("Error cancelling Stripe subscription:", err);
+        }
+      }
+    }
+    // 3. Delete Stripe customer (if exists)
+    const { data: customer } = await supabaseAdmin
+      .from("customers")
+      .select("stripe_customer_id")
+      .eq("id", userId)
+      .maybeSingle();
+    if (customer?.stripe_customer_id) {
+      try {
+        await stripe.customers.del(customer.stripe_customer_id);
+      } catch (err) {
+        console.error("Error deleting Stripe customer:", err);
+      }
+    }
+    // 4. Delete Stripe Connect account (if exists)
+    const { data: userRow } = await supabaseAdmin
+      .from("users")
+      .select("stripe_account_id")
+      .eq("id", userId)
+      .maybeSingle();
+    if (userRow?.stripe_account_id) {
+      try {
+        await stripe.accounts.del(userRow.stripe_account_id);
+      } catch (err) {
+        console.error("Error deleting Stripe Connect account:", err);
+      }
+    }
+  }
+
+  // 5. Remove from all memberships
+  await supabaseAdmin.from("collective_members").delete().eq("user_id", userId);
+
+  // 6. Delete/anonymize user content (posts, comments, etc.)
+  // (Optional: anonymize instead of delete for posts/comments)
+  await supabaseAdmin.from("posts").delete().eq("author_id", userId);
+  await supabaseAdmin.from("comments").delete().eq("user_id", userId);
+
+  // 7. Delete from users/profile tables
+  await supabaseAdmin.from("users").delete().eq("id", userId);
+  await supabaseAdmin.from("customers").delete().eq("id", userId);
+
+  // 8. Delete from Supabase Auth
+  try {
+    await supabaseAdmin.auth.admin.deleteUser(userId);
+  } catch (err: any) {
+    return {
+      success: false,
+      error: "Failed to delete Supabase Auth user: " + err.message,
+    };
+  }
+
+  return { success: true };
 }

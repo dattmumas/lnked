@@ -3,13 +3,14 @@ import { getStripe } from "@/lib/stripe";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import type Stripe from "stripe";
 import type { Database } from "@/lib/database.types";
-import { headers } from "next/headers";
+import headers from "next/headers";
 
 const relevantEvents = new Set([
   "checkout.session.completed",
   "customer.subscription.created",
   "customer.subscription.updated",
   "customer.subscription.deleted",
+  "account.updated",
 ]);
 
 export const runtime = "nodejs";
@@ -190,6 +191,50 @@ export async function POST(req: Request) {
           } else {
             console.log(
               `Subscription ${subscriptionObject.id} upserted for user ${subscriberUserId} (Next API).`
+            );
+          }
+          break;
+        }
+        case "account.updated": {
+          const account = event.data.object as Stripe.Account;
+          // Find the collective with this stripe_account_id
+          const { data: collective, error: fetchError } = await supabaseAdmin
+            .from("collectives")
+            .select("id")
+            .eq("stripe_account_id", account.id)
+            .maybeSingle();
+          if (fetchError) {
+            console.error(
+              "Error fetching collective for Stripe account:",
+              fetchError.message
+            );
+            break;
+          }
+          if (collective) {
+            const { error: updateError } = await supabaseAdmin
+              .from("collectives")
+              .update({
+                stripe_charges_enabled: account.charges_enabled,
+                stripe_payouts_enabled: account.payouts_enabled,
+                stripe_details_submitted: account.details_submitted,
+                stripe_requirements: account.requirements,
+                stripe_account_type: account.type,
+                stripe_account_email: account.email,
+              })
+              .eq("id", collective.id);
+            if (updateError) {
+              console.error(
+                "Error updating collective Stripe status:",
+                updateError.message
+              );
+            } else {
+              console.log(
+                `Collective ${collective.id} Stripe status updated from webhook.`
+              );
+            }
+          } else {
+            console.warn(
+              `No collective found for Stripe account ID ${account.id}`
             );
           }
           break;

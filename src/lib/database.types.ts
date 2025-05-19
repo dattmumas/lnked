@@ -51,6 +51,57 @@ export type Database = {
         }
         Relationships: []
       }
+      collective_invites: {
+        Row: {
+          accepted_at: string | null
+          collective_id: string
+          created_at: string
+          email: string
+          id: string
+          invite_code: string
+          invited_by_user_id: string | null
+          role: string
+          status: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          collective_id: string
+          created_at?: string
+          email: string
+          id?: string
+          invite_code: string
+          invited_by_user_id?: string | null
+          role: string
+          status?: string
+        }
+        Update: {
+          accepted_at?: string | null
+          collective_id?: string
+          created_at?: string
+          email?: string
+          id?: string
+          invite_code?: string
+          invited_by_user_id?: string | null
+          role?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "collective_invites_collective_id_fkey"
+            columns: ["collective_id"]
+            isOneToOne: false
+            referencedRelation: "collectives"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "collective_invites_invited_by_user_id_fkey"
+            columns: ["invited_by_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       collective_members: {
         Row: {
           collective_id: string

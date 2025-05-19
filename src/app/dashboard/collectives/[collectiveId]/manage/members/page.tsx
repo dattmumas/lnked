@@ -8,6 +8,15 @@ export type MemberWithDetails = Tables<"collective_members"> & {
   user: Pick<Tables<"users">, "id" | "full_name"> | null; // Removed email
 };
 
+type PendingInvite = {
+  id: string;
+  email: string;
+  role: string;
+  status: string;
+  created_at: string;
+  invite_code: string;
+};
+
 export default async function ManageCollectiveMembersPage({
   params,
 }: {
@@ -69,6 +78,20 @@ export default async function ManageCollectiveMembersPage({
     // Handle error, maybe show empty list with an error message
   }
 
+  const { data: pendingInvites, error: invitesError } = await supabase
+    .from("collective_invites")
+    .select("id, email, role, status, created_at, invite_code")
+    .eq("collective_id", collectiveId)
+    .eq("status", "pending")
+    .order("created_at", { ascending: true });
+
+  if (invitesError) {
+    console.error(
+      `Error fetching pending invites for collective ${collectiveId}:`,
+      invitesError.message
+    );
+  }
+
   return (
     <div className="container mx-auto p-4 md:p-6">
       <header className="mb-6">
@@ -85,6 +108,7 @@ export default async function ManageCollectiveMembersPage({
       <ManageMembersClientUI
         collectiveId={collective.id}
         initialMembers={(members as MemberWithDetails[]) || []}
+        pendingInvites={(pendingInvites as PendingInvite[]) || []}
         isOwner={currentUser.id === collective.owner_id}
       />
     </div>

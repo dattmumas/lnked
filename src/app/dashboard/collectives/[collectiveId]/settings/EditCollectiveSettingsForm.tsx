@@ -1,10 +1,13 @@
 "use client";
 
-import React, { useState, useTransition } from "react";
+import React, { useState, useTransition, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useForm, SubmitHandler } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
+import {
+  CollectiveSettingsClientSchema,
+  CollectiveSettingsClientFormValues,
+} from "@/lib/schemas/collectiveSettingsSchema";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -20,39 +23,15 @@ import {
 import {
   updateCollectiveSettings,
   type RawCollectiveSettingsFormInput,
+  getCollectiveStripeStatus,
 } from "@/app/actions/collectiveActions";
 import { Loader2 } from "lucide-react";
-
-// Client-side Zod schema for form validation (should match server action's input expectations)
-const ClientCollectiveSettingsSchema = z.object({
-  name: z
-    .string()
-    .min(3, "Name must be at least 3 characters long")
-    .max(100, "Name must be 100 characters or less"),
-  slug: z
-    .string()
-    .min(3, "Slug must be at least 3 characters long")
-    .max(50, "Slug must be 50 characters or less")
-    .regex(
-      /^[a-z0-9]+(?:-[a-z0-9]+)*$/,
-      "Slug can only contain lowercase letters, numbers, and hyphens. It will be auto-generated if left similar to current name-based slug."
-    ),
-  description: z
-    .string()
-    .max(500, "Description must be 500 characters or less")
-    .optional()
-    .nullable(),
-  tags_string: z.string().optional().nullable(),
-});
-
-export type CollectiveSettingsFormClientValues = z.infer<
-  typeof ClientCollectiveSettingsSchema
->;
+import { useState as useClientState } from "react";
 
 interface EditCollectiveSettingsFormProps {
   collectiveId: string;
   currentSlug: string; // To know if slug changed for redirection
-  defaultValues: CollectiveSettingsFormClientValues;
+  defaultValues: CollectiveSettingsClientFormValues;
 }
 
 export default function EditCollectiveSettingsForm({
@@ -65,8 +44,8 @@ export default function EditCollectiveSettingsForm({
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  const form = useForm<CollectiveSettingsFormClientValues>({
-    resolver: zodResolver(ClientCollectiveSettingsSchema),
+  const form = useForm<CollectiveSettingsClientFormValues>({
+    resolver: zodResolver(CollectiveSettingsClientSchema),
     defaultValues,
   });
 
@@ -110,7 +89,7 @@ export default function EditCollectiveSettingsForm({
       .substring(0, 50);
   };
 
-  const onSubmit: SubmitHandler<CollectiveSettingsFormClientValues> = async (
+  const onSubmit: SubmitHandler<CollectiveSettingsClientFormValues> = async (
     data
   ) => {
     setError(null);
@@ -122,10 +101,17 @@ export default function EditCollectiveSettingsForm({
     }
 
     startTransition(async () => {
-      const result = await updateCollectiveSettings(
-        collectiveId,
-        data as RawCollectiveSettingsFormInput
-      );
+      // Transform tags_string to string[] for the server action
+      const serverData = {
+        ...data,
+        tags_string: data.tags_string
+          ? data.tags_string
+              .split(",")
+              .map((tag) => tag.trim())
+              .filter((tag) => tag)
+          : [],
+      };
+      const result = await updateCollectiveSettings(collectiveId, serverData);
 
       if (result.error) {
         setError(
@@ -152,6 +138,42 @@ export default function EditCollectiveSettingsForm({
         }
       }
     });
+  };
+
+  // Stripe Connect status state
+  const [stripeStatus, setStripeStatus] = useClientState<any>(null);
+  const [stripeLoading, setStripeLoading] = useClientState(false);
+  const [stripeError, setStripeError] = useClientState<string | null>(null);
+
+  useEffect(() => {
+    setStripeLoading(true);
+    getCollectiveStripeStatus(collectiveId)
+      .then((status) => setStripeStatus(status))
+      .catch((err) =>
+        setStripeError(err?.message || "Failed to load Stripe status")
+      )
+      .finally(() => setStripeLoading(false));
+  }, [collectiveId]);
+
+  const handleConnectStripe = async () => {
+    setStripeLoading(true);
+    setStripeError(null);
+    try {
+      const res = await fetch(
+        `/api/collectives/${collectiveId}/stripe-onboard`,
+        { method: "POST" }
+      );
+      const data = await res.json();
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        setStripeError(data.error || "Failed to get Stripe onboarding link");
+      }
+    } catch (err: any) {
+      setStripeError(err?.message || "Failed to connect to Stripe");
+    } finally {
+      setStripeLoading(false);
+    }
   };
 
   return (
@@ -226,6 +248,46 @@ export default function EditCollectiveSettingsForm({
               {successMessage}
             </p>
           )}
+          {/* Stripe Connect Status Section */}
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle>Stripe Connect</CardTitle>
+              <CardDescription>
+                Connect your collective to Stripe to receive payments and
+                payouts.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {stripeLoading ? (
+                <p>Loading Stripe status...</p>
+              ) : stripeError ? (
+                <p className="text-destructive">{stripeError}</p>
+              ) : stripeStatus?.status === "active" ? (
+                <p className="text-success">
+                  Stripe Connected: Account is active and ready to receive
+                  payouts.
+                </p>
+              ) : stripeStatus?.status === "pending" ? (
+                <p className="text-warning">
+                  Stripe Connected: Onboarding incomplete or pending
+                  verification.
+                </p>
+              ) : (
+                <>
+                  <p className="text-muted-foreground mb-2">
+                    Stripe is not connected.
+                  </p>
+                  <Button
+                    onClick={handleConnectStripe}
+                    disabled={stripeLoading}
+                    type="button"
+                  >
+                    Connect Stripe
+                  </Button>
+                </>
+              )}
+            </CardContent>
+          </Card>
         </CardContent>
         <CardFooter className="flex justify-end">
           <Button

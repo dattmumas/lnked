@@ -1,4 +1,4 @@
-# Lnked Design System
+Proceed# Lnked Design System
 
 This document outlines the design principles, components, and guidelines for the Lnked application. Our design system emphasizes minimalist aesthetics, accessibility, and consistent spacing.
 

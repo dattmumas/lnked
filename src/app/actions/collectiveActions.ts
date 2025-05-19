@@ -9,6 +9,11 @@ import type {
 } from "@/lib/database.types";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import {
+  CollectiveSettingsServerSchema,
+  CollectiveSettingsServerFormValues,
+} from "@/lib/schemas/collectiveSettingsSchema";
+import { getStripe } from "@/lib/stripe";
 
 const emailSchema = z.string().email({ message: "Invalid email address." });
 
@@ -25,7 +30,6 @@ interface CollectiveActionResult {
 }
 
 type CollectiveRow = Database["public"]["Tables"]["collectives"]["Row"];
-
 
 // --- Invite User to Collective ---
 export async function inviteUserToCollective(
@@ -298,63 +302,20 @@ export async function updateMemberRole(
 }
 
 // --- Update Collective Settings ---
-const CollectiveSettingsSchema = z.object({
-  name: z
-    .string()
-    .min(3, "Name must be at least 3 characters long")
-    .max(100, "Name must be 100 characters or less"),
-  slug: z
-    .string()
-    .min(3, "Slug must be at least 3 characters long")
-    .max(50, "Slug must be 50 characters or less")
-    .regex(
-      /^[a-z0-9]+(?:-[a-z0-9]+)*$/,
-      "Slug can only contain lowercase letters, numbers, and hyphens"
-    ),
-  description: z
-    .string()
-    .max(500, "Description must be 500 characters or less")
-    .optional()
-    .nullable(),
-  // Assuming tags are stored as text[] in Supabase
-  tags_string: z
-    .string()
-    .optional()
-    .nullable()
-    .transform((val) =>
-      val
-        ? val
-            .split(",")
-            .map((tag) => tag.trim())
-            .filter((tag) => tag)
-        : []
-    ),
-});
-
-// Type for raw form input before Zod transformation
-export type RawCollectiveSettingsFormInput = {
-  name: string;
-  slug: string;
-  description?: string | null;
-  tags_string?: string | null;
-};
-
-// Type after Zod parsing and transformation (tags_string becomes string[])
-export type ProcessedCollectiveSettingsFormValues = z.infer<
-  typeof CollectiveSettingsSchema
->;
 
 interface UpdateCollectiveSettingsResult {
   success: boolean;
   message?: string;
   error?: string;
-  fieldErrors?: Partial<Record<keyof RawCollectiveSettingsFormInput, string[]>>;
+  fieldErrors?: Partial<
+    Record<keyof CollectiveSettingsServerFormValues, string[]>
+  >;
   updatedSlug?: string; // To redirect if slug changes
 }
 
 export async function updateCollectiveSettings(
   collectiveId: string,
-  formData: RawCollectiveSettingsFormInput
+  formData: CollectiveSettingsServerFormValues
 ): Promise<UpdateCollectiveSettingsResult> {
   const supabase = await createServerSupabaseClient();
 
@@ -384,7 +345,7 @@ export async function updateCollectiveSettings(
     };
   }
 
-  const validatedFields = CollectiveSettingsSchema.safeParse(formData);
+  const validatedFields = CollectiveSettingsServerSchema.safeParse(formData);
   if (!validatedFields.success) {
     return {
       success: false,
@@ -471,6 +432,62 @@ export async function updateCollectiveSettings(
     message: "Collective settings updated successfully.",
     updatedSlug: slug !== collective.slug ? slug : undefined,
   };
+}
+
+/**
+ * Fetch Stripe Connect account status for a collective.
+ * Returns null if not connected, or Stripe account status fields if connected.
+ */
+export async function getCollectiveStripeStatus(collectiveId: string) {
+  const supabase = await createServerSupabaseClient();
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+  if (authError || !user) {
+    return { error: "Not authenticated" };
+  }
+  // Only owner can view
+  const { data: collective, error: collectiveError } = await supabase
+    .from("collectives")
+    .select("id, owner_id, stripe_account_id")
+    .eq("id", collectiveId)
+    .single();
+  if (collectiveError || !collective) {
+    return { error: "Collective not found" };
+  }
+  if (collective.owner_id !== user.id) {
+    return { error: "Forbidden: Not the owner" };
+  }
+  if (!collective.stripe_account_id) {
+    return { status: "not_connected" };
+  }
+  const stripe = getStripe();
+  if (!stripe) {
+    return { error: "Stripe not configured" };
+  }
+  try {
+    const account = await stripe.accounts.retrieve(
+      collective.stripe_account_id
+    );
+    return {
+      status:
+        account.charges_enabled && account.payouts_enabled
+          ? "active"
+          : account.details_submitted
+          ? "pending"
+          : "incomplete",
+      charges_enabled: account.charges_enabled,
+      payouts_enabled: account.payouts_enabled,
+      details_submitted: account.details_submitted,
+      requirements: account.requirements,
+      email: account.email,
+      type: account.type,
+      id: account.id,
+    };
+  } catch (err: any) {
+    return { error: err.message || "Failed to fetch Stripe account status" };
+  }
 }
 
 // Ensure no trailing </rewritten_file> or other extraneous characters at EOF
