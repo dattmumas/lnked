@@ -17,8 +17,8 @@ export function CollectiveSelectorDropdown({
 }: CollectiveSelectorDropdownProps) {
   return (
     <Select.Root
-      value={value ?? ""}
-      onValueChange={(v) => onChange(v === "" ? null : v)}
+      value={value ?? undefined}
+      onValueChange={(v: string) => onChange(v)}
     >
       <Select.Trigger
         className="inline-flex items-center gap-2 px-3 py-1.5 border rounded-md bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
@@ -32,15 +32,6 @@ export function CollectiveSelectorDropdown({
       <Select.Portal>
         <Select.Content className="z-50 min-w-[180px] rounded-md bg-popover shadow-lg border border-border py-1">
           <Select.Viewport>
-            <Select.Item
-              value=""
-              className="flex items-center px-3 py-1.5 text-sm cursor-pointer select-none outline-none data-[state=checked]:bg-accent data-[state=checked]:text-accent-foreground hover:bg-muted"
-            >
-              <Select.ItemText>All Collectives</Select.ItemText>
-              <Select.ItemIndicator>
-                <Check className="size-4 ml-auto text-primary" />
-              </Select.ItemIndicator>
-            </Select.Item>
             {collectives.map((col) => (
               <Select.Item
                 key={col.id}

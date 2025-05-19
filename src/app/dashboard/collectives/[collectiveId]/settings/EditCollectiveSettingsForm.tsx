@@ -24,20 +24,24 @@ import {
   updateCollectiveSettings,
   type RawCollectiveSettingsFormInput,
   getCollectiveStripeStatus,
+  deleteCollective,
+  transferCollectiveOwnership,
 } from "@/app/actions/collectiveActions";
 import { Loader2 } from "lucide-react";
 import { useState as useClientState } from "react";
 
 interface EditCollectiveSettingsFormProps {
   collectiveId: string;
-  currentSlug: string; // To know if slug changed for redirection
+  currentSlug: string;
   defaultValues: CollectiveSettingsClientFormValues;
+  eligibleMembers: { id: string; full_name: string | null }[];
 }
 
 export default function EditCollectiveSettingsForm({
   collectiveId,
   currentSlug,
   defaultValues,
+  eligibleMembers,
 }: EditCollectiveSettingsFormProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -176,6 +180,49 @@ export default function EditCollectiveSettingsForm({
     }
   };
 
+  // Danger Zone: Delete Collective
+  const [deleteLoading, setDeleteLoading] = useClientState(false);
+  const [deleteError, setDeleteError] = useClientState<string | null>(null);
+  const [deleteSuccess, setDeleteSuccess] = useClientState(false);
+
+  const handleDeleteCollective = async () => {
+    setDeleteError(null);
+    setDeleteLoading(true);
+    const result = await deleteCollective({ collectiveId });
+    setDeleteLoading(false);
+    if (result.success) {
+      setDeleteSuccess(true);
+      setTimeout(() => {
+        router.push("/dashboard/collectives");
+      }, 2000);
+    } else {
+      setDeleteError(result.error || "Failed to delete collective.");
+    }
+  };
+
+  // Transfer Ownership
+  const [transferTo, setTransferTo] = useClientState<string>("");
+  const [transferLoading, setTransferLoading] = useClientState(false);
+  const [transferError, setTransferError] = useClientState<string | null>(null);
+  const [transferSuccess, setTransferSuccess] = useClientState(false);
+  const handleTransferOwnership = async () => {
+    setTransferError(null);
+    setTransferLoading(true);
+    const result = await transferCollectiveOwnership({
+      collectiveId,
+      newOwnerId: transferTo,
+    });
+    setTransferLoading(false);
+    if (result.success) {
+      setTransferSuccess(true);
+      setTimeout(() => {
+        router.refresh();
+      }, 2000);
+    } else {
+      setTransferError(result.error || "Failed to transfer ownership.");
+    }
+  };
+
   return (
     <Card>
       <form onSubmit={handleSubmit(onSubmit)}>
@@ -288,6 +335,90 @@ export default function EditCollectiveSettingsForm({
               )}
             </CardContent>
           </Card>
+          {/* Danger Zone: Delete Collective */}
+          {isOwner && (
+            <section className="mt-12 border-t pt-8">
+              <h2 className="text-xl font-bold text-destructive mb-2">
+                Delete Collective
+              </h2>
+              <p className="mb-4 text-muted-foreground">
+                This action is <b>irreversible</b>. All posts, members, invites,
+                and data for this collective will be permanently deleted. You
+                cannot undo this action.
+              </p>
+              {deleteError && (
+                <p className="text-destructive mb-2">{deleteError}</p>
+              )}
+              {deleteSuccess ? (
+                <p className="text-success mb-2">
+                  Collective deleted. Redirecting...
+                </p>
+              ) : (
+                <Button
+                  variant="destructive"
+                  disabled={deleteLoading}
+                  onClick={() => {
+                    if (
+                      window.confirm(
+                        "Are you sure you want to delete this collective? This cannot be undone."
+                      )
+                    ) {
+                      handleDeleteCollective();
+                    }
+                  }}
+                >
+                  {deleteLoading ? "Deleting..." : "Delete Collective"}
+                </Button>
+              )}
+            </section>
+          )}
+          {/* Transfer Ownership Section */}
+          {isOwner && eligibleMembers.length > 0 && (
+            <section className="mt-12 border-t pt-8">
+              <h2 className="text-xl font-bold mb-2">Transfer Ownership</h2>
+              <p className="mb-4 text-muted-foreground">
+                Transfer ownership of this collective to another member. You
+                will become an editor after transfer.
+              </p>
+              <select
+                className="input input-bordered w-full max-w-xs mb-4"
+                value={transferTo}
+                onChange={(e) => setTransferTo(e.target.value)}
+                disabled={transferLoading || transferSuccess}
+              >
+                <option value="">Select new owner...</option>
+                {eligibleMembers.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.full_name || m.id}
+                  </option>
+                ))}
+              </select>
+              {transferError && (
+                <p className="text-destructive mb-2">{transferError}</p>
+              )}
+              {transferSuccess ? (
+                <p className="text-success mb-2">
+                  Ownership transferred. Refreshing...
+                </p>
+              ) : (
+                <Button
+                  variant="outline"
+                  disabled={!transferTo || transferLoading}
+                  onClick={() => {
+                    if (
+                      window.confirm(
+                        "Are you sure you want to transfer ownership? This cannot be undone."
+                      )
+                    ) {
+                      handleTransferOwnership();
+                    }
+                  }}
+                >
+                  {transferLoading ? "Transferring..." : "Transfer Ownership"}
+                </Button>
+              )}
+            </section>
+          )}
         </CardContent>
         <CardFooter className="flex justify-end">
           <Button

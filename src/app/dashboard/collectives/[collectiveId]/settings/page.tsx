@@ -53,6 +53,15 @@ export default async function CollectiveSettingsPage({
     // safe to access collective.id, collective.name, etc.
   }
 
+  // Fetch eligible members for ownership transfer
+  const { data: members, error: membersError } = await supabase
+    .from("collective_members")
+    .select("user:users!user_id(id, full_name)")
+    .eq("collective_id", collectiveId);
+  const eligibleMembers = (members || [])
+    .map((m: any) => m.user)
+    .filter((u: any) => u && u.id !== authUser.id);
+
   return (
     <div className="container mx-auto p-4 md:p-6 max-w-2xl">
       <header className="mb-6">
@@ -63,8 +72,9 @@ export default async function CollectiveSettingsPage({
       </header>
       <EditCollectiveSettingsForm
         collectiveId={collective.id}
-        currentSlug={collective.slug} // Pass current slug for comparison in client if needed
+        currentSlug={collective.slug}
         defaultValues={defaultValues}
+        eligibleMembers={eligibleMembers}
       />
     </div>
   );

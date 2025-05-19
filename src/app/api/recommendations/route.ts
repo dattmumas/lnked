@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
  * Query params: limit (default 10), cursor (optional, for pagination)
  */
 export async function GET(req: NextRequest) {
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
 
   const {
     data: { user },

@@ -8,7 +8,7 @@ export default async function EditPostPage({
   params: Promise<{ postId: string }>;
 }) {
   const { postId } = await params;
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
 
   const {
     data: { user },

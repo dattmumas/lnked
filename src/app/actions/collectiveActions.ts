@@ -490,4 +490,129 @@ export async function getCollectiveStripeStatus(collectiveId: string) {
   }
 }
 
+/**
+ * Delete a collective and all related data (owner only).
+ */
+export async function deleteCollective({
+  collectiveId,
+}: {
+  collectiveId: string;
+}): Promise<{ success: boolean; error?: string }> {
+  const supabase = await createServerSupabaseClient();
+  const {
+    data: { user: currentUser },
+    error: authError,
+  } = await supabase.auth.getUser();
+  if (authError || !currentUser) {
+    return { success: false, error: "Not authenticated." };
+  }
+  // Only owner can delete
+  const { data: collective, error: collectiveError } = await supabase
+    .from("collectives")
+    .select("owner_id")
+    .eq("id", collectiveId)
+    .single();
+  if (collectiveError || !collective) {
+    return { success: false, error: "Collective not found." };
+  }
+  if (collective.owner_id !== currentUser.id) {
+    return {
+      success: false,
+      error: "Only the owner can delete this collective.",
+    };
+  }
+  // Delete all posts
+  await supabase.from("posts").delete().eq("collective_id", collectiveId);
+  // Delete all members
+  await supabase
+    .from("collective_members")
+    .delete()
+    .eq("collective_id", collectiveId);
+  // Delete all invites
+  await supabase
+    .from("collective_invites")
+    .delete()
+    .eq("collective_id", collectiveId);
+  // Delete the collective
+  const { error: deleteError } = await supabase
+    .from("collectives")
+    .delete()
+    .eq("id", collectiveId);
+  if (deleteError) {
+    return {
+      success: false,
+      error: "Failed to delete collective: " + deleteError.message,
+    };
+  }
+  return { success: true };
+}
+
+/**
+ * Transfer ownership of a collective to another member (owner only).
+ */
+export async function transferCollectiveOwnership({
+  collectiveId,
+  newOwnerId,
+}: {
+  collectiveId: string;
+  newOwnerId: string;
+}): Promise<{ success: boolean; error?: string }> {
+  const supabase = await createServerSupabaseClient();
+  const {
+    data: { user: currentUser },
+    error: authError,
+  } = await supabase.auth.getUser();
+  if (authError || !currentUser) {
+    return { success: false, error: "Not authenticated." };
+  }
+  // Only owner can transfer
+  const { data: collective, error: collectiveError } = await supabase
+    .from("collectives")
+    .select("owner_id")
+    .eq("id", collectiveId)
+    .single();
+  if (collectiveError || !collective) {
+    return { success: false, error: "Collective not found." };
+  }
+  if (collective.owner_id !== currentUser.id) {
+    return { success: false, error: "Only the owner can transfer ownership." };
+  }
+  if (newOwnerId === currentUser.id) {
+    return { success: false, error: "You are already the owner." };
+  }
+  // Check that newOwnerId is a member
+  const { data: member } = await supabase
+    .from("collective_members")
+    .select("id")
+    .eq("collective_id", collectiveId)
+    .eq("user_id", newOwnerId)
+    .maybeSingle();
+  if (!member) {
+    return { success: false, error: "New owner must be a current member." };
+  }
+  // Update owner_id in collectives
+  const { error: updateError } = await supabase
+    .from("collectives")
+    .update({ owner_id: newOwnerId })
+    .eq("id", collectiveId);
+  if (updateError) {
+    return {
+      success: false,
+      error: "Failed to transfer ownership: " + updateError.message,
+    };
+  }
+  // Update roles: set new owner to 'owner', old owner to 'editor'
+  await supabase
+    .from("collective_members")
+    .update({ role: "owner" })
+    .eq("collective_id", collectiveId)
+    .eq("user_id", newOwnerId);
+  await supabase
+    .from("collective_members")
+    .update({ role: "editor" })
+    .eq("collective_id", collectiveId)
+    .eq("user_id", currentUser.id);
+  return { success: true };
+}
+
 // Ensure no trailing </rewritten_file> or other extraneous characters at EOF

@@ -4,9 +4,13 @@ import { useTheme } from "next-themes";
 import { Sun, Moon } from "lucide-react";
 import { Button } from "./button";
 import React from "react";
+import { useEffect, useState } from "react";
 
 export function ModeToggle() {
   const { theme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  if (!mounted) return null;
   const isDark = theme === "dark";
 
   return (

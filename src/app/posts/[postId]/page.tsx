@@ -4,8 +4,9 @@ import { notFound } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import PostLikeButton from "@/components/PostLikeButton";
-import PostViewTracker from "@/components/app/posts/PostViewTracker";
+import PostViewTracker from "@/app/posts/_components/PostViewTracker";
 import { formatDate } from "@/lib/utils";
+import { LexicalRenderer } from "@/components/ui/LexicalRenderer";
 
 export default async function IndividualPostViewPage({
   params,
@@ -124,7 +125,7 @@ export default async function IndividualPostViewPage({
         </header>
 
         <div className="prose dark:prose-invert lg:prose-xl max-w-none">
-          <div dangerouslySetInnerHTML={{ __html: typedPost.content || "" }} />
+          <LexicalRenderer contentJSON={typedPost.content} />
         </div>
       </article>
 

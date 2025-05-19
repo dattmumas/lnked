@@ -7,6 +7,7 @@ import PostReactionButtons from "@/app/posts/_components/PostReactionButtons";
 import BookmarkButton from "@/app/posts/_components/BookmarkButton";
 import CommentsSection from "@/app/posts/_components/CommentsSection";
 import PostViewTracker from "@/app/posts/_components/PostViewTracker";
+import { LexicalRenderer } from "@/components/ui/LexicalRenderer";
 
 // Helper function to format dates, can be moved to a utils file
 const formatDate = (dateString: string | null): string => {
@@ -202,17 +203,8 @@ export default async function PostPage({
             />
           </div>
         </header>
-        <div
-          className="prose dark:prose-invert lg:prose-xl max-w-none"
-          style={
-            {
-              "--tw-prose-blockquote-borders": "hsl(var(--accent))",
-            } as React.CSSProperties
-          }
-        >
-          {/* Main post content (HTML or markdown) */}
-          {/* If using HTML, use dangerouslySetInnerHTML. If markdown, render as children. */}
-          <div dangerouslySetInnerHTML={{ __html: post.content || "" }} />
+        <div className="prose dark:prose-invert lg:prose-xl max-w-none">
+          <LexicalRenderer contentJSON={post.content} />
         </div>
       </article>
 

@@ -11,18 +11,9 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import {
-  Settings,
-  LogOut,
-  Users2,
-  Users,
-  Eye,
-  Plus,
-  TrendingUp,
-} from "lucide-react";
+import { Settings, LogOut, Users2, Plus } from "lucide-react";
 import type { Database } from "@/lib/database.types";
 import * as React from "react";
-import { useRouter } from "next/navigation";
 import { removeUserFromCollective } from "@/app/actions/collectiveActions";
 
 type Collective = Database["public"]["Tables"]["collectives"]["Row"];
@@ -46,9 +37,6 @@ export default function DashboardCollectiveCard({
   monthlyRevenue,
   currency,
 }: DashboardCollectiveCardProps) {
-  const [isPending, startTransition] = useTransition();
-  const router = useRouter();
-
   const handleLeaveCollective = async () => {
     if (role === "Owner") return;
     if (!memberId) {
@@ -59,17 +47,12 @@ export default function DashboardCollectiveCard({
     if (
       window.confirm(`Are you sure you want to leave "${collective.name}"?`)
     ) {
-      startTransition(async () => {
-        const result = await removeUserFromCollective(collective.id, memberId);
-        if (result.success) {
-          alert(result.message || "Successfully left collective.");
-          router.refresh();
-        } else {
-          alert(
-            `Failed to leave collective: ${result.error || "Unknown error"}`
-          );
-        }
-      });
+      const result = await removeUserFromCollective(collective.id, memberId);
+      if (result.success) {
+        alert(result.message || "Successfully left collective.");
+      } else {
+        alert(`Failed to leave collective: ${result.error || "Unknown error"}`);
+      }
     }
   };
 
@@ -114,13 +97,6 @@ export default function DashboardCollectiveCard({
                 {subscriberCount ?? "0"}
               </span>
             </div>
-            <div className="flex items-center">
-              <TrendingUp className="h-3.5 w-3.5 mr-1.5 text-emerald-600 dark:text-emerald-400" />{" "}
-              Monthly Revenue:{" "}
-              <span className="font-semibold ml-1 text-foreground">
-                {formatCurrency(monthlyRevenue, currency)}
-              </span>
-            </div>
           </div>
         )}
       </CardContent>
@@ -135,18 +111,18 @@ export default function DashboardCollectiveCard({
             href={`/${collective.slug}`}
             className="flex items-center justify-center w-full"
           >
-            <Eye className="h-4 w-4 mr-1.5" /> View
+            <Users2 className="h-4 w-4 mr-1.5" /> View
           </Link>
         </Button>
         {role === "Owner" && (
           <Button
-            variant="outline"
+            variant="default"
             size="sm"
             asChild
             className="flex-grow basis-1/3 sm:basis-auto"
           >
             <Link
-              href={`/dashboard/${collective.id}/new-post`}
+              href={`/dashboard/collectives/${collective.id}/posts/new`}
               className="flex items-center justify-center w-full"
             >
               <Plus className="h-4 w-4 mr-1.5" /> Add Post
@@ -165,7 +141,7 @@ export default function DashboardCollectiveCard({
                 href={`/dashboard/collectives/${collective.id}/manage/members`}
                 className="flex items-center justify-center w-full"
               >
-                <Users className="h-4 w-4 mr-1.5" /> Members
+                <Users2 className="h-4 w-4 mr-1.5" /> Members
               </Link>
             </Button>
             <Button
@@ -182,13 +158,26 @@ export default function DashboardCollectiveCard({
                 <Settings className="h-4 w-4 mr-1.5" /> Settings
               </Link>
             </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              asChild
+              className="flex-grow basis-1/3 sm:basis-auto"
+            >
+              <Link
+                href={`/dashboard/collectives/${collective.id}/subscribers`}
+                className="flex items-center justify-center w-full"
+              >
+                <Users2 className="h-4 w-4 mr-1.5" /> Subscribers
+              </Link>
+            </Button>
           </>
         ) : (
           <Button
             variant="destructive"
             size="sm"
             onClick={handleLeaveCollective}
-            disabled={isPending || !memberId}
+            disabled={!memberId}
             className="flex-grow basis-full sm:basis-auto flex items-center justify-center w-full"
           >
             <LogOut className="h-4 w-4 mr-1.5" /> Leave

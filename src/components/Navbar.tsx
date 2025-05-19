@@ -20,6 +20,7 @@ import {
   UserSquare,
   Newspaper,
   LogOut,
+  Settings,
 } from "lucide-react";
 import ModeToggle from "@/components/app/nav/ModeToggle";
 
@@ -43,6 +44,11 @@ const dashboardNavItems = [
     href: "/dashboard/profile/edit",
     label: "Edit Profile",
     icon: <UserSquare className="size-4" />,
+  },
+  {
+    href: "/settings",
+    label: "Account Settings",
+    icon: <Settings className="size-4" />,
   },
 ];
 
@@ -119,6 +125,14 @@ export default function Navbar() {
               Dashboard
             </Button>
             <Button
+              variant={pathname === "/settings" ? "secondary" : "ghost"}
+              size="sm"
+              aria-current={pathname === "/settings" ? "page" : undefined}
+              onClick={() => router.push("/settings")}
+            >
+              Account Settings
+            </Button>
+            <Button
               variant="outline"
               size="sm"
               onClick={handleSignOut}
@@ -182,6 +196,16 @@ export default function Navbar() {
                         <span className="mr-2">{item.icon}</span> {item.label}
                       </Button>
                     ))}
+                    <Button
+                      variant={pathname === "/settings" ? "secondary" : "ghost"}
+                      className="justify-start h-9 px-2"
+                      aria-current={
+                        pathname === "/settings" ? "page" : undefined
+                      }
+                      onClick={() => router.push("/settings")}
+                    >
+                      <Settings className="size-4 mr-2" /> Account Settings
+                    </Button>
                     <div className="my-2 h-px bg-border" />
                     <Button
                       variant={pathname === "/discover" ? "secondary" : "ghost"}
@@ -221,6 +245,17 @@ export default function Navbar() {
                     >
                       <LayoutDashboard className="size-4 mr-2" /> Dashboard
                     </Button>
+                    <Button
+                      variant={pathname === "/settings" ? "secondary" : "ghost"}
+                      className="justify-start h-9 px-2"
+                      aria-current={
+                        pathname === "/settings" ? "page" : undefined
+                      }
+                      onClick={() => router.push("/settings")}
+                    >
+                      <Settings className="size-4 mr-2" /> Account Settings
+                    </Button>
+                    <div className="my-2 h-px bg-border" />
                     <Button
                       variant="outline"
                       className="justify-start h-9 px-2 mt-4"

@@ -2,8 +2,9 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import PostListItem from "@/components/app/dashboard/posts/PostListItem";
 import { Button } from "@/components/ui/button";
-import { PlusCircle } from "lucide-react";
+import { Plus } from "lucide-react";
 import Link from "next/link";
+import type { Database, Enums } from "@/lib/database.types";
 
 // Use a type alias for DashboardPost
 export type DashboardPost = Database["public"]["Tables"]["posts"]["Row"] & {
@@ -19,7 +20,16 @@ type PublishingTargetCollective = Pick<
 >;
 
 export default async function MyPostsPage() {
+  // TEMP DEBUG: Log env vars and test a simple query
+  console.log("SUPABASE_URL", process.env.NEXT_PUBLIC_SUPABASE_URL);
+  console.log("SUPABASE_ANON_KEY", process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
+
   const supabase = await createServerSupabaseClient();
+  const { data: testPosts, error: testPostsError } = await supabase
+    .from("posts")
+    .select("*")
+    .limit(1);
+  console.log("Test posts query:", { testPosts, testPostsError });
 
   const {
     data: { session },
@@ -56,7 +66,7 @@ export default async function MyPostsPage() {
   const { data: memberCollectivesData, error: memberError } = await supabase
     .from("collective_members")
     .select("role, collective:collectives!inner(id, name, slug)")
-    .eq("user_id", userId)
+    .eq("member_id", userId)
     .in("role", [
       "admin",
       "editor",
@@ -66,9 +76,9 @@ export default async function MyPostsPage() {
 
   if (postsError || ownedError || memberError) {
     console.error("Error fetching data for My Posts page:", {
-      postsError,
-      ownedError,
-      memberError,
+      postsError: JSON.stringify(postsError),
+      ownedError: JSON.stringify(ownedError),
+      memberError: JSON.stringify(memberError),
     });
     return <div className="p-4">Failed to load page data.</div>;
   }
@@ -77,40 +87,46 @@ export default async function MyPostsPage() {
   const addedCollectiveIds = new Set<string>();
 
   if (ownedCollectives) {
-    ownedCollectives.forEach((c) => {
+    ownedCollectives.forEach((c: PublishingTargetCollective) => {
       if (!addedCollectiveIds.has(c.id)) {
-        publishingCollectives.push(c as PublishingTargetCollective);
+        publishingCollectives.push(c);
         addedCollectiveIds.add(c.id);
       }
     });
   }
   if (memberCollectivesData) {
-    memberCollectivesData.forEach((membership) => {
-      if (
-        membership.collective &&
-        !addedCollectiveIds.has(membership.collective.id)
-      ) {
-        publishingCollectives.push(
-          membership.collective as PublishingTargetCollective
-        );
-        addedCollectiveIds.add(membership.collective.id);
+    memberCollectivesData.forEach(
+      (membership: { collective?: PublishingTargetCollective }) => {
+        if (
+          membership.collective &&
+          !addedCollectiveIds.has(membership.collective.id)
+        ) {
+          publishingCollectives.push(
+            membership.collective as PublishingTargetCollective
+          );
+          addedCollectiveIds.add(membership.collective.id);
+        }
       }
-    });
+    );
   }
 
   // Map posts to include likeCount (count only 'like' reactions)
-  const postsWithLikeCount = (posts as DashboardPost[]).map((post) => ({
-    ...post,
-    likeCount: Array.isArray(post.post_reactions)
-      ? post.post_reactions.filter((r) => r.type === "like").length
-      : 0,
-  }));
+  const postsWithLikeCount = (posts as DashboardPost[]).map(
+    (post: DashboardPost) => ({
+      ...post,
+      likeCount: Array.isArray(post.post_reactions)
+        ? post.post_reactions.filter(
+            (r: { type?: string }) => r.type === "like"
+          ).length
+        : 0,
+    })
+  );
 
   const renderNewPostButton = () => {
     return (
       <Button asChild size="sm" className="w-full md:w-auto">
         <Link href="/dashboard/new-personal-post">
-          <PlusCircle className="h-4 w-4 mr-2" /> New Post
+          <Plus className="h-4 w-4 mr-2" /> New Post
         </Link>
       </Button>
     );
