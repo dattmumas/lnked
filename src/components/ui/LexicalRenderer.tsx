@@ -51,6 +51,8 @@ export function LexicalRenderer({ contentJSON }: LexicalRendererProps) {
           "tweet",
           "poll",
           "sticky",
+          "excalidraw",
+          "pagebreak",
           "collapsible-container",
           "layoutcontainer",
           "layoutitem",
@@ -262,6 +264,23 @@ export function LexicalRenderer({ contentJSON }: LexicalRendererProps) {
           </div>
         );
       }
+      case "excalidraw": {
+        return (
+          <div
+            className="excalidraw-renderer border rounded p-4 my-4 bg-muted"
+            data-excalidraw={(node as { data?: string }).data || ""}
+          >
+            [Excalidraw drawing]
+          </div>
+        );
+      }
+      case "pagebreak":
+        return (
+          <hr
+            className="my-8 border-t border-dashed border-border page-break"
+            style={{ pageBreakAfter: "always" }}
+          />
+        );
       case "collapsible-container": {
         const collapsed: boolean =
           (node as { collapsed?: boolean }).collapsed ?? false;
