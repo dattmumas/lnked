@@ -2,6 +2,7 @@
 
 import { useState, useTransition, useEffect } from "react";
 import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { UserPlus, UserMinus, Loader2 } from "lucide-react";
 import { followUser, unfollowUser } from "@/app/actions/followActions";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
@@ -30,6 +31,7 @@ export default function FollowButton({
   const [actualCurrentUserId, setActualCurrentUserId] = useState<string | null>(
     initialCurrentUserId || null
   );
+  const [error, setError] = useState<string | null>(null);
   const supabase = createSupabaseBrowserClient();
 
   useEffect(() => {
@@ -66,8 +68,9 @@ export default function FollowButton({
       const result = await action(targetUserId);
       if (!result.success) {
         setIsFollowing(previousIsFollowing); // Revert on error
-        alert(result.error || "Action failed. Please try again.");
+        setError(result.error || "Action failed. Please try again.");
       } else {
+        setError(null);
         // Success, revalidation should update any follower counts displayed elsewhere
       }
     });
@@ -87,24 +90,32 @@ export default function FollowButton({
   }
 
   return (
-    <Button
-      onClick={handleFollowToggle}
-      disabled={isPending || isLoadingCurrentUser}
-      variant={isFollowing ? "outline" : "default"}
-      size="sm"
-    >
-      {isPending ? (
-        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-      ) : isFollowing ? (
-        <UserMinus className="mr-2 h-4 w-4" />
-      ) : (
-        <UserPlus className="mr-2 h-4 w-4" />
+    <div className="space-y-2">
+      {error && (
+        <Alert variant="destructive">
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
       )}
-      {isPending
-        ? "Processing..."
-        : isFollowing
-        ? `Unfollow ${targetUserName}`
-        : `Follow ${targetUserName}`}
-    </Button>
+      <Button
+        onClick={handleFollowToggle}
+        disabled={isPending || isLoadingCurrentUser}
+        variant={isFollowing ? "outline" : "default"}
+        size="sm"
+      >
+        {isPending ? (
+          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+        ) : isFollowing ? (
+          <UserMinus className="mr-2 h-4 w-4" />
+        ) : (
+          <UserPlus className="mr-2 h-4 w-4" />
+        )}
+        {isPending
+          ? "Processing..."
+          : isFollowing
+          ? `Unfollow ${targetUserName}`
+          : `Follow ${targetUserName}`}
+      </Button>
+    </div>
   );
 }

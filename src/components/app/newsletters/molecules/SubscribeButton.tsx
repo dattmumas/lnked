@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import * as React from "react";
 import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { usePathname, useRouter } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import type { User } from "@supabase/supabase-js";
@@ -24,6 +25,7 @@ export default function SubscribeButton({
   const [isPending, startTransition] = React.useTransition();
   const [isLoadingUser, setIsLoadingUser] = useState(true);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const supabase = createSupabaseBrowserClient();
 
   useEffect(() => {
@@ -62,13 +64,13 @@ export default function SubscribeButton({
         if (session.url) {
           router.push(session.url); // Redirect to Stripe Checkout
         } else if (session.error) {
-          alert(`Subscription failed: ${session.error}`); // Basic error handling
+          setError(`Subscription failed: ${session.error}`);
         } else {
-          alert("Could not initiate subscription. Please try again.");
+          setError("Could not initiate subscription. Please try again.");
         }
       } catch (error) {
         console.error("Subscription request error:", error);
-        alert("An unexpected error occurred.");
+        setError("An unexpected error occurred.");
       }
     });
   };
@@ -83,12 +85,20 @@ export default function SubscribeButton({
   }
 
   return (
-    <Button
-      onClick={handleSubscribe}
-      disabled={isPending || isLoadingUser}
-      size="lg"
-    >
-      {isPending ? "Processing..." : `Subscribe to ${targetName}`}
-    </Button>
+    <div className="space-y-2">
+      {error && (
+        <Alert variant="destructive">
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+      <Button
+        onClick={handleSubscribe}
+        disabled={isPending || isLoadingUser}
+        size="lg"
+      >
+        {isPending ? "Processing..." : `Subscribe to ${targetName}`}
+      </Button>
+    </div>
   );
 }
