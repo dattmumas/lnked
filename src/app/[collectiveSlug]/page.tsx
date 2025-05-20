@@ -119,7 +119,7 @@ export default async function Page({
         {isOwner && (
           <div className="mt-4 flex gap-2">
             <Button asChild variant="outline">
-              <Link href={`/dashboard/${collective.id}/new-post`}>
+              <Link href={`/posts/new?collectiveId=${collective.id}`}>
                 Create New Post
               </Link>
             </Button>

@@ -48,5 +48,14 @@ export default async function NewPostPage({
     collective = data;
   }
 
-  return <NewPostForm collective={collective} />;
+  const pageTitle = collective
+    ? `New Post in ${collective.name}`
+    : "Create New Post";
+
+  return (
+    <div className="space-y-4">
+      <h1 className="text-2xl font-semibold">{pageTitle}</h1>
+      <NewPostForm collective={collective} />
+    </div>
+  );
 }
