@@ -212,7 +212,7 @@ export default async function PostPage({
         <div className="flex justify-between items-center">
           {isOwner && (
             <Button asChild variant="outline">
-              <Link href={`/dashboard/posts/${post.id}/edit`}>Edit Post</Link>
+              <Link href={`/posts/${post.id}/edit`}>Edit Post</Link>
             </Button>
           )}
         </div>

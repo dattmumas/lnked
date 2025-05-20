@@ -45,7 +45,7 @@ export function FileExplorer({
           {personalPosts.map((post) => (
             <li key={post.id}>
               <Link
-                href={`/dashboard/posts/${post.id}/edit`}
+                href={`/posts/${post.id}/edit`}
                 className={`block px-2 py-1 rounded-md transition-colors text-sm ${
                   isActive(post.id)
                     ? "bg-sidebar-accent/10 text-sidebar-accent font-medium"
@@ -110,7 +110,7 @@ export function FileExplorer({
                     {col.posts.map((post) => (
                       <li key={post.id}>
                         <Link
-                          href={`/dashboard/posts/${post.id}/edit`}
+                          href={`/posts/${post.id}/edit`}
                           className={`block px-2 py-1 rounded-md transition-colors text-sm ${
                             isActive(post.id)
                               ? "bg-sidebar-accent/10 text-sidebar-accent font-medium"

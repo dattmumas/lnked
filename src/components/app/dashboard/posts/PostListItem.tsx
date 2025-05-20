@@ -46,7 +46,7 @@ export default function PostListItem({ post }: PostListItemProps) {
   const postUrl = post.collective
     ? `/collectives/${post.collective.slug}/${post.id}`
     : `/posts/${post.id}`;
-  const editUrl = `/dashboard/posts/${post.id}/edit`;
+  const editUrl = `/posts/${post.id}/edit`;
 
   const handleDelete = () => {
     if (window.confirm("Are you sure you want to delete this post?")) {
@@ -61,7 +61,7 @@ export default function PostListItem({ post }: PostListItemProps) {
     <tr className="hover:bg-muted/50 transition-colors">
       <td className="px-4 py-2 whitespace-nowrap max-w-xs">
         <div className="flex items-center gap-2">
-          <Link href={editUrl} className="font-medium hover:underline">
+          <Link href={postUrl} className="font-medium hover:underline">
             {post.title}
           </Link>
           {post.collective && (

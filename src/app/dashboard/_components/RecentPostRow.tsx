@@ -30,7 +30,7 @@ function RecentPostRow({
 
   return (
     <Link
-      href={`/dashboard/posts/${id}`}
+      href={`/posts/${id}`}
       className={cn(
         "flex items-center justify-between py-2 px-3 rounded-md hover:bg-muted transition-colors",
         className

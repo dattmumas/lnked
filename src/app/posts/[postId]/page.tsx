@@ -139,7 +139,7 @@ export default async function IndividualPostViewPage({
           />
           {isOwner && (
             <Button asChild variant="outline">
-              <Link href={`/dashboard/posts/${typedPost.id}/edit`}>
+              <Link href={`/posts/${typedPost.id}/edit`}>
                 Edit Post
               </Link>
             </Button>
