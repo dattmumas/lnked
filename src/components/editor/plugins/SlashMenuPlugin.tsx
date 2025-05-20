@@ -29,7 +29,6 @@ import {
   INSERT_LAYOUT_COMMAND,
   INSERT_TABLE_COMMAND,
   INSERT_HR_COMMAND,
-  INSERT_GIF_COMMAND,
 } from "../PostEditor";
 import ReactDOM from "react-dom";
 import type { LexicalEditor } from "lexical";
@@ -133,10 +132,6 @@ const SLASH_OPTIONS: MenuOption[] = [
       editor.dispatchCommand(INSERT_INLINE_IMAGE_COMMAND, undefined),
   },
   {
-    label: "GIF",
-    action: (editor) => editor.dispatchCommand(INSERT_GIF_COMMAND, undefined),
-  },
-  {
     label: "Excalidraw",
     action: (editor) =>
       editor.dispatchCommand(INSERT_EXCALIDRAW_COMMAND, undefined),
@@ -179,21 +174,6 @@ const SlashMenuPlugin = () => {
   const [inputString, setInputString] = useState("");
   const menuRef = React.useRef<HTMLDivElement>(null);
 
-  // Helper to get caret position in viewport
-  const getCaretPosition = () => {
-    const selection = window.getSelection();
-    if (!selection || selection.rangeCount === 0) return null;
-    const range = selection.getRangeAt(0).cloneRange();
-    if (range.getClientRects) {
-      range.collapse(true);
-      const rects = range.getClientRects();
-      if (rects.length > 0) {
-        const rect = rects[0];
-        return { x: rect.left, y: rect.bottom };
-      }
-    }
-    return null;
-  };
 
   // Use KEY_DOWN_COMMAND to trigger slash menu
   useEffect(() => {
@@ -204,7 +184,7 @@ const SlashMenuPlugin = () => {
         const selection = $getSelection();
         if (selection) {
           // Log selection details
-          // @ts-ignore
+          // @ts-expect-error selection may not have constructor
           console.log(
             "[SlashMenuPlugin] selection:",
             selection.constructor.name,

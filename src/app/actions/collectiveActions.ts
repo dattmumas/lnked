@@ -485,8 +485,9 @@ export async function getCollectiveStripeStatus(collectiveId: string) {
       type: account.type,
       id: account.id,
     };
-  } catch (err: any) {
-    return { error: err.message || "Failed to fetch Stripe account status" };
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Failed to fetch Stripe account status";
+    return { error: message };
   }
 }
 

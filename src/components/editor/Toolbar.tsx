@@ -27,7 +27,6 @@ import {
   AlignRight,
   Link as LinkIcon,
   PictureInPicture2 as ExcalidrawIcon,
-  FileImage as GifIcon,
 } from "lucide-react";
 import type { JSX } from "react";
 import { $setBlocksType } from "@lexical/selection";
@@ -53,11 +52,7 @@ const BLOCK_TYPES = [
   { type: "code", label: "Code Block" },
 ];
 
-interface ToolbarProps {
-  onInsertGif: () => void;
-}
-
-function Toolbar({ onInsertGif }: ToolbarProps): JSX.Element {
+function Toolbar(): JSX.Element {
   const [editor] = useLexicalComposerContext();
   // Local state for active inline formatting and current block type/attributes
   const [blockType, setBlockType] = useState<string>("paragraph");
@@ -190,15 +185,6 @@ function Toolbar({ onInsertGif }: ToolbarProps): JSX.Element {
   return (
     <div className="toolbar sticky top-0 z-20 flex items-center gap-2 bg-background px-2 py-1 border-b dark:bg-background/80">
       {/* Quick-insert: GIF */}
-      <button
-        type="button"
-        onClick={onInsertGif}
-        className="toolbar-item spaced"
-        aria-label="Insert GIF"
-        title="Insert GIF"
-      >
-        <GifIcon className="format" />
-      </button>
       {/* Quick-insert: Excalidraw */}
       <button
         type="button"

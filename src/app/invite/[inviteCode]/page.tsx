@@ -1,6 +1,7 @@
 import { acceptCollectiveInvite } from "@/app/actions/memberActions";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
+import Link from "next/link";
 
 export default async function InviteAcceptPage({
   params,
@@ -34,9 +35,9 @@ export default async function InviteAcceptPage({
           <p>{result.error || "Failed to accept invite."}</p>
         </div>
       )}
-      <a href="/dashboard" className="text-primary underline">
+      <Link href="/dashboard" className="text-primary underline">
         Go to Dashboard
-      </a>
+      </Link>
     </div>
   );
 }

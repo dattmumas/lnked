@@ -1,26 +1,11 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
-import { Source_Serif_4 } from "next/font/google";
 import "./globals.css";
 import Navbar from "@/components/Navbar";
 import { ThemeProvider } from "next-themes";
 import SmoothScroll from "@/components/app/SmoothScroll";
 import RouteProgress from "@/components/app/nav/RouteProgress";
 import Footer from "@/components/ui/Footer";
-import { cn } from "@/lib/utils";
 
-// Load fonts
-const inter = Inter({
-  subsets: ["latin"],
-  variable: "--font-inter",
-  display: "swap",
-});
-
-const sourceSerif = Source_Serif_4({
-  subsets: ["latin"],
-  variable: "--font-source-serif",
-  display: "swap",
-});
 
 export const metadata: Metadata = {
   title: "Lnked - Collaborative Newsletters",
@@ -33,11 +18,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang="en"
-      className={cn(inter.variable, sourceSerif.variable)}
-      suppressHydrationWarning
-    >
+    <html lang="en" suppressHydrationWarning>
       <body className="bg-background text-foreground font-sans antialiased min-h-screen flex flex-col">
         <ThemeProvider
           attribute="class"

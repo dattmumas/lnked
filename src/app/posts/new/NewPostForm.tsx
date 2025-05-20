@@ -115,7 +115,7 @@ export default function NewPersonalPostPage() {
 
   const {
     handleSubmit,
-    formState: { errors, isSubmitting, isDirty },
+    formState: { isSubmitting, isDirty },
     reset,
     watch,
     getValues,
@@ -258,63 +258,54 @@ export default function NewPersonalPostPage() {
       : "Publish Post";
 
   return (
-    <FormProvider
-      {...form}
-      children={
-        <EditorLayout
-          sidebar={
-            <FileExplorer
-              personalPosts={personalPosts}
-              collectives={collectives}
+    <FormProvider {...form}>
+      <EditorLayout
+        sidebar={<FileExplorer personalPosts={personalPosts} collectives={collectives} />}
+        metadataBar={
+          <PostMetadataBar
+            onPublish={handleSubmit(onSubmit)}
+            isPublishing={isProcessing || isSubmitting}
+            publishButtonText={primaryButtonText}
+            onOpenSeoDrawer={() => setSeoDrawerOpen(true)}
+          />
+        }
+      >
+        <>
+          <div className="flex flex-col gap-4 h-full">
+            <PostEditor
+              initialContentJSON={getValues("content")}
+              placeholder="Share your thoughts..."
+              onContentChange={(json) =>
+                setValue("content", json, {
+                  shouldValidate: true,
+                  shouldDirty: true,
+                })
+              }
             />
-          }
-          metadataBar={
-            <PostMetadataBar
-              onPublish={handleSubmit(onSubmit)}
-              isPublishing={isProcessing || isSubmitting}
-              publishButtonText={primaryButtonText}
-              onOpenSeoDrawer={() => setSeoDrawerOpen(true)}
-            />
-          }
-          children={
-            <>
-              <div className="flex flex-col gap-4 h-full">
-                <PostEditor
-                  initialContentJSON={getValues("content")}
-                  placeholder="Share your thoughts..."
-                  onContentChange={(json) =>
-                    setValue("content", json, {
-                      shouldValidate: true,
-                      shouldDirty: true,
-                    })
-                  }
-                />
-                {autosaveStatus && (
-                  <Alert
-                    variant={
-                      autosaveStatus.includes("failed") ||
-                      autosaveStatus.includes("Error")
-                        ? "destructive"
-                        : "default"
-                    }
-                    className="mt-4 text-xs"
-                  >
-                    <Info className="h-4 w-4" />
-                    <AlertDescription>{autosaveStatus}</AlertDescription>
-                  </Alert>
-                )}
-                {serverError && (
-                  <p className="text-sm text-destructive mt-1">{serverError}</p>
-                )}
-              </div>
-              <SEOSettingsDrawer
-                open={seoDrawerOpen}
-                onOpenChange={setSeoDrawerOpen}
-              />
-            </>
-          }
-        />
-      }
-    />
+            {autosaveStatus && (
+              <Alert
+                variant={
+                  autosaveStatus.includes("failed") ||
+                  autosaveStatus.includes("Error")
+                    ? "destructive"
+                    : "default"
+                }
+                className="mt-4 text-xs"
+              >
+                <Info className="h-4 w-4" />
+                <AlertDescription>{autosaveStatus}</AlertDescription>
+              </Alert>
+            )}
+            {serverError && (
+              <p className="text-sm text-destructive mt-1">{serverError}</p>
+            )}
+          </div>
+          <SEOSettingsDrawer
+            open={seoDrawerOpen}
+            onOpenChange={setSeoDrawerOpen}
+          />
+        </>
+      </EditorLayout>
+    </FormProvider>
   );
 }

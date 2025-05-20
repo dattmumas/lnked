@@ -25,8 +25,6 @@ interface DashboardCollectiveCardProps {
   role: "Owner" | CollectiveMemberRole;
   memberId?: string; // For leave action, if user is not owner
   subscriberCount?: number;
-  monthlyRevenue?: number;
-  currency?: string;
 }
 
 export default function DashboardCollectiveCard({
@@ -34,8 +32,6 @@ export default function DashboardCollectiveCard({
   role,
   memberId,
   subscriberCount,
-  monthlyRevenue,
-  currency,
 }: DashboardCollectiveCardProps) {
   const handleLeaveCollective = async () => {
     if (role === "Owner") return;
@@ -56,16 +52,6 @@ export default function DashboardCollectiveCard({
     }
   };
 
-  const formatCurrency = (
-    amount: number | undefined,
-    curr: string | undefined
-  ) => {
-    if (typeof amount !== "number" || !curr) return "TBD";
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: curr,
-    }).format(amount);
-  };
 
   return (
     <Card className="flex flex-col h-full">

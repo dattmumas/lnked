@@ -1,7 +1,4 @@
-import { Resend } from "resend";
-
 const resendApiKey = process.env.RESEND_API_KEY;
-const resend = resendApiKey ? new Resend(resendApiKey) : null;
 
 export async function sendInviteEmail({
   to,
@@ -14,11 +11,16 @@ export async function sendInviteEmail({
   collectiveName: string;
   role: string;
 }) {
-  if (!resend) {
+  if (!resendApiKey) {
     console.warn("Resend API key not configured. Skipping email send.");
     return { sent: false, error: "Resend not configured" };
   }
   try {
+    const { Resend } = await import("resend").catch(() => ({ Resend: null }));
+    if (!Resend) {
+      throw new Error("resend module not available");
+    }
+    const resend = new Resend(resendApiKey);
     const subject = `You've been invited to join ${collectiveName} on Lnked`;
     const html = `
       <h2>You've been invited to join <b>${collectiveName}</b> as <b>${role}</b></h2>
@@ -33,8 +35,9 @@ export async function sendInviteEmail({
       html,
     });
     return { sent: true };
-  } catch (err: any) {
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
     console.error("Failed to send invite email:", err);
-    return { sent: false, error: err.message };
+    return { sent: false, error: message };
   }
 }
