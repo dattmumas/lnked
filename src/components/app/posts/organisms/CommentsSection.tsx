@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { ThumbsUp, ThumbsDown, MessageCircle } from "lucide-react";
+import { ThumbsUp, ThumbsDown, MessageCircle, Loader2 } from "lucide-react";
 
 interface Comment {
   id: string;
@@ -206,7 +206,10 @@ export default function CommentsSection({
                 onClick={() => handlePost(comment.id)}
                 disabled={posting}
               >
-                Post
+                {posting && (
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                )}
+                {posting ? 'Posting…' : 'Post'}
               </Button>
               <Button
                 size="sm"
@@ -226,7 +229,10 @@ export default function CommentsSection({
     <section className="mt-10">
       <h3 className="text-lg font-bold mb-4">Comments</h3>
       {isLoading ? (
-        <div className="text-muted-foreground">Loading comments...</div>
+        <div className="text-muted-foreground flex items-center gap-2">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          <span>Loading comments…</span>
+        </div>
       ) : (
         <div>
           {topLevel.length === 0 && (
@@ -247,7 +253,10 @@ export default function CommentsSection({
             rows={3}
           />
           <Button onClick={() => handlePost()} disabled={posting}>
-            Post Comment
+            {posting && (
+              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+            )}
+            {posting ? 'Posting…' : 'Post Comment'}
           </Button>
         </div>
       )}

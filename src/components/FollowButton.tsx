@@ -102,6 +102,9 @@ export default function FollowButton({
         disabled={isPending || isLoadingCurrentUser}
         variant={isFollowing ? "outline" : "default"}
         size="sm"
+        aria-label={
+          isFollowing ? `Unfollow ${targetUserName}` : `Follow ${targetUserName}`
+        }
       >
         {isPending ? (
           <Loader2 className="mr-2 h-4 w-4 animate-spin" />

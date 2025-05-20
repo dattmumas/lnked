@@ -8,7 +8,8 @@ jest.mock('../../app/actions/followActions', () => ({
 }))
 
 jest.mock('next/navigation', () => ({
-  usePathname: () => '/foo'
+  usePathname: () => '/foo',
+  useRouter: () => ({ push: jest.fn(), refresh: jest.fn() })
 }))
 
 jest.mock('../../lib/supabase/browser', () => ({
