@@ -3,10 +3,10 @@ import type { Database } from "@/lib/database.types";
 import { notFound } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import PostReactionButtons from "@/app/posts/_components/PostReactionButtons";
-import BookmarkButton from "@/app/posts/_components/BookmarkButton";
-import CommentsSection from "@/app/posts/_components/CommentsSection";
-import PostViewTracker from "@/app/posts/_components/PostViewTracker";
+import PostReactionButtons from "@/components/app/posts/molecules/PostReactionButtons";
+import BookmarkButton from "@/components/app/posts/molecules/BookmarkButton";
+import CommentsSection from "@/components/app/posts/organisms/CommentsSection";
+import PostViewTracker from "@/components/app/posts/molecules/PostViewTracker";
 import { LexicalRenderer } from "@/components/ui/LexicalRenderer";
 
 // Helper function to format dates, can be moved to a utils file

@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import DashboardCollectiveCard, {
   type CollectiveMemberRole,
-} from "@/app/dashboard/collectives/_components/DashboardCollectiveCard";
+} from "@/components/app/dashboard/collectives/DashboardCollectiveCard";
 
 type CollectiveRow = Database["public"]["Tables"]["collectives"]["Row"];
 interface JoinedCollectiveMembership {

@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import PostCard from "@/components/app/posts/molecules/PostCard";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import SubscribeButton from "@/app/newsletters/_components/SubscribeButton";
+import SubscribeButton from "@/components/app/newsletters/molecules/SubscribeButton";
 import FollowButton from "@/components/FollowButton";
 // We'll need a subscribe button component here eventually
 
