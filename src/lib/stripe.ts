@@ -1,4 +1,4 @@
-import Stripe from "stripe";
+import Stripe from 'stripe';
 
 let _stripe: Stripe | null = null;
 
@@ -12,9 +12,7 @@ export function getStripe(): Stripe | null {
   }
 
   _stripe = new Stripe(key, {
-    // Cast to any – acceptable until @types/stripe exposes newer version type
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    apiVersion: "2023-10-16" as any,
+    apiVersion: '2023-10-16',
     typescript: true,
   });
   return _stripe;

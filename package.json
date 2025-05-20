@@ -7,7 +7,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "format": "prettier --write \"src/**/*.{ts,tsx,js,jsx,json,md}\"",
+    "precommit": "pnpm lint && pnpm typecheck"
   },
   "dependencies": {
     "@excalidraw/excalidraw": "^0.18.0",
@@ -66,7 +68,8 @@
     "postcss": "8.5.3",
     "tailwindcss": "^3.4.3",
     "tailwindcss-animate": "^1.0.7",
-    "typescript": "^5.8.3"
+    "typescript": "^5.8.3",
+    "prettier": "^3.2.5"
   },
   "packageManager": "pnpm@10.1.0"
 }

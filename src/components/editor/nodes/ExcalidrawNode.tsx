@@ -2,43 +2,42 @@
  * ExcalidrawNode for Lnked, adapted from Lexical Playground (MIT License)
  * https://github.com/facebook/lexical/blob/main/packages/lexical-playground/src/nodes/ExcalidrawNode.tsx
  */
-import { DecoratorNode, NodeKey, SerializedLexicalNode, Spread } from "lexical";
-import type { JSX } from "react";
-import React, { useCallback, useEffect, useState, useRef } from "react";
-import dynamic from "next/dynamic";
-import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
-import { $getNodeByKey } from "lexical";
+import { DecoratorNode, NodeKey, SerializedLexicalNode, Spread } from 'lexical';
+import type { JSX } from 'react';
+import React, { useCallback, useEffect, useState, useRef } from 'react';
+import dynamic from 'next/dynamic';
+import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
+import { $getNodeByKey } from 'lexical';
 
 // Dynamically import Excalidraw to avoid SSR issues
 const Excalidraw = dynamic(
-  () => import("@excalidraw/excalidraw").then((mod) => mod.Excalidraw),
+  () => import('@excalidraw/excalidraw').then((mod) => mod.Excalidraw),
   {
     ssr: false,
     loading: () => (
       <div className="excalidraw-placeholder">Loading drawing canvas...</div>
     ),
-  }
+  },
 );
 
 export type SerializedExcalidrawNode = Spread<
   {
-    type: "excalidraw";
+    type: 'excalidraw';
     version: 1;
     data: string; // JSON string of drawing data
   },
   SerializedLexicalNode
 >;
 
-// Workaround: ExcalidrawImperativeAPI type cannot be imported due to package export issues
-// https://github.com/excalidraw/excalidraw/issues/4867
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type ExcalidrawImperativeAPI = any;
+// Importing the imperative API type directly from Excalidraw's bundled types
+// ensures strong typing while avoiding the previous `any` fallback.
+import type { ExcalidrawImperativeAPI } from '@excalidraw/excalidraw/dist/types/excalidraw/types';
 
 export class ExcalidrawNode extends DecoratorNode<JSX.Element> {
   __data: string;
 
   static getType() {
-    return "excalidraw";
+    return 'excalidraw';
   }
 
   static clone(node: ExcalidrawNode) {
@@ -52,27 +51,27 @@ export class ExcalidrawNode extends DecoratorNode<JSX.Element> {
   exportJSON(): SerializedExcalidrawNode {
     return {
       ...super.exportJSON(),
-      type: "excalidraw",
+      type: 'excalidraw',
       version: 1,
       data: this.__data,
     };
   }
 
-  constructor(data: string = "", key?: NodeKey) {
+  constructor(data: string = '', key?: NodeKey) {
     super(key);
     this.__data = data;
   }
 
   createDOM(): HTMLElement {
-    const el = document.createElement("div");
-    el.className = "excalidraw-node";
-    el.style.minHeight = "300px";
-    el.style.width = "100%";
-    el.style.background = "hsl(var(--muted))";
-    el.style.border = "1px solid hsl(var(--border))";
-    el.style.borderRadius = "0.5rem";
-    el.style.display = "block";
-    el.style.position = "relative";
+    const el = document.createElement('div');
+    el.className = 'excalidraw-node';
+    el.style.minHeight = '300px';
+    el.style.width = '100%';
+    el.style.background = 'hsl(var(--muted))';
+    el.style.border = '1px solid hsl(var(--border))';
+    el.style.borderRadius = '0.5rem';
+    el.style.display = 'block';
+    el.style.position = 'relative';
     return el;
   }
 
@@ -94,7 +93,6 @@ function ExcalidrawComponent({ data, nodeKey }: ExcalidrawComponentProps) {
   const [editor] = useLexicalComposerContext();
   const excalidrawRef = useRef<ExcalidrawImperativeAPI>(null);
   const [isLoaded, setIsLoaded] = useState(false);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [parsedData, setParsedData] =
     useState<Record<string, unknown>>(undefined);
 
@@ -105,7 +103,7 @@ function ExcalidrawComponent({ data, nodeKey }: ExcalidrawComponentProps) {
         const parsed = JSON.parse(data);
         setParsedData(parsed);
       } catch (error) {
-        console.error("Error parsing Excalidraw data:", error);
+        console.error('Error parsing Excalidraw data:', error);
         setParsedData(undefined);
       }
     }
@@ -134,16 +132,16 @@ function ExcalidrawComponent({ data, nodeKey }: ExcalidrawComponentProps) {
           });
         }
       } catch (error) {
-        console.error("Error saving Excalidraw data:", error);
+        console.error('Error saving Excalidraw data:', error);
       }
     },
-    [editor, nodeKey, data]
+    [editor, nodeKey, data],
   );
 
   return (
     <div
       className="excalidraw-wrapper"
-      style={{ minHeight: 300, width: "100%" }}
+      style={{ minHeight: 300, width: '100%' }}
     >
       {isLoaded ? (
         <Excalidraw

@@ -43,6 +43,13 @@ A modern, accessible, and extensible publishing platform for newsletters, collec
 # Install dependencies
 pnpm install
 
+# Lint and format code
+pnpm lint
+pnpm format
+
+# Type-check TypeScript
+pnpm typecheck
+
 # Start the development server
 pnpm dev
 
