@@ -1,8 +1,5 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import FollowButton from '../FollowButton'
-import { useRouter } from 'next/navigation'
-
-const push = jest.fn()
 
 // Mock server actions to avoid Node.js Request errors
 jest.mock('../../app/actions/followActions', () => ({
@@ -11,7 +8,6 @@ jest.mock('../../app/actions/followActions', () => ({
 }))
 
 jest.mock('next/navigation', () => ({
-  useRouter: () => ({ push }),
   usePathname: () => '/foo'
 }))
 

@@ -214,6 +214,18 @@ function CustomInsertCommandsPlugin({
       },
       0
     );
+    // Page Break
+    const removePageBreak = editor.registerCommand(
+      INSERT_PAGE_BREAK_COMMAND,
+      () => {
+        editor.update(() => {
+          $insertNodeToNearestRoot(new PageBreakNode());
+        });
+        removeSlashTrigger();
+        return true;
+      },
+      0
+    );
     // Table (3x3)
     const removeTable = editor.registerCommand(
       INSERT_TABLE_COMMAND,
@@ -336,6 +348,7 @@ function CustomInsertCommandsPlugin({
       removeYouTube();
       removeImage();
       removeInlineImage();
+      removePageBreak();
       removeHR();
       removeCollapsible();
       removeLayout();

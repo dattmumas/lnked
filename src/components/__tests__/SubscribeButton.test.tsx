@@ -1,6 +1,5 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import SubscribeButton from '../app/newsletters/molecules/SubscribeButton'
-import { useRouter } from 'next/navigation'
 
 const push = jest.fn()
 
