@@ -1,11 +1,11 @@
-"use client";
-import React from "react";
-import * as Dialog from "@radix-ui/react-dialog";
-import { XCircle } from "lucide-react";
-import { useFormContext } from "react-hook-form";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+'use client';
+import React from 'react';
+import * as Dialog from '@radix-ui/react-dialog';
+import { XCircle } from 'lucide-react';
+import { useFormContext } from 'react-hook-form';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 
 interface SEOSettingsDrawerProps {
   open: boolean;
@@ -29,6 +29,7 @@ export function SEOSettingsDrawer({
           className="fixed top-0 right-0 h-full w-full sm:w-96 bg-background border-l border-border p-6 z-50 focus:outline-none"
           aria-label="SEO Settings"
         >
+          <Dialog.Title className="sr-only">SEO Settings</Dialog.Title>
           {/* Drawer Header */}
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-medium">SEO Settings</h2>
@@ -50,7 +51,7 @@ export function SEOSettingsDrawer({
               </Label>
               <Input
                 id="seo_title"
-                {...register("seo_title")}
+                {...register('seo_title')}
                 maxLength={60}
                 className="mt-1"
               />
@@ -69,7 +70,7 @@ export function SEOSettingsDrawer({
               </Label>
               <Textarea
                 id="meta_description"
-                {...register("meta_description")}
+                {...register('meta_description')}
                 rows={3}
                 maxLength={160}
                 className="mt-1"

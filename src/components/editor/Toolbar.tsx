@@ -1,19 +1,19 @@
-"use client";
+'use client';
 
-import React, { useCallback, useEffect, useState } from "react";
-import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
+import React, { useCallback, useEffect, useState } from 'react';
+import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
 import {
   $getSelection,
   $isRangeSelection,
   FORMAT_TEXT_COMMAND,
   SELECTION_CHANGE_COMMAND,
-} from "lexical";
+} from 'lexical';
 import {
   $isHeadingNode,
   $createHeadingNode,
   $createQuoteNode,
-} from "@lexical/rich-text";
-import { CodeNode } from "@lexical/code";
+} from '@lexical/rich-text';
+import { CodeNode } from '@lexical/code';
 import {
   Bold,
   Italic,
@@ -27,35 +27,47 @@ import {
   AlignRight,
   Link as LinkIcon,
   PictureInPicture2 as ExcalidrawIcon,
-} from "lucide-react";
-import type { JSX } from "react";
-import { $setBlocksType } from "@lexical/selection";
-import { $createParagraphNode, type TextFormatType } from "lexical";
+} from 'lucide-react';
+import type { JSX } from 'react';
+import { $setBlocksType } from '@lexical/selection';
+import { $createParagraphNode, type TextFormatType } from 'lexical';
 import {
   CAN_UNDO_COMMAND,
   CAN_REDO_COMMAND,
   UNDO_COMMAND,
   REDO_COMMAND,
   FORMAT_ELEMENT_COMMAND,
-} from "lexical";
-import { TOGGLE_LINK_COMMAND } from "@lexical/link";
-import { $isLinkNode } from "@lexical/link";
-import { INSERT_EXCALIDRAW_COMMAND } from "./PostEditor";
-import { clsx } from "clsx";
+} from 'lexical';
+import { TOGGLE_LINK_COMMAND } from '@lexical/link';
+import { $isLinkNode } from '@lexical/link';
+import { INSERT_EXCALIDRAW_COMMAND } from './PostEditor';
+import { clsx } from 'clsx';
+import { CollapsibleContainerNode } from './nodes/CollapsibleContainerNode';
+import { HashtagNode } from './nodes/HashtagNode';
+import { InlineImageNode } from './nodes/InlineImageNode';
+import { LayoutContainerNode } from './nodes/LayoutContainerNode';
+import { LayoutItemNode } from './nodes/LayoutItemNode';
+import { PageBreakNode } from './nodes/PageBreakNode';
+import { StickyNode, STICKY_COLORS } from './nodes/StickyNode';
+import { TweetNode } from './nodes/TweetNode';
+import { YouTubeNode } from './nodes/YouTubeNode';
+import { $insertNodeToNearestRoot } from '@lexical/utils';
+import { $createImageNode } from './nodes/ImageNode';
+import { $createPollNode } from './nodes/PollNode';
 
 const BLOCK_TYPES = [
-  { type: "paragraph", label: "Paragraph" },
-  { type: "h1", label: "Heading 1" },
-  { type: "h2", label: "Heading 2" },
-  { type: "h3", label: "Heading 3" },
-  { type: "quote", label: "Quote" },
-  { type: "code", label: "Code Block" },
+  { type: 'paragraph', label: 'Paragraph' },
+  { type: 'h1', label: 'Heading 1' },
+  { type: 'h2', label: 'Heading 2' },
+  { type: 'h3', label: 'Heading 3' },
+  { type: 'quote', label: 'Quote' },
+  { type: 'code', label: 'Code Block' },
 ];
 
 function Toolbar(): JSX.Element {
   const [editor] = useLexicalComposerContext();
   // Local state for active inline formatting and current block type/attributes
-  const [blockType, setBlockType] = useState<string>("paragraph");
+  const [blockType, setBlockType] = useState<string>('paragraph');
   const [isBold, setIsBold] = useState(false);
   const [isItalic, setIsItalic] = useState(false);
   const [isUnderline, setIsUnderline] = useState(false);
@@ -73,7 +85,7 @@ function Toolbar(): JSX.Element {
         setCanUndo(payload);
         return false;
       },
-      0
+      0,
     );
   }, [editor]);
   useEffect(() => {
@@ -83,7 +95,7 @@ function Toolbar(): JSX.Element {
         setCanRedo(payload);
         return false;
       },
-      0
+      0,
     );
   }, [editor]);
 
@@ -100,11 +112,11 @@ function Toolbar(): JSX.Element {
       }
       setBlockType(blockType);
       // Inline styles
-      setIsBold(selection.hasFormat("bold"));
-      setIsItalic(selection.hasFormat("italic"));
-      setIsUnderline(selection.hasFormat("underline"));
-      setIsStrikethrough(selection.hasFormat("strikethrough"));
-      setIsCode(selection.hasFormat("code"));
+      setIsBold(selection.hasFormat('bold'));
+      setIsItalic(selection.hasFormat('italic'));
+      setIsUnderline(selection.hasFormat('underline'));
+      setIsStrikethrough(selection.hasFormat('strikethrough'));
+      setIsCode(selection.hasFormat('code'));
       // Link
       let node = selection.anchor.getNode();
       while (node != null) {
@@ -128,7 +140,7 @@ function Toolbar(): JSX.Element {
         editor.getEditorState().read(updateToolbar);
         return false;
       },
-      0 // low priority
+      0, // low priority
     );
   }, [editor, updateToolbar]);
 
@@ -139,19 +151,19 @@ function Toolbar(): JSX.Element {
         const selection = $getSelection();
         if ($isRangeSelection(selection)) {
           switch (type) {
-            case "h1":
-              $setBlocksType(selection, () => $createHeadingNode("h1"));
+            case 'h1':
+              $setBlocksType(selection, () => $createHeadingNode('h1'));
               break;
-            case "h2":
-              $setBlocksType(selection, () => $createHeadingNode("h2"));
+            case 'h2':
+              $setBlocksType(selection, () => $createHeadingNode('h2'));
               break;
-            case "h3":
-              $setBlocksType(selection, () => $createHeadingNode("h3"));
+            case 'h3':
+              $setBlocksType(selection, () => $createHeadingNode('h3'));
               break;
-            case "quote":
+            case 'quote':
               $setBlocksType(selection, () => $createQuoteNode());
               break;
-            case "code":
+            case 'code':
               $setBlocksType(selection, () => new CodeNode());
               break;
             default:
@@ -160,7 +172,7 @@ function Toolbar(): JSX.Element {
         }
       });
     },
-    [editor]
+    [editor],
   );
 
   // Text format handlers
@@ -169,18 +181,98 @@ function Toolbar(): JSX.Element {
   };
 
   // Alignment handlers
-  const formatAlign = (align: "left" | "center" | "right") => {
+  const formatAlign = (align: 'left' | 'center' | 'right') => {
     editor.dispatchCommand(FORMAT_ELEMENT_COMMAND, align);
   };
 
   // Link handler
   const insertLink = useCallback(() => {
     if (!isLink) {
-      editor.dispatchCommand(TOGGLE_LINK_COMMAND, "https://");
+      editor.dispatchCommand(TOGGLE_LINK_COMMAND, 'https://');
     } else {
       editor.dispatchCommand(TOGGLE_LINK_COMMAND, null);
     }
   }, [editor, isLink]);
+
+  // Insert custom node handler
+  const handleInsertNode = useCallback(
+    (type: string) => {
+      editor.update(() => {
+        switch (type) {
+          case 'collapsible-container':
+            $insertNodeToNearestRoot(new CollapsibleContainerNode(false));
+            break;
+          case 'hashtag':
+            $insertNodeToNearestRoot(new HashtagNode('#hashtag'));
+            break;
+          case 'image':
+            $insertNodeToNearestRoot(
+              $createImageNode(
+                'https://placehold.co/500x300/png',
+                'Placeholder image',
+                500,
+                300,
+                500,
+                true,
+                'Placeholder caption',
+              ),
+            );
+            break;
+          case 'inlineimage':
+            $insertNodeToNearestRoot(
+              new InlineImageNode(
+                'https://placehold.co/300x300/png',
+                'Inline image',
+              ),
+            );
+            break;
+          case 'layoutcontainer':
+            $insertNodeToNearestRoot(new LayoutContainerNode(2));
+            break;
+          case 'layoutitem':
+            $insertNodeToNearestRoot(new LayoutItemNode());
+            break;
+          case 'pagebreak':
+            $insertNodeToNearestRoot(new PageBreakNode());
+            break;
+          case 'poll':
+            $insertNodeToNearestRoot(
+              $createPollNode('Sample poll question', [
+                {
+                  text: 'Option 1',
+                  uid: Math.random().toString(36).slice(2),
+                  votes: [],
+                },
+                {
+                  text: 'Option 2',
+                  uid: Math.random().toString(36).slice(2),
+                  votes: [],
+                },
+              ]),
+            );
+            break;
+          case 'sticky':
+            $insertNodeToNearestRoot(
+              new StickyNode('Sticky note', STICKY_COLORS[0]),
+            );
+            break;
+          case 'tweet':
+            $insertNodeToNearestRoot(
+              new TweetNode('https://twitter.com/jack/status/20'),
+            );
+            break;
+          case 'youtube':
+            $insertNodeToNearestRoot(
+              new YouTubeNode('https://www.youtube.com/watch?v=dQw4w9WgXcQ'),
+            );
+            break;
+          default:
+            break;
+        }
+      });
+    },
+    [editor],
+  );
 
   return (
     <div className="toolbar sticky top-0 z-20 flex items-center gap-2 bg-background px-2 py-1 border-b dark:bg-background/80">
@@ -229,10 +321,39 @@ function Toolbar(): JSX.Element {
           </option>
         ))}
       </select>
+      {/* Insert Block Dropdown */}
+      <select
+        defaultValue=""
+        onChange={(e) => {
+          if (e.target.value) {
+            handleInsertNode(e.target.value);
+            e.target.value = ''; // reset dropdown
+          }
+        }}
+        className="toolbar-item block-controls"
+        aria-label="Insert Block"
+        style={{ minWidth: 120 }}
+      >
+        <option value="" disabled>
+          Insert Block
+        </option>
+        <option value="collapsible-container">Collapsible Container</option>
+        <option value="hashtag">Hashtag</option>
+        <option value="image">Image</option>
+        <option value="inlineimage">Inline Image</option>
+        <option value="layoutcontainer">Layout Container</option>
+        <option value="layoutitem">Layout Item</option>
+        <option value="pagebreak">Page Break</option>
+        <option value="poll">Poll</option>
+        <option value="sticky">Sticky Note</option>
+        <option value="tweet">Tweet</option>
+        <option value="youtube">YouTube</option>
+      </select>
+      <div className="divider" />
       {/* Alignment buttons */}
       <button
         type="button"
-        onClick={() => formatAlign("left")}
+        onClick={() => formatAlign('left')}
         className="toolbar-item spaced"
         aria-label="Align Left"
       >
@@ -240,7 +361,7 @@ function Toolbar(): JSX.Element {
       </button>
       <button
         type="button"
-        onClick={() => formatAlign("center")}
+        onClick={() => formatAlign('center')}
         className="toolbar-item spaced"
         aria-label="Align Center"
       >
@@ -248,7 +369,7 @@ function Toolbar(): JSX.Element {
       </button>
       <button
         type="button"
-        onClick={() => formatAlign("right")}
+        onClick={() => formatAlign('right')}
         className="toolbar-item spaced"
         aria-label="Align Right"
       >
@@ -258,40 +379,40 @@ function Toolbar(): JSX.Element {
       {/* Inline formatting buttons */}
       <button
         type="button"
-        onClick={() => toggleFormat("bold")}
-        className={clsx("toolbar-item spaced", isBold && "bg-muted")}
+        onClick={() => toggleFormat('bold')}
+        className={clsx('toolbar-item spaced', isBold && 'bg-muted')}
         aria-label="Bold"
       >
         <Bold className="format" />
       </button>
       <button
         type="button"
-        onClick={() => toggleFormat("italic")}
-        className={clsx("toolbar-item spaced", isItalic && "bg-muted")}
+        onClick={() => toggleFormat('italic')}
+        className={clsx('toolbar-item spaced', isItalic && 'bg-muted')}
         aria-label="Italic"
       >
         <Italic className="format" />
       </button>
       <button
         type="button"
-        onClick={() => toggleFormat("underline")}
-        className={clsx("toolbar-item spaced", isUnderline && "bg-muted")}
+        onClick={() => toggleFormat('underline')}
+        className={clsx('toolbar-item spaced', isUnderline && 'bg-muted')}
         aria-label="Underline"
       >
         <UnderlineIcon className="format" />
       </button>
       <button
         type="button"
-        onClick={() => toggleFormat("strikethrough")}
-        className={clsx("toolbar-item spaced", isStrikethrough && "bg-muted")}
+        onClick={() => toggleFormat('strikethrough')}
+        className={clsx('toolbar-item spaced', isStrikethrough && 'bg-muted')}
         aria-label="Strikethrough"
       >
         <Strikethrough className="format" />
       </button>
       <button
         type="button"
-        onClick={() => toggleFormat("code")}
-        className={"toolbar-item spaced " + (isCode ? "active" : "")}
+        onClick={() => toggleFormat('code')}
+        className={'toolbar-item spaced ' + (isCode ? 'active' : '')}
         aria-label="Format Inline Code"
       >
         <Code2 className="format" />
@@ -300,7 +421,7 @@ function Toolbar(): JSX.Element {
       <button
         type="button"
         onClick={insertLink}
-        className={"toolbar-item spaced " + (isLink ? "active" : "")}
+        className={'toolbar-item spaced ' + (isLink ? 'active' : '')}
         aria-label="Insert link"
       >
         <LinkIcon className="format" />

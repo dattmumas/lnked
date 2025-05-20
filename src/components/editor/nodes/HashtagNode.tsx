@@ -1,9 +1,9 @@
-import { TextNode, SerializedTextNode, Spread } from "lexical";
-import type { EditorConfig } from "lexical";
+import { TextNode, SerializedTextNode, Spread } from 'lexical';
+import type { EditorConfig } from 'lexical';
 
 export type SerializedHashtagNode = Spread<
   {
-    type: "hashtag";
+    type: 'hashtag';
     version: 1;
   },
   SerializedTextNode
@@ -11,10 +11,10 @@ export type SerializedHashtagNode = Spread<
 
 export class HashtagNode extends TextNode {
   static getType() {
-    return "hashtag";
+    return 'hashtag';
   }
   static clone(node: HashtagNode) {
-    return new HashtagNode(node.__text);
+    return new HashtagNode(node.__text, node.__key);
   }
   static importJSON(serialized: SerializedHashtagNode) {
     return new HashtagNode(serialized.text);
@@ -22,13 +22,13 @@ export class HashtagNode extends TextNode {
   exportJSON(): SerializedHashtagNode {
     return {
       ...super.exportJSON(),
-      type: "hashtag",
+      type: 'hashtag',
       version: 1,
     };
   }
   createDOM(config: EditorConfig): HTMLElement {
     const el = super.createDOM(config);
-    el.classList.add("hashtag");
+    el.classList.add('hashtag');
     return el;
   }
 }

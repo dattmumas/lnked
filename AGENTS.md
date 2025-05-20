@@ -1,16 +1,24 @@
-Task 7: Implement Page Break and Other Editor Node Improvements
-Goal: Finalize the remaining custom editor nodes to ensure all listed editor features are operational. In particular, implement the Page Break node so authors can insert page breaks (useful for print or segmentation) into their posts, and review any other partially implemented nodes like layout items.
+Task 8: UI/UX Enhancements – Accessibility & Polish
+Goal: Refine the user interface for better accessibility and overall user experience. This includes adhering to accessibility standards (ARIA, keyboard navigation, contrast) and adding UI polish like loading states and responsive design improvements.
 Scope & Actions:
-PageBreakNode Implementation: Currently, PageBreakNode is a placeholder that just renders “[Page Break]” text
+Accessibility Audit & Fixes: Perform an audit (using tools like axe or manual testing) of the app’s accessibility. Ensure all interactive components have appropriate ARIA labels or roles. For example, verify modal dialogs from Radix have <DialogTitle> and <DialogDescription> as required (the design guidelines emphasize accessible dialogs
 github.com
-. Enhance this by giving it a proper representation. For example, render it as a horizontal rule or a dashed line with a “Page Break” label, so it’s visually distinct in the editor. In the node’s createDOM, create an element with a class (e.g., page-break) and some styling (maybe use CSS to represent a break line). In decorate(), you could return a React component if needed for richer display. Ensure that when exporting or serializing, it outputs a marker that can be recognized (the JSON export now includes "type": "pagebreak"
+). Check that form inputs have associated <label> elements (e.g., the sign-in form, profile edit form). Many components already use Radix or proper semantics, but ensure no regressions. For instance, the follow/unfollow buttons and like buttons have aria-labels (as seen in PostReactionButtons
 github.com
-, which is fine).
-Usage of Page Break: Hook up the slash command for page breaks. The slash menu already has an entry for "Page Break" which dispatches INSERT_PAGE_BREAK_COMMAND
+and CommentsSection
 github.com
-. Similar to the layout, add a listener in PostEditor for this command: on trigger, insert a new PageBreakNode into the editor. After implementation, test that typing “/Page Break” inserts the break node and that it remains in the content. If the platform intends to support printing or splitting content by pages, this node will serve as a logical marker (even if actual print handling is outside scope, having the node in content is the first step).
-LayoutItemNode (if not done in Task 6): If the multi-column from Task 6 wasn’t fully completed, ensure the LayoutItemNode is properly implemented. It was left as a TODO
+); double-check such labels make sense (e.g., “Like post” vs “Unlike post” dynamically).
+Keyboard Navigation: Make sure all features can be used via keyboard alone. Test tabbing through the nav bar, forms, and editor. If any custom component (like a dropdown or sidebar menu) isn’t keyboard-accessible, use Radix primitives or add JavaScript to support arrow key navigation and focus trapping. For example, if there is a custom menu in the user profile or dashboard, ensure Tab and arrow keys navigate options, and pressing Esc closes the menu. This may involve adding role="menuitem" and handling keyDown events appropriately.
+Responsive Design Tweaks: Review the layout on mobile and tablet sizes. Ensure that pages like the landing page (with components like AnimatedHero, SlideInCard, etc.) stack gracefully and remain readable on small screens. The design system specifies responsive behavior
 github.com
-. At minimum, give it a decorate() that returns a <div class="layout-item" /> or similar, and perhaps apply a class in createDOM for styling. This likely was addressed in Task 6, but double-check that each item node displays its children.
-Review Other Custom Nodes: Go through the custom Lexical nodes in src/components/editor/nodes. Ensure each is functional or remove it if not used. For example, if there’s an ExcalidrawNode or TweetNode, verify that the slash menu can insert them and that they render (the dependencies like @excalidraw/excalidraw are present, so ensure usage is wired up). Any node with a placeholder or incomplete logic should either be finished or temporarily disabled from user access to avoid confusion.
-Testing & UX for New Nodes: Test the editor with these new nodes in a variety of scenarios: editing, saving, reloading the post for editing, and rendering on the front-end. For the Page Break, confirm it shows appropriately in the published post (the front-end renderer might need to translate it to an <hr> or a styled divider). If needed, update the rendering logic (maybe in LexicalRenderer.tsx or wherever post content JSON is converted to JSX/HTML) to handle the new node types. By polishing these editor nodes, we ensure the “rich post editor” feature set is truly realized and stable for end-users.
+, so verify components like the dashboard sidebar collapse on mobile or become accessible via a menu. If not already implemented, introduce a mobile navigation toggle for the dashboard menu and hide the sidebar by default on narrow screens to give content more space. Test the editor on mobile – if the sidebar (PostFormFields) and toolbar make the editor cramped on small screens, consider making the sidebar collapsible or scrollable horizontally.
+Loading and Skeleton States: Enhance perceived performance by using skeletons and spinners. The project already includes skeleton components (e.g., skeleton.tsx in UI
+github.com
+and skeleton variants for dashboard cards
+github.com
+). Identify places where data is being loaded and a blank screen is shown. For instance, when the dashboard page first loads stats or posts, show skeleton cards for a brief moment instead of empty space. Likewise, when comments are loading on a post, there is a “Loading comments...” text
+github.com
+– consider using a nicer skeleton or at least a spinner icon alongside the text. Ensure every fetch has some user feedback: e.g., a disabled button with spinner for actions like “Posting comment…” or “Liking…”. This provides a smoother UX, especially on slower connections.
+Visual Polish: Apply small improvements like consistent spacing and font sizes as per the design system. Use the 8px grid and predefined classes (e.g., standardize margins on section headings, ensure buttons use the design tokens for colors). Verify dark mode appearance for all new components; fix any color that doesn’t switch (utilize Tailwind’s dark: classes or CSS variables if needed). Also, add subtle animations where appropriate (the landing page already uses some fade-in; ensure new elements like alerts or modals also animate consistently, perhaps using the tailwindcss-animate utilities installed). These refinements make the app feel more professional and align with the stated design principles (minimalist, accessible, responsive)
+github.com
+.

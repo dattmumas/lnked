@@ -1,27 +1,27 @@
-import type { Metadata } from "next";
-import "./globals.css";
-import Navbar from "@/components/Navbar";
-import { ThemeProvider } from "next-themes";
-import SmoothScroll from "@/components/app/SmoothScroll";
-import RouteProgress from "@/components/app/nav/RouteProgress";
-import Footer from "@/components/ui/Footer";
-import { headers } from "next/headers";
-
+import type { Metadata } from 'next';
+import './globals.css';
+import Navbar from '@/components/Navbar';
+import { ThemeProvider } from 'next-themes';
+import SmoothScroll from '@/components/app/SmoothScroll';
+import RouteProgress from '@/components/app/nav/RouteProgress';
+import Footer from '@/components/ui/Footer';
+import { headers } from 'next/headers';
 
 export const metadata: Metadata = {
-  title: "Lnked - Collaborative Newsletters",
-  description: "Create, share, and subscribe to newsletters together.",
+  title: 'Lnked - Collaborative Newsletters',
+  description: 'Create, share, and subscribe to newsletters together.',
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const pathname = headers().get("next-url") || "";
+  const headersList = await headers();
+  const pathname = headersList.get('next-url') || '';
   const isEditorPage =
-    pathname.startsWith("/posts/") &&
-    (pathname.endsWith("/edit") || pathname === "/posts/new");
+    pathname.startsWith('/posts/') &&
+    (pathname.endsWith('/edit') || pathname === '/posts/new');
   return (
     <html lang="en" suppressHydrationWarning>
       <body className="bg-background text-foreground font-sans antialiased min-h-screen flex flex-col">
@@ -51,7 +51,9 @@ export default function RootLayout({
           )}
           <main
             className={
-              isEditorPage ? "flex-1" : "flex-1 container mx-auto px-4 md:px-6 py-8"
+              isEditorPage
+                ? 'flex-1'
+                : 'flex-1 container mx-auto px-4 md:px-6 py-8'
             }
           >
             {children}
