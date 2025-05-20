@@ -64,7 +64,11 @@ const newPostSchema = z
 
 type NewPostFormValues = z.infer<typeof newPostSchema>;
 
-export default function NewPersonalPostPage() {
+interface NewPostFormProps {
+  collective?: { id: string; name: string; owner_id: string } | null;
+}
+
+export default function NewPersonalPostPage({ collective }: NewPostFormProps) {
   // Remove useRouter usage if not available
   // const router = useRouter();
   const [isProcessing, setIsProcessing] = useState(false);
@@ -140,7 +144,7 @@ export default function NewPersonalPostPage() {
         data.status === "scheduled" && data.published_at
           ? new Date(data.published_at).toISOString()
           : null,
-      collectiveId: undefined,
+      collectiveId: collective?.id,
     };
 
     try {
@@ -170,7 +174,7 @@ export default function NewPersonalPostPage() {
       setAutosaveStatus("Autosave error.");
       console.error("Autosave exception:", error);
     }
-  }, [isDirty, currentStatus, getValues, createdPostId, reset]);
+  }, [isDirty, currentStatus, getValues, createdPostId, reset, collective]);
 
   useEffect(() => {
     const isDrafting = currentStatus === "draft";
@@ -212,7 +216,7 @@ export default function NewPersonalPostPage() {
         content: data.content,
         is_public: is_public_for_action,
         published_at: published_at_for_action,
-        collectiveId: undefined,
+        collectiveId: collective?.id,
         seo_title: data.seo_title,
         meta_description: data.meta_description,
       };
@@ -250,31 +254,46 @@ export default function NewPersonalPostPage() {
     isProcessing || isSubmitting
       ? "Processing..."
       : currentStatus === "scheduled"
-      ? "Schedule Post"
-      : currentStatus === "draft"
-      ? createdPostId
-        ? "Save Draft"
-        : "Create Draft"
-      : "Publish Post";
+        ? "Schedule Post"
+        : currentStatus === "draft"
+          ? createdPostId
+            ? "Save Draft"
+            : "Create Draft"
+          : "Publish Post";
 
   return (
     <FormProvider {...form}>
       <EditorLayout
-        sidebar={<FileExplorer personalPosts={personalPosts} collectives={collectives} />}
+        sidebar={
+          <FileExplorer
+            personalPosts={personalPosts}
+            collectives={collectives}
+          />
+        }
         metadataBar={
           <PostMetadataBar
             onPublish={handleSubmit(onSubmit)}
             isPublishing={isProcessing || isSubmitting}
             publishButtonText={primaryButtonText}
             onOpenSeoDrawer={() => setSeoDrawerOpen(true)}
+            title={collective ? `New post in ${collective.name}` : undefined}
           />
         }
       >
         <>
+          {collective && (
+            <div className="mb-4 p-2 rounded bg-primary/10 text-primary text-sm font-semibold">
+              Posting to collective: {collective.name}
+            </div>
+          )}
           <div className="flex flex-col gap-4 h-full">
             <PostEditor
               initialContentJSON={getValues("content")}
-              placeholder="Share your thoughts..."
+              placeholder={
+                collective
+                  ? `Share something with ${collective.name}...`
+                  : "Share your thoughts..."
+              }
               onContentChange={(json) =>
                 setValue("content", json, {
                   shouldValidate: true,
