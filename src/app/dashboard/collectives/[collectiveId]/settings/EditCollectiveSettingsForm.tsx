@@ -22,7 +22,6 @@ import {
 } from "@/components/ui/card";
 import {
   updateCollectiveSettings,
-  type RawCollectiveSettingsFormInput,
   getCollectiveStripeStatus,
   deleteCollective,
   transferCollectiveOwnership,
@@ -145,7 +144,7 @@ export default function EditCollectiveSettingsForm({
   };
 
   // Stripe Connect status state
-  const [stripeStatus, setStripeStatus] = useClientState<any>(null);
+  const [stripeStatus, setStripeStatus] = useClientState<Record<string, unknown> | null>(null);
   const [stripeLoading, setStripeLoading] = useClientState(false);
   const [stripeError, setStripeError] = useClientState<string | null>(null);
 
@@ -157,7 +156,7 @@ export default function EditCollectiveSettingsForm({
         setStripeError(err?.message || "Failed to load Stripe status")
       )
       .finally(() => setStripeLoading(false));
-  }, [collectiveId]);
+  }, [collectiveId, setStripeLoading, setStripeStatus, setStripeError]);
 
   const handleConnectStripe = async () => {
     setStripeLoading(true);
@@ -173,8 +172,9 @@ export default function EditCollectiveSettingsForm({
       } else {
         setStripeError(data.error || "Failed to get Stripe onboarding link");
       }
-    } catch (err: any) {
-      setStripeError(err?.message || "Failed to connect to Stripe");
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Failed to connect to Stripe";
+      setStripeError(message);
     } finally {
       setStripeLoading(false);
     }

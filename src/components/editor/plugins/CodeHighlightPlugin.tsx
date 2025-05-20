@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { CodeNode } from "@lexical/code";
 import { $createTextNode } from "lexical";
-// @ts-ignore: No types for prismjs
+// @ts-expect-error prismjs has no type definitions
 import Prism from "prismjs";
 import "prismjs/components/prism-javascript";
 import "prismjs/components/prism-typescript";
@@ -40,7 +40,7 @@ export default function CodeHighlightPlugin() {
       // Remove all children
       node.getChildren().forEach((child) => child.remove());
       // Convert Prism tokens to Lexical TextNodes
-      tokens.forEach((token: any) => {
+      tokens.forEach((token: string | Prism.Token) => {
         if (typeof token === "string") {
           node.append($createTextNode(token));
         } else {

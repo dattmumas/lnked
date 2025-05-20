@@ -16,10 +16,16 @@ const UserSettingsSchema = z.object({
   tags_string: z.string().optional().nullable(),
 });
 
+interface UserSettingsFormValues {
+  full_name: string;
+  bio?: string | null;
+  tags_string?: string | null;
+}
+
 export default function EditUserSettingsForm({
   defaultValues,
 }: {
-  defaultValues: any;
+  defaultValues: UserSettingsFormValues;
 }) {
   const [formError, setFormError] = useState<string | null>(null);
   const [formSuccess, setFormSuccess] = useState<string | null>(null);
@@ -33,7 +39,7 @@ export default function EditUserSettingsForm({
     defaultValues,
   });
 
-  const onSubmit = async (data: any) => {
+  const onSubmit = async (data: UserSettingsFormValues) => {
     setFormError(null);
     setFormSuccess(null);
     const result = await updateUserProfile(data);

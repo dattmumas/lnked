@@ -55,8 +55,6 @@ export default async function MyCollectivesPage() {
   }
 
   // Fetch subscription price (e.g., from env or DB). For now, assume a fixed price in cents.
-  const STRIPE_PRICE_CENTS = parseInt(process.env.STRIPE_PRICE_CENTS || "500"); // Default to $5.00 (500 cents) if not set
-  const STRIPE_CURRENCY = process.env.STRIPE_CURRENCY || "USD";
 
   // 2. Fetch collectives JOINED by the user (where they are a member but not owner)
   const { data: joinedMembershipsData, error: joinedError } = await supabase
@@ -127,16 +125,12 @@ export default async function MyCollectivesPage() {
               const subscriberCount = collective.subscriptions?.[0]?.count || 0;
               // Note: This assumes all subscriptions are active. For accuracy, filter by status='active'.
               // If subscriptions is null or empty array, count is 0.
-              const monthlyRevenue =
-                (subscriberCount * STRIPE_PRICE_CENTS) / 100; // Convert cents to dollars
               return (
                 <DashboardCollectiveCard
                   key={collective.id}
                   collective={collective}
                   role="Owner"
                   subscriberCount={subscriberCount}
-                  monthlyRevenue={monthlyRevenue}
-                  currency={STRIPE_CURRENCY}
                 />
               );
             })}

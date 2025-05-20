@@ -12,11 +12,11 @@ interface LexicalRendererProps {
 }
 
 export function LexicalRenderer({ contentJSON }: LexicalRendererProps) {
-  let contentObj: any = null;
+  let contentObj: Record<string, unknown> | null = null;
   if (typeof contentJSON === "string") {
     try {
       contentObj = JSON.parse(contentJSON);
-    } catch (_) {
+    } catch {
       contentObj = null;
     }
   } else {
@@ -60,7 +60,7 @@ export function LexicalRenderer({ contentJSON }: LexicalRendererProps) {
           "quote",
         ];
         const hasBlockChild = Array.isArray(node.children)
-          ? node.children.some((c: any) => blockTypes.includes(c.type))
+          ? node.children.some((c: LexicalNode) => blockTypes.includes(c.type))
           : false;
         const Wrapper = hasBlockChild ? "div" : "p";
         return (
@@ -297,7 +297,7 @@ export function LexicalRenderer({ contentJSON }: LexicalRendererProps) {
   return (
     <>
       {Array.isArray(contentObj.root.children)
-        ? contentObj.root.children.map((child: any, idx: number) => (
+        ? contentObj.root.children.map((child: LexicalNode, idx: number) => (
             <React.Fragment key={idx}>{renderNode(child)}</React.Fragment>
           ))
         : null}

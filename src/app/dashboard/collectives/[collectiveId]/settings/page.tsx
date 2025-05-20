@@ -54,13 +54,13 @@ export default async function CollectiveSettingsPage({
   }
 
   // Fetch eligible members for ownership transfer
-  const { data: members, error: membersError } = await supabase
+  const { data: members } = await supabase
     .from("collective_members")
     .select("user:users!user_id(id, full_name)")
     .eq("collective_id", collectiveId);
   const eligibleMembers = (members || [])
-    .map((m: any) => m.user)
-    .filter((u: any) => u && u.id !== authUser.id);
+    .map((m: { user: { id: string; full_name: string | null } | null }) => m.user)
+    .filter((u) => u && u.id !== authUser.id);
 
   return (
     <div className="container mx-auto p-4 md:p-6 max-w-2xl">

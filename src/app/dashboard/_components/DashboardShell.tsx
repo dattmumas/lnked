@@ -11,7 +11,7 @@ export interface CollectiveSummary {
 }
 
 interface DashboardShellProps {
-  children: any;
+  children: React.ReactNode;
   userCollectives: CollectiveSummary[];
 }
 

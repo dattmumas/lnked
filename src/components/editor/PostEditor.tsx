@@ -41,7 +41,6 @@ import { HorizontalRuleNode } from "@lexical/react/LexicalHorizontalRuleNode";
 import Toolbar from "./Toolbar";
 import FloatingLinkEditorPlugin from "./plugins/FloatingLinkEditorPlugin";
 import CodeHighlightPlugin from "./plugins/CodeHighlightPlugin";
-import { GIFNode } from "./nodes/GIFNode";
 import { CollapsibleContainerNode } from "./nodes/CollapsibleContainerNode";
 import { HashtagNode } from "./nodes/HashtagNode";
 import EmbedUrlModal from "./EmbedUrlModal";
@@ -51,7 +50,6 @@ import {
 } from "@lexical/react/LexicalTypeaheadMenuPlugin";
 import type { LexicalEditor } from "lexical";
 import { $insertNodeToNearestRoot } from "@lexical/utils";
-import { $createGIFNode } from "./nodes/GIFNode";
 import { TablePlugin } from "@lexical/react/LexicalTablePlugin";
 
 const editorNodes = [
@@ -78,7 +76,6 @@ const editorNodes = [
   PageBreakNode, // Page break
   LayoutContainerNode, // Columns container
   LayoutItemNode, // Column item
-  GIFNode, // GIF block
   CollapsibleContainerNode, // Collapsible section
   HashtagNode, // Hashtag text
 ];
@@ -107,7 +104,6 @@ export const INSERT_QUOTE_COMMAND = createCommand("INSERT_QUOTE_COMMAND");
 export const INSERT_CODE_COMMAND = createCommand("INSERT_CODE_COMMAND");
 export const INSERT_TABLE_COMMAND = createCommand("INSERT_TABLE_COMMAND");
 export const INSERT_HR_COMMAND = createCommand("INSERT_HR_COMMAND");
-export const INSERT_GIF_COMMAND = createCommand("INSERT_GIF_COMMAND");
 
 // URL and email matchers for AutoLinkPlugin
 const URL_MATCHER = createLinkMatcherWithRegExp(
@@ -327,7 +323,7 @@ function CustomInsertCommandsPlugin({
       removeHR();
       removeCollapsible();
     };
-  }, [editor]);
+  }, [editor, openEmbedModal]);
   return null;
 }
 
@@ -346,7 +342,7 @@ const SLASH_OPTIONS = [
     key: "heading-1",
     label: "Heading 1",
     description: "Insert heading level 1",
-    action: (editor: LexicalEditor) => {
+    action: () => {
       alert("Heading 1 action (implement block transform)");
     },
     setRefElement: () => {},
@@ -400,22 +396,6 @@ const SLASH_OPTIONS = [
     action: (editor: LexicalEditor) => {
       editor.update(() => {
         $insertNodeToNearestRoot($createExcalidrawNode(""));
-      });
-    },
-    setRefElement: () => {},
-  },
-  {
-    key: "gif",
-    label: "GIF",
-    description: "Insert a GIF",
-    action: (editor: LexicalEditor) => {
-      editor.update(() => {
-        $insertNodeToNearestRoot(
-          $createGIFNode(
-            "https://media.giphy.com/media/3oEjI6SIIHBdRxXI40/giphy.gif",
-            "A GIF"
-          )
-        );
       });
     },
     setRefElement: () => {},
@@ -569,10 +549,7 @@ export default function PostEditor({
 }: PostEditorProps) {
   // Store initial content only once
   const [initialContent] = useState(initialContentJSON);
-  const [showGifPicker, setShowGifPicker] = React.useState(false);
-  const gifInsertRef = React.useRef<
-    ((url: string, alt: string) => void) | null
-  >(null);
+  // GIF picker feature disabled in this build
 
   // Modal state for embed URLs
   const [embedModal, setEmbedModal] = useState<{
@@ -609,34 +586,6 @@ export default function PostEditor({
     onContentChange?.(json);
   };
 
-  // CustomCommandPlugin with GIF picker integration
-  function CustomCommandPluginWithGif() {
-    const [editor] = useLexicalComposerContext();
-    React.useEffect(() => {
-      const removeGIF = editor.registerCommand(
-        INSERT_GIF_COMMAND,
-        () => {
-          setShowGifPicker(true);
-          gifInsertRef.current = (url: string, alt: string) => {
-            setShowGifPicker(false);
-            editor.update(() => {
-              const selection = $getSelection();
-              if (selection) {
-                const node = new GIFNode(url, alt);
-                selection.insertNodes([node]);
-              }
-            });
-          };
-          return true;
-        },
-        0
-      );
-      return () => {
-        removeGIF();
-      };
-    }, [editor]);
-    return null;
-  }
 
   // Helper to open the modal
   const openEmbedModal = (
@@ -652,7 +601,7 @@ export default function PostEditor({
   return (
     <LexicalComposer initialConfig={initialConfig}>
       <div className="flex flex-col h-full">
-        <Toolbar onInsertGif={() => setShowGifPicker(true)} />
+        <Toolbar />
         <div className="relative flex-1 overflow-visible">
           <RichTextPlugin
             contentEditable={
@@ -673,16 +622,9 @@ export default function PostEditor({
           <TablePlugin />
           {/* Only load initial content once on mount */}
           {initialContent && <LoadInitialJsonPlugin json={initialContent} />}
-          <CustomCommandPluginWithGif />
           <CustomInsertCommandsPlugin openEmbedModal={openEmbedModal} />
           <FloatingLinkEditorPlugin />
           <SlashTypeaheadMenu />
-          {showGifPicker && (
-            <GifPicker
-              onSelect={(url, alt) => gifInsertRef.current?.(url, alt)}
-              onClose={() => setShowGifPicker(false)}
-            />
-          )}
           <EmbedUrlModal
             open={!!embedModal?.open}
             label={

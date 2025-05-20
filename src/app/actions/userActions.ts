@@ -133,7 +133,6 @@ export async function deleteUserAccount(): Promise<{
     return { success: false, error: "Not authenticated." };
   }
   const userId = user.id;
-  const userEmail = user.email;
 
   // 1. Check if user is owner of any collectives
   const { data: ownedCollectives } = await supabaseAdmin
@@ -208,10 +207,11 @@ export async function deleteUserAccount(): Promise<{
   // 8. Delete from Supabase Auth
   try {
     await supabaseAdmin.auth.admin.deleteUser(userId);
-  } catch (err: any) {
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
     return {
       success: false,
-      error: "Failed to delete Supabase Auth user: " + err.message,
+      error: "Failed to delete Supabase Auth user: " + message,
     };
   }
 
