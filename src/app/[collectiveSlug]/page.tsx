@@ -1,6 +1,7 @@
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
-import PostCard from "@/components/app/posts/molecules/PostCard";
+import ProfileFeed from "@/components/app/profile/ProfileFeed";
+import type { MicroPost } from "@/components/app/profile/MicrothreadPanel";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import SubscribeButton from "@/app/newsletters/_components/SubscribeButton";
@@ -62,7 +63,14 @@ export default async function Page({
       like_count: p.like_count ?? 0,
       dislike_count: p.dislike_count ?? 0,
       current_user_has_liked: undefined, // Will be determined client-side
+      collective_slug: collectiveSlug,
     })) || [];
+
+  const microPosts: MicroPost[] = [
+    { id: "m1", content: "Welcome to our new readers!" },
+    { id: "m2", content: "Recording a podcast episode today." },
+    { id: "m3", content: "Check out our latest article below." },
+  ];
 
   // Check if current user is the owner of the collective to show edit/new post links
   const isOwner = user?.id === collective.owner_id;
@@ -86,6 +94,19 @@ export default async function Page({
             </p>
           </div>
         )}
+        <div className="mt-4 w-full max-w-md">
+          <form action="" className="flex items-center gap-2">
+            <input
+              type="search"
+              name="q"
+              placeholder="Search this profile..."
+              className="w-full px-3 py-2 border border-border rounded-md bg-background text-sm"
+            />
+            <Button type="submit" size="sm" variant="outline">
+              Search
+            </Button>
+          </form>
+        </div>
         {user?.id !== collective.owner_id && (
           <div className="mt-4">
             <SubscribeButton
@@ -96,10 +117,15 @@ export default async function Page({
           </div>
         )}
         {isOwner && (
-          <div className="mt-4">
+          <div className="mt-4 flex gap-2">
             <Button asChild variant="outline">
               <Link href={`/dashboard/${collective.id}/new-post`}>
                 Create New Post
+              </Link>
+            </Button>
+            <Button asChild variant="outline">
+              <Link href={`/dashboard/collectives/${collective.id}/settings`}>
+                Edit Collective
               </Link>
             </Button>
           </div>
@@ -108,15 +134,7 @@ export default async function Page({
 
       <main>
         {posts && posts.length > 0 ? (
-          <div className="grid gap-8">
-            {posts.map((post: RawPost) => (
-              <PostCard
-                key={post.id}
-                post={post}
-                collectiveSlug={collectiveSlug}
-              />
-            ))}
-          </div>
+          <ProfileFeed posts={posts} microPosts={microPosts} />
         ) : (
           <div className="text-center py-10">
             <h2 className="text-2xl font-semibold mb-2">No posts yet!</h2>
