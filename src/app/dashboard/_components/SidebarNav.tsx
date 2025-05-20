@@ -7,7 +7,9 @@ import {
   UserSquare,
   Newspaper,
   Settings as SettingsIcon,
+  ArrowUpRight,
 } from "lucide-react";
+import Link from "next/link";
 import { SidebarLink } from "./SidebarLink";
 import type { CollectiveSummary } from "./DashboardShell";
 
@@ -95,15 +97,35 @@ export function SidebarNav({
                   No collectives
                 </span>
               )
-            : collectives.map((col) => (
-                <SidebarLink
-                  key={col.id}
-                  href={`/dashboard/collectives/${col.id}`}
-                  icon={Users2}
-                  label={col.name}
-                  collapsed={collapsed}
-                />
-              ))}
+            : collectives.map((col) =>
+                collapsed ? (
+                  <SidebarLink
+                    key={col.id}
+                    href={`/dashboard/collectives/${col.id}`}
+                    icon={Users2}
+                    label={col.name}
+                    collapsed
+                  />
+                ) : (
+                  <div
+                    key={col.id}
+                    className="flex items-center justify-between pr-2"
+                  >
+                    <SidebarLink
+                      href={`/dashboard/collectives/${col.id}`}
+                      icon={Users2}
+                      label={col.name}
+                    />
+                    <Link
+                      href={`/${col.slug}`}
+                      className="text-muted-foreground hover:text-primary"
+                      aria-label={`View ${col.name}`}
+                    >
+                      <ArrowUpRight className="size-4" />
+                    </Link>
+                  </div>
+                )
+              )}
         </nav>
       </div>
 
