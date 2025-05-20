@@ -29,7 +29,7 @@ import {
 // Import custom nodes
 import { PollNode, $createPollNode } from "./nodes/PollNode";
 import { ExcalidrawNode, $createExcalidrawNode } from "./nodes/ExcalidrawNode";
-import { StickyNode } from "./nodes/StickyNode";
+import { STICKY_COLORS, StickyNode } from "./nodes/StickyNode";
 import { ImageNode } from "./nodes/ImageNode";
 import { InlineImageNode } from "./nodes/InlineImageNode";
 import { TweetNode } from "./nodes/TweetNode";
@@ -41,12 +41,17 @@ import { HorizontalRuleNode } from "@lexical/react/LexicalHorizontalRuleNode";
 import Toolbar from "./Toolbar";
 import FloatingLinkEditorPlugin from "./plugins/FloatingLinkEditorPlugin";
 import CodeHighlightPlugin from "./plugins/CodeHighlightPlugin";
-import { GIFNode, GifPicker } from "./nodes/GIFNode";
-import SlashMenuPlugin from "./plugins/SlashMenuPlugin";
+import { GIFNode } from "./nodes/GIFNode";
 import { CollapsibleContainerNode } from "./nodes/CollapsibleContainerNode";
 import { HashtagNode } from "./nodes/HashtagNode";
-import { STICKY_COLORS } from "./nodes/StickyNode";
 import EmbedUrlModal from "./EmbedUrlModal";
+import {
+  LexicalTypeaheadMenuPlugin,
+  useBasicTypeaheadTriggerMatch,
+} from "@lexical/react/LexicalTypeaheadMenuPlugin";
+import type { LexicalEditor } from "lexical";
+import { $insertNodeToNearestRoot } from "@lexical/utils";
+import { $createGIFNode } from "./nodes/GIFNode";
 
 const editorNodes = [
   HeadingNode,
@@ -113,26 +118,6 @@ const EMAIL_MATCHER = createLinkMatcherWithRegExp(
 );
 const MATCHERS = [URL_MATCHER, EMAIL_MATCHER];
 
-// --- Node creation helpers for consistency ---
-function $createStickyNode(text = "", color = STICKY_COLORS[0]) {
-  return new StickyNode(text, color);
-}
-function $createTweetNode(tweetUrl = "") {
-  return new TweetNode(tweetUrl);
-}
-function $createYouTubeNode(videoUrl = "") {
-  return new YouTubeNode(videoUrl);
-}
-function $createImageNode(src = "", alt = "Image") {
-  return new ImageNode(src, alt);
-}
-function $createInlineImageNode(src = "", alt = "Inline Image") {
-  return new InlineImageNode(src, alt);
-}
-function $createCollapsibleContainerNode(collapsed = false) {
-  return new CollapsibleContainerNode(collapsed);
-}
-
 function lexicalEditorOnError(error: Error) {
   console.error("Lexical editor error:", error);
 }
@@ -195,15 +180,12 @@ function CustomInsertCommandsPlugin({
       INSERT_POLL_COMMAND,
       () => {
         editor.update(() => {
-          const selection = $getSelection();
-          if (selection) {
-            selection.insertNodes([
-              $createPollNode("", [
-                { text: "", uid: Date.now().toString(), votes: [] },
-                { text: "", uid: (Date.now() + 1).toString(), votes: [] },
-              ]),
-            ]);
-          }
+          $insertNodeToNearestRoot(
+            $createPollNode("Your question?", [
+              { text: "Option 1", uid: "1", votes: [] },
+              { text: "Option 2", uid: "2", votes: [] },
+            ])
+          );
         });
         removeSlashTrigger();
         return true;
@@ -215,10 +197,7 @@ function CustomInsertCommandsPlugin({
       INSERT_STICKY_COMMAND,
       () => {
         editor.update(() => {
-          const selection = $getSelection();
-          if (selection) {
-            selection.insertNodes([$createStickyNode()]);
-          }
+          $insertNodeToNearestRoot(new StickyNode("", STICKY_COLORS[0]));
         });
         removeSlashTrigger();
         return true;
@@ -230,10 +209,7 @@ function CustomInsertCommandsPlugin({
       INSERT_EXCALIDRAW_COMMAND,
       () => {
         editor.update(() => {
-          const selection = $getSelection();
-          if (selection) {
-            selection.insertNodes([$createExcalidrawNode("")]);
-          }
+          $insertNodeToNearestRoot($createExcalidrawNode(""));
         });
         removeSlashTrigger();
         return true;
@@ -268,12 +244,7 @@ function CustomInsertCommandsPlugin({
       INSERT_TWEET_COMMAND,
       () => {
         openEmbedModal("tweet", (url: string) => {
-          editor.update(() => {
-            const selection = $getSelection();
-            if (selection) {
-              selection.insertNodes([$createTweetNode(url)]);
-            }
-          });
+          $insertNodeToNearestRoot(new TweetNode(url));
           removeSlashTrigger();
         });
         return true;
@@ -285,12 +256,7 @@ function CustomInsertCommandsPlugin({
       INSERT_YOUTUBE_COMMAND,
       () => {
         openEmbedModal("youtube", (url: string) => {
-          editor.update(() => {
-            const selection = $getSelection();
-            if (selection) {
-              selection.insertNodes([$createYouTubeNode(url)]);
-            }
-          });
+          $insertNodeToNearestRoot(new YouTubeNode(url));
           removeSlashTrigger();
         });
         return true;
@@ -302,12 +268,7 @@ function CustomInsertCommandsPlugin({
       INSERT_IMAGE_COMMAND,
       () => {
         openEmbedModal("image", (url: string) => {
-          editor.update(() => {
-            const selection = $getSelection();
-            if (selection) {
-              selection.insertNodes([$createImageNode(url, "Image")]);
-            }
-          });
+          $insertNodeToNearestRoot(new ImageNode(url, "Image"));
           removeSlashTrigger();
         });
         return true;
@@ -319,14 +280,7 @@ function CustomInsertCommandsPlugin({
       INSERT_INLINE_IMAGE_COMMAND,
       () => {
         openEmbedModal("inlineimage", (url: string) => {
-          editor.update(() => {
-            const selection = $getSelection();
-            if (selection) {
-              selection.insertNodes([
-                $createInlineImageNode(url, "Inline Image"),
-              ]);
-            }
-          });
+          $insertNodeToNearestRoot(new InlineImageNode(url, "Inline Image"));
           removeSlashTrigger();
         });
         return true;
@@ -353,10 +307,7 @@ function CustomInsertCommandsPlugin({
       createCommand("INSERT_COLLAPSIBLE_COMMAND"),
       () => {
         editor.update(() => {
-          const selection = $getSelection();
-          if (selection) {
-            selection.insertNodes([$createCollapsibleContainerNode(false)]);
-          }
+          $insertNodeToNearestRoot(new CollapsibleContainerNode(false));
         });
         removeSlashTrigger();
         return true;
@@ -377,6 +328,230 @@ function CustomInsertCommandsPlugin({
     };
   }, [editor]);
   return null;
+}
+
+// Slash command options for typeahead
+const SLASH_OPTIONS = [
+  {
+    key: "paragraph",
+    label: "Paragraph",
+    description: "Insert a new paragraph",
+    action: (editor: LexicalEditor) => {
+      editor.dispatchCommand(INSERT_PARAGRAPH_COMMAND, undefined);
+    },
+    setRefElement: () => {},
+  },
+  {
+    key: "heading-1",
+    label: "Heading 1",
+    description: "Insert heading level 1",
+    action: (editor: LexicalEditor) => {
+      alert("Heading 1 action (implement block transform)");
+    },
+    setRefElement: () => {},
+  },
+  {
+    key: "image-block",
+    label: "Image",
+    description: "Insert a block image",
+    action: (editor: LexicalEditor) => {
+      editor.update(() => {
+        $insertNodeToNearestRoot(
+          new ImageNode("https://example.com/image.jpg", "Image")
+        );
+      });
+    },
+    setRefElement: () => {},
+  },
+  {
+    key: "image-inline",
+    label: "Inline Image",
+    description: "Insert an inline image",
+    action: (editor: LexicalEditor) => {
+      editor.update(() => {
+        $insertNodeToNearestRoot(
+          new InlineImageNode("https://example.com/image.jpg", "Inline Image")
+        );
+      });
+    },
+    setRefElement: () => {},
+  },
+  {
+    key: "poll",
+    label: "Poll",
+    description: "Insert a poll block",
+    action: (editor: LexicalEditor) => {
+      editor.update(() => {
+        $insertNodeToNearestRoot(
+          $createPollNode("Your question?", [
+            { text: "Option 1", uid: "1", votes: [] },
+            { text: "Option 2", uid: "2", votes: [] },
+          ])
+        );
+      });
+    },
+    setRefElement: () => {},
+  },
+  {
+    key: "excalidraw",
+    label: "Excalidraw",
+    description: "Insert an Excalidraw drawing",
+    action: (editor: LexicalEditor) => {
+      editor.update(() => {
+        $insertNodeToNearestRoot($createExcalidrawNode(""));
+      });
+    },
+    setRefElement: () => {},
+  },
+  {
+    key: "gif",
+    label: "GIF",
+    description: "Insert a GIF",
+    action: (editor: LexicalEditor) => {
+      editor.update(() => {
+        $insertNodeToNearestRoot(
+          $createGIFNode(
+            "https://media.giphy.com/media/3oEjI6SIIHBdRxXI40/giphy.gif",
+            "A GIF"
+          )
+        );
+      });
+    },
+    setRefElement: () => {},
+  },
+  {
+    key: "sticky",
+    label: "Sticky Note",
+    description: "Insert a sticky note",
+    action: (editor: LexicalEditor) => {
+      editor.update(() => {
+        $insertNodeToNearestRoot(new StickyNode("", STICKY_COLORS[0]));
+      });
+    },
+    setRefElement: () => {},
+  },
+  {
+    key: "pagebreak",
+    label: "Page Break",
+    description: "Insert a page break",
+    action: (editor: LexicalEditor) => {
+      editor.update(() => {
+        $insertNodeToNearestRoot(new PageBreakNode());
+      });
+    },
+    setRefElement: () => {},
+  },
+  {
+    key: "layoutcontainer",
+    label: "Layout Container",
+    description: "Insert a layout container",
+    action: (editor: LexicalEditor) => {
+      editor.update(() => {
+        $insertNodeToNearestRoot(new LayoutContainerNode());
+      });
+    },
+    setRefElement: () => {},
+  },
+  {
+    key: "layoutitem",
+    label: "Layout Item",
+    description: "Insert a layout item",
+    action: (editor: LexicalEditor) => {
+      editor.update(() => {
+        $insertNodeToNearestRoot(new LayoutItemNode());
+      });
+    },
+    setRefElement: () => {},
+  },
+  {
+    key: "tweet",
+    label: "Tweet",
+    description: "Insert a tweet embed",
+    action: (editor: LexicalEditor) => {
+      editor.update(() => {
+        $insertNodeToNearestRoot(
+          new TweetNode("https://twitter.com/example/status/123")
+        );
+      });
+    },
+    setRefElement: () => {},
+  },
+  {
+    key: "youtube",
+    label: "YouTube",
+    description: "Insert a YouTube video",
+    action: (editor: LexicalEditor) => {
+      editor.update(() => {
+        $insertNodeToNearestRoot(
+          new YouTubeNode("https://youtube.com/watch?v=abc123")
+        );
+      });
+    },
+    setRefElement: () => {},
+  },
+  {
+    key: "collapsible-container",
+    label: "Collapsible Section",
+    description: "Insert a collapsible section",
+    action: (editor: LexicalEditor) => {
+      editor.update(() => {
+        $insertNodeToNearestRoot(new CollapsibleContainerNode(false));
+      });
+    },
+    setRefElement: () => {},
+  },
+  {
+    key: "hashtag",
+    label: "Hashtag",
+    description: "Insert a hashtag",
+    action: (editor: LexicalEditor) => {
+      editor.update(() => {
+        $insertNodeToNearestRoot(new HashtagNode("#example"));
+      });
+    },
+    setRefElement: () => {},
+  },
+];
+
+function SlashTypeaheadMenu() {
+  const triggerFn = useBasicTypeaheadTriggerMatch("/", { minLength: 0 });
+  const [editor] = useLexicalComposerContext();
+  return (
+    <LexicalTypeaheadMenuPlugin
+      options={SLASH_OPTIONS}
+      triggerFn={triggerFn}
+      onSelectOption={(option, _textNode, closeMenu) => {
+        option.action(editor);
+        closeMenu();
+      }}
+      onQueryChange={() => {}}
+      menuRenderFn={(
+        _anchorElementRef,
+        { selectedIndex, options, selectOptionAndCleanUp }
+      ) =>
+        options.length > 0 ? (
+          <div className="fixed z-[9999] bg-white border-2 border-primary shadow-lg rounded-md mt-2 w-64">
+            {options.map((option, i) => (
+              <div
+                key={option.key}
+                className={`px-4 py-2 cursor-pointer ${
+                  i === selectedIndex ? "bg-muted" : ""
+                }`}
+                onMouseDown={() => selectOptionAndCleanUp(option)}
+              >
+                <strong>{option.label}</strong>
+                {option.description && (
+                  <span className="ml-2 text-muted-foreground text-xs">
+                    {option.description}
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
+        ) : null
+      }
+    />
+  );
 }
 
 export default function PostEditor({
@@ -492,7 +667,7 @@ export default function PostEditor({
           <CustomCommandPluginWithGif />
           <CustomInsertCommandsPlugin openEmbedModal={openEmbedModal} />
           <FloatingLinkEditorPlugin />
-          <SlashMenuPlugin />
+          <SlashTypeaheadMenu />
           {showGifPicker && (
             <GifPicker
               onSelect={(url, alt) => gifInsertRef.current?.(url, alt)}
