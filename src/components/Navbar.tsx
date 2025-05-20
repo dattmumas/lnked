@@ -18,6 +18,7 @@ import {
   FileText,
   Users2,
   UserSquare,
+  User,
   Newspaper,
   LogOut,
   Settings,
@@ -125,6 +126,14 @@ export default function Navbar() {
               Dashboard
             </Button>
             <Button
+              variant={pathname === `/users/${user?.id}` ? "secondary" : "ghost"}
+              size="sm"
+              aria-current={pathname === `/users/${user?.id}` ? "page" : undefined}
+              onClick={() => router.push(`/users/${user?.id}`)}
+            >
+              My Profile
+            </Button>
+            <Button
               variant={pathname === "/settings" ? "secondary" : "ghost"}
               size="sm"
               aria-current={pathname === "/settings" ? "page" : undefined}
@@ -197,6 +206,16 @@ export default function Navbar() {
                       </Button>
                     ))}
                     <Button
+                      variant={pathname === `/users/${user?.id}` ? "secondary" : "ghost"}
+                      className="justify-start h-9 px-2"
+                      aria-current={
+                        pathname === `/users/${user?.id}` ? "page" : undefined
+                      }
+                      onClick={() => router.push(`/users/${user?.id}`)}
+                    >
+                      <User className="size-4 mr-2" /> My Profile
+                    </Button>
+                    <Button
                       variant={pathname === "/settings" ? "secondary" : "ghost"}
                       className="justify-start h-9 px-2"
                       aria-current={
@@ -244,6 +263,16 @@ export default function Navbar() {
                       onClick={() => router.push("/dashboard")}
                     >
                       <LayoutDashboard className="size-4 mr-2" /> Dashboard
+                    </Button>
+                    <Button
+                      variant={pathname === `/users/${user?.id}` ? "secondary" : "ghost"}
+                      className="justify-start h-9 px-2"
+                      aria-current={
+                        pathname === `/users/${user?.id}` ? "page" : undefined
+                      }
+                      onClick={() => router.push(`/users/${user?.id}`)}
+                    >
+                      <User className="size-4 mr-2" /> My Profile
                     </Button>
                     <Button
                       variant={pathname === "/settings" ? "secondary" : "ghost"}
