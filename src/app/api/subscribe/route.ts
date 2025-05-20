@@ -21,7 +21,7 @@ interface StripeErrorLike {
 }
 
 export async function POST(request: Request) {
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
 
   const stripe = getStripe();
   if (!stripe) {

@@ -9,12 +9,12 @@ export async function POST(request: Request) {
   console.log("Auth callback triggered:", event);
 
   const response = NextResponse.json({ status: "success" });
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
 
   // Create a stable wrapper around cookies for the auth client
   const cookieHandler = {
-    get(name: string) {
-      return cookieStore.get(name)?.value;
+    get: async (name: string) => {
+      return (await cookieStore.get(name))?.value;
     },
     set(name: string, value: string, options?: CookieOptions) {
       console.log(`Setting cookie: ${name}`);

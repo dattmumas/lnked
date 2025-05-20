@@ -8,7 +8,7 @@ export default async function CollectiveSettingsPage({
   params: { collectiveId: string };
 }) {
   const { collectiveId } = params;
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
 
   const {
     data: { user: authUser },
@@ -59,7 +59,9 @@ export default async function CollectiveSettingsPage({
     .select("user:users!user_id(id, full_name)")
     .eq("collective_id", collectiveId);
   const eligibleMembers = (members || [])
-    .map((m: { user: { id: string; full_name: string | null } | null }) => m.user)
+    .map(
+      (m: { user: { id: string; full_name: string | null } | null }) => m.user
+    )
     .filter((u) => u && u.id !== authUser.id);
 
   return (

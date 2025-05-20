@@ -23,7 +23,7 @@ export async function POST(req: Request, context: any) {
   }
 
   // Auth: get user session
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
   const {
     data: { session },
     error: sessionError,

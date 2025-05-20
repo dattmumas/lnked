@@ -29,7 +29,7 @@ export async function logRecommendationFeedback(
   prevState: ActionResult | undefined,
   formData: FormData
 ): Promise<ActionResult> {
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
 
   const {
     data: { user },

@@ -23,7 +23,7 @@ export default async function ManageCollectiveMembersPage({
   params: { collectiveId: string };
 }) {
   const { collectiveId } = params;
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
 
   const {
     data: { user: currentUser },

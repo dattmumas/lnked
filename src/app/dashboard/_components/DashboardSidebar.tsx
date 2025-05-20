@@ -1,6 +1,6 @@
 "use client";
 
-import { PlusCircle } from "lucide-react";
+import { Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -27,7 +27,9 @@ export function DashboardSidebar({
       )}
       aria-label="Dashboard sidebar"
     >
-      <div className={cn("px-4 mb-6", collapsed && "text-center px-0 mb-2")}>
+      <div
+        className={cn("px-4 mb-6", collapsed && "text-center pl-0 pr-0 mb-2")}
+      >
         <Link
           href="/"
           className={cn(
@@ -53,13 +55,13 @@ export function DashboardSidebar({
         {collapsed ? (
           <Button asChild variant="outline" size="icon">
             <Link href="/posts/new">
-              <PlusCircle className="h-5 w-5" aria-label="Create Post" />
+              <Plus className="h-5 w-5" aria-label="Create Post" />
             </Link>
           </Button>
         ) : (
           <Button variant="outline" size="sm" asChild className="w-full">
             <Link href="/posts/new">
-              <PlusCircle className="size-4 mr-2" />
+              <Plus className="size-4 mr-2" />
               Create Post
             </Link>
           </Button>

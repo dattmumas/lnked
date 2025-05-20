@@ -8,7 +8,7 @@ export async function POST(
   { params }: { params: { _commentId: string } }
 ) {
   const { _commentId: commentId } = params;
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
 
   const {
     data: { user },

@@ -9,21 +9,21 @@ import type { Database } from "../database.types";
  * This is safer than accessing the users table directly client-side
  */
 export async function getCurrentUserProfile() {
-  const cookieStore = cookies(); // sync
+  const cookieStore = await cookies(); // now async
 
   const supabase = createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        get(name) {
-          return cookieStore.get(name)?.value;
+        get: async (name) => {
+          return (await cookieStore.get(name))?.value;
         },
-        set(name, value, options) {
-          cookieStore.set(name, value, options);
+        set: async (name, value, options) => {
+          await cookieStore.set(name, value, options);
         },
-        remove(name, options) {
-          cookieStore.set(name, "", { ...options, maxAge: 0 });
+        remove: async (name, options) => {
+          await cookieStore.set(name, "", { ...options, maxAge: 0 });
         },
       },
     }

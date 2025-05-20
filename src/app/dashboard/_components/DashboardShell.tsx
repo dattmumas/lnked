@@ -22,7 +22,7 @@ export default function DashboardShell({
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   return (
-    <div className="flex flex-col min-h-screen h-full bg-background text-foreground">
+    <div className="flex flex-col min-h-screen h-full bg-background text-foreground -mx-12 md:-mx-16">
       <DashboardNav
         sidebarCollapsed={sidebarCollapsed}
         onToggleSidebar={() => setSidebarCollapsed((c) => !c)}

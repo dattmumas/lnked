@@ -8,7 +8,7 @@ export async function POST(
   { params }: { params: { _postId: string } }
 ) {
   const { _postId: postId } = params;
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
 
   const {
     data: { user },

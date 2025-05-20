@@ -4,7 +4,7 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 // GET /api/posts - Fetches posts, optionally filtered by collective_id
 // Example: /api/posts?collectiveId=uuid-of-collective
 export async function GET(request: Request) {
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
 
   const { searchParams } = new URL(request.url);
   const collectiveId = searchParams.get("collectiveId");

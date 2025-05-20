@@ -7,7 +7,7 @@ interface LikeRequestBody {
 
 // POST /api/like - Toggles a like for a post by the authenticated user
 export async function POST(request: Request) {
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
 
   const {
     data: { user },

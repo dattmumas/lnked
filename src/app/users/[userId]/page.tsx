@@ -8,7 +8,7 @@ import SubscribeButton from "@/app/newsletters/_components/SubscribeButton";
 
 export default async function Page({ params }: { params: { userId: string } }) {
   const { userId } = params;
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
 
   const {
     data: { user: authUser },
