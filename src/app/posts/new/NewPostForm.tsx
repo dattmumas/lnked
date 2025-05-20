@@ -1,66 +1,20 @@
-"use client";
+'use client';
 
-import { useState, useEffect, useCallback } from "react";
-import { useForm, SubmitHandler, FormProvider } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
+import { useState, useEffect, useCallback } from 'react';
+import { useForm, SubmitHandler, FormProvider } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { PostFormSchema, type PostFormValues } from '@/lib/schemas/postSchemas';
 
-import EditorLayout from "@/components/editor/EditorLayout";
-import PostEditor from "@/components/editor/PostEditor";
-import PostFormFields from "@/components/app/editor/form-fields/PostFormFields";
-import FileExplorer from "@/components/app/editor/sidebar/FileExplorer";
-import { postFormFieldsSchema } from "@/lib/schemas/postFormFieldsSchema";
-import SEOSettingsDrawer from "@/components/editor/SEOSettingsDrawer";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Info } from "lucide-react";
-import { createPost, updatePost } from "@/app/actions/postActions";
+import EditorLayout from '@/components/editor/EditorLayout';
+import PostEditor from '@/components/editor/PostEditor';
+import PostFormFields from '@/components/app/editor/form-fields/PostFormFields';
+import FileExplorer from '@/components/app/editor/sidebar/FileExplorer';
+import SEOSettingsDrawer from '@/components/editor/SEOSettingsDrawer';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Info } from 'lucide-react';
+import { createPost, updatePost } from '@/app/actions/postActions';
 
-const newPostSchema = postFormFieldsSchema
-  .extend({
-    content: z.string().refine(
-      (value) => {
-        try {
-          const json = JSON.parse(value);
-          function extractText(node: unknown): string {
-            if (!node || typeof node !== "object" || node === null) return "";
-            const n = node as {
-              type?: string;
-              text?: string;
-              children?: unknown[];
-            };
-            if (n.type === "text" && typeof n.text === "string") return n.text;
-            if (Array.isArray(n.children))
-              return n.children.map(extractText).join("");
-            return "";
-          }
-          const text = extractText(json.root);
-          return text.trim().length >= 10;
-        } catch {
-          return false;
-        }
-      },
-      { message: "Content must have meaningful text (at least 10 characters)." }
-    ),
-    seo_title: z.string().max(60).optional(),
-    meta_description: z.string().max(160).optional(),
-  })
-  .refine(
-    (data) => {
-      if (
-        data.status === "scheduled" &&
-        (!data.published_at || data.published_at.trim() === "")
-      ) {
-        return false;
-      }
-      return true;
-    },
-    {
-      message: "Publish date is required for scheduled posts.",
-      path: ["published_at"],
-    }
-  );
-
-type NewPostFormValues = z.infer<typeof newPostSchema>;
+type NewPostFormValues = PostFormValues;
 
 interface NewPostFormProps {
   collective?: { id: string; name: string; owner_id: string } | null;
@@ -69,7 +23,7 @@ interface NewPostFormProps {
 export default function NewPostForm({ collective }: NewPostFormProps) {
   const [isProcessing, setIsProcessing] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
-  const [autosaveStatus, setAutosaveStatus] = useState<string>("");
+  const [autosaveStatus, setAutosaveStatus] = useState<string>('');
   const [createdPostId, setCreatedPostId] = useState<string | null>(null);
   const [seoDrawerOpen, setSeoDrawerOpen] = useState(false);
 
@@ -77,33 +31,33 @@ export default function NewPostForm({ collective }: NewPostFormProps) {
     root: {
       children: [
         {
-          type: "paragraph",
+          type: 'paragraph',
           children: [],
           direction: null,
-          format: "",
+          format: '',
           indent: 0,
           version: 1,
         },
       ],
       direction: null,
-      format: "",
+      format: '',
       indent: 0,
-      type: "root",
+      type: 'root',
       version: 1,
     },
   });
 
   const form = useForm<NewPostFormValues>({
-    resolver: zodResolver(newPostSchema),
+    resolver: zodResolver(PostFormSchema),
     defaultValues: {
-      title: "",
+      title: '',
       content: EMPTY_LEXICAL_STATE,
-      status: "draft",
-      published_at: "",
-      seo_title: "",
-      meta_description: "",
+      status: 'draft',
+      published_at: '',
+      seo_title: '',
+      meta_description: '',
     },
-    mode: "onBlur",
+    mode: 'onBlur',
   });
 
   const {
@@ -116,22 +70,22 @@ export default function NewPostForm({ collective }: NewPostFormProps) {
     setValue,
   } = form;
 
-  const currentStatus = watch("status");
-  const currentTitle = watch("title");
-  const currentContent = watch("content");
+  const currentStatus = watch('status');
+  const currentTitle = watch('title');
+  const currentContent = watch('content');
 
   const performAutosave = useCallback(async () => {
     if (!isDirty && !createdPostId) return;
-    if (currentStatus !== "draft" && createdPostId) return;
+    if (currentStatus !== 'draft' && createdPostId) return;
 
-    setAutosaveStatus("Saving draft...");
+    setAutosaveStatus('Saving draft...');
     const data = getValues();
     const payload = {
       title: data.title,
       content: data.content,
       is_public: false,
       published_at:
-        data.status === "scheduled" && data.published_at
+        data.status === 'scheduled' && data.published_at
           ? new Date(data.published_at).toISOString()
           : null,
       collectiveId: collective?.id,
@@ -144,9 +98,9 @@ export default function NewPostForm({ collective }: NewPostFormProps) {
       } else {
         if (
           data.title.trim().length < 1 ||
-          data.content.replace(/<[^>]+>/g, "").trim().length < 10
+          data.content.replace(/<[^>]+>/g, '').trim().length < 10
         ) {
-          setAutosaveStatus("Please add title & content to save draft.");
+          setAutosaveStatus('Please add title & content to save draft.');
           return;
         }
         result = await createPost(payload);
@@ -157,17 +111,17 @@ export default function NewPostForm({ collective }: NewPostFormProps) {
       if (result.error) {
         setAutosaveStatus(`Autosave failed: ${result.error.substring(0, 100)}`);
       } else {
-        setAutosaveStatus("Draft saved.");
+        setAutosaveStatus('Draft saved.');
         reset(data);
       }
     } catch (error) {
-      setAutosaveStatus("Autosave error.");
-      console.error("Autosave exception:", error);
+      setAutosaveStatus('Autosave error.');
+      console.error('Autosave exception:', error);
     }
   }, [isDirty, currentStatus, getValues, createdPostId, reset, collective]);
 
   useEffect(() => {
-    const isDrafting = currentStatus === "draft";
+    const isDrafting = currentStatus === 'draft';
     if (isDirty && isDrafting) {
       const handler = setTimeout(performAutosave, 5000);
       return () => clearTimeout(handler);
@@ -176,23 +130,23 @@ export default function NewPostForm({ collective }: NewPostFormProps) {
 
   const onSubmit: SubmitHandler<NewPostFormValues> = async (data) => {
     setServerError(null);
-    setAutosaveStatus("");
+    setAutosaveStatus('');
     setIsProcessing(true);
 
     let is_public_for_action = false;
     let published_at_for_action: string | null = null;
 
-    if (data.status === "published") {
+    if (data.status === 'published') {
       is_public_for_action = true;
       published_at_for_action = new Date().toISOString();
-    } else if (data.status === "scheduled") {
+    } else if (data.status === 'scheduled') {
       is_public_for_action = true;
-      if (data.published_at && data.published_at.trim() !== "") {
+      if (data.published_at && data.published_at.trim() !== '') {
         published_at_for_action = new Date(data.published_at).toISOString();
       } else {
-        form.setError("published_at", {
-          type: "manual",
-          message: "Publish date required for scheduled posts.",
+        form.setError('published_at', {
+          type: 'manual',
+          message: 'Publish date required for scheduled posts.',
         });
         setIsProcessing(false);
         return;
@@ -223,10 +177,10 @@ export default function NewPostForm({ collective }: NewPostFormProps) {
           Object.entries(result.fieldErrors).forEach(([field, messages]) => {
             if (messages && messages.length > 0) {
               form.setError(field as keyof NewPostFormValues, {
-                type: "server",
-                message: messages.join(", "),
+                type: 'server',
+                message: messages.join(', '),
               });
-              errorMsg += `\n${field}: ${messages.join(", ")}`;
+              errorMsg += `\n${field}: ${messages.join(', ')}`;
             }
           });
         }
@@ -241,14 +195,14 @@ export default function NewPostForm({ collective }: NewPostFormProps) {
 
   const primaryButtonText =
     isProcessing || isSubmitting
-      ? "Processing..."
-      : currentStatus === "scheduled"
-        ? "Schedule Post"
-        : currentStatus === "draft"
+      ? 'Processing...'
+      : currentStatus === 'scheduled'
+        ? 'Schedule Post'
+        : currentStatus === 'draft'
           ? createdPostId
-            ? "Save Draft"
-            : "Create Draft"
-          : "Publish Post";
+            ? 'Save Draft'
+            : 'Create Draft'
+          : 'Publish Post';
 
   // FileExplorer data (TODO: fetch real data)
   const personalPosts: { id: string; title: string; status: string }[] = [];
@@ -267,7 +221,7 @@ export default function NewPostForm({ collective }: NewPostFormProps) {
         currentStatus={currentStatus}
         isSubmitting={isProcessing || isSubmitting}
         titlePlaceholder={
-          collective ? `New post in ${collective.name}` : "Post Title"
+          collective ? `New post in ${collective.name}` : 'Post Title'
         }
       />
       <button
@@ -285,14 +239,14 @@ export default function NewPostForm({ collective }: NewPostFormProps) {
   const canvas = (
     <>
       <PostEditor
-        initialContentJSON={getValues("content")}
+        initialContentJSON={getValues('content')}
         placeholder={
           collective
             ? `Share something with ${collective.name}...`
-            : "Share your thoughts..."
+            : 'Share your thoughts...'
         }
         onContentChange={(json) =>
-          setValue("content", json, {
+          setValue('content', json, {
             shouldValidate: true,
             shouldDirty: true,
           })
@@ -301,10 +255,10 @@ export default function NewPostForm({ collective }: NewPostFormProps) {
       {autosaveStatus && (
         <Alert
           variant={
-            autosaveStatus.includes("failed") ||
-            autosaveStatus.includes("Error")
-              ? "destructive"
-              : "default"
+            autosaveStatus.includes('failed') ||
+            autosaveStatus.includes('Error')
+              ? 'destructive'
+              : 'default'
           }
           className="mt-4 text-xs"
         >

@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useForm, SubmitHandler } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
+import { PostFormSchema, type PostFormValues } from "@/lib/schemas/postSchemas";
 import EditorLayout from "@/components/editor/EditorLayout";
 import {
   updatePost,
@@ -18,52 +18,7 @@ import { Info } from "lucide-react";
 import PostFormFields from "@/components/app/editor/form-fields/PostFormFields";
 import PostEditor from "@/components/editor/PostEditor";
 
-const editPostSchema = z
-  .object({
-    title: z.string().min(1, "Title is required").max(200),
-    content: z.string().refine(
-      (value) => {
-        try {
-          const json = JSON.parse(value);
-          function extractText(node: unknown): string {
-            if (!node || typeof node !== "object" || node === null) return "";
-            const n = node as {
-              type?: string;
-              text?: string;
-              children?: unknown[];
-            };
-            if (n.type === "text" && typeof n.text === "string") return n.text;
-            if (Array.isArray(n.children))
-              return n.children.map(extractText).join("");
-            return "";
-          }
-          const text = extractText(json.root);
-          return text.trim().length >= 10;
-        } catch {
-          return false;
-        }
-      },
-      {
-        message: "Content must have meaningful text (at least 10 characters).",
-      }
-    ),
-    status: z.enum(["draft", "published", "scheduled"]),
-    published_at: z.string().optional().nullable(),
-  })
-  .refine(
-    (data) => {
-      if (data.status === "scheduled" && !data.published_at) {
-        return false;
-      }
-      return true;
-    },
-    {
-      message: "Publish date is required for scheduled posts.",
-      path: ["published_at"],
-    }
-  );
-
-type EditPostFormValues = z.infer<typeof editPostSchema>;
+type EditPostFormValues = PostFormValues;
 
 export interface PostDataType extends Tables<"posts"> {
   collective_name?: string | null;
@@ -124,7 +79,7 @@ export default function EditPostForm({
   const [autosaveStatus, setAutosaveStatus] = useState<string>("");
 
   const form = useForm<EditPostFormValues>({
-    resolver: zodResolver(editPostSchema),
+    resolver: zodResolver(PostFormSchema),
     defaultValues: {
       title: initialData.title || "",
       content: initialData.content || EMPTY_LEXICAL_STATE,
