@@ -1,5 +1,16 @@
 import { truncateText } from '../PostCard'
 
+// Mock like actions to avoid importing server-side logic in tests
+jest.mock('../../../../../app/actions/likeActions', () => ({
+  togglePostLike: jest.fn(async () => ({ success: true })),
+}))
+
+jest.mock('../../../../../lib/supabase/browser', () => ({
+  createSupabaseBrowserClient: () => ({
+    auth: { getUser: () => Promise.resolve({ data: { user: null } }) },
+  }),
+}))
+
 describe('truncateText', () => {
   it('returns empty string for null', () => {
     expect(truncateText(null)).toBe('')

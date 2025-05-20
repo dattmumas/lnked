@@ -15,3 +15,28 @@ Selection & Deletion Handling: Consider how users will remove a layout block or 
 Testing the New Feature: Update the slash menu plugin to include the “Columns Layout” option (it already lists one
 github.com
 , ensure the label and action are correct). Manually test the full flow: type “/Columns” in the editor, confirm that a two-column layout appears. Fill in some text in each column, and ensure everything (saving, rendering in the published post via LexicalRenderer if used) works. This new functionality gives end-users a powerful way to create richer post layouts. Document its usage in any help docs or tooltips if possible.
+
+
+## Testing Guidelines
+
+Address the following common issues when writing or running tests:
+
+1. **React State Updates:** If a component updates state asynchronously (for example after `fetch` calls), wrap the update in `await act(async () => { ... })` or use React Testing Library's `waitFor` helper. This prevents "state update not wrapped in act" warnings.
+2. **Router Mocking:** When testing navigation logic, ensure the router is mocked and the click event triggers your redirect logic.
+3. **TextEncoder Polyfill:** Some Node.js versions do not provide `TextEncoder`/`TextDecoder` globally. Add this to `jest.setup.ts`:
+
+   ```ts
+   import { TextEncoder, TextDecoder } from 'util';
+   global.TextEncoder = TextEncoder as unknown as typeof global.TextEncoder;
+   global.TextDecoder = TextDecoder as unknown as typeof global.TextDecoder;
+   ```
+
+   Confirm `jest.config.js` includes this setup file in `setupFilesAfterEnv`.
+4. **Playwright Tests:** Place Playwright tests under `tests/e2e/` and exclude them from Jest via `testPathIgnorePatterns`. Run them with `pnpm exec playwright test`.
+
+### Summary
+
+- Wrap async state updates in `act` or `waitFor`.
+- Ensure router mocks are set up and used correctly.
+- Polyfill `TextEncoder`/`TextDecoder` in Jest setup.
+- Exclude Playwright tests from Jest and run them with the Playwright CLI.

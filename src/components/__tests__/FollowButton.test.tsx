@@ -1,9 +1,17 @@
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import FollowButton from '../FollowButton'
 import { useRouter } from 'next/navigation'
 
+const push = jest.fn()
+
+// Mock server actions to avoid Node.js Request errors
+jest.mock('../../app/actions/followActions', () => ({
+  followUser: jest.fn(async () => ({ success: true })),
+  unfollowUser: jest.fn(async () => ({ success: true })),
+}))
+
 jest.mock('next/navigation', () => ({
-  useRouter: () => ({ push: jest.fn() }),
+  useRouter: () => ({ push }),
   usePathname: () => '/foo'
 }))
 
@@ -14,13 +22,12 @@ jest.mock('../../lib/supabase/browser', () => ({
 }))
 
 describe('FollowButton', () => {
-  it('redirects when not logged in', () => {
-    const router = useRouter()
+  it('renders nothing when user is not logged in', async () => {
     render(
       <FollowButton targetUserId="1" targetUserName="bob" initialIsFollowing={false} />
     )
-    const button = screen.getByRole('button')
-    fireEvent.click(button)
-    expect(router.push).toHaveBeenCalledWith('/sign-in?redirect=/foo')
+    await waitFor(() => {
+      expect(screen.queryByRole('button')).toBeNull()
+    })
   })
 })

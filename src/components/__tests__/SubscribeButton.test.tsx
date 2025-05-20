@@ -1,9 +1,11 @@
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import SubscribeButton from '../app/newsletters/molecules/SubscribeButton'
 import { useRouter } from 'next/navigation'
 
+const push = jest.fn()
+
 jest.mock('next/navigation', () => ({
-  useRouter: () => ({ push: jest.fn() }),
+  useRouter: () => ({ push }),
   usePathname: () => '/test'
 }))
 
@@ -15,12 +17,13 @@ jest.mock('../../lib/supabase/browser', () => ({
 
 describe('SubscribeButton', () => {
   it('redirects unauthenticated users', async () => {
-    const router = useRouter()
     render(
       <SubscribeButton targetEntityType="user" targetEntityId="1" targetName="Test" />
     )
-    const button = screen.getByRole('button')
+    const button = await screen.findByRole('button', { name: /subscribe to test/i })
     fireEvent.click(button)
-    expect(router.push).toHaveBeenCalledWith('/sign-in?redirect=/test')
+    await waitFor(() => {
+      expect(push).toHaveBeenCalledWith('/sign-in?redirect=/test')
+    })
   })
 })
