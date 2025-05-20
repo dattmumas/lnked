@@ -312,6 +312,21 @@ function CustomInsertCommandsPlugin({
       },
       0
     );
+    // Layout container with two columns
+    const removeLayout = editor.registerCommand(
+      INSERT_LAYOUT_COMMAND,
+      () => {
+        editor.update(() => {
+          const container = new LayoutContainerNode(2);
+          container.append(new LayoutItemNode());
+          container.append(new LayoutItemNode());
+          $insertNodeToNearestRoot(container);
+        });
+        removeSlashTrigger();
+        return true;
+      },
+      0
+    );
     return () => {
       removePoll();
       removeSticky();
@@ -323,6 +338,7 @@ function CustomInsertCommandsPlugin({
       removeInlineImage();
       removeHR();
       removeCollapsible();
+      removeLayout();
     };
   }, [editor, openEmbedModal]);
   return null;
@@ -430,12 +446,10 @@ const SLASH_OPTIONS = [
   },
   {
     key: "layoutcontainer",
-    label: "Layout Container",
-    description: "Insert a layout container",
+    label: "Columns Layout",
+    description: "Insert a multi-column layout",
     action: (editor: LexicalEditor) => {
-      editor.update(() => {
-        $insertNodeToNearestRoot(new LayoutContainerNode());
-      });
+      editor.dispatchCommand(INSERT_LAYOUT_COMMAND, undefined);
     },
     setRefElement: () => {},
   },
