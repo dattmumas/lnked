@@ -6,7 +6,7 @@ import { ModeToggle } from "@/components/ui/mode-toggle";
 import type { CollectiveSummary } from "./DashboardShell";
 import React, { useState, useEffect } from "react";
 import { CollectiveSelectorDropdown } from "./CollectiveSelectorDropdown";
-import { UserMenu } from "@/app/dashboard/_components/UserMenu";
+import { UserMenu } from "@/components/app/dashboard/organisms/UserMenu";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { getCurrentUserProfile } from "@/lib/supabase/actions";
 import { SidebarNav } from "./SidebarNav";

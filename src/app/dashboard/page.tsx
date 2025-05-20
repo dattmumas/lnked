@@ -8,7 +8,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import StatCard from "@/app/dashboard/_components/StatCard";
+import StatCard from "@/components/app/dashboard/organisms/StatCard";
 import {
   Users2,
   FileText,
@@ -21,7 +21,7 @@ import {
   Info,
   List,
 } from "lucide-react";
-import RecentPostRow from "@/app/dashboard/_components/RecentPostRow";
+import RecentPostRow from "@/components/app/dashboard/organisms/RecentPostRow";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { redirect } from "next/navigation";
 

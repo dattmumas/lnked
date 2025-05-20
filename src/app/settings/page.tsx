@@ -1,7 +1,7 @@
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
-import EditUserSettingsForm from "./_components/EditUserSettingsForm";
-import DeleteAccountSection from "./_components/DeleteAccountSection";
+import EditUserSettingsForm from "@/components/app/settings/EditUserSettingsForm";
+import DeleteAccountSection from "@/components/app/settings/DeleteAccountSection";
 
 export default async function UserSettingsPage() {
   const supabase = await createServerSupabaseClient();

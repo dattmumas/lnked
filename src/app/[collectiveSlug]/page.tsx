@@ -4,7 +4,7 @@ import ProfileFeed from "@/components/app/profile/ProfileFeed";
 import type { MicroPost } from "@/components/app/profile/MicrothreadPanel";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import SubscribeButton from "@/app/newsletters/_components/SubscribeButton";
+import SubscribeButton from "@/components/app/newsletters/molecules/SubscribeButton";
 
 export default async function Page({
   params,

@@ -1,5 +1,5 @@
 import { createServerSupabaseClient } from "@/lib/supabase/server";
-import DashboardShell from "./_components/DashboardShell";
+import DashboardShell from "@/components/app/dashboard/organisms/DashboardShell";
 import { Metadata } from "next";
 import { redirect } from "next/navigation";
 

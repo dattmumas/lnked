@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import PostLikeButton from "@/components/PostLikeButton";
-import PostViewTracker from "@/app/posts/_components/PostViewTracker";
+import PostViewTracker from "@/components/app/posts/molecules/PostViewTracker";
 import { formatDate } from "@/lib/utils";
 import { LexicalRenderer } from "@/components/ui/LexicalRenderer";
 
