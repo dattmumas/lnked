@@ -1,1 +1,14 @@
-
+Task 5: Expand Testing Coverage and Error Handling
+Goal: Improve confidence in the code by adding tests for critical flows and ensuring graceful error handling throughout the application. This task strengthens feature reliability (part of “feature hardening”).
+Scope & Actions:
+Unit Test Core Logic: Identify core modules and add unit tests. For example, the Zod schemas in src/lib/schemas should be tested to confirm they accept valid input and reject invalid input (e.g., test that CollectiveSettingsSchema rejects bad slugs, or the new post content schema enforces min length). Similarly, test utility functions like truncateText in PostCard.tsx or the recommendation algorithm in recommendations.ts. Writing these tests will guard against regressions in data processing.
+React Component Testing: Use React Testing Library (Jest) to test a few representative components. For instance, test the <SubscribeButton> to ensure that when the user is not logged in, clicking it triggers a redirect to sign-in, and when logged in (you can mock a user), it calls fetch to /api/subscribe. Also test the <FollowButton> component’s behavior (optimistic UI update on follow/unfollow). These tests will simulate user interactions and verify the components update state or call actions as expected.
+End-to-End Scenario Tests: Add Playwright tests for complex user journeys. The current e2e tests are minimal (just checking page titles
+github.com
+); we should script a flow like: login -> create a new post -> verify it appears on the homepage/collective. Another useful e2e test: post a comment on a post and see it appear. Since the project already has Playwright set up, we can extend tests/e2e/basic-flow.spec.ts or add new spec files for these flows. These will catch integration issues between frontend and backend (like missing auth in fetch calls, etc.).
+Improve Error Handling in UI: Audit places where errors might occur (network failures, validation errors) and ensure the UI handles them gracefully. For example, the Subscribe button currently does a basic alert() on failure
+github.com
+ – we could improve this by showing a dismissible error message banner in context. Similarly, ensure forms using react-hook-form display validation messages from Zod (the EditPostForm and NewPostForm do this via an <Alert> for server errors
+github.com
+, but make sure client validation errors are shown near fields). For fetch calls (likes, comments, etc.), if an error or non-OK response is returned, surface a friendly message (and possibly log details to console). This will enhance user experience and debuggability.
+Consistent Testing in CI: After adding tests, update CI config if needed to run all test suites (unit and e2e). The workflow already runs pnpm run test and Playwright, so ensure our new tests run in that context. If any tests are flaky, add proper waits or use test.retry() for Playwright. By broadening test coverage now, future code changes can be validated automatically, reinforcing reliability.
