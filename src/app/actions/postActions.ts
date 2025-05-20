@@ -142,8 +142,6 @@ export async function createPost(
   if (collectiveSlug) {
     revalidatePath(`/collectives/${collectiveSlug}`);
     revalidatePath(`/collectives/${collectiveSlug}/${postSlug}`);
-    if (collectiveId)
-      revalidatePath(`/dashboard/[collectiveId]/new-post`, 'page');
   } else {
     revalidatePath(`/newsletters/${user.id}`);
   }

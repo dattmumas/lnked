@@ -39,4 +39,6 @@ export async function GET(request: Request) {
   }
 }
 
-// POST for posts is handled by a Server Action in app/dashboard/[collectiveId]/new-post/_actions.ts
+// POST requests for creating posts are handled by server actions
+// in app/actions/postActions.ts to ensure proper authentication
+// and authorization for both personal and collective posts.
