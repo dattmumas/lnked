@@ -2,4 +2,6 @@
 declare module "@radix-ui/react-tooltip" {
   const content: any;
   export = content;
+  export type ComponentProps = any;
+  export type ComponentPropsWithoutRef = any;
 }

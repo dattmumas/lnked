@@ -3,7 +3,7 @@ import { getStripe } from "@/lib/stripe";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import type Stripe from "stripe";
 import type { Database } from "@/lib/database.types";
-import headers from "next/headers";
+import { headers } from "next/headers";
 
 const relevantEvents = new Set([
   "checkout.session.completed",

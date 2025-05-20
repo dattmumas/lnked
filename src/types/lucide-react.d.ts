@@ -22,6 +22,10 @@ declare module "lucide-react" {
   export const AlertCircle: React.FC<any>;
   export const Info: React.FC<any>;
   export const List: React.FC<any>;
+  export const Heart: React.FC<any>;
+  export const XIcon: React.FC<any>;
+  export const ChevronDownIcon: React.FC<any>;
+  export const ChevronUpIcon: React.FC<any>;
   export type ElementType = any;
   const content: any;
   export = content;
