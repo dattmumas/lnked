@@ -42,6 +42,7 @@ import {
 import { TOGGLE_LINK_COMMAND } from "@lexical/link";
 import { $isLinkNode } from "@lexical/link";
 import { INSERT_EXCALIDRAW_COMMAND } from "./PostEditor";
+import { clsx } from "clsx";
 
 const BLOCK_TYPES = [
   { type: "paragraph", label: "Paragraph" },
@@ -137,7 +138,7 @@ function Toolbar({ onInsertGif }: ToolbarProps): JSX.Element {
   }, [editor, updateToolbar]);
 
   // Block format change handler
-  const formatBlock = React.useCallback(
+  const formatBlock = useCallback(
     (type: string) => {
       editor.update(() => {
         const selection = $getSelection();
@@ -158,7 +159,6 @@ function Toolbar({ onInsertGif }: ToolbarProps): JSX.Element {
             case "code":
               $setBlocksType(selection, () => new CodeNode());
               break;
-            case "paragraph":
             default:
               $setBlocksType(selection, () => $createParagraphNode());
           }
@@ -273,32 +273,32 @@ function Toolbar({ onInsertGif }: ToolbarProps): JSX.Element {
       <button
         type="button"
         onClick={() => toggleFormat("bold")}
-        className={"toolbar-item spaced " + (isBold ? "active" : "")}
-        aria-label="Format Bold"
+        className={clsx("toolbar-item spaced", isBold && "bg-muted")}
+        aria-label="Bold"
       >
         <Bold className="format" />
       </button>
       <button
         type="button"
         onClick={() => toggleFormat("italic")}
-        className={"toolbar-item spaced " + (isItalic ? "active" : "")}
-        aria-label="Format Italic"
+        className={clsx("toolbar-item spaced", isItalic && "bg-muted")}
+        aria-label="Italic"
       >
         <Italic className="format" />
       </button>
       <button
         type="button"
         onClick={() => toggleFormat("underline")}
-        className={"toolbar-item spaced " + (isUnderline ? "active" : "")}
-        aria-label="Format Underline"
+        className={clsx("toolbar-item spaced", isUnderline && "bg-muted")}
+        aria-label="Underline"
       >
         <UnderlineIcon className="format" />
       </button>
       <button
         type="button"
         onClick={() => toggleFormat("strikethrough")}
-        className={"toolbar-item spaced " + (isStrikethrough ? "active" : "")}
-        aria-label="Format Strikethrough"
+        className={clsx("toolbar-item spaced", isStrikethrough && "bg-muted")}
+        aria-label="Strikethrough"
       >
         <Strikethrough className="format" />
       </button>

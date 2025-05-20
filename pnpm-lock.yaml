@@ -116,6 +116,9 @@ importers:
       react-hook-form:
         specifier: ^7.56.3
         version: 7.56.4(react@19.1.0)
+      react@latest:
+        specifier: link:lucide/react@latest
+        version: link:lucide/react@latest
       stripe:
         specifier: ^18.1.0
         version: 18.1.0(@types/node@20.17.47)

@@ -151,11 +151,11 @@ export default async function DashboardManagementPage() {
           <CardContent>
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 pt-2 w-full">
               <div className="flex flex-wrap gap-2">
-                <Button asChild size="sm">
-                  <Link href="/dashboard/new-personal-post">
+                <Link href="/posts/new">
+                  <Button variant="outline" size="sm">
                     <Plus className="h-4 w-4 mr-2" /> Write New Post
-                  </Link>
-                </Button>
+                  </Button>
+                </Link>
                 <Button asChild variant="outline" size="sm">
                   <Link href={`/newsletters/${currentUser.id}`}>
                     View Newsletter

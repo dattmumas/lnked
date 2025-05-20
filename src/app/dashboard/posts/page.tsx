@@ -125,7 +125,7 @@ export default async function MyPostsPage() {
   const renderNewPostButton = () => {
     return (
       <Button asChild size="sm" className="w-full md:w-auto">
-        <Link href="/dashboard/new-personal-post">
+        <Link href="/posts/new">
           <Plus className="h-4 w-4 mr-2" /> New Post
         </Link>
       </Button>

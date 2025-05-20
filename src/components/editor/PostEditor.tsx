@@ -52,6 +52,7 @@ import {
 import type { LexicalEditor } from "lexical";
 import { $insertNodeToNearestRoot } from "@lexical/utils";
 import { $createGIFNode } from "./nodes/GIFNode";
+import { TablePlugin } from "@lexical/react/LexicalTablePlugin";
 
 const editorNodes = [
   HeadingNode,
@@ -530,7 +531,11 @@ function SlashTypeaheadMenu() {
         { selectedIndex, options, selectOptionAndCleanUp }
       ) =>
         options.length > 0 ? (
-          <div className="fixed z-[9999] bg-white border-2 border-primary shadow-lg rounded-md mt-2 w-64">
+          <div
+            className="fixed z-[9999] bg-white border-2 border-primary shadow-lg rounded-md mt-2 w-64"
+            role="menu"
+            aria-label="Slash command menu"
+          >
             {options.map((option, i) => (
               <div
                 key={option.key}
@@ -538,6 +543,9 @@ function SlashTypeaheadMenu() {
                   i === selectedIndex ? "bg-muted" : ""
                 }`}
                 onMouseDown={() => selectOptionAndCleanUp(option)}
+                role="menuitem"
+                tabIndex={-1}
+                aria-selected={i === selectedIndex}
               >
                 <strong>{option.label}</strong>
                 {option.description && (
@@ -662,6 +670,7 @@ export default function PostEditor({
           <CodeHighlightPlugin />
           <OnChangePlugin onChange={handleOnChange} ignoreSelectionChange />
           <MarkdownShortcutPlugin transformers={TRANSFORMERS} />
+          <TablePlugin />
           {/* Only load initial content once on mount */}
           {initialContent && <LoadInitialJsonPlugin json={initialContent} />}
           <CustomCommandPluginWithGif />

@@ -121,7 +121,7 @@ export default async function IndividualNewsletterPage({
         {currentUser?.id === author.id && (
           <div className="mt-4">
             <Button asChild variant="outline">
-              <Link href="/dashboard/new-personal-post">Write New Post</Link>
+              <Link href="/posts/new">Write New Post</Link>
             </Button>
           </div>
         )}

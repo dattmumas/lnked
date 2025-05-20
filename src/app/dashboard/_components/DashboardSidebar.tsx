@@ -52,13 +52,13 @@ export function DashboardSidebar({
       >
         {collapsed ? (
           <Button asChild variant="outline" size="icon">
-            <Link href="/dashboard/new-personal-post">
+            <Link href="/posts/new">
               <PlusCircle className="h-5 w-5" aria-label="Create Post" />
             </Link>
           </Button>
         ) : (
           <Button variant="outline" size="sm" asChild className="w-full">
-            <Link href="/dashboard/new-personal-post">
+            <Link href="/posts/new">
               <PlusCircle className="size-4 mr-2" />
               Create Post
             </Link>
