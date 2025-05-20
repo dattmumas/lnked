@@ -32,10 +32,18 @@ export default async function NewPostPage({
     if (collectiveError || !data) {
       notFound();
     }
-    // Only allow owner/editor to create posts for a collective
+    // Allow owner or member with editor/author/admin role
     if (data.owner_id !== user.id) {
-      // TODO: expand to allow editors if your RLS allows
-      notFound();
+      const { data: membership } = await supabase
+        .from("collective_members")
+        .select("role")
+        .eq("collective_id", data.id)
+        .eq("user_id", user.id)
+        .maybeSingle<{ role: string }>();
+      const allowed = membership && ["admin", "editor", "author"].includes(membership.role);
+      if (!allowed) {
+        notFound();
+      }
     }
     collective = data;
   }
