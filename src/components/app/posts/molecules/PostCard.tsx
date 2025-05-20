@@ -23,7 +23,7 @@ interface PostCardProps {
   collectiveSlug: string | null;
 }
 
-const truncateText = (text: string | null, maxLength = 150): string => {
+export const truncateText = (text: string | null, maxLength = 150): string => {
   if (!text) return "";
   return text.length <= maxLength ? text : text.substring(0, maxLength) + "...";
 };
