@@ -8,32 +8,13 @@ import {
   FieldError,
   Path,
 } from "react-hook-form";
+import { postFormFieldsSchema } from "@/lib/schemas/postFormFieldsSchema";
 import { z } from "zod";
 
-// This Zod schema can be used by parent forms to validate these specific fields.
-export const postFormFieldsSchema = z
-  .object({
-    title: z.string().min(1, "Title is required").max(200),
-    status: z.enum(["draft", "published", "scheduled"]),
-    published_at: z.string().optional().nullable(),
-  })
-  .refine(
-    (data) => {
-      if (
-        data.status === "scheduled" &&
-        (!data.published_at || data.published_at.trim() === "")
-      ) {
-        return false;
-      }
-      return true;
-    },
-    {
-      message: "Publish date is required for scheduled posts.",
-      path: ["published_at"],
-    }
-  );
+// re-export for backward compatibility
+export { postFormFieldsSchema };
 
-// This reflects the values this component's fields manage
+// local alias for generic default
 export type PostFormFieldsValues = z.infer<typeof postFormFieldsSchema>;
 
 // Use a generic type that extends the base fields this component manages
@@ -47,7 +28,7 @@ interface PostFormFieldsProps<TFormValues extends PostFormFieldsValues> {
 }
 
 export default function PostFormFields<
-  TFormValues extends PostFormFieldsValues
+  TFormValues extends PostFormFieldsValues,
 >({
   register,
   errors,

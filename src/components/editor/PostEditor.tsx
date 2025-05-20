@@ -16,12 +16,13 @@ import { OnChangePlugin } from "@lexical/react/LexicalOnChangePlugin";
 import { MarkdownShortcutPlugin } from "@lexical/react/LexicalMarkdownShortcutPlugin";
 import { TRANSFORMERS } from "@lexical/markdown";
 import { LexicalErrorBoundary } from "@lexical/react/LexicalErrorBoundary";
-import { $getSelection, createCommand } from "lexical";
-import { HeadingNode, QuoteNode } from "@lexical/rich-text";
+import { $getSelection, $isRangeSelection, createCommand } from "lexical";
+import { HeadingNode, QuoteNode, $createHeadingNode } from "@lexical/rich-text";
 import { ListNode, ListItemNode } from "@lexical/list";
 import { CodeNode, CodeHighlightNode } from "@lexical/code";
 import { TableNode, TableRowNode, TableCellNode } from "@lexical/table";
 import { LinkNode, AutoLinkNode } from "@lexical/link";
+import { $setBlocksType } from "@lexical/selection";
 import {
   AutoLinkPlugin,
   createLinkMatcherWithRegExp,
@@ -342,8 +343,13 @@ const SLASH_OPTIONS = [
     key: "heading-1",
     label: "Heading 1",
     description: "Insert heading level 1",
-    action: () => {
-      alert("Heading 1 action (implement block transform)");
+    action: (editor: LexicalEditor) => {
+      editor.update(() => {
+        const selection = $getSelection();
+        if ($isRangeSelection(selection)) {
+          $setBlocksType(selection, () => $createHeadingNode("h1"));
+        }
+      });
     },
     setRefElement: () => {},
   },

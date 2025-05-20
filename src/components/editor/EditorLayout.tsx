@@ -2,55 +2,48 @@
 
 import React from "react";
 import type { ReactNode } from "react";
-import { Button } from "@/components/ui/button";
 
 interface EditorLayoutProps {
-  pageTitle: string;
-  settingsSidebar: ReactNode;
-  mainContent: ReactNode;
-  onPublish?: () => void;
-  isPublishing?: boolean;
-  publishButtonText?: string;
+  fileExplorer?: ReactNode;
+  metadataBar?: ReactNode;
+  toolbar?: ReactNode;
+  children: ReactNode; // canvas/content
 }
 
-/**
- * New EditorLayout: simple two column layout with an optional right sidebar
- * for post settings. A header displays the page title and publish button.
- */
-function EditorLayout({
-  pageTitle,
-  settingsSidebar,
-  mainContent,
-  onPublish,
-  isPublishing = false,
-  publishButtonText = "Publish",
+// Wire-frame layout:
+// ┌ fileExplorer | ┌ metadataBar
+// |              | ├ toolbar
+// |              | └ canvas (children)
+export default function EditorLayout({
+  fileExplorer,
+  metadataBar,
+  toolbar,
+  children,
 }: EditorLayoutProps) {
   return (
-    <div className="flex h-screen bg-background">
-      {/* Main content area */}
-      <div className="flex flex-col flex-1 min-h-0">
-        <div className="flex items-center justify-between border-b border-border px-8 py-4">
-          <h1 className="text-lg font-semibold">{pageTitle}</h1>
-          {onPublish && (
-            <Button
-              type="button"
-              onClick={onPublish}
-              disabled={isPublishing}
-              size="sm"
-            >
-              {isPublishing ? "Publishing..." : publishButtonText}
-            </Button>
-          )}
-        </div>
-        <div className="flex-1 flex overflow-hidden">
-          <div className="flex-1 overflow-y-auto px-8 py-6">{mainContent}</div>
-          <aside className="hidden md:block w-80 border-l border-border px-6 py-6 overflow-y-auto">
-            {settingsSidebar}
-          </aside>
-        </div>
-      </div>
+    <div className="flex h-screen bg-background divide-x divide-border">
+      {/* Left sidebar */}
+      {fileExplorer && (
+        <aside className="w-64 shrink-0 overflow-y-auto">{fileExplorer}</aside>
+      )}
+
+      {/* Main column */}
+      <main className="flex-1 flex flex-col min-w-0">
+        {/* Metadata bar */}
+        {metadataBar && (
+          <div className="border-b border-border px-6 py-3 flex items-center gap-4">
+            {metadataBar}
+          </div>
+        )}
+
+        {/* Toolbar */}
+        {toolbar && (
+          <div className="border-b border-border px-6 py-2">{toolbar}</div>
+        )}
+
+        {/* Canvas / Editor */}
+        <div className="flex-1 overflow-y-auto px-6 py-4">{children}</div>
+      </main>
     </div>
   );
 }
-
-export default EditorLayout;

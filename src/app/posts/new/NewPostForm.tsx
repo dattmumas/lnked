@@ -7,35 +7,58 @@ import { z } from "zod";
 
 import EditorLayout from "@/components/editor/EditorLayout";
 import PostEditor from "@/components/editor/PostEditor";
-import PostFormFields, { postFormFieldsSchema } from "@/components/app/editor/form-fields/PostFormFields";
+import PostFormFields from "@/components/app/editor/form-fields/PostFormFields";
+import FileExplorer from "@/components/app/editor/sidebar/FileExplorer";
+import { postFormFieldsSchema } from "@/lib/schemas/postFormFieldsSchema";
 import SEOSettingsDrawer from "@/components/editor/SEOSettingsDrawer";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Info } from "lucide-react";
 import { createPost, updatePost } from "@/app/actions/postActions";
 
-const newPostSchema = postFormFieldsSchema.extend({
-  content: z.string().refine(
-    (value) => {
-      try {
-        const json = JSON.parse(value);
-        function extractText(node: unknown): string {
-          if (!node || typeof node !== "object" || node === null) return "";
-          const n = node as { type?: string; text?: string; children?: unknown[] };
-          if (n.type === "text" && typeof n.text === "string") return n.text;
-          if (Array.isArray(n.children)) return n.children.map(extractText).join("");
-          return "";
+const newPostSchema = postFormFieldsSchema
+  .extend({
+    content: z.string().refine(
+      (value) => {
+        try {
+          const json = JSON.parse(value);
+          function extractText(node: unknown): string {
+            if (!node || typeof node !== "object" || node === null) return "";
+            const n = node as {
+              type?: string;
+              text?: string;
+              children?: unknown[];
+            };
+            if (n.type === "text" && typeof n.text === "string") return n.text;
+            if (Array.isArray(n.children))
+              return n.children.map(extractText).join("");
+            return "";
+          }
+          const text = extractText(json.root);
+          return text.trim().length >= 10;
+        } catch {
+          return false;
         }
-        const text = extractText(json.root);
-        return text.trim().length >= 10;
-      } catch {
+      },
+      { message: "Content must have meaningful text (at least 10 characters)." }
+    ),
+    seo_title: z.string().max(60).optional(),
+    meta_description: z.string().max(160).optional(),
+  })
+  .refine(
+    (data) => {
+      if (
+        data.status === "scheduled" &&
+        (!data.published_at || data.published_at.trim() === "")
+      ) {
         return false;
       }
+      return true;
     },
-    { message: "Content must have meaningful text (at least 10 characters)." }
-  ),
-  seo_title: z.string().max(60).optional(),
-  meta_description: z.string().max(160).optional(),
-});
+    {
+      message: "Publish date is required for scheduled posts.",
+      path: ["published_at"],
+    }
+  );
 
 type NewPostFormValues = z.infer<typeof newPostSchema>;
 
@@ -53,7 +76,14 @@ export default function NewPostForm({ collective }: NewPostFormProps) {
   const EMPTY_LEXICAL_STATE = JSON.stringify({
     root: {
       children: [
-        { type: "paragraph", children: [], direction: null, format: "", indent: 0, version: 1 },
+        {
+          type: "paragraph",
+          children: [],
+          direction: null,
+          format: "",
+          indent: 0,
+          version: 1,
+        },
       ],
       direction: null,
       format: "",
@@ -112,7 +142,10 @@ export default function NewPostForm({ collective }: NewPostFormProps) {
       if (createdPostId) {
         result = await updatePost(createdPostId, payload);
       } else {
-        if (data.title.trim().length < 1 || data.content.replace(/<[^>]+>/g, "").trim().length < 10) {
+        if (
+          data.title.trim().length < 1 ||
+          data.content.replace(/<[^>]+>/g, "").trim().length < 10
+        ) {
           setAutosaveStatus("Please add title & content to save draft.");
           return;
         }
@@ -210,64 +243,95 @@ export default function NewPostForm({ collective }: NewPostFormProps) {
     isProcessing || isSubmitting
       ? "Processing..."
       : currentStatus === "scheduled"
-      ? "Schedule Post"
-      : currentStatus === "draft"
-      ? createdPostId
-        ? "Save Draft"
-        : "Create Draft"
-      : "Publish Post";
+        ? "Schedule Post"
+        : currentStatus === "draft"
+          ? createdPostId
+            ? "Save Draft"
+            : "Create Draft"
+          : "Publish Post";
 
-  const settingsSidebarNode = (
-    <div className="space-y-6">
-      {collective && (
-        <div className="p-2 rounded bg-primary/10 text-primary text-sm font-semibold">
-          Collective: {collective.name}
-        </div>
-      )}
+  // FileExplorer data (TODO: fetch real data)
+  const personalPosts: { id: string; title: string; status: string }[] = [];
+  const collectives: {
+    id: string;
+    name: string;
+    posts: { id: string; title: string; status: string }[];
+  }[] = [];
+
+  // Metadata bar (title, status, publish, etc.)
+  const metadataBar = (
+    <>
       <PostFormFields
         register={register}
         errors={errors}
         currentStatus={currentStatus}
         isSubmitting={isProcessing || isSubmitting}
-        titlePlaceholder={collective ? `New post in ${collective.name}` : "Post Title"}
+        titlePlaceholder={
+          collective ? `New post in ${collective.name}` : "Post Title"
+        }
+      />
+      <button
+        type="button"
+        onClick={handleSubmit(onSubmit)}
+        disabled={isProcessing || isSubmitting}
+        className="ml-auto btn btn-primary"
+      >
+        {primaryButtonText}
+      </button>
+    </>
+  );
+
+  // Canvas (editor) - includes the real toolbar as part of PostEditor
+  const canvas = (
+    <>
+      <PostEditor
+        initialContentJSON={getValues("content")}
+        placeholder={
+          collective
+            ? `Share something with ${collective.name}...`
+            : "Share your thoughts..."
+        }
+        onContentChange={(json) =>
+          setValue("content", json, {
+            shouldValidate: true,
+            shouldDirty: true,
+          })
+        }
       />
       {autosaveStatus && (
         <Alert
-          variant={autosaveStatus.includes("failed") || autosaveStatus.includes("Error") ? "destructive" : "default"}
+          variant={
+            autosaveStatus.includes("failed") ||
+            autosaveStatus.includes("Error")
+              ? "destructive"
+              : "default"
+          }
           className="mt-4 text-xs"
         >
           <Info className="h-4 w-4" />
           <AlertDescription>{autosaveStatus}</AlertDescription>
         </Alert>
       )}
-      {serverError && <p className="text-sm text-destructive mt-1">{serverError}</p>}
+      {serverError && (
+        <p className="text-sm text-destructive mt-1">{serverError}</p>
+      )}
       <SEOSettingsDrawer open={seoDrawerOpen} onOpenChange={setSeoDrawerOpen} />
-    </div>
-  );
-
-  const mainContentNode = (
-    <PostEditor
-      initialContentJSON={getValues("content")}
-      placeholder={collective ? `Share something with ${collective.name}...` : "Share your thoughts..."}
-      onContentChange={(json) =>
-        setValue("content", json, {
-          shouldValidate: true,
-          shouldDirty: true,
-        })
-      }
-    />
+    </>
   );
 
   return (
     <FormProvider {...form}>
       <EditorLayout
-        settingsSidebar={settingsSidebarNode}
-        mainContent={mainContentNode}
-        pageTitle={collective ? `New Post in ${collective.name}` : "New Personal Post"}
-        onPublish={handleSubmit(onSubmit)}
-        isPublishing={isProcessing || isSubmitting}
-        publishButtonText={primaryButtonText}
-      />
+        fileExplorer={
+          <FileExplorer
+            personalPosts={personalPosts}
+            collectives={collectives}
+          />
+        }
+        metadataBar={metadataBar}
+      >
+        {canvas}
+      </EditorLayout>
     </FormProvider>
   );
 }

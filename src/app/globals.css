@@ -135,7 +135,7 @@
 /* Tiptap Editor Minimal Styling */
 /* Styles for the editable area itself, if not handled by editorProps class */
 /* .ProseMirror {
-  min-height: 150px; 
+  min-height: 150px;
 } */
 
 /* The focus outline is handled by the wrapper div in TiptapEditor.tsx with focus-within:ring-2 */
@@ -281,6 +281,134 @@
 }
 .text-align-right {
   text-align: right;
+}
+
+/* Custom Node Styles */
+
+/* Tweet Node */
+.tweet-node-container {
+  margin: 1rem 0;
+  max-width: 550px;
+}
+.tweet-embed {
+  min-height: 150px;
+  border: 1px solid hsl(var(--border));
+  border-radius: 0.5rem;
+  padding: 1rem;
+  background-color: hsl(var(--muted));
+}
+.tweet-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 150px;
+  color: hsl(var(--muted-foreground));
+}
+.tweet-error {
+  padding: 1rem;
+  color: hsl(var(--destructive));
+  border: 1px solid hsl(var(--destructive));
+  border-radius: 0.5rem;
+}
+
+/* Excalidraw Node */
+.excalidraw-node {
+  margin: 1rem 0;
+  border-radius: 0.5rem;
+}
+.excalidraw-placeholder,
+.excalidraw-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 300px;
+  background-color: hsl(var(--muted));
+  border: 1px solid hsl(var(--border));
+  border-radius: 0.5rem;
+  color: hsl(var(--muted-foreground));
+}
+.excalidraw-wrapper {
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+
+/* Image Node */
+.image-node-container {
+  margin: 1rem 0;
+  max-width: 100%;
+}
+.image-node {
+  border-radius: 0.5rem;
+  max-width: 100%;
+  height: auto;
+}
+.image-node-caption {
+  text-align: center;
+  color: hsl(var(--muted-foreground));
+  font-size: 0.875rem;
+  margin-top: 0.5rem;
+}
+.image-node-error {
+  padding: 1rem;
+  color: hsl(var(--destructive));
+  border: 1px solid hsl(var(--destructive));
+  border-radius: 0.5rem;
+}
+
+/* YouTube Node */
+.youtube-node {
+  margin: 1rem 0;
+  max-width: 100%;
+}
+.youtube-embed-container {
+  margin: 0 auto;
+  max-width: 640px;
+}
+.youtube-node-error {
+  padding: 1rem;
+  color: hsl(var(--destructive));
+  border: 1px solid hsl(var(--destructive));
+  border-radius: 0.5rem;
+}
+
+/* Poll Node */
+.poll-container {
+  margin: 1rem 0;
+  padding: 1rem;
+  border: 1px solid hsl(var(--border));
+  border-radius: 0.5rem;
+  background-color: hsl(var(--muted));
+}
+.poll-question {
+  font-weight: bold;
+  margin-bottom: 1rem;
+}
+.poll-options {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.poll-option {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.poll-option-text {
+  flex: 1;
+}
+
+/* Sticky Note */
+.sticky-note {
+  padding: 1rem;
+  border-radius: 0.5rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  margin: 1rem 0;
+}
+
+/* Hashtag */
+.hashtag {
+  color: hsl(var(--primary));
+  font-weight: 500;
 }
 
 body {
