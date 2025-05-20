@@ -5,7 +5,6 @@
 import { DecoratorNode, NodeKey } from "lexical";
 import type { JSX } from "react";
 
-// TODO: Implement PageBreakNode logic, import/export, and React component
 export class PageBreakNode extends DecoratorNode<JSX.Element> {
   static getType() {
     return "pagebreak";
@@ -24,13 +23,28 @@ export class PageBreakNode extends DecoratorNode<JSX.Element> {
   }
   createDOM(): HTMLElement {
     const el = document.createElement("div");
-    el.textContent = "[Page Break]";
+    el.className = "page-break my-8 relative flex items-center justify-center";
     return el;
   }
   updateDOM(): boolean {
     return false;
   }
   decorate(): JSX.Element {
-    return <div>[Page Break]</div>;
+    return (
+      <div className="w-full text-center" style={{ pageBreakAfter: "always" }}>
+        <hr className="border-t border-dashed border-border" />
+        <span className="absolute bg-background px-1 text-xs text-muted-foreground">
+          Page Break
+        </span>
+      </div>
+    );
   }
+}
+
+export function $createPageBreakNode(): PageBreakNode {
+  return new PageBreakNode();
+}
+
+export function $isPageBreakNode(node: unknown): node is PageBreakNode {
+  return node instanceof PageBreakNode;
 }
