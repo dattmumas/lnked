@@ -525,7 +525,7 @@ function SlashTypeaheadMenu() {
                 onMouseDown={() => selectOptionAndCleanUp(option)}
                 role="menuitem"
                 tabIndex={-1}
-                aria-selected={i === selectedIndex}
+                aria-current={i === selectedIndex ? "true" : undefined}
               >
                 <strong>{option.label}</strong>
                 {option.description && (
@@ -586,7 +586,6 @@ export default function PostEditor({
     onContentChange?.(json);
   };
 
-
   // Helper to open the modal
   const openEmbedModal = (
     type: "tweet" | "youtube" | "image" | "inlineimage",
@@ -631,12 +630,12 @@ export default function PostEditor({
               embedModal?.type === "tweet"
                 ? "Enter Tweet URL"
                 : embedModal?.type === "youtube"
-                ? "Enter YouTube URL"
-                : embedModal?.type === "image"
-                ? "Enter Image URL"
-                : embedModal?.type === "inlineimage"
-                ? "Enter Inline Image URL"
-                : "Enter URL"
+                  ? "Enter YouTube URL"
+                  : embedModal?.type === "image"
+                    ? "Enter Image URL"
+                    : embedModal?.type === "inlineimage"
+                      ? "Enter Inline Image URL"
+                      : "Enter URL"
             }
             onSubmit={(url) => {
               embedModal?.onSubmit(url);

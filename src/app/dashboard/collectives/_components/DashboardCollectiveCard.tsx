@@ -52,7 +52,6 @@ export default function DashboardCollectiveCard({
     }
   };
 
-
   return (
     <Card className="flex flex-col h-full">
       <CardHeader>
@@ -108,7 +107,7 @@ export default function DashboardCollectiveCard({
             className="flex-grow basis-1/3 sm:basis-auto"
           >
             <Link
-              href={`/dashboard/collectives/${collective.id}/posts/new`}
+              href={`/posts/new?collectiveId=${collective.id}`}
               className="flex items-center justify-center w-full"
             >
               <Plus className="h-4 w-4 mr-1.5" /> Add Post

@@ -30,8 +30,8 @@ export default async function CollectiveDashboardPage({
     <div className="container mx-auto max-w-2xl p-6">
       <h1 className="text-3xl font-bold mb-4">{collective.name}</h1>
       <div className="flex flex-wrap gap-4 mb-8">
-        <Link href={`/dashboard/collectives/${collectiveId}/posts`}>
-          <Button variant="outline">Posts</Button>
+        <Link href={`/posts/new?collectiveId=${collectiveId}`}>
+          <Button variant="default">Add Post</Button>
         </Link>
         <Link href={`/dashboard/collectives/${collectiveId}/manage/members`}>
           <Button variant="outline">Members</Button>
@@ -43,9 +43,6 @@ export default async function CollectiveDashboardPage({
             </Link>
             <Link href={`/dashboard/collectives/${collectiveId}/subscribers`}>
               <Button variant="outline">Subscribers</Button>
-            </Link>
-            <Link href={`/dashboard/collectives/${collectiveId}/posts/new`}>
-              <Button variant="default">Add Post</Button>
             </Link>
           </>
         )}

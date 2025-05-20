@@ -3,8 +3,7 @@
 import { useState, useEffect } from "react";
 import * as React from "react";
 import { Button } from "@/components/ui/button";
-import { usePathname } from "next/navigation";
-import useRouter from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import type { User } from "@supabase/supabase-js";
 

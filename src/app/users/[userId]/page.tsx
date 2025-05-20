@@ -6,11 +6,7 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import SubscribeButton from "@/app/newsletters/_components/SubscribeButton";
 
-export default async function Page({
-  params,
-}: {
-  params: { userId: string };
-}) {
+export default async function Page({ params }: { params: { userId: string } }) {
   const { userId } = params;
   const supabase = createServerSupabaseClient();
 
@@ -34,12 +30,13 @@ export default async function Page({
     { p_user_id: userId }
   );
 
-  if (postsError) {
+  // Only log when Supabase returns a real error (has a message/code)
+  if (postsError?.message) {
     console.error("Error fetching posts for user", userId, postsError);
   }
 
   const posts =
-    postsData?.map((p) => ({
+    postsData?.map((p: (typeof postsData)[number]) => ({
       ...p,
       like_count: p.like_count ?? 0,
       current_user_has_liked: undefined,
