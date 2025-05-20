@@ -34,12 +34,7 @@ interface CreateCollectiveResult {
 export async function createCollective(
   inputData: unknown // Raw input from the form, to be parsed by Zod
 ): Promise<CreateCollectiveResult> {
-  // Debug: log env vars and supabase client
-  console.log("SUPABASE_URL", process.env.NEXT_PUBLIC_SUPABASE_URL);
-  console.log("SUPABASE_ANON_KEY", process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
-
   const supabase = await createServerSupabaseClient();
-  console.log("supabase.auth", supabase.auth);
 
   const {
     data: { user },
@@ -53,7 +48,7 @@ export async function createCollective(
   const validatedFields = CollectiveSchema.safeParse(inputData);
 
   if (!validatedFields.success) {
-    console.log(
+    console.error(
       "Validation errors:",
       validatedFields.error.flatten().fieldErrors
     );

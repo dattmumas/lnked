@@ -6,7 +6,9 @@ import type { CookieOptions } from "@supabase/ssr";
 
 export async function POST(request: Request) {
   const { event, session } = await request.json();
-  console.log("Auth callback triggered:", event);
+  if (process.env.NODE_ENV === "development") {
+    console.log("Auth callback triggered:", event);
+  }
 
   const response = NextResponse.json({ status: "success" });
   const cookieStore = await cookies();
@@ -17,11 +19,15 @@ export async function POST(request: Request) {
       return (await cookieStore.get(name))?.value;
     },
     set(name: string, value: string, options?: CookieOptions) {
-      console.log(`Setting cookie: ${name}`);
+      if (process.env.NODE_ENV === "development") {
+        console.log(`Setting cookie: ${name}`);
+      }
       response.cookies.set(name, value, options);
     },
     remove(name: string, options?: CookieOptions) {
-      console.log(`Removing cookie: ${name}`);
+      if (process.env.NODE_ENV === "development") {
+        console.log(`Removing cookie: ${name}`);
+      }
       response.cookies.set(name, "", { ...options, maxAge: 0 });
     },
   };
@@ -40,17 +46,21 @@ export async function POST(request: Request) {
     );
 
     if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
-      console.log("Setting session in callback");
+      if (process.env.NODE_ENV === "development") {
+        console.log("Setting session in callback");
+      }
 
       // Explicitly log session data (without sensitive info)
-      if (session) {
-        console.log("Session received:", {
-          hasSession: !!session,
-          user_id: session.user?.id,
-          expires_at: session.expires_at,
-        });
-      } else {
-        console.log("No session data received in callback");
+      if (process.env.NODE_ENV === "development") {
+        if (session) {
+          console.log("Session received:", {
+            hasSession: !!session,
+            user_id: session.user?.id,
+            expires_at: session.expires_at,
+          });
+        } else {
+          console.log("No session data received in callback");
+        }
       }
 
       const result = await supabase.auth.setSession(session);
@@ -64,12 +74,16 @@ export async function POST(request: Request) {
 
       // Verify session was set
       const { data: sessionCheck } = await supabase.auth.getSession();
-      console.log(
-        "Session verification after setting:",
-        !!sessionCheck.session
-      );
+      if (process.env.NODE_ENV === "development") {
+        console.log(
+          "Session verification after setting:",
+          !!sessionCheck.session
+        );
+      }
     } else if (event === "SIGNED_OUT") {
-      console.log("Signing out in callback");
+      if (process.env.NODE_ENV === "development") {
+        console.log("Signing out in callback");
+      }
       await supabase.auth.signOut();
     }
 

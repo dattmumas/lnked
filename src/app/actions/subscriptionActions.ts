@@ -99,10 +99,12 @@ export async function unsubscribeFromEntity(
         cancel_at_period_end: true,
       }
     );
-    console.log(
-      "Stripe subscription set to cancel at period end:",
-      updatedStripeSubscription.id
-    );
+    if (process.env.NODE_ENV === "development") {
+      console.log(
+        "Stripe subscription set to cancel at period end:",
+        updatedStripeSubscription.id
+      );
+    }
 
     // Option 2: Delete immediately (more destructive)
     // await getStripe().subscriptions.del(stripeSubscriptionId);
