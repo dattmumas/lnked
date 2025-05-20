@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useForm, SubmitHandler } from "react-hook-form";
+import { useForm, SubmitHandler, FormProvider } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { PostFormSchema, type PostFormValues } from "@/lib/schemas/postSchemas";
 import EditorLayout from "@/components/editor/EditorLayout";
@@ -17,6 +17,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Info } from "lucide-react";
 import PostFormFields from "@/components/app/editor/form-fields/PostFormFields";
 import PostEditor from "@/components/editor/PostEditor";
+import SEOSettingsDrawer from "@/components/editor/SEOSettingsDrawer";
 
 type EditPostFormValues = PostFormValues;
 
@@ -27,7 +28,7 @@ export interface PostDataType extends Tables<"posts"> {
 interface EditPostFormProps {
   postId: string;
   initialData: PostDataType;
-  pageTitleInfo: string;
+  pageTitle: string;
 }
 
 function getInitialStatus(post: PostDataType): EditPostFormValues["status"] {
@@ -70,13 +71,14 @@ const EMPTY_LEXICAL_STATE = JSON.stringify({
 export default function EditPostForm({
   postId,
   initialData,
-  pageTitleInfo,
+  pageTitle,
 }: EditPostFormProps) {
   const router = useRouter();
   const [isProcessing, startTransition] = useTransition();
   const [serverError, setServerError] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [autosaveStatus, setAutosaveStatus] = useState<string>("");
+  const [seoDrawerOpen, setSeoDrawerOpen] = useState(false);
 
   const form = useForm<EditPostFormValues>({
     resolver: zodResolver(PostFormSchema),
@@ -231,6 +233,23 @@ export default function EditPostForm({
         isSubmitting={isProcessing || isSubmitting || isDeleting}
         titlePlaceholder="Edit Post Title"
       />
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        onClick={() => setSeoDrawerOpen(true)}
+        className="w-full"
+      >
+        SEO Settings
+      </Button>
+      <Button
+        type="button"
+        onClick={handleSubmit(onSubmit)}
+        disabled={isProcessing || isSubmitting || isDeleting}
+        className="w-full"
+      >
+        {primaryButtonText}
+      </Button>
       {autosaveStatus && (
         <Alert
           variant={
@@ -273,7 +292,7 @@ export default function EditPostForm({
     </div>
   );
 
-  const mainContentNode = (
+  const canvas = (
     <PostEditor
       initialContentJSON={getValues("content")}
       placeholder="Continue writing..."
@@ -284,13 +303,11 @@ export default function EditPostForm({
   );
 
   return (
-    <EditorLayout
-      settingsSidebar={formControlsNode}
-      mainContent={mainContentNode}
-      pageTitle={pageTitleInfo}
-      onPublish={handleSubmit(onSubmit)}
-      isPublishing={isProcessing || isSubmitting}
-      publishButtonText={primaryButtonText}
-    />
+    <FormProvider {...form}>
+      <SEOSettingsDrawer open={seoDrawerOpen} onOpenChange={setSeoDrawerOpen} />
+      <EditorLayout settingsSidebar={formControlsNode} pageTitle={pageTitle}>
+        {canvas}
+      </EditorLayout>
+    </FormProvider>
   );
 }

@@ -8,9 +8,9 @@ import { PostFormSchema, type PostFormValues } from '@/lib/schemas/postSchemas';
 import EditorLayout from '@/components/editor/EditorLayout';
 import PostEditor from '@/components/editor/PostEditor';
 import PostFormFields from '@/components/app/editor/form-fields/PostFormFields';
-import FileExplorer from '@/components/app/editor/sidebar/FileExplorer';
 import SEOSettingsDrawer from '@/components/editor/SEOSettingsDrawer';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
 import { Info } from 'lucide-react';
 import { createPost, updatePost } from '@/app/actions/postActions';
 
@@ -18,9 +18,10 @@ type NewPostFormValues = PostFormValues;
 
 interface NewPostFormProps {
   collective?: { id: string; name: string; owner_id: string } | null;
+  pageTitle: string;
 }
 
-export default function NewPostForm({ collective }: NewPostFormProps) {
+export default function NewPostForm({ collective, pageTitle }: NewPostFormProps) {
   const [isProcessing, setIsProcessing] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
   const [autosaveStatus, setAutosaveStatus] = useState<string>('');
@@ -204,17 +205,8 @@ export default function NewPostForm({ collective }: NewPostFormProps) {
             : 'Create Draft'
           : 'Publish Post';
 
-  // FileExplorer data (TODO: fetch real data)
-  const personalPosts: { id: string; title: string; status: string }[] = [];
-  const collectives: {
-    id: string;
-    name: string;
-    posts: { id: string; title: string; status: string }[];
-  }[] = [];
-
-  // Metadata bar (title, status, publish, etc.)
-  const metadataBar = (
-    <>
+  const formControlsNode = (
+    <div className="space-y-6">
       <PostFormFields
         register={register}
         errors={errors}
@@ -224,34 +216,23 @@ export default function NewPostForm({ collective }: NewPostFormProps) {
           collective ? `New post in ${collective.name}` : 'Post Title'
         }
       />
-      <button
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        onClick={() => setSeoDrawerOpen(true)}
+        className="w-full"
+      >
+        SEO Settings
+      </Button>
+      <Button
         type="button"
         onClick={handleSubmit(onSubmit)}
         disabled={isProcessing || isSubmitting}
-        className="ml-auto btn btn-primary"
+        className="w-full"
       >
         {primaryButtonText}
-      </button>
-    </>
-  );
-
-  // Canvas (editor) - includes the real toolbar as part of PostEditor
-  const canvas = (
-    <>
-      <PostEditor
-        initialContentJSON={getValues('content')}
-        placeholder={
-          collective
-            ? `Share something with ${collective.name}...`
-            : 'Share your thoughts...'
-        }
-        onContentChange={(json) =>
-          setValue('content', json, {
-            shouldValidate: true,
-            shouldDirty: true,
-          })
-        }
-      />
+      </Button>
       {autosaveStatus && (
         <Alert
           variant={
@@ -260,7 +241,7 @@ export default function NewPostForm({ collective }: NewPostFormProps) {
               ? 'destructive'
               : 'default'
           }
-          className="mt-4 text-xs"
+          className="text-xs"
         >
           <Info className="h-4 w-4" />
           <AlertDescription>{autosaveStatus}</AlertDescription>
@@ -269,21 +250,30 @@ export default function NewPostForm({ collective }: NewPostFormProps) {
       {serverError && (
         <p className="text-sm text-destructive mt-1">{serverError}</p>
       )}
-      <SEOSettingsDrawer open={seoDrawerOpen} onOpenChange={setSeoDrawerOpen} />
-    </>
+    </div>
+  );
+
+  const canvas = (
+    <PostEditor
+      initialContentJSON={getValues('content')}
+      placeholder={
+        collective
+          ? `Share something with ${collective.name}...`
+          : 'Share your thoughts...'
+      }
+      onContentChange={(json) =>
+        setValue('content', json, {
+          shouldValidate: true,
+          shouldDirty: true,
+        })
+      }
+    />
   );
 
   return (
     <FormProvider {...form}>
-      <EditorLayout
-        fileExplorer={
-          <FileExplorer
-            personalPosts={personalPosts}
-            collectives={collectives}
-          />
-        }
-        metadataBar={metadataBar}
-      >
+      <SEOSettingsDrawer open={seoDrawerOpen} onOpenChange={setSeoDrawerOpen} />
+      <EditorLayout settingsSidebar={formControlsNode} pageTitle={pageTitle}>
         {canvas}
       </EditorLayout>
     </FormProvider>

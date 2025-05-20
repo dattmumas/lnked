@@ -53,9 +53,6 @@ export default async function NewPostPage({
     : "Create New Post";
 
   return (
-    <div className="space-y-4">
-      <h1 className="text-2xl font-semibold">{pageTitle}</h1>
-      <NewPostForm collective={collective} />
-    </div>
+    <NewPostForm collective={collective} pageTitle={pageTitle} />
   );
 }
