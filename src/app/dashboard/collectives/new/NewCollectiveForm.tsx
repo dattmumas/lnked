@@ -22,6 +22,8 @@ export interface CreateCollectiveFormState {
   issues?: string[];
 }
 
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "";
+
 export default function NewCollectivePage() {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -113,10 +115,7 @@ export default function NewCollectivePage() {
                 disabled={isPending}
               />
               <p className="text-xs text-muted-foreground">
-                {typeof window !== "undefined"
-                  ? window.location.origin
-                  : "https://yourapp.com"}
-                /{slug}
+                {siteUrl}/{slug}
               </p>
             </div>
             <div className="space-y-2">

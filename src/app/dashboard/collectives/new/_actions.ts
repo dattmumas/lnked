@@ -34,7 +34,12 @@ interface CreateCollectiveResult {
 export async function createCollective(
   inputData: unknown // Raw input from the form, to be parsed by Zod
 ): Promise<CreateCollectiveResult> {
-  const supabase = createServerSupabaseClient();
+  // Debug: log env vars and supabase client
+  console.log("SUPABASE_URL", process.env.NEXT_PUBLIC_SUPABASE_URL);
+  console.log("SUPABASE_ANON_KEY", process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
+
+  const supabase = await createServerSupabaseClient();
+  console.log("supabase.auth", supabase.auth);
 
   const {
     data: { user },
@@ -114,7 +119,7 @@ export async function createCollective(
     .from("collective_members")
     .insert({
       collective_id: newCollective.id,
-      user_id: user.id, // The user who created the collective (owner)
+      member_id: user.id, // The user who created the collective (owner)
       role: "admin", // Assign 'admin' role
     });
 
