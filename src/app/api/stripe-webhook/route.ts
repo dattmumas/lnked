@@ -54,7 +54,9 @@ export async function POST(req: Request) {
     );
   }
 
-  console.log(`Received event in Next.js route: ${event.type}`);
+  if (process.env.NODE_ENV === "development") {
+    console.log(`Received event in Next.js route: ${event.type}`);
+  }
 
   if (relevantEvents.has(event.type)) {
     try {
@@ -85,14 +87,15 @@ export async function POST(req: Request) {
                 `Error upserting customer for user ${userId} (Next API):`,
                 customerErr.message,
               );
-            else
+            else if (process.env.NODE_ENV === "development")
               console.log(
                 `Customer mapping for user ${userId} updated (Next API).`,
               );
 
-            console.log(
-              `Checkout session completed for user ${userId}, target: ${session.metadata.targetEntityType} - ${session.metadata.targetEntityId}`,
-            );
+            if (process.env.NODE_ENV === "development")
+              console.log(
+                `Checkout session completed for user ${userId}, target: ${session.metadata.targetEntityType} - ${session.metadata.targetEntityId}`,
+              );
           } else {
             console.warn(
               'checkout.session.completed missing crucial metadata (userId, targetEntityType, targetEntityId) or not subscription (Next API):',
@@ -187,9 +190,10 @@ export async function POST(req: Request) {
               upsertErr.message,
             );
           } else {
-            console.log(
-              `Subscription ${subscriptionObject.id} upserted for user ${subscriberUserId} (Next API).`,
-            );
+            if (process.env.NODE_ENV === "development")
+              console.log(
+                `Subscription ${subscriptionObject.id} upserted for user ${subscriberUserId} (Next API).`,
+              );
           }
           break;
         }
@@ -226,9 +230,10 @@ export async function POST(req: Request) {
                 updateError.message,
               );
             } else {
-              console.log(
-                `Collective ${collective.id} Stripe status updated from webhook.`,
-              );
+              if (process.env.NODE_ENV === "development")
+                console.log(
+                  `Collective ${collective.id} Stripe status updated from webhook.`,
+                );
             }
           } else {
             console.warn(

@@ -15,7 +15,9 @@ export default function SignInPage() {
     setError(null);
 
     try {
-      console.log("Attempting sign in for:", formData.email);
+      if (process.env.NODE_ENV === "development") {
+        console.log("Attempting sign in for:", formData.email);
+      }
       // Create a fresh client instance for this request
       const supabase = createSupabaseBrowserClient();
 
@@ -36,11 +38,15 @@ export default function SignInPage() {
         return;
       }
 
-      console.log("Sign in successful, session established");
+      if (process.env.NODE_ENV === "development") {
+        console.log("Sign in successful, session established");
+      }
 
       // Verify the session was actually stored
       const { data: sessionCheck } = await supabase.auth.getSession();
-      console.log("Session verification after login:", !!sessionCheck.session);
+      if (process.env.NODE_ENV === "development") {
+        console.log("Session verification after login:", !!sessionCheck.session);
+      }
 
       if (!sessionCheck.session) {
         console.error("Session verification failed - not redirecting");
@@ -54,7 +60,9 @@ export default function SignInPage() {
       // Add a longer delay to ensure the session is properly registered
       // This gives cookies time to be properly set across all contexts
       setTimeout(() => {
-        console.log("Redirecting to dashboard after successful login");
+        if (process.env.NODE_ENV === "development") {
+          console.log("Redirecting to dashboard after successful login");
+        }
         router.push("/dashboard");
       }, 1000);
     } catch (err) {

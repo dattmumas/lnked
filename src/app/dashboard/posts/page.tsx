@@ -20,16 +20,7 @@ type PublishingTargetCollective = Pick<
 >;
 
 export default async function MyPostsPage() {
-  // TEMP DEBUG: Log env vars and test a simple query
-  console.log("SUPABASE_URL", process.env.NEXT_PUBLIC_SUPABASE_URL);
-  console.log("SUPABASE_ANON_KEY", process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
-
   const supabase = await createServerSupabaseClient();
-  const { data: testPosts, error: testPostsError } = await supabase
-    .from("posts")
-    .select("*")
-    .limit(1);
-  console.log("Test posts query:", { testPosts, testPostsError });
 
   const {
     data: { session },

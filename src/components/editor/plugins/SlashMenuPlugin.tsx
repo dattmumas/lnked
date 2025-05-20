@@ -180,19 +180,6 @@ const SlashMenuPlugin = () => {
     return editor.registerCommand(
       KEY_DOWN_COMMAND,
       (event) => {
-        console.log("[SlashMenuPlugin] KEY_DOWN_COMMAND:", event.key);
-        const selection = $getSelection();
-        if (selection) {
-          // Log selection details
-          // @ts-expect-error selection may not have constructor
-          console.log(
-            "[SlashMenuPlugin] selection:",
-            selection.constructor.name,
-            selection
-          );
-        } else {
-          console.log("[SlashMenuPlugin] No selection");
-        }
         if (
           event.key === "/" &&
           $isRangeSelection($getSelection()) &&
@@ -218,12 +205,6 @@ const SlashMenuPlugin = () => {
             if (domElem) {
               const rect = domElem.getBoundingClientRect();
               setMenuPosition({ x: rect.left, y: rect.bottom });
-              console.log(
-                "[SlashMenuPlugin] menuPosition:",
-                rect.left,
-                rect.bottom,
-                rect
-              );
             } else {
               setMenuPosition(null);
             }

@@ -43,19 +43,24 @@ export async function middleware(request: NextRequest) {
       }
     );
 
-    // Add debug logging to trace the issue
-    console.log(
-      `Middleware check path=${pathname}, wantsDashboard=${wantsDashboard}, isAuthPage=${isAuthPage}`
-    );
+    if (process.env.NODE_ENV === "development") {
+      console.log(
+        `Middleware check path=${pathname}, wantsDashboard=${wantsDashboard}, isAuthPage=${isAuthPage}`
+      );
+    }
 
     const {
       data: { session },
     } = await supabase.auth.getSession();
 
-    console.log(`Session check result: hasSession=${!!session}`);
+    if (process.env.NODE_ENV === "development") {
+      console.log(`Session check result: hasSession=${!!session}`);
+    }
 
     if (!session && wantsDashboard) {
-      console.log("No session, redirecting to sign-in");
+      if (process.env.NODE_ENV === "development") {
+        console.log("No session, redirecting to sign-in");
+      }
       const url = request.nextUrl.clone();
       url.pathname = "/sign-in";
       url.searchParams.set("redirect", pathname);
@@ -63,7 +68,9 @@ export async function middleware(request: NextRequest) {
     }
 
     if (session && isAuthPage) {
-      console.log("Has session, redirecting to dashboard");
+      if (process.env.NODE_ENV === "development") {
+        console.log("Has session, redirecting to dashboard");
+      }
       const url = request.nextUrl.clone();
       url.pathname = "/dashboard";
       return NextResponse.redirect(url);
