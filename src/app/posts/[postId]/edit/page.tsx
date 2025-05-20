@@ -76,7 +76,7 @@ export default async function EditPostPage({
     collective_name: postData.collective?.name,
   };
 
-  const pageTitleInfo = postData.collective?.name
+  const pageTitle = postData.collective?.name
     ? `Edit Post in ${postData.collective.name}`
     : "Edit Personal Post";
 
@@ -84,7 +84,7 @@ export default async function EditPostPage({
     <EditPostForm
       postId={postId}
       initialData={initialPostData}
-      pageTitleInfo={pageTitleInfo}
+      pageTitle={pageTitle}
     />
   );
 }

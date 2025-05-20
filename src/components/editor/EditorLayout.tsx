@@ -4,9 +4,9 @@ import React from "react";
 import type { ReactNode } from "react";
 
 interface EditorLayoutProps {
-  fileExplorer?: ReactNode;
-  metadataBar?: ReactNode;
   toolbar?: ReactNode;
+  settingsSidebar?: ReactNode;
+  pageTitle?: string;
   children: ReactNode; // canvas/content
 }
 
@@ -15,34 +15,32 @@ interface EditorLayoutProps {
 // |              | ├ toolbar
 // |              | └ canvas (children)
 export default function EditorLayout({
-  fileExplorer,
-  metadataBar,
   toolbar,
+  settingsSidebar,
+  pageTitle,
   children,
 }: EditorLayoutProps) {
   return (
-    <div className="flex h-screen bg-background divide-x divide-border">
-      {/* Left sidebar */}
-      {fileExplorer && (
-        <aside className="w-64 shrink-0 overflow-y-auto">{fileExplorer}</aside>
-      )}
-
-      {/* Main column */}
+    <div className="flex h-screen bg-background">
       <main className="flex-1 flex flex-col min-w-0">
-        {/* Metadata bar */}
-        {metadataBar && (
-          <div className="border-b border-border px-6 py-3 flex items-center gap-4">
-            {metadataBar}
+        {pageTitle && (
+          <div className="border-b border-border px-6 py-3">
+            <h1 className="text-xl font-semibold">{pageTitle}</h1>
           </div>
         )}
 
-        {/* Toolbar */}
         {toolbar && (
           <div className="border-b border-border px-6 py-2">{toolbar}</div>
         )}
 
-        {/* Canvas / Editor */}
-        <div className="flex-1 overflow-y-auto px-6 py-4">{children}</div>
+        <div className="flex flex-1 min-h-0">
+          <div className="flex-1 overflow-y-auto px-6 py-4">{children}</div>
+          {settingsSidebar && (
+            <aside className="w-72 shrink-0 border-l border-border px-6 py-4 overflow-y-auto">
+              {settingsSidebar}
+            </aside>
+          )}
+        </div>
       </main>
     </div>
   );
