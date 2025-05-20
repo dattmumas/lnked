@@ -2,21 +2,34 @@
  * LayoutItemNode for Lnked, adapted from Lexical Playground (MIT License)
  * https://github.com/facebook/lexical/blob/main/packages/lexical-playground/src/nodes/LayoutItemNode.tsx
  */
-import { DecoratorNode, NodeKey } from "lexical";
+import {
+  ElementNode,
+  NodeKey,
+  SerializedElementNode,
+  Spread,
+} from "lexical";
 import type { JSX } from "react";
 
 // TODO: Implement LayoutItemNode logic, import/export, and React component
-export class LayoutItemNode extends DecoratorNode<JSX.Element> {
+export type SerializedLayoutItemNode = Spread<
+  {
+    type: "layoutitem";
+    version: 1;
+  },
+  SerializedElementNode
+>;
+
+export class LayoutItemNode extends ElementNode {
   static getType() {
     return "layoutitem";
   }
   static clone(node: LayoutItemNode) {
     return new LayoutItemNode(node.__key);
   }
-  static importJSON() {
+  static importJSON(): LayoutItemNode {
     return new LayoutItemNode();
   }
-  exportJSON() {
+  exportJSON(): SerializedLayoutItemNode {
     return { ...super.exportJSON(), type: "layoutitem", version: 1 };
   }
   constructor(key?: NodeKey) {
@@ -24,13 +37,22 @@ export class LayoutItemNode extends DecoratorNode<JSX.Element> {
   }
   createDOM(): HTMLElement {
     const el = document.createElement("div");
-    el.textContent = "[Layout Item]";
+    el.className = "flex flex-col";
     return el;
   }
   updateDOM(): boolean {
     return false;
   }
-  decorate(): JSX.Element {
-    return <div>[Layout Item]</div>;
+  decorate(): JSX.Element | null {
+    return null;
   }
 }
+
+export function $createLayoutItemNode(): LayoutItemNode {
+  return new LayoutItemNode();
+}
+
+export function $isLayoutItemNode(node: unknown): node is LayoutItemNode {
+  return node instanceof LayoutItemNode;
+}
+
