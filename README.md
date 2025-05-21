@@ -60,6 +60,12 @@ pnpm test
 pnpm build
 ```
 
+### Environment Variables
+
+Copy `.env.example` to `.env.local` and provide your own values. This file lists
+all keys required for Supabase, Stripe, Resend and other services used by the
+app.
+
 ## 📚 Documentation & Resources
 
 - [Lexical Docs](https://lexical.dev/docs)
