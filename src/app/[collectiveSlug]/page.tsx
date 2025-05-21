@@ -31,7 +31,7 @@ export default async function Page({
     .single();
 
   const collective = collectiveData as
-    | (Database["public"]["Tables"]["collectives"]["Row"] & {
+    | (Database['public']['Tables']['collectives']['Row'] & {
         owner: { full_name: string | null } | null;
       })
     | null;
@@ -49,6 +49,11 @@ export default async function Page({
     .from('collective_members')
     .select('*', { count: 'exact', head: true })
     .eq('collective_id', collective.id);
+
+  const { count: followerCount } = await supabase
+    .from('follows')
+    .select('*', { count: 'exact', head: true })
+    .eq('following_id', collective.id);
 
   // Fetch posts for this collective using denormalized like/dislike counts
   const { data: postsData, error: postsError } = await supabase
@@ -115,7 +120,14 @@ export default async function Page({
             {collective.owner?.full_name
               ? `Owned by ${collective.owner.full_name} – `
               : ''}
-            {memberCount ?? 0} member{(memberCount ?? 0) === 1 ? '' : 's'}
+            <Link
+              href={`/${collectiveSlug}/followers`}
+              className="hover:underline"
+            >
+              {followerCount ?? 0} follower
+              {(followerCount ?? 0) === 1 ? '' : 's'}
+            </Link>{' '}
+            – {memberCount ?? 0} member{(memberCount ?? 0) === 1 ? '' : 's'}
           </p>
           {collective.tags && collective.tags.length > 0 && (
             <div className="flex flex-wrap justify-center gap-1 mt-1">

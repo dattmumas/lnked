@@ -96,7 +96,13 @@ export default async function Page({
             {profile.full_name ?? 'User'}
           </h1>
           <p className="text-sm text-muted-foreground">
-            {followerCount ?? 0} follower{(followerCount ?? 0) === 1 ? '' : 's'}{' '}
+            <Link
+              href={`/users/${profile.id}/followers`}
+              className="hover:underline"
+            >
+              {followerCount ?? 0} follower
+              {(followerCount ?? 0) === 1 ? '' : 's'}
+            </Link>{' '}
             – {subscriberCount ?? 0} subscriber
             {(subscriberCount ?? 0) === 1 ? '' : 's'}
           </p>
