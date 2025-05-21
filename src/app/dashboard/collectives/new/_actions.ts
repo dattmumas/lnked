@@ -1,6 +1,7 @@
 "use server";
 
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 
@@ -110,7 +111,8 @@ export async function createCollective(
   }
 
   // Automatically add the owner as an admin member of the new collective
-  const { error: addOwnerAsMemberError } = await supabase
+  // using the service role client to bypass RLS
+  const { error: addOwnerAsMemberError } = await supabaseAdmin
     .from("collective_members")
     .insert({
       collective_id: newCollective.id,
