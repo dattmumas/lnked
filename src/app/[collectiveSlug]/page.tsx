@@ -9,9 +9,9 @@ import SubscribeButton from "@/components/app/newsletters/molecules/SubscribeBut
 export default async function Page({
   params,
 }: {
-  params: Promise<{ collectiveSlug: string }>;
+  params: { collectiveSlug: string };
 }) {
-  const { collectiveSlug } = await params;
+  const { collectiveSlug } = params;
   const supabase = await createServerSupabaseClient();
 
   const {

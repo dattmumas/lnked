@@ -16,9 +16,9 @@ export type PostWithLikesData = Database["public"]["Tables"]["posts"]["Row"] & {
 export default async function IndividualNewsletterPage({
   params,
 }: {
-  params: Promise<{ userId: string }>;
+  params: { userId: string };
 }) {
-  const { userId } = await params;
+  const { userId } = params;
   const supabase = await createServerSupabaseClient();
 
   const {
