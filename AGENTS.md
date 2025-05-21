@@ -1,24 +1,23 @@
-Add Follow Button to Collective Pages (Frontend): Introduce a Follow UI on collective profiles to use the new followCollective logic. In the collective profile component (src/app/[collectiveSlug]/page.tsx), currently only a Subscribe button is shown for non-owners
-github.com
-. Under that, add logic to conditionally show a follow button if the viewing user is logged in and not already following. For consistency, we can reuse the SubscribeButton styling for a follow action, or even reuse the existing FollowButton component by making it flexible. The existing FollowButton is built for user targets (it calls followUser/unfollowUser)
-github.com
-. We can refactor it to accept a targetEntityType similar to SubscribeButton (e.g., 'user' | 'collective') and a targetId. If refactoring feels risky, create a separate FollowCollectiveButton component that is analogous: it manages an isFollowing state and calls followCollective or unfollowCollective server actions on toggle. Either way, ensure the button uses the same visual style: likely an outline or default variant button with an icon. You might use an icon like UserPlus for follow and UserMinus for unfollow (these are already imported in FollowButton
-github.com
-). Place this button in the collective header where Subscribe is – possibly to the left of Subscribe or below it. For example:
-tsx
-Copy
-{user?.id !== collective.owner_id && (
-  <div className="mt-4 flex gap-2">
-    <FollowButton targetEntityType="collective" targetId={collective.id} targetName={collective.name} /* etc */ />
-    <SubscribeButton ... />
-  </div>
-)}
-Ensure you determine the initial follow state when rendering: just as we do initialIsFollowing for user profiles by counting follows
+Support Multiple Subscription Tiers in the Database: Upgrade the subscription model to handle tiered offerings (e.g., Bronze/Silver/Gold tiers). Supabase’s schema already has a prices table and products table (likely synced with Stripe) that can store multiple price points
 github.com
 github.com
-, do a similar check for collectives (where following_id = collective.id and following_type = 'collective'). Pass that to the Follow button for optimistic UI. When the user clicks follow/unfollow, use transitions to call the appropriate action and update state just like the user follow flow (handling errors by reverting state and showing a message, as FollowButton does now
+. Each content creator (user or collective) should be associated with a Stripe Product under which multiple Prices (tiers) can exist. In the current schema, the products table has a collective_id field linking a product to a collective
+github.com
+. We should use this: when a collective connects their Stripe account and sets up tiers, those tiers would appear as prices tied to a product for that collective. For individual users, we might need a similar linkage. Since products.collective_id is nullable
+github.com
+, we can interpret collective_id = NULL as a product for an individual user (we might add a user_id or use metadata in the product to store which user it’s for). Assuming a single personal newsletter product per user, we could decide that each user has an implicit product (perhaps identified by user’s ID in product metadata) – or create a product on-the-fly when a user offers paid subscriptions. The implementation plan:
+When a user or collective first enables paid subscriptions, create a Stripe Product for them (via Stripe API) and store it in the products table with the appropriate collective_id or metadata for user. For collectives, update the collectives row with stripe_product_id if needed (or rely on the join table).
+Allow multiple Price entries for that product: e.g., monthly $5, monthly $10, yearly $100 etc. The prices table already includes fields like currency, interval, and amount
+github.com
+ to differentiate tiers. We should ensure these tables are being populated (possibly via Stripe webhooks or Admin API calls). The Stripe webhook handler we have (stripe-webhook/route.ts) should already upsert subscription records, but we might need to extend the setup to fetch product/price info.
+No direct schema changes are needed for tiers, since the structure supports multiple prices. Just verify we have enums for interval (price_interval: month, year, etc.
+github.com
+) and possibly a nickname or description for each price (Stripe allows a nickname/metadata which is stored in prices.description or prices.metadata fields
+github.com
+). We will use these fields to label tiers in the UI. This step is mostly planning out how the data is structured; the actual creation of tiers will be handled next.
+Summarizing: one creator -> one product -> many prices (tiers). Ensure the subscriptions table can link to any of those price tiers (it stores stripe_price_id for each subscription
 github.com
 github.com
-). This addition will allow users to follow collectives without payment, complementing the subscription (paid) option. It should not conflict with existing functionality: subscribe remains for paid content (Stripe flow), and follow is a separate lightweight action using our follows table. Remember to update any relevant tests (e.g., SubscribeButton.test.tsx or create FollowButton.test.tsx) to include collective scenarios if tests exist
+, which is fine). There’s no breakage here since we’re not removing the existing “default price” logic but extending it. The default tier (perhaps called "Supporter") can remain as a fallback using NEXT_PUBLIC_STRIPE_DEFAULT_PRICE_ID for creators who haven’t configured custom tiers
 github.com
-.
+, but now we support multiple options.
