@@ -1,31 +1,21 @@
-Add a Global Search Page for Posts and Profiles: Implement a site-wide search to find content across Lnked (users, collectives, and posts). Create a new page at src/app/search/page.tsx (or repurpose an existing placeholder if one exists) that will serve as a search results hub. This page should accept a searchParams.q like the profile search, and when loaded with a query, perform multiple searches:
-Posts: Query the posts table for the term in tsv (title/content) similar to profile search, but across all posts. Only include posts that are public or that the current user can access (for simplicity, we might restrict global search to public content to avoid complexity with subscriber-only content appearing unexpectedly; alternatively, if the user is logged in, you could include their subscribed content as well – but to keep it straightforward, filter is_public = true and published_at not null for global results). Select a limited number of results (say top 5-10 posts) ordered by relevance. Supabase’s .textSearch will rank results by relevance by default; you can use .order('tsv', { ascending: false, foreignTable: undefined }) if the text search is set up with a rank. Otherwise, fetching by .textSearch without explicit order might already give a relevance-weighted result.
-Users: Query the users table for the term in the user’s name, bio, or tags. If a tsv column exists for users (likely it does, named embedding or tsv for profiles
-github.com
-), use .textSearch('tsv', query) there too. Alternatively, use .ilike('full_name', '%query%') and .ilike('bio', '%query%') as a simpler approach (or union both criteria). Only fetch public profile info: since we don’t have a concept of private profiles in schema (except maybe a future users.is_private flag, not present), assume all profiles are searchable. Select fields like id, full_name, bio, avatar_url to display in results.
-Collectives: Similar to users, search collectives table’s name, description, and tags (there might be a tsv for collectives too
-github.com
-). Return id, name, description (and maybe a logo if we have one stored similarly to avatar). Filter out any private collectives if those exist (not indicated in schema, but if a collective has is_public or similar, consider it).
-With these queries, compile the results. In the page’s JSX, structure it as: a search input at the top (pre-populated with the query term), and then sections for each category of result. For example:
-jsx
-Copy
-<h1>Search Results for "{q}"</h1>
-{posts.length > 0 && <div>
-   <h2>Posts</h2>
-   {posts.map(post => <PostCard post={post} key={post.id} />)}
-</div>}
-{users.length > 0 && <div>
-   <h2>Users</h2>
-   {users.map(u => <Link key={u.id} href={`/users/${u.id}`}>{u.full_name}</Link>)}
-</div>}
-{collectives.length > 0 && <div> ... </div>}
-{if all empty, <p>No results found.</p>}
-You can reuse existing components: for posts, the PostCard (used in feeds) is ideal to show a preview
-github.com
-. For users/collectives, you might create a small card or list item component (or even reuse CollectiveCard as seen on the Discover page
+mplement Enhanced Auth Middleware
+Objective: Strengthen route clarity and authentication gating for private pages.
+Summary: Refine the Next.js middleware.ts to ensure all private routes are protected and public pages remain accessible. Currently, only the /dashboard/* paths are gated, and other authenticated routes rely on in-page checks
 github.com
 github.com
- for collectives). If time is short, a simple <Link> with the name (and maybe description snippet) suffices. Make sure each result item links to the appropriate page (user profile or collective page or post page).
-From a security standpoint, ensure only allowed data is shown: since we filter for public posts, we won’t leak private content. For users/collectives, since there’s no sensitive info aside from what’s public, it’s fine. RLS will automatically hide any collective or user rows if policies restrict them (unlikely here).
-Add this search page to the navigation if desired – for example, a search icon in the Navbar that links to /search or even a search bar in the Navbar that on enter navigates to /search?q=.... The Navbar currently doesn’t have a search field, so you could add one at the top-right. However, that might be a larger design decision; at minimum, the page exists and the profile search forms could redirect to it for broader search (for instance, if a user submits the search form on an empty profile page – maybe treat that as global search).
-By completing this global search, we provide a discovery mechanism beyond just following links and recommendations. This final feature should be tested with various queries (including partial matches, different casing – Postgres FTS should handle that). It doesn’t break any existing functionality since it’s a new page. It leverages already indexed columns (tsv and possibly embedding) in the DB for performance, and uses components that already exist to display results. Users can now find posts or profiles by keywords, rounding out the Lnked extension with a robust search system.
+. We will expand the middleware’s matcher to include any routes that require login (e.g. /settings, /posts/new, /posts/*/edit) so that unauthorized users are consistently redirected to sign-in. This centralizes access control and removes duplicate checks in individual pages. The middleware logic will also be kept simple and clear: if no session on a private route, redirect to /sign-in; if logged in and hitting auth pages, redirect to dashboard (as already done)
+github.com
+.
+Key Files/Components: middleware.ts (update matcher patterns and conditions)
+github.com
+github.com
+, any pages with manual auth checks (e.g. src/app/settings/page.tsx, src/app/(editor)/posts/new/page.tsx) to remove redundant gating logic.
+Codex Best Practices: Use atomic commits focusing only on auth middleware changes. Write a descriptive PR title like “feat: unify route authentication gating”. Ensure thorough testing of route access (e.g. try accessing protected URLs without login) to verify redirects. Maintain modularity by keeping middleware focused on routing logic, and avoid side effects beyond setting auth cookies. Document these changes for team awareness since URL access patterns will shift (update README or internal docs).
+Restructure Route Paths for Clarity
+Objective: Enforce a clearer separation of public vs. private content routes and prepare for new layout structures (e.g. breadcrumbs).
+Summary: Reorganize the routing scheme so that URLs make the site sections obvious. First, move collective pages under a dedicated prefix – e.g. change the dynamic collective route from /[collectiveSlug] to /collectives/[slug]. This ensures no conflict with user profiles and clearly identifies collective content in URLs (currently, collective pages are at the root path with just the slug
+github.com
+). Similarly, keep all personal/private pages under a common section. We will introduce a Next.js route group for dashboard or user-specific pages if not already (e.g. ensure profile editing and settings live under /dashboard or similar). For example, the profile edit page could be /dashboard/profile/edit (already exists), and account settings could reside at /dashboard/settings instead of a top-level /settings. Consolidating these under one hierarchy improves navigational clarity. After moving routes, implement Next.js rewrites or redirects for any changed paths (e.g. redirect old collective URLs to new ones) to avoid broken links. This route refactor will also allow using Next 13 layouts more effectively: we can have a src/app/collectives/layout.tsx to wrap all collective pages, and a src/app/dashboard/layout.tsx to wrap all private pages, each providing appropriate context like sidebars or breadcrumbs. We will update the middleware config to match the new structure (e.g. include /collectives/:path* if certain subroutes should be gated or just keep them public). These changes set the stage for consistent breadcrumbs since the URL hierarchy will mirror content hierarchy (e.g. Home / Collectives / [Name] / [Post]).
+Key Files/Components: Next.js route definitions in src/app: move src/app/[collectiveSlug]/* to src/app/collectives/[slug]/*; possibly adjust src/app/users/[userId] if we introduce a new profile route (see step 3). Introduce or modify layout files like src/app/collectives/layout.tsx and ensure src/app/dashboard/layout.tsx (or equivalent) exists to style private sections. Update navigation components (links in Navbar.tsx, etc.) to use new paths. Adjust middleware.ts matcher to include or accommodate the new route patterns.
+Codex Best Practices: Break this into atomic commits: one for moving/renaming collective routes, another for updating nav links and middleware. Use clear commit messages (e.g. “refactor: move collective pages under /collectives”). Verify that all internal links (nav, buttons) point to the new URLs. After restructuring, run the test suite and click through the app to catch any 404s or broken navigation. Leverage code review to ensure no stale references to old routes remain. This reorganization should improve maintainability, so keep the routing code and file structure intuitive (one purpose per route file). Add redirect logic for legacy URLs to preserve SEO – this can be done in Next.js config or middleware, aligning with best practice of not breaking existing links.
+s
