@@ -2,7 +2,7 @@
  * StickyNode for Lnked, adapted from Lexical Playground (MIT License)
  * https://github.com/facebook/lexical/blob/main/packages/lexical-playground/src/nodes/StickyNode.tsx
  */
-import { DecoratorNode, NodeKey } from 'lexical';
+import { DecoratorNode, NodeKey, $getNodeByKey } from 'lexical';
 import type { JSX } from 'react';
 import React, { useState } from 'react';
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
@@ -98,11 +98,9 @@ function StickyComponent({
 
   const updateNode = (newText: string, newColor: string) => {
     editor.update(() => {
-      const stickyNode = editor._editorState._nodeMap.get(nodeKey) as
-        | StickyNode
-        | undefined;
-      if (stickyNode) {
-        const writable = stickyNode.getWritable();
+      const node = $getNodeByKey(nodeKey);
+      if (node instanceof StickyNode) {
+        const writable = node.getWritable();
         writable.__text = newText;
         writable.__color = newColor;
       }

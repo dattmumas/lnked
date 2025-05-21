@@ -2,7 +2,13 @@
  * PollNode for Lnked, adapted from Lexical Playground (MIT License)
  * https://github.com/facebook/lexical/blob/main/packages/lexical-playground/src/nodes/PollNode.tsx
  */
-import { DecoratorNode, NodeKey, SerializedLexicalNode, Spread } from 'lexical';
+import {
+  DecoratorNode,
+  NodeKey,
+  SerializedLexicalNode,
+  Spread,
+  $getNodeByKey,
+} from 'lexical';
 import React, { useState } from 'react';
 import type { JSX } from 'react';
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
@@ -99,11 +105,9 @@ function PollComponent({
   // Update node in editor
   const updateNode = (newQuestion: string, newOptions: PollOption[]) => {
     editor.update(() => {
-      const pollNode = editor._editorState._nodeMap.get(nodeKey) as
-        | PollNode
-        | undefined;
-      if (pollNode) {
-        const writable = pollNode.getWritable();
+      const node = $getNodeByKey(nodeKey);
+      if (node instanceof PollNode) {
+        const writable = node.getWritable();
         writable.__question = newQuestion;
         writable.__options = newOptions;
       }
