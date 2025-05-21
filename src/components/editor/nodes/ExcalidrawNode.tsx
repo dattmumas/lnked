@@ -4,7 +4,7 @@
  */
 import { DecoratorNode, NodeKey, SerializedLexicalNode, Spread } from 'lexical';
 import type { JSX } from 'react';
-import React, { useCallback, useEffect, useState, useRef } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
 import { $getNodeByKey } from 'lexical';
@@ -28,10 +28,6 @@ export type SerializedExcalidrawNode = Spread<
   },
   SerializedLexicalNode
 >;
-
-// Importing the imperative API type directly from Excalidraw's bundled types
-// ensures strong typing while avoiding the previous `any` fallback.
-import type { ExcalidrawImperativeAPI } from '@excalidraw/excalidraw/dist/types/excalidraw/types';
 
 export class ExcalidrawNode extends DecoratorNode<JSX.Element> {
   __data: string;
@@ -91,10 +87,8 @@ interface ExcalidrawComponentProps {
 
 function ExcalidrawComponent({ data, nodeKey }: ExcalidrawComponentProps) {
   const [editor] = useLexicalComposerContext();
-  const excalidrawRef = useRef<ExcalidrawImperativeAPI>(null);
   const [isLoaded, setIsLoaded] = useState(false);
-  const [parsedData, setParsedData] =
-    useState<Record<string, unknown>>(undefined);
+  const [parsedData, setParsedData] = useState<Record<string, unknown>>({});
 
   // Parse initial data
   useEffect(() => {
@@ -104,7 +98,7 @@ function ExcalidrawComponent({ data, nodeKey }: ExcalidrawComponentProps) {
         setParsedData(parsed);
       } catch (error) {
         console.error('Error parsing Excalidraw data:', error);
-        setParsedData(undefined);
+        setParsedData({});
       }
     }
   }, [data]);
@@ -145,7 +139,6 @@ function ExcalidrawComponent({ data, nodeKey }: ExcalidrawComponentProps) {
     >
       {isLoaded ? (
         <Excalidraw
-          ref={excalidrawRef}
           initialData={parsedData}
           onChange={handleChange}
           viewModeEnabled={false}

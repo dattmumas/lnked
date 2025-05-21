@@ -34,7 +34,7 @@ export function LexicalRenderer({ contentJSON }: LexicalRendererProps) {
     !contentObj ||
     typeof contentObj.root !== 'object' ||
     !contentObj.root ||
-    !Array.isArray((contentObj.root as any).children)
+    !Array.isArray((contentObj.root as { children?: LexicalNode[] }).children)
   ) {
     const htmlString = typeof contentJSON === 'string' ? contentJSON : '';
     return (
@@ -135,9 +135,10 @@ export function LexicalRenderer({ contentJSON }: LexicalRendererProps) {
       case 'horizontalrule':
         return <hr />;
       case 'text': {
-        let text: React.ReactNode = (node as { text?: string }).text ?? '';
-        if ((node as { format?: number }).format) {
-          const formatFlags = (node as { format: number }).format;
+        let text: React.ReactNode =
+          'text' in node && typeof node.text === 'string' ? node.text : '';
+        if ('format' in node && typeof node.format === 'number') {
+          const formatFlags = node.format;
           if (formatFlags & 16) text = <code>{text}</code>;
           if (formatFlags & 8) text = <s>{text}</s>;
           if (formatFlags & 4) text = <u>{text}</u>;
@@ -169,8 +170,10 @@ export function LexicalRenderer({ contentJSON }: LexicalRendererProps) {
         );
       }
       case 'image': {
-        const src = (node as { src: string }).src;
-        const alt = (node as { alt?: string }).alt || 'image';
+        const src =
+          'src' in node && typeof node.src === 'string' ? node.src : '';
+        const alt =
+          'alt' in node && typeof node.alt === 'string' ? node.alt : 'image';
         return (
           <Image
             src={src}
@@ -184,8 +187,10 @@ export function LexicalRenderer({ contentJSON }: LexicalRendererProps) {
         );
       }
       case 'inlineimage': {
-        const src = (node as { src: string }).src;
-        const alt = (node as { alt?: string }).alt || 'image';
+        const src =
+          'src' in node && typeof node.src === 'string' ? node.src : '';
+        const alt =
+          'alt' in node && typeof node.alt === 'string' ? node.alt : 'image';
         return (
           <Image
             src={src}
@@ -199,8 +204,10 @@ export function LexicalRenderer({ contentJSON }: LexicalRendererProps) {
         );
       }
       case 'gif': {
-        const src = (node as { url: string }).url;
-        const alt = (node as { alt?: string }).alt || 'gif';
+        const src =
+          'url' in node && typeof node.url === 'string' ? node.url : '';
+        const alt =
+          'alt' in node && typeof node.alt === 'string' ? node.alt : 'gif';
         return (
           <Image
             src={src}
@@ -214,7 +221,10 @@ export function LexicalRenderer({ contentJSON }: LexicalRendererProps) {
         );
       }
       case 'tweet': {
-        const tweetUrl: string = (node as { tweetUrl: string }).tweetUrl;
+        const tweetUrl =
+          'tweetUrl' in node && typeof node.tweetUrl === 'string'
+            ? node.tweetUrl
+            : '';
         const match = tweetUrl.match(/status\/(\d+)/);
         if (!match) {
           return <a href={tweetUrl}>{tweetUrl}</a>;
@@ -226,7 +236,10 @@ export function LexicalRenderer({ contentJSON }: LexicalRendererProps) {
         );
       }
       case 'youtube': {
-        const videoUrl: string = (node as { videoUrl: string }).videoUrl;
+        const videoUrl =
+          'videoUrl' in node && typeof node.videoUrl === 'string'
+            ? node.videoUrl
+            : '';
         const match = videoUrl.match(
           /(?:youtube\.com\/(?:.*v=|.*\/)|youtu\.be\/)([A-Za-z0-9_-]{11})/,
         );

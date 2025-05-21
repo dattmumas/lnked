@@ -1,16 +1,16 @@
-"use client";
+'use client';
 
-import { Menu, ChevronLeft, ChevronRight } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { ModeToggle } from "@/components/ui/mode-toggle";
-import type { CollectiveSummary } from "./DashboardShell";
-import React, { useState, useEffect } from "react";
-import { CollectiveSelectorDropdown } from "./CollectiveSelectorDropdown";
-import { UserMenu } from "@/components/app/dashboard/organisms/UserMenu";
-import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
-import { getCurrentUserProfile } from "@/lib/supabase/actions";
-import { SidebarNav } from "./SidebarNav";
-import * as Sheet from "@radix-ui/react-dialog";
+import { Menu, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { ModeToggle } from '@/components/ui/mode-toggle';
+import type { CollectiveSummary } from './DashboardShell';
+import React, { useState, useEffect } from 'react';
+import { CollectiveSelectorDropdown } from './CollectiveSelectorDropdown';
+import { UserMenu } from '@/components/app/dashboard/organisms/UserMenu';
+import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
+import { getCurrentUserProfile } from '@/lib/supabase/actions';
+import { SidebarNav } from './SidebarNav';
+import * as Sheet from '@radix-ui/react-dialog';
 
 interface DashboardNavProps {
   sidebarCollapsed: boolean;
@@ -30,12 +30,12 @@ export function DashboardNav({
   collectives,
 }: DashboardNavProps) {
   // Feed type: 'personal' or 'collective'
-  const [feedType, setFeedType] = useState<"personal" | "collective">(
-    "personal"
+  const [feedType, setFeedType] = useState<'personal' | 'collective'>(
+    'personal',
   );
   // Selected collective for collective feed
   const [selectedCollective, setSelectedCollective] = useState<string | null>(
-    null
+    null,
   );
   // User state
   const [user, setUser] = useState<UserProfile | null>(null);
@@ -57,7 +57,7 @@ export function DashboardNav({
             full_name:
               result.profile?.full_name ||
               result.user.user_metadata?.full_name ||
-              result.user.email?.split("@")[0],
+              result.user.email?.split('@')[0],
           });
           return;
         }
@@ -72,11 +72,11 @@ export function DashboardNav({
             avatar_url: userData.user.user_metadata?.avatar_url,
             full_name:
               userData.user.user_metadata?.full_name ||
-              userData.user.email?.split("@")[0],
+              userData.user.email?.split('@')[0],
           });
         }
       } catch (error) {
-        console.error("Error fetching user data:", error);
+        console.error('Error fetching user data:', error);
       }
     };
 
@@ -113,10 +113,7 @@ export function DashboardNav({
         </Sheet.Trigger>
         <Sheet.Portal>
           <Sheet.Overlay className="fixed inset-0 bg-black/40 z-50" />
-          <Sheet.Content
-            side="left"
-            className="fixed top-0 left-0 h-full w-64 bg-sidebar text-sidebar-foreground shadow-lg z-50 p-0"
-          >
+          <Sheet.Content className="fixed top-0 left-0 h-full w-64 bg-sidebar text-sidebar-foreground shadow-lg z-50 p-0">
             <div className="p-4 border-b border-border font-semibold text-lg">
               Navigation
             </div>
@@ -129,24 +126,24 @@ export function DashboardNav({
       <div className="flex items-center gap-1">
         <Button
           size="sm"
-          variant={feedType === "personal" ? "secondary" : "ghost"}
-          aria-pressed={feedType === "personal"}
-          onClick={() => setFeedType("personal")}
+          variant={feedType === 'personal' ? 'secondary' : 'ghost'}
+          aria-pressed={feedType === 'personal'}
+          onClick={() => setFeedType('personal')}
         >
           Personal
         </Button>
         <Button
           size="sm"
-          variant={feedType === "collective" ? "secondary" : "ghost"}
-          aria-pressed={feedType === "collective"}
-          onClick={() => setFeedType("collective")}
+          variant={feedType === 'collective' ? 'secondary' : 'ghost'}
+          aria-pressed={feedType === 'collective'}
+          onClick={() => setFeedType('collective')}
         >
           Collectives
         </Button>
       </div>
 
       {/* Collective selector dropdown (only when collective feed) */}
-      {feedType === "collective" && (
+      {feedType === 'collective' && (
         <div className="ml-3">
           <CollectiveSelectorDropdown
             collectives={collectives}

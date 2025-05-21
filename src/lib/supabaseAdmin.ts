@@ -1,5 +1,4 @@
-import { createClient, SupabaseClient } from "@supabase/supabase-js";
-import type { Database } from "./database.types";
+import { createClient } from '@supabase/supabase-js';
 
 // Ensure environment variables are loaded (primarily for server-side environments)
 if (
@@ -14,7 +13,7 @@ if (
 }
 
 // This client is intended ONLY for server-side use where admin privileges are required.
-export const supabaseAdmin: SupabaseClient<Database> = createClient<Database>(
+export const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!, // This key MUST be defined in the server environment
   {
@@ -22,7 +21,7 @@ export const supabaseAdmin: SupabaseClient<Database> = createClient<Database>(
       autoRefreshToken: false,
       persistSession: false,
     },
-  }
+  },
 );
 
 /**

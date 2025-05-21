@@ -53,7 +53,7 @@ export async function POST(req: Request) {
     );
   }
 
-  if (process.env.NODE_ENV === "development") {
+  if (process.env.NODE_ENV === 'development') {
     console.log(`Received event in Next.js route: ${event.type}`);
   }
 
@@ -86,12 +86,12 @@ export async function POST(req: Request) {
                 `Error upserting customer for user ${userId} (Next API):`,
                 customerErr.message,
               );
-            else if (process.env.NODE_ENV === "development")
+            else if (process.env.NODE_ENV === 'development')
               console.log(
                 `Customer mapping for user ${userId} updated (Next API).`,
               );
 
-            if (process.env.NODE_ENV === "development")
+            if (process.env.NODE_ENV === 'development')
               console.log(
                 `Checkout session completed for user ${userId}, target: ${session.metadata.targetEntityType} - ${session.metadata.targetEntityId}`,
               );
@@ -106,7 +106,11 @@ export async function POST(req: Request) {
         case 'customer.subscription.created':
         case 'customer.subscription.updated':
         case 'customer.subscription.deleted': {
-          const subscriptionObject = event.data.object as Stripe.Subscription;
+          const subscriptionObject = event.data
+            .object as Stripe.Subscription & {
+            current_period_start: number;
+            current_period_end: number;
+          };
 
           const subscriberUserId = subscriptionObject.metadata?.userId;
           const targetEntityTypeFromMeta = subscriptionObject.metadata
@@ -189,7 +193,7 @@ export async function POST(req: Request) {
               upsertErr.message,
             );
           } else {
-            if (process.env.NODE_ENV === "development")
+            if (process.env.NODE_ENV === 'development')
               console.log(
                 `Subscription ${subscriptionObject.id} upserted for user ${subscriberUserId} (Next API).`,
               );
@@ -229,7 +233,7 @@ export async function POST(req: Request) {
                 updateError.message,
               );
             } else {
-              if (process.env.NODE_ENV === "development")
+              if (process.env.NODE_ENV === 'development')
                 console.log(
                   `Collective ${collective.id} Stripe status updated from webhook.`,
                 );

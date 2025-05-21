@@ -21,7 +21,10 @@ interface NewPostFormProps {
   pageTitle: string;
 }
 
-export default function NewPostForm({ collective, pageTitle }: NewPostFormProps) {
+export default function NewPostForm({
+  collective,
+  pageTitle,
+}: NewPostFormProps) {
   const [isProcessing, setIsProcessing] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
   const [autosaveStatus, setAutosaveStatus] = useState<string>('');
@@ -175,11 +178,13 @@ export default function NewPostForm({ collective, pageTitle }: NewPostFormProps)
       if (result.error) {
         let errorMsg = result.error;
         if (result.fieldErrors) {
-          const fieldErrors =
-            result.fieldErrors as Record<keyof NewPostFormValues, string[]>;
+          const fieldErrors = result.fieldErrors as Record<
+            keyof NewPostFormValues,
+            string[]
+          >;
           Object.entries(fieldErrors).forEach(([field, messages]) => {
             if (messages && messages.length > 0) {
-              form.setError(field as keyof NewPostFormValues, {
+              form.setError(field as string, {
                 type: 'server',
                 message: messages.join(', '),
               });

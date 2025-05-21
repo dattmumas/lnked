@@ -12,7 +12,7 @@ export function getStripe(): Stripe | null {
   }
 
   _stripe = new Stripe(key, {
-    apiVersion: '2023-10-16',
+    apiVersion: '2025-04-30.basil',
     typescript: true,
   });
   return _stripe;

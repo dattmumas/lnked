@@ -1,15 +1,15 @@
-"use client";
+'use client';
 
-import { useState, useEffect } from "react";
-import * as React from "react";
-import { Button } from "@/components/ui/button";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { usePathname, useRouter } from "next/navigation";
-import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
-import type { User } from "@supabase/supabase-js";
+import { useState, useEffect } from 'react';
+import * as React from 'react';
+import { Button } from '@/components/ui/button';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { usePathname, useRouter } from 'next/navigation';
+import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
+import type { User } from '@supabase/auth-js';
 
 interface SubscribeButtonProps {
-  targetEntityType: "user" | "collective";
+  targetEntityType: 'user' | 'collective';
   targetEntityId: string;
   targetName: string; // Name of the user or collective for the button label
   // TODO: Add initialIsSubscribed prop later for better UX
@@ -47,12 +47,12 @@ export default function SubscribeButton({
 
     startTransition(async () => {
       try {
-        const response = await fetch("/api/subscribe", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
+        const response = await fetch('/api/subscribe', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             priceId:
-              process.env.NEXT_PUBLIC_STRIPE_DEFAULT_PRICE_ID || "default", // Use a default or make this configurable
+              process.env.NEXT_PUBLIC_STRIPE_DEFAULT_PRICE_ID || 'default', // Use a default or make this configurable
             targetEntityType,
             targetEntityId,
             redirectPath: pathname, // Redirect back to the current page after checkout
@@ -66,11 +66,11 @@ export default function SubscribeButton({
         } else if (session.error) {
           setError(`Subscription failed: ${session.error}`);
         } else {
-          setError("Could not initiate subscription. Please try again.");
+          setError('Could not initiate subscription. Please try again.');
         }
       } catch (error) {
-        console.error("Subscription request error:", error);
-        setError("An unexpected error occurred.");
+        console.error('Subscription request error:', error);
+        setError('An unexpected error occurred.');
       }
     });
   };
@@ -97,7 +97,7 @@ export default function SubscribeButton({
         disabled={isPending || isLoadingUser}
         size="lg"
       >
-        {isPending ? "Processing..." : `Subscribe to ${targetName}`}
+        {isPending ? 'Processing...' : `Subscribe to ${targetName}`}
       </Button>
     </div>
   );

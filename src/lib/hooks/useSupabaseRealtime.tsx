@@ -1,5 +1,5 @@
-import { useEffect } from "react";
-import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
+import { useEffect } from 'react';
+import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
 
 /**
  * useSupabaseRealtime
@@ -11,11 +11,11 @@ import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 export function useSupabaseRealtime<T = unknown>(
   table: string,
   onChange: (payload: {
-    eventType: "INSERT" | "UPDATE" | "DELETE";
+    eventType: 'INSERT' | 'UPDATE' | 'DELETE';
     new?: T;
     old?: T;
   }) => void,
-  filter?: { column: string; value: string | number }
+  filter?: { column: string; value: string | number },
 ) {
   useEffect(() => {
     const supabase = createSupabaseBrowserClient();
@@ -27,20 +27,20 @@ export function useSupabaseRealtime<T = unknown>(
     }
     channel
       .on(
-        "postgres_changes",
+        'postgres_changes',
         {
-          event: "*",
-          schema: "public",
+          event: '*',
+          schema: 'public',
           table,
           ...(filter ? { filter: `${filter.column}=eq.${filter.value}` } : {}),
         },
-        (payload) => {
+        (payload: { eventType: string; new: T | null; old: T | null }) => {
           onChange({
-            eventType: payload.eventType,
+            eventType: payload.eventType as 'INSERT' | 'UPDATE' | 'DELETE',
             new: payload.new as T | undefined,
             old: payload.old as T | undefined,
           });
-        }
+        },
       )
       .subscribe();
     return () => {

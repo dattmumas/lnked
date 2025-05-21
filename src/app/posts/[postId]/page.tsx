@@ -1,6 +1,5 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import type { Database } from '@/lib/database.types';
-import { notFound } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import PostLikeButton from '@/components/PostLikeButton';
@@ -38,13 +37,13 @@ export default async function IndividualPostViewPage({
 
   if (postError || !typedPost) {
     console.error(`Error fetching post ${postId}:`, postError?.message);
-    notFound();
+    return null;
   }
 
   if (!typedPost.author) {
     // Check if author object exists after join
     console.error(`Author data missing for post ${postId}`);
-    notFound();
+    return null;
   }
 
   // Access control: Only show if public and published, or if current user is the author
@@ -53,19 +52,19 @@ export default async function IndividualPostViewPage({
     !typedPost.published_at || new Date(typedPost.published_at) <= new Date();
   const isAuthor = currentUser?.id === typedPost.author_id;
   if (!(isPublic && isPublished) && !isAuthor) {
-    notFound();
+    return null;
   }
 
   // After all notFound() guards, typedPost is guaranteed non-null
-  const authorName = typedPost!.author?.full_name || 'Anonymous';
-  const readingTime = calculateReadingTime(typedPost!.content);
-  const viewCount = typedPost!.view_count || 0;
-  const initialLikeCount = typedPost!.like_count || 0;
-  const isOwner = currentUser?.id === typedPost!.author?.id;
+  const authorName = typedPost.author?.full_name || 'Anonymous';
+  const readingTime = calculateReadingTime(typedPost.content);
+  const viewCount = typedPost.view_count || 0;
+  const initialLikeCount = typedPost.like_count || 0;
+  const isOwner = currentUser?.id === typedPost.author?.id;
 
   return (
     <div className="container mx-auto max-w-3xl p-4 md:p-6">
-      <PostViewTracker postId={typedPost!.id} />
+      <PostViewTracker postId={typedPost.id} />
       <nav
         aria-label="Breadcrumb"
         className="mb-6 text-sm text-muted-foreground"
@@ -89,7 +88,7 @@ export default async function IndividualPostViewPage({
             <span className="mx-1">/</span>
           </li>
           <li>
-            <span className="font-medium line-clamp-1">{typedPost!.title}</span>
+            <span className="font-medium line-clamp-1">{typedPost.title}</span>
           </li>
         </ol>
       </nav>
@@ -97,18 +96,18 @@ export default async function IndividualPostViewPage({
       <article className="prose dark:prose-invert lg:prose-xl max-w-none">
         <header className="mb-8">
           <h1 className="text-4xl font-extrabold tracking-tight lg:text-5xl mb-4">
-            {typedPost!.title}
+            {typedPost.title}
           </h1>
           <div className="text-base text-muted-foreground flex flex-wrap items-center gap-x-3 gap-y-1">
             <span>
               Published on{' '}
-              {formatDate(typedPost!.published_at || typedPost!.created_at)}
+              {formatDate(typedPost.published_at || typedPost.created_at)}
             </span>
-            {typedPost!.author && (
+            {typedPost.author && (
               <span>
                 by{' '}
                 <Link
-                  href={`/newsletters/${typedPost!.author.id}`}
+                  href={`/newsletters/${typedPost.author.id}`}
                   className="hover:underline"
                 >
                   {authorName}
@@ -125,21 +124,21 @@ export default async function IndividualPostViewPage({
         </header>
 
         <div className="prose dark:prose-invert lg:prose-xl max-w-none">
-          <LexicalRenderer contentJSON={typedPost!.content ?? ''} />
+          <LexicalRenderer contentJSON={typedPost.content ?? ''} />
         </div>
       </article>
 
       <footer className="mt-12 pt-8 border-t">
         <div className="flex justify-between items-center">
           <PostLikeButton
-            postId={typedPost!.id}
+            postId={typedPost.id}
             collectiveSlug={null}
             initialLikes={initialLikeCount}
-            authorId={typedPost!.author_id}
+            authorId={typedPost.author_id}
           />
           {isOwner && (
             <Button asChild variant="outline">
-              <Link href={`/posts/${typedPost!.id}/edit`}>Edit Post</Link>
+              <Link href={`/posts/${typedPost.id}/edit`}>Edit Post</Link>
             </Button>
           )}
         </div>
