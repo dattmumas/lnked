@@ -6,6 +6,8 @@ import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import SubscribeButton from '@/components/app/newsletters/molecules/SubscribeButton';
 import type { Database } from '@/lib/database.types';
+import Image from 'next/image';
+import { Badge } from '@/components/ui/badge';
 
 type PostRow = Database['public']['Tables']['posts']['Row'];
 
@@ -23,7 +25,7 @@ export default async function Page({
 
   const { data: profile, error: profileError } = await supabase
     .from('users')
-    .select('id, full_name, bio')
+    .select('id, full_name, bio, avatar_url, tags')
     .eq('id', userId)
     .single();
 
@@ -31,6 +33,18 @@ export default async function Page({
     console.error('Error fetching user', userId, profileError);
     notFound();
   }
+
+  const { count: followerCount } = await supabase
+    .from('follows')
+    .select('*', { count: 'exact', head: true })
+    .eq('following_id', userId);
+
+  const { count: subscriberCount } = await supabase
+    .from('subscriptions')
+    .select('*', { count: 'exact', head: true })
+    .eq('target_entity_type', 'user')
+    .eq('target_entity_id', userId)
+    .eq('status', 'active');
 
   const { data: postsData, error: postsError } = (await supabase.rpc(
     'get_user_feed',
@@ -68,9 +82,34 @@ export default async function Page({
   return (
     <div className="container mx-auto p-4 md:p-6">
       <header className="mb-8 pb-6 border-b border-primary/10 flex flex-col items-center">
-        <h1 className="text-5xl font-extrabold tracking-tight text-center mb-4">
-          {profile.full_name ?? 'User'}
-        </h1>
+        <div className="flex flex-col items-center gap-2 mb-4">
+          {profile.avatar_url && (
+            <Image
+              src={profile.avatar_url}
+              alt={`${profile.full_name ?? 'User'} avatar`}
+              width={96}
+              height={96}
+              className="rounded-full object-cover"
+            />
+          )}
+          <h1 className="text-5xl font-extrabold tracking-tight text-center">
+            {profile.full_name ?? 'User'}
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            {followerCount ?? 0} follower{(followerCount ?? 0) === 1 ? '' : 's'}{' '}
+            – {subscriberCount ?? 0} subscriber
+            {(subscriberCount ?? 0) === 1 ? '' : 's'}
+          </p>
+          {profile.tags && profile.tags.length > 0 && (
+            <div className="flex flex-wrap justify-center gap-1 mt-1">
+              {profile.tags.map((tag) => (
+                <Badge key={tag} variant="secondary">
+                  #{tag}
+                </Badge>
+              ))}
+            </div>
+          )}
+        </div>
         {profile.bio && (
           <div className="bg-card shadow rounded-xl p-6 max-w-2xl w-full text-center mx-auto">
             <p className="text-lg text-muted-foreground">{profile.bio}</p>
