@@ -1,5 +1,5 @@
 import { createServerSupabaseClient } from "@/lib/supabase/server";
-import { redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import ProfileFeed from "@/components/app/profile/ProfileFeed";
 import type { MicroPost } from "@/components/app/profile/MicrothreadPanel";
 import { Button } from "@/components/ui/button";
@@ -22,7 +22,7 @@ export default async function Page({ params }: { params: { userId: string } }) {
 
   if (profileError || !profile) {
     console.error("Error fetching user", userId, profileError);
-    redirect("/not-found");
+    notFound();
   }
 
   const { data: postsData, error: postsError } = await supabase.rpc(
