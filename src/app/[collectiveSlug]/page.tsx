@@ -53,7 +53,8 @@ export default async function Page({
   const { count: followerCount } = await supabase
     .from('follows')
     .select('*', { count: 'exact', head: true })
-    .eq('following_id', collective.id);
+    .eq('following_id', collective.id)
+    .eq('following_type', 'collective');
 
   // Fetch posts for this collective using denormalized like/dislike counts
   const { data: postsData, error: postsError } = await supabase
