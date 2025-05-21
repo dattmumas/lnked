@@ -10,9 +10,10 @@ interface SearchParams {
 export default async function NewPostPage({
   searchParams,
 }: {
-  searchParams: SearchParams;
+  searchParams: Promise<SearchParams>;
 }) {
   const supabase = await createServerSupabaseClient();
+  const resolvedParams = await searchParams;
   const {
     data: { user },
     error,
@@ -23,11 +24,11 @@ export default async function NewPostPage({
   }
 
   let collective: { id: string; name: string; owner_id: string } | null = null;
-  if (searchParams?.collectiveId) {
+  if (resolvedParams?.collectiveId) {
     const { data, error: collectiveError } = await supabase
       .from("collectives")
       .select("id, name, owner_id")
-      .eq("id", searchParams.collectiveId)
+      .eq("id", resolvedParams.collectiveId)
       .single();
     if (collectiveError || !data) {
       notFound();

@@ -11,9 +11,9 @@ import { LexicalRenderer } from '@/components/ui/LexicalRenderer';
 export default async function IndividualPostViewPage({
   params,
 }: {
-  params: { postId: string };
+  params: Promise<{ postId: string }>;
 }) {
-  const { postId } = params;
+  const { postId } = await params;
   const supabase = await createServerSupabaseClient();
 
   const {

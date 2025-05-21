@@ -6,8 +6,8 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import SubscribeButton from "@/components/app/newsletters/molecules/SubscribeButton";
 
-export default async function Page({ params }: { params: { userId: string } }) {
-  const { userId } = params;
+export default async function Page({ params }: { params: Promise<{ userId: string }> }) {
+  const { userId } = await params;
   const supabase = await createServerSupabaseClient();
 
   const {

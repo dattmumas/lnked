@@ -14,14 +14,15 @@ import {
 export default async function DiscoverPage({
   searchParams,
 }: {
-  searchParams: { cursor?: string };
+  searchParams: Promise<{ cursor?: string }>;
 }) {
   let recommendations: Recommendation[] = [];
   let nextCursor: string | null = null;
 
   try {
     // const cookieHeader = (await cookies()).toString(); // Not needed if fetchRecommendations handles cookies internally
-    const data = await fetchRecommendations(searchParams.cursor); // paginate
+    const params = await searchParams;
+    const data = await fetchRecommendations(params.cursor); // paginate
     recommendations = data.recommendations;
     nextCursor = data.nextCursor;
   } catch (error) {

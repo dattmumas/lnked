@@ -6,9 +6,9 @@ import { Button } from "@/components/ui/button";
 export default async function CollectiveDashboardPage({
   params,
 }: {
-  params: { collectiveId: string };
+  params: Promise<{ collectiveId: string }>;
 }) {
-  const { collectiveId } = params;
+  const { collectiveId } = await params;
   const supabase = await createServerSupabaseClient();
   const {
     data: { user: currentUser },

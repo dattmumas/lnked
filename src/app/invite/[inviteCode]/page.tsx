@@ -6,9 +6,10 @@ import Link from "next/link";
 export default async function InviteAcceptPage({
   params,
 }: {
-  params: { inviteCode: string };
+  params: Promise<{ inviteCode: string }>;
 }) {
   const supabase = await createServerSupabaseClient();
+  const { inviteCode } = await params;
   const {
     data: { user },
     error: authError,
@@ -16,11 +17,11 @@ export default async function InviteAcceptPage({
 
   if (authError || !user) {
     // Redirect to sign-in, then back to this page
-    redirect(`/sign-in?next=/invite/${params.inviteCode}`);
+    redirect(`/sign-in?next=/invite/${inviteCode}`);
   }
 
   const result = await acceptCollectiveInvite({
-    inviteCode: params.inviteCode,
+    inviteCode,
   });
 
   return (
