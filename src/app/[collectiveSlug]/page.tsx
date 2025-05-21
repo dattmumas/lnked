@@ -24,7 +24,7 @@ export default async function Page({
   const { data: collectiveData, error: collectiveError } = await supabase
     .from('collectives')
     .select(
-      'id, name, description, owner_id, tags, avatar_url, owner:users!owner_id(full_name)',
+      'id, name, description, owner_id, tags, logo_url, owner:users!owner_id(full_name)',
     )
     .eq('slug', collectiveSlug)
     .single();
@@ -84,9 +84,9 @@ export default async function Page({
     <div className="container mx-auto p-4 md:p-6">
       <header className="mb-8 pb-6 border-b border-primary/10 flex flex-col items-center">
         <div className="flex flex-col items-center gap-2 mb-4">
-          {collective.avatar_url ? (
+          {collective.logo_url ? (
             <Image
-              src={collective.avatar_url}
+              src={collective.logo_url}
               alt={`${collective.name} logo`}
               width={96}
               height={96}
