@@ -93,10 +93,44 @@ export async function updateUserProfile(
     tags_string: transformed_tags,
   } = validatedFields.data;
 
+  let avatarUrlToSave: string | null = avatar_url || null;
+
+  // Handle new avatar upload if a data URL is provided
+  if (avatar_url && avatar_url.startsWith("data:")) {
+    const match = avatar_url.match(/^data:(.+);base64,(.*)$/);
+    if (match) {
+      const mimeType = match[1];
+      const base64Data = match[2];
+      const buffer = Buffer.from(base64Data, "base64");
+      const extension = mimeType.split("/")[1] || "png";
+      const filePath = `user-${user.id}/${Date.now()}.${extension}`;
+
+      const { error: uploadError } = await supabaseAdmin.storage
+        .from("avatars")
+        .upload(filePath, buffer, {
+          contentType: mimeType,
+          upsert: true,
+        });
+
+      if (uploadError) {
+        console.error("Error uploading avatar:", uploadError);
+        return {
+          success: false,
+          error: `Failed to upload avatar: ${uploadError.message}`,
+        };
+      }
+
+      const { data: publicUrlData } = supabaseAdmin.storage
+        .from("avatars")
+        .getPublicUrl(filePath);
+      avatarUrlToSave = publicUrlData.publicUrl;
+    }
+  }
+
   const profileUpdate: TablesUpdate<"users"> = {
     full_name,
     bio: bio || null, // Ensure null if empty string
-    avatar_url: avatar_url || null,
+    avatar_url: avatarUrlToSave,
     tags:
       transformed_tags && transformed_tags.length > 0 ? transformed_tags : null, // Store as array or null
   };
@@ -119,6 +153,7 @@ export async function updateUserProfile(
   revalidatePath("/dashboard/profile/edit");
   // Add any other paths, e.g., public user profile page if it exists
   // revalidatePath(`/profile/${user.id}`); // Example if such a page exists
+  revalidatePath(`/users/${user.id}`);
 
   return { success: true, message: "Profile updated successfully." };
 }

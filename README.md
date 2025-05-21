@@ -14,6 +14,7 @@ A modern, accessible, and extensible publishing platform for newsletters, collec
 - **Supabase Integration**: Auth, database, and real-time features via [Supabase](https://supabase.com/).
 - **SSR & SEO**: Built on Next.js App Router for fast, SEO-friendly, server-rendered pages.
 - **Accessibility**: All dialogs, forms, and navigation are accessible and screen-reader friendly (Radix UI, ARIA, etc.)
+- **Profile Avatars**: Upload a profile image (max 2MB) stored securely in Supabase Storage.
 
 ## 🛠️ Tech Stack
 
