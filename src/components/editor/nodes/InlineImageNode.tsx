@@ -2,9 +2,19 @@
  * InlineImageNode for Lnked, adapted from Lexical Playground (MIT License)
  * https://github.com/facebook/lexical/blob/main/packages/lexical-playground/src/nodes/InlineImageNode.tsx
  */
-import { DecoratorNode, NodeKey } from "lexical";
+import { DecoratorNode, NodeKey, SerializedLexicalNode, Spread } from "lexical";
 import type { JSX } from "react";
 import Image from "next/image";
+
+export type SerializedInlineImageNode = Spread<
+  {
+    type: "inlineimage";
+    version: 1;
+    src?: string;
+    alt?: string;
+  },
+  SerializedLexicalNode
+>;
 
 export class InlineImageNode extends DecoratorNode<JSX.Element> {
   __src: string;
@@ -16,9 +26,11 @@ export class InlineImageNode extends DecoratorNode<JSX.Element> {
   static clone(node: InlineImageNode) {
     return new InlineImageNode(node.__src, node.__alt, node.__key);
   }
-  static importJSON(serialized: import("lexical").SerializedLexicalNode) {
-    const data = serialized as unknown as { src?: string; alt?: string };
-    return new InlineImageNode(data.src ?? "", data.alt ?? "Inline Image");
+  static importJSON(serialized: SerializedInlineImageNode) {
+    return new InlineImageNode(
+      serialized.src ?? "",
+      serialized.alt ?? "Inline Image",
+    );
   }
   exportJSON() {
     return {
