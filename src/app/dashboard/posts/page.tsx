@@ -11,6 +11,7 @@ export type DashboardPost = Database["public"]["Tables"]["posts"]["Row"] & {
   collective?: { id: string; name: string; slug: string } | null;
   post_reactions?: { count: number; type?: string }[] | null;
   likeCount?: number;
+  isFeatured?: boolean;
 };
 
 // Type for collectives user can post to
@@ -101,6 +102,20 @@ export default async function MyPostsPage() {
     );
   }
 
+  const { data: featuredPosts, error: featuredError } = await supabase
+    .from('featured_posts')
+    .select('post_id')
+    .eq('owner_id', userId)
+    .eq('owner_type', 'user');
+
+  if (featuredError) {
+    console.error('Error fetching featured posts:', featuredError.message);
+  }
+
+  const featuredIds = new Set(
+    (featuredPosts ?? []).map((fp: { post_id: string }) => fp.post_id),
+  );
+
   // Map posts to include likeCount (count only 'like' reactions)
   const postsWithLikeCount = (posts as DashboardPost[]).map(
     (post: DashboardPost) => ({
@@ -110,6 +125,7 @@ export default async function MyPostsPage() {
             (r: { type?: string }) => r.type === "like"
           ).length
         : 0,
+      isFeatured: featuredIds.has(post.id),
     })
   );
 
