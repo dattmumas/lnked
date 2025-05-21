@@ -5,6 +5,8 @@ import type { MicroPost } from '@/components/app/profile/MicrothreadPanel';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import SubscribeButton from '@/components/app/newsletters/molecules/SubscribeButton';
+import Image from 'next/image';
+import { Badge } from '@/components/ui/badge';
 
 export default async function Page({
   params,
@@ -19,11 +21,15 @@ export default async function Page({
   } = await supabase.auth.getUser(); // Get user early for like status
 
   // Fetch collective details by slug
-  const { data: collective, error: collectiveError } = await supabase
+  const { data: collectiveData, error: collectiveError } = await supabase
     .from('collectives')
-    .select('id, name, description, owner_id')
+    .select(
+      'id, name, description, owner_id, tags, avatar_url, owner:users!owner_id(full_name)',
+    )
     .eq('slug', collectiveSlug)
     .single();
+
+  const collective = collectiveData as any;
 
   if (collectiveError || !collective) {
     console.error(
@@ -33,12 +39,19 @@ export default async function Page({
     notFound();
   }
 
+  // Count members in the collective
+  const { count: memberCount } = await supabase
+    .from('collective_members')
+    .select('*', { count: 'exact', head: true })
+    .eq('collective_id', collective.id);
+
   // Fetch posts for this collective using denormalized like/dislike counts
   const { data: postsData, error: postsError } = await supabase
     .from('posts')
     .select(`*, view_count`)
     .eq('collective_id', collective.id)
     .eq('is_public', true)
+    .order('pinned_at', { ascending: false })
     .order('created_at', { ascending: false });
 
   if (postsError) {
@@ -70,15 +83,45 @@ export default async function Page({
   return (
     <div className="container mx-auto p-4 md:p-6">
       <header className="mb-8 pb-6 border-b border-primary/10 flex flex-col items-center">
-        <h1 className="text-5xl font-extrabold tracking-tight text-center flex items-center mb-4">
-          {collective.name}
-          <span
-            className="ml-2 text-primary text-5xl leading-none align-middle"
-            style={{ fontWeight: 900 }}
-          >
-            .
-          </span>
-        </h1>
+        <div className="flex flex-col items-center gap-2 mb-4">
+          {collective.avatar_url ? (
+            <Image
+              src={collective.avatar_url}
+              alt={`${collective.name} logo`}
+              width={96}
+              height={96}
+              className="rounded-full object-cover"
+            />
+          ) : (
+            <div className="w-24 h-24 rounded-full bg-muted flex items-center justify-center">
+              <span className="text-3xl">🤝</span>
+            </div>
+          )}
+          <h1 className="text-5xl font-extrabold tracking-tight text-center flex items-center">
+            {collective.name}
+            <span
+              className="ml-2 text-primary text-5xl leading-none align-middle"
+              style={{ fontWeight: 900 }}
+            >
+              .
+            </span>
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            {collective.owner?.full_name
+              ? `Owned by ${collective.owner.full_name} – `
+              : ''}
+            {memberCount ?? 0} member{(memberCount ?? 0) === 1 ? '' : 's'}
+          </p>
+          {collective.tags && collective.tags.length > 0 && (
+            <div className="flex flex-wrap justify-center gap-1 mt-1">
+              {collective.tags.map((tag: string) => (
+                <Badge key={tag} variant="secondary">
+                  #{tag}
+                </Badge>
+              ))}
+            </div>
+          )}
+        </div>
         {collective.description && (
           <div className="bg-card shadow rounded-xl p-6 max-w-2xl w-full text-center mx-auto">
             <p className="text-lg text-muted-foreground">
