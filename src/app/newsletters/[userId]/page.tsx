@@ -72,16 +72,21 @@ export default async function IndividualNewsletterPage({
   const { data: postsData, error: postsError } = await postsQuery;
 
   if (postsError) {
-    console.error(`Error fetching posts for author ${author.id}:`, postsError);
-    // Handle error, maybe show a message but still render author info
+    console.error(
+      `Error fetching posts for author ${author.id}:`,
+      typeof postsError === 'object' ? JSON.stringify(postsError) : postsError,
+    );
+    // Optionally, you could set a flag here to show an error in the UI
   }
 
-  const posts =
-    (postsData as PostWithLikesData[] | null)?.map((p) => ({
-      ...p, // p is now of type PostWithLikesData
-      like_count: p.likes?.[0]?.count || 0,
-      // No need to spread postRow and likeInfo separately if p is already correctly typed
-    })) || [];
+  const posts = Array.isArray(postsData)
+    ? (postsData as unknown as PostWithLikesData[])
+        .filter((p) => Array.isArray(p.likes) || p.likes === null)
+        .map((p) => ({
+          ...p,
+          like_count: Array.isArray(p.likes) ? p.likes[0]?.count || 0 : 0,
+        }))
+    : [];
 
   type SubscriptionTier = Database['public']['Tables']['prices']['Row'];
   let tiers: SubscriptionTier[] = [];
