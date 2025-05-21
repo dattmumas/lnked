@@ -54,6 +54,24 @@ export default async function Page({
     .eq('author_id', userId)
     .order('published_at', { ascending: false });
 
+  const { data: featuredData } = await supabase
+    .from('featured_posts')
+    .select('post_id')
+    .eq('owner_id', userId)
+    .eq('owner_type', 'user')
+    .maybeSingle();
+
+  let pinnedPost: PostRow | null = null;
+  if (featuredData?.post_id) {
+    const { data } = await supabase
+      .from('posts')
+      .select('*')
+      .eq('id', featuredData.post_id)
+      .maybeSingle<PostRow>();
+    if (data) pinnedPost = data;
+    postsQuery = postsQuery.neq('id', featuredData.post_id);
+  }
+
   const isOwner = authUser?.id === userId;
   const subscriptionStatus = await getSubscriptionStatus('user', userId);
   const isSubscribed = subscriptionStatus?.isSubscribed;
@@ -90,6 +108,18 @@ export default async function Page({
       published_at: p.published_at ?? null,
       current_user_has_liked: undefined,
     })) ?? [];
+
+  const pinned =
+    pinnedPost && {
+      ...pinnedPost,
+      like_count: pinnedPost.like_count ?? 0,
+      dislike_count: pinnedPost.dislike_count ?? 0,
+      status: pinnedPost.status ?? 'draft',
+      tsv: pinnedPost.tsv ?? null,
+      view_count: pinnedPost.view_count ?? 0,
+      published_at: pinnedPost.published_at ?? null,
+      current_user_has_liked: undefined,
+    };
 
   const microPosts: MicroPost[] = [
     { id: 'u1', content: 'Thanks for checking out my work!' },
@@ -184,7 +214,7 @@ export default async function Page({
 
       <main>
         {posts && posts.length > 0 ? (
-          <ProfileFeed posts={posts} microPosts={microPosts} />
+          <ProfileFeed posts={posts} pinnedPost={pinned ?? undefined} microPosts={microPosts} />
         ) : (
           <div className="text-center py-10">
             <h2 className="text-2xl font-semibold mb-2">No posts yet!</h2>

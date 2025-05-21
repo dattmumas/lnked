@@ -81,6 +81,24 @@ export default async function Page({
     .order('pinned_at', { ascending: false })
     .order('created_at', { ascending: false });
 
+  const { data: featuredData } = await supabase
+    .from('featured_posts')
+    .select('post_id')
+    .eq('owner_id', collective.id)
+    .eq('owner_type', 'collective')
+    .maybeSingle();
+
+  let pinnedPost: Database['public']['Tables']['posts']['Row'] | null = null;
+  if (featuredData?.post_id) {
+    const { data } = await supabase
+      .from('posts')
+      .select('*')
+      .eq('id', featuredData.post_id)
+      .maybeSingle<Database['public']['Tables']['posts']['Row']>();
+    if (data) pinnedPost = data;
+    postsQuery = postsQuery.neq('id', featuredData.post_id);
+  }
+
   const isOwner = user?.id === collective.owner_id;
   const subscriptionStatus = await getSubscriptionStatus(
     'collective',
@@ -114,6 +132,15 @@ export default async function Page({
       current_user_has_liked: undefined, // Will be determined client-side
       collective_slug: collectiveSlug,
     })) || [];
+
+  const pinned =
+    pinnedPost && {
+      ...pinnedPost,
+      like_count: pinnedPost.like_count ?? 0,
+      dislike_count: pinnedPost.dislike_count ?? 0,
+      current_user_has_liked: undefined,
+      collective_slug: collectiveSlug,
+    };
 
   type SubscriptionTier = Database['public']['Tables']['prices']['Row'];
   const { data: tierData } = (await supabase
@@ -239,7 +266,11 @@ export default async function Page({
 
       <main>
         {posts && posts.length > 0 ? (
-          <ProfileFeed posts={posts} microPosts={microPosts} />
+          <ProfileFeed
+            posts={posts}
+            pinnedPost={pinned ?? undefined}
+            microPosts={microPosts}
+          />
         ) : (
           <div className="text-center py-10">
             <h2 className="text-2xl font-semibold mb-2">No posts yet!</h2>
