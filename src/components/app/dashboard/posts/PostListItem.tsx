@@ -3,9 +3,9 @@
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Edit, Eye, Trash2 } from "lucide-react";
+import { Edit, Eye, Trash2, Pin, PinOff } from "lucide-react";
 import { useTransition } from "react";
-import { deletePost } from "@/app/actions/postActions";
+import { deletePost, featurePost } from "@/app/actions/postActions";
 import { useRouter } from "next/navigation";
 import type { Database } from "@/lib/database.types";
 
@@ -15,6 +15,7 @@ interface DashboardPost extends PostRow {
   likes?: { count: number }[] | null;
   post_reactions?: { count: number; type?: string }[] | null;
   likeCount?: number;
+  isFeatured?: boolean;
 }
 
 interface PostListItemProps {
@@ -47,6 +48,13 @@ export default function PostListItem({ post }: PostListItemProps) {
     ? `/collectives/${post.collective.slug}/${post.id}`
     : `/posts/${post.id}`;
   const editUrl = `/posts/${post.id}/edit`;
+
+  const handleToggleFeature = () => {
+    startTransition(async () => {
+      await featurePost(post.id, !post.isFeatured);
+      router.refresh();
+    });
+  };
 
   const handleDelete = () => {
     if (window.confirm("Are you sure you want to delete this post?")) {
@@ -92,6 +100,21 @@ export default function PostListItem({ post }: PostListItemProps) {
               <Edit className="h-4 w-4" />
             </Link>
           </Button>
+          {status === "Published" && (
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label={post.isFeatured ? "Unpin post" : "Pin post"}
+              onClick={handleToggleFeature}
+              disabled={isPending}
+            >
+              {post.isFeatured ? (
+                <PinOff className="h-4 w-4" />
+              ) : (
+                <Pin className="h-4 w-4" />
+              )}
+            </Button>
+          )}
           <Button
             variant="destructive"
             size="icon"

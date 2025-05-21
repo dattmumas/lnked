@@ -394,3 +394,56 @@ export async function incrementPostViewCount(
     };
   }
 }
+
+interface FeaturePostResult {
+  success: boolean;
+  error?: string;
+}
+
+export async function featurePost(
+  postId: string,
+  feature: boolean,
+): Promise<FeaturePostResult> {
+  const supabase = await createServerSupabaseClient();
+
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+
+  if (authError || !user) {
+    return { success: false, error: 'User not authenticated.' };
+  }
+
+  const { data: postOwner, error: postError } = await supabase
+    .from('posts')
+    .select('author_id')
+    .eq('id', postId)
+    .single<{ author_id: string }>();
+
+  if (postError || !postOwner || postOwner.author_id !== user.id) {
+    return { success: false, error: 'Post not found or not owned by user.' };
+  }
+
+  if (feature) {
+    const { error: insertError } = await supabase
+      .from('featured_posts')
+      .insert({ owner_id: user.id, owner_type: 'user', post_id: postId });
+
+    if (insertError && insertError.code !== '23505') {
+      return { success: false, error: insertError.message };
+    }
+  } else {
+    const { error: deleteError } = await supabase
+      .from('featured_posts')
+      .delete()
+      .match({ owner_id: user.id, owner_type: 'user', post_id: postId });
+
+    if (deleteError) {
+      return { success: false, error: deleteError.message };
+    }
+  }
+
+  revalidatePath(`/newsletters/${user.id}`);
+  return { success: true };
+}
