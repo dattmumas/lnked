@@ -83,7 +83,9 @@ export default async function Page({
   } else if (isSubscribed) {
     postsQuery = postsQuery.not('published_at', 'is', null);
   } else {
-    postsQuery = postsQuery.eq('is_public', true).not('published_at', 'is', null);
+    postsQuery = postsQuery
+      .eq('is_public', true)
+      .not('published_at', 'is', null);
   }
 
   if (searchParams.q && searchParams.q.trim().length > 0) {
@@ -117,17 +119,16 @@ export default async function Page({
       current_user_has_liked: undefined,
     })) ?? [];
 
-  const pinned =
-    pinnedPost && {
-      ...pinnedPost,
-      like_count: pinnedPost.like_count ?? 0,
-      dislike_count: pinnedPost.dislike_count ?? 0,
-      status: pinnedPost.status ?? 'draft',
-      tsv: pinnedPost.tsv ?? null,
-      view_count: pinnedPost.view_count ?? 0,
-      published_at: pinnedPost.published_at ?? null,
-      current_user_has_liked: undefined,
-    };
+  const pinned = pinnedPost && {
+    ...pinnedPost,
+    like_count: pinnedPost.like_count ?? 0,
+    dislike_count: pinnedPost.dislike_count ?? 0,
+    status: pinnedPost.status ?? 'draft',
+    tsv: pinnedPost.tsv ?? null,
+    view_count: pinnedPost.view_count ?? 0,
+    published_at: pinnedPost.published_at ?? null,
+    current_user_has_liked: undefined,
+  };
 
   const microPosts: MicroPost[] = [
     { id: 'u1', content: 'Thanks for checking out my work!' },
@@ -155,8 +156,8 @@ export default async function Page({
             <Image
               src={profile.avatar_url}
               alt={`${profile.full_name ?? 'User'} avatar`}
-              width={96}
-              height={96}
+              width={160}
+              height={160}
               className="rounded-full object-cover"
             />
           )}
@@ -222,13 +223,21 @@ export default async function Page({
 
       <main>
         {posts && posts.length > 0 ? (
-          <ProfileFeed posts={posts} pinnedPost={pinned ?? undefined} microPosts={microPosts} />
+          <ProfileFeed
+            posts={posts}
+            pinnedPost={pinned ?? undefined}
+            microPosts={microPosts}
+          />
         ) : (
           <div className="text-center py-10">
             {searchParams.q ? (
               <>
-                <h2 className="text-2xl font-semibold mb-2">No posts found for your search.</h2>
-                <p className="text-muted-foreground">Try a different search term.</p>
+                <h2 className="text-2xl font-semibold mb-2">
+                  No posts found for your search.
+                </h2>
+                <p className="text-muted-foreground">
+                  Try a different search term.
+                </p>
               </>
             ) : (
               <>

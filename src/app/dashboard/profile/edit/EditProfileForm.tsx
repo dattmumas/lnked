@@ -1,13 +1,13 @@
-"use client";
+'use client';
 
-import React, { useState, useTransition } from "react";
-import { useForm, SubmitHandler } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import React, { useState, useTransition } from 'react';
+import { useForm, SubmitHandler } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import {
   Card,
   CardContent,
@@ -15,21 +15,21 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
+} from '@/components/ui/card';
 import {
   updateUserProfile,
   type RawUserProfileFormInput,
-} from "@/app/actions/userActions";
-import { Loader2 } from "lucide-react";
+} from '@/app/actions/userActions';
+import { Loader2 } from 'lucide-react';
 
 const ClientUserProfileSchema = z.object({
   full_name: z
     .string()
-    .min(1, "Full name cannot be empty.")
-    .max(100, "Full name must be 100 characters or less."),
+    .min(1, 'Full name cannot be empty.')
+    .max(100, 'Full name must be 100 characters or less.'),
   bio: z
     .string()
-    .max(500, "Bio must be 500 characters or less.")
+    .max(500, 'Bio must be 500 characters or less.')
     .optional()
     .nullable(),
   avatar_url: z.string().optional().nullable(),
@@ -68,24 +68,22 @@ export default function EditProfileForm({
     defaultValues.avatar_url || null,
   );
 
-  const handleAvatarChange = (
-    e: React.ChangeEvent<HTMLInputElement>,
-  ) => {
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (!file.type.startsWith("image/")) {
-      setError("File must be an image.");
+    if (!file.type.startsWith('image/')) {
+      setError('File must be an image.');
       return;
     }
-    if (file.size > 2 * 1024 * 1024) {
-      setError("Image must be less than 2MB.");
+    if (file.size > 10 * 1024 * 1024) {
+      setError('Image must be less than 10MB.');
       return;
     }
     const reader = new FileReader();
     reader.onloadend = () => {
       const result = reader.result as string;
       setAvatarPreview(result);
-      setValue("avatar_url", result, { shouldDirty: true });
+      setValue('avatar_url', result, { shouldDirty: true });
     };
     reader.readAsDataURL(file);
   };
@@ -95,7 +93,7 @@ export default function EditProfileForm({
     setSuccessMessage(null);
 
     if (!isDirty) {
-      setSuccessMessage("No changes to save.");
+      setSuccessMessage('No changes to save.');
       return;
     }
 
@@ -107,12 +105,12 @@ export default function EditProfileForm({
           result.fieldErrors
             ? `${result.error} ${Object.values(result.fieldErrors)
                 .flat()
-                .join(", ")}`
-            : result.error
+                .join(', ')}`
+            : result.error,
         );
       } else {
         setSuccessMessage(
-          result.message || "Your profile has been updated successfully."
+          result.message || 'Your profile has been updated successfully.',
         );
         reset(data);
       }
@@ -134,7 +132,7 @@ export default function EditProfileForm({
             <Label htmlFor="full_name">Full Name</Label>
             <Input
               id="full_name"
-              {...register("full_name")}
+              {...register('full_name')}
               disabled={isPending || isSubmitting}
             />
             {errors.full_name && (
@@ -149,7 +147,7 @@ export default function EditProfileForm({
               <img
                 src={avatarPreview}
                 alt="Avatar preview"
-                className="h-20 w-20 rounded-full object-cover"
+                className="h-32 w-32 rounded-full object-cover"
               />
             )}
             <Input
@@ -159,7 +157,7 @@ export default function EditProfileForm({
               onChange={handleAvatarChange}
               disabled={isPending || isSubmitting}
             />
-            <input type="hidden" {...register("avatar_url")}></input>
+            <input type="hidden" {...register('avatar_url')}></input>
             {errors.avatar_url && (
               <p className="text-sm text-destructive">
                 {errors.avatar_url.message}
@@ -170,7 +168,7 @@ export default function EditProfileForm({
             <Label htmlFor="bio">Bio</Label>
             <Textarea
               id="bio"
-              {...register("bio")}
+              {...register('bio')}
               placeholder="Tell us a bit about yourself..."
               rows={4}
               disabled={isPending || isSubmitting}
@@ -185,7 +183,7 @@ export default function EditProfileForm({
             </Label>
             <Input
               id="tags_string"
-              {...register("tags_string")}
+              {...register('tags_string')}
               placeholder="e.g., tech, startups, design, coffee"
               disabled={isPending || isSubmitting}
             />

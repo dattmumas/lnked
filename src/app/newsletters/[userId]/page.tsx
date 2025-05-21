@@ -11,7 +11,7 @@ import { getSubscriptionStatus } from '@/app/actions/subscriptionActions';
 
 // Define the expected shape of items in postsData
 export type PostWithLikesData = Database['public']['Tables']['posts']['Row'] & {
-  likes: { count: number }[] | null;
+  post_reactions: { count: number }[] | null;
 };
 
 export default async function IndividualNewsletterPage({
@@ -46,12 +46,13 @@ export default async function IndividualNewsletterPage({
     .select(
       `
       *,
-      likes(count)
+      post_reactions(count)
     `,
     )
     .eq('author_id', author.id)
     .is('collective_id', null) // individual newsletter posts only
-    .order('published_at', { ascending: false });
+    .order('published_at', { ascending: false })
+    .contains('post_reactions.type', ['like']);
 
   const isOwner = currentUser?.id === author.id;
   const subscriptionStatus = await getSubscriptionStatus('user', author.id);
@@ -81,10 +82,14 @@ export default async function IndividualNewsletterPage({
 
   const posts = Array.isArray(postsData)
     ? (postsData as unknown as PostWithLikesData[])
-        .filter((p) => Array.isArray(p.likes) || p.likes === null)
+        .filter(
+          (p) => Array.isArray(p.post_reactions) || p.post_reactions === null,
+        )
         .map((p) => ({
           ...p,
-          like_count: Array.isArray(p.likes) ? p.likes[0]?.count || 0 : 0,
+          like_count: Array.isArray(p.post_reactions)
+            ? p.post_reactions[0]?.count || 0
+            : 0,
         }))
     : [];
 
