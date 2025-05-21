@@ -1,12 +1,19 @@
-import { createServerSupabaseClient } from "@/lib/supabase/server";
-import { notFound } from "next/navigation";
-import ProfileFeed from "@/components/app/profile/ProfileFeed";
-import type { MicroPost } from "@/components/app/profile/MicrothreadPanel";
-import { Button } from "@/components/ui/button";
-import Link from "next/link";
-import SubscribeButton from "@/components/app/newsletters/molecules/SubscribeButton";
+import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { notFound } from 'next/navigation';
+import ProfileFeed from '@/components/app/profile/ProfileFeed';
+import type { MicroPost } from '@/components/app/profile/MicrothreadPanel';
+import { Button } from '@/components/ui/button';
+import Link from 'next/link';
+import SubscribeButton from '@/components/app/newsletters/molecules/SubscribeButton';
+import type { Database } from '@/lib/database.types';
 
-export default async function Page({ params }: { params: Promise<{ userId: string }> }) {
+type PostRow = Database['public']['Tables']['posts']['Row'];
+
+export default async function Page({
+  params,
+}: {
+  params: Promise<{ userId: string }>;
+}) {
   const { userId } = await params;
   const supabase = await createServerSupabaseClient();
 
@@ -15,37 +22,45 @@ export default async function Page({ params }: { params: Promise<{ userId: strin
   } = await supabase.auth.getUser();
 
   const { data: profile, error: profileError } = await supabase
-    .from("users")
-    .select("id, full_name, bio")
-    .eq("id", userId)
+    .from('users')
+    .select('id, full_name, bio')
+    .eq('id', userId)
     .single();
 
   if (profileError || !profile) {
-    console.error("Error fetching user", userId, profileError);
+    console.error('Error fetching user', userId, profileError);
     notFound();
   }
 
-  const { data: postsData, error: postsError } = await supabase.rpc(
-    "get_user_feed",
-    { p_user_id: userId }
-  );
+  const { data: postsData, error: postsError } = (await supabase.rpc(
+    'get_user_feed',
+    { p_user_id: userId },
+  )) as { data: PostRow[] | null; error: unknown };
 
-  // Only log when Supabase returns a real error (has a message/code)
-  if (postsError?.message) {
-    console.error("Error fetching posts for user", userId, postsError);
+  if (postsError && typeof postsError === 'object' && 'message' in postsError) {
+    console.error(
+      'Error fetching posts for user',
+      userId,
+      (postsError as { message: string }).message,
+    );
   }
 
   const posts =
-    postsData?.map((p: (typeof postsData)[number]) => ({
+    postsData?.map((p) => ({
       ...p,
       like_count: p.like_count ?? 0,
+      dislike_count: p.dislike_count ?? 0,
+      status: p.status ?? 'draft',
+      tsv: p.tsv ?? null,
+      view_count: p.view_count ?? 0,
+      published_at: p.published_at ?? null,
       current_user_has_liked: undefined,
     })) ?? [];
 
   const microPosts: MicroPost[] = [
-    { id: "u1", content: "Thanks for checking out my work!" },
-    { id: "u2", content: "New article coming soon." },
-    { id: "u3", content: "Follow me for updates!" },
+    { id: 'u1', content: 'Thanks for checking out my work!' },
+    { id: 'u2', content: 'New article coming soon.' },
+    { id: 'u3', content: 'Follow me for updates!' },
   ];
 
   const isOwner = authUser?.id === userId;
@@ -54,7 +69,7 @@ export default async function Page({ params }: { params: Promise<{ userId: strin
     <div className="container mx-auto p-4 md:p-6">
       <header className="mb-8 pb-6 border-b border-primary/10 flex flex-col items-center">
         <h1 className="text-5xl font-extrabold tracking-tight text-center mb-4">
-          {profile.full_name ?? "User"}
+          {profile.full_name ?? 'User'}
         </h1>
         {profile.bio && (
           <div className="bg-card shadow rounded-xl p-6 max-w-2xl w-full text-center mx-auto">
@@ -85,7 +100,7 @@ export default async function Page({ params }: { params: Promise<{ userId: strin
             <SubscribeButton
               targetEntityType="user"
               targetEntityId={profile.id}
-              targetName={profile.full_name ?? ""}
+              targetName={profile.full_name ?? ''}
             />
           </div>
         )}

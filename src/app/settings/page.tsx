@@ -1,7 +1,7 @@
-import { createServerSupabaseClient } from "@/lib/supabase/server";
-import { redirect } from "next/navigation";
-import EditUserSettingsForm from "@/components/app/settings/EditUserSettingsForm";
-import DeleteAccountSection from "@/components/app/settings/DeleteAccountSection";
+import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { redirect } from 'next/navigation';
+import EditUserSettingsForm from '@/components/app/settings/EditUserSettingsForm';
+import DeleteAccountSection from '@/components/app/settings/DeleteAccountSection';
 
 export default async function UserSettingsPage() {
   const supabase = await createServerSupabaseClient();
@@ -11,30 +11,30 @@ export default async function UserSettingsPage() {
   } = await supabase.auth.getUser();
 
   if (authError || !authUser) {
-    redirect("/sign-in");
+    redirect('/sign-in');
   }
 
   // Fetch user profile data
   const { data: userProfile, error: profileError } = await supabase
-    .from("users")
-    .select("id, full_name, bio, tags")
-    .eq("id", authUser.id)
+    .from('users')
+    .select('id, full_name, bio, tags')
+    .eq('id', authUser.id)
     .single();
 
   if (profileError || !userProfile) {
     console.error(
       `Error fetching user profile for settings:`,
-      profileError?.message
+      profileError?.message,
     );
-    redirect("/error");
+    redirect('/error');
   }
 
   const defaultValues = {
-    full_name: userProfile.full_name || "",
-    bio: userProfile.bio || "",
+    full_name: userProfile.full_name || '',
+    bio: userProfile.bio || '',
     tags_string: Array.isArray(userProfile.tags)
-      ? userProfile.tags.join(", ")
-      : "",
+      ? userProfile.tags.join(', ')
+      : '',
   };
 
   return (
@@ -46,7 +46,7 @@ export default async function UserSettingsPage() {
         </p>
       </header>
       <EditUserSettingsForm defaultValues={defaultValues} />
-      <DeleteAccountSection userEmail={authUser.email} />
+      <DeleteAccountSection userEmail={authUser.email ?? ''} />
     </div>
   );
 }

@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { usePathname, useRouter } from 'next/navigation';
 import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
-import type { User } from '@supabase/auth-js';
+import type { User } from '@supabase/supabase-js';
 
 interface SubscribeButtonProps {
   targetEntityType: 'user' | 'collective';

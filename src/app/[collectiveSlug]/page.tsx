@@ -1,10 +1,10 @@
-import { createServerSupabaseClient } from "@/lib/supabase/server";
-import { notFound } from "next/navigation";
-import ProfileFeed from "@/components/app/profile/ProfileFeed";
-import type { MicroPost } from "@/components/app/profile/MicrothreadPanel";
-import { Button } from "@/components/ui/button";
-import Link from "next/link";
-import SubscribeButton from "@/components/app/newsletters/molecules/SubscribeButton";
+import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { notFound } from 'next/navigation';
+import ProfileFeed from '@/components/app/profile/ProfileFeed';
+import type { MicroPost } from '@/components/app/profile/MicrothreadPanel';
+import { Button } from '@/components/ui/button';
+import Link from 'next/link';
+import SubscribeButton from '@/components/app/newsletters/molecules/SubscribeButton';
 
 export default async function Page({
   params,
@@ -20,45 +20,37 @@ export default async function Page({
 
   // Fetch collective details by slug
   const { data: collective, error: collectiveError } = await supabase
-    .from("collectives")
-    .select("id, name, description, owner_id")
-    .eq("slug", collectiveSlug)
+    .from('collectives')
+    .select('id, name, description, owner_id')
+    .eq('slug', collectiveSlug)
     .single();
 
   if (collectiveError || !collective) {
     console.error(
       `Error fetching collective ${collectiveSlug}:`,
-      collectiveError
+      collectiveError,
     );
     notFound();
   }
 
   // Fetch posts for this collective using denormalized like/dislike counts
   const { data: postsData, error: postsError } = await supabase
-    .from("posts")
+    .from('posts')
     .select(`*, view_count`)
-    .eq("collective_id", collective.id)
-    .eq("is_public", true)
-    .order("created_at", { ascending: false });
+    .eq('collective_id', collective.id)
+    .eq('is_public', true)
+    .order('created_at', { ascending: false });
 
   if (postsError) {
     console.error(
       `Error fetching posts for collective ${collective.id}:`,
-      postsError
+      postsError,
     );
     // Decide how to handle this - e.g., show an error message or empty state
   }
 
-  type RawPost = {
-    id: string;
-    title: string;
-    like_count?: number | null;
-    dislike_count?: number | null;
-    [key: string]: unknown;
-  };
-
   const posts =
-    postsData?.map((p: RawPost) => ({
+    postsData?.map((p) => ({
       ...p,
       like_count: p.like_count ?? 0,
       dislike_count: p.dislike_count ?? 0,
@@ -67,9 +59,9 @@ export default async function Page({
     })) || [];
 
   const microPosts: MicroPost[] = [
-    { id: "m1", content: "Welcome to our new readers!" },
-    { id: "m2", content: "Recording a podcast episode today." },
-    { id: "m3", content: "Check out our latest article below." },
+    { id: 'm1', content: 'Welcome to our new readers!' },
+    { id: 'm2', content: 'Recording a podcast episode today.' },
+    { id: 'm3', content: 'Check out our latest article below.' },
   ];
 
   // Check if current user is the owner of the collective to show edit/new post links

@@ -1,14 +1,14 @@
-import { createServerSupabaseClient } from "@/lib/supabase/server";
-import { Button } from "@/components/ui/button";
-import Link from "next/link";
+import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { Button } from '@/components/ui/button';
+import Link from 'next/link';
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
-import StatCard from "@/components/app/dashboard/organisms/StatCard";
+} from '@/components/ui/card';
+import StatCard from '@/components/app/dashboard/organisms/StatCard';
 import {
   Users2,
   FileText,
@@ -20,10 +20,10 @@ import {
   AlertCircle,
   Info,
   List,
-} from "lucide-react";
-import RecentPostRow from "@/components/app/dashboard/organisms/RecentPostRow";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { redirect } from "next/navigation";
+} from 'lucide-react';
+import RecentPostRow from '@/components/app/dashboard/organisms/RecentPostRow';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { redirect } from 'next/navigation';
 
 const MAX_RECENT_PERSONAL_POSTS_DISPLAY = 3;
 
@@ -39,10 +39,10 @@ type OwnedCollective = {
   id: string;
   name: string;
   slug: string;
-  description: string;
+  description: string | null;
 };
 
-export const dynamic = "force-dynamic";
+export const dynamic = 'force-dynamic';
 
 export default async function DashboardManagementPage() {
   const supabase = await createServerSupabaseClient();
@@ -53,7 +53,7 @@ export default async function DashboardManagementPage() {
   } = await supabase.auth.getSession();
 
   if (authErrorSession || !session || !session.user) {
-    redirect("/sign-in"); // Protect the dashboard route
+    redirect('/sign-in'); // Protect the dashboard route
   }
 
   const currentUser = session.user;
@@ -63,25 +63,25 @@ export default async function DashboardManagementPage() {
   // 1. Fetch user's OWNED collectives
   const { data: ownedCollectives, error: ownedCollectivesError } =
     await supabase
-      .from("collectives")
-      .select("id, name, slug, description")
-      .eq("owner_id", userId)
-      .order("name", { ascending: true });
+      .from('collectives')
+      .select('id, name, slug, description')
+      .eq('owner_id', userId)
+      .order('name', { ascending: true });
   if (ownedCollectivesError)
     console.error(
-      "Error fetching owned collectives:",
-      ownedCollectivesError.message
+      'Error fetching owned collectives:',
+      ownedCollectivesError.message,
     );
 
   // 2. Fetch user's OWN individual posts (collective_id is NULL)
   const { data: personalPosts, error: personalPostsError } = await supabase
-    .from("posts")
-    .select("id, title, published_at, created_at, is_public, collective_id") // Add collective_id to ensure it's null
-    .eq("author_id", userId)
-    .is("collective_id", null)
-    .order("created_at", { ascending: false });
+    .from('posts')
+    .select('id, title, published_at, created_at, is_public, collective_id') // Add collective_id to ensure it's null
+    .eq('author_id', userId)
+    .is('collective_id', null)
+    .order('created_at', { ascending: false });
   if (personalPostsError)
-    console.error("Error fetching personal posts:", personalPostsError.message);
+    console.error('Error fetching personal posts:', personalPostsError.message);
 
   return (
     <>
@@ -179,7 +179,7 @@ export default async function DashboardManagementPage() {
                           key={post.id}
                           id={post.id}
                           title={post.title}
-                          status={post.is_public ? "published" : "draft"}
+                          status={post.is_public ? 'published' : 'draft'}
                           date={post.published_at || post.created_at}
                         />
                       ))}

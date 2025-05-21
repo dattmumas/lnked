@@ -1,6 +1,11 @@
-import { createServerSupabaseClient } from "@/lib/supabase/server";
-import { redirect } from "next/navigation";
-import EditCollectiveSettingsForm from "./EditCollectiveSettingsForm"; // Client component for the form
+import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { redirect } from 'next/navigation';
+import EditCollectiveSettingsForm from './EditCollectiveSettingsForm'; // Client component for the form
+import type { Database } from '@/lib/database.types';
+
+type MemberWithUser = {
+  user: Database['public']['Tables']['users']['Row'] | null;
+};
 
 export default async function CollectiveSettingsPage({
   params,
@@ -16,53 +21,55 @@ export default async function CollectiveSettingsPage({
   } = await supabase.auth.getUser();
 
   if (authError || !authUser) {
-    redirect("/sign-in");
+    redirect('/sign-in');
   }
 
   const { data: collective, error: collectiveError } = await supabase
-    .from("collectives")
-    .select("id, name, slug, description, tags, owner_id")
-    .eq("id", collectiveId)
+    .from('collectives')
+    .select('id, name, slug, description, tags, owner_id')
+    .eq('id', collectiveId)
     .single();
 
   if (collectiveError || !collective) {
     console.error(
       `Error fetching collective ${collectiveId} for settings:`,
-      collectiveError?.message
+      collectiveError?.message,
     );
-    redirect("/error");
+    redirect('/error');
   }
 
   // Authorization: Only owner can edit settings
   if (collective.owner_id !== authUser.id) {
     console.warn(
-      `User ${authUser.id} attempted to access settings for collective ${collective.id} without ownership.`
+      `User ${authUser.id} attempted to access settings for collective ${collective.id} without ownership.`,
     );
     // Or redirect to an unauthorized page or the dashboard
-    redirect("/unauthorized");
+    redirect('/unauthorized');
   }
 
   const defaultValues = {
-    name: collective.name || "",
-    slug: collective.slug || "",
-    description: collective.description || "",
-    tags_string: (collective.tags as string[] | null)?.join(", ") || "",
+    name: collective.name || '',
+    slug: collective.slug || '',
+    description: collective.description || '',
+    tags_string: (collective.tags as string[] | null)?.join(', ') || '',
   };
 
-  if ("id" in collective) {
+  if ('id' in collective) {
     // safe to access collective.id, collective.name, etc.
   }
 
   // Fetch eligible members for ownership transfer
-  const { data: members } = await supabase
-    .from("collective_members")
-    .select("user:users!user_id(id, full_name)")
-    .eq("collective_id", collectiveId);
-  const eligibleMembers = (members || [])
-    .map(
-      (m: { user: { id: string; full_name: string | null } | null }) => m.user
+  const { data: members } = (await supabase
+    .from('collective_members')
+    .select('user:users!user_id(id, full_name)')
+    .eq('collective_id', collectiveId)) as { data: MemberWithUser[] | null };
+  const eligibleMembers = (members ?? [])
+    .map((m) => m.user)
+    .filter(
+      (u): u is Database['public']['Tables']['users']['Row'] =>
+        !!u && u.id !== authUser.id,
     )
-    .filter((u: { id: string } | null) => u && u.id !== authUser.id);
+    .map((u) => ({ id: u.id, full_name: u.full_name }));
 
   return (
     <div className="container mx-auto p-4 md:p-6 max-w-2xl">

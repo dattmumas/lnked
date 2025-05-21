@@ -5,10 +5,7 @@ import { usePathname } from 'next/navigation';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import supabase from '@/lib/supabase/browser';
-import type {
-  User as SupabaseUser,
-  Session as SupabaseSession,
-} from '@supabase/auth-js';
+import type { User, Session } from '@supabase/supabase-js';
 import { Button } from './ui/button';
 import {
   Sheet,
@@ -60,20 +57,20 @@ const dashboardNavItems = [
 export default function Navbar() {
   const router = useRouter();
   const pathname = usePathname();
-  const [user, setUser] = useState<SupabaseUser | null>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
   useEffect(() => {
     // Fetch current user using shared Supabase client
     supabase.auth
       .getUser()
-      .then(({ data }: { data: { user: SupabaseUser | null } }) => {
+      .then(({ data }: { data: { user: User | null } }) => {
         setUser(data.user);
         setIsLoading(false);
       });
     // Subscribe to auth changes on the singleton client
     const { data: authListener } = supabase.auth.onAuthStateChange(
-      (event: string, session: SupabaseSession | null) => {
+      (event: string, session: Session | null) => {
         setUser(session?.user ?? null);
         // Sync session to server cookie on sign-in/sign-out
         fetch('/api/auth/callback', {

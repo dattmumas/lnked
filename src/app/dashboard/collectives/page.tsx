@@ -1,25 +1,22 @@
-import { createServerSupabaseClient } from "@/lib/supabase/server";
-import { Database } from "@/lib/database.types";
-import { redirect } from "next/navigation";
-import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
-import DashboardCollectiveCard, {
-  type CollectiveMemberRole,
-} from "@/components/app/dashboard/collectives/DashboardCollectiveCard";
-
-type CollectiveRow = Database["public"]["Tables"]["collectives"]["Row"];
-interface JoinedCollectiveMembership {
-  id: string; // This is collective_members.id
-  role: CollectiveMemberRole;
-  collective: CollectiveRow & { owner_id: string };
-}
+import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { Database } from '@/lib/database.types';
+import { redirect } from 'next/navigation';
+import Link from 'next/link';
+import { Button } from '@/components/ui/button';
+import { Plus } from 'lucide-react';
+import DashboardCollectiveCard from '@/components/app/dashboard/collectives/DashboardCollectiveCard';
 
 // Extend CollectiveRow for owned collectives to include subscriber count
 type OwnedCollectiveWithStats =
-  Database["public"]["Tables"]["collectives"]["Row"] & {
+  Database['public']['Tables']['collectives']['Row'] & {
     subscriptions: { count: number }[] | null; // Supabase returns count as an array
   };
+
+type Membership = {
+  id: string;
+  role: string;
+  collective: Database['public']['Tables']['collectives']['Row'] | null;
+};
 
 export default async function MyCollectivesPage() {
   const supabase = await createServerSupabaseClient();
@@ -30,60 +27,45 @@ export default async function MyCollectivesPage() {
   } = await supabase.auth.getSession();
 
   if (authErrorSession || !session || !session.user) {
-    redirect("/sign-in");
+    redirect('/sign-in');
   }
 
   const userId = session.user.id;
 
   // 1. Fetch collectives OWNED by the user, including active subscriber count
   const { data: ownedCollectivesData, error: ownedError } = await supabase
-    .from("collectives")
-    .select("id, name, slug, description, subscriptions(count)") // Assuming RLS allows count on subscriptions or it's a public view/join
+    .from('collectives')
+    .select('id, name, slug, description, subscriptions(count)') // Assuming RLS allows count on subscriptions or it's a public view/join
     // Ideally, filter subscriptions by status='active' here if possible with Supabase syntax,
     // e.g., subscriptions!inner(count, status.eq.active). Or filter post-fetch.
     // For now, fetching all subscriptions and assuming we might filter or that count implies active.
-    .eq("owner_id", userId)
-    .order("name", { ascending: true });
+    .eq('owner_id', userId)
+    .order('name', { ascending: true });
 
   const ownedCollectives = ownedCollectivesData as
     | OwnedCollectiveWithStats[]
     | null;
 
   if (ownedError) {
-    console.error("Error fetching owned collectives:", ownedError.message);
+    console.error('Error fetching owned collectives:', ownedError.message);
     // Handle error appropriately
   }
 
   // Fetch subscription price (e.g., from env or DB). For now, assume a fixed price in cents.
 
   // 2. Fetch collectives JOINED by the user (where they are a member but not owner)
-  const { data: joinedMembershipsData, error: joinedError } = await supabase
-    .from("collective_members")
-    .select(
-      `
-      id, 
-      role,
-      collective:collectives!inner(id, name, slug, description, owner_id)
-    `
-    )
-    .eq("user_id", userId)
-    // .neq('collective.owner_id', userId) // This condition needs to be applied carefully post-fetch or via a view/function if complex
-    .order("collective(name)", { ascending: true });
+  const { data: memberships } = (await supabase
+    .from('collective_members')
+    .select('id, role, collective:collectives!collective_id(*)')
+    .eq('user_id', userId)) as { data: Membership[] | null };
 
-  if (joinedError) {
-    console.error("Error fetching joined collectives:", joinedError.message);
-    // Handle error appropriately
-  }
-
-  const joinedCollectives: JoinedCollectiveMembership[] =
-    (joinedMembershipsData?.filter(
-      (member: JoinedCollectiveMembership) =>
-        member.collective?.owner_id !== userId
-    ) as JoinedCollectiveMembership[]) || [];
+  const eligibleMemberships = (memberships ?? []).filter(
+    (member) => member.collective && member.collective.owner_id !== userId,
+  );
 
   const hasCollectives =
     (ownedCollectives && ownedCollectives.length > 0) ||
-    (joinedCollectives && joinedCollectives.length > 0);
+    (eligibleMemberships && eligibleMemberships.length > 0);
 
   return (
     <div className="flex flex-col gap-8">
@@ -108,10 +90,10 @@ export default async function MyCollectivesPage() {
             </Link>
           </Button>
           <p className="text-sm text-muted-foreground mt-4">
-            Or{" "}
+            Or{' '}
             <Link href="/discover" className="underline hover:text-primary">
               explore collectives
-            </Link>{" "}
+            </Link>{' '}
             to join.
           </p>
         </div>
@@ -138,20 +120,29 @@ export default async function MyCollectivesPage() {
         </section>
       )}
 
-      {joinedCollectives && joinedCollectives.length > 0 && (
+      {eligibleMemberships && eligibleMemberships.length > 0 && (
         <section>
           <h2 className="text-xl font-semibold mb-4">
             Collectives I Contribute To
           </h2>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {joinedCollectives.map((membership: JoinedCollectiveMembership) => (
-              <DashboardCollectiveCard
-                key={membership.id}
-                collective={membership.collective}
-                role={membership.role}
-                memberId={membership.id}
-              />
-            ))}
+            {eligibleMemberships.map((membership: Membership) =>
+              membership.collective ? (
+                <DashboardCollectiveCard
+                  key={membership.id}
+                  collective={membership.collective}
+                  role={
+                    membership.role as
+                      | 'admin'
+                      | 'editor'
+                      | 'author'
+                      | 'owner'
+                      | 'Owner'
+                  }
+                  memberId={membership.id}
+                />
+              ) : null,
+            )}
           </div>
         </section>
       )}

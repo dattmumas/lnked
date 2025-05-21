@@ -27,7 +27,7 @@ export function useSupabaseRealtime<T = unknown>(
     }
     channel
       .on(
-        'postgres_changes',
+        'broadcast',
         {
           event: '*',
           schema: 'public',
