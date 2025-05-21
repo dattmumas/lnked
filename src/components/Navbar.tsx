@@ -58,20 +58,39 @@ export default function Navbar() {
   const router = useRouter();
   const pathname = usePathname();
   const [user, setUser] = useState<User | null>(null);
+  const [username, setUsername] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
   useEffect(() => {
     // Fetch current user using shared Supabase client
     supabase.auth
       .getUser()
-      .then(({ data }: { data: { user: User | null } }) => {
+      .then(async ({ data }: { data: { user: User | null } }) => {
         setUser(data.user);
+        if (data.user) {
+          const { data: profile } = await supabase
+            .from('users')
+            .select('username')
+            .eq('id', data.user.id)
+            .single();
+          setUsername(profile?.username ?? null);
+        }
         setIsLoading(false);
       });
     // Subscribe to auth changes on the singleton client
     const { data: authListener } = supabase.auth.onAuthStateChange(
-      (event: string, session: Session | null) => {
+      async (event: string, session: Session | null) => {
         setUser(session?.user ?? null);
+        if (session?.user) {
+          const { data: profile } = await supabase
+            .from('users')
+            .select('username')
+            .eq('id', session.user.id)
+            .single();
+          setUsername(profile?.username ?? null);
+        } else {
+          setUsername(null);
+        }
         // Sync session to server cookie on sign-in/sign-out
         fetch('/api/auth/callback', {
           method: 'POST',
@@ -129,13 +148,13 @@ export default function Navbar() {
             </Button>
             <Button
               variant={
-                pathname === `/users/${user?.id}` ? 'secondary' : 'ghost'
+                pathname === `/@${username}` ? 'secondary' : 'ghost'
               }
               size="sm"
               aria-current={
-                pathname === `/users/${user?.id}` ? 'page' : undefined
+                pathname === `/@${username}` ? 'page' : undefined
               }
-              onClick={() => router.push(`/users/${user?.id}`)}
+              onClick={() => router.push(`/@${username ?? user?.id}`)}
             >
               <UserIcon className="size-4 mr-2" /> My Profile
             </Button>
@@ -213,15 +232,15 @@ export default function Navbar() {
                     ))}
                     <Button
                       variant={
-                        pathname === `/users/${user?.id}`
+                        pathname === `/@${username}`
                           ? 'secondary'
                           : 'ghost'
                       }
                       className="justify-start h-9 px-2"
                       aria-current={
-                        pathname === `/users/${user?.id}` ? 'page' : undefined
+                        pathname === `/@${username}` ? 'page' : undefined
                       }
-                      onClick={() => router.push(`/users/${user?.id}`)}
+                      onClick={() => router.push(`/@${username ?? user?.id}`)}
                     >
                       <UserIcon className="size-4 mr-2" /> My Profile
                     </Button>
@@ -276,15 +295,15 @@ export default function Navbar() {
                     </Button>
                     <Button
                       variant={
-                        pathname === `/users/${user?.id}`
+                        pathname === `/@${username}`
                           ? 'secondary'
                           : 'ghost'
                       }
                       className="justify-start h-9 px-2"
                       aria-current={
-                        pathname === `/users/${user?.id}` ? 'page' : undefined
+                        pathname === `/@${username}` ? 'page' : undefined
                       }
-                      onClick={() => router.push(`/users/${user?.id}`)}
+                      onClick={() => router.push(`/@${username ?? user?.id}`)}
                     >
                       <UserIcon className="size-4 mr-2" /> My Profile
                     </Button>

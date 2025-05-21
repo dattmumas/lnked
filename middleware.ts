@@ -4,6 +4,14 @@ import type { CookieOptions } from "@supabase/ssr";
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+
+  if (pathname.startsWith('/@')) {
+    const username = pathname.slice(2).split('/')[0];
+    const rest = pathname.slice(2 + username.length);
+    const url = request.nextUrl.clone();
+    url.pathname = `/profile/${username}${rest}`;
+    return NextResponse.rewrite(url);
+  }
   const requiresAuth =
     pathname.startsWith("/dashboard") ||
     pathname === "/posts/new" ||
@@ -89,6 +97,7 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
+    "/@:path*",
     "/dashboard/:path*",
     "/posts/:path*/edit",
     "/posts/new",

@@ -593,6 +593,7 @@ export type Database = {
           created_at: string
           dislike_count: number | null
           id: string
+          slug: string | null
           is_public: boolean
           like_count: number
           published_at: string | null
@@ -608,6 +609,7 @@ export type Database = {
           created_at?: string
           dislike_count?: number | null
           id?: string
+          slug?: string | null
           is_public?: boolean
           like_count?: number
           published_at?: string | null
@@ -623,6 +625,7 @@ export type Database = {
           created_at?: string
           dislike_count?: number | null
           id?: string
+          slug?: string | null
           is_public?: boolean
           like_count?: number
           published_at?: string | null
@@ -893,6 +896,7 @@ export type Database = {
           bio: string | null
           cover_image_url: string | null
           embedding: string | null
+          username: string | null
           full_name: string | null
           id: string
           is_profile_public: boolean | null
@@ -915,6 +919,7 @@ export type Database = {
           bio?: string | null
           cover_image_url?: string | null
           embedding?: string | null
+          username?: string | null
           full_name?: string | null
           id: string
           is_profile_public?: boolean | null
@@ -937,6 +942,7 @@ export type Database = {
           bio?: string | null
           cover_image_url?: string | null
           embedding?: string | null
+          username?: string | null
           full_name?: string | null
           id?: string
           is_profile_public?: boolean | null
