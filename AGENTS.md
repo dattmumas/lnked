@@ -1,16 +1,24 @@
-Extend Follow Mechanics to Collectives (Backend): Currently, the follow system (follows table and followUser/unfollowUser actions) is only for user-to-user following
+Add Follow Button to Collective Pages (Frontend): Introduce a Follow UI on collective profiles to use the new followCollective logic. In the collective profile component (src/app/[collectiveSlug]/page.tsx), currently only a Subscribe button is shown for non-owners
+github.com
+. Under that, add logic to conditionally show a follow button if the viewing user is logged in and not already following. For consistency, we can reuse the SubscribeButton styling for a follow action, or even reuse the existing FollowButton component by making it flexible. The existing FollowButton is built for user targets (it calls followUser/unfollowUser)
+github.com
+. We can refactor it to accept a targetEntityType similar to SubscribeButton (e.g., 'user' | 'collective') and a targetId. If refactoring feels risky, create a separate FollowCollectiveButton component that is analogous: it manages an isFollowing state and calls followCollective or unfollowCollective server actions on toggle. Either way, ensure the button uses the same visual style: likely an outline or default variant button with an icon. You might use an icon like UserPlus for follow and UserMinus for unfollow (these are already imported in FollowButton
+github.com
+). Place this button in the collective header where Subscribe is – possibly to the left of Subscribe or below it. For example:
+tsx
+Copy
+{user?.id !== collective.owner_id && (
+  <div className="mt-4 flex gap-2">
+    <FollowButton targetEntityType="collective" targetId={collective.id} targetName={collective.name} /* etc */ />
+    <SubscribeButton ... />
+  </div>
+)}
+Ensure you determine the initial follow state when rendering: just as we do initialIsFollowing for user profiles by counting follows
 github.com
 github.com
-. We need to allow users to follow collectives as well (for free, non-paid updates). First, extend the data model: if not already present, add a following_type field to the follows table (using the member_entity_type enum of 'user' | 'collective'
+, do a similar check for collectives (where following_id = collective.id and following_type = 'collective'). Pass that to the Follow button for optimistic UI. When the user clicks follow/unfollow, use transitions to call the appropriate action and update state just like the user follow flow (handling errors by reverting state and showing a message, as FollowButton does now
 github.com
-) to distinguish the target type. (If the schema already included this as part of initial setup, just utilize it; otherwise, we’d perform a Supabase migration to add it, but per instructions we assume it’s ready.) Then implement new server actions in src/app/actions/followActions.ts for collectives. For example, create followCollective(collectiveId: string) and unfollowCollective(collectiveId: string) similar to the existing user follow functions. These should check auth (!user -> error just like followUser does
 github.com
-), prevent following one’s own collective (you might allow it or treat it like you cannot follow your own, analogous to not following yourself
+). This addition will allow users to follow collectives without payment, complementing the subscription (paid) option. It should not conflict with existing functionality: subscribe remains for paid content (Stripe flow), and follow is a separate lightweight action using our follows table. Remember to update any relevant tests (e.g., SubscribeButton.test.tsx or create FollowButton.test.tsx) to include collective scenarios if tests exist
 github.com
-), then insert/delete from the follows table. Use follows.insert({ follower_id: user.id, following_id: collectiveId, following_type: 'collective' }) for follow
-github.com
-, and a corresponding delete query for unfollow (matching on follower_id, following_id, and type). Include error handling for duplicates (if a unique constraint exists on that combination) similar to user follow
-github.com
-. After a successful follow or unfollow, revalidate any relevant pages, e.g., the collective’s page or a user’s feed, to update follower counts
-github.com
-. Security: set up RLS on follows such that inserts require auth.uid() matches follower_id (likely already done for user-user follow) – ensure it accommodates collective targets as well. With this backend in place, we haven’t changed any existing behavior (user follows still work as before), but we’ve expanded functionality to new entity types using the same pattern.
+.
