@@ -133,7 +133,7 @@ export async function followCollective(
     return { success: false, error: `Failed to follow collective: ${insertError.message}` };
   }
 
-  revalidatePath(`/${collective.slug}`);
+  revalidatePath(`/collectives/${collective.slug}`);
   revalidatePath("/");
 
   return { success: true };
@@ -177,7 +177,7 @@ export async function unfollowCollective(
   }
 
   if (collective) {
-    revalidatePath(`/${collective.slug}`);
+    revalidatePath(`/collectives/${collective.slug}`);
   }
   revalidatePath("/");
 

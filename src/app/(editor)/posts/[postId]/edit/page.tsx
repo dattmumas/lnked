@@ -1,5 +1,5 @@
 import { createServerSupabaseClient } from "@/lib/supabase/server";
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import EditPostForm, { type PostDataType } from "./EditPostForm"; // Import the client form component
 
 export default async function EditPostPage({
@@ -12,11 +12,10 @@ export default async function EditPostPage({
 
   const {
     data: { user },
-    error: authError,
   } = await supabase.auth.getUser();
 
-  if (authError || !user) {
-    redirect("/sign-in");
+  if (!user) {
+    notFound();
   }
 
   const { data: postData, error: postFetchError } = await supabase

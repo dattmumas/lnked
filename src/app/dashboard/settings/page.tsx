@@ -7,11 +7,10 @@ export default async function UserSettingsPage() {
   const supabase = await createServerSupabaseClient();
   const {
     data: { user: authUser },
-    error: authError,
   } = await supabase.auth.getUser();
 
-  if (authError || !authUser) {
-    redirect('/sign-in');
+  if (!authUser) {
+    redirect('/error');
   }
 
   // Fetch user profile data

@@ -48,7 +48,7 @@ const dashboardNavItems = [
     icon: <UserSquare className="size-4" />,
   },
   {
-    href: '/settings',
+    href: '/dashboard/settings',
     label: 'Account Settings',
     icon: <Settings className="size-4" />,
   },
@@ -140,10 +140,10 @@ export default function Navbar() {
               <UserIcon className="size-4 mr-2" /> My Profile
             </Button>
             <Button
-              variant={pathname === '/settings' ? 'secondary' : 'ghost'}
+              variant={pathname === '/dashboard/settings' ? 'secondary' : 'ghost'}
               size="sm"
-              aria-current={pathname === '/settings' ? 'page' : undefined}
-              onClick={() => router.push('/settings')}
+              aria-current={pathname === '/dashboard/settings' ? 'page' : undefined}
+              onClick={() => router.push('/dashboard/settings')}
             >
               Account Settings
             </Button>
@@ -226,12 +226,12 @@ export default function Navbar() {
                       <UserIcon className="size-4 mr-2" /> My Profile
                     </Button>
                     <Button
-                      variant={pathname === '/settings' ? 'secondary' : 'ghost'}
+                      variant={pathname === '/dashboard/settings' ? 'secondary' : 'ghost'}
                       className="justify-start h-9 px-2"
                       aria-current={
-                        pathname === '/settings' ? 'page' : undefined
+                        pathname === '/dashboard/settings' ? 'page' : undefined
                       }
-                      onClick={() => router.push('/settings')}
+                      onClick={() => router.push('/dashboard/settings')}
                     >
                       <Settings className="size-4 mr-2" /> Account Settings
                     </Button>
@@ -289,12 +289,12 @@ export default function Navbar() {
                       <UserIcon className="size-4 mr-2" /> My Profile
                     </Button>
                     <Button
-                      variant={pathname === '/settings' ? 'secondary' : 'ghost'}
+                      variant={pathname === '/dashboard/settings' ? 'secondary' : 'ghost'}
                       className="justify-start h-9 px-2"
                       aria-current={
-                        pathname === '/settings' ? 'page' : undefined
+                        pathname === '/dashboard/settings' ? 'page' : undefined
                       }
-                      onClick={() => router.push('/settings')}
+                      onClick={() => router.push('/dashboard/settings')}
                     >
                       <Settings className="size-4 mr-2" /> Account Settings
                     </Button>

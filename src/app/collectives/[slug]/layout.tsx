@@ -9,11 +9,11 @@ export default async function CollectiveLayout({
   params,
 }: {
   children: React.ReactNode;
-  params: Promise<{ collectiveSlug: string }>;
+  params: Promise<{ slug: string }>;
 }) {
-  const { collectiveSlug } = await params;
+  const { slug } = await params;
   if (process.env.NODE_ENV === "development") {
-    console.log("Rendering layout for collective slug:", collectiveSlug);
+    console.log("Rendering layout for collective slug:", slug);
   }
 
   return (

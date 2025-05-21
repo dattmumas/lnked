@@ -57,7 +57,7 @@ export default function DashboardCollectiveCard({
       <CardHeader>
         <div className="flex justify-between items-start gap-2">
           <CardTitle className="hover:text-primary line-clamp-1 break-all">
-            <Link href={`/${collective.slug}`}>{collective.name}</Link>
+            <Link href={`/collectives/${collective.slug}`}>{collective.name}</Link>
           </CardTitle>
           <Badge
             variant={role === "Owner" ? "default" : "secondary"}
@@ -93,7 +93,7 @@ export default function DashboardCollectiveCard({
           className="flex-grow basis-1/3 sm:basis-auto"
         >
           <Link
-            href={`/${collective.slug}`}
+            href={`/collectives/${collective.slug}`}
             className="flex items-center justify-center w-full"
           >
             <Users2 className="h-4 w-4 mr-1.5" /> View

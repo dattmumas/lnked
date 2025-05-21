@@ -1,5 +1,4 @@
 import { createServerSupabaseClient } from "@/lib/supabase/server";
-import { redirect } from "next/navigation";
 import NewPostForm from "./NewPostForm";
 import { notFound } from "next/navigation";
 
@@ -16,11 +15,10 @@ export default async function NewPostPage({
   const resolvedParams = await searchParams;
   const {
     data: { user },
-    error,
   } = await supabase.auth.getUser();
 
-  if (error || !user) {
-    redirect("/sign-in");
+  if (!user) {
+    notFound();
   }
 
   let collective: { id: string; name: string; owner_id: string } | null = null;

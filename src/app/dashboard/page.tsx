@@ -241,7 +241,7 @@ export default async function DashboardManagementPage() {
                     </CardHeader>
                     <CardContent className="mt-auto pt-0">
                       <Button asChild size="sm" className="w-full">
-                        <Link href={`/${collective.slug}`}>
+                        <Link href={`/collectives/${collective.slug}`}>
                           View Collective
                         </Link>
                       </Button>
