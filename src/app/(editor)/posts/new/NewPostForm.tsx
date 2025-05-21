@@ -175,7 +175,9 @@ export default function NewPostForm({ collective, pageTitle }: NewPostFormProps)
       if (result.error) {
         let errorMsg = result.error;
         if (result.fieldErrors) {
-          Object.entries(result.fieldErrors).forEach(([field, messages]) => {
+          const fieldErrors =
+            result.fieldErrors as Record<keyof NewPostFormValues, string[]>;
+          Object.entries(fieldErrors).forEach(([field, messages]) => {
             if (messages && messages.length > 0) {
               form.setError(field as keyof NewPostFormValues, {
                 type: 'server',

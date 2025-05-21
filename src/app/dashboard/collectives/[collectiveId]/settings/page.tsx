@@ -62,7 +62,7 @@ export default async function CollectiveSettingsPage({
     .map(
       (m: { user: { id: string; full_name: string | null } | null }) => m.user
     )
-    .filter((u) => u && u.id !== authUser.id);
+    .filter((u: { id: string } | null) => u && u.id !== authUser.id);
 
   return (
     <div className="container mx-auto p-4 md:p-6 max-w-2xl">
