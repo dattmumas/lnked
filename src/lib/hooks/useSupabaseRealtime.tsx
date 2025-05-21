@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
 
 /**
- * useSupabaseRealtime
+ *
  *
  * @param table - The table name to subscribe to (e.g., "posts")
  * @param onChange - Callback for insert/update/delete events
@@ -25,20 +25,25 @@ export function useSupabaseRealtime<T = unknown>(
       filterStr = `${table}:${filter.column}=eq.${filter.value}`;
       channel = supabase.channel(filterStr);
     }
-    channel
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (channel as any)
       .on(
-        'broadcast',
+        'postgres_changes',
         {
           event: '*',
           schema: 'public',
           table,
           ...(filter ? { filter: `${filter.column}=eq.${filter.value}` } : {}),
         },
-        (payload: { eventType: string; new: T | null; old: T | null }) => {
+        (payload: {
+          eventType: 'INSERT' | 'UPDATE' | 'DELETE';
+          new: T | null;
+          old: T | null;
+        }) => {
           onChange({
-            eventType: payload.eventType as 'INSERT' | 'UPDATE' | 'DELETE',
-            new: payload.new as T | undefined,
-            old: payload.old as T | undefined,
+            eventType: payload.eventType,
+            new: payload.new ?? undefined,
+            old: payload.old ?? undefined,
           });
         },
       )
