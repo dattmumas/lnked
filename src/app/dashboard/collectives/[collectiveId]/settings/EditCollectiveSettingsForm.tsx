@@ -336,8 +336,7 @@ export default function EditCollectiveSettingsForm({
             </CardContent>
           </Card>
           {/* Danger Zone: Delete Collective */}
-          {isOwner && (
-            <section className="mt-12 border-t pt-8">
+          <section className="mt-12 border-t pt-8">
               <h2 className="text-xl font-bold text-destructive mb-2">
                 Delete Collective
               </h2>
@@ -370,10 +369,9 @@ export default function EditCollectiveSettingsForm({
                   {deleteLoading ? "Deleting..." : "Delete Collective"}
                 </Button>
               )}
-            </section>
-          )}
+          </section>
           {/* Transfer Ownership Section */}
-          {isOwner && eligibleMembers.length > 0 && (
+          {eligibleMembers.length > 0 && (
             <section className="mt-12 border-t pt-8">
               <h2 className="text-xl font-bold mb-2">Transfer Ownership</h2>
               <p className="mb-4 text-muted-foreground">

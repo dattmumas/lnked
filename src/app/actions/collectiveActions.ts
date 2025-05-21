@@ -123,7 +123,7 @@ export async function inviteUserToCollective(
   // 4. Add user to collective_members
   const memberData: TablesInsert<"collective_members"> = {
     collective_id: collectiveId,
-    user_id: inviteeUser.id,
+    member_id: inviteeUser.id,
     role: role,
   };
 

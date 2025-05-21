@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
-// import { getCurrentUser } from '@/lib/auth'; // Implement as needed
+import { getCommentsByPostId } from "@/lib/data/comments";
 
 export async function GET(
   req: NextRequest,
