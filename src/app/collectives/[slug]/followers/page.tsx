@@ -6,15 +6,15 @@ import Link from 'next/link';
 export default async function Page({
   params,
 }: {
-  params: { collectiveSlug: string };
+  params: { slug: string };
 }) {
-  const { collectiveSlug } = params;
+  const { slug } = params;
   const supabase = await createServerSupabaseClient();
 
   const { data: collectiveData, error: collectiveError } = await supabase
     .from('collectives')
     .select('id, name')
-    .eq('slug', collectiveSlug)
+    .eq('slug', slug)
     .single();
 
   if (collectiveError || !collectiveData) {

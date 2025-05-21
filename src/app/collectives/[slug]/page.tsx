@@ -15,10 +15,10 @@ export default async function Page({
   params,
   searchParams,
 }: {
-  params: { collectiveSlug: string };
+  params: { slug: string };
   searchParams: { q?: string };
 }) {
-  const { collectiveSlug } = params;
+  const { slug } = params;
   const supabase = await createServerSupabaseClient();
 
   const {
@@ -31,7 +31,7 @@ export default async function Page({
     .select(
       'id, name, description, owner_id, tags, logo_url, owner:users!owner_id(full_name)',
     )
-    .eq('slug', collectiveSlug)
+    .eq('slug', slug)
     .single();
 
   const collective = collectiveData as
@@ -42,7 +42,7 @@ export default async function Page({
 
   if (collectiveError || !collective) {
     console.error(
-      `Error fetching collective ${collectiveSlug}:`,
+      `Error fetching collective ${slug}:`,
       collectiveError,
     );
     notFound();
@@ -138,7 +138,7 @@ export default async function Page({
       like_count: p.like_count ?? 0,
       dislike_count: p.dislike_count ?? 0,
       current_user_has_liked: undefined, // Will be determined client-side
-      collective_slug: collectiveSlug,
+      collective_slug: slug,
     })) || [];
 
   const pinned =
@@ -147,7 +147,7 @@ export default async function Page({
       like_count: pinnedPost.like_count ?? 0,
       dislike_count: pinnedPost.dislike_count ?? 0,
       current_user_has_liked: undefined,
-      collective_slug: collectiveSlug,
+      collective_slug: slug,
     };
 
   type SubscriptionTier = Database['public']['Tables']['prices']['Row'];
@@ -202,7 +202,7 @@ export default async function Page({
               ? `Owned by ${collective.owner.full_name} – `
               : ''}
             <Link
-              href={`/${collectiveSlug}/followers`}
+              href={`/collectives/${slug}/followers`}
               className="hover:underline"
             >
               {followerCount ?? 0} follower

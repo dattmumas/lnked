@@ -43,7 +43,7 @@ const settingsNavItems = [
     label: "Newsletter",
   },
   {
-    href: "/settings",
+    href: "/dashboard/settings",
     icon: SettingsIcon,
     label: "Account Settings",
   },

@@ -67,6 +67,12 @@ Copy `.env.example` to `.env.local` and provide your own values. This file lists
 all keys required for Supabase, Stripe, Resend and other services used by the
 app.
 
+### Routing Updates
+
+Collective pages now live under `/collectives/[slug]` instead of directly at the
+root. Account settings have moved to `/dashboard/settings`. Old URLs under the
+previous structure redirect automatically.
+
 ## 📚 Documentation & Resources
 
 - [Lexical Docs](https://lexical.dev/docs)

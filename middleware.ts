@@ -4,10 +4,13 @@ import type { CookieOptions } from "@supabase/ssr";
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  const wantsDashboard = pathname.startsWith("/dashboard");
+  const requiresAuth =
+    pathname.startsWith("/dashboard") ||
+    pathname === "/posts/new" ||
+    (pathname.startsWith("/posts/") && pathname.endsWith("/edit"));
   const isAuthPage = pathname === "/sign-in" || pathname === "/sign-up";
 
-  if (!wantsDashboard && !isAuthPage) return NextResponse.next();
+  if (!requiresAuth && !isAuthPage) return NextResponse.next();
 
   let response = NextResponse.next({ request });
 
@@ -45,7 +48,7 @@ export async function middleware(request: NextRequest) {
 
     if (process.env.NODE_ENV === "development") {
       console.log(
-        `Middleware check path=${pathname}, wantsDashboard=${wantsDashboard}, isAuthPage=${isAuthPage}`
+        `Middleware check path=${pathname}, requiresAuth=${requiresAuth}, isAuthPage=${isAuthPage}`
       );
     }
 
@@ -57,7 +60,7 @@ export async function middleware(request: NextRequest) {
       console.log(`Session check result: hasSession=${!!session}`);
     }
 
-    if (!session && wantsDashboard) {
+    if (!session && requiresAuth) {
       if (process.env.NODE_ENV === "development") {
         console.log("No session, redirecting to sign-in");
       }
@@ -85,5 +88,11 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/sign-in", "/sign-up"],
+  matcher: [
+    "/dashboard/:path*",
+    "/posts/:path*/edit",
+    "/posts/new",
+    "/sign-in",
+    "/sign-up",
+  ],
 };

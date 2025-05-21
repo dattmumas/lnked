@@ -24,7 +24,7 @@ export default function CollectiveCard({
     <div className="rounded-lg border bg-card text-card-foreground shadow-sm p-4 flex flex-col gap-2 hover:shadow-md transition-shadow">
       <div className="flex items-center justify-between">
         <Link
-          href={`/${collective.slug}`}
+          href={`/collectives/${collective.slug}`}
           className="text-lg font-semibold hover:text-primary"
         >
           {collective.name}

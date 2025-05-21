@@ -433,8 +433,8 @@ export async function updateCollectiveSettings(
   revalidatePath(`/dashboard/collectives/${collectiveId}/settings`);
   revalidatePath(`/dashboard`); // Revalidate dashboard as collective name/slug might be displayed there
   if (slug !== collective.slug) {
-    revalidatePath(`/${collective.slug}`); // Old slug path
-    revalidatePath(`/${slug}`); // New slug path
+    revalidatePath(`/collectives/${collective.slug}`); // Old slug path
+    revalidatePath(`/collectives/${slug}`); // New slug path
   }
 
   return {

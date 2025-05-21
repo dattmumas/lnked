@@ -42,9 +42,9 @@ export type CollectivePostViewData =
 export default async function PostPage({
   params,
 }: {
-  params: Promise<{ collectiveSlug: string; postId: string }>;
+  params: Promise<{ slug: string; postId: string }>;
 }) {
-  const { collectiveSlug, postId } = await params;
+  const { slug, postId } = await params;
   const supabase = await createServerSupabaseClient();
 
   const {
@@ -55,12 +55,12 @@ export default async function PostPage({
   const { data: collective, error: collectiveError } = await supabase
     .from('collectives')
     .select('id, name, slug, owner_id')
-    .eq('slug', collectiveSlug)
+    .eq('slug', slug)
     .single();
 
   if (collectiveError || !collective) {
     console.error(
-      `Error fetching collective ${collectiveSlug} for post ${postId}:`,
+      `Error fetching collective ${slug} for post ${postId}:`,
       collectiveError,
     );
     notFound();
@@ -84,7 +84,7 @@ export default async function PostPage({
   const post = postResult as CollectivePostViewData | null;
   if (postError || !post || !post.author) {
     console.error(
-      `Error fetching post ${postId} or author data for collective ${collectiveSlug}:`,
+      `Error fetching post ${postId} or author data for collective ${slug}:`,
       postError?.message,
     );
     notFound();
