@@ -5,6 +5,7 @@ import type { MicroPost } from '@/components/app/profile/MicrothreadPanel';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import SubscribeButton from '@/components/app/newsletters/molecules/SubscribeButton';
+import FollowCollectiveButton from '@/components/FollowCollectiveButton';
 import Image from 'next/image';
 import { Badge } from '@/components/ui/badge';
 import type { Database } from '@/lib/database.types';
@@ -55,6 +56,21 @@ export default async function Page({
     .select('*', { count: 'exact', head: true })
     .eq('following_id', collective.id)
     .eq('following_type', 'collective');
+
+  let initialIsFollowing = false;
+  if (user && user.id !== collective.owner_id) {
+    const { count, error: followError } = await supabase
+      .from('follows')
+      .select('*', { count: 'exact', head: true })
+      .eq('follower_id', user.id)
+      .eq('following_id', collective.id)
+      .eq('following_type', 'collective');
+    if (followError) {
+      console.error('Error checking follow status:', followError.message);
+    } else if (count !== null && count > 0) {
+      initialIsFollowing = true;
+    }
+  }
 
   // Fetch posts for this collective using denormalized like/dislike counts
   const { data: postsData, error: postsError } = await supabase
@@ -161,7 +177,13 @@ export default async function Page({
           </form>
         </div>
         {user?.id !== collective.owner_id && (
-          <div className="mt-4">
+          <div className="mt-4 flex gap-2">
+            <FollowCollectiveButton
+              targetCollectiveId={collective.id}
+              targetCollectiveName={collective.name}
+              initialIsFollowing={initialIsFollowing}
+              currentUserId={user?.id}
+            />
             <SubscribeButton
               targetEntityType="collective"
               targetEntityId={collective.id}
