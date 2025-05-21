@@ -42,9 +42,9 @@ export type CollectivePostViewData =
 export default async function PostPage({
   params,
 }: {
-  params: Promise<{ collectiveSlug: string; postId: string }>;
+  params: { collectiveSlug: string; postId: string };
 }) {
-  const { collectiveSlug, postId } = await params;
+  const { collectiveSlug, postId } = params;
   const supabase = await createServerSupabaseClient();
 
   const {
