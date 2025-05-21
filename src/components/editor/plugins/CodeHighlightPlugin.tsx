@@ -65,7 +65,8 @@ export default function CodeHighlightPlugin() {
             if (
               !(child instanceof TextNode) ||
               child.getTextContent() !== content ||
-              (child.getLatest() as any).__className !== `token ${token.type}`
+              (child.getLatest() as { __className?: string }).__className !==
+                `token ${token.type}`
             ) {
               needsUpdate = true;
               break;

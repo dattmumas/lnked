@@ -17,7 +17,7 @@ export default async function EditProfilePage() {
   // Fetch the user's profile from the public.users table
   const { data: userProfile, error: profileError } = await supabase
     .from("users")
-    .select("full_name, bio, tags")
+    .select("full_name, bio, tags, avatar_url")
     .eq("id", authUser.id)
     .single();
 
@@ -32,6 +32,7 @@ export default async function EditProfilePage() {
     bio: userProfile?.bio || "",
     // Convert tags array to comma-separated string for the form field
     tags_string: userProfile?.tags?.join(", ") || "",
+    avatar_url: userProfile?.avatar_url || "",
   };
 
   return (

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import React, { useState, useTransition } from "react";
 import { useForm, SubmitHandler } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -32,6 +32,7 @@ const ClientUserProfileSchema = z.object({
     .max(500, "Bio must be 500 characters or less.")
     .optional()
     .nullable(),
+  avatar_url: z.string().optional().nullable(),
   tags_string: z.string().optional().nullable(),
 });
 
@@ -59,8 +60,35 @@ export default function EditProfileForm({
     register,
     handleSubmit,
     formState: { errors, isSubmitting, isDirty },
+    setValue,
     reset,
   } = form;
+
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(
+    defaultValues.avatar_url || null,
+  );
+
+  const handleAvatarChange = (
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      setError("File must be an image.");
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      setError("Image must be less than 2MB.");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const result = reader.result as string;
+      setAvatarPreview(result);
+      setValue("avatar_url", result, { shouldDirty: true });
+    };
+    reader.readAsDataURL(file);
+  };
 
   const onSubmit: SubmitHandler<UserProfileFormClientValues> = async (data) => {
     setError(null);
@@ -112,6 +140,29 @@ export default function EditProfileForm({
             {errors.full_name && (
               <p className="text-sm text-destructive">
                 {errors.full_name.message}
+              </p>
+            )}
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="avatar">Profile Image</Label>
+            {avatarPreview && (
+              <img
+                src={avatarPreview}
+                alt="Avatar preview"
+                className="h-20 w-20 rounded-full object-cover"
+              />
+            )}
+            <Input
+              id="avatar"
+              type="file"
+              accept="image/*"
+              onChange={handleAvatarChange}
+              disabled={isPending || isSubmitting}
+            />
+            <input type="hidden" {...register("avatar_url")}></input>
+            {errors.avatar_url && (
+              <p className="text-sm text-destructive">
+                {errors.avatar_url.message}
               </p>
             )}
           </div>
