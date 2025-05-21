@@ -8,6 +8,7 @@ import SubscribeButton from '@/components/app/newsletters/molecules/SubscribeBut
 import type { Database } from '@/lib/database.types';
 import Image from 'next/image';
 import { Badge } from '@/components/ui/badge';
+import { getSubscriptionStatus } from '@/app/actions/subscriptionActions';
 
 type PostRow = Database['public']['Tables']['posts']['Row'];
 
@@ -47,10 +48,28 @@ export default async function Page({
     .eq('target_entity_id', userId)
     .eq('status', 'active');
 
-  const { data: postsData, error: postsError } = (await supabase.rpc(
-    'get_user_feed',
-    { p_user_id: userId },
-  )) as { data: PostRow[] | null; error: unknown };
+  let postsQuery = supabase
+    .from('posts')
+    .select('*')
+    .eq('author_id', userId)
+    .order('published_at', { ascending: false });
+
+  const isOwner = authUser?.id === userId;
+  const subscriptionStatus = await getSubscriptionStatus('user', userId);
+  const isSubscribed = subscriptionStatus?.isSubscribed;
+
+  if (isOwner) {
+    // Owners can see all their posts
+  } else if (isSubscribed) {
+    postsQuery = postsQuery.not('published_at', 'is', null);
+  } else {
+    postsQuery = postsQuery.eq('is_public', true).not('published_at', 'is', null);
+  }
+
+  const { data: postsData, error: postsError } = (await postsQuery) as {
+    data: PostRow[] | null;
+    error: unknown;
+  };
 
   if (postsError && typeof postsError === 'object' && 'message' in postsError) {
     console.error(
@@ -89,8 +108,6 @@ export default async function Page({
       .maybeSingle()) as { data: SubscriptionTier | null };
     if (price) tiers = [price];
   }
-
-  const isOwner = authUser?.id === userId;
 
   return (
     <div className="container mx-auto p-4 md:p-6">

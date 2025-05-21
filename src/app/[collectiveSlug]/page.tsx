@@ -9,6 +9,7 @@ import FollowCollectiveButton from '@/components/FollowCollectiveButton';
 import Image from 'next/image';
 import { Badge } from '@/components/ui/badge';
 import type { Database } from '@/lib/database.types';
+import { getSubscriptionStatus } from '@/app/actions/subscriptionActions';
 
 export default async function Page({
   params,
@@ -73,13 +74,29 @@ export default async function Page({
   }
 
   // Fetch posts for this collective using denormalized like/dislike counts
-  const { data: postsData, error: postsError } = await supabase
+  let postsQuery = supabase
     .from('posts')
     .select(`*, view_count`)
     .eq('collective_id', collective.id)
-    .eq('is_public', true)
     .order('pinned_at', { ascending: false })
     .order('created_at', { ascending: false });
+
+  const isOwner = user?.id === collective.owner_id;
+  const subscriptionStatus = await getSubscriptionStatus(
+    'collective',
+    collective.id,
+  );
+  const isSubscribed = subscriptionStatus?.isSubscribed;
+
+  if (isOwner) {
+    // Owners can see all posts
+  } else if (isSubscribed) {
+    postsQuery = postsQuery.not('published_at', 'is', null);
+  } else {
+    postsQuery = postsQuery.eq('is_public', true).not('published_at', 'is', null);
+  }
+
+  const { data: postsData, error: postsError } = await postsQuery;
 
   if (postsError) {
     console.error(
@@ -118,7 +135,6 @@ export default async function Page({
   ];
 
   // Check if current user is the owner of the collective to show edit/new post links
-  const isOwner = user?.id === collective.owner_id;
 
   return (
     <div className="container mx-auto p-4 md:p-6">

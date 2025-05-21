@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import SubscribeButton from '@/components/app/newsletters/molecules/SubscribeButton';
 import FollowButton from '@/components/FollowButton';
+import { getSubscriptionStatus } from '@/app/actions/subscriptionActions';
 // We'll need a subscribe button component here eventually
 
 // Define the expected shape of items in postsData
@@ -52,8 +53,17 @@ export default async function IndividualNewsletterPage({
     .is('collective_id', null) // individual newsletter posts only
     .order('published_at', { ascending: false });
 
-  // If the visiting user is NOT the owner, only show public + published posts
-  if (!currentUser || currentUser.id !== author.id) {
+  const isOwner = currentUser?.id === author.id;
+  const subscriptionStatus = await getSubscriptionStatus('user', author.id);
+  const isSubscribed = subscriptionStatus?.isSubscribed;
+
+  if (isOwner) {
+    // Owners can see all their posts
+  } else if (isSubscribed) {
+    // Subscribers see all published posts regardless of is_public
+    postsQuery = postsQuery.not('published_at', 'is', null);
+  } else {
+    // Non-subscribers see only public, published posts
     postsQuery = postsQuery
       .eq('is_public', true)
       .not('published_at', 'is', null);
