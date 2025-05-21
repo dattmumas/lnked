@@ -1,36 +1,56 @@
-3. Update Next.js App Router API Usage (useRouter, notFound, headers, etc.)
-Root Cause: Some Next.js App Router APIs are being used in the wrong context or have moved in newer versions. The upgrade to Next 15 means certain functions need to be imported/used differently. For example, useRouter must only be used in Client Components, and Next’s notFound/redirect functions should be used instead of manual 404 routes. The headers() and cookies() utilities may have changed to async in the new version, affecting how they’re used.
-Solution – Hooks (useRouter, usePathname): Audit all components using Next navigation hooks. Ensure that any component calling useRouter or usePathname is marked with "use client" at the top. For instance, src/components/Navbar.tsx imports usePathname and useRouter from "next/navigation"
+5. Address Lexical Node Casting Issues and Other Type Assertions
+Root Cause: Custom Lexical editor nodes and other parts of the codebase contain unsafe type assertions (casting) that no longer fly under stricter TypeScript settings. For example, in the PollNode Lexical node, the code directly accesses the editor’s internal node map and casts to the custom node class
 github.com
- – this file already has "use client"
-github.com
-, which is correct. If you find any server components trying to use these hooks (which would throw a TS error), refactor them to either be client components or remove the hook usage. In practice, most such hooks (for navigation or pathname) should stay in client-side interactive components only.
-Solution – notFound and redirect: Continue to use notFound() and redirect() from 'next/navigation' in Server Components to handle error states, but ensure they are imported from the correct module and used in proper contexts. In Next 15, these functions are still available in next/navigation (and they throw to halt rendering). For example, in src/app/posts/[postId]/page.tsx, keep import { notFound } from 'next/navigation' and calls to notFound() on error conditions
-github.com
-. Likewise, use redirect() from next/navigation for auth redirects (as seen in src/app/dashboard/page.tsx where we redirect if no session
-github.com
-). The key is to ensure TypeScript knows these calls never return. If TypeScript complains about code after a notFound()/redirect() call (e.g., “might be undefined” because it doesn’t realize execution stops), you can explicitly mark those functions as returning never or add a return statement after the call to satisfy the compiler. In practice, Next’s types usually define notFound() and redirect() as throwing errors (type never), so updating to the latest next types should resolve that.
-Solution – headers() and cookies(): In Next 13, headers()/cookies() were synchronous, but in Next 15 these may be async. Update their usage accordingly:
-In server components (e.g., src/app/layout.tsx), call them with await. The root layout is already doing this for headers
-github.com
-, which is correct if headers() returns a Promise. Double-check any other usage. For example, in src/app/layout.tsx:
+. Similarly, in the Stripe webhook route, casting headers() to an unknown Headers was needed. These casts can be replaced with safer, newer approaches.
+Solution – Lexical Nodes: Refactor custom Lexical nodes to avoid reaching into private internals. In src/components/editor/nodes/PollNode.tsx, instead of:
 ts
 Copy
 Edit
-const headersList = await headers();
-const pathname = headersList.get('next-url') || '';
-is fine. Just ensure the function signature matches (if headers() is now defined to return Promise<Headers> in Next’s types, the await is needed; if it’s still sync, remove the unnecessary await to appease TS).
-In API route handlers, prefer using the Request object’s headers instead of the global headers() util. For instance, in src/app/api/stripe-webhook/route.ts, instead of:
+const pollNode = editor._editorState._nodeMap.get(nodeKey) as PollNode | undefined;
+if (pollNode) {
+  const writable = pollNode.getWritable();
+  writable.__question = newQuestion;
+  writable.__options = newOptions;
+}
+use Lexical’s provided helper to get the node by key, and type-narrow it:
 ts
 Copy
 Edit
-const sig = (headers() as unknown as Headers).get('stripe-signature');
-do:
-ts
-Copy
-Edit
-const sig = req.headers.get('stripe-signature');
-Here req is the NextRequest or Request passed into the route function. This change removes the need for the unknown cast
+editor.update(() => {
+  const node = $getNodeByKey(nodeKey);
+  if (node instanceof PollNode) {
+    const writable = node.getWritable();
+    writable.__question = newQuestion;
+    writable.__options = newOptions;
+  }
+});
+This approach (similar to what the Excalidraw node does with $getNodeByKey
 github.com
- and uses the standard Web API Headers type, satisfying TypeScript. Similarly, use req.cookies via the NextRequest if needed, or the cookies() util with await in other server contexts.
-Solution – App Router conventions: Add a global not-found.tsx in the app directory (or within relevant routes) to properly handle 404 states. This is optional but recommended with App Router – when you call notFound(), Next.js will render the nearest not-found.tsx. If such a file is missing, you might get a generic error. Creating a simple app/not-found.tsx page that shows a 404 message will improve this. Also consider adding an error.tsx for error boundaries if not present (to catch unhandled errors). Ensure no legacy APIs like getServerSideProps or next/router are being used – a quick search confirms none are present, which is good. After these adjustments, all code will align with Next.js 15’s App Router practices, eliminating the “removed or unavailable export” errors for useRouter, notFound, etc.
+) avoids the need for an as PollNode cast and uses Lexical’s public API. Update all custom node classes that were using internal _nodeMap or other non-public properties. This will fix type errors and is more robust against Lexical version changes.
+Solution – JSON Casting in Nodes: Ensure that import/export JSON methods are properly typed. In some nodes (e.g. InlineImageNode), you had to cast the serialized data to an object to extract fields
+github.com
+. If TypeScript complains about those, you can improve the typings by defining a Serialized<YourNode> interface and using Lexical’s generic types. Many of your nodes already use Spread and SerializedLexicalNode to type their JSON (e.g., SerializedPollNode in PollNode
+github.com
+). Just double-check these match the shape of your node’s data so the casts can be minimal. For instance, InlineImageNode.importJSON could be typed like:
+ts
+Copy
+Edit
+static importJSON(serialized: SerializedLexicalNode & { src?: string; alt?: string }) {
+  return new InlineImageNode(serialized.src ?? "", serialized.alt ?? "Inline Image");
+}
+eliminating the as unknown as { src?: string; alt?: string } cast. These refinements will satisfy the compiler’s stricter checks.
+Solution – Other Type Assertions: Search for other usages of as unknown or non-null assertions (!) that might be unnecessary or unsafe. For example:
+In the Stripe webhook route, replace (headers() as unknown as Headers) with the approach noted above (using req.headers or await headers()), removing the cast
+github.com
+.
+In page components where you used typedPost! or similar after calling notFound(), ensure that notFound() is recognized as terminating. If it isn’t, you can appease TS by adding an explicit return after it or by using an if/else structure. For instance:
+ts
+Copy
+Edit
+if (!typedPost) {
+  notFound();
+} else {
+  // use typedPost safely here
+}
+This way TS knows in the else branch typedPost is not null. However, if using the latest next types, this may not be needed since notFound() should be type never. Adjust these patterns on a case-by-case basis to eliminate warnings about possibly null values.
+Solution – Props Alignment: Go through any React component props where types don’t line up. A common subtle issue might be passing a prop of the wrong type to a child component. For example, if a component SubscribeButton expects a targetName: string but you passed a number, that’s a mismatch. In our code, no glaring example stands out, but it’s wise to verify usage of components like PostCard, PostListItem, RecentPostRow, etc. Ensure the data you pass conforms to the interface. If a prop is optional in the child but you treat it as required (or vice versa), update the definitions accordingly (make it optional or provide a default). These fixes will remove any remaining TS errors about incompatible prop types.
