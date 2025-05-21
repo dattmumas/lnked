@@ -98,6 +98,19 @@ export default async function Page({
       collective_slug: collectiveSlug,
     })) || [];
 
+  type SubscriptionTier = Database['public']['Tables']['prices']['Row'];
+  const { data: tierData } = (await supabase
+    .from('prices')
+    .select(
+      'id, unit_amount, currency, interval, description, active, product:products!product_id(collective_id)',
+    )
+    .eq('product.collective_id', collective.id)
+    .eq('active', true)
+    .order('unit_amount', { ascending: true })) as {
+    data: SubscriptionTier[] | null;
+  };
+  const tiers = tierData ?? [];
+
   const microPosts: MicroPost[] = [
     { id: 'm1', content: 'Welcome to our new readers!' },
     { id: 'm2', content: 'Recording a podcast episode today.' },
@@ -188,6 +201,7 @@ export default async function Page({
               targetEntityType="collective"
               targetEntityId={collective.id}
               targetName={collective.name}
+              tiers={tiers}
             />
           </div>
         )}

@@ -78,6 +78,18 @@ export default async function Page({
     { id: 'u3', content: 'Follow me for updates!' },
   ];
 
+  type SubscriptionTier = Database['public']['Tables']['prices']['Row'];
+  let tiers: SubscriptionTier[] = [];
+  const defaultPriceId = process.env.NEXT_PUBLIC_STRIPE_DEFAULT_PRICE_ID;
+  if (defaultPriceId) {
+    const { data: price } = (await supabase
+      .from('prices')
+      .select('id, unit_amount, currency, interval, description')
+      .eq('id', defaultPriceId)
+      .maybeSingle()) as { data: SubscriptionTier | null };
+    if (price) tiers = [price];
+  }
+
   const isOwner = authUser?.id === userId;
 
   return (
@@ -147,6 +159,7 @@ export default async function Page({
               targetEntityType="user"
               targetEntityId={profile.id}
               targetName={profile.full_name ?? ''}
+              tiers={tiers}
             />
           </div>
         )}

@@ -1,15 +1,15 @@
-import { createServerSupabaseClient } from "@/lib/supabase/server";
-import type { Database } from "@/lib/database.types";
-import { notFound } from "next/navigation";
-import PostCard from "@/components/app/posts/molecules/PostCard";
-import { Button } from "@/components/ui/button";
-import Link from "next/link";
-import SubscribeButton from "@/components/app/newsletters/molecules/SubscribeButton";
-import FollowButton from "@/components/FollowButton";
+import { createServerSupabaseClient } from '@/lib/supabase/server';
+import type { Database } from '@/lib/database.types';
+import { notFound } from 'next/navigation';
+import PostCard from '@/components/app/posts/molecules/PostCard';
+import { Button } from '@/components/ui/button';
+import Link from 'next/link';
+import SubscribeButton from '@/components/app/newsletters/molecules/SubscribeButton';
+import FollowButton from '@/components/FollowButton';
 // We'll need a subscribe button component here eventually
 
 // Define the expected shape of items in postsData
-export type PostWithLikesData = Database["public"]["Tables"]["posts"]["Row"] & {
+export type PostWithLikesData = Database['public']['Tables']['posts']['Row'] & {
   likes: { count: number }[] | null;
 };
 
@@ -27,9 +27,9 @@ export default async function IndividualNewsletterPage({
 
   // 1. Fetch author details
   const { data: author, error: authorError } = await supabase
-    .from("users")
-    .select("id, full_name, role") // Add any other public user details you want to display
-    .eq("id", userId)
+    .from('users')
+    .select('id, full_name, role') // Add any other public user details you want to display
+    .eq('id', userId)
     .single();
 
   if (authorError || !author) {
@@ -41,22 +41,22 @@ export default async function IndividualNewsletterPage({
   //    and include like count for each post.
   //    RLS policies on 'posts' will handle public/subscriber access.
   let postsQuery = supabase
-    .from("posts")
+    .from('posts')
     .select(
       `
       *,
       likes(count)
-    `
+    `,
     )
-    .eq("author_id", author.id)
-    .is("collective_id", null) // individual newsletter posts only
-    .order("published_at", { ascending: false });
+    .eq('author_id', author.id)
+    .is('collective_id', null) // individual newsletter posts only
+    .order('published_at', { ascending: false });
 
   // If the visiting user is NOT the owner, only show public + published posts
   if (!currentUser || currentUser.id !== author.id) {
     postsQuery = postsQuery
-      .eq("is_public", true)
-      .not("published_at", "is", null);
+      .eq('is_public', true)
+      .not('published_at', 'is', null);
   }
 
   const { data: postsData, error: postsError } = await postsQuery;
@@ -73,18 +73,30 @@ export default async function IndividualNewsletterPage({
       // No need to spread postRow and likeInfo separately if p is already correctly typed
     })) || [];
 
+  type SubscriptionTier = Database['public']['Tables']['prices']['Row'];
+  let tiers: SubscriptionTier[] = [];
+  const defaultPriceId = process.env.NEXT_PUBLIC_STRIPE_DEFAULT_PRICE_ID;
+  if (defaultPriceId) {
+    const { data: price } = (await supabase
+      .from('prices')
+      .select('id, unit_amount, currency, interval, description')
+      .eq('id', defaultPriceId)
+      .maybeSingle()) as { data: SubscriptionTier | null };
+    if (price) tiers = [price];
+  }
+
   let initialIsFollowing = false;
   if (currentUser && author && currentUser.id !== author.id) {
     // Corrected select for head count query
     const { count, error: followError } = await supabase
-      .from("follows")
-      .select("*", { count: "exact", head: true })
-      .eq("follower_id", currentUser.id)
-      .eq("following_id", author.id)
-      .eq("following_type", "user");
+      .from('follows')
+      .select('*', { count: 'exact', head: true })
+      .eq('follower_id', currentUser.id)
+      .eq('following_id', author.id)
+      .eq('following_type', 'user');
 
     if (followError) {
-      console.error("Error checking follow status:", followError.message);
+      console.error('Error checking follow status:', followError.message);
     } else if (count !== null && count > 0) {
       // Check count directly
       initialIsFollowing = true;
@@ -97,7 +109,7 @@ export default async function IndividualNewsletterPage({
         <div className="flex flex-col sm:flex-row justify-between sm:items-start gap-4">
           <div>
             <h1 className="text-4xl font-bold tracking-tight mb-2">
-              {author.full_name || "Anonymous Author"}&apos;s Newsletter
+              {author.full_name || 'Anonymous Author'}&apos;s Newsletter
             </h1>
             {/* Add author bio or other info here */}
           </div>
@@ -106,13 +118,14 @@ export default async function IndividualNewsletterPage({
               <SubscribeButton
                 targetEntityType="user"
                 targetEntityId={author.id}
-                targetName={author.full_name || "this newsletter"}
+                targetName={author.full_name || 'this newsletter'}
+                tiers={tiers}
               />
             )}
             {currentUser?.id !== author.id && (
               <FollowButton
                 targetUserId={author.id}
-                targetUserName={author.full_name || "this author"}
+                targetUserName={author.full_name || 'this author'}
                 initialIsFollowing={initialIsFollowing}
                 currentUserId={currentUser?.id}
               />
@@ -143,7 +156,7 @@ export default async function IndividualNewsletterPage({
           <div className="text-center py-10">
             <h2 className="text-2xl font-semibold mb-2">No posts yet!</h2>
             <p className="text-muted-foreground">
-              {author.full_name || "This author"} hasn&apos;t published any
+              {author.full_name || 'This author'} hasn&apos;t published any
               posts to their newsletter yet.
             </p>
           </div>
