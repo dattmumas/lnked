@@ -1,54 +1,58 @@
-"use client";
+'use client';
 
-import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
-import supabase from "@/lib/supabase/browser";
-import type { User, Session } from "@supabase/supabase-js";
-import { Button } from "./ui/button";
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { useRouter } from 'next/router';
+import { useEffect, useState } from 'react';
+import supabase from '@/lib/supabase/browser';
+import type {
+  User as SupabaseUser,
+  Session as SupabaseSession,
+} from '@supabase/auth-js';
+import { Button } from './ui/button';
 import {
   Sheet,
   SheetContent,
   SheetTrigger,
   SheetTitle,
-} from "@/components/ui/sheet";
+} from '@/components/ui/sheet';
 import {
   Menu,
   LayoutDashboard,
   FileText,
   Users2,
   UserSquare,
-  User,
   Newspaper,
   LogOut,
   Settings,
-} from "lucide-react";
-import ModeToggle from "@/components/app/nav/ModeToggle";
+  User as UserIcon,
+} from 'lucide-react';
+import ModeToggle from '@/components/app/nav/ModeToggle';
 
 const dashboardNavItems = [
   {
-    href: "/dashboard",
-    label: "Overview",
+    href: '/dashboard',
+    label: 'Overview',
     icon: <LayoutDashboard className="size-4" />,
   },
   {
-    href: "/dashboard/posts",
-    label: "My Posts",
+    href: '/dashboard/posts',
+    label: 'My Posts',
     icon: <FileText className="size-4" />,
   },
   {
-    href: "/dashboard/collectives",
-    label: "My Collectives",
+    href: '/dashboard/collectives',
+    label: 'My Collectives',
     icon: <Users2 className="size-4" />,
   },
   {
-    href: "/dashboard/profile/edit",
-    label: "Edit Profile",
+    href: '/dashboard/profile/edit',
+    label: 'Edit Profile',
     icon: <UserSquare className="size-4" />,
   },
   {
-    href: "/settings",
-    label: "Account Settings",
+    href: '/settings',
+    label: 'Account Settings',
     icon: <Settings className="size-4" />,
   },
 ];
@@ -56,26 +60,28 @@ const dashboardNavItems = [
 export default function Navbar() {
   const router = useRouter();
   const pathname = usePathname();
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<SupabaseUser | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
   useEffect(() => {
     // Fetch current user using shared Supabase client
-    supabase.auth.getUser().then(({ data: { user: currentUser } }) => {
-      setUser(currentUser);
-      setIsLoading(false);
-    });
+    supabase.auth
+      .getUser()
+      .then(({ data }: { data: { user: SupabaseUser | null } }) => {
+        setUser(data.user);
+        setIsLoading(false);
+      });
     // Subscribe to auth changes on the singleton client
     const { data: authListener } = supabase.auth.onAuthStateChange(
-      (event: string, session: Session | null) => {
+      (event: string, session: SupabaseSession | null) => {
         setUser(session?.user ?? null);
         // Sync session to server cookie on sign-in/sign-out
-        fetch("/api/auth/callback", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
+        fetch('/api/auth/callback', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ event, session }),
         });
-      }
+      },
     );
     return () => {
       authListener.subscription.unsubscribe();
@@ -86,17 +92,16 @@ export default function Navbar() {
     setIsLoading(true);
     await supabase.auth.signOut();
     setUser(null);
-    router.push("/"); // Redirect to home or sign-in page after sign out
-    router.refresh();
+    router.push('/'); // Redirect to home or sign-in page after sign out
     setIsLoading(false);
   };
 
   // Hide Navbar on auth pages or specific routes if desired
-  if (pathname === "/sign-in" || pathname === "/sign-up") {
+  if (pathname === '/sign-in' || pathname === '/sign-up') {
     return null;
   }
 
-  const isDashboardPath = pathname.startsWith("/dashboard");
+  const isDashboardPath = pathname.startsWith('/dashboard');
 
   return (
     <nav
@@ -110,34 +115,38 @@ export default function Navbar() {
         ) : user ? (
           <>
             <Button
-              variant={pathname === "/discover" ? "secondary" : "ghost"}
+              variant={pathname === '/discover' ? 'secondary' : 'ghost'}
               size="sm"
-              aria-current={pathname === "/discover" ? "page" : undefined}
-              onClick={() => router.push("/discover")}
+              aria-current={pathname === '/discover' ? 'page' : undefined}
+              onClick={() => router.push('/discover')}
             >
               Discover
             </Button>
             <Button
-              variant={isDashboardPath ? "secondary" : "ghost"}
+              variant={isDashboardPath ? 'secondary' : 'ghost'}
               size="sm"
-              aria-current={isDashboardPath ? "page" : undefined}
-              onClick={() => router.push("/dashboard")}
+              aria-current={isDashboardPath ? 'page' : undefined}
+              onClick={() => router.push('/dashboard')}
             >
               Dashboard
             </Button>
             <Button
-              variant={pathname === `/users/${user?.id}` ? "secondary" : "ghost"}
+              variant={
+                pathname === `/users/${user?.id}` ? 'secondary' : 'ghost'
+              }
               size="sm"
-              aria-current={pathname === `/users/${user?.id}` ? "page" : undefined}
+              aria-current={
+                pathname === `/users/${user?.id}` ? 'page' : undefined
+              }
               onClick={() => router.push(`/users/${user?.id}`)}
             >
-              My Profile
+              <UserIcon className="size-4 mr-2" /> My Profile
             </Button>
             <Button
-              variant={pathname === "/settings" ? "secondary" : "ghost"}
+              variant={pathname === '/settings' ? 'secondary' : 'ghost'}
               size="sm"
-              aria-current={pathname === "/settings" ? "page" : undefined}
-              onClick={() => router.push("/settings")}
+              aria-current={pathname === '/settings' ? 'page' : undefined}
+              onClick={() => router.push('/settings')}
             >
               Account Settings
             </Button>
@@ -155,14 +164,14 @@ export default function Navbar() {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => router.push("/sign-in")}
+              onClick={() => router.push('/sign-in')}
             >
               Sign In
             </Button>
             <Button
               variant="default"
               size="sm"
-              onClick={() => router.push("/sign-up")}
+              onClick={() => router.push('/sign-up')}
             >
               Sign Up
             </Button>
@@ -195,10 +204,10 @@ export default function Navbar() {
                     {dashboardNavItems.map((item) => (
                       <Button
                         key={item.href}
-                        variant={pathname === item.href ? "secondary" : "ghost"}
+                        variant={pathname === item.href ? 'secondary' : 'ghost'}
                         className="justify-start h-9 px-2"
                         aria-current={
-                          pathname === item.href ? "page" : undefined
+                          pathname === item.href ? 'page' : undefined
                         }
                         onClick={() => router.push(item.href)}
                       >
@@ -206,33 +215,37 @@ export default function Navbar() {
                       </Button>
                     ))}
                     <Button
-                      variant={pathname === `/users/${user?.id}` ? "secondary" : "ghost"}
+                      variant={
+                        pathname === `/users/${user?.id}`
+                          ? 'secondary'
+                          : 'ghost'
+                      }
                       className="justify-start h-9 px-2"
                       aria-current={
-                        pathname === `/users/${user?.id}` ? "page" : undefined
+                        pathname === `/users/${user?.id}` ? 'page' : undefined
                       }
                       onClick={() => router.push(`/users/${user?.id}`)}
                     >
-                      <User className="size-4 mr-2" /> My Profile
+                      <UserIcon className="size-4 mr-2" /> My Profile
                     </Button>
                     <Button
-                      variant={pathname === "/settings" ? "secondary" : "ghost"}
+                      variant={pathname === '/settings' ? 'secondary' : 'ghost'}
                       className="justify-start h-9 px-2"
                       aria-current={
-                        pathname === "/settings" ? "page" : undefined
+                        pathname === '/settings' ? 'page' : undefined
                       }
-                      onClick={() => router.push("/settings")}
+                      onClick={() => router.push('/settings')}
                     >
                       <Settings className="size-4 mr-2" /> Account Settings
                     </Button>
                     <div className="my-2 h-px bg-border" />
                     <Button
-                      variant={pathname === "/discover" ? "secondary" : "ghost"}
+                      variant={pathname === '/discover' ? 'secondary' : 'ghost'}
                       className="justify-start h-9 px-2"
                       aria-current={
-                        pathname === "/discover" ? "page" : undefined
+                        pathname === '/discover' ? 'page' : undefined
                       }
-                      onClick={() => router.push("/discover")}
+                      onClick={() => router.push('/discover')}
                     >
                       <Newspaper className="size-4 mr-2" /> Discover
                     </Button>
@@ -247,40 +260,44 @@ export default function Navbar() {
                 ) : (
                   <>
                     <Button
-                      variant={pathname === "/discover" ? "secondary" : "ghost"}
+                      variant={pathname === '/discover' ? 'secondary' : 'ghost'}
                       className="justify-start h-9 px-2"
                       aria-current={
-                        pathname === "/discover" ? "page" : undefined
+                        pathname === '/discover' ? 'page' : undefined
                       }
-                      onClick={() => router.push("/discover")}
+                      onClick={() => router.push('/discover')}
                     >
                       <Newspaper className="size-4 mr-2" /> Discover
                     </Button>
                     <Button
-                      variant={isDashboardPath ? "secondary" : "ghost"}
+                      variant={isDashboardPath ? 'secondary' : 'ghost'}
                       className="justify-start h-9 px-2"
-                      aria-current={isDashboardPath ? "page" : undefined}
-                      onClick={() => router.push("/dashboard")}
+                      aria-current={isDashboardPath ? 'page' : undefined}
+                      onClick={() => router.push('/dashboard')}
                     >
                       <LayoutDashboard className="size-4 mr-2" /> Dashboard
                     </Button>
                     <Button
-                      variant={pathname === `/users/${user?.id}` ? "secondary" : "ghost"}
+                      variant={
+                        pathname === `/users/${user?.id}`
+                          ? 'secondary'
+                          : 'ghost'
+                      }
                       className="justify-start h-9 px-2"
                       aria-current={
-                        pathname === `/users/${user?.id}` ? "page" : undefined
+                        pathname === `/users/${user?.id}` ? 'page' : undefined
                       }
                       onClick={() => router.push(`/users/${user?.id}`)}
                     >
-                      <User className="size-4 mr-2" /> My Profile
+                      <UserIcon className="size-4 mr-2" /> My Profile
                     </Button>
                     <Button
-                      variant={pathname === "/settings" ? "secondary" : "ghost"}
+                      variant={pathname === '/settings' ? 'secondary' : 'ghost'}
                       className="justify-start h-9 px-2"
                       aria-current={
-                        pathname === "/settings" ? "page" : undefined
+                        pathname === '/settings' ? 'page' : undefined
                       }
-                      onClick={() => router.push("/settings")}
+                      onClick={() => router.push('/settings')}
                     >
                       <Settings className="size-4 mr-2" /> Account Settings
                     </Button>
@@ -303,14 +320,14 @@ export default function Navbar() {
                 <Button
                   variant="ghost"
                   className="justify-start h-9 px-2"
-                  onClick={() => router.push("/sign-in")}
+                  onClick={() => router.push('/sign-in')}
                 >
                   Sign In
                 </Button>
                 <Button
                   variant="default"
                   className="w-full"
-                  onClick={() => router.push("/sign-up")}
+                  onClick={() => router.push('/sign-up')}
                 >
                   Sign Up
                 </Button>
