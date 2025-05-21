@@ -13,6 +13,18 @@ const nextConfig: NextConfig = {
     "@lexical/table",
     "@lexical/markdown",
   ],
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: '**.supabase.co',
+      },
+      {
+        protocol: 'https',
+        hostname: 'images.unsplash.com',
+      },
+    ],
+  },
   async headers() {
     return [
       {
