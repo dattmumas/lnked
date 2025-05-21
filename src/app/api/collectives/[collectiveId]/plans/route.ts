@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { getStripe } from "@/lib/stripe";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import type Stripe from "stripe";
 
 interface PlanRequestBody {
   name: string;
@@ -82,12 +83,43 @@ export async function POST(req: Request, context: any) {
     );
   }
 
-  // 1. Create Stripe Product
-  const product = await stripe.products.create({
-    name,
-    description,
-    metadata: { collectiveId },
-  });
+  // 1. Fetch or create the Stripe Product for this collective
+  let product: Stripe.Product;
+  const { data: existingProduct, error: fetchProdErr } = await supabaseAdmin
+    .from("products")
+    .select("id")
+    .eq("collective_id", collectiveId)
+    .maybeSingle();
+  if (fetchProdErr) {
+    return NextResponse.json(
+      { error: "Failed to lookup existing product" },
+      { status: 500 }
+    );
+  }
+  if (existingProduct) {
+    // Reuse existing product so new prices become tiers under it
+    product = await stripe.products.retrieve(existingProduct.id);
+  } else {
+    product = await stripe.products.create({
+      name,
+      description,
+      metadata: { collectiveId },
+    });
+
+    const { error: productErr } = await supabaseAdmin.from("products").insert({
+      id: product.id,
+      name: product.name,
+      description: product.description,
+      collective_id: collectiveId,
+      active: true,
+    });
+    if (productErr) {
+      return NextResponse.json(
+        { error: "Failed to save product" },
+        { status: 500 }
+      );
+    }
+  }
 
   // 2. Create Stripe Price (recurring)
   const price = await stripe.prices.create({
@@ -98,20 +130,7 @@ export async function POST(req: Request, context: any) {
     metadata: { collectiveId },
   });
 
-  // 3. Store in DB
-  const { error: productErr } = await supabaseAdmin.from("products").insert({
-    id: product.id,
-    name: product.name,
-    description: product.description,
-    collective_id: collectiveId,
-    active: true,
-  });
-  if (productErr) {
-    return NextResponse.json(
-      { error: "Failed to save product" },
-      { status: 500 }
-    );
-  }
+  // 3. Store the new price in our database
   const { error: priceErr } = await supabaseAdmin.from("prices").insert({
     id: price.id,
     product_id: product.id,
