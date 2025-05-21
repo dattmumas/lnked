@@ -150,7 +150,7 @@ export async function inviteMemberToCollective(
         .from('collective_members')
         .select('id')
         .eq('collective_id', collectiveId)
-        .eq('user_id', invitedUser.id)
+        .eq('member_id', invitedUser.id)
         .maybeSingle();
 
     if (memberCheckError) {
@@ -169,7 +169,8 @@ export async function inviteMemberToCollective(
       .from('collective_members')
       .insert({
         collective_id: collectiveId,
-        user_id: invitedUser.id,
+        member_id: invitedUser.id,
+        member_type: 'user',
         role: role as Enums<'collective_member_role'>,
       });
 
@@ -222,19 +223,19 @@ export async function changeMemberRole({
   // Prevent owner from demoting themselves
   const { data: member, error: memberError } = await supabaseAdmin
     .from('collective_members')
-    .select('user_id, role')
+    .select('member_id, role')
     .eq('id', memberId)
     .single();
   if (memberError || !member) {
     return { success: false, error: 'Member not found.' };
   }
-  if (member.user_id === currentUser.id && newRole !== 'owner') {
+  if (member.member_id === currentUser.id && newRole !== 'owner') {
     return { success: false, error: 'Owner cannot demote themselves.' };
   }
   // Update role
   const { error: updateError } = await supabaseAdmin
     .from('collective_members')
-    .update({ role: newRole })
+    .update({ role: newRole as Enums<'collective_member_role'> })
     .eq('id', memberId);
   if (updateError) {
     return {
@@ -277,13 +278,13 @@ export async function removeMemberFromCollective({
   // Prevent owner from removing themselves
   const { data: member, error: memberError } = await supabaseAdmin
     .from('collective_members')
-    .select('user_id, role')
+    .select('member_id, role')
     .eq('id', memberId)
     .single();
   if (memberError || !member) {
     return { success: false, error: 'Member not found.' };
   }
-  if (member.user_id === currentUser.id) {
+  if (member.member_id === currentUser.id) {
     return { success: false, error: 'Owner cannot remove themselves.' };
   }
   // Delete member
@@ -457,7 +458,7 @@ export async function acceptCollectiveInvite({
     .from('collective_members')
     .select('id')
     .eq('collective_id', invite.collective_id)
-    .eq('user_id', currentUser.id)
+    .eq('member_id', currentUser.id)
     .maybeSingle();
   if (existingMember) {
     // Mark invite as accepted anyway
@@ -475,8 +476,9 @@ export async function acceptCollectiveInvite({
     .from('collective_members')
     .insert({
       collective_id: invite.collective_id,
-      user_id: currentUser.id,
-      role: invite.role,
+      member_id: currentUser.id,
+      member_type: 'user',
+      role: invite.role as Enums<'collective_member_role'>,
     });
   if (addError) {
     return {
