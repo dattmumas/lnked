@@ -47,9 +47,9 @@ type SubscriptionRow = {
 export default async function SubscribersPage({
   params,
 }: {
-  params: { collectiveId: string };
+  params: Promise<{ collectiveId: string }>;
 }) {
-  const { collectiveId } = params;
+  const { collectiveId } = await params;
   const supabase = await createServerSupabaseClient();
 
   const {
