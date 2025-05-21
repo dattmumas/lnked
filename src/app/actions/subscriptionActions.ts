@@ -4,6 +4,7 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 import type { Enums } from "@/lib/database.types";
 import { getStripe } from "@/lib/stripe";
 import { revalidatePath } from "next/cache";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 interface SubscriptionStatusResult {
   isSubscribed: boolean;
@@ -139,4 +140,127 @@ export async function unsubscribeFromEntity(
       message: `Failed to unsubscribe: ${errorMessage}`,
     };
   }
+}
+
+interface TierResult {
+  success: boolean;
+  error?: string;
+}
+
+export async function createPriceTier({
+  collectiveId,
+  amount,
+  interval,
+  tierName,
+}: {
+  collectiveId: string;
+  amount: number;
+  interval: 'month' | 'year';
+  tierName?: string;
+}): Promise<TierResult> {
+  const supabase = await createServerSupabaseClient();
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+  if (authError || !user) {
+    return { success: false, error: 'User not authenticated.' };
+  }
+
+  const { data: collective, error: collError } = await supabase
+    .from('collectives')
+    .select('owner_id')
+    .eq('id', collectiveId)
+    .single();
+  if (collError || !collective) {
+    return { success: false, error: 'Collective not found.' };
+  }
+  if (collective.owner_id !== user.id) {
+    return { success: false, error: 'Only the owner can manage tiers.' };
+  }
+
+  const stripe = getStripe();
+  if (!stripe) return { success: false, error: 'Stripe not configured.' };
+
+  const { data: existingProduct } = await supabase
+    .from('products')
+    .select('id')
+    .eq('collective_id', collectiveId)
+    .maybeSingle();
+
+  let productId: string;
+  if (existingProduct && existingProduct.id) {
+    productId = existingProduct.id;
+  } else {
+    const product = await stripe.products.create({
+      name: tierName || 'Subscription',
+      metadata: { collectiveId },
+    });
+    productId = product.id;
+    await supabaseAdmin.from('products').insert({
+      id: product.id,
+      name: product.name,
+      description: product.description,
+      collective_id: collectiveId,
+      active: true,
+    });
+  }
+
+  const price = await stripe.prices.create({
+    product: productId,
+    unit_amount: amount,
+    currency: 'usd',
+    nickname: tierName,
+    recurring: { interval },
+    metadata: { collectiveId },
+  });
+
+  await supabaseAdmin.from('prices').insert({
+    id: price.id,
+    product_id: productId,
+    unit_amount: price.unit_amount,
+    currency: price.currency,
+    interval: price.recurring?.interval as Enums<'price_interval'> | null,
+    description: tierName || null,
+    active: true,
+  });
+
+  revalidatePath(`/dashboard/collectives/${collectiveId}/settings`);
+  return { success: true };
+}
+
+export async function deactivatePriceTier({
+  collectiveId,
+  priceId,
+}: {
+  collectiveId: string;
+  priceId: string;
+}): Promise<TierResult> {
+  const supabase = await createServerSupabaseClient();
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+  if (authError || !user) {
+    return { success: false, error: 'User not authenticated.' };
+  }
+
+  const { data: collective } = await supabase
+    .from('collectives')
+    .select('owner_id')
+    .eq('id', collectiveId)
+    .single();
+  if (!collective || collective.owner_id !== user.id) {
+    return { success: false, error: 'Only the owner can manage tiers.' };
+  }
+
+  const stripe = getStripe();
+  if (!stripe) return { success: false, error: 'Stripe not configured.' };
+
+  await stripe.prices.update(priceId, { active: false });
+
+  await supabaseAdmin.from('prices').update({ active: false }).eq('id', priceId);
+
+  revalidatePath(`/dashboard/collectives/${collectiveId}/settings`);
+  return { success: true };
 }

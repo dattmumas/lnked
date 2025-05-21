@@ -21,6 +21,14 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
   updateCollectiveSettings,
   getCollectiveStripeStatus,
   deleteCollective,
@@ -28,12 +36,27 @@ import {
 } from "@/app/actions/collectiveActions";
 import { Loader2 } from "lucide-react";
 import { useState as useClientState } from "react";
+import type { Database } from "@/lib/database.types";
+import {
+  createPriceTier,
+  deactivatePriceTier,
+} from "@/app/actions/subscriptionActions";
+
+interface SubscriptionTier {
+  id: string;
+  unit_amount: number | null;
+  currency: string | null;
+  interval: Database["public"]["Enums"]["price_interval"] | null;
+  description: string | null;
+  active: boolean | null;
+}
 
 interface EditCollectiveSettingsFormProps {
   collectiveId: string;
   currentSlug: string;
   defaultValues: CollectiveSettingsClientFormValues;
   eligibleMembers: { id: string; full_name: string | null }[];
+  tiers: SubscriptionTier[];
 }
 
 export default function EditCollectiveSettingsForm({
@@ -41,11 +64,16 @@ export default function EditCollectiveSettingsForm({
   currentSlug,
   defaultValues,
   eligibleMembers,
+  tiers,
 }: EditCollectiveSettingsFormProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [tierError, setTierError] = useState<string | null>(null);
+  const [newAmount, setNewAmount] = useState<string>("");
+  const [newInterval, setNewInterval] = useState<"month" | "year">("month");
+  const [newName, setNewName] = useState<string>("");
 
   const form = useForm<CollectiveSettingsClientFormValues>({
     resolver: zodResolver(CollectiveSettingsClientSchema),
@@ -223,6 +251,43 @@ export default function EditCollectiveSettingsForm({
     }
   };
 
+  const handleAddTier = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setTierError(null);
+    const amount = parseInt(newAmount, 10);
+    if (!amount) {
+      setTierError("Enter a valid amount in cents");
+      return;
+    }
+    startTransition(async () => {
+      const result = await createPriceTier({
+        collectiveId,
+        amount,
+        interval: newInterval,
+        tierName: newName || undefined,
+      });
+      if (result.success) {
+        router.refresh();
+      } else {
+        setTierError(result.error || "Failed to add tier");
+      }
+    });
+  };
+
+  const handleDeactivateTier = async (priceId: string) => {
+    startTransition(async () => {
+      const result = await deactivatePriceTier({
+        collectiveId,
+        priceId,
+      });
+      if (result.success) {
+        router.refresh();
+      } else {
+        setTierError(result.error || "Failed to remove tier");
+      }
+    });
+  };
+
   return (
     <Card>
       <form onSubmit={handleSubmit(onSubmit)}>
@@ -295,6 +360,105 @@ export default function EditCollectiveSettingsForm({
               {successMessage}
             </p>
           )}
+          {/* Subscription Tiers */}
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle>Subscription Tiers</CardTitle>
+              <CardDescription>
+                Define pricing options for supporters.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {stripeStatus?.status !== "active" ? (
+                <p className="text-muted-foreground">
+                  Connect Stripe to manage tiers.
+                </p>
+              ) : (
+                <>
+                  {tiers.length > 0 ? (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Tier Name</TableHead>
+                          <TableHead>Price</TableHead>
+                          <TableHead>Interval</TableHead>
+                          <TableHead className="text-right">Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {tiers.map((tier) => (
+                          <TableRow key={tier.id}>
+                            <TableCell>
+                              {tier.description || tier.id}
+                            </TableCell>
+                            <TableCell>
+                              {tier.unit_amount
+                                ? `$${(tier.unit_amount / 100).toFixed(2)}`
+                                : ""}
+                            </TableCell>
+                            <TableCell>{tier.interval}</TableCell>
+                            <TableCell className="text-right">
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                onClick={() => {
+                                  if (
+                                    window.confirm(
+                                      "Disable this tier?"
+                                    )
+                                  ) {
+                                    handleDeactivateTier(tier.id);
+                                  }
+                                }}
+                              >
+                                Delete
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  ) : (
+                    <p className="text-muted-foreground">No tiers defined.</p>
+                  )}
+
+                  <form onSubmit={handleAddTier} className="space-y-2">
+                    {tierError && (
+                      <p className="text-destructive text-sm">{tierError}</p>
+                    )}
+                    <div className="flex flex-wrap gap-2 items-end">
+                      <Input
+                        type="number"
+                        placeholder="Amount (cents)"
+                        value={newAmount}
+                        onChange={(e) => setNewAmount(e.target.value)}
+                        className="w-28"
+                      />
+                      <select
+                        className="border rounded-md p-2"
+                        value={newInterval}
+                        onChange={(e) =>
+                          setNewInterval(e.target.value as "month" | "year")
+                        }
+                      >
+                        <option value="month">Monthly</option>
+                        <option value="year">Yearly</option>
+                      </select>
+                      <Input
+                        placeholder="Name (optional)"
+                        value={newName}
+                        onChange={(e) => setNewName(e.target.value)}
+                        className="flex-1"
+                      />
+                      <Button size="sm" type="submit" disabled={isPending}>
+                        Add Tier
+                      </Button>
+                    </div>
+                  </form>
+                </>
+              )}
+            </CardContent>
+          </Card>
           {/* Stripe Connect Status Section */}
           <Card className="mb-6">
             <CardHeader>

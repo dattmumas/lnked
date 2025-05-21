@@ -6,6 +6,7 @@ import type { Database } from '@/lib/database.types';
 type MemberWithUser = {
   user: Database['public']['Tables']['users']['Row'] | null;
 };
+type SubscriptionTier = Database['public']['Tables']['prices']['Row'];
 
 export default async function CollectiveSettingsPage({
   params,
@@ -71,6 +72,15 @@ export default async function CollectiveSettingsPage({
     )
     .map((u) => ({ id: u.id, full_name: u.full_name }));
 
+  const { data: tierData } = (await supabase
+    .from('prices')
+    .select(
+      'id, unit_amount, currency, interval, description, active, product:products!product_id(collective_id)'
+    )
+    .eq('product.collective_id', collectiveId)
+    .order('unit_amount', { ascending: true })) as { data: SubscriptionTier[] | null };
+  const tiers = tierData ?? [];
+
   return (
     <div className="container mx-auto p-4 md:p-6 max-w-2xl">
       <header className="mb-6">
@@ -84,6 +94,7 @@ export default async function CollectiveSettingsPage({
         currentSlug={collective.slug}
         defaultValues={defaultValues}
         eligibleMembers={eligibleMembers}
+        tiers={tiers}
       />
     </div>
   );
