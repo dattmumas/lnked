@@ -24,7 +24,7 @@ export default async function Page({
   const { data: followersData, error: followersError } = await supabase
     .from('follows')
     .select(
-      'follower_id, follower:users!follower_id(id, full_name, avatar_url)',
+      'follower_id, follower:users!follower_id(id, username, full_name, avatar_url)',
     )
     .eq('following_id', collectiveData.id)
     .eq('following_type', 'collective');
@@ -57,7 +57,7 @@ export default async function Page({
                   />
                 )}
                 <Link
-                  href={`/users/${f.follower.id}`}
+                  href={`/@${f.follower.username}`}
                   className="hover:underline font-medium"
                 >
                   {f.follower.full_name ?? 'User'}

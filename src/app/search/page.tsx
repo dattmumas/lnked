@@ -59,7 +59,7 @@ export default async function Page({
 
     const { data: usersData } = await supabase
       .from('users')
-      .select('id, full_name, bio, avatar_url')
+      .select('id, username, full_name, bio, avatar_url')
       .textSearch('tsv', q, { type: 'websearch' })
       .limit(10);
 
@@ -119,7 +119,7 @@ export default async function Page({
             {users.map((u) => (
               <li key={u.id} className="">
                 <Link
-                  href={`/users/${u.id}`}
+                  href={`/@${u.username}`}
                   className="font-medium text-primary hover:underline"
                 >
                   {u.full_name || 'Unnamed User'}
