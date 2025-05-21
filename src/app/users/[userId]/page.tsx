@@ -14,10 +14,12 @@ type PostRow = Database['public']['Tables']['posts']['Row'];
 
 export default async function Page({
   params,
+  searchParams,
 }: {
-  params: Promise<{ userId: string }>;
+  params: { userId: string };
+  searchParams: { q?: string };
 }) {
-  const { userId } = await params;
+  const { userId } = params;
   const supabase = await createServerSupabaseClient();
 
   const {
@@ -82,6 +84,12 @@ export default async function Page({
     postsQuery = postsQuery.not('published_at', 'is', null);
   } else {
     postsQuery = postsQuery.eq('is_public', true).not('published_at', 'is', null);
+  }
+
+  if (searchParams.q && searchParams.q.trim().length > 0) {
+    postsQuery = postsQuery.textSearch('tsv', searchParams.q, {
+      type: 'websearch',
+    });
   }
 
   const { data: postsData, error: postsError } = (await postsQuery) as {
@@ -217,10 +225,19 @@ export default async function Page({
           <ProfileFeed posts={posts} pinnedPost={pinned ?? undefined} microPosts={microPosts} />
         ) : (
           <div className="text-center py-10">
-            <h2 className="text-2xl font-semibold mb-2">No posts yet!</h2>
-            <p className="text-muted-foreground">
-              This user hasn&apos;t published any posts. Check back later!
-            </p>
+            {searchParams.q ? (
+              <>
+                <h2 className="text-2xl font-semibold mb-2">No posts found for your search.</h2>
+                <p className="text-muted-foreground">Try a different search term.</p>
+              </>
+            ) : (
+              <>
+                <h2 className="text-2xl font-semibold mb-2">No posts yet!</h2>
+                <p className="text-muted-foreground">
+                  This user hasn&apos;t published any posts. Check back later!
+                </p>
+              </>
+            )}
           </div>
         )}
       </main>

@@ -13,10 +13,12 @@ import { getSubscriptionStatus } from '@/app/actions/subscriptionActions';
 
 export default async function Page({
   params,
+  searchParams,
 }: {
-  params: Promise<{ collectiveSlug: string }>;
+  params: { collectiveSlug: string };
+  searchParams: { q?: string };
 }) {
-  const { collectiveSlug } = await params;
+  const { collectiveSlug } = params;
   const supabase = await createServerSupabaseClient();
 
   const {
@@ -112,6 +114,12 @@ export default async function Page({
     postsQuery = postsQuery.not('published_at', 'is', null);
   } else {
     postsQuery = postsQuery.eq('is_public', true).not('published_at', 'is', null);
+  }
+
+  if (searchParams.q && searchParams.q.trim().length > 0) {
+    postsQuery = postsQuery.textSearch('tsv', searchParams.q, {
+      type: 'websearch',
+    });
   }
 
   const { data: postsData, error: postsError } = await postsQuery;
@@ -273,10 +281,19 @@ export default async function Page({
           />
         ) : (
           <div className="text-center py-10">
-            <h2 className="text-2xl font-semibold mb-2">No posts yet!</h2>
-            <p className="text-muted-foreground">
-              This collective hasn&apos;t published any posts. Check back later!
-            </p>
+            {searchParams.q ? (
+              <>
+                <h2 className="text-2xl font-semibold mb-2">No posts found for your search.</h2>
+                <p className="text-muted-foreground">Try a different search term.</p>
+              </>
+            ) : (
+              <>
+                <h2 className="text-2xl font-semibold mb-2">No posts yet!</h2>
+                <p className="text-muted-foreground">
+                  This collective hasn&apos;t published any posts. Check back later!
+                </p>
+              </>
+            )}
           </div>
         )}
       </main>
