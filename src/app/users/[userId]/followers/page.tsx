@@ -22,7 +22,8 @@ export default async function Page({ params }: { params: { userId: string } }) {
     .select(
       'follower_id, follower:users!follower_id(id, full_name, avatar_url)',
     )
-    .eq('following_id', userId);
+    .eq('following_id', userId)
+    .eq('following_type', 'user');
 
   if (followersError) {
     console.error('Error fetching followers:', followersError);

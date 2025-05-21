@@ -80,7 +80,8 @@ export default async function IndividualNewsletterPage({
       .from("follows")
       .select("*", { count: "exact", head: true })
       .eq("follower_id", currentUser.id)
-      .eq("following_id", author.id);
+      .eq("following_id", author.id)
+      .eq("following_type", "user");
 
     if (followError) {
       console.error("Error checking follow status:", followError.message);

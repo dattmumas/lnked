@@ -411,16 +411,19 @@ export type Database = {
           created_at: string
           follower_id: string
           following_id: string
+          following_type: Database["public"]["Enums"]["member_entity_type"]
         }
         Insert: {
           created_at?: string
           follower_id: string
           following_id: string
+          following_type: Database["public"]["Enums"]["member_entity_type"]
         }
         Update: {
           created_at?: string
           follower_id?: string
           following_id?: string
+          following_type?: Database["public"]["Enums"]["member_entity_type"]
         }
         Relationships: [
           {

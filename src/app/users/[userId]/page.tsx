@@ -37,7 +37,8 @@ export default async function Page({
   const { count: followerCount } = await supabase
     .from('follows')
     .select('*', { count: 'exact', head: true })
-    .eq('following_id', userId);
+    .eq('following_id', userId)
+    .eq('following_type', 'user');
 
   const { count: subscriberCount } = await supabase
     .from('subscriptions')
