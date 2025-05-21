@@ -2,16 +2,16 @@
  * PollNode for Lnked, adapted from Lexical Playground (MIT License)
  * https://github.com/facebook/lexical/blob/main/packages/lexical-playground/src/nodes/PollNode.tsx
  */
-import { DecoratorNode, NodeKey, SerializedLexicalNode, Spread } from "lexical";
-import React, { useState } from "react";
-import type { JSX } from "react";
-import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
+import { DecoratorNode, NodeKey, SerializedLexicalNode, Spread } from 'lexical';
+import React, { useState } from 'react';
+import type { JSX } from 'react';
+import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
 
 export type PollOption = { text: string; uid: string; votes: number[] };
 
 export type SerializedPollNode = Spread<
   {
-    type: "poll";
+    type: 'poll';
     version: 1;
     question: string;
     options: PollOption[];
@@ -24,7 +24,7 @@ export class PollNode extends DecoratorNode<JSX.Element> {
   __options: PollOption[];
 
   static getType() {
-    return "poll";
+    return 'poll';
   }
   static clone(node: PollNode) {
     return new PollNode(node.__question, [...node.__options], node.__key);
@@ -35,27 +35,27 @@ export class PollNode extends DecoratorNode<JSX.Element> {
   exportJSON(): SerializedPollNode {
     return {
       ...super.exportJSON(),
-      type: "poll",
+      type: 'poll',
       version: 1,
       question: this.__question,
       options: this.__options,
     };
   }
   constructor(
-    question: string = "",
+    question: string = '',
     options: PollOption[] = [],
-    key?: NodeKey
+    key?: NodeKey,
   ) {
     super(key);
     this.__question = question;
     this.__options = options;
   }
   createDOM(): HTMLElement {
-    const container = document.createElement("div");
-    container.setAttribute("data-lexical-poll-question", this.__question);
+    const container = document.createElement('div');
+    container.setAttribute('data-lexical-poll-question', this.__question);
     container.setAttribute(
-      "data-lexical-poll-options",
-      JSON.stringify(this.__options)
+      'data-lexical-poll-options',
+      JSON.stringify(this.__options),
     );
     return container;
   }
@@ -75,7 +75,7 @@ export class PollNode extends DecoratorNode<JSX.Element> {
 
 export function $createPollNode(
   question: string,
-  options: PollOption[]
+  options: PollOption[],
 ): PollNode {
   return new PollNode(question, options);
 }
@@ -99,15 +99,14 @@ function PollComponent({
   // Update node in editor
   const updateNode = (newQuestion: string, newOptions: PollOption[]) => {
     editor.update(() => {
-      editor.getEditorState().read(() => {
-        const pollNode = editor._editorState._nodeMap.get(nodeKey) as
-          | PollNode
-          | undefined;
-        if (pollNode) {
-          pollNode.__question = newQuestion;
-          pollNode.__options = newOptions;
-        }
-      });
+      const pollNode = editor._editorState._nodeMap.get(nodeKey) as
+        | PollNode
+        | undefined;
+      if (pollNode) {
+        const writable = pollNode.getWritable();
+        writable.__question = newQuestion;
+        writable.__options = newOptions;
+      }
     });
   };
 
@@ -118,7 +117,7 @@ function PollComponent({
 
   const handleOptionChange = (idx: number, value: string) => {
     const newOptions = localOptions.map((opt, i) =>
-      i === idx ? { ...opt, text: value } : opt
+      i === idx ? { ...opt, text: value } : opt,
     );
     setLocalOptions(newOptions);
     updateNode(localQuestion, newOptions);
@@ -126,7 +125,7 @@ function PollComponent({
 
   const handleAddOption = () => {
     const newOption = {
-      text: "",
+      text: '',
       uid: Math.random().toString(36).slice(2),
       votes: [],
     };

@@ -2,25 +2,25 @@
  * StickyNode for Lnked, adapted from Lexical Playground (MIT License)
  * https://github.com/facebook/lexical/blob/main/packages/lexical-playground/src/nodes/StickyNode.tsx
  */
-import { DecoratorNode, NodeKey } from "lexical";
-import type { JSX } from "react";
-import React, { useState } from "react";
-import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
+import { DecoratorNode, NodeKey } from 'lexical';
+import type { JSX } from 'react';
+import React, { useState } from 'react';
+import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
 
 export const STICKY_COLORS = [
-  "#fff475", // yellow
-  "#fbbc04", // orange
-  "#ccff90", // green
-  "#a7ffeb", // teal
-  "#cbf0f8", // blue
-  "#d7aefb", // purple
-  "#fdcfe8", // pink
-  "#e6c9a8", // brown
-  "#e8eaed", // gray
+  '#fff475', // yellow
+  '#fbbc04', // orange
+  '#ccff90', // green
+  '#a7ffeb', // teal
+  '#cbf0f8', // blue
+  '#d7aefb', // purple
+  '#fdcfe8', // pink
+  '#e6c9a8', // brown
+  '#e8eaed', // gray
 ];
 
 export interface StickyNodeSerialized {
-  type: "sticky";
+  type: 'sticky';
   version: 1;
   text?: string;
   color?: string;
@@ -31,42 +31,42 @@ export class StickyNode extends DecoratorNode<JSX.Element> {
   __color: string;
 
   static getType() {
-    return "sticky";
+    return 'sticky';
   }
   static clone(node: StickyNode) {
     return new StickyNode(node.__text, node.__color, node.__key);
   }
   static importJSON(serialized: StickyNodeSerialized) {
     return new StickyNode(
-      serialized.text ?? "",
-      serialized.color ?? STICKY_COLORS[0]
+      serialized.text ?? '',
+      serialized.color ?? STICKY_COLORS[0],
     );
   }
   exportJSON() {
     return {
       ...super.exportJSON(),
-      type: "sticky",
+      type: 'sticky',
       version: 1,
       text: this.__text,
       color: this.__color,
     };
   }
   constructor(
-    text: string = "",
+    text: string = '',
     color: string = STICKY_COLORS[0],
-    key?: NodeKey
+    key?: NodeKey,
   ) {
     super(key);
     this.__text = text;
     this.__color = color;
   }
   createDOM(): HTMLElement {
-    const el = document.createElement("div");
+    const el = document.createElement('div');
     el.textContent = this.__text;
     el.style.background = this.__color;
-    el.style.padding = "1em";
-    el.style.borderRadius = "0.5em";
-    el.style.boxShadow = "0 2px 8px rgba(0,0,0,0.08)";
+    el.style.padding = '1em';
+    el.style.borderRadius = '0.5em';
+    el.style.boxShadow = '0 2px 8px rgba(0,0,0,0.08)';
     return el;
   }
   updateDOM(): boolean {
@@ -98,15 +98,14 @@ function StickyComponent({
 
   const updateNode = (newText: string, newColor: string) => {
     editor.update(() => {
-      editor.getEditorState().read(() => {
-        const stickyNode = editor._editorState._nodeMap.get(nodeKey) as
-          | StickyNode
-          | undefined;
-        if (stickyNode) {
-          stickyNode.__text = newText;
-          stickyNode.__color = newColor;
-        }
-      });
+      const stickyNode = editor._editorState._nodeMap.get(nodeKey) as
+        | StickyNode
+        | undefined;
+      if (stickyNode) {
+        const writable = stickyNode.getWritable();
+        writable.__text = newText;
+        writable.__color = newColor;
+      }
     });
   };
 
@@ -136,7 +135,7 @@ function StickyComponent({
         onChange={handleTextChange}
         rows={3}
         placeholder="Sticky note..."
-        style={{ background: "transparent" }}
+        style={{ background: 'transparent' }}
       />
       <div className="flex gap-1 mt-2">
         {STICKY_COLORS.map((c) => (
@@ -144,7 +143,7 @@ function StickyComponent({
             key={c}
             type="button"
             className={`w-5 h-5 rounded-full border-2 ${
-              localColor === c ? "border-primary" : "border-transparent"
+              localColor === c ? 'border-primary' : 'border-transparent'
             }`}
             style={{ background: c }}
             onClick={() => handleColorChange(c)}
