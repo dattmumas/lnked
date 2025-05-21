@@ -1,15 +1,17 @@
-import CollectiveCard from "@/components/app/dashboard/collectives/CollectiveCard";
-import LoadMoreButton from "@/components/app/discover/molecules/LoadMoreButton";
+import CollectiveCard from '@/components/app/dashboard/collectives/CollectiveCard';
+import LoadMoreButton from '@/components/app/discover/molecules/LoadMoreButton';
 // import { cookies } from "next/headers"; // No longer needed directly here
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Terminal } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Terminal } from 'lucide-react';
 import {
   fetchRecommendations,
   type Recommendation,
-} from "@/lib/data/recommendations"; // Import new helper
+} from '@/lib/data/recommendations'; // Import new helper
 
 // Recommendation interface might be moved to a shared types file eventually
 // For now, it's also exported from the lib file, or we can define it here if preferred.
+
+export const dynamic = 'force-dynamic';
 
 export default async function DiscoverPage({
   searchParams,
@@ -22,14 +24,15 @@ export default async function DiscoverPage({
   try {
     // const cookieHeader = (await cookies()).toString(); // Not needed if fetchRecommendations handles cookies internally
     const params = await searchParams;
-    const data = await fetchRecommendations(params.cursor); // paginate
+    const cursor = params.cursor;
+    const data = await fetchRecommendations(cursor); // paginate
     recommendations = data.recommendations;
     nextCursor = data.nextCursor;
   } catch (error) {
     if (error instanceof Error) {
-      console.error("Error in DiscoverPage:", error.message);
+      console.error('Error in DiscoverPage:', error.message);
     } else {
-      console.error("An unexpected error occurred in DiscoverPage:", error);
+      console.error('An unexpected error occurred in DiscoverPage:', error);
     }
     return (
       <div className="p-8 text-center">
