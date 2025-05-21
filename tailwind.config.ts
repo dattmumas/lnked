@@ -16,8 +16,11 @@ const config: Config = {
         mono: ["ui-monospace", "SFMono-Regular", "Menlo", "monospace"],
       },
       spacing: {
-        // Ensure we're using 8px grid (by default Tailwind uses 0.25rem = 4px as base)
-        // Actual increments are already multiples of 4, which works for 8px grid when using even values
+        xs: 'var(--spacing-xs)',
+        sm: 'var(--spacing-sm)',
+        md: 'var(--spacing-md)',
+        lg: 'var(--spacing-lg)',
+        xl: 'var(--spacing-xl)',
       },
       colors: {
         border: "hsl(var(--border))",
@@ -80,6 +83,11 @@ const config: Config = {
                 color: "hsl(var(--primary) / 0.8)",
               },
             },
+            p: {
+              fontFamily: theme("fontFamily.serif"),
+              fontSize: "1.125rem",
+              lineHeight: "1.6",
+            },
             h1: {
               color: "hsl(var(--foreground))",
               fontFamily: theme("fontFamily.serif"),
@@ -104,6 +112,11 @@ const config: Config = {
         },
         dark: {
           css: {
+            p: {
+              fontFamily: theme("fontFamily.serif"),
+              fontSize: "1.125rem",
+              lineHeight: "1.6",
+            },
             color: "hsl(var(--foreground))",
             a: {
               color: "hsl(var(--primary))",
