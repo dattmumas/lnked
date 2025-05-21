@@ -7,6 +7,7 @@ import Link from 'next/link';
 import SubscribeButton from '@/components/app/newsletters/molecules/SubscribeButton';
 import Image from 'next/image';
 import { Badge } from '@/components/ui/badge';
+import type { Database } from '@/lib/database.types';
 
 export default async function Page({
   params,
@@ -29,7 +30,11 @@ export default async function Page({
     .eq('slug', collectiveSlug)
     .single();
 
-  const collective = collectiveData as any;
+  const collective = collectiveData as
+    | (Database["public"]["Tables"]["collectives"]["Row"] & {
+        owner: { full_name: string | null } | null;
+      })
+    | null;
 
   if (collectiveError || !collective) {
     console.error(

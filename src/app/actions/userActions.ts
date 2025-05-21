@@ -19,6 +19,7 @@ const UserProfileSchema = z.object({
     .max(500, "Bio must be 500 characters or less.")
     .optional()
     .nullable(),
+  avatar_url: z.string().optional().nullable(),
   // Assuming tags is an array of strings, to be stored as text[] in Supabase
   // For simplicity, we might handle string-to-array conversion here or expect a specific format.
   // Let's assume a comma-separated string for now from the form, then split into an array.
@@ -88,12 +89,14 @@ export async function updateUserProfile(
   const {
     full_name,
     bio,
+    avatar_url,
     tags_string: transformed_tags,
   } = validatedFields.data;
 
   const profileUpdate: TablesUpdate<"users"> = {
     full_name,
     bio: bio || null, // Ensure null if empty string
+    avatar_url: avatar_url || null,
     tags:
       transformed_tags && transformed_tags.length > 0 ? transformed_tags : null, // Store as array or null
   };
