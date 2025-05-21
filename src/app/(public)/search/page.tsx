@@ -25,7 +25,7 @@ export default async function Page({
 
   type UserResult = Pick<
     Database['public']['Tables']['users']['Row'],
-    'id' | 'full_name' | 'bio' | 'avatar_url'
+    'id' | 'username' | 'full_name' | 'bio' | 'avatar_url'
   >;
 
   type CollectiveResult = Pick<
