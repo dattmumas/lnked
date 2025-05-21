@@ -1,5 +1,5 @@
 import { createServerSupabaseClient } from "@/lib/supabase/server";
-import { redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import ProfileFeed from "@/components/app/profile/ProfileFeed";
 import type { MicroPost } from "@/components/app/profile/MicrothreadPanel";
 import { Button } from "@/components/ui/button";
@@ -30,7 +30,7 @@ export default async function Page({
       `Error fetching collective ${collectiveSlug}:`,
       collectiveError
     );
-    redirect("/not-found");
+    notFound();
   }
 
   // Fetch posts for this collective using denormalized like/dislike counts

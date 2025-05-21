@@ -1,6 +1,6 @@
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { Enums } from "@/lib/database.types";
-import { redirect } from "next/navigation";
+import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
 import {
   Table,
@@ -73,7 +73,7 @@ export default async function SubscribersPage({
       `Error fetching collective ${collectiveId}:`,
       collectiveError?.message
     );
-    redirect("/not-found");
+    notFound();
   }
 
   if (collective.owner_id !== currentUser.id) {
@@ -81,7 +81,7 @@ export default async function SubscribersPage({
     console.warn(
       `User ${currentUser.id} tried to access subscribers for collective ${collectiveId} they do not own.`
     );
-    redirect("/not-found");
+    notFound();
   }
 
   // 2. Fetch subscribers to this collective

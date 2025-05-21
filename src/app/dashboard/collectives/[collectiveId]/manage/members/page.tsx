@@ -1,6 +1,6 @@
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import type { Tables } from "@/lib/database.types";
-import { redirect } from "next/navigation";
+import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
 import ManageMembersClientUI from "./ManageMembersClientUI"; // New client component
 
@@ -45,7 +45,7 @@ export default async function ManageCollectiveMembersPage({
       `Error fetching collective ${collectiveId} for member management:`,
       collectiveError?.message
     );
-    redirect("/not-found");
+    notFound();
   }
 
   // Permission check: Only owner can manage members (for now, can be expanded to admin role members)
@@ -54,7 +54,7 @@ export default async function ManageCollectiveMembersPage({
       `User ${currentUser.id} attempted to manage members for collective ${collectiveId} without ownership.`
     );
     // redirect('/dashboard'); // Or a more specific unauthorized page
-    redirect("/not-found");
+    notFound();
   }
 
   const { data: members, error: membersError } = await supabase
