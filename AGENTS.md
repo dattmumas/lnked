@@ -1,6 +1,16 @@
-Display Follower Counts and Followers List: Augment both user and collective profiles to show follower information. After implementing follow mechanics, fetch the count of followers for the profile and display it prominently. For example, in users/[userId]/page.tsx, after loading the profile, run a Supabase query on the follows table: .from('follows').select('*', { count: 'exact', head: true }).eq('following_id', userId) to get the number of followers (where following_id is the profile’s ID)
+Extend Follow Mechanics to Collectives (Backend): Currently, the follow system (follows table and followUser/unfollowUser actions) is only for user-to-user following
 github.com
 github.com
-. Do the same for collectives (with following_id = collective.id). Render these counts in the profile header (e.g., next to the subscribe/follow buttons or under the bio). You could format it like “234 followers” (and optionally make it a link). For a richer experience, implement a modal or dedicated page to list followers. For instance, clicking the follower count could open a small <Dialog> or navigate to /users/[userId]/followers where you list followers’ names. To get the list, query follows for rows where following_id = profileId and select the follower’s user details (a join on users table by follower_id). Ensure that for collective profiles, you handle follower listing similarly (target type will differentiate user vs collective follows). Use the user’s name and maybe avatar in the list, each linking to that follower’s profile. Privacy consideration: If profiles or follower relationships can be private, enforce that here (e.g., only show mutual followers if required by settings), but since such toggles are not explicitly in schema, assume all followers are public info for now. By providing follower counts (and possibly lists), users can gauge engagement on profiles, and this step uses only existing data (the follows table) so it doesn’t break anything – we’re carefully reading from follows which we already use for follow logic
+. We need to allow users to follow collectives as well (for free, non-paid updates). First, extend the data model: if not already present, add a following_type field to the follows table (using the member_entity_type enum of 'user' | 'collective'
 github.com
-.
+) to distinguish the target type. (If the schema already included this as part of initial setup, just utilize it; otherwise, we’d perform a Supabase migration to add it, but per instructions we assume it’s ready.) Then implement new server actions in src/app/actions/followActions.ts for collectives. For example, create followCollective(collectiveId: string) and unfollowCollective(collectiveId: string) similar to the existing user follow functions. These should check auth (!user -> error just like followUser does
+github.com
+), prevent following one’s own collective (you might allow it or treat it like you cannot follow your own, analogous to not following yourself
+github.com
+), then insert/delete from the follows table. Use follows.insert({ follower_id: user.id, following_id: collectiveId, following_type: 'collective' }) for follow
+github.com
+, and a corresponding delete query for unfollow (matching on follower_id, following_id, and type). Include error handling for duplicates (if a unique constraint exists on that combination) similar to user follow
+github.com
+. After a successful follow or unfollow, revalidate any relevant pages, e.g., the collective’s page or a user’s feed, to update follower counts
+github.com
+. Security: set up RLS on follows such that inserts require auth.uid() matches follower_id (likely already done for user-user follow) – ensure it accommodates collective targets as well. With this backend in place, we haven’t changed any existing behavior (user follows still work as before), but we’ve expanded functionality to new entity types using the same pattern.
