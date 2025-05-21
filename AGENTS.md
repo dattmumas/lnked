@@ -1,15 +1,24 @@
-Display Featured (Pinned) Posts on Profile Pages: Now integrate the pinning so that the chosen featured posts actually show up at the top of a profile. In the profile feed component (src/components/app/profile/ProfileFeed.tsx), we currently take the first post in the list as pinned
+Display Featured (Pinned) Posts on Profile Pages: Now integrate the pinning so that the chosen featured posts actImplement Profile-Specific Search Functionality: Activate the "Search this profile..." form present on user and collective pages
 github.com
-, which was a placeholder approach. Change this logic to use the actual featured data: for a user profile, find if any post is marked as featured by that user; for a collective profile, do the same. A straightforward way: when querying posts for a profile page, fetch the featured one separately. For instance, in users/[userId]/page.tsx, after fetching profile info, get the featured post:
-If using is_featured flag: query .from('posts').select(*).eq('author_id', userId).eq('is_featured', true).single() to get the featured post (if any).
-If using a featured_posts join table: query that table for user_id = userId to get the featured post_id, then select that post.
-If a user/collective can have at most one pinned post, this yields either one or none.
-Once you have the featured post (let’s call it pinnedPost), fetch the rest of the posts as usual (but exclude the pinned one from the main list). For example, if using is_featured, do one query for pinned, and another query for other posts with .neq('id', pinnedPost.id) (also applying the public/subscriber filter as appropriate). Similarly for collectives: check if the collective has a featured post (maybe a field collectives.featured_post_id or via posts.is_featured with collective_id filter) and fetch accordingly. Then adjust ProfileFeed: pass the pinnedPost separately as a prop or simply ensure it’s the first element in the posts array as we do now. If you pass it separately, you can simplify ProfileFeed to place that post in the highlighted section. For instance, instead of using categorized[0] blindly
 github.com
-, provide pinnedPost prop and use that.
-In the UI, render the pinned post distinctively. The current ProfileFeed simply shows the pinned post in a larger card at the top
+. Right now, those forms do nothing (their action is empty). We will use them to filter posts on the profile page by a search query. In Next.js App Router, when a form with a name="q" is submitted, the page can capture searchParams. So first, adjust the page components to accept search params. For example, change the function signature of users/[userId]/page.tsx to:
+tsx
+Copy
+export default async function Page({ params, searchParams }: { params: { userId: string }, searchParams: { q?: string } }) { … }
+(Do the same for [collectiveSlug]/page.tsx.) Then, use the q parameter if present to modify the posts query. For text search, leverage Supabase’s full-text search capability on the posts.tsv column which is likely configured to index title and content
 github.com
-. Continue that approach – it already takes the first post and wraps it in an extra <div className="mb-6"> to emphasize it. We’ll now be sure that “first post” is actually the intended featured one. You might add a small label like “Featured” above it for clarity, or a pin icon, though that’s optional. Also ensure micro-posts (the microthread panel on the right) remain unaffected
+. If q exists and is non-empty, perform a text search: e.g.
+ts
+Copy
+postsQuery = postsQuery.textSearch('tsv', searchParams.q!, { type: 'web' });
+This will filter posts to those matching the query (the type: 'web' uses the websearch syntax, making the search more natural). If using RPC (get_user_feed), you might instead call a different RPC that handles searching, or fall back to a .from('posts') query with filters. Another approach is client-side filtering, but given we have server-side capabilities and want up-to-date results, doing it in the server component is better. After filtering, proceed with the usual data mapping and rendering. In the UI, when the user enters a search and submits, the page will reload with ?q=term and show only matching posts. We should also provide some UI feedback: if no posts match, render a message like “No posts found for your search.” Similarly implement search on collective pages: filter that collective’s posts by the query (again using full-text search on their posts). We might also consider searching micro-posts if that’s relevant, but those are likely not stored in the DB in the same way (they seem hardcoded for now
 github.com
-. For collectives, apply the same concept in their page: if a collective has a pinned post, show it first. This may mean adjusting [collectiveSlug]/page.tsx to handle featured logic similarly and then perhaps reuse ProfileFeed for rendering (passing appropriate props).
-By doing this, we ensure the featured content chosen by the creator is always showcased. This change should not break anything – if no post is featured, the logic can fall back to the existing behavior (or simply no pinned section). Testing: Pin a post via the dashboard, then visit the profile – that post should appear at top even if it’s not the most recent. Unpin it, refresh – it should drop back into chronological order. The profile feed is now fully aligned with the new featured posts capability.
+), so skip that.
+Important: the search should respect visibility rules. Because we are using the same Supabase query with RLS, it will naturally only return posts the user is allowed to see (public or subscriber-only if the user has access). Our earlier fix (step 11) ensures subscriber-only content can be included if authorized. So text search queries will adhere to those conditions as well – Supabase’s text search can be combined with other filters, or the RLS policy might apply the is_public check. We have to ensure our .textSearch is used in conjunction with the author/collective filter and any published filter. For example, for a public viewer, we might do:
+ts
+Copy
+.eq('author_id', userId)
+.textSearch('tsv', q)
+.eq('is_public', true).not('published_at', 'is', null)
+whereas for a subscriber, we’d omit the is_public filter. You can incorporate that logic similarly to the earlier step.
+Lastly, ensure the front-end form triggers properly: the form in the HTML is correct (it has method GET by default when action is empty, which is fine). You might just need to add action={''} explicitly or allow it to default. Test the profile search: go to a user profile with many posts, search a keyword, and verify that only posts containing that keyword appear. This new feature is self-contained to profile pages and doesn’t break existing flows; it leverages DB indexing (tsv columns in users, collectives, posts are presumably kept up-to-date via triggers) so performance should be good.
