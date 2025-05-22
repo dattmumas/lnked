@@ -70,8 +70,9 @@ app.
 ### Routing Updates
 
 Collective pages now live under `/collectives/[slug]` instead of directly at the
-root. Account settings have moved to `/dashboard/settings`. Old URLs under the
-previous structure redirect automatically.
+root. User profiles are accessed at `/@username` (served by `/profile/[username]`).
+Old ID-based paths like `/newsletters/[id]` or `/users/[id]` have been removed.
+Account settings remain under `/dashboard/settings` and old URLs redirect automatically.
 
 ## 📚 Documentation & Resources
 

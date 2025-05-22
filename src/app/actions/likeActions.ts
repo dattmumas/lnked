@@ -86,8 +86,7 @@ export async function togglePostLike(
     revalidatePath(`/collectives/${collectiveSlug}/${postId}`);
     revalidatePath(`/collectives/${collectiveSlug}`);
   } else {
-    // It's an individual post, revalidate the author's newsletter page and the generic post page
-    revalidatePath(`/newsletters/${authorId}`);
+    // It's an individual post, revalidate the generic post page
     revalidatePath(`/posts/${postId}`);
   }
   // Also revalidate any other relevant general feeds if applicable

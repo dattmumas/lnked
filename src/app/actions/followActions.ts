@@ -46,8 +46,6 @@ export async function followUser(
     };
   }
 
-  revalidatePath(`/newsletters/${userIdToFollow}`); // Revalidate the followed user's page
-  revalidatePath(`/newsletters/${user.id}`); // Revalidate the current user's page (e.g., for following count)
   revalidatePath("/"); // Revalidate feed potentially
 
   return { success: true };
@@ -84,8 +82,6 @@ export async function unfollowUser(
     };
   }
 
-  revalidatePath(`/newsletters/${userIdToUnfollow}`);
-  revalidatePath(`/newsletters/${user.id}`);
   revalidatePath("/");
 
   return { success: true };

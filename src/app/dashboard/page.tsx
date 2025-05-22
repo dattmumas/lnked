@@ -60,6 +60,13 @@ export default async function DashboardManagementPage() {
 
   const userId = session.user.id;
 
+  const { data: profile } = await supabase
+    .from('users')
+    .select('username')
+    .eq('id', userId)
+    .maybeSingle();
+  const username = profile?.username;
+
   // 1. Fetch user's OWNED collectives
   const { data: ownedCollectives, error: ownedCollectivesError } =
     await supabase
@@ -156,11 +163,11 @@ export default async function DashboardManagementPage() {
                     <Plus className="h-4 w-4 mr-2" /> Write New Post
                   </Button>
                 </Link>
-                <Button asChild variant="outline" size="sm">
-                  <Link href={`/newsletters/${currentUser.id}`}>
-                    View Newsletter
-                  </Link>
-                </Button>
+                {username && (
+                  <Button asChild variant="outline" size="sm">
+                    <Link href={`/@${username}`}>View Profile</Link>
+                  </Button>
+                )}
                 <Button asChild variant="ghost" size="sm">
                   <Link href="/dashboard/my-newsletter/subscribers">
                     Subscribers
