@@ -444,3 +444,13 @@ body {
 .layout-item {
   /* acts as a column */
 }
+
+/* Multi-column reading layout utilities */
+.column-balance {
+  column-fill: balance;
+}
+
+.prose {
+  hyphens: auto;
+  overflow-wrap: break-word;
+}
