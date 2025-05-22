@@ -1,12 +1,26 @@
-Refine Slash Command Menu UI & Accessibility
-Files: src/components/editor/plugins/SlashMenuPlugin.tsx
-Action: Restyle the slash “/” command menu to match the theme and improve usability. Currently, the menu’s container is a fixed-position white box with a red border (likely a temporary style)
+ Polish Typography and Layout for Readability
+Files: tailwind.config.ts, src/app/globals.css
+Action: Tune typography settings for an editorial feel. The base typography is already using a serif font for body text and headings
 github.com
-. Update this to use design token classes: for example, className="fixed z-50 bg-popover text-foreground border border-border shadow rounded-md p-1 max-w-sm" ref={menuRef}. This will give it a neutral background that auto-adjusts for dark mode (Tailwind’s bg-popover and border-border use CSS variables for light/dark
+. Now refine font sizes and spacing at different breakpoints to ensure comfortable reading. In tailwind.config.ts, extend the typography plugin settings for larger screens. For example, define an xl or 2xl variant:
+js
+Copy
+Edit
+typography: {
+  DEFAULT: { ... },  
+  lg: { /* maybe already used via prose-xl */ },  
+  xl: { css: {  
+          p: { fontSize: '1.25rem', lineHeight: '1.7' },  
+          h1: { fontSize: '2.5rem' },  
+          h2: { fontSize: '2rem' },  
+          // etc. 
+       } }  
+}
+This can complement the lg:prose-xl utility by making an even larger size for very wide layouts, ensuring text doesn’t appear too small in our new max width. If Tailwind’s preset prose-xl or prose-2xl classes suffice, use those on the article container instead of custom settings. The goal is to maintain ~65-75 characters per line in each column for optimal readability.
+Action: Adjust spacing and visual hierarchy. Increase spacing between paragraphs, headings, and other blocks to avoid crowding, especially with multi-column layouts. You can do this via the typography config (e.g., add marginTop for paragraphs, or ensure heading margins are larger). Check the rendered posts to see if columns make text too dense and tweak accordingly (for instance, maybe add an extra mb-4 to paragraphs via CSS). Additionally, use the accent color sparingly in text styles to highlight key elements: one idea is to update blockquote styling to use the accent for its border or quote icon. Currently blockquotes have a gray left border
 github.com
-) instead of hard-coded white. Remove the red outline. Ensure the width is sufficient but not overly rigid – you can use max-w-sm and w-full so it adapts to content up to a limit instead of always 16rem.
-Action: Add visual highlight for the selected option and improve keyboard navigation cues. The plugin already listens for arrow key commands to move selection and Enter/Escape to choose or cancel. Introduce a state or variable for the currently highlighted index, and apply a highlight style to that item’s element. For example, when rendering the list of options (SLASH_OPTIONS), if an item is the active one, give it a class like bg-accent text-accent-foreground or at least bg-muted to indicate focus. Also consider adding small icons to each option for quicker scanning (e.g., a paragraph icon, heading icon, image icon, etc., using Lucide or custom SVGs) – this mirrors Notion’s slash menu which shows an icon for each block type. If SLASH_OPTIONS doesn’t already carry icon info, you can map labels to icons (for example, “Image” option gets a 🖼️ icon). This is a UX enhancement that makes the menu feel more polished.
-Action: Improve ARIA roles for the menu. Wrap the options in a semantic container: e.g., <ul role="listbox"> for the menu, and <li role="option"> for each item. If using divs, you can still apply role="option" and aria-selected={true/false} on the active element. Add aria-label="Insert block menu" or similar on the menu container for screen reader context. Manage focus appropriately: when the menu opens, you might programmatically focus the container so that arrow key events are captured (since you’re likely intercepting them at the editor level, this may not be necessary). Ensure that pressing Escape not only closes the menu (which it does via command) but also returns focus to the editor. These ARIA improvements align with the accessibility goal of the platform
+; changing borderLeftColor to var(--accent) and perhaps making the text italic can give it a nice highlight that ties into the accent-on-gray theme. Ensure this still meets contrast requirements (accent against white should be fine).
+Action: Verify multi-column behavior with various content. Test posts with different content types: long words, code blocks, images, etc., and apply CSS fixes as needed for readability. For example, if you have code blocks (<pre><code>) inside .prose, ensure they have white-space: pre-wrap or a horizontal scrollbar to prevent breaking the layout. If a code block is too wide for a column, consider forcing it to span full width (you might give .prose code a break-inside: avoid so it doesn’t split across columns, or even take it out of the multi-col flow by not applying the columns utility to code blocks). Similarly, make sure an image or embed doesn’t overflow its column (the Next/Image styling already sets max-width 100%
 github.com
-, making the slash menu usable for all users.
-Intent & Impact: The slash command menu will become more user-friendly and accessible. Visually, it will blend with the app’s UI (no jarring styles), and the active selection will be clearly indicated, much like menus in other applications. Users can navigate the menu with arrow keys confidently, seeing which item is highlighted, and they’ll benefit from the contextual icons and descriptions (e.g., “Tweet – Insert a tweet embed”). Screen reader users will get appropriate feedback due to proper roles. All of this makes the editor’s advanced features (embeds, special blocks) easier to discover and use, bringing the experience closer to that of Notion or Substack’s editors where slash commands are smooth and intuitive.
+, so that should be okay). Tweak any such edge cases in globals.css (for example, add .prose img { break-inside: avoid; } to keep images from splitting between columns).
+Intent & Impact: These typographic refinements will elevate the reading experience to a truly professional level. Users will benefit from comfortable font sizes tailored to their device, well-spaced lines and blocks that guide the eye, and a clear content hierarchy. The multi-column layout will feel natural, as text flow and hyphenation adjustments prevent awkward breaks. Overall, posts will be easier and more pleasurable to read – crucial for a platform focused on editorial content. It aligns the presentation with industry best practices (Ghost and Medium also pay special attention to typography, spacing, and line length for readability).
