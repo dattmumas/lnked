@@ -88,7 +88,7 @@ export default async function PostBySlugPage({
   }
 
   return (
-    <div className="container mx-auto max-w-3xl p-4 md:p-6">
+    <div className="container mx-auto max-w-3xl xl:max-w-6xl p-4 md:p-6">
       <PostViewTracker postId={post!.id} />
       <nav
         aria-label="Breadcrumb"
@@ -166,7 +166,7 @@ export default async function PostBySlugPage({
             />
           </div>
         </header>
-        <div className="prose dark:prose-invert lg:prose-xl max-w-none">
+        <div className="prose dark:prose-invert lg:prose-xl max-w-none xl:columns-2 xl:gap-8 column-balance">
           <LexicalRenderer contentJSON={post!.content ?? ''} />
         </div>
       </article>
