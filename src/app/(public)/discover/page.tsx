@@ -16,14 +16,14 @@ export const dynamic = 'force-dynamic';
 export default async function DiscoverPage({
   searchParams,
 }: {
-  searchParams: { cursor?: string };
+  searchParams: Promise<{ cursor?: string }>;
 }) {
   let recommendations: Recommendation[] = [];
   let nextCursor: string | null = null;
 
   try {
     // const cookieHeader = (await cookies()).toString(); // Not needed if fetchRecommendations handles cookies internally
-    const cursor = searchParams.cursor;
+    const { cursor } = await searchParams;
     const data = await fetchRecommendations(cursor); // paginate
     recommendations = data.recommendations;
     nextCursor = data.nextCursor;

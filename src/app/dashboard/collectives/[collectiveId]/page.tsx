@@ -1,29 +1,29 @@
-import { createServerSupabaseClient } from "@/lib/supabase/server";
-import { redirect } from "next/navigation";
-import Link from "next/link";
-import { Button } from "@/components/ui/button";
+import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { redirect } from 'next/navigation';
+import Link from 'next/link';
+import { Button } from '@/components/ui/button';
 
 export default async function CollectiveDashboardPage({
   params,
 }: {
-  params: { collectiveId: string };
+  params: Promise<{ collectiveId: string }>;
 }) {
-  const { collectiveId } = params;
+  const { collectiveId } = await params;
   const supabase = await createServerSupabaseClient();
   const {
     data: { user: currentUser },
     error: authError,
   } = await supabase.auth.getUser();
   if (authError || !currentUser) {
-    redirect("/sign-in");
+    redirect('/sign-in');
   }
   const { data: collective, error: collectiveError } = await supabase
-    .from("collectives")
-    .select("id, name, owner_id")
-    .eq("id", collectiveId)
+    .from('collectives')
+    .select('id, name, owner_id')
+    .eq('id', collectiveId)
     .single();
   if (collectiveError || !collective) {
-    redirect("/dashboard/collectives");
+    redirect('/dashboard/collectives');
   }
   const isOwner = currentUser.id === collective.owner_id;
   return (

@@ -4,9 +4,9 @@ import { getPostBySlug } from '@/lib/data/posts';
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: { slug: string } },
+  { params }: { params: Promise<{ slug: string }> },
 ) {
-  const { slug } = params;
+  const { slug } = await params;
   // const user = await getCurrentUser(req); // Implement this for auth if needed
   try {
     const post = await getPostBySlug(slug);

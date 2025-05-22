@@ -11,9 +11,9 @@ type SubscriptionTier = Database['public']['Tables']['prices']['Row'];
 export default async function CollectiveSettingsPage({
   params,
 }: {
-  params: { collectiveId: string };
+  params: Promise<{ collectiveId: string }>;
 }) {
-  const { collectiveId } = params;
+  const { collectiveId } = await params;
   const supabase = await createServerSupabaseClient();
 
   const {
@@ -75,10 +75,12 @@ export default async function CollectiveSettingsPage({
   const { data: tierData } = (await supabase
     .from('prices')
     .select(
-      'id, unit_amount, currency, interval, description, active, product:products!product_id(collective_id)'
+      'id, unit_amount, currency, interval, description, active, product:products!product_id(collective_id)',
     )
     .eq('product.collective_id', collectiveId)
-    .order('unit_amount', { ascending: true })) as { data: SubscriptionTier[] | null };
+    .order('unit_amount', { ascending: true })) as {
+    data: SubscriptionTier[] | null;
+  };
   const tiers = tierData ?? [];
 
   return (

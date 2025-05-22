@@ -1,15 +1,18 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { notFound } from 'next/navigation';
 import Image from 'next/image';
-import Link from 'next/link';
 
-export default async function Page({ params }: { params: { userId: string } }) {
-  const { userId } = params;
+export default async function Page({
+  params,
+}: {
+  params: Promise<{ userId: string }>;
+}) {
+  const { userId } = await params;
   const supabase = await createServerSupabaseClient();
 
   const { data: profile, error: profileError } = await supabase
     .from('users')
-    .select('id, username, full_name')
+    .select('id, full_name')
     .eq('id', userId)
     .single();
 
@@ -20,7 +23,7 @@ export default async function Page({ params }: { params: { userId: string } }) {
   const { data: followersData, error: followersError } = await supabase
     .from('follows')
     .select(
-      'follower_id, follower:users!follower_id(id, username, full_name, avatar_url)',
+      'follower_id, follower:users!follower_id(id, full_name, avatar_url)',
     )
     .eq('following_id', userId)
     .eq('following_type', 'user');
@@ -52,12 +55,9 @@ export default async function Page({ params }: { params: { userId: string } }) {
                     className="rounded-full object-cover"
                   />
                 )}
-                <Link
-                  href={`/@${f.follower.username}`}
-                  className="hover:underline font-medium"
-                >
+                <span className="font-medium">
                   {f.follower.full_name ?? 'User'}
-                </Link>
+                </span>
               </li>
             ) : null,
           )}

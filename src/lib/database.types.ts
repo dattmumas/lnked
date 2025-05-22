@@ -906,6 +906,7 @@ export type Database = {
           terms_accepted_at: string | null
           tsv: unknown | null
           updated_at: string | null
+          username: string | null
         }
         Insert: {
           avatar_url?: string | null
@@ -928,6 +929,7 @@ export type Database = {
           terms_accepted_at?: string | null
           tsv?: unknown | null
           updated_at?: string | null
+          username?: string | null
         }
         Update: {
           avatar_url?: string | null
@@ -950,6 +952,7 @@ export type Database = {
           terms_accepted_at?: string | null
           tsv?: unknown | null
           updated_at?: string | null
+          username?: string | null
         }
         Relationships: [
           {

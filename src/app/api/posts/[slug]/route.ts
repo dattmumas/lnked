@@ -5,9 +5,9 @@ import { getPostBySlug, getPostStatsBySlug } from '@/lib/data/posts';
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { slug: string } },
+  { params }: { params: Promise<{ slug: string }> },
 ) {
-  const { slug } = params;
+  const { slug } = await params;
   // const user = await getCurrentUser(req); // Implement this for auth
   try {
     const post = await getPostBySlug(slug);

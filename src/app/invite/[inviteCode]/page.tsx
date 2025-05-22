@@ -1,15 +1,15 @@
-import { acceptCollectiveInvite } from "@/app/actions/memberActions";
-import { createServerSupabaseClient } from "@/lib/supabase/server";
-import { redirect } from "next/navigation";
-import Link from "next/link";
+import { acceptCollectiveInvite } from '@/app/actions/memberActions';
+import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { redirect } from 'next/navigation';
+import Link from 'next/link';
 
 export default async function InviteAcceptPage({
   params,
 }: {
-  params: { inviteCode: string };
+  params: Promise<{ inviteCode: string }>;
 }) {
   const supabase = await createServerSupabaseClient();
-  const { inviteCode } = params;
+  const { inviteCode } = await params;
   const {
     data: { user },
     error: authError,
@@ -33,7 +33,7 @@ export default async function InviteAcceptPage({
         </div>
       ) : (
         <div className="text-destructive bg-destructive/10 p-4 rounded mb-4">
-          <p>{result.error || "Failed to accept invite."}</p>
+          <p>{result.error || 'Failed to accept invite.'}</p>
         </div>
       )}
       <Link href="/dashboard" className="text-accent underline">

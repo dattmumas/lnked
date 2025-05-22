@@ -1,14 +1,13 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { notFound } from 'next/navigation';
 import Image from 'next/image';
-import Link from 'next/link';
 
 export default async function Page({
   params,
 }: {
-  params: { slug: string };
+  params: Promise<{ slug: string }>;
 }) {
-  const { slug } = params;
+  const { slug } = await params;
   const supabase = await createServerSupabaseClient();
 
   const { data: collectiveData, error: collectiveError } = await supabase
@@ -24,7 +23,7 @@ export default async function Page({
   const { data: followersData, error: followersError } = await supabase
     .from('follows')
     .select(
-      'follower_id, follower:users!follower_id(id, username, full_name, avatar_url)',
+      'follower_id, follower:users!follower_id(id, full_name, avatar_url)',
     )
     .eq('following_id', collectiveData.id)
     .eq('following_type', 'collective');
@@ -56,12 +55,9 @@ export default async function Page({
                     className="rounded-full object-cover"
                   />
                 )}
-                <Link
-                  href={`/@${f.follower.username}`}
-                  className="hover:underline font-medium"
-                >
+                <span className="font-medium">
                   {f.follower.full_name ?? 'User'}
-                </Link>
+                </span>
               </li>
             ) : null,
           )}

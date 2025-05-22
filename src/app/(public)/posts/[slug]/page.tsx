@@ -42,9 +42,9 @@ type PostViewData = Database['public']['Tables']['posts']['Row'] & {
 export default async function PostBySlugPage({
   params,
 }: {
-  params: { slug: string };
+  params: Promise<{ slug: string }>;
 }) {
-  const { slug: slugOrId } = params;
+  const { slug: slugOrId } = await params;
   const supabase = await createServerSupabaseClient();
   const {
     data: { user },

@@ -16,10 +16,11 @@ export default async function Page({
   params,
   searchParams,
 }: {
-  params: { username: string };
-  searchParams: { q?: string };
+  params: Promise<{ username: string }>;
+  searchParams: Promise<{ q?: string }>;
 }) {
-  const { username } = params;
+  const { username } = await params;
+  const { q } = await searchParams;
   const supabase = await createServerSupabaseClient();
 
   const {
@@ -88,8 +89,8 @@ export default async function Page({
       .not('published_at', 'is', null);
   }
 
-  if (searchParams.q && searchParams.q.trim().length > 0) {
-    postsQuery = postsQuery.textSearch('tsv', searchParams.q, {
+  if (q && q.trim().length > 0) {
+    postsQuery = postsQuery.textSearch('tsv', q, {
       type: 'websearch',
     });
   }
@@ -230,7 +231,7 @@ export default async function Page({
           />
         ) : (
           <div className="text-center py-10">
-            {searchParams.q ? (
+            {q ? (
               <>
                 <h2 className="text-2xl font-semibold mb-2">
                   No posts found for your search.

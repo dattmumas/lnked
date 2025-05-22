@@ -1,7 +1,6 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import PostCard from '@/components/app/posts/molecules/PostCard';
 import CollectiveCard from '@/components/app/dashboard/collectives/CollectiveCard';
-import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import type { Database } from '@/lib/database.types';
 
@@ -10,10 +9,11 @@ export const dynamic = 'force-dynamic';
 export default async function Page({
   searchParams,
 }: {
-  searchParams: { q?: string };
+  searchParams: Promise<{ q?: string }>;
 }) {
   const supabase = await createServerSupabaseClient();
-  const q = searchParams.q?.trim();
+  const { q: queryParam } = await searchParams;
+  const q = queryParam?.trim();
 
   type PostRow = Database['public']['Tables']['posts']['Row'];
   type PostResult = PostRow & {
@@ -25,7 +25,7 @@ export default async function Page({
 
   type UserResult = Pick<
     Database['public']['Tables']['users']['Row'],
-    'id' | 'username' | 'full_name' | 'bio' | 'avatar_url'
+    'id' | 'full_name' | 'bio' | 'avatar_url'
   >;
 
   type CollectiveResult = Pick<
@@ -47,19 +47,21 @@ export default async function Page({
       .limit(10);
 
     posts =
-      (postsData as (PostRow & { collective?: { slug: string } | null })[] | null)?.map(
-        (p) => ({
-          ...p,
-          like_count: p.like_count ?? 0,
-          dislike_count: p.dislike_count ?? 0,
-          collective_slug: p.collective?.slug ?? null,
-          current_user_has_liked: undefined,
-        }),
-      ) || [];
+      (
+        postsData as
+          | (PostRow & { collective?: { slug: string } | null })[]
+          | null
+      )?.map((p) => ({
+        ...p,
+        like_count: p.like_count ?? 0,
+        dislike_count: p.dislike_count ?? 0,
+        collective_slug: p.collective?.slug ?? null,
+        current_user_has_liked: undefined,
+      })) || [];
 
     const { data: usersData } = await supabase
       .from('users')
-      .select('id, username, full_name, bio, avatar_url')
+      .select('id, full_name, bio, avatar_url')
       .textSearch('tsv', q, { type: 'websearch' })
       .limit(10);
 
@@ -118,12 +120,9 @@ export default async function Page({
           <ul className="space-y-2">
             {users.map((u) => (
               <li key={u.id} className="">
-                <Link
-                  href={`/@${u.username}`}
-                  className="font-medium text-accent hover:underline"
-                >
+                <span className="font-medium text-accent">
                   {u.full_name || 'Unnamed User'}
-                </Link>
+                </span>
                 {u.bio && (
                   <p className="text-sm text-muted-foreground">{u.bio}</p>
                 )}

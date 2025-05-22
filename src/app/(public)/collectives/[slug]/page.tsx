@@ -15,10 +15,11 @@ export default async function Page({
   params,
   searchParams,
 }: {
-  params: { slug: string };
-  searchParams: { q?: string };
+  params: Promise<{ slug: string }>;
+  searchParams: Promise<{ q?: string }>;
 }) {
-  const { slug } = params;
+  const { slug } = await params;
+  const { q } = await searchParams;
   const supabase = await createServerSupabaseClient();
 
   const {
@@ -41,10 +42,14 @@ export default async function Page({
     | null;
 
   if (collectiveError || !collective) {
-    console.error(
-      `Error fetching collective ${slug}:`,
-      collectiveError,
-    );
+    console.error(`Error fetching collective ${slug}:`, {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      message: (collectiveError as any)?.message,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      code: (collectiveError as any)?.code,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      details: (collectiveError as any)?.details,
+    });
     notFound();
   }
 
@@ -80,7 +85,6 @@ export default async function Page({
     .from('posts')
     .select(`*, view_count`)
     .eq('collective_id', collective.id)
-    .order('pinned_at', { ascending: false })
     .order('created_at', { ascending: false });
 
   const { data: featuredData } = await supabase
@@ -113,11 +117,13 @@ export default async function Page({
   } else if (isSubscribed) {
     postsQuery = postsQuery.not('published_at', 'is', null);
   } else {
-    postsQuery = postsQuery.eq('is_public', true).not('published_at', 'is', null);
+    postsQuery = postsQuery
+      .eq('is_public', true)
+      .not('published_at', 'is', null);
   }
 
-  if (searchParams.q && searchParams.q.trim().length > 0) {
-    postsQuery = postsQuery.textSearch('tsv', searchParams.q, {
+  if (q && q.trim().length > 0) {
+    postsQuery = postsQuery.textSearch('tsv', q, {
       type: 'websearch',
     });
   }
@@ -125,10 +131,14 @@ export default async function Page({
   const { data: postsData, error: postsError } = await postsQuery;
 
   if (postsError) {
-    console.error(
-      `Error fetching posts for collective ${collective.id}:`,
-      postsError,
-    );
+    console.error(`Error fetching posts for collective ${collective.id}:`, {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      message: (postsError as any)?.message,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      code: (postsError as any)?.code,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      details: (postsError as any)?.details,
+    });
     // Decide how to handle this - e.g., show an error message or empty state
   }
 
@@ -141,14 +151,13 @@ export default async function Page({
       collective_slug: slug,
     })) || [];
 
-  const pinned =
-    pinnedPost && {
-      ...pinnedPost,
-      like_count: pinnedPost.like_count ?? 0,
-      dislike_count: pinnedPost.dislike_count ?? 0,
-      current_user_has_liked: undefined,
-      collective_slug: slug,
-    };
+  const pinned = pinnedPost && {
+    ...pinnedPost,
+    like_count: pinnedPost.like_count ?? 0,
+    dislike_count: pinnedPost.dislike_count ?? 0,
+    current_user_has_liked: undefined,
+    collective_slug: slug,
+  };
 
   type SubscriptionTier = Database['public']['Tables']['prices']['Row'];
   const { data: tierData } = (await supabase
@@ -281,16 +290,21 @@ export default async function Page({
           />
         ) : (
           <div className="text-center py-10">
-            {searchParams.q ? (
+            {q ? (
               <>
-                <h2 className="text-2xl font-semibold mb-2">No posts found for your search.</h2>
-                <p className="text-muted-foreground">Try a different search term.</p>
+                <h2 className="text-2xl font-semibold mb-2">
+                  No posts found for your search.
+                </h2>
+                <p className="text-muted-foreground">
+                  Try a different search term.
+                </p>
               </>
             ) : (
               <>
                 <h2 className="text-2xl font-semibold mb-2">No posts yet!</h2>
                 <p className="text-muted-foreground">
-                  This collective hasn&apos;t published any posts. Check back later!
+                  This collective hasn&apos;t published any posts. Check back
+                  later!
                 </p>
               </>
             )}

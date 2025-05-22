@@ -1,4 +1,4 @@
-import React from "react";
+import React from 'react';
 
 // TODO: Implement fetching and applying collective-specific theme values (Rule 5.2)
 // Example: Fetch collective data by slug, extract theme (e.g., primaryColor, coverImageUrl)
@@ -9,11 +9,11 @@ export default async function CollectiveLayout({
   params,
 }: {
   children: React.ReactNode;
-  params: { slug: string };
+  params: Promise<{ slug: string }>;
 }) {
-  const { slug } = params;
-  if (process.env.NODE_ENV === "development") {
-    console.log("Rendering layout for collective slug:", slug);
+  const { slug } = await params;
+  if (process.env.NODE_ENV === 'development') {
+    console.log('Rendering layout for collective slug:', slug);
   }
 
   return (

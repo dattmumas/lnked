@@ -4,9 +4,9 @@ import { getCommentsByPostId } from '@/lib/data/comments';
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { slug: string } },
+  { params }: { params: Promise<{ slug: string }> },
 ) {
-  const { slug } = params;
+  const { slug } = await params;
   const supabase = await createServerSupabaseClient();
 
   const { data: postRecord } = await supabase
@@ -30,9 +30,9 @@ export async function GET(
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: { slug: string } },
+  { params }: { params: Promise<{ slug: string }> },
 ) {
-  const { slug } = params;
+  const { slug } = await params;
   const supabase = await createServerSupabaseClient();
 
   const { data: postRecord } = await supabase
