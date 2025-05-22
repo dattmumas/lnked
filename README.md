@@ -9,6 +9,8 @@ A modern, accessible, and extensible publishing platform for newsletters, collec
 - **Rich Post Editor**: Powerful, extensible editor built with [Lexical](https://lexical.dev/) supporting:
   - Rich text, lists, code, tables, embeds (images, GIFs, polls, tweets, YouTube, Excalidraw, etc.)
   - Slash/typeahead menu for fast block/command insertion
+  - Drag-and-drop image uploads with automatic insertion
+  - Floating formatting toolbar for quick text styling
   - Markdown shortcuts, autosave, and more
 - **Atomic Design System**: Custom UI components (no third-party UI kits) with full accessibility and dark mode support.
 - **Supabase Integration**: Auth, database, and real-time features via [Supabase](https://supabase.com/).

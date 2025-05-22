@@ -95,12 +95,12 @@ function Toolbar(): JSX.Element {
     if (error) {
       // Supabase StorageError's properties are non-enumerable, so spread it to retain message
       console.error('Error uploading image:', {
-        message: (error as any).message,
-        statusCode: (error as any).statusCode,
-        name: error.name,
+        message: (error as Error).message,
+        statusCode: (error as { statusCode?: number }).statusCode,
+        name: (error as Error).name,
       });
       // TODO: replace with a proper toast component
-      alert((error as any).message || 'Failed to upload image');
+      alert((error as Error).message || 'Failed to upload image');
       return;
     }
     const { data } = supabase.storage.from('posts').getPublicUrl(path);
