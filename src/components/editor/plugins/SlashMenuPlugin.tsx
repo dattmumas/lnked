@@ -36,16 +36,38 @@ import { $setBlocksType } from '@lexical/selection';
 import { $createHeadingNode, $createQuoteNode } from '@lexical/rich-text';
 import { $createParagraphNode } from 'lexical';
 import { CodeNode } from '@lexical/code';
+import {
+  Pilcrow,
+  Heading1,
+  Heading2,
+  Heading3,
+  Quote,
+  Code,
+  Table,
+  ListChecks,
+  SeparatorHorizontal,
+  Image as ImageIcon,
+  ImagePlus,
+  PenTool,
+  StickyNote,
+  Youtube,
+  Twitter,
+  SquareSplitVertical,
+  LayoutTemplate,
+  type LucideIcon,
+} from 'lucide-react';
 
 interface MenuOption {
   label: string;
   description?: string;
+  icon: LucideIcon;
   action: (editor: LexicalEditor) => void;
 }
 
 const SLASH_OPTIONS: MenuOption[] = [
   {
     label: 'Paragraph',
+    icon: Pilcrow,
     action: (editor) => {
       editor.update(() => {
         const selection = $getSelection();
@@ -57,6 +79,7 @@ const SLASH_OPTIONS: MenuOption[] = [
   },
   {
     label: 'Heading 1',
+    icon: Heading1,
     action: (editor) => {
       editor.update(() => {
         const selection = $getSelection();
@@ -68,6 +91,7 @@ const SLASH_OPTIONS: MenuOption[] = [
   },
   {
     label: 'Heading 2',
+    icon: Heading2,
     action: (editor) => {
       editor.update(() => {
         const selection = $getSelection();
@@ -79,6 +103,7 @@ const SLASH_OPTIONS: MenuOption[] = [
   },
   {
     label: 'Heading 3',
+    icon: Heading3,
     action: (editor) => {
       editor.update(() => {
         const selection = $getSelection();
@@ -90,6 +115,7 @@ const SLASH_OPTIONS: MenuOption[] = [
   },
   {
     label: 'Quote',
+    icon: Quote,
     action: (editor) => {
       editor.update(() => {
         const selection = $getSelection();
@@ -101,6 +127,7 @@ const SLASH_OPTIONS: MenuOption[] = [
   },
   {
     label: 'Code Block',
+    icon: Code,
     action: (editor) => {
       editor.update(() => {
         const selection = $getSelection();
@@ -112,51 +139,62 @@ const SLASH_OPTIONS: MenuOption[] = [
   },
   {
     label: 'Table',
+    icon: Table,
     action: (editor) => editor.dispatchCommand(INSERT_TABLE_COMMAND, undefined),
   },
   {
     label: 'Poll',
+    icon: ListChecks,
     action: (editor) => editor.dispatchCommand(INSERT_POLL_COMMAND, undefined),
   },
   {
     label: 'Horizontal Rule',
+    icon: SeparatorHorizontal,
     action: (editor) => editor.dispatchCommand(INSERT_HR_COMMAND, undefined),
   },
   {
     label: 'Image',
+    icon: ImageIcon,
     action: (editor) => editor.dispatchCommand(INSERT_IMAGE_COMMAND, undefined),
   },
   {
     label: 'Inline Image',
+    icon: ImagePlus,
     action: (editor) =>
       editor.dispatchCommand(INSERT_INLINE_IMAGE_COMMAND, undefined),
   },
   {
     label: 'Excalidraw',
+    icon: PenTool,
     action: (editor) =>
       editor.dispatchCommand(INSERT_EXCALIDRAW_COMMAND, undefined),
   },
   {
     label: 'Sticky Note',
+    icon: StickyNote,
     action: (editor) =>
       editor.dispatchCommand(INSERT_STICKY_COMMAND, undefined),
   },
   {
     label: 'YouTube Video',
+    icon: Youtube,
     action: (editor) =>
       editor.dispatchCommand(INSERT_YOUTUBE_COMMAND, undefined),
   },
   {
     label: 'Tweet',
+    icon: Twitter,
     action: (editor) => editor.dispatchCommand(INSERT_TWEET_COMMAND, undefined),
   },
   {
     label: 'Page Break',
+    icon: SquareSplitVertical,
     action: (editor) =>
       editor.dispatchCommand(INSERT_PAGE_BREAK_COMMAND, undefined),
   },
   {
     label: 'Columns Layout',
+    icon: LayoutTemplate,
     action: (editor) =>
       editor.dispatchCommand(INSERT_LAYOUT_COMMAND, undefined),
   },
@@ -172,7 +210,7 @@ const SlashMenuPlugin = () => {
   } | null>(null);
   const [triggerNodeKey, setTriggerNodeKey] = useState<string | null>(null);
   const [inputString, setInputString] = useState('');
-  const menuRef = React.useRef<HTMLDivElement>(null);
+  const menuRef = React.useRef<HTMLUListElement>(null);
 
   // Use KEY_DOWN_COMMAND to trigger slash menu
   useEffect(() => {
@@ -279,6 +317,7 @@ const SlashMenuPlugin = () => {
       KEY_ESCAPE_COMMAND,
       () => {
         setOpen(false);
+        editor.focus();
         return true;
       },
       COMMAND_PRIORITY_LOW,
@@ -342,9 +381,11 @@ const SlashMenuPlugin = () => {
 
   // Render menu at caret position
   return ReactDOM.createPortal(
-    <div
+    <ul
       ref={menuRef}
-      className="fixed z-[9999] bg-white border-2 border-red-500 shadow-lg rounded-md mt-2 w-64"
+      role="listbox"
+      aria-label="Insert block menu"
+      className="fixed z-50 bg-popover text-foreground border border-border shadow rounded-md p-1 max-w-sm w-full"
       style={{
         left: menuPosition.x,
         top: menuPosition.y,
@@ -352,13 +393,15 @@ const SlashMenuPlugin = () => {
       }}
     >
       {filteredOptions.length === 0 ? (
-        <div className="px-4 py-2 text-muted-foreground">No results</div>
+        <li className="px-4 py-2 text-muted-foreground">No results</li>
       ) : (
         filteredOptions.map((opt, i) => (
-          <div
+          <li
             key={opt.label}
-            className={`px-4 py-2 cursor-pointer ${
-              i === highlighted ? 'bg-muted' : ''
+            role="option"
+            aria-selected={i === highlighted}
+            className={`px-4 py-2 cursor-pointer flex items-center gap-2 rounded-sm ${
+              i === highlighted ? 'bg-accent text-accent-foreground' : ''
             }`}
             onMouseEnter={() => setHighlighted(i)}
             onMouseDown={(e) => e.preventDefault()}
@@ -379,16 +422,17 @@ const SlashMenuPlugin = () => {
               setOpen(false);
             }}
           >
-            <strong>{opt.label}</strong>
+            <opt.icon className="size-4" aria-hidden="true" />
+            <span className="font-medium">{opt.label}</span>
             {opt.description && (
               <span className="ml-2 text-muted-foreground text-xs">
                 {opt.description}
               </span>
             )}
-          </div>
+          </li>
         ))
       )}
-    </div>,
+    </ul>,
     document.body,
   );
 };
