@@ -88,9 +88,19 @@ function Toolbar(): JSX.Element {
     const ext = file.name.split('.').pop() || 'png';
     const filename = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
     const path = `public/${user.id}/${filename}`;
-    const { error } = await supabase.storage.from('posts').upload(path, file);
+    const { error } = await supabase.storage
+      .from('posts')
+      .upload(path, file, { cacheControl: '3600', upsert: false });
+
     if (error) {
-      console.error('Error uploading image:', error);
+      // Supabase StorageError's properties are non-enumerable, so spread it to retain message
+      console.error('Error uploading image:', {
+        message: (error as any).message,
+        statusCode: (error as any).statusCode,
+        name: error.name,
+      });
+      // TODO: replace with a proper toast component
+      alert((error as any).message || 'Failed to upload image');
       return;
     }
     const { data } = supabase.storage.from('posts').getPublicUrl(path);
