@@ -1,9 +1,9 @@
 // import Link from "next/link"; // No longer used directly here
-import { ArrowDown } from "lucide-react";
+import { ArrowDown } from 'lucide-react';
 // import { Button } from "@/components/ui/button"; // Button is now in AnimatedHero
-import FragmentedFeeds from "@/components/landing/sections/FragmentedFeeds";
-import CreateCollaborate from "@/components/landing/sections/CreateCollaborate";
-import AnimatedHero from "@/components/landing/sections/AnimatedHero"; // Added import
+import FragmentedFeeds from '@/components/landing/sections/FragmentedFeeds';
+import CreateCollaborate from '@/components/landing/sections/CreateCollaborate';
+import AnimatedHero from '@/components/landing/sections/AnimatedHero'; // Added import
 
 // Removed unused imports and variables related to the old feed page
 // import { cookies } from "next/headers";
@@ -21,10 +21,7 @@ export default function LandingPage() {
   return (
     <>
       <div className="min-h-screen bg-background text-foreground flex flex-col items-center justify-center p-4 relative overflow-hidden">
-        {/* Animated SVG Blobs and Noise Overlay - Assuming these are separate or not part of AnimatedHero itself */}
-        {/* Background animation removed as per latest direction */}
-        <AnimatedHero />{" "}
-        {/* Replaced static hero content with AnimatedHero component */}
+        <AnimatedHero />{' '}
         <div className="absolute bottom-10 left-1/2 -translate-x-1/2 z-10 flex flex-col items-center space-y-1 animate-bounce">
           <span className="text-sm text-muted-foreground">Scroll</span>
           <ArrowDown className="w-5 h-5 text-muted-foreground" />
@@ -40,4 +37,4 @@ export default function LandingPage() {
   );
 }
 
-export const dynamic = "force-static"; // ensure RSC caching for landing
+export const dynamic = 'force-static'; // ensure RSC caching for landing

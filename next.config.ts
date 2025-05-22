@@ -1,17 +1,17 @@
-import type { NextConfig } from "next";
+import type { NextConfig } from 'next';
 
 /** @type {import('next').NextConfig} */
 const nextConfig: NextConfig = {
   // From audit: transpile the Lexical packages
   transpilePackages: [
-    "lexical",
-    "@lexical/react",
-    "@lexical/rich-text",
-    "@lexical/code",
-    "@lexical/list",
-    "@lexical/link",
-    "@lexical/table",
-    "@lexical/markdown",
+    'lexical',
+    '@lexical/react',
+    '@lexical/rich-text',
+    '@lexical/code',
+    '@lexical/list',
+    '@lexical/link',
+    '@lexical/table',
+    '@lexical/markdown',
   ],
   images: {
     remotePatterns: [
@@ -29,17 +29,21 @@ const nextConfig: NextConfig = {
     return [
       {
         source:
-          '/:slug((?!dashboard|sign-in|sign-up|discover|invite|posts|settings|search|api|collectives|_next).*?)',
+          '/:slug((?!dashboard|sign-in|sign-up|discover|invite|posts|settings|search|api|collectives|_next)[^/]+)',
         destination: '/collectives/:slug',
         permanent: true,
       },
       {
         source:
-          '/:slug((?!dashboard|sign-in|sign-up|discover|invite|posts|settings|search|api|collectives|_next).*?)/:path*',
+          '/:slug((?!dashboard|sign-in|sign-up|discover|invite|posts|settings|search|api|collectives|_next)[^/]+)/:path*',
         destination: '/collectives/:slug/:path*',
         permanent: true,
       },
-      { source: "/collectives/:slug/:id", destination: "/posts/:id", permanent: true },
+      {
+        source: '/collectives/:slug/:id',
+        destination: '/posts/:id',
+        permanent: true,
+      },
     ];
   },
   async headers() {
