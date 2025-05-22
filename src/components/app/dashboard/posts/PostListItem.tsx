@@ -44,9 +44,7 @@ export default function PostListItem({ post }: PostListItemProps) {
       ? post.likeCount
       : post.likes?.[0]?.count || post.post_reactions?.[0]?.count || 0;
   const publishDate = post.published_at || post.created_at;
-  const postUrl = post.collective
-    ? `/collectives/${post.collective.slug}/${post.id}`
-    : `/posts/${post.id}`;
+  const postUrl = post.slug ? `/posts/${post.slug}` : (post.collective ? `/collectives/${post.collective.slug}/${post.id}` : `/posts/${post.id}`);
   const editUrl = `/posts/${post.id}/edit`;
 
   const handleToggleFeature = () => {

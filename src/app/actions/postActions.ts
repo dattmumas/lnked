@@ -145,7 +145,7 @@ export async function createPost(
   } else {
     revalidatePath(`/newsletters/${user.id}`);
   }
-  revalidatePath(`/posts/${newPost.id}`);
+  revalidatePath(`/posts/${postSlug}`);
 
   return {
     data: {
@@ -187,13 +187,14 @@ export async function updatePost(
     collective_id: string | null;
     published_at: string | null;
     is_public: boolean;
+    slug: string | null;
     status: Enums<'post_status_type'>;
     collective: { slug: string; owner_id: string } | null;
   };
   const { data: existingPost, error: fetchError } = await supabase
     .from('posts')
     .select(
-      'id, author_id, collective_id, published_at, is_public, status, collective:collectives!collective_id(slug, owner_id)',
+      'id, author_id, collective_id, published_at, is_public, slug, status, collective:collectives!collective_id(slug, owner_id)',
     )
     .eq('id', postId)
     .single<ExistingPostData>();
@@ -316,7 +317,7 @@ export async function updatePost(
   } else if (existingPost.author_id) {
     revalidatePath(`/newsletters/${existingPost.author_id}`);
   }
-  revalidatePath(`/posts/${postId}`);
+  revalidatePath(`/posts/${postSlug || existingPost.slug || postId}`);
 
   return {
     data: {
