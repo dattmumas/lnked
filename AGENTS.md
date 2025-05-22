@@ -1,21 +1,27 @@
-Implement Multi-Column Responsive Reading Layout
-Files: src/app/(public)/posts/[slug]/page.tsx (post reading page), possibly globals.css or Tailwind config for additional utilities
-Action: Update the post article layout to span multiple columns on large screens for an editorial reading experience. In the post view component, adjust the container classes to allow wider layouts and use CSS columns for text content. For example, increase the max width for the content container:
+Apply Vibrant Accent-on-Gray Theme Updates
+Files: src/app/globals.css, tailwind.config.ts
+Action: Intensify the accent color and usage in the theme to achieve a vibrant-accent-on-gray design. Adjust the design tokens in globals.css for the accent color to make it more saturated or prominent against the neutral background. For example, if the current --accent is defined as oklch(0.72 0.15 203)
+github.com
+, increase the chroma component (second value) or adjust hue to a bolder variant (e.g., oklch(0.72 0.25 203)) for a richer accent. Ensure the contrast with --background (light gray) is sufficient for accessibility.
+Action: Use the accent color more deliberately across UI elements. Update Tailwind config and component styles so that interactive or highlighted elements use the accent. For instance, in tailwind.config.ts under the Typography plugin settings, change link colors to the accent:
 diff
 Copy
 Edit
-- <div className="container mx-auto max-w-3xl p-4 md:p-6">  
-+ <div className="container mx-auto max-w-3xl xl:max-w-6xl p-4 md:p-6">  
-This lets the article expand to a larger width on extra-large screens (e.g. up to ~1200px). Then, target the content wrapper that currently holds the rendered post (the <div className="prose ..."> around <LexicalRenderer>
+typography: {
+  DEFAULT: {
+    css: {
+-      a: { color: "hsl(var(--primary))", "&:hover": { color: "hsl(var(--primary) / 0.8)" } },
++      a: { color: "hsl(var(--accent))", "&:hover": { color: "hsl(var(--accent) / 0.8)" } },
+       ...  
+    }
+  }
+}
+Currently, links in articles use the primary color
 github.com
-) and add multi-column classes:
-diff
-Copy
-Edit
-- <div className="prose dark:prose-invert lg:prose-xl max-w-none">  
-+ <div className="prose dark:prose-invert lg:prose-xl max-w-none xl:columns-2 xl:gap-8">  
-This uses Tailwind’s columns-2 utility to flow text in two columns on xl screens, with a gap between columns for readability. Ensure images and embeds are responsive within columns (they already have max-width: 100% via Next/Image
+; switching to accent will make them stand out with the new vibrant hue. Similarly, update any buttons or focus states that should draw attention – e.g. use bg-accent and text-accent-foreground for primary call-to-action buttons, and use accent for focus rings (--ring is already tied to primary which we can align with accent)
 github.com
-, so they will shrink to column width as needed). Optionally, enable CSS property column-fill: balance; on that container (via a utility or custom CSS) so the two columns are filled more evenly.
-Action: Enable automatic hyphenation for better text flow in columns. In globals.css or as a Tailwind plugin, add hyphens: auto (and overflow-wrap: break-word) to the .prose class or article content class. This prevents overly large words or URLs from breaking the column layout and improves readability by hyphenating long words across line breaks.
-Intent & Impact: On wide desktop screens, posts will now render in a multi-column magazine-style format, reducing line length for easier reading. Readers on large monitors will see text in two balanced columns, giving a professional editorial feel similar to print layouts. On smaller devices, the layout gracefully falls back to a single column. This responsive design enhances readability and visual appeal without affecting mobile users.
+.
+Action: Embrace gray for surfaces, accent for highlights. Audit UI components (cards, nav, sidebar) to ensure their backgrounds are neutral (gray/white from the design tokens) and the accent color is used for key highlights (active states, selection, brand mark, etc.). For example, maintain the background as the --background token (a nearly white gray) and use accent for things like the logo dot, icons, or selection highlights. The theme already defines a neutral “card” background and foreground
+github.com
+ – continue leveraging those, but wherever a pop of color is needed (links, highlight text, or important icons), apply the accent color class.
+Intent & Impact: These changes will refine the UI to have a consistent modern theme: mostly calm gray tones with a single vibrant accent color drawing the eye. The platform’s design will feel more cohesive and visually engaging. Users will notice interactive elements and highlights more clearly (thanks to the bolder accent), while the overall interface retains a clean, minimalist gray backdrop. This improves both aesthetic appeal and usability (through better contrast and consistent theming).
