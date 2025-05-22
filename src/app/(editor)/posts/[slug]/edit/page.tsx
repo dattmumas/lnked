@@ -5,9 +5,9 @@ import EditPostForm, { type PostDataType } from './EditPostForm'; // Import the 
 export default async function EditPostPage({
   params,
 }: {
-  params: Promise<{ slug: string }>;
+  params: { slug: string };
 }) {
-  const { slug } = await params;
+  const { slug } = params;
   const supabase = await createServerSupabaseClient();
 
   const {

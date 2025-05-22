@@ -9,10 +9,10 @@ interface SearchParams {
 export default async function NewPostPage({
   searchParams,
 }: {
-  searchParams: Promise<SearchParams>;
+  searchParams: SearchParams;
 }) {
   const supabase = await createServerSupabaseClient();
-  const resolvedParams = await searchParams;
+  const resolvedParams = searchParams;
   const {
     data: { user },
   } = await supabase.auth.getUser();

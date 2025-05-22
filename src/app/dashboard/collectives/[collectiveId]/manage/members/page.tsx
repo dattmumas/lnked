@@ -20,9 +20,9 @@ type PendingInvite = {
 export default async function ManageCollectiveMembersPage({
   params,
 }: {
-  params: Promise<{ collectiveId: string }>;
+  params: { collectiveId: string };
 }) {
-  const { collectiveId } = await params;
+  const { collectiveId } = params;
   const supabase = await createServerSupabaseClient();
 
   const {

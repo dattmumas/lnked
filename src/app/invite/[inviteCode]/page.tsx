@@ -6,10 +6,10 @@ import Link from "next/link";
 export default async function InviteAcceptPage({
   params,
 }: {
-  params: Promise<{ inviteCode: string }>;
+  params: { inviteCode: string };
 }) {
   const supabase = await createServerSupabaseClient();
-  const { inviteCode } = await params;
+  const { inviteCode } = params;
   const {
     data: { user },
     error: authError,
