@@ -62,9 +62,7 @@ export default function PostCard({ post, collectiveSlug }: PostCardProps) {
       })
     : "Date not available";
 
-  const postUrl = collectiveSlug
-    ? `/collectives/${collectiveSlug}/${post.id}`
-    : `/posts/${post.id}`;
+  const postUrl = post.slug ? `/posts/${post.slug}` : (collectiveSlug ? `/collectives/${collectiveSlug}/${post.id}` : `/posts/${post.id}`);
 
   const handleLikeToggle = async () => {
     if (!currentUserId) {

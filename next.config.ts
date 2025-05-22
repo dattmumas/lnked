@@ -39,6 +39,7 @@ const nextConfig: NextConfig = {
         destination: '/collectives/:slug/:path*',
         permanent: true,
       },
+      { source: "/collectives/:slug/:id", destination: "/posts/:id", permanent: true },
     ];
   },
   async headers() {
