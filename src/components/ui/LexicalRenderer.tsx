@@ -39,7 +39,7 @@ export function LexicalRenderer({ contentJSON }: LexicalRendererProps) {
     const htmlString = typeof contentJSON === 'string' ? contentJSON : '';
     return (
       <div
-        className="prose dark:prose-invert lg:prose-xl max-w-none"
+        className="prose dark:prose-invert lg:prose-xl 2xl:prose-2xl max-w-none"
         dangerouslySetInnerHTML={{ __html: htmlString }}
       />
     );

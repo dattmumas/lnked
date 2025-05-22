@@ -87,22 +87,31 @@ const config: Config = {
               fontFamily: theme("fontFamily.serif"),
               fontSize: "1.125rem",
               lineHeight: "1.6",
+              marginTop: "1.25em",
+              marginBottom: "1.25em",
             },
             h1: {
               color: "hsl(var(--foreground))",
               fontFamily: theme("fontFamily.serif"),
+              marginTop: "1.5em",
+              marginBottom: "0.5em",
             },
             h2: {
               color: "hsl(var(--foreground))",
               fontFamily: theme("fontFamily.serif"),
+              marginTop: "1.25em",
+              marginBottom: "0.5em",
             },
             h3: {
               color: "hsl(var(--foreground))",
               fontFamily: theme("fontFamily.serif"),
+              marginTop: "1em",
+              marginBottom: "0.5em",
             },
             blockquote: {
               color: "hsl(var(--muted-foreground))",
-              borderLeftColor: "hsl(var(--border))",
+              borderLeftColor: "hsl(var(--accent))",
+              fontStyle: "italic",
             },
             code: {
               color: "hsl(var(--foreground))",
@@ -116,6 +125,8 @@ const config: Config = {
               fontFamily: theme("fontFamily.serif"),
               fontSize: "1.125rem",
               lineHeight: "1.6",
+              marginTop: "1.25em",
+              marginBottom: "1.25em",
             },
             color: "hsl(var(--foreground))",
             a: {
@@ -126,12 +137,21 @@ const config: Config = {
             },
             blockquote: {
               color: "hsl(var(--muted-foreground))",
-              borderLeftColor: "hsl(var(--border))",
+              borderLeftColor: "hsl(var(--accent))",
+              fontStyle: "italic",
             },
             code: {
               color: "hsl(var(--foreground))",
               backgroundColor: "hsl(var(--muted))",
             },
+          },
+        },
+        "2xl": {
+          css: {
+            p: { fontSize: "1.25rem", lineHeight: "1.7" },
+            h1: { fontSize: "2.5rem" },
+            h2: { fontSize: "2rem" },
+            h3: { fontSize: "1.75rem" },
           },
         },
       }),

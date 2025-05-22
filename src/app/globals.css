@@ -454,3 +454,13 @@ body {
   hyphens: auto;
   overflow-wrap: break-word;
 }
+
+.prose img {
+  break-inside: avoid;
+}
+
+.prose pre {
+  white-space: pre-wrap;
+  overflow-x: auto;
+  break-inside: avoid;
+}
