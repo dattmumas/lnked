@@ -1,7 +1,7 @@
-"use server";
+'use server';
 
-import { createServerSupabaseClient } from "@/lib/supabase/server";
-import { revalidatePath } from "next/cache";
+import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { revalidatePath } from 'next/cache';
 
 interface FollowActionResult {
   success: boolean;
@@ -9,7 +9,7 @@ interface FollowActionResult {
 }
 
 export async function followUser(
-  userIdToFollow: string
+  userIdToFollow: string,
 ): Promise<FollowActionResult> {
   const supabase = await createServerSupabaseClient();
 
@@ -19,26 +19,24 @@ export async function followUser(
   } = await supabase.auth.getUser();
 
   if (authError || !user) {
-    return { success: false, error: "User not authenticated." };
+    return { success: false, error: 'User not authenticated.' };
   }
 
   if (user.id === userIdToFollow) {
-    return { success: false, error: "You cannot follow yourself." };
+    return { success: false, error: 'You cannot follow yourself.' };
   }
 
-  const { error: insertError } = await supabase
-    .from("follows")
-    .insert({
-      follower_id: user.id,
-      following_id: userIdToFollow,
-      following_type: "user",
-    });
+  const { error: insertError } = await supabase.from('follows').insert({
+    follower_id: user.id,
+    following_id: userIdToFollow,
+    following_type: 'user',
+  });
 
   if (insertError) {
-    console.error("Error following user:", insertError.message);
-    if (insertError.code === "23505") {
+    console.error('Error following user:', insertError.message);
+    if (insertError.code === '23505') {
       // Unique constraint violation
-      return { success: false, error: "You are already following this user." };
+      return { success: false, error: 'You are already following this user.' };
     }
     return {
       success: false,
@@ -46,13 +44,17 @@ export async function followUser(
     };
   }
 
-  revalidatePath("/"); // Revalidate feed potentially
+  // Revalidate relevant paths to update follower counts and UI
+  revalidatePath('/');
+  revalidatePath(`/profile/${userIdToFollow}`);
+  revalidatePath(`/users/${userIdToFollow}`);
+  revalidatePath(`/users/${userIdToFollow}/followers`);
 
   return { success: true };
 }
 
 export async function unfollowUser(
-  userIdToUnfollow: string
+  userIdToUnfollow: string,
 ): Promise<FollowActionResult> {
   const supabase = await createServerSupabaseClient();
 
@@ -62,27 +64,28 @@ export async function unfollowUser(
   } = await supabase.auth.getUser();
 
   if (authError || !user) {
-    return { success: false, error: "User not authenticated." };
+    return { success: false, error: 'User not authenticated.' };
   }
 
-  const { error: deleteError } = await supabase
-    .from("follows")
-    .delete()
-    .match({
-      follower_id: user.id,
-      following_id: userIdToUnfollow,
-      following_type: "user",
-    });
+  const { error: deleteError } = await supabase.from('follows').delete().match({
+    follower_id: user.id,
+    following_id: userIdToUnfollow,
+    following_type: 'user',
+  });
 
   if (deleteError) {
-    console.error("Error unfollowing user:", deleteError.message);
+    console.error('Error unfollowing user:', deleteError.message);
     return {
       success: false,
       error: `Failed to unfollow user: ${deleteError.message}`,
     };
   }
 
-  revalidatePath("/");
+  // Revalidate relevant paths to update follower counts and UI
+  revalidatePath('/');
+  revalidatePath(`/profile/${userIdToUnfollow}`);
+  revalidatePath(`/users/${userIdToUnfollow}`);
+  revalidatePath(`/users/${userIdToUnfollow}/followers`);
 
   return { success: true };
 }
@@ -98,39 +101,45 @@ export async function followCollective(
   } = await supabase.auth.getUser();
 
   if (authError || !user) {
-    return { success: false, error: "User not authenticated." };
+    return { success: false, error: 'User not authenticated.' };
   }
 
   const { data: collective, error: collectiveError } = await supabase
-    .from("collectives")
-    .select("owner_id, slug")
-    .eq("id", collectiveId)
+    .from('collectives')
+    .select('owner_id, slug')
+    .eq('id', collectiveId)
     .single();
 
   if (collectiveError || !collective) {
-    return { success: false, error: "Collective not found." };
+    return { success: false, error: 'Collective not found.' };
   }
 
   if (collective.owner_id === user.id) {
-    return { success: false, error: "You cannot follow your own collective." };
+    return { success: false, error: 'You cannot follow your own collective.' };
   }
 
-  const { error: insertError } = await supabase.from("follows").insert({
+  const { error: insertError } = await supabase.from('follows').insert({
     follower_id: user.id,
     following_id: collectiveId,
-    following_type: "collective",
+    following_type: 'collective',
   });
 
   if (insertError) {
-    console.error("Error following collective:", insertError.message);
-    if (insertError.code === "23505") {
-      return { success: false, error: "You are already following this collective." };
+    console.error('Error following collective:', insertError.message);
+    if (insertError.code === '23505') {
+      return {
+        success: false,
+        error: 'You are already following this collective.',
+      };
     }
-    return { success: false, error: `Failed to follow collective: ${insertError.message}` };
+    return {
+      success: false,
+      error: `Failed to follow collective: ${insertError.message}`,
+    };
   }
 
   revalidatePath(`/collectives/${collective.slug}`);
-  revalidatePath("/");
+  revalidatePath('/');
 
   return { success: true };
 }
@@ -146,26 +155,23 @@ export async function unfollowCollective(
   } = await supabase.auth.getUser();
 
   if (authError || !user) {
-    return { success: false, error: "User not authenticated." };
+    return { success: false, error: 'User not authenticated.' };
   }
 
   const { data: collective } = await supabase
-    .from("collectives")
-    .select("slug")
-    .eq("id", collectiveId)
+    .from('collectives')
+    .select('slug')
+    .eq('id', collectiveId)
     .single();
 
-  const { error: deleteError } = await supabase
-    .from("follows")
-    .delete()
-    .match({
-      follower_id: user.id,
-      following_id: collectiveId,
-      following_type: "collective",
-    });
+  const { error: deleteError } = await supabase.from('follows').delete().match({
+    follower_id: user.id,
+    following_id: collectiveId,
+    following_type: 'collective',
+  });
 
   if (deleteError) {
-    console.error("Error unfollowing collective:", deleteError.message);
+    console.error('Error unfollowing collective:', deleteError.message);
     return {
       success: false,
       error: `Failed to unfollow collective: ${deleteError.message}`,
@@ -175,7 +181,7 @@ export async function unfollowCollective(
   if (collective) {
     revalidatePath(`/collectives/${collective.slug}`);
   }
-  revalidatePath("/");
+  revalidatePath('/');
 
   return { success: true };
 }

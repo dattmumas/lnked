@@ -5,6 +5,7 @@ import type { MicroPost } from '@/components/app/profile/MicrothreadPanel';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import SubscribeButton from '@/components/app/newsletters/molecules/SubscribeButton';
+import FollowButton from '@/components/FollowButton';
 import type { Database } from '@/lib/database.types';
 import Image from 'next/image';
 import { Badge } from '@/components/ui/badge';
@@ -27,29 +28,70 @@ export default async function Page({
     data: { user: authUser },
   } = await supabase.auth.getUser();
 
-  const { data: profile, error: profileError } = await supabase
-    .from('users')
-    .select('id, username, full_name, bio, avatar_url, tags')
-    .eq('username', username)
-    .single();
+  // First try to find user by username, if not found try by ID (for backward compatibility)
+  let profile;
+  let profileError;
+
+  if (username) {
+    const { data: profileData } = await supabase
+      .from('users')
+      .select('id, username, full_name, bio, avatar_url, tags')
+      .eq('username', username)
+      .single();
+
+    if (profileData) {
+      profile = profileData;
+      profileError = null;
+    } else {
+      // If username lookup failed, try by ID (backward compatibility)
+      const { data: idProfileData, error: idError } = await supabase
+        .from('users')
+        .select('id, username, full_name, bio, avatar_url, tags')
+        .eq('id', username)
+        .single();
+
+      profile = idProfileData;
+      profileError = idError;
+    }
+  }
 
   if (profileError || !profile) {
     console.error('Error fetching user', username, profileError);
     notFound();
   }
 
-  const { count: followerCount } = await supabase
-    .from('follows')
-    .select('*', { count: 'exact', head: true })
-    .eq('following_id', profile.id)
-    .eq('following_type', 'user');
+  // Get follower and subscriber counts using optimized queries
+  const [
+    { count: followerCount },
+    { count: subscriberCount },
+    { data: followData },
+  ] = await Promise.all([
+    // Get follower count using the updated table structure
+    supabase
+      .from('follows')
+      .select('*', { count: 'exact', head: true })
+      .eq('following_id', profile.id)
+      .eq('following_type', 'user'),
+    // Get subscriber count
+    supabase
+      .from('subscriptions')
+      .select('*', { count: 'exact', head: true })
+      .eq('target_entity_type', 'user')
+      .eq('target_entity_id', profile.id)
+      .eq('status', 'active'),
+    // Check if current user is following this profile (only if authenticated)
+    authUser
+      ? supabase
+          .from('follows')
+          .select('*')
+          .eq('follower_id', authUser.id)
+          .eq('following_id', profile.id)
+          .eq('following_type', 'user')
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
+  ]);
 
-  const { count: subscriberCount } = await supabase
-    .from('subscriptions')
-    .select('*', { count: 'exact', head: true })
-    .eq('target_entity_type', 'user')
-    .eq('target_entity_id', profile.id)
-    .eq('status', 'active');
+  const isFollowing = !!followData;
 
   let postsQuery = supabase
     .from('posts')
@@ -167,7 +209,7 @@ export default async function Page({
           </h1>
           <p className="text-sm text-muted-foreground">
             <Link
-              href={`/@${profile.username}/followers`}
+              href={`/profile/${profile.username || profile.id}/followers`}
               className="hover:underline"
             >
               {followerCount ?? 0} follower
@@ -211,13 +253,34 @@ export default async function Page({
             </Button>
           </div>
         ) : (
-          <div className="mt-4">
-            <SubscribeButton
-              targetEntityType="user"
-              targetEntityId={profile.id}
-              targetName={profile.full_name ?? ''}
-              tiers={tiers}
-            />
+          <div className="mt-4 space-y-4">
+            {/* Follow Section - Free notifications */}
+            <div className="text-center">
+              <FollowButton
+                targetUserId={profile.id}
+                targetUserName={profile.full_name ?? 'User'}
+                initialIsFollowing={isFollowing}
+                currentUserId={authUser?.id}
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Get notified when {profile.full_name ?? 'this user'} publishes
+                new posts
+              </p>
+            </div>
+
+            {/* Subscribe Section - Paid access */}
+            <div className="text-center">
+              <SubscribeButton
+                targetEntityType="user"
+                targetEntityId={profile.id}
+                targetName={profile.full_name ?? ''}
+                tiers={tiers}
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Access exclusive content and support{' '}
+                {profile.full_name ?? 'this creator'}
+              </p>
+            </div>
           </div>
         )}
       </header>

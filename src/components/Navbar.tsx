@@ -175,13 +175,21 @@ export default function Navbar({ initialUser, initialUsername }: NavbarProps) {
               </Link>
             </Button>
             <Button
-              variant={pathname === `/@${username}` ? 'secondary' : 'ghost'}
+              variant={
+                pathname === `/profile/${username ?? user?.id}`
+                  ? 'secondary'
+                  : 'ghost'
+              }
               size="sm"
               asChild
             >
               <Link
-                href={`/@${username ?? user?.id}`}
-                aria-current={pathname === `/@${username}` ? 'page' : undefined}
+                href={`/profile/${username ?? user?.id}`}
+                aria-current={
+                  pathname === `/profile/${username ?? user?.id}`
+                    ? 'page'
+                    : undefined
+                }
               >
                 <UserIcon className="size-4 mr-2" /> My Profile
               </Link>
@@ -264,15 +272,19 @@ export default function Navbar({ initialUser, initialUsername }: NavbarProps) {
                     ))}
                     <Button
                       variant={
-                        pathname === `/@${username}` ? 'secondary' : 'ghost'
+                        pathname === `/profile/${username ?? user?.id}`
+                          ? 'secondary'
+                          : 'ghost'
                       }
                       className="justify-start h-9 px-2"
                       asChild
                     >
                       <Link
-                        href={`/@${username ?? user?.id}`}
+                        href={`/profile/${username ?? user?.id}`}
                         aria-current={
-                          pathname === `/@${username}` ? 'page' : undefined
+                          pathname === `/profile/${username ?? user?.id}`
+                            ? 'page'
+                            : undefined
                         }
                       >
                         <UserIcon className="size-4 mr-2" /> My Profile
@@ -351,15 +363,19 @@ export default function Navbar({ initialUser, initialUsername }: NavbarProps) {
                     </Button>
                     <Button
                       variant={
-                        pathname === `/@${username}` ? 'secondary' : 'ghost'
+                        pathname === `/profile/${username ?? user?.id}`
+                          ? 'secondary'
+                          : 'ghost'
                       }
                       className="justify-start h-9 px-2"
                       asChild
                     >
                       <Link
-                        href={`/@${username ?? user?.id}`}
+                        href={`/profile/${username ?? user?.id}`}
                         aria-current={
-                          pathname === `/@${username}` ? 'page' : undefined
+                          pathname === `/profile/${username ?? user?.id}`
+                            ? 'page'
+                            : undefined
                         }
                       >
                         <UserIcon className="size-4 mr-2" /> My Profile

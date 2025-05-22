@@ -1,27 +1,25 @@
-"use client";
+'use client';
 
-import Link from "next/link";
-import { useRouter } from "next/navigation";
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
-} from "@/components/ui/dropdown-menu";
-import { LogOut, Settings, User as UserIcon } from "lucide-react";
-import supabase from "@/lib/supabase/browser";
+} from '@/components/ui/dropdown-menu';
+import { LogOut, Settings, User as UserIcon } from 'lucide-react';
+import supabase from '@/lib/supabase/browser';
 
 export interface UserMenuProps {
-  user:
-    | {
-        email?: string;
-        avatar_url?: string;
-        full_name?: string;
-        id?: string;
-        username?: string;
-      }
-    | null;
+  user: {
+    email?: string;
+    avatar_url?: string;
+    full_name?: string;
+    id?: string;
+    username?: string;
+  } | null;
 }
 
 export function UserMenu({ user }: UserMenuProps) {
@@ -31,13 +29,13 @@ export function UserMenu({ user }: UserMenuProps) {
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
-    router.push("/");
+    router.push('/');
   };
 
-  const displayName = user.full_name || user.email || "User";
+  const displayName = user.full_name || user.email || 'User';
   const profileUrl = user.username
-    ? `/@${user.username}`
-    : "/dashboard/profile/edit";
+    ? `/profile/${user.username}`
+    : '/dashboard/profile/edit';
 
   return (
     <DropdownMenu>

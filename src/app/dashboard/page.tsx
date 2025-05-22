@@ -8,19 +8,8 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import StatCard from '@/components/app/dashboard/organisms/StatCard';
-import {
-  Users2,
-  FileText,
-  BookOpen,
-  Mail,
-  Settings,
-  Rss,
-  Plus,
-  AlertCircle,
-  Info,
-  List,
-} from 'lucide-react';
+import StatsRow from '@/components/app/dashboard/organisms/StatsRow';
+import { BookOpen, Rss, Plus, AlertCircle, Info, List } from 'lucide-react';
 import RecentPostRow from '@/components/app/dashboard/organisms/RecentPostRow';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { redirect } from 'next/navigation';
@@ -88,64 +77,82 @@ export default async function DashboardManagementPage() {
   if (personalPostsError)
     console.error('Error fetching personal posts:', personalPostsError.message);
 
+  // 3. Fetch dashboard statistics
+  const [
+    { count: subscriberCount },
+    { count: followerCount },
+    { data: viewsData },
+    { data: likesData },
+  ] = await Promise.all([
+    // Get subscriber count for the user
+    supabase
+      .from('subscriptions')
+      .select('*', { count: 'exact', head: true })
+      .eq('target_entity_type', 'user')
+      .eq('target_entity_id', userId)
+      .eq('status', 'active'),
+    // Get follower count for the user
+    supabase
+      .from('follows')
+      .select('*', { count: 'exact', head: true })
+      .eq('following_id', userId)
+      .eq('following_type', 'user'),
+    // Get total views for user's posts
+    supabase.from('posts').select('view_count').eq('author_id', userId),
+    // Get total likes for user's posts
+    supabase.from('posts').select('like_count').eq('author_id', userId),
+  ]);
+
+  // Calculate aggregated stats
+  const totalViews =
+    viewsData?.reduce((sum, post) => sum + (post.view_count || 0), 0) || 0;
+  const totalLikes =
+    likesData?.reduce((sum, post) => sum + (post.like_count || 0), 0) || 0;
+
+  // Calculate posts published this month
+  const currentMonth = new Date();
+  const startOfMonth = new Date(
+    currentMonth.getFullYear(),
+    currentMonth.getMonth(),
+    1,
+  );
+  const publishedThisMonth =
+    personalPosts?.filter(
+      (post) =>
+        post.published_at && new Date(post.published_at) >= startOfMonth,
+    ).length || 0;
+
   return (
     <>
       {/* Dashboard Page Header - Sticky within the scrollable area defined in DashboardShell */}
       {/* The DashboardShell provides p-4 md:p-6. This sticky header will live INSIDE that padding. */}
       {/* top-0 here means top of the scrollable container. */}
-      <div className="sticky top-0 z-30 bg-background py-4 border-b border-border mb-6 flex flex-col md:flex-row items-center justify-between">
+      <div className="sticky top-0 z-30 bg-background py-4 border-b border-border mb-6">
         <div>
           <h1 className="text-3xl md:text-4xl font-bold font-serif tracking-tight text-foreground">
             Management Dashboard
           </h1>
         </div>
-        <div className="flex items-center gap-3 mt-4 md:mt-0">
-          <Button asChild variant="outline" size="sm">
-            <Link href="/dashboard/profile/edit">
-              <Settings className="h-4 w-4 mr-2" /> Edit Profile
-            </Link>
-          </Button>
-        </div>
+      </div>
+
+      {/* Stats Row - Thin focused metrics */}
+      <div className="mb-6">
+        <StatsRow
+          subscriberCount={subscriberCount || 0}
+          followerCount={followerCount || 0}
+          totalPosts={personalPosts?.length || 0}
+          collectiveCount={ownedCollectives?.length || 0}
+          totalViews={totalViews}
+          totalLikes={totalLikes}
+          monthlyRevenue={0} // TODO: Implement when payment system is ready
+          pendingPayout={0} // TODO: Implement when payout system is ready
+          openRate="0%" // TODO: Implement when email tracking is ready
+          publishedThisMonth={publishedThisMonth}
+        />
       </div>
 
       {/* Main content sections in a grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
-        {/* Quick Stats - full width */}
-        <Card className="md:col-span-2 w-full bg-background text-foreground shadow-sm">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Users2 className="h-5 w-5" /> Quick Stats
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 pt-2 w-full">
-              <StatCard
-                title="Subscribers"
-                value={123}
-                trend={12}
-                icon={<Users2 className="h-5 w-5 text-muted-foreground" />}
-              />
-              <StatCard
-                title="Total Posts"
-                value={personalPosts?.length || 0}
-                trend={3}
-                icon={<FileText className="h-5 w-5 text-muted-foreground" />}
-              />
-              <StatCard
-                title="Collectives"
-                value={ownedCollectives?.length || 0}
-                icon={<BookOpen className="h-5 w-5 text-muted-foreground" />}
-              />
-              <StatCard
-                title="Avg. Open Rate"
-                value="45%"
-                trend={-2}
-                icon={<Mail className="h-5 w-5 text-muted-foreground" />}
-              />
-            </div>
-          </CardContent>
-        </Card>
-
         {/* Individual Newsletter */}
         <Card className="w-full bg-background text-foreground shadow-sm">
           <CardHeader>
@@ -163,7 +170,7 @@ export default async function DashboardManagementPage() {
                 </Link>
                 {username && (
                   <Button asChild variant="outline" size="sm">
-                    <Link href={`/@${username}`}>View Profile</Link>
+                    <Link href={`/profile/${username}`}>View Profile</Link>
                   </Button>
                 )}
                 <Button asChild variant="ghost" size="sm">

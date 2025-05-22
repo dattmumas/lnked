@@ -1,17 +1,15 @@
-"use client";
+'use client';
 
 import {
   LayoutDashboard,
   FileText,
   Users2,
-  UserSquare,
-  Newspaper,
   Settings as SettingsIcon,
   ArrowUpRight,
-} from "lucide-react";
-import Link from "next/link";
-import { SidebarLink } from "./SidebarLink";
-import type { CollectiveSummary } from "./DashboardShell";
+} from 'lucide-react';
+import Link from 'next/link';
+import { SidebarLink } from './SidebarLink';
+import type { CollectiveSummary } from './DashboardShell';
 
 interface SidebarNavProps {
   collectives: CollectiveSummary[];
@@ -20,32 +18,22 @@ interface SidebarNavProps {
 
 const mainNavItems = [
   {
-    href: "/dashboard",
+    href: '/dashboard',
     icon: LayoutDashboard,
-    label: "Overview",
+    label: 'Overview',
   },
   {
-    href: "/dashboard/posts",
+    href: '/dashboard/posts',
     icon: FileText,
-    label: "My Posts",
+    label: 'My Posts',
   },
 ];
 
 const settingsNavItems = [
   {
-    href: "/dashboard/profile/edit",
-    icon: UserSquare,
-    label: "Edit Profile",
-  },
-  {
-    href: "/dashboard/my-newsletter/subscribers",
-    icon: Newspaper,
-    label: "Newsletter",
-  },
-  {
-    href: "/dashboard/settings",
+    href: '/dashboard/settings',
     icon: SettingsIcon,
-    label: "Account Settings",
+    label: 'Settings',
   },
 ];
 
@@ -54,13 +42,13 @@ export function SidebarNav({
   collapsed = false,
 }: SidebarNavProps) {
   return (
-    <div className={collapsed ? "space-y-2 px-0" : "space-y-6 px-2"}>
+    <div className={collapsed ? 'space-y-2 px-0' : 'space-y-6 px-2'}>
       {/* Main section */}
       <nav
         className={
-          collapsed ? "flex flex-col items-center gap-2" : "flex flex-col gap-1"
+          collapsed ? 'flex flex-col items-center gap-2' : 'flex flex-col gap-1'
         }
-        aria-label={collapsed ? "Collapsed Main" : "Main"}
+        aria-label={collapsed ? 'Collapsed Main' : 'Main'}
       >
         {mainNavItems.map((item) => (
           <SidebarLink
@@ -68,7 +56,7 @@ export function SidebarNav({
             href={item.href}
             icon={item.icon}
             label={item.label}
-            exact={item.href === "/dashboard"}
+            exact={item.href === '/dashboard'}
             collapsed={collapsed}
           />
         ))}
@@ -86,10 +74,10 @@ export function SidebarNav({
         <nav
           className={
             collapsed
-              ? "flex flex-col items-center gap-2"
-              : "flex flex-col gap-1"
+              ? 'flex flex-col items-center gap-2'
+              : 'flex flex-col gap-1'
           }
-          aria-label={collapsed ? "Collapsed Collectives" : "Collectives"}
+          aria-label={collapsed ? 'Collapsed Collectives' : 'Collectives'}
         >
           {collectives.length === 0
             ? !collapsed && (
@@ -124,7 +112,7 @@ export function SidebarNav({
                       <ArrowUpRight className="size-4" />
                     </Link>
                   </div>
-                )
+                ),
               )}
         </nav>
       </div>
@@ -141,10 +129,10 @@ export function SidebarNav({
         <nav
           className={
             collapsed
-              ? "flex flex-col items-center gap-2"
-              : "flex flex-col gap-1"
+              ? 'flex flex-col items-center gap-2'
+              : 'flex flex-col gap-1'
           }
-          aria-label={collapsed ? "Collapsed Settings" : "Settings"}
+          aria-label={collapsed ? 'Collapsed Settings' : 'Settings'}
         >
           {settingsNavItems.map((item) => (
             <SidebarLink

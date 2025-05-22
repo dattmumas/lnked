@@ -156,7 +156,7 @@ export default async function PostBySlugPage({
               <span>
                 by{' '}
                 <Link
-                  href={`/@${authorUsername}`}
+                  href={`/profile/${authorUsername}`}
                   className="hover:underline text-accent"
                 >
                   {authorName}
