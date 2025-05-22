@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useTransition } from 'react';
+import Image from 'next/image';
 import { useForm, SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -144,9 +145,11 @@ export default function EditProfileForm({
           <div className="space-y-2">
             <Label htmlFor="avatar">Profile Image</Label>
             {avatarPreview && (
-              <img
+              <Image
                 src={avatarPreview}
                 alt="Avatar preview"
+                width={128}
+                height={128}
                 className="h-32 w-32 rounded-full object-cover"
               />
             )}

@@ -1,10 +1,10 @@
-"use client";
+'use client';
 
-import { useState, useTransition, useEffect } from "react";
-import { Button } from "@/components/ui/button";
-import { Heart } from "lucide-react";
-import { togglePostLike } from "@/app/actions/likeActions";
-import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
+import { useState, useTransition, useEffect } from 'react';
+import { Button } from '@/components/ui/button';
+import { Heart } from 'lucide-react';
+import { togglePostLike } from '@/app/actions/likeActions';
+import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
 // import type { User } from "@supabase/supabase-js"; // User type is not strictly needed here
 
 interface PostLikeButtonProps {
@@ -12,7 +12,6 @@ interface PostLikeButtonProps {
   collectiveSlug: string | null; // Updated to allow null
   initialLikes: number;
   initialUserHasLiked?: boolean; // Optional, component can fetch if not provided
-  authorId: string; // Added authorId
 }
 
 export default function PostLikeButton({
@@ -20,13 +19,12 @@ export default function PostLikeButton({
   collectiveSlug,
   initialLikes,
   initialUserHasLiked,
-  authorId, // Added authorId
 }: PostLikeButtonProps) {
   const supabase = createSupabaseBrowserClient();
   const [isPending, startTransition] = useTransition();
   const [likeCount, setLikeCount] = useState(initialLikes);
   const [userHasLiked, setUserHasLiked] = useState(
-    initialUserHasLiked || false
+    initialUserHasLiked || false,
   );
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [isLoadingInitialState, setIsLoadingInitialState] = useState(true);
@@ -41,14 +39,14 @@ export default function PostLikeButton({
 
       if (user && initialUserHasLiked === undefined) {
         const { data: like, error } = await supabase
-          .from("post_reactions")
-          .select("user_id")
-          .eq("post_id", postId)
-          .eq("user_id", user.id)
-          .eq("type", "like")
+          .from('post_reactions')
+          .select('user_id')
+          .eq('post_id', postId)
+          .eq('user_id', user.id)
+          .eq('type', 'like')
           .maybeSingle();
         if (error) {
-          console.error("Error fetching initial like state:", error.message);
+          console.error('Error fetching initial like state:', error.message);
         } else {
           setUserHasLiked(!!like);
         }
@@ -68,7 +66,7 @@ export default function PostLikeButton({
 
   const handleLikeToggle = async () => {
     if (!currentUserId) {
-      alert("Please sign in to like posts.");
+      alert('Please sign in to like posts.');
       return;
     }
     if (isLoadingInitialState) return;
@@ -84,7 +82,7 @@ export default function PostLikeButton({
       if (!result.success) {
         setUserHasLiked(previousUserHasLiked);
         setLikeCount(previousLikeCount);
-        alert(result.message || "Failed to update like.");
+        alert(result.message || 'Failed to update like.');
       } else {
         if (result.newLikeCount !== undefined)
           setLikeCount(result.newLikeCount);
@@ -101,20 +99,20 @@ export default function PostLikeButton({
         size="lg"
         onClick={handleLikeToggle}
         disabled={isPending || isLoadingInitialState || !currentUserId}
-        aria-label={userHasLiked ? "Unlike post" : "Like post"}
+        aria-label={userHasLiked ? 'Unlike post' : 'Like post'}
         className="flex items-center space-x-2 px-3 py-2 rounded-md hover:bg-muted"
       >
         <Heart
           className={`w-5 h-5 ${
             userHasLiked
-              ? "fill-destructive text-destructive"
-              : "text-muted-foreground"
+              ? 'fill-destructive text-destructive'
+              : 'text-muted-foreground'
           }`}
         />
-        <span>{userHasLiked ? "Liked" : "Like"}</span>
+        <span>{userHasLiked ? 'Liked' : 'Like'}</span>
       </Button>
       <span className="text-base text-muted-foreground tabular-nums">
-        {likeCount} {likeCount === 1 ? "like" : "likes"}
+        {likeCount} {likeCount === 1 ? 'like' : 'likes'}
       </span>
     </div>
   );
