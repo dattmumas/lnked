@@ -1,24 +1,31 @@
-"use client";
+'use client';
 
-import React, { useEffect, useRef, useState } from "react";
-import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
+import React, { useEffect, useRef, useState } from 'react';
+import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
 import {
   $getSelection,
   $isRangeSelection,
   FORMAT_TEXT_COMMAND,
   SELECTION_CHANGE_COMMAND,
-} from "lexical";
-import { TOGGLE_LINK_COMMAND } from "@lexical/link";
-import { $setBlocksType } from "@lexical/selection";
-import { $createQuoteNode } from "@lexical/rich-text";
-import { Bold, Italic, Quote as QuoteIcon, Link as LinkIcon } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import ReactDOM from "react-dom";
+} from 'lexical';
+import { TOGGLE_LINK_COMMAND } from '@lexical/link';
+import { $setBlocksType } from '@lexical/selection';
+import { $createQuoteNode } from '@lexical/rich-text';
+import {
+  Bold,
+  Italic,
+  Quote as QuoteIcon,
+  Link as LinkIcon,
+} from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import ReactDOM from 'react-dom';
 
 export default function FloatingFormatToolbarPlugin() {
   const [editor] = useLexicalComposerContext();
   const toolbarRef = useRef<HTMLDivElement>(null);
-  const [position, setPosition] = useState<{ x: number; y: number } | null>(null);
+  const [position, setPosition] = useState<{ x: number; y: number } | null>(
+    null,
+  );
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
@@ -49,16 +56,16 @@ export default function FloatingFormatToolbarPlugin() {
         update();
         return false;
       },
-      0
+      0,
     );
 
-    window.addEventListener("scroll", update);
-    window.addEventListener("resize", update);
+    window.addEventListener('scroll', update);
+    window.addEventListener('resize', update);
     update();
     return () => {
       removeSelectionListener();
-      window.removeEventListener("scroll", update);
-      window.removeEventListener("resize", update);
+      window.removeEventListener('scroll', update);
+      window.removeEventListener('resize', update);
     };
   }, [editor]);
 
@@ -67,8 +74,8 @@ export default function FloatingFormatToolbarPlugin() {
   const style = {
     left: position.x,
     top: position.y,
-    transform: "translate(-50%, -110%)",
-    position: "absolute" as const,
+    transform: 'translate(-50%, -110%)',
+    position: 'absolute' as const,
     zIndex: 1000,
   };
 
@@ -76,6 +83,7 @@ export default function FloatingFormatToolbarPlugin() {
     <div
       ref={toolbarRef}
       aria-label="Text formatting options"
+      aria-live="polite"
       className="bg-card shadow-md p-1 rounded flex gap-1 animate-in fade-in zoom-in-95"
       style={style}
     >
@@ -84,7 +92,7 @@ export default function FloatingFormatToolbarPlugin() {
         size="icon"
         onMouseDown={(e) => {
           e.preventDefault();
-          editor.dispatchCommand(FORMAT_TEXT_COMMAND, "bold");
+          editor.dispatchCommand(FORMAT_TEXT_COMMAND, 'bold');
         }}
         title="Bold"
         aria-label="Bold"
@@ -96,7 +104,7 @@ export default function FloatingFormatToolbarPlugin() {
         size="icon"
         onMouseDown={(e) => {
           e.preventDefault();
-          editor.dispatchCommand(FORMAT_TEXT_COMMAND, "italic");
+          editor.dispatchCommand(FORMAT_TEXT_COMMAND, 'italic');
         }}
         title="Italic"
         aria-label="Italic"
@@ -125,7 +133,7 @@ export default function FloatingFormatToolbarPlugin() {
         size="icon"
         onMouseDown={(e) => {
           e.preventDefault();
-          editor.dispatchCommand(TOGGLE_LINK_COMMAND, "https://");
+          editor.dispatchCommand(TOGGLE_LINK_COMMAND, 'https://');
         }}
         title="Link"
         aria-label="Link"
@@ -133,7 +141,6 @@ export default function FloatingFormatToolbarPlugin() {
         <LinkIcon className="size-4" />
       </Button>
     </div>,
-    document.body
+    document.body,
   );
 }
-

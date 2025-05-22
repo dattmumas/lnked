@@ -64,7 +64,7 @@ interface MenuOption {
   action: (editor: LexicalEditor) => void;
 }
 
-const SLASH_OPTIONS: MenuOption[] = [
+export const SLASH_OPTIONS: MenuOption[] = [
   {
     label: 'Paragraph',
     icon: Pilcrow,
@@ -200,6 +200,13 @@ const SLASH_OPTIONS: MenuOption[] = [
   },
 ];
 
+export function filterSlashOptions(query: string): MenuOption[] {
+  if (!query) return SLASH_OPTIONS;
+  return SLASH_OPTIONS.filter((opt) =>
+    opt.label.toLowerCase().includes(query.toLowerCase()),
+  );
+}
+
 const SlashMenuPlugin = () => {
   const [editor] = useLexicalComposerContext();
   const [open, setOpen] = useState(false);
@@ -304,11 +311,7 @@ const SlashMenuPlugin = () => {
   }, [editor, open, triggerNodeKey]);
 
   // Filter options based on inputString
-  const filteredOptions = inputString
-    ? SLASH_OPTIONS.filter((opt) =>
-        opt.label.toLowerCase().includes(inputString.toLowerCase()),
-      )
-    : SLASH_OPTIONS;
+  const filteredOptions = filterSlashOptions(inputString);
 
   // Keyboard navigation
   useEffect(() => {
