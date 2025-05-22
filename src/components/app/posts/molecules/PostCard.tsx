@@ -77,11 +77,7 @@ export default function PostCard({ post, collectiveSlug }: PostCardProps) {
     setOptimisticLikeCount(prevLiked ? prevCount - 1 : prevCount + 1);
 
     startTransition(async () => {
-      const result = await togglePostLike(
-        post.id,
-        collectiveSlug,
-        post.author_id
-      );
+      const result = await togglePostLike(post.id, collectiveSlug);
       if (!result.success) {
         setOptimisticUserHasLiked(prevLiked);
         setOptimisticLikeCount(prevCount);

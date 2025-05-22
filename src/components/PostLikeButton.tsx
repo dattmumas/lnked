@@ -80,7 +80,7 @@ export default function PostLikeButton({
     setLikeCount(userHasLiked ? likeCount - 1 : likeCount + 1);
 
     startTransition(async () => {
-      const result = await togglePostLike(postId, collectiveSlug, authorId);
+      const result = await togglePostLike(postId, collectiveSlug);
       if (!result.success) {
         setUserHasLiked(previousUserHasLiked);
         setLikeCount(previousLikeCount);

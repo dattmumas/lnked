@@ -56,8 +56,6 @@ export default async function DashboardManagementPage() {
     redirect('/sign-in'); // Protect the dashboard route
   }
 
-  const currentUser = session.user;
-
   const userId = session.user.id;
 
   const { data: profile } = await supabase
