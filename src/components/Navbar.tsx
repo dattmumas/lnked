@@ -125,9 +125,16 @@ export default function Navbar({ initialUser, initialUsername }: NavbarProps) {
     setIsLoading(false);
   };
 
-  // Hide Navbar on auth pages or specific routes if desired
-  if (pathname === '/sign-in' || pathname === '/sign-up') {
-    return null;
+  const isAuthPage = pathname === '/sign-in' || pathname === '/sign-up';
+
+  if (isAuthPage) {
+    return (
+      <nav className="flex items-center justify-end gap-2 md:gap-4">
+        <Button variant="ghost" size="sm" asChild>
+          <Link href="/">Back</Link>
+        </Button>
+      </nav>
+    );
   }
 
   const isDashboardPath = pathname.startsWith('/dashboard');

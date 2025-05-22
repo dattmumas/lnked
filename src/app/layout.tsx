@@ -5,6 +5,7 @@ import SmoothScroll from '@/components/app/SmoothScroll';
 import RouteProgress from '@/components/app/nav/RouteProgress';
 import Navbar from '@/components/Navbar';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
+import Link from 'next/link';
 
 export const metadata: Metadata = {
   title: 'Lnked - Collaborative Newsletters',
@@ -55,7 +56,10 @@ export default async function RootLayout({
           {/* Global site header */}
           <header className="bg-background border-b border-border py-4 px-4 md:px-6 sticky top-0 z-50">
             <div className="container mx-auto flex items-center justify-between">
-              <span className="text-2xl md:text-3xl font-serif font-extrabold text-foreground tracking-tight flex items-center">
+              <Link
+                href="/dashboard"
+                className="text-2xl md:text-3xl font-serif font-extrabold text-foreground tracking-tight flex items-center"
+              >
                 Lnked
                 <span
                   className="ml-1 text-accent text-3xl md:text-4xl leading-none self-center"
@@ -63,7 +67,7 @@ export default async function RootLayout({
                 >
                   .
                 </span>
-              </span>
+              </Link>
               <Navbar initialUser={user} initialUsername={username} />
             </div>
           </header>
