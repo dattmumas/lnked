@@ -41,6 +41,7 @@ import { LayoutItemNode } from "./nodes/LayoutItemNode";
 import { HorizontalRuleNode } from "@lexical/react/LexicalHorizontalRuleNode";
 import Toolbar from "./Toolbar";
 import FloatingLinkEditorPlugin from "./plugins/FloatingLinkEditorPlugin";
+import FloatingFormatToolbarPlugin from "./plugins/FloatingFormatToolbar";
 import CodeHighlightPlugin from "./plugins/CodeHighlightPlugin";
 import { CollapsibleContainerNode } from "./nodes/CollapsibleContainerNode";
 import { HashtagNode } from "./nodes/HashtagNode";
@@ -656,6 +657,7 @@ export default function PostEditor({
           {initialContent && <LoadInitialJsonPlugin json={initialContent} />}
           <CustomInsertCommandsPlugin openEmbedModal={openEmbedModal} />
           <FloatingLinkEditorPlugin />
+          <FloatingFormatToolbarPlugin />
           <SlashTypeaheadMenu />
           <EmbedUrlModal
             open={!!embedModal?.open}
