@@ -199,7 +199,7 @@ export default function EditProfileForm({
             </p>
           )}
           {successMessage && (
-            <p className="text-sm text-primary p-3 bg-primary/10 rounded-md">
+            <p className="text-sm text-accent p-3 bg-accent/10 rounded-md">
               {successMessage}
             </p>
           )}

@@ -128,7 +128,7 @@ export default function InviteMemberForm({
           </Alert>
         )}
         {formSuccess && (
-          <Alert variant="default" className="bg-primary/10 text-primary">
+          <Alert variant="default" className="bg-accent/10 text-accent">
             <Terminal className="h-4 w-4" />
             <AlertTitle>Success</AlertTitle>
             <AlertDescription>{formSuccess}</AlertDescription>

@@ -76,7 +76,7 @@ const AnimatedHero = () => {
         variants={titleItemVariants}
       >
         Lnked
-        <motion.span variants={titleItemVariants} className="text-primary">
+        <motion.span variants={titleItemVariants} className="text-accent">
           .
         </motion.span>
       </motion.h1>
@@ -101,7 +101,7 @@ const AnimatedHero = () => {
         variants={textItemVariants}
       >
         The future of social media is{" "}
-        <span className="text-primary font-bold">collective experience.</span>
+        <span className="text-accent font-bold">collective experience.</span>
         <br />
         Create your own.
       </motion.p>

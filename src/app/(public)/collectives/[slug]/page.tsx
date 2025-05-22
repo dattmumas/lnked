@@ -173,7 +173,7 @@ export default async function Page({
 
   return (
     <div className="container mx-auto p-4 md:p-6">
-      <header className="mb-8 pb-6 border-b border-primary/10 flex flex-col items-center">
+      <header className="mb-8 pb-6 border-b border-accent/10 flex flex-col items-center">
         <div className="flex flex-col items-center gap-2 mb-4">
           {collective.logo_url ? (
             <Image
@@ -191,7 +191,7 @@ export default async function Page({
           <h1 className="text-5xl font-extrabold tracking-tight text-center flex items-center">
             {collective.name}
             <span
-              className="ml-2 text-primary text-5xl leading-none align-middle"
+              className="ml-2 text-accent text-5xl leading-none align-middle"
               style={{ fontWeight: 900 }}
             >
               .

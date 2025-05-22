@@ -120,7 +120,7 @@ export default async function Page({
               <li key={u.id} className="">
                 <Link
                   href={`/@${u.username}`}
-                  className="font-medium text-primary hover:underline"
+                  className="font-medium text-accent hover:underline"
                 >
                   {u.full_name || 'Unnamed User'}
                 </Link>

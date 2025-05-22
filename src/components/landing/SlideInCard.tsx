@@ -34,11 +34,11 @@ export default function SlideInCard({
     <div
       ref={ref}
       className={cn(
-        "relative bg-card border border-border rounded-xl shadow-sm p-6 transition-all duration-700 group hover:ring-2 hover:ring-primary hover:scale-[1.02] flex items-start",
+        "relative bg-card border border-border rounded-xl shadow-sm p-6 transition-all duration-700 group hover:ring-2 hover:ring-accent hover:scale-[1.02] flex items-start",
         visible ? "opacity-100 translate-x-0" : `opacity-0 ${direction}`
       )}
     >
-      <span className="absolute left-0 top-6 h-10 w-1 rounded-full bg-primary" />
+      <span className="absolute left-0 top-6 h-10 w-1 rounded-full bg-accent" />
       <div className="pl-4">
         <h3 className="font-bold text-lg mb-1 group-hover:text-accent transition-colors">
           {title}

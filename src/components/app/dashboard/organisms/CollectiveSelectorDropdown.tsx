@@ -40,7 +40,7 @@ export function CollectiveSelectorDropdown({
               >
                 <Select.ItemText>{col.name}</Select.ItemText>
                 <Select.ItemIndicator>
-                  <Check className="size-4 ml-auto text-primary" />
+                  <Check className="size-4 ml-auto text-accent" />
                 </Select.ItemIndicator>
               </Select.Item>
             ))}

@@ -91,7 +91,7 @@ export default async function MyCollectivesPage() {
           </Button>
           <p className="text-sm text-muted-foreground mt-4">
             Or{' '}
-            <Link href="/discover" className="underline hover:text-primary">
+            <Link href="/discover" className="underline hover:text-accent">
               explore collectives
             </Link>{' '}
             to join.

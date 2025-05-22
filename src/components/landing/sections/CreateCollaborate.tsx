@@ -22,7 +22,7 @@ export default function CreateCollaborate() {
   return (
     <motion.section
       ref={ref}
-      className="w-full py-12 md:py-16 bg-card text-foreground border-b border-primary/10"
+      className="w-full py-12 md:py-16 bg-card text-foreground border-b border-accent/10"
       initial="hidden"
       animate={isInView ? "visible" : "hidden"}
       variants={sectionVariants}
@@ -84,7 +84,7 @@ export default function CreateCollaborate() {
         {/* Copy */}
         <div className="space-y-6">
           <h2 className="text-3xl md:text-4xl font-extrabold">
-            Create\u00A0Your <span className="text-primary">Channel</span>
+            Create\u00A0Your <span className="text-accent">Channel</span>
           </h2>
           <p className="text-lg text-muted-foreground">
             Launch a newsletter in minutes. Invite peers, editors or an entire

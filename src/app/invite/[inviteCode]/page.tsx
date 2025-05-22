@@ -36,7 +36,7 @@ export default async function InviteAcceptPage({
           <p>{result.error || "Failed to accept invite."}</p>
         </div>
       )}
-      <Link href="/dashboard" className="text-primary underline">
+      <Link href="/dashboard" className="text-accent underline">
         Go to Dashboard
       </Link>
     </div>

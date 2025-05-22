@@ -84,7 +84,7 @@ export default function PostReactionButtons({
       >
         <ThumbsUp
           className={
-            userReaction === "like" ? "text-primary" : "text-muted-foreground"
+            userReaction === "like" ? "text-accent" : "text-muted-foreground"
           }
         />
       </Button>

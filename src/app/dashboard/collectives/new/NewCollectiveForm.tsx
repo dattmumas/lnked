@@ -133,7 +133,7 @@ export default function NewCollectivePage() {
             </div>
             {error && <p className="text-sm text-destructive">{error}</p>}
             {successMessage && (
-              <p className="text-sm text-primary">{successMessage}</p>
+              <p className="text-sm text-accent">{successMessage}</p>
             )}
           </CardContent>
           <CardFooter className="flex justify-end">

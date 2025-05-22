@@ -78,9 +78,9 @@ const config: Config = {
           css: {
             color: "hsl(var(--foreground))",
             a: {
-              color: "hsl(var(--primary))",
+              color: "hsl(var(--accent))",
               "&:hover": {
-                color: "hsl(var(--primary) / 0.8)",
+                color: "hsl(var(--accent) / 0.8)",
               },
             },
             p: {
@@ -119,9 +119,9 @@ const config: Config = {
             },
             color: "hsl(var(--foreground))",
             a: {
-              color: "hsl(var(--primary))",
+              color: "hsl(var(--accent))",
               "&:hover": {
-                color: "hsl(var(--primary) / 0.8)",
+                color: "hsl(var(--accent) / 0.8)",
               },
             },
             blockquote: {

@@ -142,7 +142,7 @@ export default function CommentsSection({
             <ThumbsUp
               className={
                 userReaction === "like"
-                  ? "text-primary"
+                  ? "text-accent"
                   : "text-muted-foreground"
               }
             />

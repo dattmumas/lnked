@@ -25,7 +25,7 @@ export default function CollectiveCard({
       <div className="flex items-center justify-between">
         <Link
           href={`/collectives/${collective.slug}`}
-          className="text-lg font-semibold hover:text-primary"
+          className="text-lg font-semibold hover:text-accent"
         >
           {collective.name}
         </Link>

@@ -65,7 +65,7 @@ SnippetCardProps) {
         {IconComponent && (
           <IconComponent className="w-6 h-6 mb-2 text-muted-foreground group-hover:text-foreground transition-colors" />
         )}
-        <h3 className="text-lg md:text-xl font-semibold font-sans leading-tight group-hover:text-primary transition-colors">
+        <h3 className="text-lg md:text-xl font-semibold font-sans leading-tight group-hover:text-accent transition-colors">
           {headline}
         </h3>
         {/* Placeholder for abstract text lines */}
@@ -87,7 +87,7 @@ SnippetCardProps) {
             {categoryHint}
           </span>
         )}
-        <ArrowUpRight className="w-5 h-5 text-muted-foreground opacity-0 group-hover:opacity-100 group-hover:text-primary transition-all duration-300 transform group-hover:rotate-[360deg]" />
+        <ArrowUpRight className="w-5 h-5 text-muted-foreground opacity-0 group-hover:opacity-100 group-hover:text-accent transition-all duration-300 transform group-hover:rotate-[360deg]" />
       </div>
     </div>
   );

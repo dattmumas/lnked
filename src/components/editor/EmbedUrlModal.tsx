@@ -67,7 +67,7 @@ export function EmbedUrlModal({
           </button>
           <button
             type="button"
-            className="px-4 py-2 rounded bg-primary text-primary-foreground disabled:opacity-50"
+            className="px-4 py-2 rounded bg-accent text-accent-foreground disabled:opacity-50"
             disabled={!url.trim()}
             onClick={() => onSubmit(url.trim())}
           >

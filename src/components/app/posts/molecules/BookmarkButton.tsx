@@ -46,7 +46,7 @@ export default function BookmarkButton({
       className="rounded-full"
     >
       {bookmarked ? (
-        <BookmarkCheck className="text-primary" />
+        <BookmarkCheck className="text-accent" />
       ) : (
         <Bookmark className="text-muted-foreground" />
       )}

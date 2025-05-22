@@ -138,7 +138,7 @@ export default async function PostBySlugPage({
                 by{' '}
                 <Link
                   href={`/@${authorUsername}`}
-                  className="hover:underline text-primary"
+                  className="hover:underline text-accent"
                 >
                   {authorName}
                 </Link>

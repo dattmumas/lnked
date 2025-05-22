@@ -206,7 +206,7 @@ export default function Navbar() {
           </SheetTrigger>
           <SheetContent side="left" className="p-4 w-[250px] sm:w-[300px]">
             <SheetTitle className="mb-4">
-              <Link href="/" className="text-xl font-bold text-primary">
+              <Link href="/" className="text-xl font-bold text-accent">
                 Lnked
               </Link>
             </SheetTitle>

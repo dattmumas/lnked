@@ -22,7 +22,7 @@ export default function Footer() {
         <div className="flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="text-sm text-muted-foreground">
             © {new Date().getFullYear()} Lnked. All rights reserved.
-            <span className="ml-2 text-primary font-medium">Beta</span>
+            <span className="ml-2 text-accent font-medium">Beta</span>
           </div>
 
           <nav className="flex flex-wrap gap-6" aria-label="Footer navigation">

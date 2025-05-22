@@ -33,7 +33,7 @@ export function FileExplorer({
           </span>
           <Link
             href="/posts/new"
-            className="ml-2 text-primary hover:underline flex items-center gap-1"
+            className="ml-2 text-accent hover:underline flex items-center gap-1"
             aria-label="Create new personal post"
           >
             <Plus size={16} />

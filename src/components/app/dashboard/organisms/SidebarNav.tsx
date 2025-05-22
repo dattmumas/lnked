@@ -118,7 +118,7 @@ export function SidebarNav({
                     />
                     <Link
                       href={`/${col.slug}`}
-                      className="text-muted-foreground hover:text-primary"
+                      className="text-muted-foreground hover:text-accent"
                       aria-label={`View ${col.name}`}
                     >
                       <ArrowUpRight className="size-4" />
