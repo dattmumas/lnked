@@ -116,9 +116,7 @@ export async function unsubscribeFromEntity(
     // For now, rely on webhook for DB state.
 
     // Revalidate paths related to this subscription or user's content access
-    if (subRecord.target_entity_type === "user") {
-      revalidatePath(`/newsletters/${subRecord.target_entity_id}`);
-    } else if (subRecord.target_entity_type === "collective") {
+    if (subRecord.target_entity_type === "collective") {
       // Need collective slug for path revalidation - this action doesn't have it.
       // This makes revalidation tricky from a generic action. Client might need to trigger specific revalidations.
       // Or, revalidate a broader path like the user's feed or dashboard.

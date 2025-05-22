@@ -142,8 +142,6 @@ export async function createPost(
   if (collectiveSlug) {
     revalidatePath(`/collectives/${collectiveSlug}`);
     revalidatePath(`/collectives/${collectiveSlug}/${postSlug}`);
-  } else {
-    revalidatePath(`/newsletters/${user.id}`);
   }
   revalidatePath(`/posts/${postSlug}`);
 
@@ -314,8 +312,6 @@ export async function updatePost(
         postSlug || existingPost.id
       }`,
     );
-  } else if (existingPost.author_id) {
-    revalidatePath(`/newsletters/${existingPost.author_id}`);
   }
   revalidatePath(`/posts/${postSlug || existingPost.slug || postId}`);
 
@@ -445,6 +441,5 @@ export async function featurePost(
     }
   }
 
-  revalidatePath(`/newsletters/${user.id}`);
   return { success: true };
 }

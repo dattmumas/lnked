@@ -151,9 +151,7 @@ export async function updateUserProfile(
   // Revalidate paths that display user profile information
   revalidatePath("/dashboard");
   revalidatePath("/dashboard/profile/edit");
-  // Add any other paths, e.g., public user profile page if it exists
-  // revalidatePath(`/profile/${user.id}`); // Example if such a page exists
-  revalidatePath(`/users/${user.id}`);
+  // Revalidate dashboard but no longer revalidate old user profile path
 
   return { success: true, message: "Profile updated successfully." };
 }
