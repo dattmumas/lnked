@@ -1,4 +1,9 @@
+"use client";
+
 import * as React from "react";
+import * as Dialog from "@radix-ui/react-dialog";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 
 interface EmbedUrlModalProps {
   open: boolean;
@@ -23,59 +28,37 @@ export function EmbedUrlModal({
     }
   }, [open]);
 
-  if (!open) return null;
-
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
-      role="dialog"
-      aria-modal="true"
-      tabIndex={-1}
-      onKeyDown={(e) => {
-        if (e.key === "Escape") onCancel();
-      }}
-    >
-      <div className="bg-card rounded shadow-lg p-6 w-full max-w-md flex flex-col gap-4">
-        <label htmlFor="embed-url-input" className="font-medium mb-1">
-          {label}
-        </label>
-        <input
-          id="embed-url-input"
-          ref={inputRef}
-          type="url"
-          className="input input-bordered w-full"
-          placeholder="https://..."
-          value={url}
-          onChange={(e) => setUrl(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && url.trim()) {
-              e.preventDefault();
-              onSubmit(url.trim());
-            } else if (e.key === "Escape") {
-              e.preventDefault();
-              onCancel();
-            }
-          }}
-        />
-        <div className="flex gap-2 justify-end mt-2">
-          <button
-            type="button"
-            className="px-4 py-2 rounded bg-muted text-foreground hover:bg-muted/80"
-            onClick={onCancel}
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            className="px-4 py-2 rounded bg-accent text-accent-foreground disabled:opacity-50"
-            disabled={!url.trim()}
-            onClick={() => onSubmit(url.trim())}
-          >
-            Insert
-          </button>
-        </div>
-      </div>
-    </div>
+    <Dialog.Root open={open} onOpenChange={(o) => !o && onCancel()}>
+      <Dialog.Portal>
+        <Dialog.Overlay className="fixed inset-0 z-50 bg-black/40" />
+        <Dialog.Content className="fixed left-1/2 top-1/2 z-50 w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded bg-card p-6 shadow-lg focus:outline-none">
+          <Dialog.Title className="font-medium mb-1">{label}</Dialog.Title>
+          <Input
+            id="embed-url-input"
+            ref={inputRef}
+            type="url"
+            placeholder="https://..."
+            value={url}
+            onChange={(e) => setUrl(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && url.trim()) {
+                e.preventDefault();
+                onSubmit(url.trim());
+              }
+            }}
+          />
+          <div className="flex gap-2 justify-end mt-4">
+            <Button type="button" variant="secondary" onClick={onCancel}>
+              Cancel
+            </Button>
+            <Button type="button" disabled={!url.trim()} onClick={() => onSubmit(url.trim())}>
+              Insert
+            </Button>
+          </div>
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog.Root>
   );
 }
 
