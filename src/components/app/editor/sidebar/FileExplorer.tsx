@@ -1,16 +1,16 @@
-"use client";
+'use client';
 
-import React, { useState } from "react";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { ChevronDown, ChevronRight, Plus } from "lucide-react";
+import React, { useState } from 'react';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { ChevronDown, ChevronRight, Plus } from 'lucide-react';
 
 export interface FileExplorerProps {
-  personalPosts: { id: string; title: string; status: string }[];
+  personalPosts: { id: string; slug: string; title: string; status: string }[];
   collectives: {
     id: string;
     name: string;
-    posts: { id: string; title: string; status: string }[];
+    posts: { id: string; slug: string; title: string; status: string }[];
   }[];
 }
 
@@ -47,13 +47,13 @@ export function FileExplorer({
           {personalPosts.map((post) => (
             <li key={post.id}>
               <Link
-                href={`/posts/${post.id}/edit`}
+                href={`/posts/${post.slug}/edit`}
                 className={`block px-2 py-1 rounded-md transition-colors text-sm ${
                   isActive(post.id)
-                    ? "bg-sidebar-accent/10 text-sidebar-accent font-medium"
-                    : "text-sidebar-foreground/80 hover:bg-sidebar-accent/5 hover:text-sidebar-foreground"
+                    ? 'bg-sidebar-accent/10 text-sidebar-accent font-medium'
+                    : 'text-sidebar-foreground/80 hover:bg-sidebar-accent/5 hover:text-sidebar-foreground'
                 }`}
-                aria-current={isActive(post.id) ? "page" : undefined}
+                aria-current={isActive(post.id) ? 'page' : undefined}
               >
                 {post.title}
               </Link>
@@ -112,13 +112,13 @@ export function FileExplorer({
                     {col.posts.map((post) => (
                       <li key={post.id}>
                         <Link
-                          href={`/posts/${post.id}/edit`}
+                          href={`/posts/${post.slug}/edit`}
                           className={`block px-2 py-1 rounded-md transition-colors text-sm ${
                             isActive(post.id)
-                              ? "bg-sidebar-accent/10 text-sidebar-accent font-medium"
-                              : "text-sidebar-foreground/80 hover:bg-sidebar-accent/5 hover:text-sidebar-foreground"
+                              ? 'bg-sidebar-accent/10 text-sidebar-accent font-medium'
+                              : 'text-sidebar-foreground/80 hover:bg-sidebar-accent/5 hover:text-sidebar-foreground'
                           }`}
-                          aria-current={isActive(post.id) ? "page" : undefined}
+                          aria-current={isActive(post.id) ? 'page' : undefined}
                         >
                           {post.title}
                         </Link>

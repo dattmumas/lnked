@@ -26,7 +26,7 @@ export interface PostDataType extends Tables<'posts'> {
 }
 
 interface EditPostFormProps {
-  slug: string;
+  postId: string;
   initialData: PostDataType;
   pageTitle: string;
 }
@@ -69,7 +69,7 @@ const EMPTY_LEXICAL_STATE = JSON.stringify({
 });
 
 export default function EditPostForm({
-  slug,
+  postId,
   initialData,
   pageTitle,
 }: EditPostFormProps) {
@@ -133,14 +133,14 @@ export default function EditPostForm({
           ? new Date(dataToSave.published_at).toISOString()
           : null,
     };
-    const result = await updatePost(slug, autosavePayload);
+    const result = await updatePost(postId, autosavePayload);
     if (result.error) {
       setAutosaveStatus(`Autosave failed: ${result.error.substring(0, 100)}`);
     } else {
       setAutosaveStatus('Draft saved.');
       reset(dataToSave); // Reset dirty state with current values
     }
-  }, [isDirty, currentStatus, getValues, slug, reset]);
+  }, [isDirty, currentStatus, getValues, postId, reset]);
 
   useEffect(() => {
     const isDrafting = currentStatus === 'draft';
@@ -181,7 +181,7 @@ export default function EditPostForm({
     }
 
     startTransition(async () => {
-      const result = await updatePost(slug, payloadForUpdate);
+      const result = await updatePost(postId, payloadForUpdate);
       if (result.error) {
         setServerError(result.error);
       } else if (result.data) {
@@ -203,7 +203,7 @@ export default function EditPostForm({
     setServerError(null);
     setAutosaveStatus('');
     startTransition(async () => {
-      const result = await deletePost(slug);
+      const result = await deletePost(postId);
       if (result.error) {
         setServerError(result.error);
         setIsDeleting(false);

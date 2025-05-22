@@ -1,9 +1,9 @@
-"use client";
+'use client';
 
-import { useEffect, useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { ThumbsUp, ThumbsDown, MessageCircle, Loader2 } from "lucide-react";
+import { useEffect, useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
+import { ThumbsUp, ThumbsDown, MessageCircle, Loader2 } from 'lucide-react';
 
 interface Comment {
   id: string;
@@ -18,39 +18,39 @@ interface Comment {
 }
 
 interface CommentsSectionProps {
-  postId: string;
+  postSlug: string;
   currentUserId: string | null;
 }
 
 export default function CommentsSection({
-  postId,
+  postSlug,
   currentUserId,
 }: CommentsSectionProps) {
   const [comments, setComments] = useState<Comment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [newComment, setNewComment] = useState("");
+  const [newComment, setNewComment] = useState('');
   const [replyTo, setReplyTo] = useState<string | null>(null);
   const [posting, setPosting] = useState(false);
 
   useEffect(() => {
-    fetch(`/api/posts/${postId}/comments`)
+    fetch(`/api/posts/${postSlug}/comments`)
       .then((res) => res.json())
       .then((data) => setComments(data.comments || []))
       .finally(() => setIsLoading(false));
-  }, [postId]);
+  }, [postSlug]);
 
   const handlePost = async (parent_id?: string) => {
     if (!newComment.trim()) return;
     setPosting(true);
-    const res = await fetch(`/api/posts/${postId}/comments`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
+    const res = await fetch(`/api/posts/${postSlug}/comments`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ content: newComment, parent_id }),
     });
     if (res.ok) {
       const { comment } = await res.json();
       setComments((prev) => [...prev, comment]);
-      setNewComment("");
+      setNewComment('');
       setReplyTo(null);
     }
     setPosting(false);
@@ -69,40 +69,40 @@ export default function CommentsSection({
   function CommentItem({ comment }: { comment: Comment }) {
     const [likeCount, setLikeCount] = useState(comment.like_count || 0);
     const [dislikeCount, setDislikeCount] = useState(
-      comment.dislike_count || 0
+      comment.dislike_count || 0,
     );
-    const [userReaction, setUserReaction] = useState<"like" | "dislike" | null>(
-      null
+    const [userReaction, setUserReaction] = useState<'like' | 'dislike' | null>(
+      null,
     );
-    const handleReact = (type: "like" | "dislike") => {
+    const handleReact = (type: 'like' | 'dislike') => {
       if (!currentUserId) return;
       const prevReaction = userReaction;
       let newLike = likeCount,
         newDislike = dislikeCount;
-      if (type === "like") {
-        if (userReaction === "like") {
+      if (type === 'like') {
+        if (userReaction === 'like') {
           newLike -= 1;
           setUserReaction(null);
         } else {
           newLike += 1;
-          if (userReaction === "dislike") newDislike -= 1;
-          setUserReaction("like");
+          if (userReaction === 'dislike') newDislike -= 1;
+          setUserReaction('like');
         }
       } else {
-        if (userReaction === "dislike") {
+        if (userReaction === 'dislike') {
           newDislike -= 1;
           setUserReaction(null);
         } else {
           newDislike += 1;
-          if (userReaction === "like") newLike -= 1;
-          setUserReaction("dislike");
+          if (userReaction === 'like') newLike -= 1;
+          setUserReaction('dislike');
         }
       }
       setLikeCount(newLike);
       setDislikeCount(newDislike);
       fetch(`/api/comments/${comment.id}/reactions`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ type }),
       })
         .then((res) => res.json())
@@ -121,7 +121,7 @@ export default function CommentsSection({
       <div className="mb-4">
         <div className="flex items-center gap-2">
           <span className="font-medium text-sm">
-            {comment.user_full_name || "User"}
+            {comment.user_full_name || 'User'}
           </span>
           <span className="text-xs text-muted-foreground">
             {new Date(comment.created_at).toLocaleString()}
@@ -130,20 +130,20 @@ export default function CommentsSection({
         <div className="ml-2 text-sm">{comment.content}</div>
         <div className="flex items-center gap-2 ml-2 mt-1">
           <Button
-            variant={userReaction === "like" ? "default" : "ghost"}
+            variant={userReaction === 'like' ? 'default' : 'ghost'}
             size="icon"
             aria-label={
-              userReaction === "like" ? "Unlike comment" : "Like comment"
+              userReaction === 'like' ? 'Unlike comment' : 'Like comment'
             }
-            onClick={() => handleReact("like")}
+            onClick={() => handleReact('like')}
             disabled={!currentUserId}
             className="rounded-full"
           >
             <ThumbsUp
               className={
-                userReaction === "like"
-                  ? "text-accent"
-                  : "text-muted-foreground"
+                userReaction === 'like'
+                  ? 'text-accent'
+                  : 'text-muted-foreground'
               }
             />
           </Button>
@@ -151,20 +151,20 @@ export default function CommentsSection({
             {likeCount}
           </span>
           <Button
-            variant={userReaction === "dislike" ? "destructive" : "ghost"}
+            variant={userReaction === 'dislike' ? 'destructive' : 'ghost'}
             size="icon"
             aria-label={
-              userReaction === "dislike" ? "Remove dislike" : "Dislike comment"
+              userReaction === 'dislike' ? 'Remove dislike' : 'Dislike comment'
             }
-            onClick={() => handleReact("dislike")}
+            onClick={() => handleReact('dislike')}
             disabled={!currentUserId}
             className="rounded-full"
           >
             <ThumbsDown
               className={
-                userReaction === "dislike"
-                  ? "text-destructive"
-                  : "text-muted-foreground"
+                userReaction === 'dislike'
+                  ? 'text-destructive'
+                  : 'text-muted-foreground'
               }
             />
           </Button>
@@ -206,9 +206,7 @@ export default function CommentsSection({
                 onClick={() => handlePost(comment.id)}
                 disabled={posting}
               >
-                {posting && (
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                )}
+                {posting && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
                 {posting ? 'Posting…' : 'Post'}
               </Button>
               <Button
@@ -253,9 +251,7 @@ export default function CommentsSection({
             rows={3}
           />
           <Button onClick={() => handlePost()} disabled={posting}>
-            {posting && (
-              <Loader2 className="h-4 w-4 animate-spin mr-2" />
-            )}
+            {posting && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
             {posting ? 'Posting…' : 'Post Comment'}
           </Button>
         </div>

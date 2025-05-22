@@ -7,8 +7,20 @@ export async function GET(
   { params }: { params: { slug: string } },
 ) {
   const { slug } = params;
+  const supabase = await createServerSupabaseClient();
+
+  const { data: postRecord } = await supabase
+    .from('posts')
+    .select('id')
+    .eq('slug', slug)
+    .maybeSingle<{ id: string }>();
+
+  if (!postRecord) {
+    return NextResponse.json({ error: 'Post not found' }, { status: 404 });
+  }
+
   try {
-    const comments = await getCommentsByPostId(slug);
+    const comments = await getCommentsByPostId(postRecord.id);
     return NextResponse.json({ comments });
   } catch (e: unknown) {
     const error = e instanceof Error ? e : new Error('Unknown error');
@@ -22,6 +34,17 @@ export async function POST(
 ) {
   const { slug } = params;
   const supabase = await createServerSupabaseClient();
+
+  const { data: postRecord } = await supabase
+    .from('posts')
+    .select('id')
+    .eq('slug', slug)
+    .maybeSingle<{ id: string }>();
+
+  if (!postRecord) {
+    return NextResponse.json({ error: 'Post not found' }, { status: 404 });
+  }
+  const postId = postRecord.id;
 
   const {
     data: { user },
@@ -57,7 +80,7 @@ export async function POST(
   const { data: inserted, error: insertError } = await supabase
     .from('comments')
     .insert({
-      post_id: slug,
+      post_id: postId,
       user_id: user.id,
       content: content.trim(),
       parent_id: parent_id || null,

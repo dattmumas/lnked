@@ -10,6 +10,17 @@ export async function POST(
   const { slug } = params;
   const supabase = await createServerSupabaseClient();
 
+  const { data: postRecord } = await supabase
+    .from('posts')
+    .select('id')
+    .eq('slug', slug)
+    .maybeSingle<{ id: string }>();
+
+  if (!postRecord) {
+    return NextResponse.json({ error: 'Post not found' }, { status: 404 });
+  }
+  const postId = postRecord.id;
+
   const {
     data: { user },
     error: authError,
@@ -40,7 +51,7 @@ export async function POST(
   const { data: existing, error: existingError } = await supabase
     .from('post_reactions')
     .select('type')
-    .eq('post_id', slug)
+    .eq('post_id', postId)
     .eq('user_id', user.id)
     .maybeSingle();
 
@@ -56,7 +67,7 @@ export async function POST(
       await supabase
         .from('post_reactions')
         .delete()
-        .eq('post_id', slug)
+        .eq('post_id', postId)
         .eq('user_id', user.id);
       userReaction = null;
     } else {
@@ -64,18 +75,18 @@ export async function POST(
       await supabase
         .from('post_reactions')
         .delete()
-        .eq('post_id', slug)
+        .eq('post_id', postId)
         .eq('user_id', user.id);
       await supabase
         .from('post_reactions')
-        .insert({ post_id: slug, user_id: user.id, type });
+        .insert({ post_id: postId, user_id: user.id, type });
       userReaction = type;
     }
   } else {
     // No reaction, insert new
     await supabase
       .from('post_reactions')
-      .insert({ post_id: slug, user_id: user.id, type });
+      .insert({ post_id: postId, user_id: user.id, type });
     userReaction = type;
   }
 
@@ -84,12 +95,12 @@ export async function POST(
     supabase
       .from('post_reactions')
       .select('*', { count: 'exact', head: true })
-      .eq('post_id', slug)
+      .eq('post_id', postId)
       .eq('type', 'like'),
     supabase
       .from('post_reactions')
       .select('*', { count: 'exact', head: true })
-      .eq('post_id', slug)
+      .eq('post_id', postId)
       .eq('type', 'dislike'),
   ]);
 

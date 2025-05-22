@@ -1,17 +1,17 @@
-"use client";
+'use client';
 
-import { useState, useTransition } from "react";
-import { Button } from "@/components/ui/button";
-import { Bookmark, BookmarkCheck } from "lucide-react";
+import { useState, useTransition } from 'react';
+import { Button } from '@/components/ui/button';
+import { Bookmark, BookmarkCheck } from 'lucide-react';
 
 interface BookmarkButtonProps {
-  postId: string;
+  postSlug: string;
   initialBookmarked: boolean;
   disabled?: boolean;
 }
 
 export default function BookmarkButton({
-  postId,
+  postSlug,
   initialBookmarked,
   disabled = false,
 }: BookmarkButtonProps) {
@@ -23,9 +23,9 @@ export default function BookmarkButton({
     const prevBookmarked = bookmarked;
     setBookmarked(!bookmarked);
     startTransition(async () => {
-      const res = await fetch(`/api/posts/${postId}/bookmark`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+      const res = await fetch(`/api/posts/${postSlug}/bookmark`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
       });
       if (res.ok) {
         const data = await res.json();
@@ -38,9 +38,9 @@ export default function BookmarkButton({
 
   return (
     <Button
-      variant={bookmarked ? "default" : "ghost"}
+      variant={bookmarked ? 'default' : 'ghost'}
       size="icon"
-      aria-label={bookmarked ? "Remove bookmark" : "Bookmark post"}
+      aria-label={bookmarked ? 'Remove bookmark' : 'Bookmark post'}
       onClick={handleToggle}
       disabled={disabled || isPending}
       className="rounded-full"
