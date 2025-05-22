@@ -1,15 +1,21 @@
-Files: src/app/(editor)/layout.tsx, src/app/globals.css
-Action: Create a new layout component for editor routes that includes the main site header and <Navbar /> (similar to PublicLayout). This ensures the navigation bar renders on pages like the new post editor (currently missing because editor routes don’t use the public layout). For example, mimic PublicLayout’s structure by wrapping editor page content with a <header> containing the logo and <Navbar />
-github.com
-. In Next.js App Router, each route group needs its own layout to share common UI; adding an Editor layout will fix the navbar not rendering on those pages.
-Action: In globals.css, define styles for multi-column editor containers to lay groundwork for the new layout. Add CSS for .layout-container and .layout-item (used by Lexical’s column nodes) to display as a responsive two-column grid. For instance:
-css
+Implement Multi-Column Responsive Reading Layout
+Files: src/app/(public)/posts/[slug]/page.tsx (post reading page), possibly globals.css or Tailwind config for additional utilities
+Action: Update the post article layout to span multiple columns on large screens for an editorial reading experience. In the post view component, adjust the container classes to allow wider layouts and use CSS columns for text content. For example, increase the max width for the content container:
+diff
 Copy
 Edit
-.layout-container { display: grid; grid-template-columns: 1fr; gap: 1.5rem; }  
-@media (min-width: 768px) { /* large screens */  
-  .layout-container { grid-template-columns: repeat(2, 1fr); }  
-}  
-.layout-item { /* acts as a column */ }  
-This will initially stack items on mobile and show two columns on desktop. (Alternatively, use Tailwind utilities like grid cols-1 md:cols-2 gap-6 on those elements.) This styling “turns on” the editor’s Columns Layout feature so that when authors insert a two-column layout, the items actually appear side by side.
-Intent & Impact: Fixes the navbar bug – the nav bar will now consistently render on all pages (public, dashboard, and editor) by providing a layout wrapper for editor routes. It also establishes the base for multi-column layouts, enabling editorial content to be structured in multiple columns (both in-editor and in the output) going forward. Users will regain navigation on editor pages and can start using column blocks in their posts with proper styling.
+- <div className="container mx-auto max-w-3xl p-4 md:p-6">  
++ <div className="container mx-auto max-w-3xl xl:max-w-6xl p-4 md:p-6">  
+This lets the article expand to a larger width on extra-large screens (e.g. up to ~1200px). Then, target the content wrapper that currently holds the rendered post (the <div className="prose ..."> around <LexicalRenderer>
+github.com
+) and add multi-column classes:
+diff
+Copy
+Edit
+- <div className="prose dark:prose-invert lg:prose-xl max-w-none">  
++ <div className="prose dark:prose-invert lg:prose-xl max-w-none xl:columns-2 xl:gap-8">  
+This uses Tailwind’s columns-2 utility to flow text in two columns on xl screens, with a gap between columns for readability. Ensure images and embeds are responsive within columns (they already have max-width: 100% via Next/Image
+github.com
+, so they will shrink to column width as needed). Optionally, enable CSS property column-fill: balance; on that container (via a utility or custom CSS) so the two columns are filled more evenly.
+Action: Enable automatic hyphenation for better text flow in columns. In globals.css or as a Tailwind plugin, add hyphens: auto (and overflow-wrap: break-word) to the .prose class or article content class. This prevents overly large words or URLs from breaking the column layout and improves readability by hyphenating long words across line breaks.
+Intent & Impact: On wide desktop screens, posts will now render in a multi-column magazine-style format, reducing line length for easier reading. Readers on large monitors will see text in two balanced columns, giving a professional editorial feel similar to print layouts. On smaller devices, the layout gracefully falls back to a single column. This responsive design enhances readability and visual appeal without affecting mobile users.
