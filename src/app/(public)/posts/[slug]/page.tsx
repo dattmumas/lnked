@@ -166,7 +166,7 @@ export default async function PostBySlugPage({
             />
           </div>
         </header>
-        <div className="prose dark:prose-invert lg:prose-xl max-w-none xl:columns-2 xl:gap-8 column-balance">
+        <div className="prose dark:prose-invert lg:prose-xl 2xl:prose-2xl max-w-none xl:columns-2 xl:gap-8 column-balance">
           <LexicalRenderer contentJSON={post!.content ?? ''} />
         </div>
       </article>
