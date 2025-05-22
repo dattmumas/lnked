@@ -257,6 +257,11 @@ export default function NewPostForm({
       {serverError && (
         <p className="text-sm text-destructive mt-1">{serverError}</p>
       )}
+      {errors.content && (
+        <p className="text-sm text-destructive mt-1">
+          {errors.content.message as string}
+        </p>
+      )}
     </div>
   );
 

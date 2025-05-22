@@ -274,6 +274,11 @@ export default function EditPostForm({
           ))}
         </p>
       )}
+      {errors.content && (
+        <p className="text-sm text-destructive mt-1">
+          {errors.content.message as string}
+        </p>
+      )}
       <div className="pt-6 border-t">
         <h3 className="text-lg font-medium text-destructive">Danger Zone</h3>
         <p className="text-sm text-muted-foreground mb-3">

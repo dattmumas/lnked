@@ -411,19 +411,16 @@ export type Database = {
           created_at: string
           follower_id: string
           following_id: string
-          following_type: Database["public"]["Enums"]["member_entity_type"]
         }
         Insert: {
           created_at?: string
           follower_id: string
           following_id: string
-          following_type: Database["public"]["Enums"]["member_entity_type"]
         }
         Update: {
           created_at?: string
           follower_id?: string
           following_id?: string
-          following_type?: Database["public"]["Enums"]["member_entity_type"]
         }
         Relationships: [
           {
@@ -593,7 +590,6 @@ export type Database = {
           created_at: string
           dislike_count: number | null
           id: string
-          slug: string | null
           is_public: boolean
           like_count: number
           published_at: string | null
@@ -609,7 +605,6 @@ export type Database = {
           created_at?: string
           dislike_count?: number | null
           id?: string
-          slug?: string | null
           is_public?: boolean
           like_count?: number
           published_at?: string | null
@@ -625,7 +620,6 @@ export type Database = {
           created_at?: string
           dislike_count?: number | null
           id?: string
-          slug?: string | null
           is_public?: boolean
           like_count?: number
           published_at?: string | null
@@ -896,7 +890,6 @@ export type Database = {
           bio: string | null
           cover_image_url: string | null
           embedding: string | null
-          username: string | null
           full_name: string | null
           id: string
           is_profile_public: boolean | null
@@ -919,7 +912,6 @@ export type Database = {
           bio?: string | null
           cover_image_url?: string | null
           embedding?: string | null
-          username?: string | null
           full_name?: string | null
           id: string
           is_profile_public?: boolean | null
@@ -942,7 +934,6 @@ export type Database = {
           bio?: string | null
           cover_image_url?: string | null
           embedding?: string | null
-          username?: string | null
           full_name?: string | null
           id?: string
           is_profile_public?: boolean | null
