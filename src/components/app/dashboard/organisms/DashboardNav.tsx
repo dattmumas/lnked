@@ -84,7 +84,7 @@ export function DashboardNav({
   }, []);
 
   return (
-    <header className="flex items-center w-full h-12 px-4 border-b border-border bg-background sticky top-0 z-40">
+    <header className="flex items-center w-full h-12 px-4 border-b border-border bg-background sticky top-0 z-50">
       {/* Sidebar toggle button (desktop) */}
       <Button
         variant="ghost"

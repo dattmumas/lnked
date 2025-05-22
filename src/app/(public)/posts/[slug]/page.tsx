@@ -28,7 +28,11 @@ function calculateReadingTime(htmlContent: string | null): string {
 }
 
 type PostViewData = Database['public']['Tables']['posts']['Row'] & {
-  author: { id: string; full_name: string | null; username: string | null } | null;
+  author: {
+    id: string;
+    full_name: string | null;
+    username: string | null;
+  } | null;
   collective: { id: string; name: string; slug: string } | null;
   likes: { count: number }[] | null;
   view_count: number | null;
@@ -36,7 +40,9 @@ type PostViewData = Database['public']['Tables']['posts']['Row'] & {
 
 export default async function PostBySlugPage({
   params,
-}: { params: Promise<{ slug: string }> }) {
+}: {
+  params: Promise<{ slug: string }>;
+}) {
   const { slug } = await params;
   const supabase = await createServerSupabaseClient();
   const {
@@ -46,7 +52,7 @@ export default async function PostBySlugPage({
   const { data: postResult, error } = await supabase
     .from('posts')
     .select(
-      `*, author:users!author_id(id, full_name, username), collective:collectives!collective_id(id, name, slug), likes(count)`
+      `*, author:users!author_id(id, full_name, username), collective:collectives!collective_id(id, name, slug), likes(count)`,
     )
     .eq('slug', slug)
     .single();
@@ -70,15 +76,24 @@ export default async function PostBySlugPage({
     user?.id === post!.author_id || user?.id === post!.collective?.id;
 
   const isPublished =
-    post!.is_public && post!.published_at && new Date(post!.published_at) <= new Date();
-  if (!isPublished && user?.id !== post!.author_id && user?.id !== post!.collective?.id) {
+    post!.is_public &&
+    post!.published_at &&
+    new Date(post!.published_at) <= new Date();
+  if (
+    !isPublished &&
+    user?.id !== post!.author_id &&
+    user?.id !== post!.collective?.id
+  ) {
     notFound();
   }
 
   return (
     <div className="container mx-auto max-w-3xl p-4 md:p-6">
       <PostViewTracker postId={post!.id} />
-      <nav aria-label="Breadcrumb" className="mb-6 text-sm text-muted-foreground">
+      <nav
+        aria-label="Breadcrumb"
+        className="mb-6 text-sm text-muted-foreground"
+      >
         <ol className="flex space-x-2 flex-wrap">
           <li>
             <Link href="/" className="hover:underline">
@@ -91,7 +106,10 @@ export default async function PostBySlugPage({
                 <span className="mx-1">/</span>
               </li>
               <li>
-                <Link href={`/${post!.collective.slug}`} className="hover:underline">
+                <Link
+                  href={`/${post!.collective.slug}`}
+                  className="hover:underline"
+                >
                   {post!.collective.name}
                 </Link>
               </li>
@@ -118,7 +136,10 @@ export default async function PostBySlugPage({
             {post!.author && (
               <span>
                 by{' '}
-                <Link href={`/@${authorUsername}`} className="hover:underline text-primary">
+                <Link
+                  href={`/@${authorUsername}`}
+                  className="hover:underline text-primary"
+                >
                   {authorName}
                 </Link>
               </span>

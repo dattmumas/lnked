@@ -1,13 +1,13 @@
-import { NextRequest, NextResponse } from "next/server";
-import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { NextRequest, NextResponse } from 'next/server';
+import { createServerSupabaseClient } from '@/lib/supabase/server';
 // import { toggleBookmark } from '@/lib/data/bookmarks';
 // import { getCurrentUser } from '@/lib/auth'; // Implement as needed
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: { _postId: string } }
+  { params }: { params: { slug: string } },
 ) {
-  const { _postId: postId } = params;
+  const { slug } = params;
   const supabase = await createServerSupabaseClient();
 
   const {
@@ -17,37 +17,37 @@ export async function POST(
 
   if (authError || !user) {
     return NextResponse.json(
-      { error: "User not authenticated" },
-      { status: 401 }
+      { error: 'User not authenticated' },
+      { status: 401 },
     );
   }
 
   // Check for existing bookmark
   const { data: existing, error: existingError } = await supabase
-    .from("post_bookmarks")
-    .select("*")
-    .eq("post_id", postId)
-    .eq("user_id", user.id)
+    .from('post_bookmarks')
+    .select('*')
+    .eq('post_id', slug)
+    .eq('user_id', user.id)
     .maybeSingle();
 
-  if (existingError && existingError.code !== "PGRST116") {
-    return NextResponse.json({ error: "Database error" }, { status: 500 });
+  if (existingError && existingError.code !== 'PGRST116') {
+    return NextResponse.json({ error: 'Database error' }, { status: 500 });
   }
 
   let bookmarked: boolean;
   if (existing) {
     // Unbookmark
     await supabase
-      .from("post_bookmarks")
+      .from('post_bookmarks')
       .delete()
-      .eq("post_id", postId)
-      .eq("user_id", user.id);
+      .eq('post_id', slug)
+      .eq('user_id', user.id);
     bookmarked = false;
   } else {
     // Bookmark
     await supabase
-      .from("post_bookmarks")
-      .insert({ post_id: postId, user_id: user.id });
+      .from('post_bookmarks')
+      .insert({ post_id: slug, user_id: user.id });
     bookmarked = true;
   }
 

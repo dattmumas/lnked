@@ -1,26 +1,26 @@
-import { NextRequest, NextResponse } from "next/server";
-import { createServerSupabaseClient } from "@/lib/supabase/server";
-import { getCommentsByPostId } from "@/lib/data/comments";
+import { NextRequest, NextResponse } from 'next/server';
+import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { getCommentsByPostId } from '@/lib/data/comments';
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { _postId: string } }
+  { params }: { params: { slug: string } },
 ) {
-  const { _postId: postId } = params;
+  const { slug } = params;
   try {
-    const comments = await getCommentsByPostId(postId);
+    const comments = await getCommentsByPostId(slug);
     return NextResponse.json({ comments });
   } catch (e: unknown) {
-    const error = e instanceof Error ? e : new Error("Unknown error");
+    const error = e instanceof Error ? e : new Error('Unknown error');
     return NextResponse.json({ error: error.message }, { status: 404 });
   }
 }
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: { _postId: string } }
+  { params }: { params: { slug: string } },
 ) {
-  const { _postId: postId } = params;
+  const { slug } = params;
   const supabase = await createServerSupabaseClient();
 
   const {
@@ -30,8 +30,8 @@ export async function POST(
 
   if (authError || !user) {
     return NextResponse.json(
-      { error: "User not authenticated" },
-      { status: 401 }
+      { error: 'User not authenticated' },
+      { status: 401 },
     );
   }
 
@@ -39,25 +39,25 @@ export async function POST(
   try {
     body = await req.json();
   } catch {
-    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
   }
   const { content, parent_id } = body;
   if (
     !content ||
-    typeof content !== "string" ||
+    typeof content !== 'string' ||
     content.trim().length < 1 ||
     content.length > 2000
   ) {
     return NextResponse.json(
-      { error: "Invalid comment content" },
-      { status: 400 }
+      { error: 'Invalid comment content' },
+      { status: 400 },
     );
   }
 
   const { data: inserted, error: insertError } = await supabase
-    .from("comments")
+    .from('comments')
     .insert({
-      post_id: postId,
+      post_id: slug,
       user_id: user.id,
       content: content.trim(),
       parent_id: parent_id || null,
@@ -67,8 +67,8 @@ export async function POST(
 
   if (insertError || !inserted) {
     return NextResponse.json(
-      { error: insertError?.message || "Failed to add comment" },
-      { status: 500 }
+      { error: insertError?.message || 'Failed to add comment' },
+      { status: 500 },
     );
   }
 

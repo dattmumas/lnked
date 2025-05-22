@@ -1,13 +1,13 @@
-import { createServerSupabaseClient } from "@/lib/supabase/server";
-import { notFound } from "next/navigation";
-import EditPostForm, { type PostDataType } from "./EditPostForm"; // Import the client form component
+import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { notFound } from 'next/navigation';
+import EditPostForm, { type PostDataType } from './EditPostForm'; // Import the client form component
 
 export default async function EditPostPage({
   params,
 }: {
-  params: Promise<{ postId: string }>;
+  params: { slug: string };
 }) {
-  const { postId } = await params;
+  const { slug } = params;
   const supabase = await createServerSupabaseClient();
 
   const {
@@ -19,20 +19,20 @@ export default async function EditPostPage({
   }
 
   const { data: postData, error: postFetchError } = await supabase
-    .from("posts")
-    .select("*, collective:collectives!collective_id(name, owner_id)") // Fetch needed fields
-    .eq("id", postId)
+    .from('posts')
+    .select('*, collective:collectives!collective_id(name, owner_id)') // Fetch needed fields
+    .eq('id', slug)
     .single();
 
   if (postFetchError || !postData) {
     console.error(
-      `Error fetching post ${postId} for edit:`,
-      postFetchError?.message
+      `Error fetching post ${slug} for edit:`,
+      postFetchError?.message,
     );
     notFound();
   }
 
-  if ("id" in postData) {
+  if ('id' in postData) {
     // safe to access postData.id, postData.author_id, etc.
   }
 
@@ -45,16 +45,16 @@ export default async function EditPostPage({
     } else {
       // Check if user is an admin/editor member of the collective
       const { data: member, error: memberError } = await supabase
-        .from("collective_members")
-        .select("role")
-        .eq("collective_id", postData.collective_id)
-        .eq("user_id", user.id)
-        .in("role", ["admin", "editor"])
+        .from('collective_members')
+        .select('role')
+        .eq('collective_id', postData.collective_id)
+        .eq('user_id', user.id)
+        .in('role', ['admin', 'editor'])
         .maybeSingle();
       if (memberError) {
         console.error(
-          "Error checking collective membership for edit permission:",
-          memberError.message
+          'Error checking collective membership for edit permission:',
+          memberError.message,
         );
         // Decide if this error should prevent editing or just be logged.
         // For now, if memberError occurs, canEditCollectivePost remains false unless they are the direct owner.
@@ -65,7 +65,7 @@ export default async function EditPostPage({
 
   if (!isAuthor && !canEditCollectivePost) {
     console.warn(
-      `User ${user.id} does not have permission to edit post ${postId}.`
+      `User ${user.id} does not have permission to edit post ${slug}.`,
     );
     notFound(); // Or redirect to an unauthorized page
   }
@@ -77,11 +77,11 @@ export default async function EditPostPage({
 
   const pageTitle = postData.collective?.name
     ? `Edit Post in ${postData.collective.name}`
-    : "Edit Personal Post";
+    : 'Edit Personal Post';
 
   return (
     <EditPostForm
-      postId={postId}
+      slug={slug}
       initialData={initialPostData}
       pageTitle={pageTitle}
     />
