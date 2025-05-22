@@ -102,7 +102,7 @@ export default function PostCard({ post, collectiveSlug }: PostCardProps) {
         <img src={post.image} alt="Post cover" className="img-splash mb-4" />
       )} */}
       <Link href={postUrl} className="group mb-auto">
-        <h2 className="text-2xl font-bold mb-2 group-hover:text-primary transition-colors">
+        <h2 className="text-2xl font-bold mb-2 group-hover:text-accent transition-colors">
           {post.title}
         </h2>
       </Link>
@@ -118,7 +118,7 @@ export default function PostCard({ post, collectiveSlug }: PostCardProps) {
       <div className="flex items-center justify-between mt-auto pt-4 border-t border-border">
         <Link
           href={postUrl}
-          className="text-sm font-medium text-primary hover:underline"
+          className="text-sm font-medium text-accent hover:underline"
         >
           Read more &rarr;
         </Link>
@@ -135,7 +135,7 @@ export default function PostCard({ post, collectiveSlug }: PostCardProps) {
             <Heart
               className={`w-5 h-5 ${
                 optimisticUserHasLiked
-                  ? "fill-primary text-primary"
+                  ? "fill-accent text-accent"
                   : "text-muted-foreground/40"
               }`}
             />

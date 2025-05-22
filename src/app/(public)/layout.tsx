@@ -9,7 +9,7 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
         <div className="container mx-auto flex items-center justify-between">
           <span className="text-2xl md:text-3xl font-serif font-extrabold text-foreground tracking-tight flex items-center">
             Lnked
-            <span className="ml-1 text-primary text-3xl md:text-4xl leading-none self-center" aria-hidden="true">
+            <span className="ml-1 text-accent text-3xl md:text-4xl leading-none self-center" aria-hidden="true">
               .
             </span>
           </span>

@@ -51,7 +51,7 @@ export const CollapsibleTrigger = React.forwardRef<
     {...props}
   >
     <span className="flex items-center gap-2">
-      {icon && <span className="text-primary">{icon}</span>}
+      {icon && <span className="text-accent">{icon}</span>}
       <span className="font-serif text-2xl font-semibold text-foreground">
         {title}
       </span>

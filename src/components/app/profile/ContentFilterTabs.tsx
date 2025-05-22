@@ -24,7 +24,7 @@ export default function ContentFilterTabs({
           key={tab.id}
           className={`px-3 pb-2 text-sm font-medium transition-colors border-b-2${
             active === tab.id
-              ? " border-primary text-primary"
+              ? " border-accent text-accent"
               : " border-transparent text-muted-foreground hover:text-foreground"
           }`}
           onClick={() => onChange(tab.id)}

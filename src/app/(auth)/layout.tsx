@@ -16,7 +16,7 @@ export default function AuthLayout({
           >
             Lnked
             <span
-              className="ml-1 text-primary text-3xl leading-none"
+              className="ml-1 text-accent text-3xl leading-none"
               aria-hidden="true"
             >
               .

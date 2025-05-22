@@ -113,7 +113,7 @@ const FloatingLinkEditorPlugin: React.FC = () => {
           />
           <button
             onClick={applyLink}
-            className="px-2 py-1 bg-primary text-primary-foreground rounded"
+            className="px-2 py-1 bg-accent text-accent-foreground rounded"
           >
             Save
           </button>
@@ -124,7 +124,7 @@ const FloatingLinkEditorPlugin: React.FC = () => {
             href={linkUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-primary underline mr-2"
+            className="text-accent underline mr-2"
           >
             {linkUrl.length > 30 ? linkUrl.slice(0, 30) + "..." : linkUrl}
           </a>

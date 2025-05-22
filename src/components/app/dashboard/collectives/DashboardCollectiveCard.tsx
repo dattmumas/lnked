@@ -56,7 +56,7 @@ export default function DashboardCollectiveCard({
     <Card className="flex flex-col h-full">
       <CardHeader>
         <div className="flex justify-between items-start gap-2">
-          <CardTitle className="hover:text-primary line-clamp-1 break-all">
+          <CardTitle className="hover:text-accent line-clamp-1 break-all">
             <Link href={`/collectives/${collective.slug}`}>{collective.name}</Link>
           </CardTitle>
           <Badge

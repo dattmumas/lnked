@@ -39,7 +39,7 @@ export default function FragmentedFeeds() {
   return (
     <motion.section
       ref={ref}
-      className="w-full py-12 md:py-16 bg-muted text-foreground border-b border-primary/10"
+      className="w-full py-12 md:py-16 bg-muted text-foreground border-b border-accent/10"
       initial="hidden"
       animate={isInView ? "visible" : "hidden"}
       variants={sectionVariants}
@@ -60,7 +60,7 @@ export default function FragmentedFeeds() {
         {/* Copy column */}
         <div className="order-1 md:order-2 flex flex-col justify-center space-y-4">
           <h2 className="text-3xl md:text-4xl font-extrabold">
-            Fragmented <span className="text-primary">Feeds</span>
+            Fragmented <span className="text-accent">Feeds</span>
           </h2>
           <p className="text-lg text-muted-foreground">
             Content arrives in isolation—different emails, tabs and apps.

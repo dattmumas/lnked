@@ -66,7 +66,7 @@ export default function ManageMembersClientUI({
 
   const getRoleIcon = (role: string | null | undefined) => {
     if (role === "owner")
-      return <ShieldCheck className="h-4 w-4 text-primary mr-1" />;
+      return <ShieldCheck className="h-4 w-4 text-accent mr-1" />;
     if (role === "editor")
       return <Edit3 className="h-4 w-4 text-accent mr-1" />;
     if (role === "contributor")
