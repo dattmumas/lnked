@@ -43,6 +43,7 @@ import Toolbar from "./Toolbar";
 import FloatingLinkEditorPlugin from "./plugins/FloatingLinkEditorPlugin";
 import FloatingFormatToolbarPlugin from "./plugins/FloatingFormatToolbar";
 import CodeHighlightPlugin from "./plugins/CodeHighlightPlugin";
+import DragDropUploadPlugin from "./plugins/DragDropUploadPlugin";
 import { CollapsibleContainerNode } from "./nodes/CollapsibleContainerNode";
 import { HashtagNode } from "./nodes/HashtagNode";
 import EmbedUrlModal from "./EmbedUrlModal";
@@ -650,6 +651,7 @@ export default function PostEditor({
           <LinkPlugin />
           <AutoLinkPlugin matchers={MATCHERS} />
           <CodeHighlightPlugin />
+          <DragDropUploadPlugin />
           <OnChangePlugin onChange={handleOnChange} ignoreSelectionChange />
           <MarkdownShortcutPlugin transformers={TRANSFORMERS} />
           <TablePlugin />

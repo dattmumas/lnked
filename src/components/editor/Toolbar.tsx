@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
 import {
   $getSelection,
@@ -27,6 +27,7 @@ import {
   AlignRight,
   Link as LinkIcon,
   PictureInPicture2 as ExcalidrawIcon,
+  Image as ImageIcon,
 } from 'lucide-react';
 import type { JSX } from 'react';
 import { $setBlocksType } from '@lexical/selection';
@@ -54,6 +55,7 @@ import { YouTubeNode } from './nodes/YouTubeNode';
 import { $insertNodeToNearestRoot } from '@lexical/utils';
 import { $createImageNode } from './nodes/ImageNode';
 import { $createPollNode } from './nodes/PollNode';
+import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
 
 const BLOCK_TYPES = [
   { type: 'paragraph', label: 'Paragraph' },
@@ -66,6 +68,8 @@ const BLOCK_TYPES = [
 
 function Toolbar(): JSX.Element {
   const [editor] = useLexicalComposerContext();
+  const supabase = createSupabaseBrowserClient();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   // Local state for active inline formatting and current block type/attributes
   const [blockType, setBlockType] = useState<string>('paragraph');
   const [isBold, setIsBold] = useState(false);
@@ -76,6 +80,34 @@ function Toolbar(): JSX.Element {
   const [canUndo, setCanUndo] = useState(false);
   const [canRedo, setCanRedo] = useState(false);
   const [isLink, setIsLink] = useState(false);
+  const uploadImage = async (file: File) => {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return;
+    const ext = file.name.split('.').pop() || 'png';
+    const filename = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+    const path = `public/${user.id}/${filename}`;
+    const { error } = await supabase.storage.from('posts').upload(path, file);
+    if (error) {
+      console.error('Error uploading image:', error);
+      return;
+    }
+    const { data } = supabase.storage.from('posts').getPublicUrl(path);
+    const url = data.publicUrl;
+    if (!url) return;
+    editor.update(() => {
+      $insertNodeToNearestRoot($createImageNode(url, file.name));
+    });
+  };
+
+  const onFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      await uploadImage(file);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
 
   // Listen for undo/redo availability
   useEffect(() => {
@@ -277,6 +309,22 @@ function Toolbar(): JSX.Element {
   return (
     <div className="toolbar sticky top-0 z-20 flex items-center gap-2 bg-background px-2 py-1 border-b dark:bg-background/80">
       {/* Quick-insert: GIF */}
+      <input
+        type="file"
+        accept="image/*"
+        ref={fileInputRef}
+        onChange={onFileChange}
+        className="hidden"
+      />
+      <button
+        type="button"
+        onClick={() => fileInputRef.current?.click()}
+        className="toolbar-item spaced"
+        aria-label="Insert Image"
+        title="Insert Image"
+      >
+        <ImageIcon className="format" />
+      </button>
       {/* Quick-insert: Excalidraw */}
       <button
         type="button"
