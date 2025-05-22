@@ -10,6 +10,17 @@ export async function POST(
   const { slug } = params;
   const supabase = await createServerSupabaseClient();
 
+  const { data: postRecord } = await supabase
+    .from('posts')
+    .select('id')
+    .eq('slug', slug)
+    .maybeSingle<{ id: string }>();
+
+  if (!postRecord) {
+    return NextResponse.json({ error: 'Post not found' }, { status: 404 });
+  }
+  const postId = postRecord.id;
+
   const {
     data: { user },
     error: authError,
@@ -26,7 +37,7 @@ export async function POST(
   const { data: existing, error: existingError } = await supabase
     .from('post_bookmarks')
     .select('*')
-    .eq('post_id', slug)
+    .eq('post_id', postId)
     .eq('user_id', user.id)
     .maybeSingle();
 
@@ -40,14 +51,14 @@ export async function POST(
     await supabase
       .from('post_bookmarks')
       .delete()
-      .eq('post_id', slug)
+      .eq('post_id', postId)
       .eq('user_id', user.id);
     bookmarked = false;
   } else {
     // Bookmark
     await supabase
       .from('post_bookmarks')
-      .insert({ post_id: slug, user_id: user.id });
+      .insert({ post_id: postId, user_id: user.id });
     bookmarked = true;
   }
 

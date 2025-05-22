@@ -81,7 +81,7 @@ export default async function EditPostPage({
 
   return (
     <EditPostForm
-      slug={slug}
+      postId={postData.id}
       initialData={initialPostData}
       pageTitle={pageTitle}
     />

@@ -1,16 +1,17 @@
-"use client";
+'use client';
 
-import Link from "next/link";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Edit, Eye, Trash2, Pin, PinOff } from "lucide-react";
-import { useTransition } from "react";
-import { deletePost, featurePost } from "@/app/actions/postActions";
-import { useRouter } from "next/navigation";
-import type { Database } from "@/lib/database.types";
+import Link from 'next/link';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Edit, Eye, Trash2, Pin, PinOff } from 'lucide-react';
+import { useTransition } from 'react';
+import { deletePost, featurePost } from '@/app/actions/postActions';
+import { useRouter } from 'next/navigation';
+import type { Database } from '@/lib/database.types';
 
-type PostRow = Database["public"]["Tables"]["posts"]["Row"];
+type PostRow = Database['public']['Tables']['posts']['Row'];
 interface DashboardPost extends PostRow {
+  slug?: string | null;
   collective?: { id: string; name: string; slug: string } | null;
   likes?: { count: number }[] | null;
   post_reactions?: { count: number; type?: string }[] | null;
@@ -23,10 +24,10 @@ interface PostListItemProps {
 }
 
 function getStatus(post: DashboardPost) {
-  if (!post.published_at) return "Draft";
+  if (!post.published_at) return 'Draft';
   if (post.published_at && new Date(post.published_at) > new Date())
-    return "Scheduled";
-  return "Published";
+    return 'Scheduled';
+  return 'Published';
 }
 
 export default function PostListItem({ post }: PostListItemProps) {
@@ -34,18 +35,22 @@ export default function PostListItem({ post }: PostListItemProps) {
   const router = useRouter();
   const status = getStatus(post);
   const statusColor =
-    status === "Draft"
-      ? "outline"
-      : status === "Scheduled"
-      ? "secondary"
-      : "default";
+    status === 'Draft'
+      ? 'outline'
+      : status === 'Scheduled'
+        ? 'secondary'
+        : 'default';
   const likes =
-    typeof post.likeCount === "number"
+    typeof post.likeCount === 'number'
       ? post.likeCount
       : post.likes?.[0]?.count || post.post_reactions?.[0]?.count || 0;
   const publishDate = post.published_at || post.created_at;
-  const postUrl = post.slug ? `/posts/${post.slug}` : (post.collective ? `/collectives/${post.collective.slug}/${post.id}` : `/posts/${post.id}`);
-  const editUrl = `/posts/${post.id}/edit`;
+  const postUrl = post.slug
+    ? `/posts/${post.slug}`
+    : post.collective
+      ? `/collectives/${post.collective.slug}/${post.id}`
+      : `/posts/${post.id}`;
+  const editUrl = `/posts/${post.slug}/edit`;
 
   const handleToggleFeature = () => {
     startTransition(async () => {
@@ -55,7 +60,7 @@ export default function PostListItem({ post }: PostListItemProps) {
   };
 
   const handleDelete = () => {
-    if (window.confirm("Are you sure you want to delete this post?")) {
+    if (window.confirm('Are you sure you want to delete this post?')) {
       startTransition(async () => {
         await deletePost(post.id);
         router.refresh();
@@ -83,7 +88,7 @@ export default function PostListItem({ post }: PostListItemProps) {
         </Badge>
       </td>
       <td className="px-4 py-2">
-        {publishDate ? new Date(publishDate).toLocaleDateString() : "N/A"}
+        {publishDate ? new Date(publishDate).toLocaleDateString() : 'N/A'}
       </td>
       <td className="px-4 py-2 tabular-nums">{likes}</td>
       <td className="px-4 py-2">
@@ -98,11 +103,11 @@ export default function PostListItem({ post }: PostListItemProps) {
               <Edit className="h-4 w-4" />
             </Link>
           </Button>
-          {status === "Published" && (
+          {status === 'Published' && (
             <Button
               variant="ghost"
               size="icon"
-              aria-label={post.isFeatured ? "Unpin post" : "Pin post"}
+              aria-label={post.isFeatured ? 'Unpin post' : 'Pin post'}
               onClick={handleToggleFeature}
               disabled={isPending}
             >

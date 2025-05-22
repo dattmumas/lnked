@@ -28,6 +28,7 @@ function calculateReadingTime(htmlContent: string | null): string {
 }
 
 type PostViewData = Database['public']['Tables']['posts']['Row'] & {
+  slug: string | null;
   author: {
     id: string;
     full_name: string | null;
@@ -171,14 +172,14 @@ export default async function PostBySlugPage({
           </div>
           <div className="mt-4 flex flex-row gap-4 justify-center items-center">
             <PostReactionButtons
-              postId={post!.id}
+              postSlug={post!.slug!}
               initialLikeCount={initialLikeCount}
               initialDislikeCount={initialDislikeCount}
               initialUserReaction={initialUserReaction}
               disabled={!user?.id}
             />
             <BookmarkButton
-              postId={post!.id}
+              postSlug={post!.slug!}
               initialBookmarked={initialBookmarked}
               disabled={!user?.id}
             />
@@ -193,11 +194,14 @@ export default async function PostBySlugPage({
         <div className="flex justify-between items-center">
           {isOwner && (
             <Button asChild variant="outline">
-              <Link href={`/posts/${post!.id}/edit`}>Edit Post</Link>
+              <Link href={`/posts/${post!.slug}/edit`}>Edit Post</Link>
             </Button>
           )}
         </div>
-        <CommentsSection postId={post!.id} currentUserId={user?.id ?? null} />
+        <CommentsSection
+          postSlug={post!.slug!}
+          currentUserId={user?.id ?? null}
+        />
       </footer>
     </div>
   );

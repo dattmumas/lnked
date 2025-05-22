@@ -1,19 +1,19 @@
-"use client";
+'use client';
 
-import { useState, useTransition } from "react";
-import { Button } from "@/components/ui/button";
-import { ThumbsUp, ThumbsDown } from "lucide-react";
+import { useState, useTransition } from 'react';
+import { Button } from '@/components/ui/button';
+import { ThumbsUp, ThumbsDown } from 'lucide-react';
 
 interface PostReactionButtonsProps {
-  postId: string;
+  postSlug: string;
   initialLikeCount: number;
   initialDislikeCount: number;
-  initialUserReaction: "like" | "dislike" | null;
+  initialUserReaction: 'like' | 'dislike' | null;
   disabled?: boolean;
 }
 
 export default function PostReactionButtons({
-  postId,
+  postSlug,
   initialLikeCount,
   initialDislikeCount,
   initialUserReaction,
@@ -22,40 +22,40 @@ export default function PostReactionButtons({
   const [isPending, startTransition] = useTransition();
   const [likeCount, setLikeCount] = useState(initialLikeCount);
   const [dislikeCount, setDislikeCount] = useState(initialDislikeCount);
-  const [userReaction, setUserReaction] = useState<"like" | "dislike" | null>(
-    initialUserReaction
+  const [userReaction, setUserReaction] = useState<'like' | 'dislike' | null>(
+    initialUserReaction,
   );
 
-  const handleReaction = (type: "like" | "dislike") => {
+  const handleReaction = (type: 'like' | 'dislike') => {
     if (disabled || isPending) return;
     const prevReaction = userReaction;
     let newLikeCount = likeCount;
     let newDislikeCount = dislikeCount;
-    if (type === "like") {
-      if (userReaction === "like") {
+    if (type === 'like') {
+      if (userReaction === 'like') {
         newLikeCount -= 1;
         setUserReaction(null);
       } else {
         newLikeCount += 1;
-        if (userReaction === "dislike") newDislikeCount -= 1;
-        setUserReaction("like");
+        if (userReaction === 'dislike') newDislikeCount -= 1;
+        setUserReaction('like');
       }
     } else {
-      if (userReaction === "dislike") {
+      if (userReaction === 'dislike') {
         newDislikeCount -= 1;
         setUserReaction(null);
       } else {
         newDislikeCount += 1;
-        if (userReaction === "like") newLikeCount -= 1;
-        setUserReaction("dislike");
+        if (userReaction === 'like') newLikeCount -= 1;
+        setUserReaction('dislike');
       }
     }
     setLikeCount(newLikeCount);
     setDislikeCount(newDislikeCount);
     startTransition(async () => {
-      const res = await fetch(`/api/posts/${postId}/reactions`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+      const res = await fetch(`/api/posts/${postSlug}/reactions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ type }),
       });
       if (res.ok) {
@@ -75,35 +75,35 @@ export default function PostReactionButtons({
   return (
     <div className="flex items-center gap-2">
       <Button
-        variant={userReaction === "like" ? "default" : "ghost"}
+        variant={userReaction === 'like' ? 'default' : 'ghost'}
         size="icon"
-        aria-label={userReaction === "like" ? "Unlike post" : "Like post"}
-        onClick={() => handleReaction("like")}
+        aria-label={userReaction === 'like' ? 'Unlike post' : 'Like post'}
+        onClick={() => handleReaction('like')}
         disabled={disabled || isPending}
         className="rounded-full"
       >
         <ThumbsUp
           className={
-            userReaction === "like" ? "text-accent" : "text-muted-foreground"
+            userReaction === 'like' ? 'text-accent' : 'text-muted-foreground'
           }
         />
       </Button>
       <span className="text-sm tabular-nums w-6 text-center">{likeCount}</span>
       <Button
-        variant={userReaction === "dislike" ? "destructive" : "ghost"}
+        variant={userReaction === 'dislike' ? 'destructive' : 'ghost'}
         size="icon"
         aria-label={
-          userReaction === "dislike" ? "Remove dislike" : "Dislike post"
+          userReaction === 'dislike' ? 'Remove dislike' : 'Dislike post'
         }
-        onClick={() => handleReaction("dislike")}
+        onClick={() => handleReaction('dislike')}
         disabled={disabled || isPending}
         className="rounded-full"
       >
         <ThumbsDown
           className={
-            userReaction === "dislike"
-              ? "text-destructive"
-              : "text-muted-foreground"
+            userReaction === 'dislike'
+              ? 'text-destructive'
+              : 'text-muted-foreground'
           }
         />
       </Button>
@@ -113,4 +113,3 @@ export default function PostReactionButtons({
     </div>
   );
 }
-
