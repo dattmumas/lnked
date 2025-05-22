@@ -23,6 +23,12 @@ export default function DashboardShell({
 
   return (
     <div className="flex flex-col min-h-screen h-full bg-background text-foreground">
+      <a
+        href="#dashboard-main-content"
+        className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 bg-accent text-accent-foreground p-2 rounded z-50"
+      >
+        Skip to main content
+      </a>
       <DashboardNav
         sidebarCollapsed={sidebarCollapsed}
         onToggleSidebar={() => setSidebarCollapsed((c) => !c)}
@@ -34,7 +40,12 @@ export default function DashboardShell({
           collectives={userCollectives}
           collapsed={sidebarCollapsed}
         />
-        <main className="flex-1 overflow-y-auto p-4 md:p-6">{children}</main>
+        <main
+          id="dashboard-main-content"
+          className="flex-1 overflow-y-auto p-4 md:p-6"
+        >
+          {children}
+        </main>
       </div>
     </div>
   );
