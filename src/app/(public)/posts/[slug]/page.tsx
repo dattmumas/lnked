@@ -41,21 +41,39 @@ type PostViewData = Database['public']['Tables']['posts']['Row'] & {
 export default async function PostBySlugPage({
   params,
 }: {
-  params: Promise<{ slug: string }>;
+  params: { slug: string };
 }) {
-  const { slug } = await params;
+  const { slug: slugOrId } = params;
   const supabase = await createServerSupabaseClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const { data: postResult, error } = await supabase
+  // First attempt to fetch by slug
+  const baseSelect = `*, author:users!author_id(id, full_name, username), collective:collectives!collective_id(id, name, slug), likes(count)`;
+
+  let { data: postResult, error } = await supabase
     .from('posts')
-    .select(
-      `*, author:users!author_id(id, full_name, username), collective:collectives!collective_id(id, name, slug), likes(count)`,
-    )
-    .eq('slug', slug)
-    .single();
+    .select(baseSelect)
+    .eq('slug', slugOrId)
+    .maybeSingle();
+
+  if (!postResult || error) {
+    // Fallback: treat slugOrId as numeric / uuid id
+    ({ data: postResult, error } = await supabase
+      .from('posts')
+      .select(baseSelect)
+      .eq('id', slugOrId)
+      .maybeSingle());
+
+    const postWithSlug = postResult as unknown as {
+      slug: string | null;
+    } | null;
+    if (postWithSlug && postWithSlug.slug) {
+      const { redirect } = await import('next/navigation');
+      redirect(`/posts/${postWithSlug.slug}`);
+    }
+  }
 
   const post = postResult as PostViewData | null;
   if (error || !post) {
