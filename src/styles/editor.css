@@ -1,0 +1,22 @@
+/* Minimal styles for PostEditor layout */
+.editor-shell {
+  margin: 1rem auto;
+  max-width: 1100px;
+  position: relative;
+}
+
+.editor-container {
+  background: var(--background);
+  border-radius: var(--radius);
+  position: relative;
+}
+
+.editor-scroller {
+  min-height: 150px;
+  display: flex;
+}
+
+.editor {
+  flex: auto;
+  max-width: 100%;
+}

@@ -1,7 +1,7 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-import '@/components/lexical-playground/index.css';
+import '@/styles/editor.css';
 
 interface PostEditorProps {
   initialContent?: string;

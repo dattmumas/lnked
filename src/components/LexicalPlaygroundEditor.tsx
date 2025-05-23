@@ -1,7 +1,7 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-import '@/components/lexical-playground/index.css';
+import '@/styles/editor.css';
 
 // Lazy-load the heavy playground so it doesn't bloat the first bundle.
 const PlaygroundApp = dynamic(
