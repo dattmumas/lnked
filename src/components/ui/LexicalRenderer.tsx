@@ -214,6 +214,34 @@ export function LexicalRenderer({ contentJSON }: LexicalRendererProps) {
           }
           return text;
         }
+        case 'link': {
+          const url =
+            'url' in node && typeof node.url === 'string' ? node.url : '#';
+          return (
+            <a
+              href={url}
+              rel="noopener noreferrer"
+              target="_blank"
+              className="text-primary underline hover:opacity-80"
+            >
+              {renderChildren(node.children)}
+            </a>
+          );
+        }
+        case 'autolink': {
+          const url =
+            'url' in node && typeof node.url === 'string' ? node.url : '#';
+          return (
+            <a
+              href={url}
+              rel="noopener noreferrer"
+              target="_blank"
+              className="text-primary underline hover:opacity-80"
+            >
+              {renderChildren(node.children)}
+            </a>
+          );
+        }
         case 'hashtag':
           return (
             <span className="text-primary font-medium">

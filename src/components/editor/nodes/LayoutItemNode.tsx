@@ -38,6 +38,7 @@ export class LayoutItemNode extends ElementNode {
   createDOM(): HTMLElement {
     const el = document.createElement("div");
     el.className = "flex flex-col";
+    el.contentEditable = "false";
     return el;
   }
   updateDOM(): boolean {

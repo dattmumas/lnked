@@ -57,8 +57,11 @@ import { InlineImageNode } from './nodes/InlineImageNode';
 import { TweetNode } from './nodes/TweetNode';
 import { YouTubeNode } from './nodes/YouTubeNode';
 import { PageBreakNode } from './nodes/PageBreakNode';
-import { LayoutContainerNode } from './nodes/LayoutContainerNode';
-import { LayoutItemNode } from './nodes/LayoutItemNode';
+import {
+  LayoutContainerNode,
+  $createLayoutContainerNode,
+} from './nodes/LayoutContainerNode';
+import { LayoutItemNode, $createLayoutItemNode } from './nodes/LayoutItemNode';
 import { HorizontalRuleNode } from '@lexical/react/LexicalHorizontalRuleNode';
 import FloatingLinkEditorPlugin from './plugins/FloatingLinkEditorPlugin';
 import CodeHighlightPlugin from './plugins/CodeHighlightPlugin';
@@ -334,6 +337,26 @@ function CommandsPlugin({
             if ($isRangeSelection(selection)) {
               const pageBreakNode = new PageBreakNode();
               $insertNodeToNearestRoot(pageBreakNode);
+            }
+          });
+          return true;
+        },
+        1,
+      ),
+      editor.registerCommand(
+        INSERT_LAYOUT_COMMAND,
+        () => {
+          editor.update(() => {
+            const selection = $getSelection();
+            if ($isRangeSelection(selection)) {
+              const container = $createLayoutContainerNode(2);
+              const col1 = $createLayoutItemNode();
+              col1.append($createParagraphNode());
+              const col2 = $createLayoutItemNode();
+              col2.append($createParagraphNode());
+              container.append(col1);
+              container.append(col2);
+              $insertNodeToNearestRoot(container);
             }
           });
           return true;

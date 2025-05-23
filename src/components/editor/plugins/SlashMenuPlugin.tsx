@@ -218,6 +218,28 @@ const SlashMenuPlugin = () => {
   const [inputString, setInputString] = useState('');
   const menuRef = React.useRef<HTMLUListElement>(null);
 
+  const repositionMenu = React.useCallback(() => {
+    if (!open || !triggerNodeKey) return;
+    const domElem = editor.getElementByKey(triggerNodeKey);
+    if (!domElem) return;
+    const rect = domElem.getBoundingClientRect();
+    let x = rect.left;
+    let y = rect.bottom;
+    const menuEl = menuRef.current;
+    if (menuEl) {
+      const { offsetHeight, offsetWidth } = menuEl;
+      if (y + offsetHeight > window.innerHeight) {
+        y = rect.top - offsetHeight - 4;
+      } else {
+        y += 4;
+      }
+      if (x + offsetWidth > window.innerWidth) {
+        x = rect.right - offsetWidth;
+      }
+    }
+    setMenuPosition({ x, y });
+  }, [editor, open, triggerNodeKey]);
+
   // Use KEY_DOWN_COMMAND to trigger slash menu
   useEffect(() => {
     return editor.registerCommand(
@@ -244,15 +266,11 @@ const SlashMenuPlugin = () => {
             if (isAtBeginning || isInEmptyParagraph || isInEmptyTextNode) {
               // Set up the slash menu trigger
               setTimeout(() => {
-                const domElem = editor.getElementByKey(node.getKey());
-                if (domElem) {
-                  const rect = domElem.getBoundingClientRect();
-                  setMenuPosition({ x: rect.left, y: rect.bottom + 4 });
-                  setOpen(true);
-                  setHighlighted(0);
-                  setTriggerNodeKey(node.getKey());
-                  setInputString('');
-                }
+                setTriggerNodeKey(node.getKey());
+                setOpen(true);
+                setHighlighted(0);
+                setInputString('');
+                repositionMenu();
               }, 0);
             }
           });
@@ -261,7 +279,7 @@ const SlashMenuPlugin = () => {
       },
       COMMAND_PRIORITY_LOW,
     );
-  }, [editor]);
+  }, [editor, repositionMenu]);
 
   // While menu is open, track input and close if selection leaves trigger node or '/' is deleted
   useEffect(() => {
@@ -292,14 +310,22 @@ const SlashMenuPlugin = () => {
         }
         setInputString(text.slice(1));
         // Update menu position
-        const domElem = editor.getElementByKey(node.getKey());
-        if (domElem) {
-          const rect = domElem.getBoundingClientRect();
-          setMenuPosition({ x: rect.left, y: rect.bottom });
-        }
+        repositionMenu();
       });
     });
-  }, [editor, open, triggerNodeKey]);
+  }, [editor, open, triggerNodeKey, repositionMenu]);
+
+  // Reposition on scroll/resize
+  useEffect(() => {
+    if (!open) return;
+    const handler = () => repositionMenu();
+    window.addEventListener('scroll', handler, true);
+    window.addEventListener('resize', handler);
+    return () => {
+      window.removeEventListener('scroll', handler, true);
+      window.removeEventListener('resize', handler);
+    };
+  }, [open, repositionMenu]);
 
   // Filter options based on inputString
   const filteredOptions = filterSlashOptions(inputString);
