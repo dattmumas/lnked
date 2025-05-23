@@ -3,11 +3,11 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { chatService } from '@/lib/chat/chat-service';
 import { realtimeService } from '@/lib/chat/realtime-service';
-import type { 
-  ConversationWithParticipants, 
-  MessageWithSender, 
-  ChatState, 
-  TypingIndicator 
+import type { Json } from '@/lib/database.types';
+import type {
+  MessageWithSender,
+  TypingIndicator,
+  ChatState,
 } from '@/lib/chat/types';
 
 /**
@@ -95,7 +95,7 @@ export function useChat() {
     content: string;
     message_type?: 'text' | 'image' | 'file' | 'system';
     reply_to_id?: string;
-    metadata?: Record<string, any>;
+    metadata?: Json;
   }) => {
     try {
       // Stop typing indicator

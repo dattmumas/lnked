@@ -4,10 +4,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { MessageSquare, Users, Hash, User } from 'lucide-react';
-import type {
-  ConversationWithParticipants,
-  ConversationParticipant,
-} from '@/lib/chat/types';
+import type { ConversationWithParticipants } from '@/lib/chat/types';
 
 interface ConversationListProps {
   conversations: ConversationWithParticipants[];
@@ -44,8 +41,7 @@ export function ConversationList({
     if (conversation.type === 'direct') {
       // For direct messages, show the other participant's name
       const otherParticipant = conversation.participants.find(
-        (p: ConversationParticipant & { user: any }) =>
-          p.user_id !== currentUserId,
+        (p) => p.user_id !== currentUserId,
       );
       return (
         otherParticipant?.user.full_name ||
@@ -62,8 +58,7 @@ export function ConversationList({
   ) => {
     if (conversation.type === 'direct') {
       const otherParticipant = conversation.participants.find(
-        (p: ConversationParticipant & { user: any }) =>
-          p.user_id !== currentUserId,
+        (p) => p.user_id !== currentUserId,
       );
       return otherParticipant?.user.avatar_url;
     }
@@ -117,8 +112,7 @@ export function ConversationList({
           const hasOnlineUser =
             conversation.type === 'direct'
               ? conversation.participants.some(
-                  (p: ConversationParticipant & { user: any }) =>
-                    p.user_id !== currentUserId && isUserOnline(p.user_id),
+                  (p) => p.user_id !== currentUserId && isUserOnline(p.user_id),
                 )
               : false;
 

@@ -62,7 +62,7 @@ export function CreateConversationModal({
         );
         setSearchResults(filteredResults);
       }
-    } catch (err) {
+    } catch {
       setError('Failed to search users');
       setSearchResults([]);
     } finally {
@@ -136,10 +136,12 @@ export function CreateConversationModal({
       setParticipantQuery('');
       setSelectedParticipants([]);
       setSearchResults([]);
-    } catch (err) {
-      console.error('Error creating conversation:', err);
+    } catch (error) {
+      console.error('Error creating conversation:', error);
       setError(
-        err instanceof Error ? err.message : 'Failed to create conversation',
+        error instanceof Error
+          ? error.message
+          : 'Failed to create conversation',
       );
     } finally {
       setIsCreating(false);
@@ -188,7 +190,9 @@ export function CreateConversationModal({
                 <button
                   key={value}
                   type="button"
-                  onClick={() => setType(value as any)}
+                  onClick={() =>
+                    setType(value as 'direct' | 'group' | 'channel')
+                  }
                   disabled={isCreating}
                   className={cn(
                     'flex flex-col items-center gap-2 p-3 rounded-lg border transition-colors',

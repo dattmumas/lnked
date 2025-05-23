@@ -54,9 +54,10 @@ export class RealtimeService {
           table: 'messages',
           filter: `conversation_id=eq.${conversationId}`,
         },
-        async (payload: RealtimePostgresChangesPayload<any>) => {
+        async (payload: RealtimePostgresChangesPayload<Record<string, unknown>>) => {
           if (payload.new && callbacks.onMessage) {
             // Fetch full message with sender info
+            const newMessage = payload.new as { id: string };
             const { data: message } = await this.supabase
               .from('messages')
               .select(`
@@ -67,7 +68,7 @@ export class RealtimeService {
                   sender:users(id, full_name, username, avatar_url)
                 )
               `)
-              .eq('id', payload.new.id)
+              .eq('id', newMessage.id)
               .single();
 
             if (message) {
@@ -86,9 +87,10 @@ export class RealtimeService {
           table: 'messages',
           filter: `conversation_id=eq.${conversationId}`,
         },
-        async (payload: RealtimePostgresChangesPayload<any>) => {
+        async (payload: RealtimePostgresChangesPayload<Record<string, unknown>>) => {
           if (payload.new && callbacks.onMessageUpdate) {
             // Fetch updated message with sender info
+            const updatedMessage = payload.new as { id: string };
             const { data: message } = await this.supabase
               .from('messages')
               .select(`
@@ -99,7 +101,7 @@ export class RealtimeService {
                   sender:users(id, full_name, username, avatar_url)
                 )
               `)
-              .eq('id', payload.new.id)
+              .eq('id', updatedMessage.id)
               .single();
 
             if (message) {
@@ -118,9 +120,12 @@ export class RealtimeService {
           table: 'messages',
           filter: `conversation_id=eq.${conversationId}`,
         },
-        (payload: RealtimePostgresChangesPayload<any>) => {
-          if (payload.new?.deleted_at && callbacks.onMessageDelete) {
-            callbacks.onMessageDelete(payload.new.id);
+        (payload: RealtimePostgresChangesPayload<Record<string, unknown>>) => {
+          if (payload.new && callbacks.onMessageDelete) {
+            const deletedMessage = payload.new as { id: string; deleted_at?: string };
+            if (deletedMessage.deleted_at) {
+              callbacks.onMessageDelete(deletedMessage.id);
+            }
           }
         }
       )
@@ -346,7 +351,6 @@ export class RealtimeService {
   ) {
     if (!payload.user_id || !onTyping) return;
 
-    const typingKey = `${conversationId}:typing`;
     const currentTyping = this.getTypingUsers(conversationId);
     
     // Add or update typing user

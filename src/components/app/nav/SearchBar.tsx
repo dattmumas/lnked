@@ -3,7 +3,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { Search, X, TrendingUp, Clock } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 
 interface SearchResult {

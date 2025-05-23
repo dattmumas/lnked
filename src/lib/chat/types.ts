@@ -1,4 +1,5 @@
 // Temporary types for chat functionality
+import type { Json } from '@/lib/database.types';
 
 export type Conversation = {
   id: string;
@@ -36,7 +37,7 @@ export type Message = {
   sender_id: string | null;
   content: string;
   message_type: 'text' | 'image' | 'file' | 'system';
-  metadata: Record<string, any>;
+  metadata: Json;
   reply_to_id: string | null;
   edited_at: string | null;
   deleted_at: string | null;
@@ -109,7 +110,7 @@ export type BroadcastMessage = {
     user_id?: string;
     action?: 'typing_start' | 'typing_stop' | 'message_read';
     timestamp?: number;
-    [key: string]: any;
+    [key: string]: unknown;
   };
 };
 

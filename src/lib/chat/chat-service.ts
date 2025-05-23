@@ -1,5 +1,6 @@
 import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
+import type { Json } from '@/lib/database.types';
 import type { 
   ConversationWithParticipants, 
   MessageWithSender, 
@@ -229,7 +230,7 @@ export class ChatService {
     content: string;
     message_type?: 'text' | 'image' | 'file' | 'system';
     reply_to_id?: string;
-    metadata?: Record<string, any>;
+    metadata?: Json;
   }) {
     try {
       const user = await this.getCurrentUser();

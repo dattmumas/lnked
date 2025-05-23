@@ -5,6 +5,7 @@ import { MessageList } from './message-list';
 import { MessageInput } from './message-input';
 import { TypingIndicator } from './typing-indicator';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import type { Json } from '@/lib/database.types';
 import type {
   MessageWithSender,
   TypingIndicator as TypingType,
@@ -19,7 +20,7 @@ interface ChatWindowProps {
     content: string;
     message_type?: 'text' | 'image' | 'file' | 'system';
     reply_to_id?: string;
-    metadata?: Record<string, any>;
+    metadata?: Json;
   }) => Promise<MessageWithSender | null>;
   onStartTyping: () => void;
   onStopTyping: () => void;

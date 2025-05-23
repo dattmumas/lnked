@@ -1,5 +1,6 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import FollowButton from '../FollowButton';
+import { useRouter } from 'next/navigation';
 
 // Mock Next.js navigation
 jest.mock('next/navigation', () => ({
@@ -161,8 +162,7 @@ describe('FollowButton', () => {
 
   it('redirects to sign-in when not authenticated', () => {
     const mockPush = jest.fn();
-    const { useRouter } = require('next/navigation');
-    useRouter.mockReturnValue({ push: mockPush });
+    (useRouter as jest.Mock).mockReturnValue({ push: mockPush });
 
     render(<FollowButton {...defaultProps} currentUserId={null} />);
 
