@@ -25,26 +25,10 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  // Redirects - Consider removing these for better performance and simplicity
+  // Most apps don't need vanity URLs and they add complexity + performance overhead
   async redirects() {
-    return [
-      {
-        source:
-          '/:slug((?!dashboard|sign-in|sign-up|discover|invite|posts|settings|search|api|collectives|profile|users|chat|_next)(?!$)[a-zA-Z0-9][a-zA-Z0-9-_]*)',
-        destination: '/collectives/:slug',
-        permanent: true,
-      },
-      {
-        source:
-          '/:slug((?!dashboard|sign-in|sign-up|discover|invite|posts|settings|search|api|collectives|profile|users|chat|_next)(?!$)[a-zA-Z0-9][a-zA-Z0-9-_]*)/:path*',
-        destination: '/collectives/:slug/:path*',
-        permanent: true,
-      },
-      {
-        source: '/collectives/:slug/:id',
-        destination: '/posts/:id',
-        permanent: true,
-      },
-    ];
+    return [];
   },
   async headers() {
     return [
