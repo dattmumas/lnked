@@ -4,10 +4,10 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { chatService } from '@/lib/chat/chat-service';
 import { realtimeService } from '@/lib/chat/realtime-service';
 import type { Json } from '@/lib/database.types';
-import type {
-  MessageWithSender,
+import type { 
+  MessageWithSender, 
   TypingIndicator,
-  ChatState,
+  ChatState, 
 } from '@/lib/chat/types';
 
 /**
@@ -100,7 +100,7 @@ export function useChat() {
     try {
       // Stop typing indicator
       if (ENABLE_REALTIME) {
-        realtimeService.broadcastTypingStop(data.conversation_id);
+      realtimeService.broadcastTypingStop(data.conversation_id);
       }
       
       const { data: message, error } = await chatService.sendMessage(data);
@@ -202,8 +202,8 @@ export function useChat() {
 
     // Subscribe to real-time updates (only if enabled)
     if (ENABLE_REALTIME) {
-      realtimeService.subscribeToConversation(conversationId, {
-        onMessage: (message: MessageWithSender) => {
+    realtimeService.subscribeToConversation(conversationId, {
+      onMessage: (message: MessageWithSender) => {
           setState(prev => {
             const existingMessages = prev.messages[conversationId] || [];
             // Check if message already exists (prevent duplicates)
@@ -214,74 +214,74 @@ export function useChat() {
             }
             
             return {
-              ...prev,
-              messages: {
-                ...prev.messages,
-                [conversationId]: [
+          ...prev,
+          messages: {
+            ...prev.messages,
+            [conversationId]: [
                   ...existingMessages,
-                  message,
-                ],
-              },
+              message,
+            ],
+          },
             };
           });
-          
-          // Update conversation last message time
-          setState(prev => ({
-            ...prev,
-            conversations: prev.conversations.map(conv =>
-              conv.id === conversationId
-                ? { ...conv, last_message_at: message.created_at }
-                : conv
+        
+        // Update conversation last message time
+        setState(prev => ({
+          ...prev,
+          conversations: prev.conversations.map(conv =>
+            conv.id === conversationId
+              ? { ...conv, last_message_at: message.created_at }
+              : conv
+          ),
+        }));
+      },
+
+      onMessageUpdate: (message: MessageWithSender) => {
+        setState(prev => ({
+          ...prev,
+          messages: {
+            ...prev.messages,
+            [conversationId]: (prev.messages[conversationId] || []).map(msg =>
+              msg.id === message.id ? message : msg
             ),
-          }));
-        },
+          },
+        }));
+      },
 
-        onMessageUpdate: (message: MessageWithSender) => {
-          setState(prev => ({
-            ...prev,
-            messages: {
-              ...prev.messages,
-              [conversationId]: (prev.messages[conversationId] || []).map(msg =>
-                msg.id === message.id ? message : msg
-              ),
-            },
-          }));
-        },
+      onMessageDelete: (messageId: string) => {
+        setState(prev => ({
+          ...prev,
+          messages: {
+            ...prev.messages,
+            [conversationId]: (prev.messages[conversationId] || []).filter(msg =>
+              msg.id !== messageId
+            ),
+          },
+        }));
+      },
 
-        onMessageDelete: (messageId: string) => {
-          setState(prev => ({
-            ...prev,
-            messages: {
-              ...prev.messages,
-              [conversationId]: (prev.messages[conversationId] || []).filter(msg =>
-                msg.id !== messageId
-              ),
-            },
-          }));
-        },
+      onTyping: (typing: TypingIndicator[]) => {
+        setState(prev => ({
+          ...prev,
+          typing: {
+            ...prev.typing,
+            [conversationId]: typing,
+          },
+        }));
+      },
 
-        onTyping: (typing: TypingIndicator[]) => {
-          setState(prev => ({
-            ...prev,
-            typing: {
-              ...prev.typing,
-              [conversationId]: typing,
-            },
-          }));
-        },
+      onUserJoin: (userId: string) => {
+        setOnlineUsers(prev => new Set([...prev, userId]));
+      },
 
-        onUserJoin: (userId: string) => {
-          setOnlineUsers(prev => new Set([...prev, userId]));
-        },
-
-        onUserLeave: (userId: string) => {
-          setOnlineUsers(prev => {
-            const newSet = new Set(prev);
-            newSet.delete(userId);
-            return newSet;
-          });
-        },
-      });
+      onUserLeave: (userId: string) => {
+        setOnlineUsers(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(userId);
+          return newSet;
+        });
+      },
+    });
     } else {
       console.log('Realtime disabled - using polling/manual refresh only');
     }
@@ -426,7 +426,7 @@ export function useChat() {
     // Cleanup on unmount
     return () => {
       if (ENABLE_REALTIME) {
-        realtimeService.unsubscribeFromAll();
+      realtimeService.unsubscribeFromAll();
       }
       // Clear refresh interval
       if (refreshInterval.current) {

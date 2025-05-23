@@ -73,7 +73,7 @@ export class ChatService {
       // Validate participant IDs are UUIDs, not emails
       const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
       const invalidIds = data.participant_ids.filter((id) => !uuidRegex.test(id));
-
+      
       if (invalidIds.length > 0) {
         throw new Error(
           `Invalid participant IDs. Please provide valid user IDs, not emails: ${invalidIds.join(', ')}`,
@@ -176,9 +176,9 @@ export class ChatService {
       const conversationsWithUnread = await Promise.all(
         (data || []).map(async (conversation) => {
           const { data: unreadCount } = await this.supabase.rpc('get_unread_message_count', {
-            p_user_id: user.id,
-            p_conversation_id: conversation.id,
-          });
+              p_user_id: user.id,
+              p_conversation_id: conversation.id,
+            });
 
           return {
             ...conversation,

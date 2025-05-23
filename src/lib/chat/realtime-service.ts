@@ -171,11 +171,11 @@ export class RealtimeService {
     // Subscribe to the channel (keeping original API since receive doesn't exist)
     channel.subscribe((status) => {
       if (status === 'SUBSCRIBED') {
-        console.log(`Subscribed to conversation ${conversationId}`);
-        
-        // Announce user joining
-        if (callbacks.onUserJoin) {
-          this.broadcastUserJoin(conversationId);
+      console.log(`Subscribed to conversation ${conversationId}`);
+      
+      // Announce user joining
+      if (callbacks.onUserJoin) {
+        this.broadcastUserJoin(conversationId);
         }
       } else if (status === 'CHANNEL_ERROR') {
         console.error(`Channel error for conversation ${conversationId}`);
@@ -209,12 +209,12 @@ export class RealtimeService {
     if (channel) {
       // Announce user leaving before unsubscribing (only if channel is active)
       if (channel.state === 'joined') {
-        this.broadcastUserLeave(conversationId);
+      this.broadcastUserLeave(conversationId);
       }
       
       // Only unsubscribe if channel is not already closed
       if (channel.state !== 'closed') {
-        channel.unsubscribe();
+      channel.unsubscribe();
       }
       
       this.channels.delete(conversationId);

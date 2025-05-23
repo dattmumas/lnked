@@ -1,19 +1,14 @@
 /*
  * LayoutItemNode for Lnked, adapted from Lexical Playground (MIT License)
- * https://github.com/facebook/lexical/blob/main/packages/lexical-playground/src/nodes/LayoutItemNode.tsx
+ * Individual column item within a layout container
  */
-import {
-  ElementNode,
-  NodeKey,
-  SerializedElementNode,
-  Spread,
-} from "lexical";
-import type { JSX } from "react";
+import { ElementNode, NodeKey, SerializedElementNode, Spread } from 'lexical';
+import type { JSX } from 'react';
 
 // TODO: Implement LayoutItemNode logic, import/export, and React component
 export type SerializedLayoutItemNode = Spread<
   {
-    type: "layoutitem";
+    type: 'layoutitem';
     version: 1;
   },
   SerializedElementNode
@@ -21,7 +16,7 @@ export type SerializedLayoutItemNode = Spread<
 
 export class LayoutItemNode extends ElementNode {
   static getType() {
-    return "layoutitem";
+    return 'layoutitem';
   }
   static clone(node: LayoutItemNode) {
     return new LayoutItemNode(node.__key);
@@ -30,15 +25,23 @@ export class LayoutItemNode extends ElementNode {
     return new LayoutItemNode();
   }
   exportJSON(): SerializedLayoutItemNode {
-    return { ...super.exportJSON(), type: "layoutitem", version: 1 };
+    return { ...super.exportJSON(), type: 'layoutitem', version: 1 };
   }
   constructor(key?: NodeKey) {
     super(key);
   }
   createDOM(): HTMLElement {
-    const el = document.createElement("div");
-    el.className = "flex flex-col";
-    el.contentEditable = "false";
+    const el = document.createElement('div');
+    el.className =
+      'layout-item min-h-[100px] p-4 border border-dashed border-transparent hover:border-border hover:bg-muted/30 transition-all duration-200 rounded-md';
+
+    // Add empty state indicator
+    const emptyIndicator = document.createElement('div');
+    emptyIndicator.className =
+      'empty-indicator text-muted-foreground text-sm italic opacity-0 pointer-events-none';
+    emptyIndicator.textContent = 'Click to add content...';
+    el.appendChild(emptyIndicator);
+
     return el;
   }
   updateDOM(): boolean {
@@ -46,6 +49,18 @@ export class LayoutItemNode extends ElementNode {
   }
   decorate(): JSX.Element | null {
     return null;
+  }
+  canBeEmpty(): boolean {
+    return true;
+  }
+  isShadowRoot(): boolean {
+    return false;
+  }
+  canInsertTextBefore(): boolean {
+    return false;
+  }
+  canInsertTextAfter(): boolean {
+    return false;
   }
 }
 
@@ -56,4 +71,3 @@ export function $createLayoutItemNode(): LayoutItemNode {
 export function $isLayoutItemNode(node: unknown): node is LayoutItemNode {
   return node instanceof LayoutItemNode;
 }
-

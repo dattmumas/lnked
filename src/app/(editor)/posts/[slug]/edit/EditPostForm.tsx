@@ -79,8 +79,6 @@ export default function EditPostForm({
   const [isDeleting, setIsDeleting] = useState(false);
   const [autosaveStatus, setAutosaveStatus] = useState<string>('');
   const [seoDrawerOpen, setSeoDrawerOpen] = useState(false);
-  const [subtitle, setSubtitle] = useState(initialData.subtitle || '');
-  const [author, setAuthor] = useState(initialData.author || '');
 
   const form = useForm<EditPostFormValues>({
     resolver: zodResolver(PostFormSchema),
@@ -126,9 +124,6 @@ export default function EditPostForm({
       seo_title: initialData.seo_title || '',
       meta_description: initialData.meta_description || '',
     });
-    // Also sync local state
-    setSubtitle(initialData.subtitle || '');
-    setAuthor(initialData.author || '');
   }, [initialData, reset]);
 
   const performAutosave = useCallback(async () => {
@@ -139,14 +134,14 @@ export default function EditPostForm({
     const dataToSave = getValues();
     const autosavePayload: UpdatePostClientValues = {
       title: dataToSave.title,
-      subtitle: subtitle,
+      subtitle: dataToSave.subtitle,
       content: dataToSave.content,
       is_public: false,
       published_at:
         dataToSave.status === 'scheduled' && dataToSave.published_at
           ? new Date(dataToSave.published_at).toISOString()
           : null,
-      author: author,
+      author: dataToSave.author,
       seo_title: dataToSave.seo_title,
       meta_description: dataToSave.meta_description,
     };
@@ -157,7 +152,7 @@ export default function EditPostForm({
       setAutosaveStatus('Draft saved.');
       reset(dataToSave); // Reset dirty state with current values
     }
-  }, [isDirty, currentStatus, getValues, postId, reset, subtitle, author]);
+  }, [isDirty, currentStatus, getValues, postId, reset]);
 
   useEffect(() => {
     const isDrafting = currentStatus === 'draft';
@@ -173,9 +168,9 @@ export default function EditPostForm({
 
     const payloadForUpdate: UpdatePostClientValues = {
       title: data.title,
-      subtitle: subtitle,
+      subtitle: data.subtitle,
       content: data.content,
-      author: author,
+      author: data.author,
       seo_title: data.seo_title,
       meta_description: data.meta_description,
     };
@@ -320,18 +315,9 @@ export default function EditPostForm({
 
   const canvas = (
     <PostEditor
-      initialContentJSON={getValues('content')}
+      initialContent={getValues('content')}
       placeholder="Continue writing..."
-      title={currentTitle}
-      onTitleChange={(title) =>
-        setValue('title', title, { shouldValidate: true, shouldDirty: true })
-      }
-      titlePlaceholder="Edit Post Title"
-      subtitle={subtitle}
-      onSubtitleChange={setSubtitle}
-      author={author}
-      onAuthorChange={setAuthor}
-      onContentChange={(json) =>
+      onChange={(json) =>
         setValue('content', json, { shouldValidate: true, shouldDirty: true })
       }
     />

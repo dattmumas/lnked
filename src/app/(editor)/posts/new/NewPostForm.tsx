@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useForm, SubmitHandler, FormProvider } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { PostFormSchema, type PostFormValues } from '@/lib/schemas/postSchemas';
@@ -26,6 +26,26 @@ interface NewPostFormProps {
   pageTitle: string;
 }
 
+const EMPTY_LEXICAL_STATE = JSON.stringify({
+  root: {
+    children: [
+      {
+        type: 'paragraph',
+        children: [],
+        direction: null,
+        format: '',
+        indent: 0,
+        version: 1,
+      },
+    ],
+    direction: null,
+    format: '',
+    indent: 0,
+    type: 'root',
+    version: 1,
+  },
+});
+
 export default function NewPostForm({
   collective,
   pageTitle,
@@ -36,28 +56,6 @@ export default function NewPostForm({
   const [autosaveStatus, setAutosaveStatus] = useState<string>('');
   const [createdPostId, setCreatedPostId] = useState<string | null>(null);
   const [seoDrawerOpen, setSeoDrawerOpen] = useState(false);
-  const [subtitle, setSubtitle] = useState('');
-  const [author, setAuthor] = useState('');
-
-  const EMPTY_LEXICAL_STATE = JSON.stringify({
-    root: {
-      children: [
-        {
-          type: 'paragraph',
-          children: [],
-          direction: null,
-          format: '',
-          indent: 0,
-          version: 1,
-        },
-      ],
-      direction: null,
-      format: '',
-      indent: 0,
-      type: 'root',
-      version: 1,
-    },
-  });
 
   const form = useForm<NewPostFormValues>({
     resolver: zodResolver(PostFormSchema),
@@ -85,6 +83,30 @@ export default function NewPostForm({
   const currentTitle = watch('title');
   const currentContent = watch('content');
 
+  // Memoize the onChange callback to prevent PostEditor re-renders
+  const handleEditorChange = useCallback(
+    (json: string) => {
+      setValue('content', json, {
+        shouldValidate: true,
+        shouldDirty: true,
+      });
+    },
+    [setValue],
+  );
+
+  // Memoize the PostEditor component to prevent unnecessary re-renders
+  // Only pass initialContent once at component creation
+  const editorComponent = useMemo(
+    () => (
+      <PostEditor
+        initialContent={EMPTY_LEXICAL_STATE}
+        placeholder="Start writing..."
+        onChange={handleEditorChange}
+      />
+    ),
+    [handleEditorChange],
+  );
+
   const performAutosave = useCallback(async () => {
     if (!isDirty && !createdPostId) return;
     if (currentStatus !== 'draft' && createdPostId) return;
@@ -108,8 +130,6 @@ export default function NewPostForm({
         console.log('Autosave: Updating existing post', { createdPostId });
         result = await updatePost(createdPostId, {
           ...payload,
-          subtitle,
-          author,
         });
       } else {
         if (
@@ -122,8 +142,6 @@ export default function NewPostForm({
         console.log('Autosave: Creating new post');
         result = await createPost({
           ...payload,
-          subtitle,
-          author,
         });
         if (result.data?.postId) {
           console.log('Autosave: Post created with ID', result.data.postId);
@@ -141,16 +159,7 @@ export default function NewPostForm({
       setAutosaveStatus('Save error');
       console.error('Autosave exception:', error);
     }
-  }, [
-    isDirty,
-    currentStatus,
-    getValues,
-    createdPostId,
-    reset,
-    collective,
-    subtitle,
-    author,
-  ]);
+  }, [isDirty, currentStatus, getValues, createdPostId, reset, collective]);
 
   useEffect(() => {
     const isDrafting = currentStatus === 'draft';
@@ -201,15 +210,11 @@ export default function NewPostForm({
         console.log('Publishing: Updating existing post', { createdPostId });
         result = await updatePost(createdPostId, {
           ...payload,
-          subtitle,
-          author,
         });
       } else {
         console.log('Publishing: Creating new post');
         result = await createPost({
           ...payload,
-          subtitle,
-          author,
         });
       }
 
@@ -399,36 +404,11 @@ export default function NewPostForm({
     </div>
   );
 
-  const canvas = (
-    <PostEditor
-      initialContentJSON={getValues('content')}
-      placeholder="Start writing..."
-      title={currentTitle}
-      onTitleChange={(title) =>
-        setValue('title', title, {
-          shouldValidate: true,
-          shouldDirty: true,
-        })
-      }
-      titlePlaceholder="Title"
-      subtitle={subtitle}
-      onSubtitleChange={setSubtitle}
-      author={author}
-      onAuthorChange={setAuthor}
-      onContentChange={(json) =>
-        setValue('content', json, {
-          shouldValidate: true,
-          shouldDirty: true,
-        })
-      }
-    />
-  );
-
   return (
     <FormProvider {...form}>
       <SEOSettingsDrawer open={seoDrawerOpen} onOpenChange={setSeoDrawerOpen} />
       <EditorLayout settingsSidebar={settingsSidebar} pageTitle={pageTitle}>
-        {canvas}
+        {editorComponent}
       </EditorLayout>
     </FormProvider>
   );

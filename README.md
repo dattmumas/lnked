@@ -1,44 +1,90 @@
-# Lnked
+# Lnked - Professional Publishing Platform
 
-A modern, accessible, and extensible publishing platform for newsletters, collectives, and collaborative content.
+A modern platform for creators to build newsletters, publish articles, and grow communities. Built with Next.js, TypeScript, and Supabase.
 
 ## ✨ Features
 
-- **Personal Newsletters**: Create and manage your own newsletter, publish posts, and grow your audience.
-- **Collectives**: Join or create collectives for collaborative publishing and shared audiences.
-- **Rich Post Editor**: Powerful, extensible editor built with [Lexical](https://lexical.dev/) supporting:
-  - Rich text, lists, code, tables, embeds (images, GIFs, polls, tweets, YouTube, Excalidraw, etc.)
-  - Slash/typeahead menu for fast block/command insertion
-  - Drag-and-drop image uploads with automatic insertion
-  - Floating formatting toolbar for quick text styling
-  - Markdown shortcuts, autosave, and more
-- **Atomic Design System**: Custom UI components (no third-party UI kits) with full accessibility and dark mode support.
-- **Supabase Integration**: Auth, database, and real-time features via [Supabase](https://supabase.com/).
-- **SSR & SEO**: Built on Next.js App Router for fast, SEO-friendly, server-rendered pages.
-- **Accessibility**: All dialogs, forms, and navigation are accessible and screen-reader friendly (Radix UI, ARIA, etc.)
-- **Profile Avatars**: Upload a profile image (max 2MB) stored securely in Supabase Storage.
+### 📝 Advanced Editor
+
+- **Rich Text Editing**: Powered by [Lexical](https://lexical.dev/) with modern editing capabilities
+- **Drag & Drop Blocks**: Reorder content blocks with visual drag handles (inspired by Notion)
+- **Floating Add Buttons**: Click + buttons between blocks to add new content
+- **Multi-Column Layouts**: Create sophisticated layouts with visual column guides
+- **Live Preview**: Real-time editing with immediate visual feedback
+
+### 🎨 Editor Features (Lexical Playground Inspired)
+
+- **Draggable Block Handles**: Hover over any block to see drag handles for reordering
+- **Smart Add Buttons**: Floating + buttons appear between blocks with content type selection
+- **Layout Modal**: Toast-style modal for selecting column layouts (2, 3, 4 columns, sidebar+main)
+- **Visual Column Guides**: Dashed borders show layout structure with hover effects
+- **Responsive Layouts**: Columns automatically adapt to mobile and tablet screens
+
+### 🚀 Platform Features
+
+- Newsletter publishing and management
+- Community building with collectives
+- Real-time chat system
+- User profiles and following
+- Content discovery and search
+- Subscription management
+- Analytics and insights
 
 ## 🛠️ Tech Stack
 
-- [Next.js](https://nextjs.org/) (App Router, SSR, API routes)
-- [TypeScript](https://www.typescriptlang.org/)
-- [Tailwind CSS](https://tailwindcss.com/) (utility-first, design tokens, dark mode)
-- [Lexical](https://lexical.dev/) (rich text editor, custom nodes/plugins)
-- [Supabase](https://supabase.com/) (auth, database, storage, real-time)
-- [Radix UI](https://www.radix-ui.com/docs/primitives/components/dialog) (accessible primitives: Dialog, Menu, etc.)
-- [Lucide Icons](https://lucide.dev/)
-- [Zod](https://zod.dev/) (schema validation)
-- [React Hook Form](https://react-hook-form.com/) (forms)
-- [Jest](https://jestjs.io/) + [React Testing Library](https://testing-library.com/) (testing)
+- **Frontend**: Next.js 15, React 18, TypeScript
+- **Styling**: Tailwind CSS, Radix UI components
+- **Editor**: Lexical with custom plugins
+- **Backend**: Supabase (PostgreSQL, Auth, Storage)
+- **Real-time**: Supabase Realtime
+- **Deployment**: Vercel
 
-## 🏗️ Architecture & Conventions
+## 🎯 Editor Components
 
-- **Atomic Design**: Components organized as atoms, molecules, organisms in `src/components/ui` and `src/components/app`.
-- **Custom UI Only**: No third-party UI kits; all UI is custom and accessible.
-- **Server-first**: Data fetching and auth via server components and API routes.
-- **Accessibility**: All dialogs require a `DialogTitle`, all forms use labels, keyboard navigation is supported.
-- **Editor Extensibility**: Add new blocks/nodes by creating a custom Lexical node and registering it in the editor.
-- **Dark Mode**: Fully supported via Tailwind and design tokens.
+### DraggableBlockPlugin
+
+Provides drag handles for reordering content blocks:
+
+- Visual drag indicators on hover
+- Smooth drag & drop experience
+- Target line showing drop location
+- Keyboard accessible
+
+### FloatingAddButtonPlugin
+
+Smart content insertion system:
+
+- Context-aware + buttons between blocks
+- Dropdown menu with content types
+- Supports text, images, polls, drawings, videos, tables, layouts
+- Non-intrusive positioning
+
+### LayoutPlugin
+
+Multi-column layout system:
+
+- Modal selection for layout types
+- Visual preview of column structures
+- Responsive grid system
+- Dashed visual guides
+- Support for 2, 3, 4 columns and sidebar layouts
+
+## 🎨 Visual Design
+
+The editor features a clean, modern interface inspired by the best publishing tools:
+
+- **Substack-style toolbar** with essential formatting options
+- **Medium-inspired** floating elements and interactions
+- **Notion-like** block manipulation and layouts
+- **Professional typography** with careful spacing and hierarchy
+
+## 📱 Responsive Design
+
+All editor features work seamlessly across devices:
+
+- **Mobile**: Single column layouts, touch-friendly interactions
+- **Tablet**: Optimized for touch with appropriate spacing
+- **Desktop**: Full feature set with hover states and keyboard shortcuts
 
 ## 🚀 Getting Started
 

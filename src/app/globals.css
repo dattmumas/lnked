@@ -578,6 +578,202 @@ body {
 
   /* Focus visible improvements */
   .focus-visible-ring {
-    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/60 focus-visible:ring-offset-2;
+    @apply ring-2 ring-ring ring-offset-2 ring-offset-background;
   }
+}
+
+/* Lexical Editor Layout Features - Exact Playground Replica */
+
+/* Layout container with visual guides */
+.layout-container {
+  position: relative;
+  margin: 1rem 0;
+  padding: 1rem;
+  border: 2px dashed transparent;
+  border-radius: 6px;
+  transition:
+    border-color 0.2s ease,
+    background-color 0.2s ease;
+  display: grid;
+  gap: 1rem;
+}
+
+.layout-container:hover,
+.layout-container:focus-within {
+  border-color: hsl(var(--border));
+  background-color: hsl(var(--muted) / 0.3);
+}
+
+/* Layout items with guides */
+.layout-item {
+  position: relative;
+  min-height: 100px;
+  padding: 1rem;
+  border: 1px dashed transparent;
+  transition:
+    border-color 0.2s ease,
+    background-color 0.2s ease;
+  border-radius: 4px;
+}
+
+.layout-item:hover,
+.layout-item:focus-within {
+  border-color: hsl(var(--border));
+  background-color: hsl(var(--muted) / 0.3);
+}
+
+.layout-item:empty::before {
+  content: 'Click to add content...';
+  color: hsl(var(--muted-foreground));
+  font-style: italic;
+  pointer-events: none;
+  opacity: 0.7;
+}
+
+/* Draggable block styling - Exact playground replica */
+.draggable-block-menu {
+  position: fixed;
+  cursor: grab;
+  user-select: none;
+  width: 20px;
+  height: 20px;
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  color: #6c757d;
+  opacity: 0;
+}
+
+.draggable-block-menu.visible {
+  opacity: 1;
+}
+
+.draggable-block-menu:hover {
+  background: #e9ecef;
+  border-color: #d0d7de;
+  color: #495057;
+}
+
+.draggable-block-menu:active {
+  cursor: grabbing;
+  background: #dee2e6;
+}
+
+/* Note: Drag handle visibility is controlled by JavaScript hover detection */
+
+/* Target line for drag operations */
+.draggable-block-target-line {
+  pointer-events: none;
+  background: #0969da;
+  height: 2px;
+  position: fixed;
+  left: 0;
+  top: 0;
+  opacity: 0;
+  will-change: transform;
+  border-radius: 1px;
+  z-index: 1000;
+  transition: opacity 0.2s ease;
+}
+
+/* Floating add button positioning */
+.floating-add-button {
+  pointer-events: auto;
+  z-index: 1000;
+  position: fixed;
+}
+
+/* Layout column indicators */
+.layout-container[data-layout-columns='2'] {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.layout-container[data-layout-columns='3'] {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.layout-container[data-layout-columns='4'] {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+/* Responsive layout adjustments */
+@media (max-width: 768px) {
+  .layout-container[data-layout-columns='3'],
+  .layout-container[data-layout-columns='4'] {
+    grid-template-columns: 1fr;
+  }
+
+  .layout-container[data-layout-columns='2'] {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 1024px) {
+  .layout-container[data-layout-columns='4'] {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* Layout column preview in modal */
+.layout-preview {
+  display: grid;
+  gap: 2px;
+  width: 100%;
+  height: 24px;
+  margin-top: 8px;
+}
+
+.layout-preview > div {
+  background-color: hsl(var(--muted));
+  border: 1px solid hsl(var(--border));
+  border-radius: 2px;
+}
+
+/* Empty state indicator for layout items */
+.layout-item .empty-indicator {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  font-size: 14px;
+  color: hsl(var(--muted-foreground));
+  font-style: italic;
+  pointer-events: none;
+}
+
+.layout-item:empty .empty-indicator {
+  opacity: 1;
+}
+
+/* Focus states for accessibility */
+.draggable-block-menu:focus-visible {
+  outline: 2px solid #0969da;
+  outline-offset: 2px;
+}
+
+.floating-add-button button:focus-visible {
+  outline: 2px solid #0969da;
+  outline-offset: 2px;
+}
+
+/* Animation for layout insertion */
+@keyframes layoutInsert {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.layout-container.layout-inserting {
+  animation: layoutInsert 0.3s ease-out;
 }

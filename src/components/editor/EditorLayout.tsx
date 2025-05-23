@@ -15,27 +15,18 @@ export default function EditorLayout({
   children,
 }: EditorLayoutProps) {
   return (
-    <div className="min-h-screen bg-white">
-      {/* Clean header bar */}
-      {pageTitle && (
-        <div className="border-b border-gray-200 bg-white sticky top-16 z-40">
-          <div className="max-w-4xl mx-auto px-6 py-3">
-            <h1 className="text-sm font-medium text-gray-600">{pageTitle}</h1>
-          </div>
-        </div>
-      )}
-
-      <div className="flex min-h-screen">
+    <div className="container mx-auto px-4 md:px-6">
+      <div className="flex gap-6">
         {/* Main writing area - Full width Substack style */}
-        <main className="flex-1 min-w-0">
+        <div className="flex-1">
           {/* Clean, focused writing canvas */}
           {children}
-        </main>
+        </div>
 
         {/* Fixed settings sidebar */}
         {settingsSidebar && (
-          <aside className="w-80 shrink-0 border-l border-gray-200 bg-gray-50">
-            <div className="sticky top-24 p-6 max-h-screen overflow-y-auto">
+          <aside className="w-80 flex-shrink-0">
+            <div className="sticky top-24 bg-gray-50 border border-gray-200 rounded-lg p-6 max-h-[calc(100vh-6rem)] overflow-y-auto">
               {settingsSidebar}
             </div>
           </aside>
