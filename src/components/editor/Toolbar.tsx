@@ -27,6 +27,12 @@ import { $setBlocksType } from '@lexical/selection';
 import { $createParagraphNode, type TextFormatType } from 'lexical';
 import { TOGGLE_LINK_COMMAND } from '@lexical/link';
 import { $isLinkNode } from '@lexical/link';
+import {
+  INSERT_IMAGE_COMMAND,
+  INSERT_YOUTUBE_COMMAND,
+  INSERT_POLL_COMMAND,
+  INSERT_STICKY_COMMAND,
+} from './PostEditor';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -47,6 +53,9 @@ function Toolbar({ className }: ToolbarProps): React.ReactElement {
   const [blockType, setBlockType] = useState<string>('paragraph');
   const [isBold, setIsBold] = useState(false);
   const [isItalic, setIsItalic] = useState(false);
+  const [isUnderline, setIsUnderline] = useState(false);
+  const [isStrikethrough, setIsStrikethrough] = useState(false);
+  const [isCode, setIsCode] = useState(false);
   const [isLink, setIsLink] = useState(false);
 
   // Update toolbar state
@@ -65,6 +74,9 @@ function Toolbar({ className }: ToolbarProps): React.ReactElement {
       // Inline styles
       setIsBold(selection.hasFormat('bold'));
       setIsItalic(selection.hasFormat('italic'));
+      setIsUnderline(selection.hasFormat('underline'));
+      setIsStrikethrough(selection.hasFormat('strikethrough'));
+      setIsCode(selection.hasFormat('code'));
 
       // Link detection
       let node = selection.anchor.getNode();
@@ -233,11 +245,29 @@ function Toolbar({ className }: ToolbarProps): React.ReactElement {
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-48">
-          <DropdownMenuItem>📷 Image</DropdownMenuItem>
-          <DropdownMenuItem>🎬 Video</DropdownMenuItem>
-          <DropdownMenuItem>📊 Poll</DropdownMenuItem>
-          <DropdownMenuItem>📝 Quote</DropdownMenuItem>
-          <DropdownMenuItem>💭 Note</DropdownMenuItem>
+          <DropdownMenuItem
+            onClick={() => editor.dispatchCommand(INSERT_IMAGE_COMMAND, undefined)}
+          >
+            📷 Image
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onClick={() => editor.dispatchCommand(INSERT_YOUTUBE_COMMAND, undefined)}
+          >
+            🎬 Video
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onClick={() => editor.dispatchCommand(INSERT_POLL_COMMAND, undefined)}
+          >
+            📊 Poll
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => formatBlock('quote')}>
+            📝 Quote
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onClick={() => editor.dispatchCommand(INSERT_STICKY_COMMAND, undefined)}
+          >
+            💭 Note
+          </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
 
@@ -249,9 +279,24 @@ function Toolbar({ className }: ToolbarProps): React.ReactElement {
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-40">
-          <DropdownMenuItem>Underline</DropdownMenuItem>
-          <DropdownMenuItem>Strikethrough</DropdownMenuItem>
-          <DropdownMenuItem>Code</DropdownMenuItem>
+          <DropdownMenuItem
+            onClick={() => toggleFormat('underline')}
+            className={isUnderline ? 'bg-muted' : ''}
+          >
+            Underline
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onClick={() => toggleFormat('strikethrough')}
+            className={isStrikethrough ? 'bg-muted' : ''}
+          >
+            Strikethrough
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onClick={() => toggleFormat('code')}
+            className={isCode ? 'bg-muted' : ''}
+          >
+            Code
+          </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
     </div>

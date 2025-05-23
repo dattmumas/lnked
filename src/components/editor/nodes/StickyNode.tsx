@@ -62,11 +62,11 @@ export class StickyNode extends DecoratorNode<JSX.Element> {
   }
   createDOM(): HTMLElement {
     const el = document.createElement('div');
-    el.textContent = this.__text;
     el.style.background = this.__color;
     el.style.padding = '1em';
     el.style.borderRadius = '0.5em';
     el.style.boxShadow = '0 2px 8px rgba(0,0,0,0.08)';
+    el.contentEditable = 'false';
     return el;
   }
   updateDOM(): boolean {

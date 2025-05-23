@@ -98,22 +98,7 @@ export class ImageNode extends DecoratorNode<JSX.Element> {
   createDOM(): HTMLElement {
     const figure = document.createElement("figure");
     figure.className = "image-node-container";
-
-    const img = document.createElement("img");
-    img.src = this.__src;
-    img.alt = this.__alt;
-    img.className = "image-node";
-    img.style.maxWidth = this.__maxWidth ? `${this.__maxWidth}px` : "100%";
-
-    figure.appendChild(img);
-
-    if (this.__showCaption) {
-      const figcaption = document.createElement("figcaption");
-      figcaption.textContent = this.__caption || this.__alt;
-      figcaption.className = "image-node-caption";
-      figure.appendChild(figcaption);
-    }
-
+    figure.contentEditable = "false";
     return figure;
   }
 

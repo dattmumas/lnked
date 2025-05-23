@@ -48,6 +48,7 @@ export class LayoutContainerNode extends ElementNode {
     container.className = "grid gap-4";
     container.style.display = "grid";
     container.style.gridTemplateColumns = `repeat(${this.__columns}, 1fr)`;
+    container.contentEditable = "false";
     return container;
   }
   updateDOM(): boolean {
