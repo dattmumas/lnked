@@ -6,11 +6,11 @@ import { usePathname } from 'next/navigation';
 import { ChevronDown, ChevronRight, Plus } from 'lucide-react';
 
 export interface FileExplorerProps {
-  personalPosts: { id: string; slug: string; title: string; status: string }[];
+  personalPosts: { id: string; title: string; status: string }[];
   collectives: {
     id: string;
     name: string;
-    posts: { id: string; slug: string; title: string; status: string }[];
+    posts: { id: string; title: string; status: string }[];
   }[];
 }
 
@@ -47,7 +47,7 @@ export function FileExplorer({
           {personalPosts.map((post) => (
             <li key={post.id}>
               <Link
-                href={`/posts/${post.slug}/edit`}
+                href={`/posts/${post.id}/edit`}
                 className={`block px-2 py-1 rounded-md transition-colors text-sm ${
                   isActive(post.id)
                     ? 'bg-sidebar-accent/10 text-sidebar-accent font-medium'
@@ -112,7 +112,7 @@ export function FileExplorer({
                     {col.posts.map((post) => (
                       <li key={post.id}>
                         <Link
-                          href={`/posts/${post.slug}/edit`}
+                          href={`/posts/${post.id}/edit`}
                           className={`block px-2 py-1 rounded-md transition-colors text-sm ${
                             isActive(post.id)
                               ? 'bg-sidebar-accent/10 text-sidebar-accent font-medium'

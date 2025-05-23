@@ -14,43 +14,60 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet';
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+import {
   Menu,
   LayoutDashboard,
   FileText,
   Users2,
-  UserSquare,
-  Newspaper,
-  LogOut,
-  Settings,
   User as UserIcon,
+  Search,
+  PenSquare,
+  Settings,
+  LogOut,
 } from 'lucide-react';
 import ModeToggle from '@/components/app/nav/ModeToggle';
 
-const dashboardNavItems = [
+const mainNavItems = [
+  {
+    href: '/discover',
+    label: 'Discover',
+    icon: Search,
+    description: 'Explore content',
+  },
   {
     href: '/dashboard',
-    label: 'Overview',
-    icon: <LayoutDashboard className="size-4" />,
+    label: 'Dashboard',
+    icon: LayoutDashboard,
+    description: 'Your dashboard',
   },
+  {
+    href: '/posts/new',
+    label: 'Create',
+    icon: PenSquare,
+    description: 'Create new post',
+  },
+];
+
+const profileNavItems = [
   {
     href: '/dashboard/posts',
     label: 'My Posts',
-    icon: <FileText className="size-4" />,
+    icon: FileText,
   },
   {
     href: '/dashboard/collectives',
     label: 'My Collectives',
-    icon: <Users2 className="size-4" />,
-  },
-  {
-    href: '/dashboard/profile/edit',
-    label: 'Edit Profile',
-    icon: <UserSquare className="size-4" />,
+    icon: Users2,
   },
   {
     href: '/dashboard/settings',
-    label: 'Account Settings',
-    icon: <Settings className="size-4" />,
+    label: 'Settings',
+    icon: Settings,
   },
 ];
 
@@ -129,312 +146,278 @@ export default function Navbar({ initialUser, initialUsername }: NavbarProps) {
 
   if (isAuthPage) {
     return (
-      <nav className="flex items-center justify-end gap-2 md:gap-4">
+      <nav className="flex items-center gap-2">
         <Button variant="ghost" size="sm" asChild>
           <Link href="/">Back</Link>
         </Button>
+        <ModeToggle />
       </nav>
     );
   }
 
-  const isDashboardPath = pathname.startsWith('/dashboard');
+  const isActiveRoute = (href: string) => {
+    if (href === '/dashboard') {
+      return pathname === '/dashboard';
+    }
+    return pathname.startsWith(href);
+  };
 
   return (
-    <nav
-      className="flex items-center justify-end gap-2 md:gap-4"
-      role="navigation"
-      aria-label="Main navigation"
-    >
-      <div className="hidden md:flex items-center gap-2">
-        {isLoading ? (
-          <div className="h-8 w-20 bg-muted rounded animate-pulse"></div>
-        ) : user ? (
-          <>
-            <Button
-              variant={pathname === '/discover' ? 'secondary' : 'ghost'}
-              size="sm"
-              asChild
-            >
-              <Link
-                href="/discover"
-                aria-current={pathname === '/discover' ? 'page' : undefined}
-              >
-                Discover
-              </Link>
-            </Button>
-            <Button
-              variant={isDashboardPath ? 'secondary' : 'ghost'}
-              size="sm"
-              asChild
-            >
-              <Link
-                href="/dashboard"
-                aria-current={isDashboardPath ? 'page' : undefined}
-              >
-                Dashboard
-              </Link>
-            </Button>
-            <Button
-              variant={
-                pathname === `/profile/${username ?? user?.id}`
-                  ? 'secondary'
-                  : 'ghost'
-              }
-              size="sm"
-              asChild
-            >
-              <Link
-                href={`/profile/${username ?? user?.id}`}
-                aria-current={
-                  pathname === `/profile/${username ?? user?.id}`
-                    ? 'page'
-                    : undefined
-                }
-              >
-                <UserIcon className="size-4 mr-2" /> My Profile
-              </Link>
-            </Button>
-            <Button
-              variant={
-                pathname === '/dashboard/settings' ? 'secondary' : 'ghost'
-              }
-              size="sm"
-              asChild
-            >
-              <Link
-                href="/dashboard/settings"
-                aria-current={
-                  pathname === '/dashboard/settings' ? 'page' : undefined
-                }
-              >
-                Account Settings
-              </Link>
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleSignOut}
-              disabled={isLoading}
-            >
-              Sign Out
-            </Button>
-          </>
-        ) : (
-          <>
-            <Button variant="ghost" size="sm" asChild>
-              <Link href="/sign-in">Sign In</Link>
-            </Button>
-            <Button variant="default" size="sm" asChild>
-              <Link href="/sign-up">Sign Up</Link>
-            </Button>
-          </>
-        )}
-        <ModeToggle />
-      </div>
+    <TooltipProvider>
+      <nav
+        className="flex items-center gap-1 md:gap-2"
+        role="navigation"
+        aria-label="Main navigation"
+      >
+        {/* Desktop Navigation */}
+        <div className="hidden md:flex items-center gap-1">
+          {isLoading ? (
+            <div className="h-10 w-32 bg-muted rounded animate-pulse"></div>
+          ) : user ? (
+            <>
+              {/* Main navigation icons */}
+              {mainNavItems.map((item) => {
+                const Icon = item.icon;
+                const isActive = isActiveRoute(item.href);
+                return (
+                  <Tooltip key={item.href} delayDuration={200}>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant={isActive ? 'secondary' : 'ghost'}
+                        size="icon"
+                        asChild
+                        className="h-10 w-10"
+                      >
+                        <Link
+                          href={item.href}
+                          aria-current={isActive ? 'page' : undefined}
+                          aria-label={item.label}
+                        >
+                          <Icon className="size-4" />
+                        </Link>
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom" className="text-sm">
+                      <p>{item.description}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                );
+              })}
 
-      {/* Mobile menu */}
-      <div className="md:hidden flex items-center gap-2">
-        <Sheet>
-          <SheetTrigger asChild>
-            <Button variant="ghost" size="icon" aria-label="Open menu">
-              <Menu className="size-4" />
-            </Button>
-          </SheetTrigger>
-          <SheetContent side="left" className="p-4 w-[250px] sm:w-[300px]">
-            <SheetTitle className="mb-4">
-              <Link href="/" className="text-xl font-bold text-accent">
-                Lnked
-              </Link>
-            </SheetTitle>
+              <div className="mx-1 h-6 w-px bg-border" />
 
-            {isLoading ? (
-              <div className="h-8 w-full bg-muted rounded animate-pulse mt-4" />
-            ) : user ? (
-              <div className="flex flex-col space-y-1">
-                {isDashboardPath ? (
-                  <>
-                    {dashboardNavItems.map((item) => (
+              {/* Profile button */}
+              <Tooltip delayDuration={200}>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant={
+                      pathname === `/profile/${username ?? user?.id}`
+                        ? 'secondary'
+                        : 'ghost'
+                    }
+                    size="icon"
+                    asChild
+                    className="h-10 w-10"
+                  >
+                    <Link
+                      href={`/profile/${username ?? user?.id}`}
+                      aria-current={
+                        pathname === `/profile/${username ?? user?.id}`
+                          ? 'page'
+                          : undefined
+                      }
+                      aria-label="My Profile"
+                    >
+                      <UserIcon className="size-4" />
+                    </Link>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="text-sm">
+                  <p>My Profile</p>
+                </TooltipContent>
+              </Tooltip>
+
+              {/* Settings button */}
+              <Tooltip delayDuration={200}>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant={
+                      pathname === '/dashboard/settings' ? 'secondary' : 'ghost'
+                    }
+                    size="icon"
+                    asChild
+                    className="h-10 w-10"
+                  >
+                    <Link
+                      href="/dashboard/settings"
+                      aria-current={
+                        pathname === '/dashboard/settings' ? 'page' : undefined
+                      }
+                      aria-label="Settings"
+                    >
+                      <Settings className="size-4" />
+                    </Link>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="text-sm">
+                  <p>Account Settings</p>
+                </TooltipContent>
+              </Tooltip>
+
+              <div className="mx-1 h-6 w-px bg-border" />
+
+              {/* Sign out button */}
+              <Tooltip delayDuration={200}>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={handleSignOut}
+                    disabled={isLoading}
+                    className="h-10 w-10"
+                    aria-label="Sign Out"
+                  >
+                    <LogOut className="size-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="text-sm">
+                  <p>Sign Out</p>
+                </TooltipContent>
+              </Tooltip>
+            </>
+          ) : (
+            <>
+              <Button variant="ghost" size="sm" asChild>
+                <Link href="/sign-in">Sign In</Link>
+              </Button>
+              <Button variant="default" size="sm" asChild>
+                <Link href="/sign-up">Sign Up</Link>
+              </Button>
+            </>
+          )}
+          <ModeToggle />
+        </div>
+
+        {/* Mobile Navigation */}
+        <div className="md:hidden flex items-center gap-2">
+          <ModeToggle />
+          <Sheet>
+            <SheetTrigger asChild>
+              <Button variant="ghost" size="icon" aria-label="Open menu">
+                <Menu className="size-4" />
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="right" className="p-4 w-[280px] sm:w-[320px]">
+              <SheetTitle className="mb-6">
+                <Link href="/" className="text-xl font-bold text-accent">
+                  Lnked
+                </Link>
+              </SheetTitle>
+
+              {isLoading ? (
+                <div className="h-8 w-full bg-muted rounded animate-pulse mt-4" />
+              ) : user ? (
+                <div className="flex flex-col space-y-1">
+                  {/* Main navigation */}
+                  {mainNavItems.map((item) => {
+                    const Icon = item.icon;
+                    const isActive = isActiveRoute(item.href);
+                    return (
                       <Button
                         key={item.href}
-                        variant={pathname === item.href ? 'secondary' : 'ghost'}
-                        className="justify-start h-9 px-2"
+                        variant={isActive ? 'secondary' : 'ghost'}
+                        className="justify-start h-11 px-3"
                         asChild
                       >
                         <Link
                           href={item.href}
-                          aria-current={
-                            pathname === item.href ? 'page' : undefined
-                          }
+                          aria-current={isActive ? 'page' : undefined}
                         >
-                          <span className="mr-2">{item.icon}</span> {item.label}
+                          <Icon className="size-4 mr-3" />
+                          {item.label}
                         </Link>
                       </Button>
-                    ))}
-                    <Button
-                      variant={
+                    );
+                  })}
+
+                  <div className="my-3 h-px bg-border" />
+
+                  {/* Profile section */}
+                  <Button
+                    variant={
+                      pathname === `/profile/${username ?? user?.id}`
+                        ? 'secondary'
+                        : 'ghost'
+                    }
+                    className="justify-start h-11 px-3"
+                    asChild
+                  >
+                    <Link
+                      href={`/profile/${username ?? user?.id}`}
+                      aria-current={
                         pathname === `/profile/${username ?? user?.id}`
-                          ? 'secondary'
-                          : 'ghost'
+                          ? 'page'
+                          : undefined
                       }
-                      className="justify-start h-9 px-2"
-                      asChild
                     >
-                      <Link
-                        href={`/profile/${username ?? user?.id}`}
-                        aria-current={
-                          pathname === `/profile/${username ?? user?.id}`
-                            ? 'page'
-                            : undefined
-                        }
+                      <UserIcon className="size-4 mr-3" />
+                      My Profile
+                    </Link>
+                  </Button>
+
+                  {/* Additional profile items */}
+                  {profileNavItems.map((item) => {
+                    const Icon = item.icon;
+                    const isActive = isActiveRoute(item.href);
+                    return (
+                      <Button
+                        key={item.href}
+                        variant={isActive ? 'secondary' : 'ghost'}
+                        className="justify-start h-11 px-3"
+                        asChild
                       >
-                        <UserIcon className="size-4 mr-2" /> My Profile
-                      </Link>
-                    </Button>
-                    <Button
-                      variant={
-                        pathname === '/dashboard/settings'
-                          ? 'secondary'
-                          : 'ghost'
-                      }
-                      className="justify-start h-9 px-2"
-                      asChild
-                    >
-                      <Link
-                        href="/dashboard/settings"
-                        aria-current={
-                          pathname === '/dashboard/settings'
-                            ? 'page'
-                            : undefined
-                        }
-                      >
-                        <Settings className="size-4 mr-2" /> Account Settings
-                      </Link>
-                    </Button>
-                    <div className="my-2 h-px bg-border" />
-                    <Button
-                      variant={pathname === '/discover' ? 'secondary' : 'ghost'}
-                      className="justify-start h-9 px-2"
-                      asChild
-                    >
-                      <Link
-                        href="/discover"
-                        aria-current={
-                          pathname === '/discover' ? 'page' : undefined
-                        }
-                      >
-                        <Newspaper className="size-4 mr-2" /> Discover
-                      </Link>
-                    </Button>
-                    <Button
-                      variant="outline"
-                      className="justify-start h-9 px-2 mt-4"
-                      onClick={handleSignOut}
-                    >
-                      <LogOut className="size-4 mr-2" /> Sign Out
-                    </Button>
-                  </>
-                ) : (
-                  <>
-                    <Button
-                      variant={pathname === '/discover' ? 'secondary' : 'ghost'}
-                      className="justify-start h-9 px-2"
-                      asChild
-                    >
-                      <Link
-                        href="/discover"
-                        aria-current={
-                          pathname === '/discover' ? 'page' : undefined
-                        }
-                      >
-                        <Newspaper className="size-4 mr-2" /> Discover
-                      </Link>
-                    </Button>
-                    <Button
-                      variant={isDashboardPath ? 'secondary' : 'ghost'}
-                      className="justify-start h-9 px-2"
-                      asChild
-                    >
-                      <Link
-                        href="/dashboard"
-                        aria-current={isDashboardPath ? 'page' : undefined}
-                      >
-                        <LayoutDashboard className="size-4 mr-2" /> Dashboard
-                      </Link>
-                    </Button>
-                    <Button
-                      variant={
-                        pathname === `/profile/${username ?? user?.id}`
-                          ? 'secondary'
-                          : 'ghost'
-                      }
-                      className="justify-start h-9 px-2"
-                      asChild
-                    >
-                      <Link
-                        href={`/profile/${username ?? user?.id}`}
-                        aria-current={
-                          pathname === `/profile/${username ?? user?.id}`
-                            ? 'page'
-                            : undefined
-                        }
-                      >
-                        <UserIcon className="size-4 mr-2" /> My Profile
-                      </Link>
-                    </Button>
-                    <Button
-                      variant={
-                        pathname === '/dashboard/settings'
-                          ? 'secondary'
-                          : 'ghost'
-                      }
-                      className="justify-start h-9 px-2"
-                      asChild
-                    >
-                      <Link
-                        href="/dashboard/settings"
-                        aria-current={
-                          pathname === '/dashboard/settings'
-                            ? 'page'
-                            : undefined
-                        }
-                      >
-                        <Settings className="size-4 mr-2" /> Account Settings
-                      </Link>
-                    </Button>
-                    <div className="my-2 h-px bg-border" />
-                    <Button
-                      variant="outline"
-                      className="justify-start h-9 px-2 mt-4"
-                      onClick={handleSignOut}
-                    >
-                      <LogOut className="size-4 mr-2" /> Sign Out
-                    </Button>
-                  </>
-                )}
-                <div className="mt-4 flex justify-center">
-                  <ModeToggle />
+                        <Link
+                          href={item.href}
+                          aria-current={isActive ? 'page' : undefined}
+                        >
+                          <Icon className="size-4 mr-3" />
+                          {item.label}
+                        </Link>
+                      </Button>
+                    );
+                  })}
+
+                  <div className="my-4 h-px bg-border" />
+
+                  {/* Sign out */}
+                  <Button
+                    variant="outline"
+                    className="justify-start h-11 px-3"
+                    onClick={handleSignOut}
+                    disabled={isLoading}
+                  >
+                    <LogOut className="size-4 mr-3" />
+                    Sign Out
+                  </Button>
                 </div>
-              </div>
-            ) : (
-              <div className="flex flex-col space-y-2">
-                <Button
-                  variant="ghost"
-                  className="justify-start h-9 px-2"
-                  asChild
-                >
-                  <Link href="/sign-in">Sign In</Link>
-                </Button>
-                <Button variant="default" className="w-full" asChild>
-                  <Link href="/sign-up">Sign Up</Link>
-                </Button>
-                <div className="mt-4 flex justify-center">
-                  <ModeToggle />
+              ) : (
+                <div className="flex flex-col space-y-3">
+                  <Button
+                    variant="ghost"
+                    className="justify-start h-11"
+                    asChild
+                  >
+                    <Link href="/sign-in">Sign In</Link>
+                  </Button>
+                  <Button variant="default" className="w-full h-11" asChild>
+                    <Link href="/sign-up">Sign Up</Link>
+                  </Button>
                 </div>
-              </div>
-            )}
-          </SheetContent>
-        </Sheet>
-      </div>
-    </nav>
+              )}
+            </SheetContent>
+          </Sheet>
+        </div>
+      </nav>
+    </TooltipProvider>
   );
 }

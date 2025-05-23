@@ -50,7 +50,7 @@ export default function PostListItem({ post }: PostListItemProps) {
     : post.collective
       ? `/collectives/${post.collective.slug}/${post.id}`
       : `/posts/${post.id}`;
-  const editUrl = `/posts/${post.slug}/edit`;
+  const editUrl = `/posts/${post.id}/edit`;
 
   const handleToggleFeature = () => {
     startTransition(async () => {

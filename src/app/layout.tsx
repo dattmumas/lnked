@@ -54,8 +54,8 @@ export default async function RootLayout({
           </a>
 
           {/* Global site header */}
-          <header className="bg-background border-b border-border py-4 px-4 md:px-6 sticky top-0 z-50">
-            <div className="container mx-auto flex items-center justify-between">
+          <header className="bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 border-b border-border sticky top-0 z-50">
+            <div className="container mx-auto flex items-center justify-between h-16 px-4 md:px-6">
               <Link
                 href="/dashboard"
                 className="text-2xl md:text-3xl font-serif font-extrabold text-foreground tracking-tight flex items-center"
@@ -72,8 +72,8 @@ export default async function RootLayout({
             </div>
           </header>
 
-          {/* Main page area */}
-          <main id="main-content" className="flex-1">
+          {/* Main page area with proper spacing for fixed header */}
+          <main id="main-content" className="flex-1 pt-0">
             {children}
           </main>
         </ThemeProvider>

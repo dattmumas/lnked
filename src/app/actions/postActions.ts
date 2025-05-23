@@ -59,8 +59,17 @@ export async function createPost(
     };
   }
 
-  const { title, content, is_public, collectiveId, published_at } =
-    validatedFields.data;
+  const {
+    title,
+    subtitle,
+    content,
+    is_public,
+    collectiveId,
+    published_at,
+    author,
+    seo_title,
+    meta_description,
+  } = validatedFields.data;
   let collectiveSlug: string | null = null;
 
   if (collectiveId) {
@@ -114,6 +123,7 @@ export async function createPost(
   const postToInsert: TablesInsert<'posts'> = {
     author_id: user.id,
     title,
+    subtitle: subtitle || null,
     content,
     is_public,
     collective_id: collectiveId || null,
@@ -121,6 +131,9 @@ export async function createPost(
     status: db_status,
     view_count: 0,
     like_count: 0,
+    author: author || null,
+    seo_title: seo_title || null,
+    meta_description: meta_description || null,
   };
 
   const { data: newPost, error: insertError } = await supabase
@@ -185,19 +198,23 @@ export async function updatePost(
     collective_id: string | null;
     published_at: string | null;
     is_public: boolean;
-    slug: string | null;
     status: Enums<'post_status_type'>;
     collective: { slug: string; owner_id: string } | null;
   };
   const { data: existingPost, error: fetchError } = await supabase
     .from('posts')
     .select(
-      'id, author_id, collective_id, published_at, is_public, slug, status, collective:collectives!collective_id(slug, owner_id)',
+      'id, author_id, collective_id, published_at, is_public, status, collective:collectives!collective_id(slug, owner_id)',
     )
     .eq('id', postId)
     .single<ExistingPostData>();
 
   if (fetchError || !existingPost) {
+    console.error('Error fetching post for update:', {
+      postId,
+      fetchError,
+      existingPost: !!existingPost,
+    });
     return { error: 'Post not found or error fetching post data.' };
   }
 
@@ -235,8 +252,17 @@ export async function updatePost(
     };
   }
 
-  const { title, content, is_public, published_at, collectiveId } =
-    validatedFields.data;
+  const {
+    title,
+    subtitle,
+    content,
+    is_public,
+    published_at,
+    collectiveId,
+    author,
+    seo_title,
+    meta_description,
+  } = validatedFields.data;
 
   if (
     collectiveId !== undefined &&
@@ -250,11 +276,16 @@ export async function updatePost(
 
   const updateData: Partial<TablesUpdate<'posts'>> = {};
   if (title !== undefined) updateData.title = title;
+  if (subtitle !== undefined) updateData.subtitle = subtitle || null;
   if (content !== undefined) updateData.content = content;
   if (is_public !== undefined) updateData.is_public = is_public;
   if (published_at !== undefined) {
     updateData.published_at = published_at;
   }
+  if (author !== undefined) updateData.author = author || null;
+  if (seo_title !== undefined) updateData.seo_title = seo_title || null;
+  if (meta_description !== undefined)
+    updateData.meta_description = meta_description || null;
 
   if (is_public !== undefined || published_at !== undefined) {
     let db_status: Enums<'post_status_type'> = existingPost.status;
@@ -313,7 +344,7 @@ export async function updatePost(
       }`,
     );
   }
-  revalidatePath(`/posts/${postSlug || existingPost.slug || postId}`);
+  revalidatePath(`/posts/${postSlug || postId}`);
 
   return {
     data: {

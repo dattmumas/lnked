@@ -27,10 +27,10 @@ export async function followUser(
   }
 
   const { error: insertError } = await supabase.from('follows').insert({
-    follower_id: user.id,
-    following_id: userIdToFollow,
+      follower_id: user.id,
+      following_id: userIdToFollow,
     following_type: 'user',
-  });
+    });
 
   if (insertError) {
     console.error('Error following user:', insertError.message);
@@ -68,10 +68,10 @@ export async function unfollowUser(
   }
 
   const { error: deleteError } = await supabase.from('follows').delete().match({
-    follower_id: user.id,
-    following_id: userIdToUnfollow,
+      follower_id: user.id,
+      following_id: userIdToUnfollow,
     following_type: 'user',
-  });
+    });
 
   if (deleteError) {
     console.error('Error unfollowing user:', deleteError.message);
@@ -165,10 +165,10 @@ export async function unfollowCollective(
     .single();
 
   const { error: deleteError } = await supabase.from('follows').delete().match({
-    follower_id: user.id,
-    following_id: collectiveId,
+      follower_id: user.id,
+      following_id: collectiveId,
     following_type: 'collective',
-  });
+    });
 
   if (deleteError) {
     console.error('Error unfollowing collective:', deleteError.message);

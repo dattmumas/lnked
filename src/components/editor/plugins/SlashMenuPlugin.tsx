@@ -9,7 +9,6 @@ import {
   $isRangeSelection,
   $getNodeByKey,
   $isTextNode,
-  TextNode,
   COMMAND_PRIORITY_LOW,
   KEY_ARROW_DOWN_COMMAND,
   KEY_ARROW_UP_COMMAND,
@@ -224,48 +223,40 @@ const SlashMenuPlugin = () => {
     return editor.registerCommand(
       KEY_DOWN_COMMAND,
       (event) => {
-        if (
-          event.key === '/' &&
-          $isRangeSelection($getSelection()) &&
-          $getSelection() &&
-          $getSelection()!.isCollapsed()
-        ) {
-          const selection = $getSelection();
-          if (!selection || !$isRangeSelection(selection)) return false;
-          const anchor = selection.anchor;
-          if (!anchor) return false;
-          const node = anchor.getNode();
-          // Allow menu if at start of empty paragraph or empty text node
-          const isEmptyText =
-            node instanceof TextNode &&
-            node.getTextContent() === '' &&
-            anchor.offset === 0;
-          const isEmptyParagraph =
-            node.getType &&
-            node.getType() === 'paragraph' &&
-            node.getTextContent() === '' &&
-            anchor.offset === 0;
-          if (isEmptyText || isEmptyParagraph) {
-            // Get caret position
-            const domElem = editor.getElementByKey(node.getKey());
-            if (domElem) {
-              const rect = domElem.getBoundingClientRect();
-              setMenuPosition({ x: rect.left, y: rect.bottom });
-            } else {
-              setMenuPosition(null);
+        if (event.key === '/') {
+          editor.getEditorState().read(() => {
+            const selection = $getSelection();
+            if (!$isRangeSelection(selection) || !selection.isCollapsed()) {
+              return;
             }
-            setOpen(true);
-            setHighlighted(0);
-            setTriggerNodeKey(node.getKey());
-            setInputString('');
-            // Do NOT prevent default so the '/' character is inserted.
-            return false;
-          }
+
+            const anchor = selection.anchor;
+            const node = anchor.getNode();
+
+            // Check if we're at the beginning of a line
+            const isAtBeginning = anchor.offset === 0;
+            const isInEmptyParagraph =
+              node.getType() === 'paragraph' &&
+              node.getTextContent().trim() === '';
+            const isInEmptyTextNode =
+              $isTextNode(node) && node.getTextContent() === '';
+
+            if (isAtBeginning || isInEmptyParagraph || isInEmptyTextNode) {
+              // Set up the slash menu trigger
+              setTimeout(() => {
+                const domElem = editor.getElementByKey(node.getKey());
+                if (domElem) {
+                  const rect = domElem.getBoundingClientRect();
+                  setMenuPosition({ x: rect.left, y: rect.bottom + 4 });
+                  setOpen(true);
+                  setHighlighted(0);
+                  setTriggerNodeKey(node.getKey());
+                  setInputString('');
+                }
+              }, 0);
+            }
+          });
         }
-        setOpen(false);
-        setMenuPosition(null);
-        setTriggerNodeKey(null);
-        setInputString('');
         return false;
       },
       COMMAND_PRIORITY_LOW,
@@ -320,57 +311,64 @@ const SlashMenuPlugin = () => {
       KEY_ESCAPE_COMMAND,
       () => {
         setOpen(false);
+        setTriggerNodeKey(null);
+        setInputString('');
         editor.focus();
         return true;
       },
-      COMMAND_PRIORITY_LOW,
+      4, // Higher priority than default
     );
     const removeDown = editor.registerCommand(
       KEY_ARROW_DOWN_COMMAND,
       () => {
-        setHighlighted((i: number) => (i + 1) % filteredOptions.length);
-        return true;
-      },
-      COMMAND_PRIORITY_LOW,
-    );
-    const removeUp = editor.registerCommand(
-      KEY_ARROW_UP_COMMAND,
-      () => {
-        setHighlighted(
-          (i: number) =>
-            (i - 1 + filteredOptions.length) % filteredOptions.length,
-        );
-        return true;
-      },
-      COMMAND_PRIORITY_LOW,
-    );
-    const removeEnter = editor.registerCommand(
-      KEY_ENTER_COMMAND,
-      () => {
-        if (open) {
-          if (filteredOptions.length > 0) {
-            // Run the selected action
-            filteredOptions[highlighted].action(editor);
-            // Remove the trigger '/' character
-            if (triggerNodeKey) {
-              editor.update(() => {
-                const node = $getNodeByKey(triggerNodeKey);
-                if (
-                  node &&
-                  $isTextNode(node) &&
-                  node.getTextContent().startsWith('/')
-                ) {
-                  node.setTextContent('');
-                }
-              });
-            }
-          }
-          setOpen(false);
+        if (open && filteredOptions.length > 0) {
+          setHighlighted((i: number) => (i + 1) % filteredOptions.length);
           return true;
         }
         return false;
       },
-      COMMAND_PRIORITY_LOW,
+      4, // Higher priority than default
+    );
+    const removeUp = editor.registerCommand(
+      KEY_ARROW_UP_COMMAND,
+      () => {
+        if (open && filteredOptions.length > 0) {
+          setHighlighted(
+            (i: number) =>
+              (i - 1 + filteredOptions.length) % filteredOptions.length,
+          );
+          return true;
+        }
+        return false;
+      },
+      4, // Higher priority than default
+    );
+    const removeEnter = editor.registerCommand(
+      KEY_ENTER_COMMAND,
+      () => {
+        if (open && filteredOptions.length > 0) {
+          // Run the selected action
+          filteredOptions[highlighted].action(editor);
+          // Remove the trigger '/' character and any typed text
+          if (triggerNodeKey) {
+            editor.update(() => {
+              const node = $getNodeByKey(triggerNodeKey);
+              if (node && $isTextNode(node)) {
+                const text = node.getTextContent();
+                if (text.startsWith('/')) {
+                  node.setTextContent('');
+                }
+              }
+            });
+          }
+          setOpen(false);
+          setTriggerNodeKey(null);
+          setInputString('');
+          return true;
+        }
+        return false;
+      },
+      4, // Higher priority than default
     );
     return () => {
       removeEscape();
@@ -409,20 +407,29 @@ const SlashMenuPlugin = () => {
             onMouseEnter={() => setHighlighted(i)}
             onMouseDown={(e) => e.preventDefault()}
             onClick={() => {
+              // Execute the action
               opt.action(editor);
+
+              // Clean up the trigger text
               if (triggerNodeKey) {
                 editor.update(() => {
                   const node = $getNodeByKey(triggerNodeKey);
-                  if (
-                    node &&
-                    $isTextNode(node) &&
-                    node.getTextContent().startsWith('/')
-                  ) {
-                    node.setTextContent('');
+                  if (node && $isTextNode(node)) {
+                    const text = node.getTextContent();
+                    if (text.startsWith('/')) {
+                      node.setTextContent('');
+                    }
                   }
                 });
               }
+
+              // Close menu and cleanup
               setOpen(false);
+              setTriggerNodeKey(null);
+              setInputString('');
+
+              // Refocus editor
+              setTimeout(() => editor.focus(), 0);
             }}
           >
             <opt.icon className="size-4" aria-hidden="true" />

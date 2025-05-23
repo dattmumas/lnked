@@ -1,9 +1,12 @@
-// import Link from "next/link"; // No longer used directly here
-import { ArrowDown } from 'lucide-react';
-// import { Button } from "@/components/ui/button"; // Button is now in AnimatedHero
-import FragmentedFeeds from '@/components/landing/sections/FragmentedFeeds';
-import CreateCollaborate from '@/components/landing/sections/CreateCollaborate';
-import AnimatedHero from '@/components/landing/sections/AnimatedHero'; // Added import
+// Previous sections - kept for reference
+// import FragmentedFeeds from '@/components/landing/sections/FragmentedFeeds';
+// import CreateCollaborate from '@/components/landing/sections/CreateCollaborate';
+// import AnimatedHero from '@/components/landing/sections/AnimatedHero';
+import NewspaperHero from '@/components/landing/sections/NewspaperHero';
+import PrintFragmentation from '@/components/landing/sections/PrintFragmentation';
+import CollaborativeInk from '@/components/landing/sections/CollaborativeInk';
+import DigitalPrintroom from '@/components/landing/sections/DigitalPrintroom';
+import NewsstandFooter from '@/components/landing/sections/NewsstandFooter';
 
 // Removed unused imports and variables related to the old feed page
 // import { cookies } from "next/headers";
@@ -20,19 +23,20 @@ import AnimatedHero from '@/components/landing/sections/AnimatedHero'; // Added 
 export default function LandingPage() {
   return (
     <>
-      <div className="min-h-screen bg-background text-foreground flex flex-col items-center justify-center p-4 relative overflow-hidden">
-        <AnimatedHero />{' '}
-        <div className="absolute bottom-10 left-1/2 -translate-x-1/2 z-10 flex flex-col items-center space-y-1 animate-bounce">
-          <span className="text-sm text-muted-foreground">Scroll</span>
-          <ArrowDown className="w-5 h-5 text-muted-foreground" />
-        </div>
-      </div>
+      {/* Hero Section - Animated newspaper unfold */}
+      <NewspaperHero />
 
-      <FragmentedFeeds />
+      {/* Fragmentation Section - 3D scattered papers */}
+      <PrintFragmentation />
 
-      <CreateCollaborate />
+      {/* Collaboration Section - Printing press mechanics */}
+      <CollaborativeInk />
 
-      {/* Stream section removed */}
+      {/* Features Section - Digital newsroom */}
+      <DigitalPrintroom />
+
+      {/* Footer Section - Newsstand display */}
+      <NewsstandFooter />
     </>
   );
 }

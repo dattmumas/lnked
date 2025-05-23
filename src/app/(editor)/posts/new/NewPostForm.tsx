@@ -4,14 +4,19 @@ import { useState, useEffect, useCallback } from 'react';
 import { useForm, SubmitHandler, FormProvider } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { PostFormSchema, type PostFormValues } from '@/lib/schemas/postSchemas';
+import { useRouter } from 'next/navigation';
 
 import EditorLayout from '@/components/editor/EditorLayout';
 import PostEditor from '@/components/editor/PostEditor';
-import PostFormFields from '@/components/app/editor/form-fields/PostFormFields';
 import SEOSettingsDrawer from '@/components/editor/SEOSettingsDrawer';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { Info } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Label } from '@/components/ui/label';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Input } from '@/components/ui/input';
+import { Info, Calendar, Eye, FileText, Save } from 'lucide-react';
 import { createPost, updatePost } from '@/app/actions/postActions';
 
 type NewPostFormValues = PostFormValues;
@@ -25,11 +30,14 @@ export default function NewPostForm({
   collective,
   pageTitle,
 }: NewPostFormProps) {
+  const router = useRouter();
   const [isProcessing, setIsProcessing] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
   const [autosaveStatus, setAutosaveStatus] = useState<string>('');
   const [createdPostId, setCreatedPostId] = useState<string | null>(null);
   const [seoDrawerOpen, setSeoDrawerOpen] = useState(false);
+  const [subtitle, setSubtitle] = useState('');
+  const [author, setAuthor] = useState('');
 
   const EMPTY_LEXICAL_STATE = JSON.stringify({
     root: {
@@ -65,7 +73,6 @@ export default function NewPostForm({
   });
 
   const {
-    register,
     handleSubmit,
     formState: { errors, isSubmitting, isDirty },
     reset,
@@ -98,36 +105,57 @@ export default function NewPostForm({
     try {
       let result;
       if (createdPostId) {
-        result = await updatePost(createdPostId, payload);
+        console.log('Autosave: Updating existing post', { createdPostId });
+        result = await updatePost(createdPostId, {
+          ...payload,
+          subtitle,
+          author,
+        });
       } else {
         if (
           data.title.trim().length < 1 ||
           data.content.replace(/<[^>]+>/g, '').trim().length < 10
         ) {
-          setAutosaveStatus('Please add title & content to save draft.');
+          setAutosaveStatus('Add a title and content to save draft');
           return;
         }
-        result = await createPost(payload);
+        console.log('Autosave: Creating new post');
+        result = await createPost({
+          ...payload,
+          subtitle,
+          author,
+        });
         if (result.data?.postId) {
+          console.log('Autosave: Post created with ID', result.data.postId);
           setCreatedPostId(result.data.postId);
         }
       }
       if (result.error) {
-        setAutosaveStatus(`Autosave failed: ${result.error.substring(0, 100)}`);
+        console.error('Autosave error:', result.error);
+        setAutosaveStatus(`Save failed: ${result.error.substring(0, 50)}...`);
       } else {
-        setAutosaveStatus('Draft saved.');
+        setAutosaveStatus('Draft saved');
         reset(data);
       }
     } catch (error) {
-      setAutosaveStatus('Autosave error.');
+      setAutosaveStatus('Save error');
       console.error('Autosave exception:', error);
     }
-  }, [isDirty, currentStatus, getValues, createdPostId, reset, collective]);
+  }, [
+    isDirty,
+    currentStatus,
+    getValues,
+    createdPostId,
+    reset,
+    collective,
+    subtitle,
+    author,
+  ]);
 
   useEffect(() => {
     const isDrafting = currentStatus === 'draft';
     if (isDirty && isDrafting) {
-      const handler = setTimeout(performAutosave, 5000);
+      const handler = setTimeout(performAutosave, 3000);
       return () => clearTimeout(handler);
     }
   }, [currentTitle, currentContent, isDirty, currentStatus, performAutosave]);
@@ -170,9 +198,19 @@ export default function NewPostForm({
       };
 
       if (createdPostId) {
-        result = await updatePost(createdPostId, payload);
+        console.log('Publishing: Updating existing post', { createdPostId });
+        result = await updatePost(createdPostId, {
+          ...payload,
+          subtitle,
+          author,
+        });
       } else {
-        result = await createPost(payload);
+        console.log('Publishing: Creating new post');
+        result = await createPost({
+          ...payload,
+          subtitle,
+          author,
+        });
       }
 
       if (result.error) {
@@ -194,73 +232,169 @@ export default function NewPostForm({
         }
         setServerError(errorMsg);
       } else if (result.data?.postId) {
+        const postId = result.data.postId;
         reset();
+        router.push(`/posts/${postId}`);
       }
     } finally {
       setIsProcessing(false);
     }
   };
 
-  const primaryButtonText =
-    isProcessing || isSubmitting
-      ? 'Processing...'
-      : currentStatus === 'scheduled'
-        ? 'Schedule Post'
-        : currentStatus === 'draft'
-          ? createdPostId
-            ? 'Save Draft'
-            : 'Create Draft'
-          : 'Publish Post';
+  const getStatusConfig = () => {
+    switch (currentStatus) {
+      case 'published':
+        return {
+          icon: <Eye className="w-4 h-4" />,
+          text: 'Publish Now',
+          description: 'Make your post live immediately',
+          variant: 'default' as const,
+        };
+      case 'scheduled':
+        return {
+          icon: <Calendar className="w-4 h-4" />,
+          text: 'Schedule Post',
+          description: 'Publish at a specific time',
+          variant: 'secondary' as const,
+        };
+      default:
+        return {
+          icon: <Save className="w-4 h-4" />,
+          text: createdPostId ? 'Update Draft' : 'Save Draft',
+          description: 'Save as private draft',
+          variant: 'outline' as const,
+        };
+    }
+  };
 
-  const formControlsNode = (
+  const statusConfig = getStatusConfig();
+
+  const settingsSidebar = (
     <div className="space-y-6">
-      <PostFormFields
-        register={register}
-        errors={errors}
-        currentStatus={currentStatus}
-        isSubmitting={isProcessing || isSubmitting}
-        titlePlaceholder={
-          collective ? `New post in ${collective.name}` : 'Post Title'
-        }
-      />
+      {/* Status Card */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <FileText className="w-4 h-4" />
+            Publish Settings
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-3">
+            <Label className="text-sm font-medium">Status</Label>
+            <RadioGroup
+              value={currentStatus}
+              onValueChange={(value: 'draft' | 'published' | 'scheduled') =>
+                setValue('status', value)
+              }
+              className="space-y-2"
+            >
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="draft" id="draft" />
+                <Label htmlFor="draft" className="text-sm">
+                  Draft
+                </Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="published" id="published" />
+                <Label htmlFor="published" className="text-sm">
+                  Published
+                </Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="scheduled" id="scheduled" />
+                <Label htmlFor="scheduled" className="text-sm">
+                  Scheduled
+                </Label>
+              </div>
+            </RadioGroup>
+          </div>
+
+          {currentStatus === 'scheduled' && (
+            <div className="space-y-2">
+              <Label htmlFor="published_at" className="text-sm font-medium">
+                Publish Date
+              </Label>
+              <Input
+                id="published_at"
+                type="datetime-local"
+                {...form.register('published_at')}
+                className="text-sm"
+              />
+              {errors.published_at && (
+                <p className="text-xs text-destructive">
+                  {errors.published_at.message as string}
+                </p>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* SEO Settings */}
       <Button
         type="button"
         variant="outline"
-        size="sm"
         onClick={() => setSeoDrawerOpen(true)}
-        className="w-full"
+        className="w-full justify-start"
+        size="sm"
       >
+        <FileText className="w-4 h-4 mr-2" />
         SEO Settings
       </Button>
+
+      {/* Publish Button */}
       <Button
         type="button"
         onClick={handleSubmit(onSubmit)}
         disabled={isProcessing || isSubmitting}
         className="w-full"
+        variant={statusConfig.variant}
+        size="lg"
       >
-        {primaryButtonText}
+        {isProcessing || isSubmitting ? (
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+            Processing...
+          </div>
+        ) : (
+          <div className="flex items-center gap-2">
+            {statusConfig.icon}
+            {statusConfig.text}
+          </div>
+        )}
       </Button>
+
+      {/* Status Messages */}
       {autosaveStatus && (
         <Alert
           variant={
             autosaveStatus.includes('failed') ||
-            autosaveStatus.includes('Error')
+            autosaveStatus.includes('error')
               ? 'destructive'
               : 'default'
           }
           className="text-xs"
         >
-          <Info className="h-4 w-4" />
-          <AlertDescription>{autosaveStatus}</AlertDescription>
+          <Info className="h-3 w-3" />
+          <AlertDescription className="text-xs">
+            {autosaveStatus}
+          </AlertDescription>
         </Alert>
       )}
+
       {serverError && (
-        <p className="text-sm text-destructive mt-1">{serverError}</p>
+        <Alert variant="destructive" className="text-xs">
+          <AlertDescription className="text-xs">{serverError}</AlertDescription>
+        </Alert>
       )}
-      {errors.content && (
-        <p className="text-sm text-destructive mt-1">
-          {errors.content.message as string}
-        </p>
+
+      {collective && (
+        <div className="pt-4 border-t">
+          <Badge variant="secondary" className="text-xs">
+            Publishing to {collective.name}
+          </Badge>
+        </div>
       )}
     </div>
   );
@@ -268,11 +402,19 @@ export default function NewPostForm({
   const canvas = (
     <PostEditor
       initialContentJSON={getValues('content')}
-      placeholder={
-        collective
-          ? `Share something with ${collective.name}...`
-          : 'Share your thoughts...'
+      placeholder="Start writing..."
+      title={currentTitle}
+      onTitleChange={(title) =>
+        setValue('title', title, {
+          shouldValidate: true,
+          shouldDirty: true,
+        })
       }
+      titlePlaceholder="Title"
+      subtitle={subtitle}
+      onSubtitleChange={setSubtitle}
+      author={author}
+      onAuthorChange={setAuthor}
       onContentChange={(json) =>
         setValue('content', json, {
           shouldValidate: true,
@@ -285,7 +427,7 @@ export default function NewPostForm({
   return (
     <FormProvider {...form}>
       <SEOSettingsDrawer open={seoDrawerOpen} onOpenChange={setSeoDrawerOpen} />
-      <EditorLayout settingsSidebar={formControlsNode} pageTitle={pageTitle}>
+      <EditorLayout settingsSidebar={settingsSidebar} pageTitle={pageTitle}>
         {canvas}
       </EditorLayout>
     </FormProvider>
