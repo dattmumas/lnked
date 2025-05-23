@@ -4,14 +4,12 @@ import React from 'react';
 import type { ReactNode } from 'react';
 
 interface EditorLayoutProps {
-  toolbar?: ReactNode;
   settingsSidebar?: ReactNode;
   pageTitle?: string;
   children: ReactNode; // canvas/content
 }
 
 export default function EditorLayout({
-  toolbar,
   settingsSidebar,
   pageTitle,
   children,

@@ -1,22 +1,12 @@
 'use client';
 
-import { motion, useScroll, useTransform, useInView } from 'framer-motion';
+import { motion, useInView } from 'framer-motion';
 import { useRef } from 'react';
 import { Mail, Rss, FileText } from 'lucide-react';
 
 const PrintFragmentation = () => {
   const containerRef = useRef<HTMLDivElement>(null);
   const isInView = useInView(containerRef, { once: true, amount: 0.3 });
-
-  const { scrollYProgress } = useScroll({
-    target: containerRef,
-    offset: ['start end', 'end start'],
-  });
-
-  // Parallax for floating papers
-  const y1 = useTransform(scrollYProgress, [0, 1], ['20%', '-20%']);
-  const y2 = useTransform(scrollYProgress, [0, 1], ['-10%', '30%']);
-  const y3 = useTransform(scrollYProgress, [0, 1], ['30%', '-10%']);
 
   const feeds = [
     {
@@ -50,24 +40,6 @@ const PrintFragmentation = () => {
     visible: {
       opacity: 1,
       transition: { duration: 0.8, staggerChildren: 0.3 },
-    },
-  };
-
-  const paperVariants = {
-    hidden: { opacity: 0, rotateX: -90, rotateY: 45, z: -200 },
-    visible: {
-      opacity: 1,
-      rotateX: [0, 5, 0],
-      rotateY: [0, -3, 0],
-      z: 0,
-      transition: {
-        duration: 1.2,
-        type: 'tween',
-        ease: 'easeInOut',
-        repeat: Infinity,
-        repeatType: 'reverse' as const,
-        repeatDelay: 3,
-      },
     },
   };
 

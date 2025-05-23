@@ -22,16 +22,14 @@ function initClient(): SupabaseClient<Database> {
 // Export a proxy so existing `supabaseAdmin` imports keep working.
 // The real client is only created on first property access, which happens
 // at runtime on the server (after env vars are available), not at build.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const supabaseAdmin = new Proxy(
   {},
   {
     get(_target, prop) {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-explicit-any
-      return (initClient() as any)[prop as keyof SupabaseClient<Database>];
+      const client = initClient();
+      return client[prop as keyof SupabaseClient<Database>];
     },
     // Support calling supabaseAdmin() if some code kept the old API
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     apply() {
       return initClient();
     },

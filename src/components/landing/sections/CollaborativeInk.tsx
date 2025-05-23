@@ -1,6 +1,6 @@
 'use client';
 
-import { motion, useScroll, useTransform, useInView } from 'framer-motion';
+import { motion, useInView } from 'framer-motion';
 import { useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
@@ -10,34 +10,11 @@ const CollaborativeInk = () => {
   const containerRef = useRef<HTMLDivElement>(null);
   const isInView = useInView(containerRef, { once: true, amount: 0.3 });
 
-  const { scrollYProgress } = useScroll({
-    target: containerRef,
-    offset: ['start end', 'end start'],
-  });
-
-  // Mechanical animations
-  const gearRotation = useTransform(scrollYProgress, [0, 1], [0, 360]);
-  const pressMovement = useTransform(scrollYProgress, [0, 1], ['0%', '10%']);
-
   const sectionVariants = {
     hidden: { opacity: 0 },
     visible: {
       opacity: 1,
       transition: { duration: 0.8, staggerChildren: 0.2 },
-    },
-  };
-
-  const mechanicalVariants = {
-    hidden: { opacity: 0, scale: 0.8 },
-    visible: {
-      opacity: 1,
-      scale: 1,
-      transition: {
-        duration: 1,
-        type: 'spring',
-        stiffness: 100,
-        damping: 15,
-      },
     },
   };
 
