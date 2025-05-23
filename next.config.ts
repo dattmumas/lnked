@@ -29,13 +29,13 @@ const nextConfig: NextConfig = {
     return [
       {
         source:
-          '/:slug((?!dashboard|sign-in|sign-up|discover|invite|posts|settings|search|api|collectives|profile|users|_next)(?!$)[a-zA-Z0-9][a-zA-Z0-9-_]*)',
+          '/:slug((?!dashboard|sign-in|sign-up|discover|invite|posts|settings|search|api|collectives|profile|users|chat|_next)(?!$)[a-zA-Z0-9][a-zA-Z0-9-_]*)',
         destination: '/collectives/:slug',
         permanent: true,
       },
       {
         source:
-          '/:slug((?!dashboard|sign-in|sign-up|discover|invite|posts|settings|search|api|collectives|profile|users|_next)(?!$)[a-zA-Z0-9][a-zA-Z0-9-_]*)/:path*',
+          '/:slug((?!dashboard|sign-in|sign-up|discover|invite|posts|settings|search|api|collectives|profile|users|chat|_next)(?!$)[a-zA-Z0-9][a-zA-Z0-9-_]*)/:path*',
         destination: '/collectives/:slug/:path*',
         permanent: true,
       },

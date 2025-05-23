@@ -26,17 +26,50 @@ export async function followUser(
     return { success: false, error: 'You cannot follow yourself.' };
   }
 
+  // Validate that the target user exists
+  const { data: targetUser, error: targetUserError } = await supabase
+    .from('users')
+    .select('id, username')
+    .eq('id', userIdToFollow)
+    .single();
+
+  if (targetUserError || !targetUser) {
+    return { success: false, error: 'User not found.' };
+  }
+
+  // Check if already following to prevent unnecessary database operations
+  const { data: existingFollow, error: checkError } = await supabase
+    .from('follows')
+    .select('*')
+    .eq('follower_id', user.id)
+    .eq('following_id', userIdToFollow)
+    .eq('following_type', 'user')
+    .maybeSingle();
+
+  if (checkError) {
+    console.error('Error checking existing follow:', checkError.message);
+    return {
+      success: false,
+      error: 'Failed to check follow status.',
+    };
+  }
+
+  if (existingFollow) {
+    return { success: true }; // Already following, treat as success
+  }
+
+  // Insert new follow relationship
   const { error: insertError } = await supabase.from('follows').insert({
-      follower_id: user.id,
-      following_id: userIdToFollow,
+    follower_id: user.id,
+    following_id: userIdToFollow,
     following_type: 'user',
-    });
+  });
 
   if (insertError) {
     console.error('Error following user:', insertError.message);
     if (insertError.code === '23505') {
-      // Unique constraint violation
-      return { success: false, error: 'You are already following this user.' };
+      // Unique constraint violation - already following
+      return { success: true }; // Treat as success since the relationship exists
     }
     return {
       success: false,
@@ -49,6 +82,12 @@ export async function followUser(
   revalidatePath(`/profile/${userIdToFollow}`);
   revalidatePath(`/users/${userIdToFollow}`);
   revalidatePath(`/users/${userIdToFollow}/followers`);
+  
+  // Also revalidate username-based paths if username exists
+  if (targetUser.username) {
+    revalidatePath(`/profile/${targetUser.username}`);
+    revalidatePath(`/profile/${targetUser.username}/followers`);
+  }
 
   return { success: true };
 }
@@ -67,11 +106,44 @@ export async function unfollowUser(
     return { success: false, error: 'User not authenticated.' };
   }
 
+  if (user.id === userIdToUnfollow) {
+    return { success: false, error: 'You cannot unfollow yourself.' };
+  }
+
+  // Get target user info for path revalidation
+  const { data: targetUser } = await supabase
+    .from('users')
+    .select('id, username')
+    .eq('id', userIdToUnfollow)
+    .single();
+
+  // Check if currently following
+  const { data: existingFollow, error: checkError } = await supabase
+    .from('follows')
+    .select('*')
+    .eq('follower_id', user.id)
+    .eq('following_id', userIdToUnfollow)
+    .eq('following_type', 'user')
+    .maybeSingle();
+
+  if (checkError) {
+    console.error('Error checking existing follow:', checkError.message);
+    return {
+      success: false,
+      error: 'Failed to check follow status.',
+    };
+  }
+
+  if (!existingFollow) {
+    return { success: true }; // Not following, treat as success
+  }
+
+  // Delete the follow relationship
   const { error: deleteError } = await supabase.from('follows').delete().match({
-      follower_id: user.id,
-      following_id: userIdToUnfollow,
+    follower_id: user.id,
+    following_id: userIdToUnfollow,
     following_type: 'user',
-    });
+  });
 
   if (deleteError) {
     console.error('Error unfollowing user:', deleteError.message);
@@ -86,6 +158,12 @@ export async function unfollowUser(
   revalidatePath(`/profile/${userIdToUnfollow}`);
   revalidatePath(`/users/${userIdToUnfollow}`);
   revalidatePath(`/users/${userIdToUnfollow}/followers`);
+  
+  // Also revalidate username-based paths if username exists
+  if (targetUser?.username) {
+    revalidatePath(`/profile/${targetUser.username}`);
+    revalidatePath(`/profile/${targetUser.username}/followers`);
+  }
 
   return { success: true };
 }

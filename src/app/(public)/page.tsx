@@ -4,8 +4,6 @@
 // import AnimatedHero from '@/components/landing/sections/AnimatedHero';
 import NewspaperHero from '@/components/landing/sections/NewspaperHero';
 import PrintFragmentation from '@/components/landing/sections/PrintFragmentation';
-import CollaborativeInk from '@/components/landing/sections/CollaborativeInk';
-import DigitalPrintroom from '@/components/landing/sections/DigitalPrintroom';
 import NewsstandFooter from '@/components/landing/sections/NewsstandFooter';
 
 // Removed unused imports and variables related to the old feed page
@@ -28,12 +26,6 @@ export default function LandingPage() {
 
       {/* Fragmentation Section - 3D scattered papers */}
       <PrintFragmentation />
-
-      {/* Collaboration Section - Printing press mechanics */}
-      <CollaborativeInk />
-
-      {/* Features Section - Digital newsroom */}
-      <DigitalPrintroom />
 
       {/* Footer Section - Newsstand display */}
       <NewsstandFooter />

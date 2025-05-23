@@ -316,6 +316,101 @@ export type Database = {
           },
         ]
       }
+      conversation_participants: {
+        Row: {
+          conversation_id: string | null
+          id: string
+          is_muted: boolean | null
+          is_pinned: boolean | null
+          joined_at: string | null
+          last_read_at: string | null
+          role: string | null
+          user_id: string | null
+        }
+        Insert: {
+          conversation_id?: string | null
+          id?: string
+          is_muted?: boolean | null
+          is_pinned?: boolean | null
+          joined_at?: string | null
+          last_read_at?: string | null
+          role?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          conversation_id?: string | null
+          id?: string
+          is_muted?: boolean | null
+          is_pinned?: boolean | null
+          joined_at?: string | null
+          last_read_at?: string | null
+          role?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversation_participants_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conversation_participants_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      conversations: {
+        Row: {
+          archived: boolean | null
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          id: string
+          is_private: boolean | null
+          last_message_at: string | null
+          title: string | null
+          type: string
+          updated_at: string | null
+        }
+        Insert: {
+          archived?: boolean | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_private?: boolean | null
+          last_message_at?: string | null
+          title?: string | null
+          type?: string
+          updated_at?: string | null
+        }
+        Update: {
+          archived?: boolean | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_private?: boolean | null
+          last_message_at?: string | null
+          title?: string | null
+          type?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversations_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customers: {
         Row: {
           id: string
@@ -435,6 +530,145 @@ export type Database = {
           {
             foreignKeyName: "interactions_user_id_fkey"
             columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      message_reactions: {
+        Row: {
+          created_at: string | null
+          emoji: string
+          id: string
+          message_id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          emoji: string
+          id?: string
+          message_id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          emoji?: string
+          id?: string
+          message_id?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "message_reactions_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "message_reactions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      message_read_receipts: {
+        Row: {
+          id: string
+          message_id: string | null
+          read_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          id?: string
+          message_id?: string | null
+          read_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          id?: string
+          message_id?: string | null
+          read_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "message_read_receipts_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "message_read_receipts_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      messages: {
+        Row: {
+          content: string
+          conversation_id: string | null
+          created_at: string | null
+          deleted_at: string | null
+          edited_at: string | null
+          id: string
+          message_type: string | null
+          metadata: Json | null
+          reply_to_id: string | null
+          sender_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          content: string
+          conversation_id?: string | null
+          created_at?: string | null
+          deleted_at?: string | null
+          edited_at?: string | null
+          id?: string
+          message_type?: string | null
+          metadata?: Json | null
+          reply_to_id?: string | null
+          sender_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          content?: string
+          conversation_id?: string | null
+          created_at?: string | null
+          deleted_at?: string | null
+          edited_at?: string | null
+          id?: string
+          message_type?: string | null
+          metadata?: Json | null
+          reply_to_id?: string | null
+          sender_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messages_reply_to_id_fkey"
+            columns: ["reply_to_id"]
+            isOneToOne: false
+            referencedRelation: "messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messages_sender_id_fkey"
+            columns: ["sender_id"]
             isOneToOne: false
             referencedRelation: "users"
             referencedColumns: ["id"]
@@ -1027,6 +1261,10 @@ export type Database = {
         Args: { entity_id: string; entity_type: string }
         Returns: number
       }
+      get_unread_message_count: {
+        Args: { p_user_id: string; p_conversation_id: string }
+        Returns: number
+      }
       get_user_feed: {
         Args: { p_user_id: string; p_limit?: number; p_offset?: number }
         Returns: {
@@ -1111,6 +1349,10 @@ export type Database = {
       l2_normalize: {
         Args: { "": string } | { "": unknown } | { "": unknown }
         Returns: string
+      }
+      mark_messages_as_read: {
+        Args: { p_user_id: string; p_conversation_id: string }
+        Returns: undefined
       }
       sparsevec_out: {
         Args: { "": unknown }

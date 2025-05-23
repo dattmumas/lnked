@@ -15,6 +15,7 @@ export async function middleware(request: NextRequest) {
   const requiresAuth =
     pathname.startsWith("/dashboard") ||
     pathname === "/posts/new" ||
+    pathname === "/chat" ||
     (pathname.startsWith("/posts/") && pathname.endsWith("/edit"));
   const isAuthPage = pathname === "/sign-in" || pathname === "/sign-up";
 
@@ -101,6 +102,7 @@ export const config = {
     "/dashboard/:path*",
     "/posts/:path*/edit",
     "/posts/new",
+    "/chat",
     "/sign-in",
     "/sign-up",
   ],

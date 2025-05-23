@@ -3,7 +3,7 @@ import './globals.css';
 import { ThemeProvider } from 'next-themes';
 import SmoothScroll from '@/components/app/SmoothScroll';
 import RouteProgress from '@/components/app/nav/RouteProgress';
-import Navbar from '@/components/Navbar';
+import ModernNavbar from '@/components/ModernNavbar';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import Link from 'next/link';
 
@@ -54,21 +54,36 @@ export default async function RootLayout({
           </a>
 
           {/* Global site header */}
-          <header className="bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 border-b border-border sticky top-0 z-50">
-            <div className="container mx-auto flex items-center justify-between h-16 px-4 md:px-6">
-              <Link
-                href="/dashboard"
-                className="text-2xl md:text-3xl font-serif font-extrabold text-foreground tracking-tight flex items-center"
-              >
-                Lnked
-                <span
-                  className="ml-1 text-accent text-3xl md:text-4xl leading-none self-center"
-                  aria-hidden="true"
+          <header className="header-gradient paper-texture backdrop-blur supports-[backdrop-filter]:bg-background/80 border-b border-border/50 sticky top-0 z-50 shadow-sm">
+            <div className="container mx-auto h-16 px-4 md:px-6">
+              <div className="flex items-center justify-between h-full">
+                {/* Brand logo - Newspaper masthead style */}
+                <Link
+                  href="/dashboard"
+                  className="group flex items-center gap-1 hover:opacity-80 transition-all duration-200 modern-button relative"
                 >
-                  .
-                </span>
-              </Link>
-              <Navbar initialUser={user} initialUsername={username} />
+                  <div className="relative">
+                    {/* Top decorative line */}
+                    <div className="absolute -top-1 left-0 right-0 h-px bg-gradient-to-r from-transparent via-foreground/20 to-transparent" />
+
+                    {/* Main logo text */}
+                    <h1 className="text-2xl md:text-3xl font-serif font-bold text-foreground tracking-tight relative">
+                      <span className="relative">
+                        Lnked
+                        <span className="text-red-600 dark:text-red-500 text-3xl md:text-4xl leading-none">
+                          .
+                        </span>
+                      </span>
+                    </h1>
+
+                    {/* Bottom decorative line */}
+                    <div className="absolute -bottom-1 left-0 right-0 h-px bg-gradient-to-r from-transparent via-foreground/20 to-transparent" />
+                  </div>
+                </Link>
+
+                {/* Navigation */}
+                <ModernNavbar initialUser={user} initialUsername={username} />
+              </div>
             </div>
           </header>
 
