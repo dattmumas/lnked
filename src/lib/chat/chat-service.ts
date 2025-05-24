@@ -8,9 +8,10 @@ import type {
   MessageInsert,
   ConversationParticipantInsert 
 } from './types';
+import { chatSecurity } from './security';
 
 /**
- * Chat service following Supabase's official patterns
+ * Chat service following Supabase's official patterns with enhanced security
  * Based on: https://supabase.com/docs/guides/realtime
  */
 
@@ -75,9 +76,27 @@ export class ChatService {
       const invalidIds = data.participant_ids.filter((id) => !uuidRegex.test(id));
       
       if (invalidIds.length > 0) {
+        await chatSecurity.logSecurityEvent({
+          action: 'create_conversation_denied',
+          userId: user.id,
+          success: false,
+          details: { reason: 'Invalid participant IDs provided', invalidIds },
+        });
         throw new Error(
           `Invalid participant IDs. Please provide valid user IDs, not emails: ${invalidIds.join(', ')}`,
         );
+      }
+
+      // Security check: Validate all participants exist
+      const participantValidation = await chatSecurity.validateParticipants(data.participant_ids);
+      if (!participantValidation.valid) {
+        await chatSecurity.logSecurityEvent({
+          action: 'create_conversation_denied',
+          userId: user.id,
+          success: false,
+          details: { reason: 'Invalid participant IDs', invalidIds: participantValidation.invalidIds },
+        });
+        throw new Error(`Invalid participant IDs: ${participantValidation.invalidIds.join(', ')}`);
       }
 
       // Ensure the creator is not accidentally duplicated in participant list
@@ -194,10 +213,26 @@ export class ChatService {
   }
 
   /**
-   * Get messages for a conversation
+   * Get messages for a conversation with security checks
    */
   async getMessages(conversationId: string, limit = 50, offset = 0): Promise<{ data: MessageWithSender[] | null; error: Error | null }> {
     try {
+      const user = await this.getCurrentUser();
+      if (!user) throw new Error('User not authenticated');
+
+      // Security check: Verify user can view this conversation
+      const canView = await chatSecurity.canViewConversation(conversationId, user.id);
+      if (!canView) {
+        await chatSecurity.logSecurityEvent({
+          action: 'get_messages_denied',
+          userId: user.id,
+          conversationId: conversationId,
+          success: false,
+          details: { reason: 'User not authorized to view messages in this conversation' },
+        });
+        throw new Error('You are not authorized to view messages in this conversation');
+      }
+
       const { data, error } = await this.supabase
         .from('messages')
         .select(`
@@ -223,7 +258,7 @@ export class ChatService {
   }
 
   /**
-   * Send a message following Supabase patterns
+   * Send a message following Supabase patterns with security checks
    */
   async sendMessage(data: {
     conversation_id: string;
@@ -235,6 +270,19 @@ export class ChatService {
     try {
       const user = await this.getCurrentUser();
       if (!user) throw new Error('User not authenticated');
+
+      // Security check: Verify user can send messages to this conversation
+      const canSend = await chatSecurity.canSendMessage(data.conversation_id, user.id);
+      if (!canSend) {
+        await chatSecurity.logSecurityEvent({
+          action: 'send_message_denied',
+          userId: user.id,
+          conversationId: data.conversation_id,
+          success: false,
+          details: { reason: 'User not authorized to send messages to this conversation' },
+        });
+        throw new Error('You are not authorized to send messages to this conversation');
+      }
 
       const messageData: MessageInsert = {
         conversation_id: data.conversation_id,

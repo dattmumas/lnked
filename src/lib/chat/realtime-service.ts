@@ -3,9 +3,10 @@
 import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
 import type { RealtimeChannel, RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 import type { MessageWithSender, BroadcastMessage, TypingIndicator } from './types';
+import { chatSecurity } from './security';
 
 /**
- * Real-time service following Supabase's official patterns
+ * Real-time service following Supabase's official patterns with enhanced security
  * Based on: https://supabase.com/docs/guides/realtime/broadcast
  * and: https://supabase.com/docs/guides/realtime/postgres-changes
  */
@@ -18,9 +19,9 @@ export class RealtimeService {
   private typingTimeout: Map<string, NodeJS.Timeout> = new Map();
 
   /**
-   * Subscribe to a conversation channel following Supabase broadcast patterns
+   * Subscribe to a conversation channel following Supabase broadcast patterns with security checks
    */
-  subscribeToConversation(
+  async subscribeToConversation(
     conversationId: string,
     callbacks: {
       onMessage?: (message: MessageWithSender) => void;
@@ -32,6 +33,26 @@ export class RealtimeService {
     }
   ) {
     const channelName = `conversation:${conversationId}`;
+    
+    // Security check: Verify user can access this conversation
+    const user = await this.getCurrentUser();
+    if (!user) {
+      console.error('User not authenticated for real-time subscription');
+      return null;
+    }
+
+    const canView = await chatSecurity.canViewConversation(conversationId, user.id);
+    if (!canView) {
+      await chatSecurity.logSecurityEvent({
+        action: 'realtime_subscription_denied',
+        userId: user.id,
+        conversationId: conversationId,
+        success: false,
+        details: { reason: 'User not authorized to subscribe to this conversation' },
+      });
+      console.error('User not authorized to subscribe to conversation:', conversationId);
+      return null;
+    }
     
     // Remove existing channel if it exists
     this.unsubscribeFromConversation(conversationId);

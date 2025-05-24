@@ -202,7 +202,7 @@ export function useChat() {
 
     // Subscribe to real-time updates (only if enabled)
     if (ENABLE_REALTIME) {
-    realtimeService.subscribeToConversation(conversationId, {
+    await realtimeService.subscribeToConversation(conversationId, {
       onMessage: (message: MessageWithSender) => {
           setState(prev => {
             const existingMessages = prev.messages[conversationId] || [];
