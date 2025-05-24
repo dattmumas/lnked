@@ -24,6 +24,7 @@ import { ToolbarContext } from '@/components/lexical-playground/context/ToolbarC
 import { SharedHistoryContext } from '@/components/lexical-playground/context/SharedHistoryContext';
 import AutoLinkPlugin from '@/components/lexical-playground/plugins/AutoLinkPlugin';
 import CodeHighlightPlugin from '@/components/lexical-playground/plugins/CodeHighlightPlugin';
+import ComponentPickerPlugin from '@/components/lexical-playground/plugins/ComponentPickerPlugin';
 import EmojisPlugin from '@/components/lexical-playground/plugins/EmojisPlugin';
 import { LayoutPlugin } from '@/components/lexical-playground/plugins/LayoutPlugin/LayoutPlugin';
 import LinkPlugin from '@/components/lexical-playground/plugins/LinkPlugin';
@@ -77,6 +78,7 @@ function EditorContent({
       <div className="editor-container">
         <AutoFocusPlugin />
         <ClearEditorPlugin />
+        <ComponentPickerPlugin />
         <EmojisPlugin />
         <HashtagPlugin />
         <AutoLinkPlugin />
