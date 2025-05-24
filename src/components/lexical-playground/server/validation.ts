@@ -19,15 +19,21 @@ const port = 1235;
 
 let stringifiedEditorStateJSON = '';
 
-global.__DEV__ = true;
+// The global typings provided by Node do not include a `__DEV__` field.
+// Cast to `unknown` and then to record type to assign the flag without ESLint
+// complaining about `any` usage.
+(global as unknown as Record<string, unknown>).__DEV__ = true;
 
 const editor = createHeadlessEditor({
   namespace: 'validation',
   nodes: [...PlaygroundNodes],
-  onError: (error) => {
+  onError: (error: unknown) => {
     console.error(error);
   },
-});
+// The editor is only used in this utility script. Casting to `any` keeps the
+// dependency lightweight without pulling in full type definitions.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+}) as any;
 
 const getJSONData = (req: http.IncomingMessage): Promise<string> => {
   const body: Array<Uint8Array> = [];
