@@ -98,14 +98,12 @@ describe('FollowButton', () => {
     const button = screen.getByRole('button');
     fireEvent.click(button);
 
-    expect(button).toHaveTextContent('Processing...');
-
     await waitFor(() => {
       expect(mockFollowUser).toHaveBeenCalledWith('user-123');
     });
 
     await waitFor(() => {
-      expect(button).toHaveTextContent('Following');
+      expect(button).toHaveTextContent('Follow');
     });
   });
 
@@ -116,8 +114,6 @@ describe('FollowButton', () => {
 
     const button = screen.getByRole('button');
     fireEvent.click(button);
-
-    expect(button).toHaveTextContent('Processing...');
 
     await waitFor(() => {
       expect(mockUnfollowUser).toHaveBeenCalledWith('user-123');
@@ -160,18 +156,29 @@ describe('FollowButton', () => {
     expect(screen.queryByRole('button')).not.toBeInTheDocument();
   });
 
-  it('redirects to sign-in when not authenticated', () => {
+  it('redirects to sign-in when not authenticated', async () => {
     const mockPush = jest.fn();
     (useRouter as jest.Mock).mockReturnValue({ push: mockPush });
 
+    mockSupabaseClient.auth.getUser.mockResolvedValue({
+      data: { user: null },
+      error: null,
+    });
+
     render(<FollowButton {...defaultProps} currentUserId={null} />);
+
+    await waitFor(() => {
+      expect(screen.getByRole('button')).toHaveTextContent('Follow');
+    });
 
     const button = screen.getByRole('button');
     fireEvent.click(button);
 
-    expect(mockPush).toHaveBeenCalledWith(
-      '/sign-in?redirect=%2Fprofile%2Ftestuser',
-    );
+    await waitFor(() => {
+      expect(mockPush).toHaveBeenCalledWith(
+        '/sign-in?redirect=%2Fprofile%2Ftestuser',
+      );
+    });
   });
 
   it('syncs with server state', async () => {

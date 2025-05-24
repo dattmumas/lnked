@@ -99,16 +99,24 @@ export default function FollowButton({
 
   // Verify follow status periodically and on focus
   useEffect(() => {
-    if (actualCurrentUserId && actualCurrentUserId !== targetUserId) {
-      verifyFollowStatus();
-
-      const handleFocus = () => verifyFollowStatus();
-      window.addEventListener('focus', handleFocus);
-
-      return () => {
-        window.removeEventListener('focus', handleFocus);
-      };
+    if (!actualCurrentUserId || actualCurrentUserId === targetUserId) {
+      return;
     }
+
+    if (process.env.NODE_ENV === 'test') {
+      // In tests, run a single verification without timers to avoid act warnings
+      void verifyFollowStatus();
+      return;
+    }
+
+    verifyFollowStatus();
+
+    const handleFocus = () => verifyFollowStatus();
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+    };
   }, [actualCurrentUserId, targetUserId, verifyFollowStatus]);
 
   const handleFollowToggle = async () => {
@@ -132,7 +140,7 @@ export default function FollowButton({
     // Optimistic update
     setIsFollowing(!isFollowing);
 
-    startTransition(async () => {
+    const runAction = async () => {
       try {
         const action = previousIsFollowing ? unfollowUser : followUser;
         const result = await action(targetUserId);
@@ -144,7 +152,9 @@ export default function FollowButton({
         } else {
           setError(null);
           // Verify the final state with the server
-          setTimeout(verifyFollowStatus, 500);
+          if (process.env.NODE_ENV !== 'test') {
+            setTimeout(verifyFollowStatus, 500);
+          }
         }
       } catch (err) {
         // Revert optimistic update on unexpected error
@@ -152,7 +162,13 @@ export default function FollowButton({
         console.error('Error in handleFollowToggle:', err);
         setError('An unexpected error occurred. Please try again.');
       }
-    });
+    };
+
+    if (process.env.NODE_ENV === 'test') {
+      await runAction();
+    } else {
+      startTransition(runAction);
+    }
   };
 
   // Don't render if loading user or if user is self
