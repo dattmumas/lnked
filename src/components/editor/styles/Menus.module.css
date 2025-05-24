@@ -48,3 +48,12 @@
 :global(.mentions-menu){width:250px;}
 :global(.auto-embed-menu){width:150px;}
 :global(.emoji-menu){width:200px;}
+
+@media (max-width: 640px){
+  :global(.typeahead-popover){
+    width:90vw;
+  }
+  :global(.typeahead-popover ul){
+    max-height:40vh;
+  }
+}

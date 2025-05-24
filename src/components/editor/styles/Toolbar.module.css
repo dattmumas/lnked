@@ -6,7 +6,9 @@
   border-top-left-radius:10px;
   border-top-right-radius:10px;
   vertical-align:middle;
-  overflow:auto;
+  flex-wrap:nowrap;
+  overflow-x:auto;
+  -webkit-overflow-scrolling:touch;
   height:36px;
   position:sticky;
   top:0;
@@ -30,6 +32,15 @@
   flex-shrink:0;
   align-items:center;
   justify-content:space-between;
+}
+
+@media (max-width: 640px){
+  :global(button.toolbar-item){
+    padding:10px;
+  }
+  :global(.toolbar){
+    padding:4px 8px;
+  }
 }
 
 :global(button.toolbar-item:disabled){
