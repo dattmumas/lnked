@@ -2,6 +2,9 @@
 
 import dynamic from 'next/dynamic';
 import '@/components/lexical-playground/index.css';
+import './styles/EditorLayout.module.css';
+import './styles/Toolbar.module.css';
+import './styles/Menus.module.css';
 
 interface PostEditorProps {
   initialContent?: string;
