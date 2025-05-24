@@ -22,7 +22,7 @@
   margin-bottom: 10px;
   font-size: 15px;
   color: hsl(var(--muted-foreground));
-  border-left-color: hsl(var(--border));
+  border-left-color: var(--border);
   border-left-width: 4px;
   border-left-style: solid;
   padding-left: 16px;
@@ -188,7 +188,7 @@
   background-color: hsl(var(--muted));
   left: 0;
   top: 0;
-  border-right: 1px solid hsl(var(--border));
+  border-right: 1px solid var(--border);
   padding: 8px;
   color: hsl(var(--muted-foreground));
   white-space: pre-wrap;
@@ -247,7 +247,7 @@
   left: 0;
   bottom: 0;
   width: 100%;
-  border-bottom: 1px solid hsl(var(--border));
+  border-bottom: 1px solid var(--border);
 }
 .PlaygroundEditorTheme__tableFrozenColumn tr > td:first-child {
   background-color: hsl(var(--card));
@@ -268,7 +268,7 @@
   top: 0;
   right: 0;
   height: 100%;
-  border-right: 1px solid hsl(var(--border));
+  border-right: 1px solid var(--border);
 }
 .PlaygroundEditorTheme__tableRowStriping tr:nth-child(even) {
   background-color: hsl(var(--muted));
@@ -280,7 +280,7 @@
   outline: 2px solid hsl(var(--accent));
 }
 .PlaygroundEditorTheme__tableCell {
-  border: 1px solid hsl(var(--border));
+  border: 1px solid var(--border);
   width: 75px;
   vertical-align: top;
   text-align: start;
@@ -576,7 +576,7 @@
   margin: 10px 0;
 }
 .PlaygroundEditorTheme__layoutItem {
-  border: 1px dashed hsl(var(--border));
+  border: 1px dashed var(--border);
   padding: 8px 16px;
   min-width: 0;
   max-width: 100%;
@@ -594,7 +594,7 @@
   content: '';
   display: block;
   height: 2px;
-  background-color: hsl(var(--border));
+  background-color: var(--border);
   line-height: 2px;
 }
 .PlaygroundEditorTheme__hr.PlaygroundEditorTheme__hrSelected {

@@ -5,7 +5,6 @@ import { useForm, SubmitHandler, FormProvider } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { PostFormSchema, type PostFormValues } from '@/lib/schemas/postSchemas';
 import { useRouter } from 'next/navigation';
-
 import EditorLayout from '@/components/editor/EditorLayout';
 import PostEditor from '@/components/editor/PostEditor';
 import SEOSettingsDrawer from '@/components/editor/SEOSettingsDrawer';
