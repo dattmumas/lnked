@@ -21,21 +21,21 @@
   margin-left: 20px;
   margin-bottom: 10px;
   font-size: 15px;
-  color: rgb(101, 103, 107);
-  border-left-color: rgb(206, 208, 212);
+  color: hsl(var(--muted-foreground));
+  border-left-color: hsl(var(--border));
   border-left-width: 4px;
   border-left-style: solid;
   padding-left: 16px;
 }
 .PlaygroundEditorTheme__h1 {
   font-size: 24px;
-  color: rgb(5, 5, 5);
+  color: hsl(var(--foreground));
   font-weight: 400;
   margin: 0;
 }
 .PlaygroundEditorTheme__h2 {
   font-size: 15px;
-  color: rgb(101, 103, 107);
+  color: hsl(var(--muted-foreground));
   font-weight: 700;
   margin: 0;
   text-transform: uppercase;
@@ -123,7 +123,7 @@
   vertical-align: super;
 }
 .PlaygroundEditorTheme__textCode {
-  background-color: rgb(240, 242, 245);
+  background-color: hsl(var(--muted));
   padding: 1px 0.25rem;
   font-family: Menlo, Consolas, Monaco, monospace;
   font-size: 94%;
@@ -142,7 +142,7 @@
   border-bottom: 1px solid rgba(88, 144, 255, 0.3);
 }
 .PlaygroundEditorTheme__link {
-  color: rgb(33, 111, 219);
+  color: hsl(var(--accent));
   text-decoration: none;
 }
 .PlaygroundEditorTheme__link:hover {
@@ -169,7 +169,7 @@
   }
 }
 .PlaygroundEditorTheme__code {
-  background-color: rgb(240, 242, 245);
+  background-color: hsl(var(--muted));
   font-family: Menlo, Consolas, Monaco, monospace;
   display: block;
   padding: 8px 8px 8px 52px;
@@ -185,12 +185,12 @@
 .PlaygroundEditorTheme__code:before {
   content: attr(data-gutter);
   position: absolute;
-  background-color: #eee;
+  background-color: hsl(var(--muted));
   left: 0;
   top: 0;
-  border-right: 1px solid #ccc;
+  border-right: 1px solid hsl(var(--border));
   padding: 8px;
-  color: #777;
+  color: hsl(var(--muted-foreground));
   white-space: pre-wrap;
   text-align: right;
   min-width: 25px;
@@ -235,7 +235,7 @@
 }
 .PlaygroundEditorTheme__tableFrozenRow tr:nth-of-type(1) > th {
   overflow: clip;
-  background-color: #f2f3f5;
+  background-color: hsl(var(--muted));
   position: sticky;
   z-index: 2;
   top: 44px;
@@ -247,16 +247,16 @@
   left: 0;
   bottom: 0;
   width: 100%;
-  border-bottom: 1px solid #bbb;
+  border-bottom: 1px solid hsl(var(--border));
 }
 .PlaygroundEditorTheme__tableFrozenColumn tr > td:first-child {
-  background-color: #ffffff;
+  background-color: hsl(var(--card));
   position: sticky;
   z-index: 2;
   left: 0;
 }
 .PlaygroundEditorTheme__tableFrozenColumn tr > th:first-child {
-  background-color: #f2f3f5;
+  background-color: hsl(var(--muted));
   position: sticky;
   z-index: 2;
   left: 0;
@@ -268,19 +268,19 @@
   top: 0;
   right: 0;
   height: 100%;
-  border-right: 1px solid #bbb;
+  border-right: 1px solid hsl(var(--border));
 }
 .PlaygroundEditorTheme__tableRowStriping tr:nth-child(even) {
-  background-color: #f2f5fb;
+  background-color: hsl(var(--muted));
 }
 .PlaygroundEditorTheme__tableSelection *::selection {
   background-color: transparent;
 }
 .PlaygroundEditorTheme__tableSelected {
-  outline: 2px solid rgb(60, 132, 244);
+  outline: 2px solid hsl(var(--accent));
 }
 .PlaygroundEditorTheme__tableCell {
-  border: 1px solid #bbb;
+  border: 1px solid hsl(var(--border));
   width: 75px;
   vertical-align: top;
   text-align: start;
@@ -306,7 +306,7 @@
   top: 0;
 }
 .PlaygroundEditorTheme__tableCellHeader {
-  background-color: #f2f3f5;
+  background-color: hsl(var(--muted));
   text-align: start;
 }
 .PlaygroundEditorTheme__tableCellSelected {
@@ -325,7 +325,7 @@
 }
 .PlaygroundEditorTheme__tableAddColumns {
   position: absolute;
-  background-color: #eee;
+  background-color: hsl(var(--muted));
   height: 100%;
   animation: table-controls 0.2s ease;
   border: 0;
@@ -352,7 +352,7 @@
 .PlaygroundEditorTheme__tableAddRows {
   position: absolute;
   width: calc(100% - 25px);
-  background-color: #eee;
+  background-color: hsl(var(--muted));
   animation: table-controls 0.2s ease;
   border: 0;
   cursor: pointer;
@@ -383,7 +383,7 @@
   display: block;
   position: absolute;
   width: 1px;
-  background-color: rgb(60, 132, 244);
+  background-color: hsl(var(--accent));
   height: 100%;
   top: 0;
 }
@@ -397,7 +397,7 @@
   height: 20px;
 }
 .PlaygroundEditorTheme__tableCellActionButton {
-  background-color: #eee;
+  background-color: hsl(var(--muted));
   display: block;
   border: 0;
   border-radius: 20px;
@@ -407,7 +407,7 @@
   cursor: pointer;
 }
 .PlaygroundEditorTheme__tableCellActionButton:hover {
-  background-color: #ddd;
+  background-color: hsl(var(--muted));
 }
 .PlaygroundEditorTheme__characterLimit {
   display: inline;
@@ -496,9 +496,9 @@
   border-radius: 2px;
 }
 .PlaygroundEditorTheme__listItemChecked:before {
-  border: 1px solid rgb(61, 135, 245);
+  border: 1px solid hsl(var(--accent));
   border-radius: 2px;
-  background-color: #3d87f5;
+  background-color: hsl(var(--accent));
   background-repeat: no-repeat;
 }
 .PlaygroundEditorTheme__listItemChecked:after {
@@ -568,7 +568,7 @@
   user-select: none;
 }
 .PlaygroundEditorTheme__embedBlockFocus {
-  outline: 2px solid rgb(60, 132, 244);
+  outline: 2px solid hsl(var(--accent));
 }
 .PlaygroundEditorTheme__layoutContainer {
   display: grid;
@@ -576,13 +576,13 @@
   margin: 10px 0;
 }
 .PlaygroundEditorTheme__layoutItem {
-  border: 1px dashed #ddd;
+  border: 1px dashed hsl(var(--border));
   padding: 8px 16px;
   min-width: 0;
   max-width: 100%;
 }
 .PlaygroundEditorTheme__autocomplete {
-  color: #ccc;
+  color: hsl(var(--muted-foreground));
 }
 .PlaygroundEditorTheme__hr {
   padding: 2px 2px;
@@ -594,11 +594,11 @@
   content: '';
   display: block;
   height: 2px;
-  background-color: #ccc;
+  background-color: hsl(var(--border));
   line-height: 2px;
 }
 .PlaygroundEditorTheme__hr.PlaygroundEditorTheme__hrSelected {
-  outline: 2px solid rgb(60, 132, 244);
+  outline: 2px solid hsl(var(--accent));
   user-select: none;
 }
 
