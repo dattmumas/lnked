@@ -65,6 +65,8 @@ export class CollapsibleContainerNode extends ElementNode {
   }
 
   collapseAtStart(selection: RangeSelection): boolean {
+    void selection; // Parameter required by interface but not used
+    
     // Unwrap the CollapsibleContainerNode by replacing it with the children
     // of its children (CollapsibleTitleNode, CollapsibleContentNode)
     const nodesToInsert: LexicalNode[] = [];
@@ -133,6 +135,7 @@ export class CollapsibleContainerNode extends ElementNode {
   static importDOM(): DOMConversionMap<HTMLDetailsElement> | null {
     return {
       details: (domNode: HTMLDetailsElement) => {
+        void domNode; // Parameter required for type compatibility
         return {
           conversion: $convertDetailsElement,
           priority: 1,

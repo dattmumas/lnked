@@ -6,14 +6,14 @@
  *
  */
 
-import type {JSX} from 'react';
+import type { JSX } from 'react';
 
 import './index.css';
 
-import {$isCodeHighlightNode} from '@lexical/code';
-import {$isLinkNode, TOGGLE_LINK_COMMAND} from '@lexical/link';
-import {useLexicalComposerContext} from '@lexical/react/LexicalComposerContext';
-import {mergeRegister} from '@lexical/utils';
+import { $isCodeHighlightNode } from '@lexical/code';
+import { $isLinkNode, TOGGLE_LINK_COMMAND } from '@lexical/link';
+import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
+import { mergeRegister } from '@lexical/utils';
 import {
   $getSelection,
   $isParagraphNode,
@@ -25,14 +25,14 @@ import {
   LexicalEditor,
   SELECTION_CHANGE_COMMAND,
 } from 'lexical';
-import {Dispatch, useCallback, useEffect, useRef, useState} from 'react';
+import { Dispatch, useCallback, useEffect, useRef, useState } from 'react';
 import * as React from 'react';
-import {createPortal} from 'react-dom';
+import { createPortal } from 'react-dom';
 
-import {getDOMRangeRect} from '../../utils/getDOMRangeRect';
-import {getSelectedNode} from '../../utils/getSelectedNode';
-import {setFloatingElemPosition} from '../../utils/setFloatingElemPosition';
-import {INSERT_INLINE_COMMAND} from '../CommentPlugin';
+import { getDOMRangeRect } from '../../utils/getDOMRangeRect';
+import { getSelectedNode } from '../../utils/getSelectedNode';
+import { setFloatingElemPosition } from '../../utils/setFloatingElemPosition';
+import { INSERT_INLINE_COMMAND } from '../CommentPlugin';
 
 function TextFormatFloatingToolbar({
   editor,
@@ -99,6 +99,7 @@ function TextFormatFloatingToolbar({
     }
   }
   function mouseUpListener(e: MouseEvent) {
+    void e; // Parameter required by interface but not used
     if (popupCharStylesEditorRef?.current) {
       if (popupCharStylesEditorRef.current.style.pointerEvents !== 'auto') {
         popupCharStylesEditorRef.current.style.pointerEvents = 'auto';
@@ -174,7 +175,7 @@ function TextFormatFloatingToolbar({
       $updateTextFormatFloatingToolbar();
     });
     return mergeRegister(
-      editor.registerUpdateListener(({editorState}) => {
+      editor.registerUpdateListener(({ editorState }) => {
         editorState.read(() => {
           $updateTextFormatFloatingToolbar();
         });
@@ -202,7 +203,8 @@ function TextFormatFloatingToolbar({
             }}
             className={'popup-item spaced ' + (isBold ? 'active' : '')}
             title="Bold"
-            aria-label="Format text as bold">
+            aria-label="Format text as bold"
+          >
             <i className="format bold" />
           </button>
           <button
@@ -212,7 +214,8 @@ function TextFormatFloatingToolbar({
             }}
             className={'popup-item spaced ' + (isItalic ? 'active' : '')}
             title="Italic"
-            aria-label="Format text as italics">
+            aria-label="Format text as italics"
+          >
             <i className="format italic" />
           </button>
           <button
@@ -222,7 +225,8 @@ function TextFormatFloatingToolbar({
             }}
             className={'popup-item spaced ' + (isUnderline ? 'active' : '')}
             title="Underline"
-            aria-label="Format text to underlined">
+            aria-label="Format text to underlined"
+          >
             <i className="format underline" />
           </button>
           <button
@@ -232,7 +236,8 @@ function TextFormatFloatingToolbar({
             }}
             className={'popup-item spaced ' + (isStrikethrough ? 'active' : '')}
             title="Strikethrough"
-            aria-label="Format text with a strikethrough">
+            aria-label="Format text with a strikethrough"
+          >
             <i className="format strikethrough" />
           </button>
           <button
@@ -242,7 +247,8 @@ function TextFormatFloatingToolbar({
             }}
             className={'popup-item spaced ' + (isSubscript ? 'active' : '')}
             title="Subscript"
-            aria-label="Format Subscript">
+            aria-label="Format Subscript"
+          >
             <i className="format subscript" />
           </button>
           <button
@@ -252,7 +258,8 @@ function TextFormatFloatingToolbar({
             }}
             className={'popup-item spaced ' + (isSuperscript ? 'active' : '')}
             title="Superscript"
-            aria-label="Format Superscript">
+            aria-label="Format Superscript"
+          >
             <i className="format superscript" />
           </button>
           <button
@@ -262,7 +269,8 @@ function TextFormatFloatingToolbar({
             }}
             className={'popup-item spaced ' + (isUppercase ? 'active' : '')}
             title="Uppercase"
-            aria-label="Format text to uppercase">
+            aria-label="Format text to uppercase"
+          >
             <i className="format uppercase" />
           </button>
           <button
@@ -272,7 +280,8 @@ function TextFormatFloatingToolbar({
             }}
             className={'popup-item spaced ' + (isLowercase ? 'active' : '')}
             title="Lowercase"
-            aria-label="Format text to lowercase">
+            aria-label="Format text to lowercase"
+          >
             <i className="format lowercase" />
           </button>
           <button
@@ -282,7 +291,8 @@ function TextFormatFloatingToolbar({
             }}
             className={'popup-item spaced ' + (isCapitalize ? 'active' : '')}
             title="Capitalize"
-            aria-label="Format text to capitalize">
+            aria-label="Format text to capitalize"
+          >
             <i className="format capitalize" />
           </button>
           <button
@@ -292,7 +302,8 @@ function TextFormatFloatingToolbar({
             }}
             className={'popup-item spaced ' + (isCode ? 'active' : '')}
             title="Insert code block"
-            aria-label="Insert code block">
+            aria-label="Insert code block"
+          >
             <i className="format code" />
           </button>
           <button
@@ -300,7 +311,8 @@ function TextFormatFloatingToolbar({
             onClick={insertLink}
             className={'popup-item spaced ' + (isLink ? 'active' : '')}
             title="Insert link"
-            aria-label="Insert link">
+            aria-label="Insert link"
+          >
             <i className="format link" />
           </button>
         </>
@@ -310,7 +322,8 @@ function TextFormatFloatingToolbar({
         onClick={insertComment}
         className={'popup-item spaced insert-comment'}
         title="Insert comment"
-        aria-label="Insert comment">
+        aria-label="Insert comment"
+      >
         <i className="format add-comment" />
       </button>
     </div>

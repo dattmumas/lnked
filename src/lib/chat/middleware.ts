@@ -5,11 +5,31 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { createServerChatSecurity } from './security';
+import type { User } from '@supabase/supabase-js';
+import type { SupabaseClient } from '@supabase/supabase-js';
+
+type AuthResult = {
+  user: User;
+  supabase: SupabaseClient;
+};
+
+type ConversationAccessResult = AuthResult & {
+  security: ReturnType<typeof createServerChatSecurity>;
+};
+
+type HandlerContext = ConversationAccessResult & {
+  params: Record<string, string>;
+};
+
+type AuthHandlerContext = AuthResult & {
+  params: Record<string, string>;
+};
 
 /**
  * Middleware to check if user is authenticated
  */
 export async function requireAuth(request: NextRequest) {
+  void request; // Parameter required by interface but not used
   const supabase = await createServerSupabaseClient();
   
   const {
@@ -71,15 +91,10 @@ export async function requireConversationAccess(
 export function withConversationAccess(
   handler: (
     request: NextRequest,
-    context: {
-      user: any;
-      supabase: any;
-      security: any;
-      params: any;
-    }
+    context: HandlerContext
   ) => Promise<NextResponse>
 ) {
-  return async (request: NextRequest, { params }: { params: any }) => {
+  return async (request: NextRequest, { params }: { params: Record<string, string> }) => {
     const conversationId = params.conversationId || params.id;
     
     if (!conversationId) {
@@ -105,14 +120,10 @@ export function withConversationAccess(
 export function withAuth(
   handler: (
     request: NextRequest,
-    context: {
-      user: any;
-      supabase: any;
-      params: any;
-    }
+    context: AuthHandlerContext
   ) => Promise<NextResponse>
 ) {
-  return async (request: NextRequest, { params }: { params: any }) => {
+  return async (request: NextRequest, { params }: { params: Record<string, string> }) => {
     const authResult = await requireAuth(request);
     
     if (authResult instanceof NextResponse) {

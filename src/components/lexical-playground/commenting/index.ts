@@ -296,7 +296,7 @@ export class CommentStore {
     const disconnect = () => {
       try {
         provider.disconnect();
-      } catch (e) {
+      } catch {
         // Do nothing
       }
     };
@@ -308,11 +308,9 @@ export class CommentStore {
           const shouldConnect = payload;
 
           if (shouldConnect) {
-            // eslint-disable-next-line no-console
             console.log('Comments connected!');
             connect();
           } else {
-            // eslint-disable-next-line no-console
             console.log('Comments disconnected!');
             disconnect();
           }

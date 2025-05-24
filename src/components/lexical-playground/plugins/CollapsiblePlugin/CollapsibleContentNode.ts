@@ -26,6 +26,7 @@ type SerializedCollapsibleContentNode = SerializedElementNode;
 export function $convertCollapsibleContentElement(
   domNode: HTMLElement,
 ): DOMConversionOutput | null {
+  void domNode; // Parameter required for type compatibility but not used
   const node = $createCollapsibleContentNode();
   return {
     node,
@@ -74,6 +75,8 @@ export class CollapsibleContentNode extends ElementNode {
   }
 
   updateDOM(prevNode: this, dom: HTMLElement): boolean {
+    void prevNode; // Parameter required by interface but not used
+    void dom; // Parameter required by interface but not used
     return false;
   }
 

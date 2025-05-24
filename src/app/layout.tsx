@@ -3,7 +3,6 @@ import './globals.css';
 import { ThemeProvider } from 'next-themes';
 import ModernNavbar from '@/components/ModernNavbar';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
-import Link from 'next/link';
 
 export const metadata: Metadata = {
   title: 'Lnked - Collaborative Newsletters',

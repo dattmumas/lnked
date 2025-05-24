@@ -6,10 +6,10 @@
  *
  */
 
-import type {LexicalEditor} from 'lexical';
-import type {JSX} from 'react';
+import type { LexicalEditor } from 'lexical';
+import type { JSX } from 'react';
 
-import {$createCodeNode, $isCodeNode} from '@lexical/code';
+import { $createCodeNode, $isCodeNode } from '@lexical/code';
 import {
   editorStateFromSerializedDocument,
   exportFile,
@@ -21,10 +21,10 @@ import {
   $convertFromMarkdownString,
   $convertToMarkdownString,
 } from '@lexical/markdown';
-import {useCollaborationContext} from '@lexical/react/LexicalCollaborationContext';
-import {useLexicalComposerContext} from '@lexical/react/LexicalComposerContext';
-import {mergeRegister} from '@lexical/utils';
-import {CONNECTED_COMMAND, TOGGLE_CONNECT_COMMAND} from '@lexical/yjs';
+import { useCollaborationContext } from '@lexical/react/LexicalCollaborationContext';
+import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
+import { mergeRegister } from '@lexical/utils';
+import { CONNECTED_COMMAND, TOGGLE_CONNECT_COMMAND } from '@lexical/yjs';
 import {
   $createTextNode,
   $getRoot,
@@ -35,14 +35,14 @@ import {
   COMMAND_PRIORITY_EDITOR,
   HISTORIC_TAG,
 } from 'lexical';
-import {useCallback, useEffect, useState} from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
-import {INITIAL_SETTINGS} from '../../appSettings';
+import { INITIAL_SETTINGS } from '../../appSettings';
 import useFlashMessage from '../../hooks/useFlashMessage';
 import useModal from '../../hooks/useModal';
 import Button from '../../ui/Button';
-import {docFromHash, docToHash} from '../../utils/docSerialization';
-import {PLAYGROUND_TRANSFORMERS} from '../MarkdownTransformers';
+import { docFromHash, docToHash } from '../../utils/docSerialization';
+import { PLAYGROUND_TRANSFORMERS } from '../MarkdownTransformers';
 import {
   SPEECH_TO_TEXT_COMMAND,
   SUPPORT_SPEECH_RECOGNITION,
@@ -101,6 +101,8 @@ export default function ActionsPlugin({
   isRichText: boolean;
   shouldPreserveNewLinesInMarkdown: boolean;
 }): JSX.Element {
+  void isRichText; // Parameter required by interface but not used in current implementation
+
   const [editor] = useLexicalComposerContext();
   const [isEditable, setIsEditable] = useState(() => editor.isEditable());
   const [isSpeechToText, setIsSpeechToText] = useState(false);
@@ -108,7 +110,7 @@ export default function ActionsPlugin({
   const [isEditorEmpty, setIsEditorEmpty] = useState(true);
   const [modal, showModal] = useModal();
   const showFlashMessage = useFlashMessage();
-  const {isCollabActive} = useCollaborationContext();
+  const { isCollabActive } = useCollaborationContext();
   useEffect(() => {
     if (INITIAL_SETTINGS.isCollab) {
       return;
@@ -139,7 +141,9 @@ export default function ActionsPlugin({
 
   useEffect(() => {
     return editor.registerUpdateListener(
-      ({dirtyElements, prevEditorState, tags}) => {
+      ({ dirtyElements, prevEditorState, tags }) => {
+        void prevEditorState; // Parameter required by interface but not used
+
         // If we are in read only mode, send the editor state
         // to server and ask for validation if possible.
         if (
@@ -209,9 +213,8 @@ export default function ActionsPlugin({
             (isSpeechToText ? 'active' : '')
           }
           title="Speech To Text"
-          aria-label={`${
-            isSpeechToText ? 'Enable' : 'Disable'
-          } speech to text`}>
+          aria-label={`${isSpeechToText ? 'Enable' : 'Disable'} speech to text`}
+        >
           <i className="mic" />
         </button>
       )}
@@ -219,7 +222,8 @@ export default function ActionsPlugin({
         className="action-button import"
         onClick={() => importFile(editor)}
         title="Import"
-        aria-label="Import editor state from JSON">
+        aria-label="Import editor state from JSON"
+      >
         <i className="import" />
       </button>
 
@@ -232,7 +236,8 @@ export default function ActionsPlugin({
           })
         }
         title="Export"
-        aria-label="Export editor state to JSON">
+        aria-label="Export editor state to JSON"
+      >
         <i className="export" />
       </button>
       <button
@@ -249,7 +254,8 @@ export default function ActionsPlugin({
           )
         }
         title="Share"
-        aria-label="Share Playground link to current editor state">
+        aria-label="Share Playground link to current editor state"
+      >
         <i className="share" />
       </button>
       <button
@@ -261,7 +267,8 @@ export default function ActionsPlugin({
           ));
         }}
         title="Clear"
-        aria-label="Clear editor contents">
+        aria-label="Clear editor contents"
+      >
         <i className="clear" />
       </button>
       <button
@@ -274,14 +281,16 @@ export default function ActionsPlugin({
           editor.setEditable(!editor.isEditable());
         }}
         title="Read-Only Mode"
-        aria-label={`${!isEditable ? 'Unlock' : 'Lock'} read-only mode`}>
+        aria-label={`${!isEditable ? 'Unlock' : 'Lock'} read-only mode`}
+      >
         <i className={!isEditable ? 'unlock' : 'lock'} />
       </button>
       <button
         className="action-button"
         onClick={handleMarkdownToggle}
         title="Convert From Markdown"
-        aria-label="Convert from markdown">
+        aria-label="Convert from markdown"
+      >
         <i className="markdown" />
       </button>
       {isCollabActive && (
@@ -295,7 +304,8 @@ export default function ActionsPlugin({
           } Collaborative Editing`}
           aria-label={`${
             connected ? 'Disconnect from' : 'Connect to'
-          } a collaborative editing server`}>
+          } a collaborative editing server`}
+        >
           <i className={connected ? 'disconnect' : 'connect'} />
         </button>
       )}
@@ -320,14 +330,16 @@ function ShowClearDialog({
             editor.dispatchCommand(CLEAR_EDITOR_COMMAND, undefined);
             editor.focus();
             onClose();
-          }}>
+          }}
+        >
           Clear
         </Button>{' '}
         <Button
           onClick={() => {
             editor.focus();
             onClose();
-          }}>
+          }}
+        >
           Cancel
         </Button>
       </div>

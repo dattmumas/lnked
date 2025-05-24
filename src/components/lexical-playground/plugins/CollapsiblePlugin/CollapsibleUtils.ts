@@ -7,11 +7,11 @@
  */
 
 export function setDomHiddenUntilFound(dom: HTMLElement): void {
-  // @ts-expect-error
+  // @ts-expect-error - hidden property accepts 'until-found' value in modern browsers
   dom.hidden = 'until-found';
 }
 
 export function domOnBeforeMatch(dom: HTMLElement, callback: () => void): void {
-  // @ts-expect-error
+  // @ts-expect-error - onbeforematch is a newer DOM API not yet in TypeScript types
   dom.onbeforematch = callback;
 }

@@ -20,18 +20,18 @@ export default (() => {
       try {
         const value = JSON.parse(urlSearchParams.get(param) ?? 'true');
         INITIAL_SETTINGS[param as keyof Settings] = Boolean(value);
-      } catch (error) {
+      } catch {
         console.warn(`Unable to parse query parameter "${param}"`);
       }
     }
   }
 
   if (INITIAL_SETTINGS.disableBeforeInput) {
-    // @ts-expect-error
+    // @ts-expect-error - InputEvent may not have getTargetRanges method in all browsers
     delete window.InputEvent.prototype.getTargetRanges;
   }
 
-  // @ts-ignore
+  // @ts-expect-error - Global window property for Excalidraw asset path
   window.EXCALIDRAW_ASSET_PATH = process.env.EXCALIDRAW_ASSET_PATH;
 
   return INITIAL_SETTINGS;

@@ -36,7 +36,6 @@ import {
   Search,
 } from 'lucide-react';
 import ModeToggle from '@/components/app/nav/ModeToggle';
-import { motion, AnimatePresence } from 'framer-motion';
 import SearchBar from '@/components/app/nav/SearchBar';
 
 const publicNavItems = [
@@ -57,15 +56,6 @@ const authenticatedNavItems = [
     href: '/dashboard',
     label: 'Dashboard',
     icon: LayoutDashboard,
-  },
-];
-
-const quickActions = [
-  {
-    href: '/posts/new',
-    label: 'Write',
-    icon: PenSquare,
-    variant: 'default' as const,
   },
 ];
 

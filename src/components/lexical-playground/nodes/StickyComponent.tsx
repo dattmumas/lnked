@@ -6,28 +6,28 @@
  *
  */
 
-import type {LexicalEditor, NodeKey} from 'lexical';
-import type {JSX} from 'react';
+import type { LexicalEditor, NodeKey } from 'lexical';
+import type { JSX } from 'react';
 
 import './StickyNode.css';
 
-import {useCollaborationContext} from '@lexical/react/LexicalCollaborationContext';
-import {CollaborationPlugin} from '@lexical/react/LexicalCollaborationPlugin';
-import {useLexicalComposerContext} from '@lexical/react/LexicalComposerContext';
-import {LexicalErrorBoundary} from '@lexical/react/LexicalErrorBoundary';
-import {HistoryPlugin} from '@lexical/react/LexicalHistoryPlugin';
-import {LexicalNestedComposer} from '@lexical/react/LexicalNestedComposer';
-import {PlainTextPlugin} from '@lexical/react/LexicalPlainTextPlugin';
-import {calculateZoomLevel} from '@lexical/utils';
-import {$getNodeByKey} from 'lexical';
+import { useCollaborationContext } from '@lexical/react/LexicalCollaborationContext';
+import { CollaborationPlugin } from '@lexical/react/LexicalCollaborationPlugin';
+import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
+import { LexicalErrorBoundary } from '@lexical/react/LexicalErrorBoundary';
+import { HistoryPlugin } from '@lexical/react/LexicalHistoryPlugin';
+import { LexicalNestedComposer } from '@lexical/react/LexicalNestedComposer';
+import { PlainTextPlugin } from '@lexical/react/LexicalPlainTextPlugin';
+import { calculateZoomLevel } from '@lexical/utils';
+import { $getNodeByKey } from 'lexical';
 import * as React from 'react';
-import {useEffect, useLayoutEffect, useRef} from 'react';
+import { useEffect, useLayoutEffect, useRef } from 'react';
 
-import {createWebsocketProvider} from '../collaboration';
-import {useSharedHistoryContext} from '../context/SharedHistoryContext';
+import { createWebsocketProvider } from '../collaboration';
+import { useSharedHistoryContext } from '../context/SharedHistoryContext';
 import StickyEditorTheme from '../themes/StickyEditorTheme';
 import ContentEditable from '../ui/ContentEditable';
-import {$isStickyNode} from './StickyNode';
+import { $isStickyNode } from './StickyNode';
 
 type Positioning = {
   isDragging: boolean;
@@ -73,7 +73,7 @@ export default function StickyComponent({
     x: 0,
     y: 0,
   });
-  const {isCollabActive} = useCollaborationContext();
+  const { isCollabActive } = useCollaborationContext();
 
   useEffect(() => {
     const position = positioningRef.current;
@@ -91,7 +91,7 @@ export default function StickyComponent({
     const resizeObserver = new ResizeObserver((entries) => {
       for (let i = 0; i < entries.length; i++) {
         const entry = entries[i];
-        const {target} = entry;
+        const { target } = entry;
         position.rootElementRect = target.getBoundingClientRect();
         const stickyContainer = stickyContainerRef.current;
         if (stickyContainer !== null) {
@@ -161,6 +161,7 @@ export default function StickyComponent({
   };
 
   const handlePointerUp = (event: PointerEvent) => {
+    void event;
     const stickyContainer = stickyContainerRef.current;
     const positioning = positioningRef.current;
     if (stickyContainer !== null) {
@@ -195,7 +196,7 @@ export default function StickyComponent({
     });
   };
 
-  const {historyState} = useSharedHistoryContext();
+  const { historyState } = useSharedHistoryContext();
 
   return (
     <div ref={stickyContainerRef} className="sticky-note-container">
@@ -214,7 +215,7 @@ export default function StickyComponent({
           const stickContainer = stickyContainer;
           const positioning = positioningRef.current;
           if (stickContainer !== null) {
-            const {top, left} = stickContainer.getBoundingClientRect();
+            const { top, left } = stickContainer.getBoundingClientRect();
             const zoom = calculateZoomLevel(stickContainer);
             positioning.offsetX = event.clientX / zoom - left;
             positioning.offsetY = event.clientY / zoom - top;
@@ -224,24 +225,28 @@ export default function StickyComponent({
             document.addEventListener('pointerup', handlePointerUp);
             event.preventDefault();
           }
-        }}>
+        }}
+      >
         <button
           onClick={handleDelete}
           className="delete"
           aria-label="Delete sticky note"
-          title="Delete">
+          title="Delete"
+        >
           X
         </button>
         <button
           onClick={handleColorChange}
           className="color"
           aria-label="Change sticky note color"
-          title="Color">
+          title="Color"
+        >
           <i className="bucket" />
         </button>
         <LexicalNestedComposer
           initialEditor={caption}
-          initialTheme={StickyEditorTheme}>
+          initialTheme={StickyEditorTheme}
+        >
           {isCollabActive ? (
             <CollaborationPlugin
               id={caption.getKey()}

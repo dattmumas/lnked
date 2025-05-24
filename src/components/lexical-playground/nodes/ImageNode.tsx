@@ -19,10 +19,10 @@ import type {
   SerializedLexicalNode,
   Spread,
 } from 'lexical';
-import type {JSX} from 'react';
+import type { JSX } from 'react';
 
-import {HashtagNode} from '@lexical/hashtag';
-import {LinkNode} from '@lexical/link';
+import { HashtagNode } from '@lexical/hashtag';
+import { LinkNode } from '@lexical/link';
 import {
   $applyNodeReplacement,
   createEditor,
@@ -34,8 +34,8 @@ import {
 } from 'lexical';
 import * as React from 'react';
 
-import {EmojiNode} from './EmojiNode';
-import {KeywordNode} from './KeywordNode';
+import { EmojiNode } from './EmojiNode';
+import { KeywordNode } from './KeywordNode';
 
 const ImageComponent = React.lazy(() => import('./ImageComponent'));
 
@@ -65,9 +65,9 @@ function $convertImageElement(domNode: Node): null | DOMConversionOutput {
   if (img.src.startsWith('file:///') || isGoogleDocCheckboxImg(img)) {
     return null;
   }
-  const {alt: altText, src, width, height} = img;
-  const node = $createImageNode({altText, height, src, width});
-  return {node};
+  const { alt: altText, src, width, height } = img;
+  const node = $createImageNode({ altText, height, src, width });
+  return { node };
 }
 
 export type SerializedImageNode = Spread<
@@ -113,7 +113,8 @@ export class ImageNode extends DecoratorNode<JSX.Element> {
   }
 
   static importJSON(serializedNode: SerializedImageNode): ImageNode {
-    const {altText, height, width, maxWidth, src, showCaption} = serializedNode;
+    const { altText, height, width, maxWidth, src, showCaption } =
+      serializedNode;
     return $createImageNode({
       altText,
       height,
@@ -126,7 +127,7 @@ export class ImageNode extends DecoratorNode<JSX.Element> {
 
   updateFromJSON(serializedNode: LexicalUpdateJSON<SerializedImageNode>): this {
     const node = super.updateFromJSON(serializedNode);
-    const {caption} = serializedNode;
+    const { caption } = serializedNode;
 
     const nestedEditor = node.__caption;
     const editorState = nestedEditor.parseEditorState(caption.editorState);
@@ -142,15 +143,18 @@ export class ImageNode extends DecoratorNode<JSX.Element> {
     element.setAttribute('alt', this.__altText);
     element.setAttribute('width', this.__width.toString());
     element.setAttribute('height', this.__height.toString());
-    return {element};
+    return { element };
   }
 
   static importDOM(): DOMConversionMap | null {
     return {
-      img: (node: Node) => ({
-        conversion: $convertImageElement,
-        priority: 0,
-      }),
+      img: (node: Node) => {
+        void node;
+        return {
+          conversion: $convertImageElement,
+          priority: 0,
+        };
+      },
     };
   }
 

@@ -28,6 +28,7 @@ type SerializedCollapsibleTitleNode = SerializedElementNode;
 export function $convertSummaryElement(
   domNode: HTMLElement,
 ): DOMConversionOutput | null {
+  void domNode;
   const node = $createCollapsibleTitleNode();
   return {
     node,
@@ -63,12 +64,15 @@ export class CollapsibleTitleNode extends ElementNode {
   }
 
   updateDOM(prevNode: this, dom: HTMLElement): boolean {
+    void prevNode;
+    void dom;
     return false;
   }
 
   static importDOM(): DOMConversionMap | null {
     return {
       summary: (domNode: HTMLElement) => {
+        void domNode;
         return {
           conversion: $convertSummaryElement,
           priority: 1,

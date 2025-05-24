@@ -63,7 +63,7 @@ function EditorContent({
 }) {
   const [editor] = useLexicalComposerContext();
   const [activeEditor, setActiveEditor] = useState(editor);
-  const [isLinkEditMode, setIsLinkEditMode] = useState<boolean>(false);
+  const [, setIsLinkEditMode] = useState<boolean>(false);
   const isEditable = true;
 
   return (

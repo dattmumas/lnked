@@ -185,7 +185,10 @@ export const TABLE: ElementTransformer = {
 
       output.push(`| ${rowOutput.join(' | ')} |`);
       if (isHeaderRow) {
-        output.push(`| ${rowOutput.map((_) => '---').join(' | ')} |`);
+        output.push(`| ${rowOutput.map((_) => {
+          void _; // Parameter required by interface but not used
+          return '---';
+        }).join(' | ')} |`);
       }
     }
 

@@ -15,9 +15,9 @@ import type {
   Spread,
 } from 'lexical';
 
-import {TextNode} from 'lexical';
+import { TextNode } from 'lexical';
 
-import {uuid as UUID} from '../plugins/AutocompletePlugin';
+import { uuid as UUID } from '../plugins/AutocompletePlugin';
 
 export type SerializedAutocompleteNode = Spread<
   {
@@ -67,11 +67,15 @@ export class AutocompleteNode extends TextNode {
   }
 
   updateDOM(prevNode: this, dom: HTMLElement, config: EditorConfig): boolean {
+    void prevNode;
+    void dom;
+    void config;
     return false;
   }
 
   exportDOM(_: LexicalEditor): DOMExportOutput {
-    return {element: null};
+    void _;
+    return { element: null };
   }
 
   excludeFromCopy() {

@@ -6,10 +6,10 @@
  *
  */
 
-import type {JSX} from 'react';
+import type { JSX } from 'react';
 
-import {$isLinkNode, TOGGLE_LINK_COMMAND} from '@lexical/link';
-import {useLexicalComposerContext} from '@lexical/react/LexicalComposerContext';
+import { $isLinkNode, TOGGLE_LINK_COMMAND } from '@lexical/link';
+import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
 import {
   LexicalContextMenuPlugin,
   MenuOption,
@@ -25,7 +25,7 @@ import {
   type LexicalNode,
   PASTE_COMMAND,
 } from 'lexical';
-import {useCallback, useMemo} from 'react';
+import { useCallback, useMemo } from 'react';
 import * as React from 'react';
 import * as ReactDOM from 'react-dom';
 
@@ -56,7 +56,8 @@ function ContextMenuItem({
       aria-selected={isSelected}
       id={'typeahead-item-' + index}
       onMouseEnter={onMouseEnter}
-      onClick={onClick}>
+      onClick={onClick}
+    >
       <span className="text">{option.title}</span>
     </li>
   );
@@ -113,17 +114,21 @@ export default function ContextMenuPlugin(): JSX.Element {
     return [
       new ContextMenuOption(`Copy`, {
         onSelect: (_node) => {
+          void _node;
           editor.dispatchCommand(COPY_COMMAND, null);
         },
       }),
       new ContextMenuOption(`Cut`, {
         onSelect: (_node) => {
+          void _node;
           editor.dispatchCommand(CUT_COMMAND, null);
         },
       }),
       new ContextMenuOption(`Paste`, {
         onSelect: (_node) => {
+          void _node;
           navigator.clipboard.read().then(async function (...args) {
+            void args;
             const data = new DataTransfer();
 
             const items = await navigator.clipboard.read();
@@ -153,7 +158,9 @@ export default function ContextMenuPlugin(): JSX.Element {
       }),
       new ContextMenuOption(`Paste as Plain Text`, {
         onSelect: (_node) => {
+          void _node;
           navigator.clipboard.read().then(async function (...args) {
+            void args;
             const permission = await navigator.permissions.query({
               // @ts-expect-error These types are incorrect.
               name: 'clipboard-read',
@@ -177,6 +184,7 @@ export default function ContextMenuPlugin(): JSX.Element {
       }),
       new ContextMenuOption(`Delete Node`, {
         onSelect: (_node) => {
+          void _node;
           const selection = $getSelection();
           if ($isRangeSelection(selection)) {
             const currentNode = selection.anchor.getNode();
@@ -224,6 +232,7 @@ export default function ContextMenuPlugin(): JSX.Element {
           newOptions = [
             new ContextMenuOption(`Remove Link`, {
               onSelect: (_node) => {
+                void _node;
                 editor.dispatchCommand(TOGGLE_LINK_COMMAND, null);
               },
             }),
@@ -248,9 +257,10 @@ export default function ContextMenuPlugin(): JSX.Element {
           selectOptionAndCleanUp,
           setHighlightedIndex,
         },
-        {setMenuRef},
-      ) =>
-        anchorElementRef.current
+        { setMenuRef },
+      ) => {
+        void _options;
+        return anchorElementRef.current
           ? ReactDOM.createPortal(
               <div
                 className="typeahead-popover auto-embed-menu"
@@ -259,7 +269,8 @@ export default function ContextMenuPlugin(): JSX.Element {
                   userSelect: 'none',
                   width: 200,
                 }}
-                ref={setMenuRef}>
+                ref={setMenuRef}
+              >
                 <ContextMenu
                   options={options}
                   selectedItemIndex={selectedIndex}
@@ -274,8 +285,8 @@ export default function ContextMenuPlugin(): JSX.Element {
               </div>,
               anchorElementRef.current,
             )
-          : null
-      }
+          : null;
+      }}
     />
   );
 }

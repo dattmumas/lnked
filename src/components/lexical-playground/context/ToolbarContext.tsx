@@ -6,9 +6,9 @@
  *
  */
 
-import type {JSX} from 'react';
+import type { JSX } from 'react';
 
-import {ElementFormatType} from 'lexical';
+import { ElementFormatType } from 'lexical';
 import React, {
   createContext,
   ReactNode,
@@ -22,11 +22,6 @@ import React, {
 export const MIN_ALLOWED_FONT_SIZE = 8;
 export const MAX_ALLOWED_FONT_SIZE = 72;
 export const DEFAULT_FONT_SIZE = 15;
-
-const rootTypeToRootName = {
-  root: 'Root',
-  table: 'Table',
-};
 
 export const blockTypeToBlockName = {
   bullet: 'Bulleted List',
@@ -43,8 +38,6 @@ export const blockTypeToBlockName = {
   quote: 'Quote',
 };
 
-//disable eslint sorting rule for quick reference to toolbar state
-/* eslint-disable sort-keys-fix/sort-keys-fix */
 const INITIAL_TOOLBAR_STATE = {
   bgColor: '#fff',
   blockType: 'paragraph' as keyof typeof blockTypeToBlockName,
@@ -72,7 +65,7 @@ const INITIAL_TOOLBAR_STATE = {
   isLowercase: false,
   isUppercase: false,
   isCapitalize: false,
-  rootType: 'root' as keyof typeof rootTypeToRootName,
+  rootType: 'root' as keyof { root: string; table: string },
 };
 
 type ToolbarState = typeof INITIAL_TOOLBAR_STATE;

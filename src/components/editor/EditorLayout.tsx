@@ -5,13 +5,11 @@ import type { ReactNode } from 'react';
 
 interface EditorLayoutProps {
   settingsSidebar?: ReactNode;
-  pageTitle?: string;
   children: ReactNode; // canvas/content
 }
 
 export default function EditorLayout({
   settingsSidebar,
-  pageTitle,
   children,
 }: EditorLayoutProps) {
   return (
