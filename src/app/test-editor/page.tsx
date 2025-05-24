@@ -10,8 +10,10 @@ export default function TestEditorPage() {
     <div className="container mx-auto py-8 max-w-4xl">
       <h1 className="text-2xl font-bold mb-4">Lexical Editor Test</h1>
       <p className="text-gray-600 mb-6">
-        Test the slash command by typing "/" in the editor below. This should
-        open a menu with various formatting options.
+        {
+          "Test the slash command by typing '/' in the editor below. This should"
+        }
+        {' open a menu with various formatting options.'}
       </p>
       <div className="border rounded-lg">
         <PostEditor
