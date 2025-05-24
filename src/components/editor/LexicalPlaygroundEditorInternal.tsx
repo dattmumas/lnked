@@ -31,6 +31,7 @@ import LinkPlugin from '@/components/lexical-playground/plugins/LinkPlugin';
 import MarkdownShortcutPlugin from '@/components/lexical-playground/plugins/MarkdownShortcutPlugin';
 import ToolbarPlugin from '@/components/lexical-playground/plugins/ToolbarPlugin';
 import ContentEditable from '@/components/lexical-playground/ui/ContentEditable';
+import PlusButtonPlugin from './plugins/PlusButtonPlugin';
 
 interface PostEditorProps {
   initialContent?: string;
@@ -108,6 +109,7 @@ function EditorContent({
         <HorizontalRulePlugin />
         <TabIndentationPlugin />
         <LayoutPlugin />
+        <PlusButtonPlugin />
 
         {initialContent && <LoadInitialJsonPlugin json={initialContent} />}
         {onChange && (

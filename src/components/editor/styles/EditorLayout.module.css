@@ -1,7 +1,7 @@
 :global(.editor-shell){
-  margin:20px auto;
-  border-radius:2px;
-  max-width:1100px;
+  margin:40px auto;
+  max-width:760px;
+  padding:0 1rem;
   color:hsl(var(--foreground));
   position:relative;
   line-height:1.7;
@@ -9,16 +9,12 @@
 }
 
 :global(.editor-shell .editor-container){
-  background:hsl(var(--card));
+  background:transparent;
   position:relative;
   display:block;
-  border-bottom-left-radius:10px;
-  border-bottom-right-radius:10px;
 }
 
 :global(.editor-shell .editor-container.plain-text){
-  border-top-left-radius:10px;
-  border-top-right-radius:10px;
 }
 
 :global(.editor-scroller){
