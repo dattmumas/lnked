@@ -27,7 +27,8 @@ import { FlashMessageContext } from './context/FlashMessageContext';
 import { SettingsContext, useSettings } from './context/SettingsContext';
 import { SharedHistoryContext } from './context/SharedHistoryContext';
 import { ToolbarContext } from './context/ToolbarContext';
-import Editor from './Editor';
+// Reuse the main PostEditor used throughout the app
+import PostEditor from '../editor/PostEditor';
 import logo from './images/logo.svg';
 import PlaygroundNodes from './nodes/PlaygroundNodes';
 import DocsPlugin from './plugins/DocsPlugin';
@@ -220,7 +221,7 @@ function App(): JSX.Element {
               </a>
             </header>
             <div className="editor-shell">
-              <Editor />
+              <PostEditor />
             </div>
             <Settings />
             {isDevPlayground ? <DocsPlugin /> : null}
