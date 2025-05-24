@@ -256,33 +256,6 @@ export default function NewPostForm({
 
   const settingsSidebar = (
     <div className="space-y-6">
-      {/* Title Card */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base flex items-center gap-2">
-            <FileText className="w-4 h-4" />
-            Post Title
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-2">
-            <Label htmlFor="title" className="text-sm font-medium">
-              Title
-            </Label>
-            <Input
-              id="title"
-              {...form.register('title')}
-              placeholder="Enter post title..."
-              className="text-sm"
-            />
-            {errors.title && (
-              <p className="text-xs text-destructive">
-                {errors.title.message as string}
-              </p>
-            )}
-          </div>
-        </CardContent>
-      </Card>
 
       {/* Status Card */}
       <Card>
@@ -416,7 +389,18 @@ export default function NewPostForm({
     <FormProvider {...form}>
       <SEOSettingsDrawer open={seoDrawerOpen} onOpenChange={setSeoDrawerOpen} />
       <EditorLayout settingsSidebar={settingsSidebar} pageTitle={pageTitle}>
-        {editorComponent}
+        <div className="space-y-6">
+          <Input
+            id="title"
+            {...form.register('title')}
+            placeholder="Enter post title..."
+            className="w-full text-4xl font-bold border-none p-0 focus:ring-0 focus:outline-none placeholder:text-muted-foreground"
+          />
+          {errors.title && (
+            <p className="text-destructive text-sm">{errors.title.message as string}</p>
+          )}
+          {editorComponent}
+        </div>
       </EditorLayout>
     </FormProvider>
   );
