@@ -17,16 +17,8 @@ const LexicalPlaygroundEditor = dynamic(
     loading: () => (
       <div className="editor-shell" style={{ minHeight: 250 }}>
         <div
-          className="toolbar"
-          style={{
-            height: 48,
-            minHeight: 48,
-            display: 'flex',
-            alignItems: 'center',
-            padding: '8px 12px',
-            borderBottom: '1px solid hsl(var(--border))',
-            background: 'var(--background)',
-          }}
+          className="flex flex-wrap items-center py-2 px-3 bg-background border-b border-border shadow-sm sticky top-0 z-10"
+          style={{ height: 48, minHeight: 48 }}
         >
           {/* Toolbar placeholder: keep height and flex structure */}
         </div>

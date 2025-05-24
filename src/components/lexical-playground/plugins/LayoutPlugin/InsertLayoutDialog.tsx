@@ -42,7 +42,7 @@ export default function InsertLayoutDialog({
   return (
     <>
       <DropDown
-        buttonClassName="toolbar-item dialog-dropdown"
+        buttonClassName="inline-flex items-center justify-center px-2 py-1 mr-2 bg-transparent border-none cursor-pointer text-muted-foreground hover:bg-muted active:bg-muted dialog-dropdown"
         buttonLabel={buttonLabel}>
         {LAYOUTS.map(({label, value}) => (
           <DropDownItem

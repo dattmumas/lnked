@@ -10,6 +10,10 @@ import './fontSize.css';
 
 import {LexicalEditor} from 'lexical';
 import * as React from 'react';
+import { cn } from '@/lib/utils';
+
+const toolbarItemClass =
+  'inline-flex items-center justify-center px-2 py-1 mr-1 bg-transparent border-none cursor-pointer text-muted-foreground hover:bg-muted active:bg-muted disabled:opacity-40 disabled:cursor-not-allowed';
 
 import {
   MAX_ALLOWED_FONT_SIZE,
@@ -100,10 +104,10 @@ export default function FontSize({
         onClick={() =>
           updateFontSize(editor, UpdateFontSizeType.decrement, inputValue)
         }
-        className="toolbar-item font-decrement"
+        className={cn(toolbarItemClass, 'font-decrement')}
         aria-label="Decrease font size"
         title={`Decrease font size (${SHORTCUTS.DECREASE_FONT_SIZE})`}>
-        <i className="format minus-icon" />
+        <i className="format minus-icon toolbar-format-icon" />
       </button>
 
       <input
@@ -111,7 +115,7 @@ export default function FontSize({
         title="Font size"
         value={inputValue}
         disabled={disabled}
-        className="toolbar-item font-size-input"
+        className={cn(toolbarItemClass, 'font-size-input')}
         min={MIN_ALLOWED_FONT_SIZE}
         max={MAX_ALLOWED_FONT_SIZE}
         onChange={(e) => setInputValue(e.target.value)}
@@ -129,10 +133,10 @@ export default function FontSize({
         onClick={() =>
           updateFontSize(editor, UpdateFontSizeType.increment, inputValue)
         }
-        className="toolbar-item font-increment"
+        className={cn(toolbarItemClass, 'font-increment')}
         aria-label="Increase font size"
         title={`Increase font size (${SHORTCUTS.INCREASE_FONT_SIZE})`}>
-        <i className="format add-icon" />
+        <i className="format add-icon toolbar-format-icon" />
       </button>
     </>
   );
