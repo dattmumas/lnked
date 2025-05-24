@@ -56,10 +56,14 @@ export default function DraggableBlockPlugin({
   return (
     <DraggableBlockPlugin_EXPERIMENTAL
       anchorElem={anchorElem}
-      menuRef={menuRef}
-      targetLineRef={targetLineRef}
+      // Cast refs to the type expected by the experimental plugin
+      menuRef={menuRef as React.RefObject<HTMLElement>}
+      targetLineRef={targetLineRef as React.RefObject<HTMLElement>}
       menuComponent={
-        <div ref={menuRef} className="icon draggable-block-menu">
+        <div
+          ref={menuRef as React.RefObject<HTMLDivElement>}
+          className="icon draggable-block-menu"
+        >
           <button
             title="Click to add below"
             className="icon icon-plus"
@@ -69,7 +73,10 @@ export default function DraggableBlockPlugin({
         </div>
       }
       targetLineComponent={
-        <div ref={targetLineRef} className="draggable-block-target-line" />
+        <div
+          ref={targetLineRef as React.RefObject<HTMLDivElement>}
+          className="draggable-block-target-line"
+        />
       }
       isOnMenu={isOnMenu}
       onElementChanged={setDraggableElement}

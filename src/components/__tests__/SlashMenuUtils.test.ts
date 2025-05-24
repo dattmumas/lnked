@@ -17,6 +17,8 @@ describe('filterSlashOptions', () => {
   it('filters options case-insensitively', () => {
     const opts = filterSlashOptions('image');
     expect(opts.length).toBeGreaterThan(0);
-    opts.forEach((o) => expect(o.label.toLowerCase()).toContain('image'));
+    opts.forEach((o: { label: string }) =>
+      expect(o.label.toLowerCase()).toContain('image'),
+    );
   });
 });

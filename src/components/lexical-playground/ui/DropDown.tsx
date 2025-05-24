@@ -51,7 +51,9 @@ export function DropDownItem({
 
   useEffect(() => {
     if (ref && ref.current) {
-      registerItem(ref);
+      // `registerItem` expects a readonly `RefObject`, but `useRef` returns a
+      // mutable ref. Cast here to satisfy the interface.
+      registerItem(ref as React.RefObject<HTMLButtonElement>);
     }
   }, [ref, registerItem]);
 

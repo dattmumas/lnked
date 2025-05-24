@@ -278,7 +278,10 @@ function getBaseOptions(editor: LexicalEditor, showModal: ShowModal) {
       onSelect: () =>
         editor.dispatchCommand(INSERT_IMAGE_COMMAND, {
           altText: 'Cat typing on a laptop',
-          src: catTypingGif,
+          // `catTypingGif` is imported as a `StaticImageData` when using Next.js
+          // image imports. The image insertion command expects a string `src`,
+          // so fall back to the underlying `src` field when present.
+          src: typeof catTypingGif === 'string' ? catTypingGif : catTypingGif.src,
         }),
     }),
     new ComponentPickerOption('Image', {

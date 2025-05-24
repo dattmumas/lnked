@@ -6,6 +6,12 @@ import type { ReactNode } from 'react';
 interface EditorLayoutProps {
   settingsSidebar?: ReactNode;
   children: ReactNode; // canvas/content
+  /**
+   * Optional page title used by parent components. This is currently
+   * unused but included so consuming components can pass it without
+   * causing type errors during type checking.
+   */
+  pageTitle?: string;
 }
 
 export default function EditorLayout({

@@ -94,10 +94,6 @@ import {
   formatQuote,
 } from './utils';
 
-type rootTypeToRootName = {
-  root: 'Root';
-  table: 'Table';
-};
 
 function getCodeLanguageOptions(): [string, string][] {
   const options: [string, string][] = [];

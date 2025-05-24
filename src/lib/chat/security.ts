@@ -122,7 +122,12 @@ export class ChatSecurity {
       if (message.sender_id === currentUser) return true;
 
       // Check if user is a conversation admin  
-      return await this.isConversationAdmin(message.conversation_id, currentUser);
+      // `currentUser` is guaranteed to be a string at this point due to the
+      // null check above. Use a non-null assertion to satisfy the type checker.
+      return await this.isConversationAdmin(
+        message.conversation_id as string,
+        currentUser!,
+      );
     } catch {
       return false;
     }
