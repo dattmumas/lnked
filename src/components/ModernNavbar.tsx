@@ -201,7 +201,7 @@ export default function ModernNavbar({
 
   if (isAuthPage) {
     return (
-      <div>
+      <div className="flex items-center gap-3">
         <Button variant="ghost" size="sm" asChild>
           <Link href="/">← Back</Link>
         </Button>
@@ -230,9 +230,9 @@ export default function ModernNavbar({
   };
 
   return (
-    <nav>
+    <nav className="flex items-center gap-3">
       {/* Desktop Navigation */}
-      <div>
+      <div className="hidden md:flex items-center gap-4">
         {/* Primary nav items */}
         {primaryNavItems.map((item) => {
           const Icon = item.icon;
@@ -245,7 +245,7 @@ export default function ModernNavbar({
               asChild
             >
               <Link href={item.href}>
-                <Icon />
+                <Icon className="w-4 h-4 mr-2" />
                 {item.label}
               </Link>
             </Button>
@@ -253,23 +253,28 @@ export default function ModernNavbar({
         })}
 
         {/* Search bar */}
-        <div>
-          <SearchBar />
+        <div className="hidden lg:block">
+          <SearchBar className="w-64" />
         </div>
       </div>
 
       {/* User actions */}
       {isLoading ? (
-        <div>
-          <div />
-          <div />
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 bg-muted rounded animate-pulse" />
+          <div className="w-8 h-8 bg-muted rounded-full animate-pulse" />
         </div>
       ) : user ? (
-        <div>
+        <div className="flex items-center gap-2">
           {/* Write button */}
-          <Button variant="default" size="sm" asChild>
+          <Button
+            variant="default"
+            size="sm"
+            asChild
+            className="hidden sm:flex"
+          >
             <Link href="/posts/new">
-              <PenSquare />
+              <PenSquare className="w-4 h-4 mr-2" />
               Write
             </Link>
           </Button>
@@ -278,29 +283,36 @@ export default function ModernNavbar({
           <Button
             variant="ghost"
             size="sm"
+            className="lg:hidden"
             onClick={() => router.push('/search')}
           >
-            <Search />
+            <Search className="w-4 h-4" />
           </Button>
 
           {/* Notifications */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm">
-                <Bell />
+              <Button variant="ghost" size="sm" className="relative">
+                <Bell className="w-4 h-4" />
                 {notifications > 0 && (
-                  <Badge variant="destructive">{notifications}</Badge>
+                  <Badge
+                    variant="destructive"
+                    className="absolute -top-1 -right-1 w-5 h-5 p-0 text-xs flex items-center justify-center"
+                  >
+                    {notifications}
+                  </Badge>
                 )}
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <div>
-                <div>
-                  <h3>Notifications</h3>
+            <DropdownMenuContent align="end" className="w-80">
+              <div className="p-3 border-b">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-semibold text-sm">Notifications</h3>
                   {notifications > 0 && (
                     <Button
                       variant="ghost"
                       size="sm"
+                      className="text-xs"
                       onClick={handleNotificationClick}
                     >
                       Mark all as read
@@ -310,32 +322,44 @@ export default function ModernNavbar({
               </div>
 
               {notifications > 0 ? (
-                <div>
+                <div className="max-h-80 overflow-y-auto">
                   {notificationList.map((notification) => (
-                    <DropdownMenuItem key={notification.id}>
-                      <div>
-                        <div className={notification.color} />
-                        <span>{notification.title}</span>
-                        <span>{notification.time}</span>
+                    <DropdownMenuItem
+                      key={notification.id}
+                      className="flex flex-col items-start p-3 space-y-1 relative group"
+                    >
+                      <div className="flex items-center gap-2 w-full">
+                        <div
+                          className={`w-2 h-2 ${notification.color} rounded-full`}
+                        />
+                        <span className="text-sm font-medium">
+                          {notification.title}
+                        </span>
+                        <span className="text-xs text-muted-foreground ml-auto">
+                          {notification.time}
+                        </span>
                         <Button
                           variant="ghost"
                           size="sm"
+                          className="opacity-0 group-hover:opacity-100 p-1 h-auto w-auto"
                           onClick={(e) => {
                             e.stopPropagation();
                             handleDismissNotification(notification.id);
                           }}
                         >
-                          <X />
+                          <X className="w-3 h-3" />
                         </Button>
                       </div>
-                      <p>{notification.message}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {notification.message}
+                      </p>
                     </DropdownMenuItem>
                   ))}
                 </div>
               ) : (
-                <div>
-                  <Bell />
-                  <p>No new notifications</p>
+                <div className="p-6 text-center text-muted-foreground">
+                  <Bell className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                  <p className="text-sm">No new notifications</p>
                 </div>
               )}
             </DropdownMenuContent>
@@ -344,50 +368,60 @@ export default function ModernNavbar({
           {/* User menu */}
           <DropdownMenu open={isUserMenuOpen} onOpenChange={setIsUserMenuOpen}>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost">
-                <Avatar>
+              <Button
+                variant="ghost"
+                className="relative h-8 w-8 rounded-full p-0"
+              >
+                <Avatar className="h-8 w-8">
                   <AvatarImage
                     src={userMetadata.avatar_url}
                     alt={userMetadata.full_name || username || 'User'}
                   />
-                  <AvatarFallback>{getUserInitials()}</AvatarFallback>
+                  <AvatarFallback className="text-xs">
+                    {getUserInitials()}
+                  </AvatarFallback>
                 </Avatar>
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <div>
-                <p>{userMetadata.full_name || username || 'User'}</p>
-                <p>{user.email}</p>
+            <DropdownMenuContent align="end" className="w-56">
+              <div className="px-2 py-1.5">
+                <p className="text-sm font-medium">
+                  {userMetadata.full_name || username || 'User'}
+                </p>
+                <p className="text-xs text-muted-foreground">{user.email}</p>
               </div>
               <DropdownMenuSeparator />
               <DropdownMenuItem asChild>
                 <Link href={`/profile/${username ?? user.id}`}>
-                  <UserIcon />
+                  <UserIcon className="mr-2 h-4 w-4" />
                   Profile
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
                 <Link href="/dashboard/posts">
-                  <FileText />
+                  <FileText className="mr-2 h-4 w-4" />
                   My Posts
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
                 <Link href="/dashboard/settings">
-                  <Settings />
+                  <Settings className="mr-2 h-4 w-4" />
                   Settings
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onSelect={handleSignOut}>
-                <LogOut />
+              <DropdownMenuItem
+                onSelect={handleSignOut}
+                className="text-red-600 focus:text-red-600"
+              >
+                <LogOut className="mr-2 h-4 w-4" />
                 Sign out
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
       ) : (
-        <div>
+        <div className="flex items-center gap-2">
           <Button variant="ghost" size="sm" asChild>
             <Link href="/sign-in">Sign In</Link>
           </Button>
@@ -400,21 +434,21 @@ export default function ModernNavbar({
       <ModeToggle />
 
       {/* Mobile menu */}
-      <div>
+      <div className="md:hidden">
         <Sheet>
           <SheetTrigger asChild>
             <Button variant="ghost" size="sm">
-              <Menu />
+              <Menu className="w-4 h-4" />
             </Button>
           </SheetTrigger>
-          <SheetContent side="right">
-            <SheetTitle>Menu</SheetTitle>
+          <SheetContent side="right" className="w-80">
+            <SheetTitle className="mb-6">Menu</SheetTitle>
 
             {user ? (
-              <div>
+              <div className="space-y-6">
                 {/* User info */}
-                <div>
-                  <Avatar>
+                <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
+                  <Avatar className="h-10 w-10">
                     <AvatarImage
                       src={userMetadata.avatar_url}
                       alt={userMetadata.full_name || username || 'User'}
@@ -422,13 +456,17 @@ export default function ModernNavbar({
                     <AvatarFallback>{getUserInitials()}</AvatarFallback>
                   </Avatar>
                   <div>
-                    <p>{userMetadata.full_name || username || 'User'}</p>
-                    <p>{user.email}</p>
+                    <p className="text-sm font-medium">
+                      {userMetadata.full_name || username || 'User'}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {user.email}
+                    </p>
                   </div>
                 </div>
 
                 {/* Navigation */}
-                <div>
+                <div className="space-y-2">
                   {primaryNavItems.map((item) => {
                     const Icon = item.icon;
                     const isActive = isActiveRoute(item.href);
@@ -436,10 +474,11 @@ export default function ModernNavbar({
                       <Button
                         key={item.href}
                         variant={isActive ? 'secondary' : 'ghost'}
+                        className="w-full justify-start"
                         asChild
                       >
                         <Link href={item.href}>
-                          <Icon />
+                          <Icon className="mr-3 h-4 w-4" />
                           {item.label}
                         </Link>
                       </Button>
@@ -448,41 +487,57 @@ export default function ModernNavbar({
                 </div>
 
                 {/* Quick actions */}
-                <div>
-                  <Button variant="default" asChild>
+                <div className="border-t pt-4 space-y-2">
+                  <Button
+                    variant="default"
+                    className="w-full justify-start"
+                    asChild
+                  >
                     <Link href="/posts/new">
-                      <PenSquare />
+                      <PenSquare className="mr-3 h-4 w-4" />
                       Write
                     </Link>
                   </Button>
                 </div>
 
                 {/* User actions */}
-                <div>
-                  <Button variant="ghost" asChild>
+                <div className="border-t pt-4 space-y-2">
+                  <Button
+                    variant="ghost"
+                    className="w-full justify-start"
+                    asChild
+                  >
                     <Link href={`/profile/${username ?? user.id}`}>
-                      <UserIcon />
+                      <UserIcon className="mr-3 h-4 w-4" />
                       Profile
                     </Link>
                   </Button>
-                  <Button variant="ghost" asChild>
+                  <Button
+                    variant="ghost"
+                    className="w-full justify-start"
+                    asChild
+                  >
                     <Link href="/dashboard/settings">
-                      <Settings />
+                      <Settings className="mr-3 h-4 w-4" />
                       Settings
                     </Link>
                   </Button>
-                  <Button variant="ghost" onClick={handleSignOut}>
-                    <LogOut />
+                  <Button
+                    variant="ghost"
+                    className="w-full justify-start text-red-600 hover:text-red-600"
+                    onClick={handleSignOut}
+                  >
+                    <LogOut className="mr-3 h-4 w-4" />
                     Sign Out
                   </Button>
                 </div>
               </div>
             ) : (
-              <div>
-                <Button variant="ghost" asChild>
+              <div className="space-y-4">
+                <Button variant="ghost" className="w-full" asChild>
                   <Link href="/sign-in">Sign In</Link>
                 </Button>
-                <Button variant="default" asChild>
+                <Button variant="default" className="w-full" asChild>
                   <Link href="/sign-up">Sign Up</Link>
                 </Button>
               </div>
