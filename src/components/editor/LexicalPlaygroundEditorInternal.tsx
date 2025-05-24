@@ -134,16 +134,18 @@ export default function LexicalPlaygroundEditorInternal({
   };
 
   return (
-    <LexicalComposer initialConfig={initialConfig}>
-      <SharedHistoryContext>
-        <ToolbarContext>
-          <EditorContent
-            placeholder={placeholder}
-            initialContent={initialContent}
-            onChange={onChange}
-          />
-        </ToolbarContext>
-      </SharedHistoryContext>
-    </LexicalComposer>
+    <div className="lexical-playground">
+      <LexicalComposer initialConfig={initialConfig}>
+        <SharedHistoryContext>
+          <ToolbarContext>
+            <EditorContent
+              placeholder={placeholder}
+              initialContent={initialContent}
+              onChange={onChange}
+            />
+          </ToolbarContext>
+        </SharedHistoryContext>
+      </LexicalComposer>
+    </div>
   );
 }

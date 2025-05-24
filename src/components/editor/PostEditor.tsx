@@ -15,12 +15,13 @@ const LexicalPlaygroundEditor = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="editor-shell" style={{ minHeight: 250 }}>
-        <div
-          className="toolbar"
-          style={{
-            height: 48,
-            minHeight: 48,
+      <div className="lexical-playground">
+        <div className="editor-shell" style={{ minHeight: 250 }}>
+          <div
+            className="toolbar"
+            style={{
+              height: 48,
+              minHeight: 48,
             display: 'flex',
             alignItems: 'center',
             padding: '8px 12px',
@@ -29,10 +30,11 @@ const LexicalPlaygroundEditor = dynamic(
           }}
         >
           {/* Toolbar placeholder: keep height and flex structure */}
-        </div>
-        <div className="editor-container">
-          <div className="editor-scroller" style={{ minHeight: 150 }}>
-            <div className="editor" />
+          </div>
+          <div className="editor-container">
+            <div className="editor-scroller" style={{ minHeight: 150 }}>
+              <div className="editor" />
+            </div>
           </div>
         </div>
       </div>
