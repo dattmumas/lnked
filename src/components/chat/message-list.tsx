@@ -4,6 +4,11 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { Reply, MoreVertical } from 'lucide-react';
+import {
+  getDisplayName,
+  getUserInitials,
+  formatChatTime,
+} from '@/lib/chat/utils';
 import type { MessageWithSender } from '@/lib/chat/types';
 
 interface MessageListProps {
@@ -23,23 +28,9 @@ export function MessageList({
   onRemoveReaction,
   isUserOnline,
 }: MessageListProps) {
-  const formatTime = (dateString: string) => {
-    const date = new Date(dateString);
-    return new Intl.DateTimeFormat('en-US', {
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true,
-    }).format(date);
-  };
+  // Using utility function for time formatting
 
-  const getInitials = (name: string) => {
-    return name
-      .split(' ')
-      .map((word) => word.charAt(0))
-      .join('')
-      .toUpperCase()
-      .slice(0, 2);
-  };
+  // Using utility function for initials
 
   if (messages.length === 0) {
     return (
@@ -79,7 +70,7 @@ export function MessageList({
                       src={message.sender?.avatar_url || undefined}
                     />
                     <AvatarFallback className="text-xs">
-                      {getInitials(message.sender?.full_name || 'Unknown')}
+                      {getUserInitials(message.sender)}
                     </AvatarFallback>
                   </Avatar>
                   {isOnline && (
@@ -102,12 +93,10 @@ export function MessageList({
               {showAvatar && !isOwnMessage && (
                 <div className="flex items-center gap-2 mb-1">
                   <span className="text-sm font-medium">
-                    {message.sender?.full_name ||
-                      message.sender?.username ||
-                      'Unknown User'}
+                    {getDisplayName(message.sender)}
                   </span>
                   <span className="text-xs text-muted-foreground">
-                    {formatTime(message.created_at)}
+                    {formatChatTime(message.created_at)}
                   </span>
                 </div>
               )}
@@ -116,7 +105,7 @@ export function MessageList({
               {message.reply_to && (
                 <div className="mb-2 p-2 bg-muted/50 rounded border-l-2 border-primary text-xs">
                   <div className="font-medium text-muted-foreground mb-1">
-                    {message.reply_to.sender?.full_name || 'Unknown User'}
+                    {getDisplayName(message.reply_to.sender)}
                   </div>
                   <div className="truncate">{message.reply_to.content}</div>
                 </div>
@@ -136,7 +125,7 @@ export function MessageList({
                 {/* Time for own messages */}
                 {isOwnMessage && (
                   <div className="text-xs opacity-70 mt-1">
-                    {formatTime(message.created_at)}
+                    {formatChatTime(message.created_at)}
                   </div>
                 )}
 

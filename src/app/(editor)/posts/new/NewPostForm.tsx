@@ -27,7 +27,6 @@ interface NewPostFormProps {
   pageTitle: string;
 }
 
-
 export default function NewPostForm({
   collective,
   pageTitle,
@@ -258,6 +257,34 @@ export default function NewPostForm({
 
   const settingsSidebar = (
     <div className="space-y-6">
+      {/* Title Card */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <FileText className="w-4 h-4" />
+            Post Title
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-2">
+            <Label htmlFor="title" className="text-sm font-medium">
+              Title
+            </Label>
+            <Input
+              id="title"
+              {...form.register('title')}
+              placeholder="Enter post title..."
+              className="text-sm"
+            />
+            {errors.title && (
+              <p className="text-xs text-destructive">
+                {errors.title.message as string}
+              </p>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Status Card */}
       <Card>
         <CardHeader className="pb-3">

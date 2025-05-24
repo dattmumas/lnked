@@ -4,6 +4,7 @@ import { useState, useRef, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Send, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { getDisplayName } from '@/lib/chat/utils';
 import type { MessageWithSender } from '@/lib/chat/types';
 
 interface MessageInputProps {
@@ -109,7 +110,7 @@ export function MessageInput({
           <div className="flex items-start justify-between">
             <div className="flex-1 min-w-0">
               <p className="text-xs text-muted-foreground mb-1">
-                Replying to {replyToMessage.sender?.full_name || 'Unknown User'}
+                Replying to {getDisplayName(replyToMessage.sender)}
               </p>
               <p className="text-sm truncate">{replyToMessage.content}</p>
             </div>

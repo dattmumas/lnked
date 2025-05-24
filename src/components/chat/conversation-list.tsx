@@ -4,6 +4,11 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { MessageSquare, Users, Hash, User } from 'lucide-react';
+import {
+  getDisplayName,
+  getUserInitials,
+  formatRelativeTime,
+} from '@/lib/chat/utils';
 import type { ConversationWithParticipants } from '@/lib/chat/types';
 
 interface ConversationListProps {
@@ -23,17 +28,7 @@ export function ConversationList({
   isUserOnline,
   currentUserId,
 }: ConversationListProps) {
-  const formatDistanceToNow = (dateString: string) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
-
-    if (diffInSeconds < 60) return 'now';
-    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m`;
-    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h`;
-    if (diffInSeconds < 2592000) return `${Math.floor(diffInSeconds / 86400)}d`;
-    return `${Math.floor(diffInSeconds / 2592000)}mo`;
-  };
+  // Using utility function for date formatting
 
   const getConversationTitle = (conversation: ConversationWithParticipants) => {
     if (conversation.title) return conversation.title;
@@ -43,11 +38,7 @@ export function ConversationList({
       const otherParticipant = conversation.participants.find(
         (p) => p.user_id !== currentUserId,
       );
-      return (
-        otherParticipant?.user.full_name ||
-        otherParticipant?.user.username ||
-        'Unknown User'
-      );
+      return getDisplayName(otherParticipant?.user);
     }
 
     return `${conversation.type === 'group' ? 'Group' : 'Channel'} Chat`;
@@ -78,14 +69,7 @@ export function ConversationList({
     }
   };
 
-  const getInitials = (name: string) => {
-    return name
-      .split(' ')
-      .map((word) => word.charAt(0))
-      .join('')
-      .toUpperCase()
-      .slice(0, 2);
-  };
+  // Using utility function for initials
 
   if (conversations.length === 0) {
     return (
@@ -133,7 +117,7 @@ export function ConversationList({
                     <Avatar className="h-10 w-10">
                       <AvatarImage src={avatarUrl || undefined} />
                       <AvatarFallback className="text-xs">
-                        {getInitials(title)}
+                        {getUserInitials({ full_name: title })}
                       </AvatarFallback>
                     </Avatar>
                   ) : (
@@ -164,7 +148,7 @@ export function ConversationList({
                     <div className="flex items-center gap-2 ml-2">
                       {conversation.last_message_at && (
                         <span className="text-xs text-muted-foreground">
-                          {formatDistanceToNow(conversation.last_message_at)}
+                          {formatRelativeTime(conversation.last_message_at)}
                         </span>
                       )}
 

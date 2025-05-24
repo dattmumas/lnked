@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { X, Users, User, Hash, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { getDisplayName } from '@/lib/chat/utils';
 import { chatService } from '@/lib/chat/chat-service';
 
 interface CreateConversationModalProps {
@@ -80,7 +81,7 @@ export function CreateConversationModal({
         ...prev,
         {
           id: user.id,
-          name: user.full_name || user.username || 'Unknown User',
+          name: getDisplayName(user),
         },
       ]);
       setParticipantQuery('');
@@ -307,7 +308,7 @@ export function CreateConversationModal({
                     className="w-full text-left px-3 py-2 hover:bg-muted/50 first:rounded-t-lg last:rounded-b-lg disabled:opacity-50"
                   >
                     <div className="font-medium text-sm">
-                      {user.full_name || user.username || 'Unknown User'}
+                      {getDisplayName(user)}
                     </div>
                     {user.username && user.full_name && (
                       <div className="text-xs text-muted-foreground">
