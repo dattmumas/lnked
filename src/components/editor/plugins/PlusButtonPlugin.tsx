@@ -53,9 +53,9 @@ export default function PlusButtonPlugin() {
         handleClick();
       }}
       style={{ position: 'absolute', top: pos.top, left: pos.left }}
-      className="p-1 opacity-80 hover:opacity-100 text-muted-foreground"
+      className="p-2 sm:p-1 opacity-80 hover:opacity-100 text-muted-foreground"
     >
-      <img src="/plus-slash-minus.svg" alt="add" className="w-4 h-4" />
+      <img src="/plus-slash-minus.svg" alt="add" className="w-5 h-5 sm:w-4 sm:h-4" />
     </button>,
     root.parentElement || root,
   );

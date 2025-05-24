@@ -8,6 +8,14 @@
   font-weight:400;
 }
 
+@media (max-width: 640px){
+  :global(.editor-shell){
+    max-width:100%;
+    padding-left:16px;
+    padding-right:16px;
+  }
+}
+
 :global(.editor-shell .editor-container){
   background:transparent;
   position:relative;
@@ -34,4 +42,15 @@
   position:relative;
   resize:vertical;
   z-index:-1;
+}
+
+:global(.editor img){
+  max-width:100%;
+  height:auto;
+}
+
+:global(.editor table){
+  display:block;
+  width:100%;
+  overflow-x:auto;
 }
