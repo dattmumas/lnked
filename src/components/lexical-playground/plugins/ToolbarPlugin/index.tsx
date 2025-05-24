@@ -14,6 +14,15 @@ import {
   CODE_LANGUAGE_MAP,
   getLanguageFriendlyName,
 } from '@lexical/code';
+import {
+  Bold as BoldIcon,
+  Italic as ItalicIcon,
+  Underline as UnderlineIcon,
+  Undo2,
+  Redo2,
+  Code as CodeIcon,
+  Link as LinkIcon,
+} from 'lucide-react';
 import { $isLinkNode, TOGGLE_LINK_COMMAND } from '@lexical/link';
 import { $isListNode, ListNode } from '@lexical/list';
 import { INSERT_EMBED_COMMAND } from '@lexical/react/LexicalAutoEmbedPlugin';
@@ -754,43 +763,45 @@ export default function ToolbarPlugin({
 
   return (
     <div className="toolbar">
-      <button
-        disabled={!toolbarState.canUndo || !isEditable}
-        onClick={() => {
-          activeEditor.dispatchCommand(UNDO_COMMAND, undefined);
-        }}
-        title={IS_APPLE ? 'Undo (⌘Z)' : 'Undo (Ctrl+Z)'}
-        type="button"
-        className="toolbar-item spaced"
-        aria-label="Undo"
-      >
-        <i className="format undo" />
-      </button>
-      <button
-        disabled={!toolbarState.canRedo || !isEditable}
-        onClick={() => {
-          activeEditor.dispatchCommand(REDO_COMMAND, undefined);
-        }}
-        title={IS_APPLE ? 'Redo (⇧⌘Z)' : 'Redo (Ctrl+Y)'}
-        type="button"
-        className="toolbar-item"
-        aria-label="Redo"
-      >
-        <i className="format redo" />
-      </button>
+      <div className="toolbar-group">
+        <button
+          disabled={!toolbarState.canUndo || !isEditable}
+          onClick={() => {
+            activeEditor.dispatchCommand(UNDO_COMMAND, undefined);
+          }}
+          title={IS_APPLE ? 'Undo (⌘Z)' : 'Undo (Ctrl+Z)'}
+          type="button"
+          className="toolbar-item spaced"
+          aria-label="Undo"
+        >
+          <Undo2 className="w-4 h-4" />
+        </button>
+        <button
+          disabled={!toolbarState.canRedo || !isEditable}
+          onClick={() => {
+            activeEditor.dispatchCommand(REDO_COMMAND, undefined);
+          }}
+          title={IS_APPLE ? 'Redo (⇧⌘Z)' : 'Redo (Ctrl+Y)'}
+          type="button"
+          className="toolbar-item"
+          aria-label="Redo"
+        >
+          <Redo2 className="w-4 h-4" />
+        </button>
+      </div>
       <Divider />
       {toolbarState.blockType in blockTypeToBlockName &&
         activeEditor === editor && (
-          <>
+          <div className="toolbar-group">
             <BlockFormatDropDown
               disabled={!isEditable}
               blockType={toolbarState.blockType}
               rootType={toolbarState.rootType}
               editor={activeEditor}
             />
-            <Divider />
-          </>
+          </div>
         )}
+      {toolbarState.blockType in blockTypeToBlockName && activeEditor === editor && <Divider />}
       {toolbarState.blockType === 'code' ? (
         <DropDown
           disabled={!isEditable}
@@ -814,19 +825,22 @@ export default function ToolbarPlugin({
         </DropDown>
       ) : (
         <>
-          <FontDropDown
-            disabled={!isEditable}
-            style={'font-family'}
-            value={toolbarState.fontFamily}
-            editor={activeEditor}
-          />
+          <div className="toolbar-group">
+            <FontDropDown
+              disabled={!isEditable}
+              style={'font-family'}
+              value={toolbarState.fontFamily}
+              editor={activeEditor}
+            />
+            <Divider />
+            <FontSize
+              selectionFontSize={toolbarState.fontSize.slice(0, -2)}
+              editor={activeEditor}
+              disabled={!isEditable}
+            />
+          </div>
           <Divider />
-          <FontSize
-            selectionFontSize={toolbarState.fontSize.slice(0, -2)}
-            editor={activeEditor}
-            disabled={!isEditable}
-          />
-          <Divider />
+          <div className="toolbar-group">
           <button
             disabled={!isEditable}
             onClick={() => {
@@ -839,7 +853,7 @@ export default function ToolbarPlugin({
             type="button"
             aria-label={`Format text as bold. Shortcut: ${SHORTCUTS.BOLD}`}
           >
-            <i className="format bold" />
+            <BoldIcon className="w-4 h-4" />
           </button>
           <button
             disabled={!isEditable}
@@ -853,7 +867,7 @@ export default function ToolbarPlugin({
             type="button"
             aria-label={`Format text as italics. Shortcut: ${SHORTCUTS.ITALIC}`}
           >
-            <i className="format italic" />
+            <ItalicIcon className="w-4 h-4" />
           </button>
           <button
             disabled={!isEditable}
@@ -868,7 +882,7 @@ export default function ToolbarPlugin({
             type="button"
             aria-label={`Format text to underlined. Shortcut: ${SHORTCUTS.UNDERLINE}`}
           >
-            <i className="format underline" />
+            <UnderlineIcon className="w-4 h-4" />
           </button>
           {canViewerSeeInsertCodeButton && (
             <button
@@ -883,7 +897,7 @@ export default function ToolbarPlugin({
               type="button"
               aria-label="Insert code block"
             >
-              <i className="format code" />
+              <CodeIcon className="w-4 h-4" />
             </button>
           )}
           <button
@@ -896,7 +910,7 @@ export default function ToolbarPlugin({
             title={`Insert link (${SHORTCUTS.INSERT_LINK})`}
             type="button"
           >
-            <i className="format link" />
+            <LinkIcon className="w-4 h-4" />
           </button>
           <DropdownColorPicker
             disabled={!isEditable}
@@ -1051,9 +1065,10 @@ export default function ToolbarPlugin({
                 <span className="text">Clear Formatting</span>
               </div>
               <span className="shortcut">{SHORTCUTS.CLEAR_FORMATTING}</span>
-            </DropDownItem>
-          </DropDown>
-          {canViewerSeeInsertDropdown && (
+          </DropDownItem>
+        </DropDown>
+        </div>
+        {canViewerSeeInsertDropdown && (
             <>
               <Divider />
               <DropDown
@@ -1239,12 +1254,14 @@ export default function ToolbarPlugin({
         </>
       )}
       <Divider />
-      <ElementFormatDropdown
-        disabled={!isEditable}
-        value={toolbarState.elementFormat}
-        editor={activeEditor}
-        isRTL={toolbarState.isRTL}
-      />
+      <div className="toolbar-group">
+        <ElementFormatDropdown
+          disabled={!isEditable}
+          value={toolbarState.elementFormat}
+          editor={activeEditor}
+          isRTL={toolbarState.isRTL}
+        />
+      </div>
 
       {modal}
     </div>

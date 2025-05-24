@@ -14,6 +14,11 @@
   overflow-y:hidden;
 }
 
+:global(.toolbar-group){
+  display:flex;
+  align-items:center;
+}
+
 :global(button.toolbar-item){
   border:0;
   display:flex;
