@@ -18,6 +18,7 @@ import { Info } from 'lucide-react';
 import PostFormFields from '@/components/app/editor/form-fields/PostFormFields';
 import PostEditor from '@/components/editor/PostEditor';
 import SEOSettingsDrawer from '@/components/editor/SEOSettingsDrawer';
+import { EMPTY_LEXICAL_STATE } from '@/lib/editorConstants';
 
 type EditPostFormValues = PostFormValues;
 
@@ -48,25 +49,6 @@ const formatDateForInput = (date: Date | string | null): string => {
   return localDate.toISOString().slice(0, 16);
 };
 
-const EMPTY_LEXICAL_STATE = JSON.stringify({
-  root: {
-    children: [
-      {
-        type: 'paragraph',
-        children: [],
-        direction: null,
-        format: '',
-        indent: 0,
-        version: 1,
-      },
-    ],
-    direction: null,
-    format: '',
-    indent: 0,
-    type: 'root',
-    version: 1,
-  },
-});
 
 export default function EditPostForm({
   postId,

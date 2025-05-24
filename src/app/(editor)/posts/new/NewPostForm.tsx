@@ -18,6 +18,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Input } from '@/components/ui/input';
 import { Info, Calendar, Eye, FileText, Save } from 'lucide-react';
 import { createPost, updatePost } from '@/app/actions/postActions';
+import { EMPTY_LEXICAL_STATE } from '@/lib/editorConstants';
 
 type NewPostFormValues = PostFormValues;
 
@@ -26,25 +27,6 @@ interface NewPostFormProps {
   pageTitle: string;
 }
 
-const EMPTY_LEXICAL_STATE = JSON.stringify({
-  root: {
-    children: [
-      {
-        type: 'paragraph',
-        children: [],
-        direction: null,
-        format: '',
-        indent: 0,
-        version: 1,
-      },
-    ],
-    direction: null,
-    format: '',
-    indent: 0,
-    type: 'root',
-    version: 1,
-  },
-});
 
 export default function NewPostForm({
   collective,
