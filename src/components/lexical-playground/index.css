@@ -12,14 +12,14 @@
   margin: 20px auto;
   border-radius: 2px;
   max-width: 1100px;
-  color: #000;
+  color: hsl(var(--foreground));
   position: relative;
   line-height: 1.7;
   font-weight: 400;
 }
 
 .editor-shell .editor-container {
-  background: #fff;
+  background: hsl(var(--card));
   position: relative;
   display: block;
   border-bottom-left-radius: 10px;
@@ -61,8 +61,8 @@
 
 .lexical-playground pre {
   line-height: 1.1;
-  background: #222;
-  color: #fff;
+  background: hsl(var(--muted));
+  color: hsl(var(--foreground));
   margin: 0;
   padding: 10px;
   font-size: 12px;
@@ -72,8 +72,8 @@
 
 .tree-view-output {
   display: block;
-  background: #222;
-  color: #fff;
+  background: hsl(var(--muted));
+  color: hsl(var(--foreground));
   padding: 0;
   font-size: 12px;
   margin: 1px auto 10px auto;
@@ -223,7 +223,7 @@
 }
 
 .typeahead-popover {
-  background: #fff;
+  background: hsl(var(--card));
   box-shadow: 0px 5px 10px rgba(0, 0, 0, 0.3);
   border-radius: 8px;
   position: relative;
@@ -271,7 +271,7 @@
   align-content: center;
   flex-direction: row;
   flex-shrink: 0;
-  background-color: #fff;
+  background-color: hsl(var(--card));
   border-radius: 8px;
   border: 0;
 }
@@ -724,7 +724,7 @@ i.page-break,
     inset 0 0 0 1px rgba(255, 255, 255, 0.5);
   border-radius: 8px;
   min-height: 40px;
-  background-color: #fff;
+  background-color: hsl(var(--card));
 }
 
 .dropdown .item {
@@ -739,7 +739,7 @@ i.page-break,
   flex-direction: row;
   flex-shrink: 0;
   justify-content: space-between;
-  background-color: #fff;
+  background-color: hsl(var(--card));
   border-radius: 8px;
   border: 0;
   max-width: 264px;
@@ -1001,10 +1001,10 @@ i.page-break,
   right: 0;
   padding: 0;
   margin: 0;
-  border-top: 1px solid #fff;
-  background-color: rgba(255, 255, 255, 0.9);
+  border-top: 1px solid hsl(var(--border));
+  background-color: hsl(var(--background) / 0.9);
   min-width: 100px;
-  color: #000;
+  color: hsl(var(--foreground));
   overflow: hidden;
 }
 
@@ -1021,7 +1021,7 @@ i.page-break,
   border-radius: 5px;
   background-color: rgba(0, 0, 0, 0.5);
   min-width: 100px;
-  color: #fff;
+  color: hsl(var(--foreground));
   cursor: pointer;
   user-select: none;
 }
@@ -1057,7 +1057,7 @@ i.page-break,
   height: 7px;
   position: absolute;
   background-color: rgb(60, 132, 244);
-  border: 1px solid #fff;
+  border: 1px solid hsl(var(--background));
 }
 
 .editor-shell .editor-image .image-resizer.image-resizer-n {
@@ -1164,7 +1164,7 @@ i.page-break,
   border-radius: 5px;
   background-color: rgba(0, 0, 0, 0.5);
   min-width: 60px;
-  color: #fff;
+  color: hsl(var(--foreground));
   cursor: pointer;
   user-select: none;
 }
@@ -1175,15 +1175,15 @@ i.page-break,
 
 .editor-shell .inline-editor-image .image-caption-container {
   display: block;
-  background-color: #f4f4f4;
+  background-color: hsl(var(--muted));
   min-width: 100%;
-  color: #000;
+  color: hsl(var(--foreground));
   overflow: hidden;
 }
 
 .emoji {
   color: transparent;
-  caret-color: rgb(5, 5, 5);
+  caret-color: hsl(var(--foreground));
   background-size: 16px 16px;
   background-position: center;
   background-repeat: no-repeat;
@@ -1347,8 +1347,8 @@ i.chevron-down {
 }
 
 .action-button:hover {
-  background-color: #ddd;
-  color: #000;
+  background-color: hsl(var(--muted));
+  color: hsl(var(--foreground));
 }
 
 .action-button-mic.active {
@@ -1392,7 +1392,7 @@ button.action-button:disabled {
   border: 0;
   background: none;
   flex: 1;
-  color: #fff;
+  color: hsl(var(--foreground));
   font-size: 12px;
 }
 
@@ -1408,7 +1408,7 @@ button.action-button:disabled {
   right: 15px;
   position: absolute;
   background: none;
-  color: #fff;
+  color: hsl(var(--foreground));
 }
 
 .debug-timetravel-button:hover {
@@ -1423,7 +1423,7 @@ button.action-button:disabled {
   right: 85px;
   position: absolute;
   background: none;
-  color: #fff;
+  color: hsl(var(--foreground));
 }
 
 .debug-treetype-button:hover {
@@ -1455,7 +1455,7 @@ button.action-button:disabled {
 .toolbar {
   display: flex;
   margin-bottom: 1px;
-  background: #fff;
+  background: hsl(var(--card));
   padding: 4px;
   border-top-left-radius: 10px;
   border-top-right-radius: 10px;
