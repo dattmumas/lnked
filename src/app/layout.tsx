@@ -40,9 +40,6 @@ export default async function RootLayout({
           disableTransitionOnChange
         >
           <header className="pb-4 flex items-center justify-between border-b border-border/50">
-            <Link href="/dashboard" className="font-bold text-xl">
-              Lnked<span className="text-red-500">.</span>
-            </Link>
             <ModernNavbar initialUser={user} initialUsername={username} />
           </header>
           <main>{children}</main>

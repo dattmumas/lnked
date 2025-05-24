@@ -39,7 +39,15 @@ import ModeToggle from '@/components/app/nav/ModeToggle';
 import { motion, AnimatePresence } from 'framer-motion';
 import SearchBar from '@/components/app/nav/SearchBar';
 
-const primaryNavItems = [
+const publicNavItems = [
+  {
+    href: '/discover',
+    label: 'Discover',
+    icon: Compass,
+  },
+];
+
+const authenticatedNavItems = [
   {
     href: '/discover',
     label: 'Discover',
@@ -201,8 +209,13 @@ export default function ModernNavbar({
 
   if (isAuthPage) {
     return (
-      <div className="flex items-center gap-3">
-        <Button variant="ghost" size="sm" asChild>
+      <div className="flex items-center gap-4 h-16 px-8">
+        <Button
+          variant="ghost"
+          size="default"
+          asChild
+          className="gap-2 h-10 px-4 font-medium"
+        >
           <Link href="/">← Back to Home</Link>
         </Button>
         <ModeToggle />
@@ -230,349 +243,378 @@ export default function ModernNavbar({
   };
 
   return (
-    <nav className="flex items-center justify-between gap-4">
-      {/* Left Section - Primary Navigation */}
-      <div className="flex items-center gap-2">
-        {/* Desktop Navigation Items */}
-        <div className="hidden md:flex items-center gap-1">
-          {primaryNavItems.map((item) => {
-            const Icon = item.icon;
-            const isActive = isActiveRoute(item.href);
-            return (
-              <Button
-                key={item.href}
-                variant={isActive ? 'default' : 'ghost'}
-                size="sm"
-                asChild
-                className="gap-2"
-              >
-                <Link href={item.href}>
-                  <Icon className="h-4 w-4" />
+    <nav className="bg-background w-full">
+      <div className="max-w-7xl mx-auto flex items-center justify-between h-18 min-h-[72px] px-4 md:px-8">
+        {/* Left: Logo + Nav */}
+        <div className="flex items-center gap-12 min-w-0">
+          {/* Logo */}
+          <Link
+            href="/"
+            className="text-3xl font-extrabold tracking-tight flex items-center gap-1 select-none"
+            style={{ letterSpacing: '-0.04em' }}
+          >
+            Lnked<span className="text-red-500 text-4xl leading-none">.</span>
+          </Link>
+          {/* Nav Items */}
+          <div className="hidden md:flex items-center gap-6 ml-8">
+            {(user ? authenticatedNavItems : publicNavItems).map((item) => {
+              const Icon = item.icon;
+              const isActive = isActiveRoute(item.href);
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={`flex items-center gap-2 px-2 py-1.5 text-base font-medium transition-colors duration-150 border-b-2 ${
+                    isActive
+                      ? 'border-black text-black dark:border-white dark:text-white'
+                      : 'border-transparent text-muted-foreground hover:text-foreground hover:border-foreground/40'
+                  }`}
+                >
+                  <Icon className="h-5 w-5" />
                   <span>{item.label}</span>
                 </Link>
-              </Button>
-            );
-          })}
-        </div>
-
-        {/* Desktop Search */}
-        <div className="hidden lg:block ml-4">
-          <SearchBar className="w-64" />
-        </div>
-      </div>
-
-      {/* Right Section - User Actions */}
-      <div className="flex items-center gap-2">
-        {isLoading ? (
-          <div className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded bg-muted animate-pulse" />
-            <div className="h-8 w-8 rounded-full bg-muted animate-pulse" />
+              );
+            })}
           </div>
-        ) : user ? (
-          <>
-            {/* Write Button - Desktop */}
-            <Button
-              variant="default"
-              size="sm"
-              asChild
-              className="hidden sm:flex gap-2"
-            >
-              <Link href="/posts/new">
-                <PenSquare className="h-4 w-4" />
-                <span>Write</span>
-              </Link>
-            </Button>
-
-            {/* Search Button - Mobile */}
-            <Button
-              variant="ghost"
-              size="icon"
-              className="lg:hidden"
-              onClick={() => router.push('/search')}
-            >
-              <Search className="h-4 w-4" />
-              <span className="sr-only">Search</span>
-            </Button>
-
-            {/* Notifications */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="relative">
-                  <Bell className="h-4 w-4" />
-                  {notifications > 0 && (
-                    <Badge
-                      variant="destructive"
-                      className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center text-xs"
-                    >
-                      {notifications}
-                    </Badge>
-                  )}
-                  <span className="sr-only">Notifications</span>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-80">
-                <div className="flex items-center justify-between p-4 border-b">
-                  <h3 className="font-semibold">Notifications</h3>
-                  {notifications > 0 && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-xs h-auto p-1"
-                      onClick={handleNotificationClick}
-                    >
-                      Mark all as read
-                    </Button>
-                  )}
-                </div>
-
-                {notifications > 0 ? (
-                  <div className="max-h-80 overflow-y-auto">
-                    {notificationList.map((notification) => (
-                      <DropdownMenuItem
-                        key={notification.id}
-                        className="p-4 cursor-pointer focus:bg-accent"
-                      >
-                        <div className="flex flex-col gap-1 w-full">
-                          <div className="flex items-start justify-between gap-2">
-                            <div className="flex items-center gap-2">
-                              <div
-                                className={`h-2 w-2 rounded-full ${notification.color}`}
-                              />
-                              <span className="font-medium text-sm">
-                                {notification.title}
-                              </span>
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <span className="text-xs text-muted-foreground">
-                                {notification.time}
-                              </span>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleDismissNotification(notification.id);
-                                }}
-                              >
-                                <X className="h-3 w-3" />
-                              </Button>
-                            </div>
-                          </div>
-                          <p className="text-sm text-muted-foreground">
-                            {notification.message}
-                          </p>
-                        </div>
-                      </DropdownMenuItem>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="p-8 text-center">
-                    <Bell className="h-8 w-8 mx-auto mb-3 text-muted-foreground/50" />
-                    <p className="text-sm text-muted-foreground">
-                      No new notifications
-                    </p>
-                  </div>
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
-
-            {/* User Menu */}
-            <DropdownMenu
-              open={isUserMenuOpen}
-              onOpenChange={setIsUserMenuOpen}
-            >
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="relative rounded-full"
-                >
-                  <Avatar className="h-8 w-8">
-                    <AvatarImage
-                      src={userMetadata.avatar_url}
-                      alt={userMetadata.full_name || username || 'User'}
-                    />
-                    <AvatarFallback className="text-xs">
-                      {getUserInitials()}
-                    </AvatarFallback>
-                  </Avatar>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                <div className="flex flex-col gap-1 p-2">
-                  <p className="text-sm font-medium">
-                    {userMetadata.full_name || username || 'User'}
-                  </p>
-                  <p className="text-xs text-muted-foreground">{user.email}</p>
-                </div>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem asChild>
-                  <Link
-                    href={`/profile/${username ?? user.id}`}
-                    className="gap-2"
-                  >
-                    <UserIcon className="h-4 w-4" />
-                    Profile
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link href="/dashboard/posts" className="gap-2">
-                    <FileText className="h-4 w-4" />
-                    My Posts
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link href="/dashboard/settings" className="gap-2">
-                    <Settings className="h-4 w-4" />
-                    Settings
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  onSelect={handleSignOut}
-                  className="gap-2 text-destructive focus:text-destructive"
-                >
-                  <LogOut className="h-4 w-4" />
-                  Sign out
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </>
-        ) : (
-          <>
-            <Button variant="ghost" size="sm" asChild>
-              <Link href="/sign-in">Sign In</Link>
-            </Button>
-            <Button variant="default" size="sm" asChild>
-              <Link href="/sign-up">Get Started</Link>
-            </Button>
-          </>
-        )}
-
-        <ModeToggle />
-
-        {/* Mobile Menu */}
-        <div className="md:hidden">
-          <Sheet>
-            <SheetTrigger asChild>
-              <Button variant="ghost" size="icon">
-                <Menu className="h-5 w-5" />
-                <span className="sr-only">Menu</span>
+          {/* Desktop Search */}
+          {user && (
+            <div className="hidden lg:block ml-6">
+              <SearchBar className="w-72 h-10" />
+            </div>
+          )}
+        </div>
+        {/* Right: Actions */}
+        <div className="flex items-center gap-3">
+          {isLoading ? (
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-20 rounded-lg bg-muted animate-pulse" />
+              <div className="h-10 w-10 rounded-full bg-muted animate-pulse" />
+            </div>
+          ) : user ? (
+            <>
+              {/* Write Button - Desktop */}
+              <Button
+                variant="default"
+                size="default"
+                asChild
+                className="hidden sm:flex gap-2 h-10 px-4 font-medium"
+              >
+                <Link href="/posts/new">
+                  <PenSquare className="h-4 w-4" />
+                  <span>Write</span>
+                </Link>
               </Button>
-            </SheetTrigger>
-            <SheetContent side="right" className="w-80">
-              <SheetTitle>Menu</SheetTitle>
 
-              {user ? (
-                <div className="flex flex-col gap-6 mt-6">
-                  {/* User Info */}
-                  <div className="flex items-center gap-3 p-4 rounded-lg bg-muted">
-                    <Avatar className="h-12 w-12">
+              {/* Search Button - Mobile */}
+              <Button
+                variant="ghost"
+                size="default"
+                className="lg:hidden h-10 w-10 p-0"
+                onClick={() => router.push('/search')}
+              >
+                <Search className="h-4 w-4" />
+                <span className="sr-only">Search</span>
+              </Button>
+
+              {/* Notifications */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="default"
+                    className="relative h-10 w-10 p-0"
+                  >
+                    <Bell className="h-4 w-4" />
+                    {notifications > 0 && (
+                      <Badge
+                        variant="destructive"
+                        className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center text-xs font-medium"
+                      >
+                        {notifications}
+                      </Badge>
+                    )}
+                    <span className="sr-only">Notifications</span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-96 shadow-lg">
+                  <div className="flex items-center justify-between p-4 border-b">
+                    <h3 className="font-semibold text-base">Notifications</h3>
+                    {notifications > 0 && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-xs h-auto p-1 hover:bg-accent"
+                        onClick={handleNotificationClick}
+                      >
+                        Mark all as read
+                      </Button>
+                    )}
+                  </div>
+
+                  {notifications > 0 ? (
+                    <div className="max-h-96 overflow-y-auto">
+                      {notificationList.map((notification) => (
+                        <DropdownMenuItem
+                          key={notification.id}
+                          className="p-4 cursor-pointer focus:bg-accent group"
+                        >
+                          <div className="flex flex-col gap-2 w-full">
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="flex items-center gap-3">
+                                <div
+                                  className={`h-2.5 w-2.5 rounded-full ${notification.color} flex-shrink-0`}
+                                />
+                                <span className="font-medium text-sm">
+                                  {notification.title}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs text-muted-foreground">
+                                  {notification.time}
+                                </span>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDismissNotification(notification.id);
+                                  }}
+                                >
+                                  <X className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            </div>
+                            <p className="text-sm text-muted-foreground pl-5">
+                              {notification.message}
+                            </p>
+                          </div>
+                        </DropdownMenuItem>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="p-12 text-center">
+                      <Bell className="h-10 w-10 mx-auto mb-4 text-muted-foreground/30" />
+                      <p className="text-sm text-muted-foreground">
+                        No new notifications
+                      </p>
+                    </div>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+
+              {/* User Menu */}
+              <DropdownMenu
+                open={isUserMenuOpen}
+                onOpenChange={setIsUserMenuOpen}
+              >
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="default"
+                    className="relative rounded-full p-0 h-10 w-10"
+                  >
+                    <Avatar className="h-10 w-10">
                       <AvatarImage
                         src={userMetadata.avatar_url}
                         alt={userMetadata.full_name || username || 'User'}
                       />
-                      <AvatarFallback>{getUserInitials()}</AvatarFallback>
+                      <AvatarFallback className="text-sm font-medium">
+                        {getUserInitials()}
+                      </AvatarFallback>
                     </Avatar>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">
-                        {userMetadata.full_name || username || 'User'}
-                      </p>
-                      <p className="text-xs text-muted-foreground truncate">
-                        {user.email}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Navigation */}
-                  <div className="space-y-1">
-                    <p className="text-xs font-medium text-muted-foreground px-3 mb-2">
-                      Navigation
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-64 shadow-lg">
+                  <div className="flex flex-col gap-1 p-3 border-b">
+                    <p className="font-medium">
+                      {userMetadata.full_name || username || 'User'}
                     </p>
-                    {primaryNavItems.map((item) => {
-                      const Icon = item.icon;
-                      const isActive = isActiveRoute(item.href);
-                      return (
-                        <Button
-                          key={item.href}
-                          variant={isActive ? 'secondary' : 'ghost'}
-                          className="w-full justify-start gap-3"
-                          asChild
-                        >
-                          <Link href={item.href}>
-                            <Icon className="h-4 w-4" />
-                            {item.label}
-                          </Link>
-                        </Button>
-                      );
-                    })}
-                  </div>
-
-                  {/* Actions */}
-                  <div className="space-y-1">
-                    <p className="text-xs font-medium text-muted-foreground px-3 mb-2">
-                      Actions
+                    <p className="text-sm text-muted-foreground">
+                      {user.email}
                     </p>
-                    <Button
-                      variant="default"
-                      className="w-full justify-start gap-3"
-                      asChild
-                    >
-                      <Link href="/posts/new">
-                        <PenSquare className="h-4 w-4" />
-                        Write New Post
-                      </Link>
-                    </Button>
                   </div>
-
-                  {/* Account */}
-                  <div className="space-y-1">
-                    <p className="text-xs font-medium text-muted-foreground px-3 mb-2">
-                      Account
-                    </p>
-                    <Button
-                      variant="ghost"
-                      className="w-full justify-start gap-3"
-                      asChild
-                    >
-                      <Link href={`/profile/${username ?? user.id}`}>
+                  <div className="p-1">
+                    <DropdownMenuItem asChild className="cursor-pointer">
+                      <Link
+                        href={`/profile/${username ?? user.id}`}
+                        className="gap-3 p-2"
+                      >
                         <UserIcon className="h-4 w-4" />
-                        Profile
+                        <span>Profile</span>
                       </Link>
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      className="w-full justify-start gap-3"
-                      asChild
-                    >
-                      <Link href="/dashboard/settings">
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild className="cursor-pointer">
+                      <Link href="/dashboard/posts" className="gap-3 p-2">
+                        <FileText className="h-4 w-4" />
+                        <span>My Posts</span>
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild className="cursor-pointer">
+                      <Link href="/dashboard/settings" className="gap-3 p-2">
                         <Settings className="h-4 w-4" />
-                        Settings
+                        <span>Settings</span>
                       </Link>
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      className="w-full justify-start gap-3 text-destructive hover:text-destructive"
-                      onClick={handleSignOut}
+                    </DropdownMenuItem>
+                  </div>
+                  <DropdownMenuSeparator />
+                  <div className="p-1">
+                    <DropdownMenuItem
+                      onSelect={handleSignOut}
+                      className="gap-3 p-2 text-destructive focus:text-destructive cursor-pointer"
                     >
                       <LogOut className="h-4 w-4" />
-                      Sign Out
-                    </Button>
+                      <span>Sign out</span>
+                    </DropdownMenuItem>
                   </div>
-                </div>
-              ) : (
-                <div className="flex flex-col gap-4 mt-6">
-                  <Button variant="default" className="w-full" asChild>
-                    <Link href="/sign-up">Get Started</Link>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </>
+          ) : (
+            <>
+              <Button
+                variant="ghost"
+                size="default"
+                asChild
+                className="h-10 px-4 font-medium"
+              >
+                <Link href="/sign-in">Sign In</Link>
+              </Button>
+              <Button
+                variant="default"
+                size="default"
+                asChild
+                className="h-10 px-4 font-medium"
+              >
+                <Link href="/sign-up">Get Started</Link>
+              </Button>
+            </>
+          )}
+
+          <div className="h-6 w-px bg-border mx-2" />
+          <ModeToggle />
+
+          {/* Mobile Menu - Only show when user is logged in */}
+          {user && (
+            <div className="md:hidden">
+              <Sheet>
+                <SheetTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="default"
+                    className="h-10 w-10 p-0"
+                  >
+                    <Menu className="h-4 w-4" />
+                    <span className="sr-only">Menu</span>
                   </Button>
-                  <Button variant="ghost" className="w-full" asChild>
-                    <Link href="/sign-in">Sign In</Link>
-                  </Button>
-                </div>
-              )}
-            </SheetContent>
-          </Sheet>
+                </SheetTrigger>
+                <SheetContent side="right" className="w-80">
+                  <SheetTitle className="text-xl font-semibold">
+                    Menu
+                  </SheetTitle>
+
+                  <div className="flex flex-col gap-6 mt-8">
+                    {/* User Info */}
+                    <div className="flex items-center gap-4 p-4 rounded-lg bg-accent/30">
+                      <Avatar className="h-12 w-12">
+                        <AvatarImage
+                          src={userMetadata.avatar_url}
+                          alt={userMetadata.full_name || username || 'User'}
+                        />
+                        <AvatarFallback className="text-sm font-medium">
+                          {getUserInitials()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium truncate">
+                          {userMetadata.full_name || username || 'User'}
+                        </p>
+                        <p className="text-sm text-muted-foreground truncate">
+                          {user.email}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Navigation */}
+                    <div className="space-y-2">
+                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-3">
+                        Navigation
+                      </p>
+                      {authenticatedNavItems.map((item) => {
+                        const Icon = item.icon;
+                        const isActive = isActiveRoute(item.href);
+                        return (
+                          <Button
+                            key={item.href}
+                            variant={isActive ? 'secondary' : 'ghost'}
+                            className="w-full justify-start gap-3 h-11"
+                            asChild
+                          >
+                            <Link href={item.href}>
+                              <Icon className="h-5 w-5" />
+                              <span className="font-medium">{item.label}</span>
+                            </Link>
+                          </Button>
+                        );
+                      })}
+                    </div>
+
+                    {/* Actions */}
+                    <div className="space-y-2">
+                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-3">
+                        Actions
+                      </p>
+                      <Button
+                        variant="default"
+                        className="w-full justify-start gap-3 h-11"
+                        asChild
+                      >
+                        <Link href="/posts/new">
+                          <PenSquare className="h-5 w-5" />
+                          <span className="font-medium">Write New Post</span>
+                        </Link>
+                      </Button>
+                    </div>
+
+                    {/* Account */}
+                    <div className="space-y-2">
+                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-3">
+                        Account
+                      </p>
+                      <Button
+                        variant="ghost"
+                        className="w-full justify-start gap-3 h-11"
+                        asChild
+                      >
+                        <Link href={`/profile/${username ?? user.id}`}>
+                          <UserIcon className="h-5 w-5" />
+                          <span className="font-medium">Profile</span>
+                        </Link>
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        className="w-full justify-start gap-3 h-11"
+                        asChild
+                      >
+                        <Link href="/dashboard/settings">
+                          <Settings className="h-5 w-5" />
+                          <span className="font-medium">Settings</span>
+                        </Link>
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        className="w-full justify-start gap-3 h-11 text-destructive hover:text-destructive hover:bg-destructive/10"
+                        onClick={handleSignOut}
+                      >
+                        <LogOut className="h-5 w-5" />
+                        <span className="font-medium">Sign Out</span>
+                      </Button>
+                    </div>
+                  </div>
+                </SheetContent>
+              </Sheet>
+            </div>
+          )}
         </div>
       </div>
     </nav>

@@ -127,13 +127,6 @@ export default async function DashboardManagementPage() {
       {/* Dashboard Page Header - Sticky within the scrollable area defined in DashboardShell */}
       {/* The DashboardShell provides p-4 md:p-6. This sticky header will live INSIDE that padding. */}
       {/* top-0 here means top of the scrollable container. */}
-      <div className="sticky top-0 z-30 bg-background py-4 border-b border-border mb-6">
-        <div>
-          <h1 className="text-3xl md:text-4xl font-bold font-serif tracking-tight text-foreground">
-            Management Dashboard
-          </h1>
-        </div>
-      </div>
 
       {/* Stats Row - Thin focused metrics */}
       <div className="mb-6">
