@@ -28,7 +28,7 @@ jest.mock('../../lib/supabase/browser', () => ({
 }));
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const Navbar = require('../Navbar').default;
+const Navbar = require('../ModernNavbar').default;
 
 describe('Navbar on editor route', () => {
   it('shows sign in link when not authenticated', async () => {
