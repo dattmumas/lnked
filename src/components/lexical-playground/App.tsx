@@ -29,14 +29,9 @@ import { SharedHistoryContext } from './context/SharedHistoryContext';
 import { ToolbarContext } from './context/ToolbarContext';
 // Reuse the main PostEditor used throughout the app
 import PostEditor from '../editor/PostEditor';
-import logo from './images/logo.svg';
 import PlaygroundNodes from './nodes/PlaygroundNodes';
-import DocsPlugin from './plugins/DocsPlugin';
-import PasteLogPlugin from './plugins/PasteLogPlugin';
 import { TableContext } from './plugins/TablePlugin';
-import TestRecorderPlugin from './plugins/TestRecorderPlugin';
 import { parseAllowedFontSize } from './plugins/ToolbarPlugin/fontSize';
-import TypingPerfPlugin from './plugins/TypingPerfPlugin';
 import Settings from './Settings';
 import PlaygroundEditorTheme from './themes/PlaygroundEditorTheme';
 import { parseAllowedColor } from './ui/ColorPicker';
@@ -215,20 +210,10 @@ function App(): JSX.Element {
       <SharedHistoryContext>
         <TableContext>
           <ToolbarContext>
-            <header>
-              <a href="https://lexical.dev" target="_blank" rel="noreferrer">
-                <Image src={logo} alt="Lexical Logo" width={100} height={40} />
-              </a>
-            </header>
             <div className="editor-shell">
               <PostEditor />
             </div>
             <Settings />
-            {isDevPlayground ? <DocsPlugin /> : null}
-            {isDevPlayground ? <PasteLogPlugin /> : null}
-            {isDevPlayground ? <TestRecorderPlugin /> : null}
-
-            {measureTypingPerf ? <TypingPerfPlugin /> : null}
           </ToolbarContext>
         </TableContext>
       </SharedHistoryContext>
