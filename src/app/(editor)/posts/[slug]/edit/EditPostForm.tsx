@@ -303,10 +303,19 @@ export default function EditPostForm({
         id="title"
         {...register('title')}
         placeholder="Edit post title..."
-        className="w-full text-4xl font-bold border-none p-0 focus:ring-0 focus:outline-none placeholder:text-muted-foreground"
+        className="w-full text-4xl font-bold font-serif border-none p-0 focus:ring-0 focus:outline-none placeholder:text-muted-foreground"
       />
       {errors.title && (
         <p className="text-destructive text-sm">{errors.title.message as string}</p>
+      )}
+      <Input
+        id="subtitle"
+        {...register('subtitle')}
+        placeholder="Add a subtitle..."
+        className="w-full text-2xl font-medium italic font-serif text-muted-foreground border-none p-0 focus:ring-0 focus:outline-none placeholder:text-muted-foreground"
+      />
+      {errors.subtitle && (
+        <p className="text-destructive text-sm">{errors.subtitle.message as string}</p>
       )}
       <PostEditor
         initialContent={getValues('content')}
