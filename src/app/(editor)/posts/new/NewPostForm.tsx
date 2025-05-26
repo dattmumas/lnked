@@ -41,6 +41,7 @@ export default function NewPostForm({
     resolver: zodResolver(PostFormSchema),
     defaultValues: {
       title: '',
+      subtitle: '',
       content: EMPTY_LEXICAL_STATE,
       status: 'draft',
       published_at: '',
@@ -95,6 +96,7 @@ export default function NewPostForm({
     const data = getValues();
     const payload = {
       title: data.title,
+      subtitle: data.subtitle,
       content: data.content,
       is_public: false,
       published_at:
@@ -178,6 +180,7 @@ export default function NewPostForm({
       let result;
       const payload = {
         title: data.title,
+        subtitle: data.subtitle,
         content: data.content,
         is_public: is_public_for_action,
         published_at: published_at_for_action,
@@ -394,10 +397,19 @@ export default function NewPostForm({
             id="title"
             {...form.register('title')}
             placeholder="Enter post title..."
-            className="w-full text-4xl font-bold border-none p-0 focus:ring-0 focus:outline-none placeholder:text-muted-foreground"
+            className="w-full text-4xl font-bold font-serif border-none p-0 focus:ring-0 focus:outline-none placeholder:text-muted-foreground"
           />
           {errors.title && (
             <p className="text-destructive text-sm">{errors.title.message as string}</p>
+          )}
+          <Input
+            id="subtitle"
+            {...form.register('subtitle')}
+            placeholder="Add a subtitle..."
+            className="w-full text-2xl font-medium italic font-serif text-muted-foreground border-none p-0 focus:ring-0 focus:outline-none placeholder:text-muted-foreground"
+          />
+          {errors.subtitle && (
+            <p className="text-destructive text-sm">{errors.subtitle.message as string}</p>
           )}
           {editorComponent}
         </div>

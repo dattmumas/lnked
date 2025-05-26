@@ -13,8 +13,11 @@
   text-align: right;
 }
 .PlaygroundEditorTheme__paragraph {
-  margin: 0;
+  margin: 0 0 1rem 0;
   position: relative;
+  font-family: var(--font-source-serif);
+  font-size: 1rem;
+  line-height: 1.7;
 }
 .PlaygroundEditorTheme__quote {
   margin: 0;
@@ -28,22 +31,25 @@
   padding-left: 16px;
 }
 .PlaygroundEditorTheme__h1 {
-  font-size: 24px;
+  font-family: var(--font-source-serif);
+  font-size: 2rem;
+  font-weight: 700;
+  margin: 1.5rem 0 1rem 0;
   color: hsl(var(--foreground));
-  font-weight: 400;
-  margin: 0;
 }
 .PlaygroundEditorTheme__h2 {
-  font-size: 15px;
-  color: hsl(var(--muted-foreground));
-  font-weight: 700;
-  margin: 0;
-  text-transform: uppercase;
+  font-family: var(--font-source-serif);
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin: 1.25rem 0 0.75rem 0;
+  color: hsl(var(--foreground));
 }
 .PlaygroundEditorTheme__h3 {
-  font-size: 12px;
-  margin: 0;
-  text-transform: uppercase;
+  font-family: var(--font-source-serif);
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin: 1rem 0 0.5rem 0;
+  color: hsl(var(--foreground));
 }
 .PlaygroundEditorTheme__indent {
   --lexical-indent-base-value: 40px;
