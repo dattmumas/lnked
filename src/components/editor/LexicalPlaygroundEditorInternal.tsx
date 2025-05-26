@@ -32,6 +32,10 @@ import MarkdownShortcutPlugin from '@/components/lexical-playground/plugins/Mark
 import ToolbarPlugin from '@/components/lexical-playground/plugins/ToolbarPlugin';
 import ContentEditable from '@/components/lexical-playground/ui/ContentEditable';
 import PlusButtonPlugin from './plugins/PlusButtonPlugin';
+import AutoEmbedPlugin from '@/components/lexical-playground/plugins/AutoEmbedPlugin';
+import YouTubePlugin from '@/components/lexical-playground/plugins/YouTubePlugin';
+import TwitterPlugin from '@/components/lexical-playground/plugins/TwitterPlugin';
+import FigmaPlugin from '@/components/lexical-playground/plugins/FigmaPlugin';
 
 interface PostEditorProps {
   initialContent?: string;
@@ -80,6 +84,10 @@ function EditorContent({
         <AutoFocusPlugin />
         <ClearEditorPlugin />
         <ComponentPickerPlugin />
+        <AutoEmbedPlugin />
+        <YouTubePlugin />
+        <TwitterPlugin />
+        <FigmaPlugin />
         <EmojisPlugin />
         <HashtagPlugin />
         <AutoLinkPlugin />

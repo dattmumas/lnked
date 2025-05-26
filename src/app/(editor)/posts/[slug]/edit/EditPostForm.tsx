@@ -50,7 +50,6 @@ const formatDateForInput = (date: Date | string | null): string => {
   return localDate.toISOString().slice(0, 16);
 };
 
-
 export default function EditPostForm({
   postId,
   initialData,
@@ -306,7 +305,9 @@ export default function EditPostForm({
         className="w-full text-4xl font-bold font-serif border-none p-0 focus:ring-0 focus:outline-none placeholder:text-muted-foreground"
       />
       {errors.title && (
-        <p className="text-destructive text-sm">{errors.title.message as string}</p>
+        <p className="text-destructive text-sm">
+          {errors.title.message as string}
+        </p>
       )}
       <Input
         id="subtitle"
@@ -315,10 +316,12 @@ export default function EditPostForm({
         className="w-full text-2xl font-medium italic font-serif text-muted-foreground border-none p-0 focus:ring-0 focus:outline-none placeholder:text-muted-foreground"
       />
       {errors.subtitle && (
-        <p className="text-destructive text-sm">{errors.subtitle.message as string}</p>
+        <p className="text-destructive text-sm">
+          {errors.subtitle.message as string}
+        </p>
       )}
       <PostEditor
-        initialContent={getValues('content')}
+        initialContent={initialData.content || EMPTY_LEXICAL_STATE}
         placeholder="Continue writing..."
         onChange={(json) =>
           setValue('content', json, { shouldValidate: true, shouldDirty: true })
