@@ -30,7 +30,7 @@ export default function EditorLayout({
         {/* Fixed settings sidebar */}
         {settingsSidebar && (
           <aside className="w-80 flex-shrink-0">
-            <div className="sticky top-24 bg-gray-50 border border-gray-200 rounded-lg p-6 max-h-[calc(100vh-6rem)] overflow-y-auto">
+            <div className="sticky top-24 bg-card border border-border rounded-lg p-6 max-h-[calc(100vh-6rem)] overflow-y-auto">
               {settingsSidebar}
             </div>
           </aside>
