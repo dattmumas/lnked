@@ -19,6 +19,7 @@ import PostFormFields from '@/components/app/editor/form-fields/PostFormFields';
 import PostEditor from '@/components/editor/PostEditor';
 import SEOSettingsDrawer from '@/components/editor/SEOSettingsDrawer';
 import { EMPTY_LEXICAL_STATE } from '@/lib/editorConstants';
+import { Input } from '@/components/ui/input';
 
 type EditPostFormValues = PostFormValues;
 
@@ -230,6 +231,7 @@ export default function EditPostForm({
         currentStatus={currentStatus}
         isSubmitting={isProcessing || isSubmitting || isDeleting}
         titlePlaceholder="Edit Post Title"
+        showTitle={false}
       />
       <Button
         type="button"
@@ -296,13 +298,24 @@ export default function EditPostForm({
   );
 
   const canvas = (
-    <PostEditor
-      initialContent={getValues('content')}
-      placeholder="Continue writing..."
-      onChange={(json) =>
-        setValue('content', json, { shouldValidate: true, shouldDirty: true })
-      }
-    />
+    <div className="space-y-6">
+      <Input
+        id="title"
+        {...register('title')}
+        placeholder="Edit post title..."
+        className="w-full text-4xl font-bold border-none p-0 focus:ring-0 focus:outline-none placeholder:text-muted-foreground"
+      />
+      {errors.title && (
+        <p className="text-destructive text-sm">{errors.title.message as string}</p>
+      )}
+      <PostEditor
+        initialContent={getValues('content')}
+        placeholder="Continue writing..."
+        onChange={(json) =>
+          setValue('content', json, { shouldValidate: true, shouldDirty: true })
+        }
+      />
+    </div>
   );
 
   return (

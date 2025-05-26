@@ -25,6 +25,10 @@ interface PostFormFieldsProps<TFormValues extends PostFormFieldsValues> {
   currentStatus: "draft" | "published" | "scheduled" | undefined;
   isSubmitting: boolean;
   titlePlaceholder?: string;
+  /**
+   * Whether to render the title field. Defaults to true.
+   */
+  showTitle?: boolean;
 }
 
 export default function PostFormFields<
@@ -35,6 +39,7 @@ export default function PostFormFields<
   currentStatus,
   isSubmitting,
   titlePlaceholder = "Post Title",
+  showTitle = true,
 }: PostFormFieldsProps<TFormValues>) {
   // Helper to safely access error messages
   const getErrorMessage = (
@@ -45,26 +50,28 @@ export default function PostFormFields<
 
   return (
     <>
-      <div>
-        <Label
-          htmlFor="title"
-          className="mb-1 block text-sm font-medium text-foreground"
-        >
-          Post Title
-        </Label>
-        <Input
-          id="title"
-          {...register("title" as Path<TFormValues>)}
-          placeholder={titlePlaceholder}
-          disabled={isSubmitting}
-          className={errors.title ? "border-destructive" : ""}
-        />
-        {errors.title && (
-          <p className="text-sm text-destructive mt-1">
-            {getErrorMessage(errors.title as FieldError)}
-          </p>
-        )}
-      </div>
+      {showTitle && (
+        <div>
+          <Label
+            htmlFor="title"
+            className="mb-1 block text-sm font-medium text-foreground"
+          >
+            Post Title
+          </Label>
+          <Input
+            id="title"
+            {...register("title" as Path<TFormValues>)}
+            placeholder={titlePlaceholder}
+            disabled={isSubmitting}
+            className={errors.title ? "border-destructive" : ""}
+          />
+          {errors.title && (
+            <p className="text-sm text-destructive mt-1">
+              {getErrorMessage(errors.title as FieldError)}
+            </p>
+          )}
+        </div>
+      )}
 
       <div className="space-y-2">
         <Label htmlFor="status" className="text-sm font-medium text-foreground">
