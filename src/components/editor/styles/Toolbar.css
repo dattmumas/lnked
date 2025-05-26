@@ -1,15 +1,16 @@
 .toolbar {
   display: flex;
   margin-bottom: 1px;
-  background: hsl(var(--card));
+  background: hsl(var(--background));
   padding: 4px;
-  border-top-left-radius: 10px;
-  border-top-right-radius: 10px;
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
   vertical-align: middle;
   flex-wrap: nowrap;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
-  height: 36px;
+  height: 48px;
+  min-height: 48px;
   position: sticky;
   top: 0;
   z-index: 2;
@@ -33,7 +34,7 @@ button.toolbar-item {
   flex-shrink: 0;
   align-items: center;
   justify-content: space-between;
-  color: hsl(var(--muted-foreground));
+  color: hsl(var(--foreground));
 }
 
 @media (max-width: 640px) {
@@ -71,8 +72,8 @@ button.toolbar-item:disabled .chevron-down {
 }
 
 button.toolbar-item.active {
-  background-color: hsl(var(--accent));
-  color: hsl(var(--accent-foreground));
+  background-color: hsl(var(--secondary));
+  color: hsl(var(--foreground));
 }
 
 button.toolbar-item.active i {
@@ -97,7 +98,7 @@ button.toolbar-item:hover:not([disabled]) {
   line-height: 20px;
   vertical-align: middle;
   font-size: 14px;
-  color: hsl(var(--muted-foreground));
+  color: hsl(var(--foreground));
   text-overflow: ellipsis;
   overflow: hidden;
   height: 20px;
