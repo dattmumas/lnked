@@ -12,7 +12,6 @@
   display: block;
   position: relative;
   outline: 0;
-  padding: 8px 46px 40px;
   min-height: 150px;
 }
 @media (max-width: 1025px) {

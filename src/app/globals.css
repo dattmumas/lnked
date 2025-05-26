@@ -151,24 +151,6 @@
   min-height: 150px;
 } */
 
-/* The focus outline is handled by the wrapper div in TiptapEditor.tsx with focus-within:ring-2 */
-/* .ProseMirror:focus {
-  outline: none;
-} */
-
-/* Placeholder styling for Tiptap - This is specific and generally safe */
-.ProseMirror p.is-editor-empty:first-child::before {
-  content: attr(data-placeholder);
-  float: left;
-  color: hsl(var(--muted-foreground)); /* Using a Tailwind variable */
-  pointer-events: none;
-  height: 0;
-}
-
-/* Removed specific element overrides like .ProseMirror h1, .ProseMirror p etc. */
-/* Rely on the 'prose' classes applied via editorProps in TiptapEditor.tsx */
-/* and customize typography via tailwind.config.ts if needed */
-
 @layer utilities {
   .bg-highlight {
     background-color: hsl(var(--accent) / 0.2);
@@ -237,14 +219,7 @@
   box-sizing: border-box;
   background: var(--background);
 }
-.editor-placeholder {
-  position: absolute;
-  top: 12px;
-  left: 12px;
-  color: hsl(var(--muted-foreground));
-  font-style: italic;
-  pointer-events: none;
-}
+
 .editor-paragraph,
 .editor-paragraph:last-child {
   margin: 0 0 1rem 0;
@@ -447,10 +422,6 @@ body {
   }
 }
 
-.layout-item {
-  /* acts as a column */
-}
-
 /* Multi-column reading layout utilities */
 .column-balance {
   column-fill: balance;
@@ -588,8 +559,6 @@ body {
   }
 }
 
-/* Lexical Editor Layout Features - Exact Playground Replica */
-
 /* Layout container with visual guides */
 .layout-container {
   position: relative;
@@ -693,19 +662,6 @@ body {
   position: fixed;
 }
 
-/* Layout column indicators */
-.layout-container[data-layout-columns='2'] {
-  grid-template-columns: repeat(2, 1fr);
-}
-
-.layout-container[data-layout-columns='3'] {
-  grid-template-columns: repeat(3, 1fr);
-}
-
-.layout-container[data-layout-columns='4'] {
-  grid-template-columns: repeat(4, 1fr);
-}
-
 /* Responsive layout adjustments */
 @media (max-width: 768px) {
   .layout-container[data-layout-columns='3'],
@@ -778,8 +734,4 @@ body {
     opacity: 1;
     transform: scale(1);
   }
-}
-
-.layout-container.layout-inserting {
-  animation: layoutInsert 0.3s ease-out;
 }

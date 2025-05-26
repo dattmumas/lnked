@@ -259,7 +259,6 @@ export default function NewPostForm({
 
   const settingsSidebar = (
     <div className="space-y-6">
-
       {/* Status Card */}
       <Card>
         <CardHeader className="pb-3">
@@ -397,19 +396,23 @@ export default function NewPostForm({
             id="title"
             {...form.register('title')}
             placeholder="Enter post title..."
-            className="w-full text-4xl font-bold font-serif border-none p-0 focus:ring-0 focus:outline-none placeholder:text-muted-foreground"
+            className="w-full h-16 text-4xl font-bold font-serif border-none p-1 focus:ring-0 focus:outline-none placeholder:text-muted-foreground"
           />
           {errors.title && (
-            <p className="text-destructive text-sm">{errors.title.message as string}</p>
+            <p className="text-destructive text-sm">
+              {errors.title.message as string}
+            </p>
           )}
           <Input
             id="subtitle"
             {...form.register('subtitle')}
             placeholder="Add a subtitle..."
-            className="w-full text-2xl font-medium italic font-serif text-muted-foreground border-none p-0 focus:ring-0 focus:outline-none placeholder:text-muted-foreground"
+            className="w-full text-2xl font-medium italic font-serif text-muted-foreground border-none p-1 focus:ring-0 focus:outline-none "
           />
           {errors.subtitle && (
-            <p className="text-destructive text-sm">{errors.subtitle.message as string}</p>
+            <p className="text-destructive text-sm">
+              {errors.subtitle.message as string}
+            </p>
           )}
           {editorComponent}
         </div>
