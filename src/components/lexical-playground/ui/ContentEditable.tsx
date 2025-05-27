@@ -25,7 +25,7 @@ export default function LexicalContentEditable({
   const hasPlaceholder = placeholder !== undefined;
   let contentEditableProps: Record<
     string,
-    React.RefObject<HTMLDivElement>
+    string | ((isEditable: boolean) => JSX.Element | null)
   > = {};
   if (hasPlaceholder) {
     if (typeof placeholder === 'function') {

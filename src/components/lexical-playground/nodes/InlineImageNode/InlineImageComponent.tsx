@@ -50,7 +50,7 @@ const imageCache = new Set();
 function useSuspenseImage(src: string) {
   if (!imageCache.has(src)) {
     throw new Promise((resolve) => {
-      const img = new Image();
+      const img = new HTMLImageElement();
       img.src = src;
       img.onload = () => {
         imageCache.add(src);
@@ -376,7 +376,6 @@ export default function InlineImageComponent({
                         </div>
                       ) : null
                     }
-                    className="InlineImageNode__contentEditable"
                   />
                 }
                 ErrorBoundary={LexicalErrorBoundary}

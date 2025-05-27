@@ -268,7 +268,6 @@ export default function StickyComponent({
                     </div>
                   ) : null
                 }
-                className="StickyNode__contentEditable"
               />
             }
             ErrorBoundary={LexicalErrorBoundary}

@@ -35,7 +35,6 @@ import {
   UpdateFontSizeType,
 } from '../ToolbarPlugin/utils';
 import {
-  isAddComment,
   isCapitalize,
   isCenterAlign,
   isClearFormatting,
@@ -136,8 +135,6 @@ export default function ShortcutsPlugin({
         const url = toolbarState.isLink ? null : sanitizeUrl('https://');
         setIsLinkEditMode(!toolbarState.isLink);
         editor.dispatchCommand(TOGGLE_LINK_COMMAND, url);
-      } else if (isAddComment(event)) {
-        editor.dispatchCommand(INSERT_INLINE_COMMAND, undefined);
       } else {
         // No match for any of the event handlers
         return false;

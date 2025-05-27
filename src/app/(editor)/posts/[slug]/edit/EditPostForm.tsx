@@ -13,9 +13,6 @@ import {
 import { useState, useTransition, useEffect, useCallback } from 'react';
 import type { Tables } from '@/lib/database.types';
 import { Button } from '@/components/ui/button';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Info } from 'lucide-react';
-import PostFormFields from '@/components/app/editor/form-fields/PostFormFields';
 import PostEditor from '@/components/editor/PostEditor';
 import SEOSettingsDrawer from '@/components/editor/SEOSettingsDrawer';
 import { EMPTY_LEXICAL_STATE } from '@/lib/editorConstants';
@@ -214,15 +211,6 @@ export default function EditPostForm({
       }
     });
   };
-
-  const primaryButtonText =
-    isProcessing || isSubmitting
-      ? 'Processing...'
-      : currentStatus === 'scheduled'
-        ? 'Schedule Post'
-        : currentStatus === 'draft'
-          ? 'Save Draft'
-          : 'Update Post';
 
   const formControlsNode = (
     <div className="space-y-6">

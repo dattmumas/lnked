@@ -2,7 +2,6 @@
 
 import React from 'react';
 import {
-  FileText,
   Calendar,
   Eye,
   Save,
@@ -15,7 +14,6 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 
 interface PublishSettingsCardProps {

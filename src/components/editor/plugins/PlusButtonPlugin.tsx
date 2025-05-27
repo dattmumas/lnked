@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
 import { $getSelection, $isRangeSelection } from 'lexical';
+import Image from 'next/image';
 
 export default function PlusButtonPlugin() {
   const [editor] = useLexicalComposerContext();
@@ -55,7 +56,13 @@ export default function PlusButtonPlugin() {
       style={{ position: 'absolute', top: pos.top, left: pos.left }}
       className="p-2 sm:p-1 opacity-80 hover:opacity-100 text-muted-foreground"
     >
-      <img src="/plus-slash-minus.svg" alt="add" className="w-5 h-5 sm:w-4 sm:h-4" />
+      <Image
+        src="/plus-slash-minus.svg"
+        alt="add"
+        width={20}
+        height={20}
+        className="w-5 h-5 sm:w-4 sm:h-4"
+      />
     </button>,
     root.parentElement || root,
   );

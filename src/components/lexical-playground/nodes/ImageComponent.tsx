@@ -49,7 +49,6 @@ import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 
 import { createWebsocketProvider } from '../collaboration';
-import { useSettings } from '../context/SettingsContext';
 import { useSharedHistoryContext } from '../context/SharedHistoryContext';
 import brokenImage from '../images/image-broken.svg';
 import EmojisPlugin from '../plugins/EmojisPlugin';
@@ -71,7 +70,7 @@ function useSuspenseImage(src: string) {
     return cached;
   } else if (!cached) {
     cached = new Promise<boolean>((resolve) => {
-      const img = new Image();
+      const img = new HTMLImageElement();
       img.src = src;
       img.onload = () => resolve(false);
       img.onerror = () => resolve(true);
@@ -442,9 +441,6 @@ export default function ImageComponent({
   };
 
   const { historyState } = useSharedHistoryContext();
-  const {
-    settings: { showNestedEditorTreeView },
-  } = useSettings();
 
   const draggable = isSelected && $isNodeSelection(selection) && !isResizing;
   const isFocused = (isSelected || isResizing) && isEditable;
@@ -500,7 +496,6 @@ export default function ImageComponent({
                         </div>
                       ) : null
                     }
-                    className="ImageNode__contentEditable"
                   />
                 }
                 ErrorBoundary={LexicalErrorBoundary}

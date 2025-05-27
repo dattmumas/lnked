@@ -78,10 +78,6 @@ function TextFormatFloatingToolbar({
     }
   }, [editor, isLink, setIsLinkEditMode]);
 
-  const insertComment = () => {
-    editor.dispatchCommand(INSERT_INLINE_COMMAND, undefined);
-  };
-
   function mouseMoveListener(e: MouseEvent) {
     if (
       popupCharStylesEditorRef?.current &&
@@ -318,15 +314,6 @@ function TextFormatFloatingToolbar({
           </button>
         </>
       )}
-      <button
-        type="button"
-        onClick={insertComment}
-        className={'popup-item spaced insert-comment'}
-        title="Insert comment"
-        aria-label="Insert comment"
-      >
-        <i className="format add-comment" />
-      </button>
     </div>
   );
 }
