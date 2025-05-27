@@ -289,8 +289,8 @@ export default function LandingPage() {
         :root {
           --ink: #0a0908;
           --paper: #ffffff;
-          --gold: #dda15e;
-          --rust: #bc6c25;
+          --gold: rgb(91, 91, 91);
+          --rust: rgb(181, 30, 19);
           --sage: #606c38;
           --cream: #f8f8f8;
         }
@@ -717,7 +717,6 @@ export default function LandingPage() {
         {/* Why Choose Lnked Section */}
         <section className="flow-section">
           <div className="flow-content">
-            <h2 className="large-quote">Why Choose Lnked?</h2>
             <div className="feature-grid">
               <div className="feature-card">
                 <h3>Collective Growth & Shared Discovery</h3>
