@@ -98,10 +98,6 @@ const MaxLengthPlugin = dynamic(
     ),
   { ssr: false },
 );
-const ExcalidrawPlugin = dynamic(
-  () => import('@/components/lexical-playground/plugins/ExcalidrawPlugin'),
-  { ssr: false },
-);
 const ComponentPickerPlugin = dynamic(
   () => import('@/components/lexical-playground/plugins/ComponentPickerPlugin'),
   { ssr: false },

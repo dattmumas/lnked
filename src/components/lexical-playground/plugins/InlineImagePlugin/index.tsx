@@ -46,6 +46,7 @@ import {
 import Button from '../../ui/Button';
 import { DialogActions } from '../../ui/Dialog';
 import FileInput from '../../ui/FileInput';
+import { uploadPostImage } from '@/lib/uploadPostImage';
 import Select from '../../ui/Select';
 import TextInput from '../../ui/TextInput';
 
@@ -68,7 +69,9 @@ export function InsertInlineImageDialog({
   const [showCaption, setShowCaption] = useState(false);
   const [position, setPosition] = useState<Position>('left');
 
-  const isDisabled = src === '';
+  const [isUploading, setIsUploading] = useState(false);
+
+  const isDisabled = src === '' || isUploading;
 
   const handleShowCaptionChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setShowCaption(e.target.checked);
@@ -78,17 +81,16 @@ export function InsertInlineImageDialog({
     setPosition(e.target.value as Position);
   };
 
-  const loadImage = (files: FileList | null) => {
-    const reader = new FileReader();
-    reader.onload = function () {
-      if (typeof reader.result === 'string') {
-        setSrc(reader.result);
-      }
-      return '';
-    };
-    if (files !== null) {
-      reader.readAsDataURL(files[0]);
+  const loadImage = async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    setIsUploading(true);
+    const { url, error } = await uploadPostImage(files[0]);
+    if (url) {
+      setSrc(url);
+    } else {
+      console.error('Image upload failed:', error);
     }
+    setIsUploading(false);
   };
 
   useEffect(() => {

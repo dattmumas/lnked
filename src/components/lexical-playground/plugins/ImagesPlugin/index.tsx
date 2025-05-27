@@ -46,6 +46,7 @@ import {
 import Button from '../../ui/Button';
 import { DialogActions, DialogButtonsList } from '../../ui/Dialog';
 import FileInput from '../../ui/FileInput';
+import { uploadPostImage } from '@/lib/uploadPostImage';
 import TextInput from '../../ui/TextInput';
 
 export type InsertImagePayload = Readonly<ImagePayload>;
@@ -99,20 +100,20 @@ export function InsertImageUploadedDialogBody({
 }) {
   const [src, setSrc] = useState('');
   const [altText, setAltText] = useState('');
+  const [isUploading, setIsUploading] = useState(false);
 
-  const isDisabled = src === '';
+  const isDisabled = src === '' || isUploading;
 
-  const loadImage = (files: FileList | null) => {
-    const reader = new FileReader();
-    reader.onload = function () {
-      if (typeof reader.result === 'string') {
-        setSrc(reader.result);
-      }
-      return '';
-    };
-    if (files !== null) {
-      reader.readAsDataURL(files[0]);
+  const loadImage = async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    setIsUploading(true);
+    const { url, error } = await uploadPostImage(files[0]);
+    if (url) {
+      setSrc(url);
+    } else {
+      console.error('Image upload failed:', error);
     }
+    setIsUploading(false);
   };
 
   return (
