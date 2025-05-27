@@ -1,3 +1,5 @@
+'use client';
+
 /**
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
@@ -6,12 +8,12 @@
  *
  */
 
-import type {BaseSelection, NodeKey, TextNode} from 'lexical';
-import type {JSX} from 'react';
+import type { BaseSelection, NodeKey, TextNode } from 'lexical';
+import type { JSX } from 'react';
 
-import {useLexicalComposerContext} from '@lexical/react/LexicalComposerContext';
-import {$isAtNodeEnd} from '@lexical/selection';
-import {mergeRegister} from '@lexical/utils';
+import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
+import { $isAtNodeEnd } from '@lexical/selection';
+import { mergeRegister } from '@lexical/utils';
 import {
   $addUpdateTag,
   $createTextNode,
@@ -25,16 +27,16 @@ import {
   KEY_ARROW_RIGHT_COMMAND,
   KEY_TAB_COMMAND,
 } from 'lexical';
-import {useCallback, useEffect} from 'react';
+import { useCallback, useEffect } from 'react';
 
-import {useToolbarState} from '../../context/ToolbarContext';
+import { useToolbarState } from '../../context/ToolbarContext';
 import {
   $createAutocompleteNode,
   AutocompleteNode,
 } from '../../nodes/AutocompleteNode';
-import {addSwipeRightListener} from '../../utils/swipe';
+import { addSwipeRightListener } from '../../utils/swipe';
 
-const HISTORY_MERGE = {tag: HISTORY_MERGE_TAG};
+const HISTORY_MERGE = { tag: HISTORY_MERGE_TAG };
 
 declare global {
   interface Navigator {
@@ -102,7 +104,7 @@ function formatSuggestionText(suggestion: string): string {
 export default function AutocompletePlugin(): JSX.Element | null {
   const [editor] = useLexicalComposerContext();
   const query = useQuery();
-  const {toolbarState} = useToolbarState();
+  const { toolbarState } = useToolbarState();
 
   useEffect(() => {
     let autocompleteNodeKey: null | NodeKey = null;

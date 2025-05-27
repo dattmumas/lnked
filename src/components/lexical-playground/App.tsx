@@ -20,9 +20,7 @@ import {
   DOMConversionMap,
   TextNode,
 } from 'lexical';
-import Image from 'next/image';
 
-import { isDevPlayground } from './appSettings';
 import { FlashMessageContext } from './context/FlashMessageContext';
 import { SettingsContext, useSettings } from './context/SettingsContext';
 import { SharedHistoryContext } from './context/SharedHistoryContext';
@@ -187,7 +185,7 @@ function buildImportMap(): DOMConversionMap {
 
 function App(): JSX.Element {
   const {
-    settings: { isCollab, emptyEditor, measureTypingPerf },
+    settings: { isCollab, emptyEditor },
   } = useSettings();
 
   const initialConfig = {

@@ -37,6 +37,37 @@ import YouTubePlugin from '@/components/lexical-playground/plugins/YouTubePlugin
 import TwitterPlugin from '@/components/lexical-playground/plugins/TwitterPlugin';
 import FigmaPlugin from '@/components/lexical-playground/plugins/FigmaPlugin';
 
+// --- BEGIN AUTO-GENERATED PLUGIN IMPORTS ---
+import DraggableBlockPlugin from '@/components/lexical-playground/plugins/DraggableBlockPlugin';
+import ImagesPlugin from '@/components/lexical-playground/plugins/ImagesPlugin';
+import TableOfContentsPlugin from '@/components/lexical-playground/plugins/TableOfContentsPlugin';
+import ShortcutsPlugin from '@/components/lexical-playground/plugins/ShortcutsPlugin';
+import CollapsiblePlugin from '@/components/lexical-playground/plugins/CollapsiblePlugin';
+import EmojiPickerPlugin from '@/components/lexical-playground/plugins/EmojiPickerPlugin';
+import SpeechToTextPlugin from '@/components/lexical-playground/plugins/SpeechToTextPlugin';
+import TabFocusPlugin from '@/components/lexical-playground/plugins/TabFocusPlugin';
+import StickyPlugin from '@/components/lexical-playground/plugins/StickyPlugin';
+import InlineImagePlugin from '@/components/lexical-playground/plugins/InlineImagePlugin';
+import FloatingTextFormatToolbarPlugin from '@/components/lexical-playground/plugins/FloatingTextFormatToolbarPlugin';
+import DragDropPastePlugin from '@/components/lexical-playground/plugins/DragDropPastePlugin';
+import KeywordsPlugin from '@/components/lexical-playground/plugins/KeywordsPlugin';
+import TreeViewPlugin from '@/components/lexical-playground/plugins/TreeViewPlugin';
+import TableHoverActionsPlugin from '@/components/lexical-playground/plugins/TableHoverActionsPlugin';
+import PageBreakPlugin from '@/components/lexical-playground/plugins/PageBreakPlugin';
+import EquationsPlugin from '@/components/lexical-playground/plugins/EquationsPlugin';
+import ExcalidrawPlugin from '@/components/lexical-playground/plugins/ExcalidrawPlugin';
+import FloatingLinkEditorPlugin from '@/components/lexical-playground/plugins/FloatingLinkEditorPlugin';
+import { MaxLengthPlugin } from '@/components/lexical-playground/plugins/MaxLengthPlugin';
+import AutocompletePlugin from '@/components/lexical-playground/plugins/AutocompletePlugin';
+import ContextMenuPlugin from '@/components/lexical-playground/plugins/ContextMenuPlugin';
+import SpecialTextPlugin from '@/components/lexical-playground/plugins/SpecialTextPlugin';
+import CommentPlugin from '@/components/lexical-playground/plugins/CommentPlugin';
+import CodeActionMenuPlugin from '@/components/lexical-playground/plugins/CodeActionMenuPlugin';
+import TableActionMenuPlugin from '@/components/lexical-playground/plugins/TableActionMenuPlugin';
+import PollPlugin from '@/components/lexical-playground/plugins/PollPlugin';
+import TableCellResizer from '@/components/lexical-playground/plugins/TableCellResizer';
+// --- END AUTO-GENERATED PLUGIN IMPORTS ---
+
 interface PostEditorProps {
   initialContent?: string;
   placeholder?: string;
@@ -69,7 +100,7 @@ function EditorContent({
 }) {
   const [editor] = useLexicalComposerContext();
   const [activeEditor, setActiveEditor] = useState(editor);
-  const [, setIsLinkEditMode] = useState<boolean>(false);
+  const [isLinkEditMode, setIsLinkEditMode] = useState<boolean>(false);
   const isEditable = true;
 
   return (
@@ -118,6 +149,45 @@ function EditorContent({
         <TabIndentationPlugin />
         <LayoutPlugin />
         <PlusButtonPlugin />
+
+        {/* --- BEGIN AUTO-GENERATED PLUGIN RENDER --- */}
+        <DraggableBlockPlugin />
+        <ImagesPlugin />
+        <TableOfContentsPlugin />
+        <ShortcutsPlugin
+          editor={editor}
+          setIsLinkEditMode={setIsLinkEditMode}
+        />
+        <CollapsiblePlugin />
+        <EmojiPickerPlugin />
+        <SpeechToTextPlugin />
+        <TabFocusPlugin />
+        <StickyPlugin />
+        <InlineImagePlugin />
+        <FloatingTextFormatToolbarPlugin
+          setIsLinkEditMode={setIsLinkEditMode}
+        />
+        <DragDropPastePlugin />
+        <KeywordsPlugin />
+        <TreeViewPlugin />
+        <TableHoverActionsPlugin />
+        <PageBreakPlugin />
+        <EquationsPlugin />
+        <ExcalidrawPlugin />
+        <FloatingLinkEditorPlugin
+          isLinkEditMode={isLinkEditMode}
+          setIsLinkEditMode={setIsLinkEditMode}
+        />
+        <MaxLengthPlugin maxLength={10000} />
+        <AutocompletePlugin />
+        <ContextMenuPlugin />
+        <SpecialTextPlugin />
+        <CommentPlugin />
+        <CodeActionMenuPlugin />
+        <TableActionMenuPlugin />
+        <PollPlugin />
+        <TableCellResizer />
+        {/* --- END AUTO-GENERATED PLUGIN RENDER --- */}
 
         {initialContent && <LoadInitialJsonPlugin json={initialContent} />}
         {onChange && (

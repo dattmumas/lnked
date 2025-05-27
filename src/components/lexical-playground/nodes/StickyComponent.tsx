@@ -6,6 +6,8 @@
  *
  */
 
+'use client';
+
 import type { LexicalEditor, NodeKey } from 'lexical';
 import type { JSX } from 'react';
 
@@ -259,8 +261,13 @@ export default function StickyComponent({
           <PlainTextPlugin
             contentEditable={
               <ContentEditable
-                placeholder="What's up?"
-                placeholderClassName="StickyNode__placeholder"
+                placeholder={(isEditable: boolean) =>
+                  isEditable ? (
+                    <div className="StickyNode__placeholder">
+                      What&apos;s up?
+                    </div>
+                  ) : null
+                }
                 className="StickyNode__contentEditable"
               />
             }

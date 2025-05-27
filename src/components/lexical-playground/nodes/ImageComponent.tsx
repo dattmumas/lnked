@@ -1,3 +1,5 @@
+'use client';
+
 /**
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
@@ -12,22 +14,22 @@ import type {
   LexicalEditor,
   NodeKey,
 } from 'lexical';
-import type {JSX} from 'react';
+import type { JSX } from 'react';
 
 import './ImageNode.css';
 
-import {AutoFocusPlugin} from '@lexical/react/LexicalAutoFocusPlugin';
-import {useCollaborationContext} from '@lexical/react/LexicalCollaborationContext';
-import {CollaborationPlugin} from '@lexical/react/LexicalCollaborationPlugin';
-import {useLexicalComposerContext} from '@lexical/react/LexicalComposerContext';
-import {LexicalErrorBoundary} from '@lexical/react/LexicalErrorBoundary';
-import {HashtagPlugin} from '@lexical/react/LexicalHashtagPlugin';
-import {HistoryPlugin} from '@lexical/react/LexicalHistoryPlugin';
-import {LexicalNestedComposer} from '@lexical/react/LexicalNestedComposer';
-import {RichTextPlugin} from '@lexical/react/LexicalRichTextPlugin';
-import {useLexicalEditable} from '@lexical/react/useLexicalEditable';
-import {useLexicalNodeSelection} from '@lexical/react/useLexicalNodeSelection';
-import {mergeRegister} from '@lexical/utils';
+import { AutoFocusPlugin } from '@lexical/react/LexicalAutoFocusPlugin';
+import { useCollaborationContext } from '@lexical/react/LexicalCollaborationContext';
+import { CollaborationPlugin } from '@lexical/react/LexicalCollaborationPlugin';
+import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
+import { LexicalErrorBoundary } from '@lexical/react/LexicalErrorBoundary';
+import { HashtagPlugin } from '@lexical/react/LexicalHashtagPlugin';
+import { HistoryPlugin } from '@lexical/react/LexicalHistoryPlugin';
+import { LexicalNestedComposer } from '@lexical/react/LexicalNestedComposer';
+import { RichTextPlugin } from '@lexical/react/LexicalRichTextPlugin';
+import { useLexicalEditable } from '@lexical/react/useLexicalEditable';
+import { useLexicalNodeSelection } from '@lexical/react/useLexicalNodeSelection';
+import { mergeRegister } from '@lexical/utils';
 import {
   $getNodeByKey,
   $getSelection,
@@ -43,11 +45,12 @@ import {
   SELECTION_CHANGE_COMMAND,
 } from 'lexical';
 import * as React from 'react';
-import {Suspense, useCallback, useEffect, useRef, useState} from 'react';
+import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
+import Image from 'next/image';
 
-import {createWebsocketProvider} from '../collaboration';
-import {useSettings} from '../context/SettingsContext';
-import {useSharedHistoryContext} from '../context/SharedHistoryContext';
+import { createWebsocketProvider } from '../collaboration';
+import { useSettings } from '../context/SettingsContext';
+import { useSharedHistoryContext } from '../context/SharedHistoryContext';
 import brokenImage from '../images/image-broken.svg';
 import EmojisPlugin from '../plugins/EmojisPlugin';
 import KeywordsPlugin from '../plugins/KeywordsPlugin';
@@ -56,7 +59,7 @@ import MentionsPlugin from '../plugins/MentionsPlugin';
 import TreeViewPlugin from '../plugins/TreeViewPlugin';
 import ContentEditable from '../ui/ContentEditable';
 import ImageResizer from '../ui/ImageResizer';
-import {$isImageNode} from './ImageNode';
+import { $isImageNode } from './ImageNode';
 
 const imageCache = new Map<string, Promise<boolean> | boolean>();
 
@@ -100,7 +103,7 @@ function LazyImage({
   altText: string;
   className: string | null;
   height: 'inherit' | number;
-  imageRef: {current: null | HTMLImageElement};
+  imageRef: { current: null | HTMLImageElement };
   maxWidth: number;
   src: string;
   width: 'inherit' | number;
@@ -115,7 +118,7 @@ function LazyImage({
   // Set initial dimensions for SVG images
   useEffect(() => {
     if (imageRef.current && isSVGImage) {
-      const {naturalWidth, naturalHeight} = imageRef.current;
+      const { naturalWidth, naturalHeight } = imageRef.current;
       setDimensions({
         height: naturalHeight,
         width: naturalWidth,
@@ -177,7 +180,7 @@ function LazyImage({
   const imageStyle = calculateDimensions();
 
   return (
-    <img
+    <Image
       className={className || undefined}
       src={src}
       alt={altText}
@@ -200,7 +203,7 @@ function LazyImage({
 
 function BrokenImage(): JSX.Element {
   return (
-    <img
+    <Image
       src={brokenImage}
       style={{
         height: 200,
@@ -241,7 +244,7 @@ export default function ImageComponent({
   const [isSelected, setSelected, clearSelection] =
     useLexicalNodeSelection(nodeKey);
   const [isResizing, setIsResizing] = useState<boolean>(false);
-  const {isCollabActive} = useCollaborationContext();
+  const { isCollabActive } = useCollaborationContext();
   const [editor] = useLexicalComposerContext();
   const [selection, setSelection] = useState<BaseSelection | null>(null);
   const activeEditorRef = useRef<LexicalEditor | null>(null);
@@ -343,7 +346,7 @@ export default function ImageComponent({
   useEffect(() => {
     const rootElement = editor.getRootElement();
     const unregister = mergeRegister(
-      editor.registerUpdateListener(({editorState}) => {
+      editor.registerUpdateListener(({ editorState }) => {
         const updatedSelection = editorState.read(() => $getSelection());
         if ($isNodeSelection(updatedSelection)) {
           setSelection(updatedSelection);
@@ -439,9 +442,9 @@ export default function ImageComponent({
     setIsResizing(true);
   };
 
-  const {historyState} = useSharedHistoryContext();
+  const { historyState } = useSharedHistoryContext();
   const {
-    settings: {showNestedEditorTreeView},
+    settings: { showNestedEditorTreeView },
   } = useSettings();
 
   const draggable = isSelected && $isNodeSelection(selection) && !isResizing;
@@ -491,8 +494,13 @@ export default function ImageComponent({
               <RichTextPlugin
                 contentEditable={
                   <ContentEditable
-                    placeholder="Enter a caption..."
-                    placeholderClassName="ImageNode__placeholder"
+                    placeholder={(isEditable: boolean) =>
+                      isEditable ? (
+                        <div className="ImageNode__placeholder">
+                          Enter a caption...
+                        </div>
+                      ) : null
+                    }
                     className="ImageNode__contentEditable"
                   />
                 }

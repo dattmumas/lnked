@@ -6,6 +6,8 @@
  *
  */
 
+'use client';
+
 import type {JSX} from 'react';
 
 import {registerCodeHighlighting} from '@lexical/code';

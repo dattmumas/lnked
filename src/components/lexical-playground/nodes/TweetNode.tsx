@@ -6,6 +6,8 @@
  *
  */
 
+'use client';
+
 import type {
   DOMConversionMap,
   DOMConversionOutput,

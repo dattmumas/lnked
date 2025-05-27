@@ -1,3 +1,5 @@
+'use client';
+
 /**
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
@@ -6,7 +8,7 @@
  *
  */
 
-import type {JSX} from 'react';
+import type { JSX } from 'react';
 
 import './index.css';
 
@@ -16,15 +18,15 @@ import {
   getLanguageFriendlyName,
   normalizeCodeLang,
 } from '@lexical/code';
-import {useLexicalComposerContext} from '@lexical/react/LexicalComposerContext';
-import {$getNearestNodeFromDOMNode, isHTMLElement} from 'lexical';
-import {useEffect, useRef, useState} from 'react';
+import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
+import { $getNearestNodeFromDOMNode, isHTMLElement } from 'lexical';
+import { useEffect, useRef, useState } from 'react';
 import * as React from 'react';
-import {createPortal} from 'react-dom';
+import { createPortal } from 'react-dom';
 
-import {CopyButton} from './components/CopyButton';
-import {canBePrettier, PrettierButton} from './components/PrettierButton';
-import {useDebounce} from './utils';
+import { CopyButton } from './components/CopyButton';
+import { canBePrettier, PrettierButton } from './components/PrettierButton';
+import { useDebounce } from './utils';
 
 const CODE_PADDING = 8;
 
@@ -57,7 +59,7 @@ function CodeActionMenuContainer({
 
   const debouncedOnMouseMove = useDebounce(
     (event: MouseEvent) => {
-      const {codeDOMNode, isOutside} = getMouseInfo(event);
+      const { codeDOMNode, isOutside } = getMouseInfo(event);
       if (isOutside) {
         setShown(false);
         return;
@@ -82,9 +84,9 @@ function CodeActionMenuContainer({
       });
 
       if (codeNode) {
-        const {y: editorElemY, right: editorElemRight} =
+        const { y: editorElemY, right: editorElemRight } =
           anchorElem.getBoundingClientRect();
-        const {y, right} = codeDOMNode.getBoundingClientRect();
+        const { y, right } = codeDOMNode.getBoundingClientRect();
         setLang(_lang);
         setShown(true);
         setPosition({
@@ -133,7 +135,7 @@ function CodeActionMenuContainer({
         });
         setShouldListenMouseMove(codeSetRef.current.size > 0);
       },
-      {skipInitialization: false},
+      { skipInitialization: false },
     );
   }, [editor]);
 
@@ -143,7 +145,7 @@ function CodeActionMenuContainer({
   return (
     <>
       {isShown ? (
-        <div className="code-action-menu-container" style={{...position}}>
+        <div className="code-action-menu-container" style={{ ...position }}>
           <div className="code-highlight-language">{codeFriendlyName}</div>
           <CopyButton editor={editor} getCodeDOMNode={getCodeDOMNode} />
           {canBePrettier(normalizedLang) ? (
@@ -174,9 +176,9 @@ function getMouseInfo(event: MouseEvent): {
       target.closest<HTMLElement>('div.code-action-menu-container')
     );
 
-    return {codeDOMNode, isOutside};
+    return { codeDOMNode, isOutside };
   } else {
-    return {codeDOMNode: null, isOutside: true};
+    return { codeDOMNode: null, isOutside: true };
   }
 }
 

@@ -8,7 +8,7 @@ import PostReactionButtons from '@/components/app/posts/molecules/PostReactionBu
 import BookmarkButton from '@/components/app/posts/molecules/BookmarkButton';
 import CommentsSection from '@/components/app/posts/organisms/CommentsSection';
 import PostViewTracker from '@/components/app/posts/molecules/PostViewTracker';
-import { LexicalRenderer } from '@/components/ui/LexicalRenderer';
+import { ReadOnlyLexicalViewer } from '@/components/ui/ReadOnlyLexicalViewer';
 import { ChevronLeft, Edit, Share2, MoreHorizontal } from 'lucide-react';
 import {
   DropdownMenu,
@@ -358,7 +358,7 @@ export default async function PostBySlugPage({
               prose-a:text-primary prose-a:no-underline hover:prose-a:underline
             "
             >
-              <LexicalRenderer contentJSON={post.content ?? ''} />
+              <ReadOnlyLexicalViewer contentJSON={post.content ?? ''} />
             </div>
 
             {/* Post Footer */}

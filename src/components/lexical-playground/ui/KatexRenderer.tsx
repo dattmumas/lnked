@@ -6,11 +6,12 @@
  *
  */
 
-import type {JSX} from 'react';
+import type { JSX } from 'react';
 
 import katex from 'katex';
 import * as React from 'react';
-import {useEffect, useRef} from 'react';
+import { useEffect, useRef } from 'react';
+import Image from 'next/image';
 
 export default function KatexRenderer({
   equation,
@@ -43,7 +44,7 @@ export default function KatexRenderer({
     // inner text from Katex. There didn't seem to be any other way of making this work,
     // without having a physical space.
     <>
-      <img
+      <Image
         src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"
         width="0"
         height="0"
@@ -55,7 +56,7 @@ export default function KatexRenderer({
         onDoubleClick={onDoubleClick}
         ref={katexElementRef}
       />
-      <img
+      <Image
         src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"
         width="0"
         height="0"

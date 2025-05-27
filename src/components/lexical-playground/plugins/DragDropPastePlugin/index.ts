@@ -6,6 +6,8 @@
  *
  */
 
+'use client';
+
 import {useLexicalComposerContext} from '@lexical/react/LexicalComposerContext';
 import {DRAG_DROP_PASTE} from '@lexical/rich-text';
 import {isMimeType, mediaFileReader} from '@lexical/utils';

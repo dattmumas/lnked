@@ -6,10 +6,12 @@
  *
  */
 
-import type {JSX} from 'react';
+'use client';
 
-import {useLexicalComposerContext} from '@lexical/react/LexicalComposerContext';
-import {$insertNodeToNearestRoot, mergeRegister} from '@lexical/utils';
+import type { JSX } from 'react';
+
+import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
+import { $insertNodeToNearestRoot, mergeRegister } from '@lexical/utils';
 import {
   $getSelection,
   $isRangeSelection,
@@ -17,9 +19,9 @@ import {
   createCommand,
   LexicalCommand,
 } from 'lexical';
-import {useEffect} from 'react';
+import { useEffect } from 'react';
 
-import {$createPageBreakNode, PageBreakNode} from '../../nodes/PageBreakNode';
+import { $createPageBreakNode, PageBreakNode } from '../../nodes/PageBreakNode';
 
 export const INSERT_PAGE_BREAK: LexicalCommand<undefined> = createCommand();
 
