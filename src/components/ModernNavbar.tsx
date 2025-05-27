@@ -241,7 +241,7 @@ export default function ModernNavbar({
             {/* Logo */}
             <Link
               href="/"
-              className="text-2xl font-extrabold tracking-tight flex items-center gap-0.5 select-none hover:opacity-80 transition-opacity"
+              className="text-2xl font-extrabold-serif tracking-tight flex items-center gap-0.5 select-none hover:opacity-80 transition-opacity"
               style={{ letterSpacing: '-0.04em' }}
             >
               Lnked<span className="text-red-500 text-3xl leading-none">.</span>
@@ -259,7 +259,7 @@ export default function ModernNavbar({
                     className={`flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md transition-all duration-150 ${
                       isActive
                         ? 'bg-accent text-accent-foreground'
-                        : 'text-muted-foreground hover:text-foreground hover:bg-accent/50'
+                        : 'text-foreground/70 hover:text-foreground hover:bg-accent/50'
                     }`}
                   >
                     <Icon className="h-4 w-4" />
@@ -363,7 +363,7 @@ export default function ModernNavbar({
                                   </span>
                                 </div>
                                 <div className="flex items-center gap-2">
-                                  <span className="text-xs text-muted-foreground">
+                                  <span className="text-xs text-foreground/60">
                                     {notification.time}
                                   </span>
                                   <Button
@@ -381,7 +381,7 @@ export default function ModernNavbar({
                                   </Button>
                                 </div>
                               </div>
-                              <p className="text-sm text-muted-foreground pl-5">
+                              <p className="text-sm text-foreground/60 pl-5">
                                 {notification.message}
                               </p>
                             </div>
@@ -390,9 +390,9 @@ export default function ModernNavbar({
                       </div>
                     ) : (
                       <div className="p-12 text-center">
-                        <Bell className="h-10 w-10 mx-auto mb-4 text-muted-foreground/30" />
-                        <p className="text-sm text-muted-foreground">
-                          No new notifications
+                        <Bell className="h-10 w-10 mx-auto mb-4 text-foreground/30" />
+                        <p className="text-sm text-foreground/60">
+                          No notifications yet
                         </p>
                       </div>
                     )}
@@ -426,9 +426,9 @@ export default function ModernNavbar({
                       <p className="font-medium">
                         {userMetadata.full_name || username || 'User'}
                       </p>
-                      <p className="text-sm text-muted-foreground">
+                      <span className="text-xs text-foreground/60">
                         {user.email}
-                      </p>
+                      </span>
                     </div>
                     <div className="p-1">
                       <DropdownMenuItem asChild className="cursor-pointer">
@@ -521,7 +521,7 @@ export default function ModernNavbar({
                           <p className="font-medium truncate">
                             {userMetadata.full_name || username || 'User'}
                           </p>
-                          <p className="text-sm text-muted-foreground truncate">
+                          <p className="text-sm text-foreground/60 truncate">
                             {user.email}
                           </p>
                         </div>
@@ -529,7 +529,7 @@ export default function ModernNavbar({
 
                       {/* Navigation */}
                       <div className="space-y-2">
-                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-3">
+                        <p className="text-xs font-semibold text-foreground/60 uppercase tracking-wider px-3">
                           Navigation
                         </p>
                         {authenticatedNavItems.map((item) => {
@@ -555,7 +555,7 @@ export default function ModernNavbar({
 
                       {/* Actions */}
                       <div className="space-y-2">
-                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-3">
+                        <p className="text-xs font-semibold text-foreground/60 uppercase tracking-wider px-3">
                           Actions
                         </p>
                         <Button
@@ -572,7 +572,7 @@ export default function ModernNavbar({
 
                       {/* Account */}
                       <div className="space-y-2">
-                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-3">
+                        <p className="text-xs font-semibold text-foreground/60 uppercase tracking-wider px-3">
                           Account
                         </p>
                         <Button

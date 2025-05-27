@@ -1,7 +1,7 @@
-"use client";
+'use client';
 
-import React, { useState } from "react";
-import { Button } from "@/components/ui/button";
+import React, { useState } from 'react';
+import { Button } from '@/components/ui/button';
 import {
   Card,
   CardContent,
@@ -9,16 +9,16 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { useRouter } from "next/navigation";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Terminal } from "lucide-react";
+} from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { useRouter } from 'next/navigation';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Terminal } from 'lucide-react';
 
 // Types
 interface AuthFormProps {
-  mode: "signIn" | "signUp";
+  mode: 'signIn' | 'signUp';
   onSubmit: (formData: Record<string, string>) => Promise<void>;
   isLoading: boolean;
   error: string | null;
@@ -26,7 +26,7 @@ interface AuthFormProps {
 }
 
 interface AuthFormFieldsProps {
-  mode: "signIn" | "signUp";
+  mode: 'signIn' | 'signUp';
   isLoading: boolean;
   email: string;
   setEmail: (value: string) => void;
@@ -70,7 +70,7 @@ const AuthFormFieldsComponent: React.FC<AuthFormFieldsProps> = ({
   setFullName,
 }) => (
   <>
-    {mode === "signUp" && setFullName && (
+    {mode === 'signUp' && setFullName && (
       <div className="space-y-2">
         <Label htmlFor="fullName">Full Name</Label>
         <Input
@@ -105,9 +105,9 @@ const AuthFormFieldsComponent: React.FC<AuthFormFieldsProps> = ({
       <Input
         id="password"
         type="password"
-        placeholder={mode === "signUp" ? "••••••••" : undefined}
+        placeholder={mode === 'signUp' ? '••••••••' : undefined}
         required
-        minLength={mode === "signUp" ? 6 : undefined}
+        minLength={mode === 'signUp' ? 6 : undefined}
         value={password}
         onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
           setPassword(e.target.value)
@@ -150,32 +150,34 @@ export default function AuthForm({
   error,
   message,
 }: AuthFormProps) {
-  const [email, setEmail] = useState<string>("");
-  const [password, setPassword] = useState<string>("");
-  const [fullName, setFullName] = useState<string>("");
+  const [email, setEmail] = useState<string>('');
+  const [password, setPassword] = useState<string>('');
+  const [fullName, setFullName] = useState<string>('');
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const formData: Record<string, string> = { email, password };
-    if (mode === "signUp") {
+    if (mode === 'signUp') {
       formData.fullName = fullName;
     }
     onSubmit(formData);
   };
 
   const content = {
-    title: mode === "signIn" ? "Sign In" : "Create an Account",
+    title: mode === 'signIn' ? 'Sign In' : 'Create an Account',
     description:
-      mode === "signIn"
-        ? "Enter your email and password to access your account."
-        : "Enter your details to get started.",
-    buttonText: mode === "signIn" ? "Sign In" : "Create Account",
+      mode === 'signIn'
+        ? 'Enter your email and password to access your account.'
+        : 'Enter your details to get started.',
+    buttonText: mode === 'signIn' ? 'Sign In' : 'Create Account',
     loadingButtonText:
-      mode === "signIn" ? "Signing In..." : "Creating Account...",
-    switchLinkText: mode === "signIn" ? "Sign Up" : "Sign In",
+      mode === 'signIn' ? 'Signing In...' : 'Creating Account...',
+    switchLinkText: mode === 'signIn' ? 'Sign Up' : 'Sign In',
     switchPromptText:
-      mode === "signIn" ? "Don't have an account?" : "Already have an account?",
-    switchLinkHref: mode === "signIn" ? "/sign-up" : "/sign-in",
+      mode === 'signIn'
+        ? 'Don&apos;t have an account?'
+        : 'Already have an account?',
+    switchLinkHref: mode === 'signIn' ? '/sign-up' : '/sign-in',
   };
 
   return (
@@ -194,8 +196,8 @@ export default function AuthForm({
               setEmail={setEmail}
               password={password}
               setPassword={setPassword}
-              fullName={mode === "signUp" ? fullName : undefined}
-              setFullName={mode === "signUp" ? setFullName : undefined}
+              fullName={mode === 'signUp' ? fullName : undefined}
+              setFullName={mode === 'signUp' ? setFullName : undefined}
             />
             {error && (
               <Alert variant="destructive" className="mt-4">
@@ -204,7 +206,7 @@ export default function AuthForm({
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
             )}
-            {message && mode === "signUp" && (
+            {message && mode === 'signUp' && (
               <Alert variant="default" className="mt-4 bg-accent/10">
                 <Terminal className="h-4 w-4 text-accent" />
                 <AlertTitle className="text-accent">Success</AlertTitle>

@@ -66,7 +66,7 @@ export function SidebarNav({
       <div>
         {!collapsed && (
           <div className="px-3 py-2 flex items-center justify-between">
-            <h2 className="text-xs uppercase tracking-wider font-medium text-sidebar-foreground/50">
+            <h2 className="text-xs uppercase tracking-wider font-medium text-sidebar-foreground/60">
               Collectives
             </h2>
           </div>
@@ -121,7 +121,7 @@ export function SidebarNav({
       <div>
         {!collapsed && (
           <div className="px-3 py-2">
-            <h2 className="text-xs uppercase tracking-wider font-medium text-sidebar-foreground/50">
+            <h2 className="text-xs uppercase tracking-wider font-medium text-sidebar-foreground/60">
               Settings
             </h2>
           </div>

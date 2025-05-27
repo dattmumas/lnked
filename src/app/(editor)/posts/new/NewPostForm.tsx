@@ -269,7 +269,7 @@ export default function NewPostForm({
             id="title"
             {...form.register('title')}
             placeholder="Enter post title..."
-            className="w-full h-16 text-4xl font-bold font-serif border-none p-1 focus:ring-0 focus:outline-none placeholder:text-muted-foreground"
+            className="w-full h-16 text-4xl font-bold font-serif border-none p-1 focus:ring-0 focus:outline-none placeholder:text-foreground/50"
           />
           {errors.title && (
             <p className="text-destructive text-sm">
@@ -280,7 +280,7 @@ export default function NewPostForm({
             id="subtitle"
             {...form.register('subtitle')}
             placeholder="Add a subtitle..."
-            className="w-full text-2xl font-medium italic font-serif text-muted-foreground border-none p-1 focus:ring-0 focus:outline-none "
+            className="w-full text-2xl font-medium italic font-serif text-foreground/70 border-none p-1 focus:ring-0 focus:outline-none placeholder:text-foreground/50"
           />
           {errors.subtitle && (
             <p className="text-destructive text-sm">

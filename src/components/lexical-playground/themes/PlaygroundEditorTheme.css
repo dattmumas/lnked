@@ -24,8 +24,8 @@
   margin-left: 20px;
   margin-bottom: 10px;
   font-size: 15px;
-  color: hsl(var(--muted-foreground));
-  border-left-color: var(--border);
+  color: hsl(var(--foreground) / 0.7);
+  border-left-color: hsl(var(--border));
   border-left-width: 4px;
   border-left-style: solid;
   padding-left: 16px;
@@ -196,7 +196,7 @@
   top: 0;
   border-right: 1px solid var(--border);
   padding: 8px;
-  color: hsl(var(--muted-foreground));
+  color: hsl(var(--foreground) / 0.5);
   white-space: pre-wrap;
   text-align: right;
   min-width: 25px;
@@ -302,6 +302,22 @@
 .PlaygroundEditorTheme__tableCell > * {
   overflow: inherit;
 }
+.PlaygroundEditorTheme__tableCell:first-child {
+  border-left: 1px solid hsl(var(--border));
+}
+.PlaygroundEditorTheme__tableCell:last-child {
+  border-right: 1px solid hsl(var(--border));
+}
+.PlaygroundEditorTheme__tableCellSortedIndicator {
+  display: block;
+  opacity: 0.5;
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 4px;
+  background-color: #999;
+}
 .PlaygroundEditorTheme__tableCellResizer {
   position: absolute;
   right: -4px;
@@ -313,7 +329,16 @@
 }
 .PlaygroundEditorTheme__tableCellHeader {
   background-color: hsl(var(--muted));
-  text-align: start;
+  cursor: pointer;
+}
+.PlaygroundEditorTheme__tableCellHeader:hover {
+  background-color: hsl(var(--muted) / 0.8);
+}
+.PlaygroundEditorTheme__tableCellHeader__sortedLexical {
+  background-color: hsl(var(--muted) / 0.5);
+}
+.PlaygroundEditorTheme__tableCellHeader__sortedNumeric {
+  background-color: hsl(var(--muted) / 0.5);
 }
 .PlaygroundEditorTheme__tableCellSelected {
   caret-color: transparent;
@@ -385,14 +410,6 @@
     opacity: 1;
   }
 }
-.PlaygroundEditorTheme__tableCellResizeRuler {
-  display: block;
-  position: absolute;
-  width: 1px;
-  background-color: hsl(var(--accent));
-  height: 100%;
-  top: 0;
-}
 .PlaygroundEditorTheme__tableCellActionButtonContainer {
   display: block;
   right: 5px;
@@ -403,13 +420,13 @@
   height: 20px;
 }
 .PlaygroundEditorTheme__tableCellActionButton {
-  background-color: hsl(var(--muted));
+  background-color: hsl(var(--background));
   display: block;
   border: 0;
   border-radius: 20px;
   width: 20px;
   height: 20px;
-  color: #222;
+  color: hsl(var(--foreground) / 0.6);
   cursor: pointer;
 }
 .PlaygroundEditorTheme__tableCellActionButton:hover {
@@ -574,7 +591,7 @@
   user-select: none;
 }
 .PlaygroundEditorTheme__embedBlockFocus {
-  outline: 2px solid hsl(var(--accent));
+  outline: 2px solid hsl(var(--ring));
 }
 .PlaygroundEditorTheme__layoutContainer {
   display: grid;
@@ -588,7 +605,7 @@
   max-width: 100%;
 }
 .PlaygroundEditorTheme__autocomplete {
-  color: hsl(var(--muted-foreground));
+  color: hsl(var(--foreground) / 0.6);
 }
 .PlaygroundEditorTheme__hr {
   padding: 2px 2px;
@@ -611,4 +628,12 @@
 .PlaygroundEditorTheme__specialText {
   background-color: yellow;
   font-weight: bold;
+}
+
+.mention:hover {
+  text-decoration: underline;
+  cursor: pointer;
+}
+.mention {
+  color: hsl(var(--accent));
 }

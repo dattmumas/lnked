@@ -1,7 +1,7 @@
-"use client";
+'use client';
 
-import { Card } from "@/components/ui/card";
-import { cn } from "@/lib/utils";
+import { Card } from '@/components/ui/card';
+import { cn } from '@/lib/utils';
 
 interface StatCardProps {
   title: string;
@@ -21,12 +21,12 @@ export default function StatCard({
   trend,
 }: StatCardProps) {
   return (
-    <Card className={cn("overflow-hidden", className)}>
+    <Card className={cn('overflow-hidden', className)}>
       <div className="flex flex-col p-4 h-full">
         <div className="flex items-center justify-between gap-2 mb-2">
-          <h3 className="text-sm font-medium text-muted-foreground">{title}</h3>
+          <h3 className="text-sm font-medium text-foreground/70">{title}</h3>
           {icon && (
-            <span className="size-4 text-muted-foreground" aria-hidden="true">
+            <span className="size-4 text-foreground/60" aria-hidden="true">
               {icon}
             </span>
           )}
@@ -35,23 +35,23 @@ export default function StatCard({
         <div className="flex items-baseline gap-2">
           <span className="text-2xl font-bold tabular-nums">{value}</span>
 
-          {typeof trend === "number" && (
+          {typeof trend === 'number' && (
             <span
               className={cn(
-                "text-xs font-medium tabular-nums",
+                'text-xs font-medium tabular-nums',
                 trend > 0
-                  ? "text-emerald-500 dark:text-emerald-400"
-                  : "text-destructive"
+                  ? 'text-emerald-500 dark:text-emerald-400'
+                  : 'text-destructive',
               )}
             >
-              {trend > 0 ? "+" : ""}
+              {trend > 0 ? '+' : ''}
               {Math.abs(trend)}%
             </span>
           )}
         </div>
 
         {description && (
-          <p className="mt-1 text-xs text-muted-foreground">{description}</p>
+          <p className="mt-1 text-xs text-foreground/60">{description}</p>
         )}
       </div>
     </Card>

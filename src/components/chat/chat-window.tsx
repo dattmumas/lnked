@@ -5,14 +5,20 @@ import { MessageList } from './message-list';
 import { MessageInput } from './message-input';
 import { TypingIndicator } from './typing-indicator';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { MoreVertical, Users } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { getDisplayName, getUserInitials } from '@/lib/chat/utils';
 import type { Json } from '@/lib/database.types';
 import type {
   MessageWithSender,
   TypingIndicator as TypingType,
+  ConversationWithParticipants,
 } from '@/lib/chat/types';
 
 interface ChatWindowProps {
   conversationId: string;
+  conversation?: ConversationWithParticipants;
   messages: MessageWithSender[];
   typingUsers: TypingType[];
   onSendMessage: (data: {
@@ -32,6 +38,7 @@ interface ChatWindowProps {
 
 export function ChatWindow({
   conversationId,
+  conversation,
   messages,
   typingUsers,
   onSendMessage,
@@ -47,6 +54,47 @@ export function ChatWindow({
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const [isNearBottom, setIsNearBottom] = useState(true);
+
+  // Get conversation title and participant info
+  const getConversationTitle = () => {
+    if (!conversation) return 'Chat';
+
+    if (conversation.title) return conversation.title;
+
+    if (conversation.type === 'direct') {
+      const otherParticipant = conversation.participants.find(
+        (p) => p.user_id !== currentUserId,
+      );
+      return getDisplayName(otherParticipant?.user);
+    }
+
+    return `${conversation.type === 'group' ? 'Group' : 'Channel'} Chat`;
+  };
+
+  const getConversationSubtitle = () => {
+    if (!conversation) return '';
+
+    if (conversation.type === 'direct') {
+      const otherParticipant = conversation.participants.find(
+        (p) => p.user_id !== currentUserId,
+      );
+      const isOnline = otherParticipant
+        ? isUserOnline(otherParticipant.user_id)
+        : false;
+      return isOnline ? 'Active now' : 'Offline';
+    }
+
+    return `${conversation.participants.length} members`;
+  };
+
+  const getConversationAvatar = () => {
+    if (!conversation || conversation.type !== 'direct') return null;
+
+    const otherParticipant = conversation.participants.find(
+      (p) => p.user_id !== currentUserId,
+    );
+    return otherParticipant?.user;
+  };
 
   // Auto-scroll to bottom when new messages arrive (if user is near bottom)
   useEffect(() => {
@@ -79,12 +127,43 @@ export function ChatWindow({
     setReplyToMessage(message);
   };
 
-  const clearReply = () => {
-    setReplyToMessage(null);
-  };
+  const conversationTitle = getConversationTitle();
+  const conversationSubtitle = getConversationSubtitle();
+  const avatarUser = getConversationAvatar();
 
   return (
     <div className="flex flex-col h-full">
+      {/* Chat header */}
+      <div className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="flex items-center justify-between px-4 py-2">
+          <div className="flex items-center gap-3">
+            {conversation?.type === 'direct' ? (
+              <Avatar className="h-9 w-9">
+                <AvatarImage src={avatarUser?.avatar_url || undefined} />
+                <AvatarFallback className="text-xs bg-primary/10 text-primary">
+                  {getUserInitials(avatarUser)}
+                </AvatarFallback>
+              </Avatar>
+            ) : (
+              <div className="h-9 w-9 rounded-full bg-muted flex items-center justify-center">
+                <Users className="h-4 w-4 text-foreground/60" />
+              </div>
+            )}
+
+            <div>
+              <h3 className="font-medium text-sm">{conversationTitle}</h3>
+              <p className="text-xs text-foreground/60">
+                {conversationSubtitle}
+              </p>
+            </div>
+          </div>
+
+          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+            <MoreVertical className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+
       {/* Messages area */}
       <div className="flex-1 min-h-0 relative">
         <ScrollArea
@@ -143,8 +222,6 @@ export function ChatWindow({
           onSendMessage={handleSendMessage}
           onStartTyping={onStartTyping}
           onStopTyping={onStopTyping}
-          replyToMessage={replyToMessage}
-          onClearReply={clearReply}
           placeholder="Type a message..."
         />
       </div>

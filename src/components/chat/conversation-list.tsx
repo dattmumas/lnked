@@ -73,7 +73,7 @@ export function ConversationList({
 
   if (conversations.length === 0) {
     return (
-      <div className="flex items-center justify-center h-32 text-muted-foreground">
+      <div className="flex items-center justify-center h-32 text-foreground/60">
         <div className="text-center">
           <MessageSquare className="h-8 w-8 mx-auto mb-2 opacity-50" />
           <p className="text-sm">No conversations yet</p>
@@ -105,74 +105,80 @@ export function ConversationList({
               key={conversation.id}
               onClick={() => onSelectConversation(conversation.id)}
               className={cn(
-                'w-full p-3 rounded-lg text-left hover:bg-muted/50 transition-colors',
-                'focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2',
-                isActive && 'bg-muted',
+                'w-full p-2 rounded-lg text-left transition-all duration-200',
+                'border border-transparent hover:border-border/50',
+                'hover:bg-muted/30 hover:shadow-sm',
+                'focus:outline-none focus:ring-1 focus:ring-ring focus:ring-offset-1',
+                isActive && 'bg-muted border-border shadow-sm',
               )}
             >
-              <div className="flex items-start gap-3">
+              <div className="flex items-center gap-2.5">
                 {/* Avatar */}
-                <div className="relative">
+                <div className="relative flex-shrink-0">
                   {conversation.type === 'direct' ? (
-                    <Avatar className="h-10 w-10">
+                    <Avatar className="h-9 w-9">
                       <AvatarImage src={avatarUrl || undefined} />
-                      <AvatarFallback className="text-xs">
+                      <AvatarFallback className="text-xs bg-primary/10 text-primary">
                         {getUserInitials({ full_name: title })}
                       </AvatarFallback>
                     </Avatar>
                   ) : (
-                    <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center">
-                      <Icon className="h-5 w-5 text-muted-foreground" />
+                    <div className="h-9 w-9 rounded-full bg-muted flex items-center justify-center">
+                      <Icon className="h-4 w-4 text-foreground/60" />
                     </div>
                   )}
 
                   {/* Online indicator for direct messages */}
                   {conversation.type === 'direct' && hasOnlineUser && (
-                    <div className="absolute -bottom-0.5 -right-0.5 h-3 w-3 bg-green-500 rounded-full border-2 border-background" />
+                    <div className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 bg-green-500 rounded-full border-2 border-background" />
                   )}
                 </div>
 
                 {/* Content */}
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between mb-1">
+                  <div className="flex items-center justify-between">
                     <h3
                       className={cn(
-                        'font-medium truncate',
-                        unreadCount > 0 && 'font-semibold',
+                        'font-medium text-sm truncate',
+                        unreadCount > 0 && 'font-semibold text-foreground',
                       )}
                     >
                       {title}
                     </h3>
 
-                    {/* Timestamp and unread badge */}
-                    <div className="flex items-center gap-2 ml-2">
-                      {conversation.last_message_at && (
-                        <span className="text-xs text-muted-foreground">
-                          {formatRelativeTime(conversation.last_message_at)}
-                        </span>
-                      )}
-
-                      {unreadCount > 0 && (
-                        <Badge
-                          variant="default"
-                          className="h-5 min-w-5 text-xs px-1.5"
-                        >
-                          {unreadCount > 99 ? '99+' : unreadCount}
-                        </Badge>
-                      )}
-                    </div>
+                    {/* Timestamp */}
+                    {conversation.last_message_at && (
+                      <span className="text-xs text-foreground/50 ml-2">
+                        {formatRelativeTime(conversation.last_message_at)}
+                      </span>
+                    )}
                   </div>
 
-                  {/* Last message preview */}
-                  {conversation.last_message && (
-                    <p className="text-sm text-muted-foreground truncate">
-                      {conversation.last_message.content}
-                    </p>
-                  )}
+                  {/* Last message preview and unread badge */}
+                  <div className="flex items-center justify-between mt-0.5">
+                    {conversation.last_message ? (
+                      <p className="text-xs text-foreground/60 truncate pr-2">
+                        {conversation.last_message.content}
+                      </p>
+                    ) : (
+                      <p className="text-xs text-foreground/50 italic">
+                        No messages yet
+                      </p>
+                    )}
+
+                    {unreadCount > 0 && (
+                      <Badge
+                        variant="default"
+                        className="h-4 min-w-4 text-[10px] px-1 flex-shrink-0"
+                      >
+                        {unreadCount > 99 ? '99+' : unreadCount}
+                      </Badge>
+                    )}
+                  </div>
 
                   {/* Participants count for group chats */}
                   {conversation.type !== 'direct' && (
-                    <p className="text-xs text-muted-foreground mt-1">
+                    <p className="text-[10px] text-foreground/40 mt-0.5">
                       {conversation.participants.length} members
                     </p>
                   )}

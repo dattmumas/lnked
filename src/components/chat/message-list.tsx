@@ -41,7 +41,7 @@ export function MessageList({
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {messages.map((message, index) => {
         const isOwnMessage = message.sender_id === currentUserId;
         const showAvatar =
@@ -51,34 +51,40 @@ export function MessageList({
           ? isUserOnline(message.sender.id)
           : false;
 
+        // Get the display name for the sender
+        const senderName = getDisplayName(message.sender);
+        const isConsecutive =
+          index > 0 && messages[index - 1].sender_id === message.sender_id;
+
         return (
           <div
             key={message.id}
             className={cn(
-              'flex gap-3 group',
+              'flex gap-2 group',
               isOwnMessage ? 'flex-row-reverse' : 'flex-row',
+              isConsecutive && !showAvatar && 'mt-1',
             )}
           >
             {/* Avatar */}
             <div
-              className={cn('flex-shrink-0', isOwnMessage ? 'ml-3' : 'mr-3')}
+              className={cn('flex-shrink-0', isOwnMessage ? 'ml-2' : 'mr-2')}
             >
               {showAvatar ? (
                 <div className="relative">
-                  <Avatar className="h-8 w-8">
+                  <Avatar className="h-7 w-7">
                     <AvatarImage
                       src={message.sender?.avatar_url || undefined}
                     />
-                    <AvatarFallback className="text-xs">
+                    <AvatarFallback className="text-[10px] bg-primary/10 text-primary">
                       {getUserInitials(message.sender)}
                     </AvatarFallback>
                   </Avatar>
                   {isOnline && (
-                    <div className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 bg-green-500 rounded-full border border-background" />
+                    <div className="absolute -bottom-0.5 -right-0.5 h-2 w-2 bg-green-500 rounded-full border border-background" />
                   )}
                 </div>
               ) : (
-                <div className="w-8 h-8" />
+                <div className="w-7 h-7" />
               )}
             </div>
 
@@ -91,11 +97,11 @@ export function MessageList({
             >
               {/* Sender name and time */}
               {showAvatar && !isOwnMessage && (
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="text-sm font-medium">
-                    {getDisplayName(message.sender)}
+                <div className="flex items-baseline gap-2 mb-0.5 px-1">
+                  <span className="text-xs font-medium text-foreground/80">
+                    {senderName}
                   </span>
-                  <span className="text-xs text-muted-foreground">
+                  <span className="text-[10px] text-foreground/50">
                     {formatChatTime(message.created_at)}
                   </span>
                 </div>
@@ -103,28 +109,33 @@ export function MessageList({
 
               {/* Reply preview */}
               {message.reply_to && (
-                <div className="mb-2 p-2 bg-muted/50 rounded border-l-2 border-primary text-xs">
-                  <div className="font-medium text-muted-foreground mb-1">
+                <div className="mb-1 p-1.5 bg-muted/50 rounded border-l-2 border-primary/50 text-[11px]">
+                  <div className="font-medium text-foreground/60">
                     {getDisplayName(message.reply_to.sender)}
                   </div>
-                  <div className="truncate">{message.reply_to.content}</div>
+                  <div className="truncate text-foreground/50">
+                    {message.reply_to.content}
+                  </div>
                 </div>
               )}
 
               {/* Message bubble */}
               <div
                 className={cn(
-                  'relative rounded-2xl px-4 py-2 text-sm',
+                  'relative rounded-2xl px-3 py-1.5 text-sm',
+                  'border border-transparent',
                   isOwnMessage
-                    ? 'bg-primary text-primary-foreground'
-                    : 'bg-muted text-foreground',
+                    ? 'bg-primary text-primary-foreground border-primary/20'
+                    : 'bg-muted text-foreground border-border/50',
                 )}
               >
-                <div className="break-words">{message.content}</div>
+                <div className="break-words leading-relaxed">
+                  {message.content}
+                </div>
 
                 {/* Time for own messages */}
                 {isOwnMessage && (
-                  <div className="text-xs opacity-70 mt-1">
+                  <div className="text-[10px] opacity-70 mt-0.5">
                     {formatChatTime(message.created_at)}
                   </div>
                 )}
@@ -132,15 +143,15 @@ export function MessageList({
                 {/* Message actions */}
                 <div
                   className={cn(
-                    'absolute top-0 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity',
-                    isOwnMessage ? '-left-20' : '-right-20',
+                    'absolute top-0 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity',
+                    isOwnMessage ? '-left-16' : '-right-16',
                   )}
                 >
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={() => onReply(message)}
-                    className="h-6 w-6 p-0 bg-background shadow-sm"
+                    className="h-6 w-6 p-0 bg-background/80 backdrop-blur-sm shadow-sm hover:bg-background"
                   >
                     <Reply className="h-3 w-3" />
                   </Button>
@@ -148,14 +159,14 @@ export function MessageList({
                     variant="ghost"
                     size="sm"
                     onClick={() => onAddReaction(message.id, '👍')}
-                    className="h-6 w-6 p-0 bg-background shadow-sm"
+                    className="h-6 w-6 p-0 bg-background/80 backdrop-blur-sm shadow-sm hover:bg-background text-xs"
                   >
                     👍
                   </Button>
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-6 w-6 p-0 bg-background shadow-sm"
+                    className="h-6 w-6 p-0 bg-background/80 backdrop-blur-sm shadow-sm hover:bg-background"
                   >
                     <MoreVertical className="h-3 w-3" />
                   </Button>
@@ -164,7 +175,7 @@ export function MessageList({
 
               {/* Reactions */}
               {message.reactions && message.reactions.length > 0 && (
-                <div className="flex flex-wrap gap-1 mt-1">
+                <div className="flex flex-wrap gap-0.5 mt-0.5 px-1">
                   {Object.entries(
                     message.reactions.reduce(
                       (acc, reaction) => {
@@ -177,10 +188,10 @@ export function MessageList({
                     <button
                       key={emoji}
                       onClick={() => onRemoveReaction(message.id, emoji)}
-                      className="text-xs bg-muted hover:bg-muted/80 rounded-full px-2 py-1 flex items-center gap-1"
+                      className="text-[11px] bg-muted/60 hover:bg-muted rounded-full px-1.5 py-0.5 flex items-center gap-0.5 border border-border/30"
                     >
                       <span>{emoji}</span>
-                      <span>{count}</span>
+                      <span className="text-foreground/60">{count}</span>
                     </button>
                   ))}
                 </div>

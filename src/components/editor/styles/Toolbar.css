@@ -39,7 +39,7 @@ button[class*='toolbar-item'],
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: hsl(var(--muted-foreground));
+  color: hsl(var(--foreground) / 0.4);
   border-radius: 6px;
   transition: all 0.2s ease;
   min-width: 30px;
@@ -78,7 +78,50 @@ button[class*='toolbar-item']:focus-visible,
 }
 
 .toolbar-item.spaced {
-  margin-right: 4px;
+  margin-right: 2px;
+}
+
+.toolbar-item:last-of-type {
+  margin-right: 0;
+}
+
+.toolbar-item.spaced.separator {
+  margin-right: 2px;
+}
+
+.toolbar-item:not(.spaced) {
+  margin-right: 0;
+}
+
+.toolbar-item:hover:not([disabled]) {
+  background-color: hsl(var(--muted));
+}
+
+.toolbar-item.active {
+  background-color: hsl(var(--accent) / 0.1);
+}
+
+.toolbar-item.active i {
+  color: hsl(var(--accent));
+}
+
+.toolbar-item i.format {
+  background-size: contain;
+  display: inline-block;
+  height: 18px;
+  width: 18px;
+  vertical-align: -0.25em;
+  display: flex;
+  opacity: 0.6;
+}
+
+.toolbar-item:disabled {
+  cursor: not-allowed;
+}
+
+.toolbar-item:disabled i.format {
+  opacity: 0.2;
+  color: hsl(var(--foreground) / 0.4);
 }
 
 /* Dropdown specific styles */

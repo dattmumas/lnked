@@ -246,7 +246,7 @@ export default function EditPostForm({
       )}
       <div className="pt-6 border-t">
         <h3 className="text-lg font-medium text-destructive">Danger Zone</h3>
-        <p className="text-sm text-muted-foreground mb-3">
+        <p className="text-sm text-foreground/70 mb-3">
           Deleting this post is permanent.
         </p>
         <Button
@@ -272,7 +272,7 @@ export default function EditPostForm({
         id="title"
         {...register('title')}
         placeholder="Edit post title..."
-        className="w-full text-4xl font-bold font-serif border-none p-0 focus:ring-0 focus:outline-none placeholder:text-muted-foreground"
+        className="w-full text-4xl font-bold font-serif border-none p-0 focus:ring-0 focus:outline-none placeholder:text-foreground/50"
       />
       {errors.title && (
         <p className="text-destructive text-sm">
@@ -283,7 +283,7 @@ export default function EditPostForm({
         id="subtitle"
         {...register('subtitle')}
         placeholder="Add a subtitle..."
-        className="w-full text-2xl font-medium italic font-serif text-muted-foreground border-none p-0 focus:ring-0 focus:outline-none placeholder:text-muted-foreground"
+        className="w-full text-2xl font-medium italic font-serif text-foreground/70 border-none p-0 focus:ring-0 focus:outline-none placeholder:text-foreground/50"
       />
       {errors.subtitle && (
         <p className="text-destructive text-sm">

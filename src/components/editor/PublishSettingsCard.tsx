@@ -37,7 +37,7 @@ const statusOptions = [
     label: 'Draft',
     description: 'Save privately',
     icon: Lock,
-    color: 'text-muted-foreground',
+    color: 'text-foreground/70',
   },
   {
     value: 'published' as const,
@@ -99,7 +99,7 @@ export function PublishSettingsCard({
         <h3 className="font-medium text-sm text-foreground">
           Publish Settings
         </h3>
-        <p className="text-xs text-muted-foreground mt-0.5">
+        <p className="text-xs text-foreground/60 mt-0.5">
           Choose when to publish
         </p>
       </div>
@@ -131,7 +131,7 @@ export function PublishSettingsCard({
               <OptionIcon className={cn('w-4 h-4', option.color)} />
               <div className="flex-1">
                 <span className="font-medium text-sm">{option.label}</span>
-                <span className="text-xs text-muted-foreground ml-2">
+                <span className="text-xs text-foreground/60 ml-2">
                   {option.description}
                 </span>
               </div>
@@ -191,7 +191,7 @@ export function PublishSettingsCard({
         <div
           className={cn(
             'text-xs flex items-center gap-1.5',
-            'text-muted-foreground',
+            'text-foreground/70',
             autosaveStatus.includes('failed') ||
               autosaveStatus.includes('error')
               ? 'text-destructive'
@@ -209,7 +209,7 @@ export function PublishSettingsCard({
 
       {/* Publishing to Collection Badge - Minimal */}
       {collectiveName && (
-        <div className="text-xs text-muted-foreground text-center">
+        <div className="text-xs text-foreground/60 text-center">
           Publishing to <span className="font-medium">{collectiveName}</span>
         </div>
       )}

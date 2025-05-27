@@ -55,7 +55,7 @@ export function SEOSettingsDrawer({
                 maxLength={60}
                 className="mt-1"
               />
-              <p className="text-xs text-muted-foreground mt-1">
+              <p className="text-xs text-foreground/60 mt-1">
                 Recommended 60 characters or less.
               </p>
               {errors.seo_title && (
@@ -75,7 +75,7 @@ export function SEOSettingsDrawer({
                 maxLength={160}
                 className="mt-1"
               />
-              <p className="text-xs text-muted-foreground mt-1">
+              <p className="text-xs text-foreground/60 mt-1">
                 Recommended 160 characters or less.
               </p>
               {errors.meta_description && (

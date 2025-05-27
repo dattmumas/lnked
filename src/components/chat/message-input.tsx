@@ -2,17 +2,13 @@
 
 import { useState, useRef, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
-import { Send, X } from 'lucide-react';
+import { Send } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { getDisplayName } from '@/lib/chat/utils';
-import type { MessageWithSender } from '@/lib/chat/types';
 
 interface MessageInputProps {
   onSendMessage: (content: string) => Promise<void>;
   onStartTyping: () => void;
   onStopTyping: () => void;
-  replyToMessage?: MessageWithSender | null;
-  onClearReply?: () => void;
   placeholder?: string;
   disabled?: boolean;
 }
@@ -21,8 +17,6 @@ export function MessageInput({
   onSendMessage,
   onStartTyping,
   onStopTyping,
-  replyToMessage,
-  onClearReply,
   placeholder = 'Type a message...',
   disabled = false,
 }: MessageInputProps) {
@@ -104,30 +98,6 @@ export function MessageInput({
 
   return (
     <div className="p-4">
-      {/* Reply preview */}
-      {replyToMessage && (
-        <div className="mb-2 p-2 bg-muted rounded-lg border-l-4 border-primary">
-          <div className="flex items-start justify-between">
-            <div className="flex-1 min-w-0">
-              <p className="text-xs text-muted-foreground mb-1">
-                Replying to {getDisplayName(replyToMessage.sender)}
-              </p>
-              <p className="text-sm truncate">{replyToMessage.content}</p>
-            </div>
-            {onClearReply && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={onClearReply}
-                className="h-6 w-6 p-0 ml-2"
-              >
-                <X className="h-3 w-3" />
-              </Button>
-            )}
-          </div>
-        </div>
-      )}
-
       {/* Input area */}
       <div className="flex items-end gap-2">
         <div className="flex-1 relative">
@@ -141,7 +111,7 @@ export function MessageInput({
             rows={1}
             className={cn(
               'w-full resize-none border border-input bg-background px-3 py-2 text-sm ring-offset-background',
-              'placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+              'placeholder:text-foreground/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
               'disabled:cursor-not-allowed disabled:opacity-50 rounded-lg',
               'min-h-[40px] max-h-[120px] overflow-y-auto',
             )}
@@ -160,7 +130,7 @@ export function MessageInput({
 
       {/* Character count or other info */}
       {content.length > 0 && (
-        <div className="mt-1 text-xs text-muted-foreground text-right">
+        <div className="mt-1 text-xs text-foreground/60 text-right">
           {content.length} characters
         </div>
       )}

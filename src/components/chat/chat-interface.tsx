@@ -148,6 +148,9 @@ export function ChatInterface({ className, userId }: ChatInterfaceProps) {
           {chat.activeConversation ? (
             <ChatWindow
               conversationId={chat.activeConversation}
+              conversation={chat.conversations.find(
+                (c) => c.id === chat.activeConversation,
+              )}
               messages={chat.messages}
               typingUsers={chat.typingUsers}
               onSendMessage={chat.sendMessage}
