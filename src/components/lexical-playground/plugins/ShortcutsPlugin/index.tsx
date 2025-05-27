@@ -6,8 +6,8 @@
  *
  */
 
-import {TOGGLE_LINK_COMMAND} from '@lexical/link';
-import {HeadingTagType} from '@lexical/rich-text';
+import { TOGGLE_LINK_COMMAND } from '@lexical/link';
+import { HeadingTagType } from '@lexical/rich-text';
 import {
   COMMAND_PRIORITY_NORMAL,
   FORMAT_ELEMENT_COMMAND,
@@ -18,11 +18,10 @@ import {
   LexicalEditor,
   OUTDENT_CONTENT_COMMAND,
 } from 'lexical';
-import {Dispatch, useEffect} from 'react';
+import { Dispatch, useEffect } from 'react';
 
-import {useToolbarState} from '../../context/ToolbarContext';
-import {sanitizeUrl} from '../../utils/url';
-import {INSERT_INLINE_COMMAND} from '../CommentPlugin';
+import { useToolbarState } from '../../context/ToolbarContext';
+import { sanitizeUrl } from '../../utils/url';
 import {
   clearFormatting,
   formatBulletList,
@@ -70,7 +69,7 @@ export default function ShortcutsPlugin({
   editor: LexicalEditor;
   setIsLinkEditMode: Dispatch<boolean>;
 }): null {
-  const {toolbarState} = useToolbarState();
+  const { toolbarState } = useToolbarState();
 
   useEffect(() => {
     const keyboardShortcutsHandler = (event: KeyboardEvent) => {
@@ -80,7 +79,7 @@ export default function ShortcutsPlugin({
       } else if (isFormatParagraph(event)) {
         formatParagraph(editor);
       } else if (isFormatHeading(event)) {
-        const {code} = event;
+        const { code } = event;
         const headingSize = `h${code[code.length - 1]}` as HeadingTagType;
         formatHeading(editor, toolbarState.blockType, headingSize);
       } else if (isFormatBulletList(event)) {

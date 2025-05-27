@@ -51,7 +51,6 @@ import InlineImagePlugin from '@/components/lexical-playground/plugins/InlineIma
 import FloatingTextFormatToolbarPlugin from '@/components/lexical-playground/plugins/FloatingTextFormatToolbarPlugin';
 import DragDropPastePlugin from '@/components/lexical-playground/plugins/DragDropPastePlugin';
 import KeywordsPlugin from '@/components/lexical-playground/plugins/KeywordsPlugin';
-import TreeViewPlugin from '@/components/lexical-playground/plugins/TreeViewPlugin';
 import TableHoverActionsPlugin from '@/components/lexical-playground/plugins/TableHoverActionsPlugin';
 import PageBreakPlugin from '@/components/lexical-playground/plugins/PageBreakPlugin';
 import EquationsPlugin from '@/components/lexical-playground/plugins/EquationsPlugin';
@@ -61,7 +60,6 @@ import { MaxLengthPlugin } from '@/components/lexical-playground/plugins/MaxLeng
 import AutocompletePlugin from '@/components/lexical-playground/plugins/AutocompletePlugin';
 import ContextMenuPlugin from '@/components/lexical-playground/plugins/ContextMenuPlugin';
 import SpecialTextPlugin from '@/components/lexical-playground/plugins/SpecialTextPlugin';
-import CommentPlugin from '@/components/lexical-playground/plugins/CommentPlugin';
 import CodeActionMenuPlugin from '@/components/lexical-playground/plugins/CodeActionMenuPlugin';
 import TableActionMenuPlugin from '@/components/lexical-playground/plugins/TableActionMenuPlugin';
 import PollPlugin from '@/components/lexical-playground/plugins/PollPlugin';
@@ -104,14 +102,14 @@ function EditorContent({
   const isEditable = true;
 
   return (
-    <div className="editor-shell">
+    <div className="editor-shell w-full">
       <ToolbarPlugin
         editor={editor}
         activeEditor={activeEditor}
         setActiveEditor={setActiveEditor}
         setIsLinkEditMode={setIsLinkEditMode}
       />
-      <div className="editor-container">
+      <div className="editor-container w-full">
         <AutoFocusPlugin />
         <ClearEditorPlugin />
         <ComponentPickerPlugin />
@@ -169,7 +167,6 @@ function EditorContent({
         />
         <DragDropPastePlugin />
         <KeywordsPlugin />
-        <TreeViewPlugin />
         <TableHoverActionsPlugin />
         <PageBreakPlugin />
         <EquationsPlugin />
@@ -182,7 +179,6 @@ function EditorContent({
         <AutocompletePlugin />
         <ContextMenuPlugin />
         <SpecialTextPlugin />
-        <CommentPlugin />
         <CodeActionMenuPlugin />
         <TableActionMenuPlugin />
         <PollPlugin />

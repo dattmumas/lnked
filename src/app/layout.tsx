@@ -38,7 +38,7 @@ export default async function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <header className="pb-4 flex items-center justify-between border-b border-border/50">
+          <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-md border-b border-border/50">
             <ModernNavbar initialUser={user} initialUsername={username} />
           </header>
           <main>{children}</main>

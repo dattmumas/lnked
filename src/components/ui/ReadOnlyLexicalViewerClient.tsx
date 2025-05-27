@@ -42,10 +42,6 @@ const PageBreakPlugin = dynamic(
   () => import('@/components/lexical-playground/plugins/PageBreakPlugin'),
   { ssr: false },
 );
-const CommentPlugin = dynamic(
-  () => import('@/components/lexical-playground/plugins/CommentPlugin'),
-  { ssr: false },
-);
 const LayoutPlugin = dynamic(
   () =>
     import(
@@ -68,10 +64,6 @@ const CodeActionMenuPlugin = dynamic(
 );
 const TableCellResizer = dynamic(
   () => import('@/components/lexical-playground/plugins/TableCellResizer'),
-  { ssr: false },
-);
-const TreeViewPlugin = dynamic(
-  () => import('@/components/lexical-playground/plugins/TreeViewPlugin'),
   { ssr: false },
 );
 const ContextMenuPlugin = dynamic(
@@ -208,7 +200,6 @@ export function ReadOnlyLexicalViewerClient({
         <FloatingTextFormatToolbarPlugin setIsLinkEditMode={() => {}} />
         <DragDropPastePlugin />
         <KeywordsPlugin />
-        <TreeViewPlugin />
         <TableHoverActionsPlugin />
         <PageBreakPlugin />
         <FloatingLinkEditorPlugin
@@ -218,7 +209,6 @@ export function ReadOnlyLexicalViewerClient({
         <MaxLengthPlugin maxLength={10000} />
         <ContextMenuPlugin />
         <SpecialTextPlugin />
-        <CommentPlugin />
         <CodeActionMenuPlugin />
         <TableActionMenuPlugin />
         <PollPlugin />

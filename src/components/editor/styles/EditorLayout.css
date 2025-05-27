@@ -1,10 +1,12 @@
 :global(.editor-shell) {
-  @apply mx-auto my-10 max-w-[760px] px-4 text-foreground relative leading-[1.7] font-normal;
+  @apply mx-auto my-10 text-foreground relative leading-[1.7] font-normal;
+  max-width: 100%;
+  padding: 0;
 }
 
 @media (max-width: 640px) {
   :global(.editor-shell) {
-    @apply max-w-full px-4;
+    @apply px-4;
   }
 }
 
@@ -12,9 +14,6 @@
   background: transparent;
   position: relative;
   display: block;
-}
-
-:global(.editor-shell .editor-container.plain-text) {
 }
 
 :global(.editor-scroller) {

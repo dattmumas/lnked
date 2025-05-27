@@ -18,6 +18,8 @@ import { Input } from '@/components/ui/input';
 import { Info, Calendar, Eye, FileText, Save } from 'lucide-react';
 import { createPost, updatePost } from '@/app/actions/postActions';
 import { EMPTY_LEXICAL_STATE } from '@/lib/editorConstants';
+import { PublishSettingsCard } from '@/components/editor/PublishSettingsCard';
+import { QuickActionsBar } from '@/components/editor/QuickActionsBar';
 
 type NewPostFormValues = PostFormValues;
 
@@ -229,160 +231,31 @@ export default function NewPostForm({
     }
   };
 
-  const getStatusConfig = () => {
-    switch (currentStatus) {
-      case 'published':
-        return {
-          icon: <Eye className="w-4 h-4" />,
-          text: 'Publish Now',
-          description: 'Make your post live immediately',
-          variant: 'default' as const,
-        };
-      case 'scheduled':
-        return {
-          icon: <Calendar className="w-4 h-4" />,
-          text: 'Schedule Post',
-          description: 'Publish at a specific time',
-          variant: 'secondary' as const,
-        };
-      default:
-        return {
-          icon: <Save className="w-4 h-4" />,
-          text: createdPostId ? 'Update Draft' : 'Save Draft',
-          description: 'Save as private draft',
-          variant: 'outline' as const,
-        };
-    }
-  };
-
-  const statusConfig = getStatusConfig();
-
   const settingsSidebar = (
     <div className="space-y-6">
-      {/* Status Card */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base flex items-center gap-2">
-            <FileText className="w-4 h-4" />
-            Publish Settings
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-3">
-            <Label className="text-sm font-medium">Status</Label>
-            <RadioGroup
-              value={currentStatus}
-              onValueChange={(value: 'draft' | 'published' | 'scheduled') =>
-                setValue('status', value)
-              }
-              className="space-y-2"
-            >
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="draft" id="draft" />
-                <Label htmlFor="draft" className="text-sm">
-                  Draft
-                </Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="published" id="published" />
-                <Label htmlFor="published" className="text-sm">
-                  Published
-                </Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="scheduled" id="scheduled" />
-                <Label htmlFor="scheduled" className="text-sm">
-                  Scheduled
-                </Label>
-              </div>
-            </RadioGroup>
-          </div>
+      {/* Publish Settings Card */}
+      <PublishSettingsCard
+        status={currentStatus}
+        onStatusChange={(value) => setValue('status', value)}
+        publishedAt={watch('published_at')}
+        onPublishedAtChange={(value) => setValue('published_at', value)}
+        onPublish={handleSubmit(onSubmit)}
+        isPublishing={isProcessing || isSubmitting}
+        autosaveStatus={autosaveStatus}
+        errors={{
+          published_at: errors.published_at
+            ? { message: errors.published_at.message as string }
+            : undefined,
+        }}
+        collectiveName={collective?.name}
+        postId={createdPostId}
+      />
 
-          {currentStatus === 'scheduled' && (
-            <div className="space-y-2">
-              <Label htmlFor="published_at" className="text-sm font-medium">
-                Publish Date
-              </Label>
-              <Input
-                id="published_at"
-                type="datetime-local"
-                {...form.register('published_at')}
-                className="text-sm"
-              />
-              {errors.published_at && (
-                <p className="text-xs text-destructive">
-                  {errors.published_at.message as string}
-                </p>
-              )}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* SEO Settings */}
-      <Button
-        type="button"
-        variant="outline"
-        onClick={() => setSeoDrawerOpen(true)}
-        className="w-full justify-start"
-        size="sm"
-      >
-        <FileText className="w-4 h-4 mr-2" />
-        SEO Settings
-      </Button>
-
-      {/* Publish Button */}
-      <Button
-        type="button"
-        onClick={handleSubmit(onSubmit)}
-        disabled={isProcessing || isSubmitting}
-        className="w-full"
-        variant={statusConfig.variant}
-        size="lg"
-      >
-        {isProcessing || isSubmitting ? (
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-            Processing...
-          </div>
-        ) : (
-          <div className="flex items-center gap-2">
-            {statusConfig.icon}
-            {statusConfig.text}
-          </div>
-        )}
-      </Button>
-
-      {/* Status Messages */}
-      {autosaveStatus && (
-        <Alert
-          variant={
-            autosaveStatus.includes('failed') ||
-            autosaveStatus.includes('error')
-              ? 'destructive'
-              : 'default'
-          }
-          className="text-xs"
-        >
-          <Info className="h-3 w-3" />
-          <AlertDescription className="text-xs">
-            {autosaveStatus}
-          </AlertDescription>
-        </Alert>
-      )}
-
+      {/* Server Error */}
       {serverError && (
         <Alert variant="destructive" className="text-xs">
           <AlertDescription className="text-xs">{serverError}</AlertDescription>
         </Alert>
-      )}
-
-      {collective && (
-        <div className="pt-4 border-t">
-          <Badge variant="secondary" className="text-xs">
-            Publishing to {collective.name}
-          </Badge>
-        </div>
       )}
     </div>
   );
@@ -392,6 +265,12 @@ export default function NewPostForm({
       <SEOSettingsDrawer open={seoDrawerOpen} onOpenChange={setSeoDrawerOpen} />
       <EditorLayout settingsSidebar={settingsSidebar} pageTitle={pageTitle}>
         <div className="space-y-6">
+          {/* Quick Actions Bar */}
+          <QuickActionsBar
+            onSeoClick={() => setSeoDrawerOpen(true)}
+            className="mb-8"
+          />
+
           <Input
             id="title"
             {...form.register('title')}

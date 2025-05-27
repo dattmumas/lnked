@@ -20,6 +20,8 @@ import PostEditor from '@/components/editor/PostEditor';
 import SEOSettingsDrawer from '@/components/editor/SEOSettingsDrawer';
 import { EMPTY_LEXICAL_STATE } from '@/lib/editorConstants';
 import { Input } from '@/components/ui/input';
+import { PublishSettingsCard } from '@/components/editor/PublishSettingsCard';
+import { QuickActionsBar } from '@/components/editor/QuickActionsBar';
 
 type EditPostFormValues = PostFormValues;
 
@@ -224,45 +226,21 @@ export default function EditPostForm({
 
   const formControlsNode = (
     <div className="space-y-6">
-      <PostFormFields
-        register={register}
-        errors={errors}
-        currentStatus={currentStatus}
-        isSubmitting={isProcessing || isSubmitting || isDeleting}
-        titlePlaceholder="Edit Post Title"
-        showTitle={false}
+      <PublishSettingsCard
+        status={currentStatus}
+        onStatusChange={(value) => setValue('status', value)}
+        publishedAt={watch('published_at')}
+        onPublishedAtChange={(value) => setValue('published_at', value)}
+        onPublish={handleSubmit(onSubmit)}
+        isPublishing={isProcessing || isSubmitting || isDeleting}
+        autosaveStatus={autosaveStatus}
+        errors={{
+          published_at: errors.published_at
+            ? { message: errors.published_at.message as string }
+            : undefined,
+        }}
+        postId={postId}
       />
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        onClick={() => setSeoDrawerOpen(true)}
-        className="w-full"
-      >
-        SEO Settings
-      </Button>
-      <Button
-        type="button"
-        onClick={handleSubmit(onSubmit)}
-        disabled={isProcessing || isSubmitting || isDeleting}
-        className="w-full"
-      >
-        {primaryButtonText}
-      </Button>
-      {autosaveStatus && (
-        <Alert
-          variant={
-            autosaveStatus.includes('failed') ||
-            autosaveStatus.includes('Error')
-              ? 'destructive'
-              : 'default'
-          }
-          className="mt-4 text-xs"
-        >
-          <Info className="h-4 w-4" />
-          <AlertDescription>{autosaveStatus}</AlertDescription>
-        </Alert>
-      )}
       {serverError && (
         <p className="text-sm text-destructive rounded-md bg-destructive/10 p-3">
           {serverError.split('\n').map((line, i) => (
@@ -298,6 +276,10 @@ export default function EditPostForm({
 
   const canvas = (
     <div className="space-y-6">
+      <QuickActionsBar
+        onSeoClick={() => setSeoDrawerOpen(true)}
+        className="mb-8"
+      />
       <Input
         id="title"
         {...register('title')}
