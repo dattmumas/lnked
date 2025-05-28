@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -36,8 +36,24 @@ export function NotificationDropdown({
   } = useNotifications(userId, {
     autoFetch: true,
     realtime: true,
-    filters: { limit: 10 }, // Only show recent notifications in dropdown
+    filters: {
+      limit: 10,
+      read: false, // Only fetch unread notifications
+    },
   });
+
+  // Mark all notifications as read when dropdown opens
+  useEffect(() => {
+    if (isOpen && notifications.length > 0) {
+      const unreadNotificationIds = notifications
+        .filter((n) => !n.read_at)
+        .map((n) => n.id);
+
+      if (unreadNotificationIds.length > 0) {
+        markAsRead(unreadNotificationIds);
+      }
+    }
+  }, [isOpen, notifications, markAsRead]);
 
   const handleMarkAllAsRead = async () => {
     if (unreadCount > 0) {
@@ -137,7 +153,7 @@ export function NotificationDropdown({
             // Empty state
             <div className="p-8 text-center">
               <Bell className="h-8 w-8 mx-auto mb-3 text-muted-foreground" />
-              <h4 className="font-medium mb-1">No notifications</h4>
+              <h4 className="font-medium mb-1">No new notifications</h4>
               <p className="text-sm text-muted-foreground">
                 You're all caught up! Check back later for updates.
               </p>
@@ -171,21 +187,19 @@ export function NotificationDropdown({
           )}
         </div>
 
-        {/* Footer */}
-        {notifications.length > 0 && (
-          <div className="border-t p-3">
-            <Button
-              variant="ghost"
-              className="w-full justify-center gap-2 text-sm"
-              asChild
-            >
-              <Link href="/dashboard/notifications">
-                View all notifications
-                <ExternalLink className="h-3 w-3" />
-              </Link>
-            </Button>
-          </div>
-        )}
+        {/* Footer - Always show link to all notifications */}
+        <div className="border-t p-3">
+          <Button
+            variant="ghost"
+            className="w-full justify-center gap-2 text-sm"
+            asChild
+          >
+            <Link href="/dashboard/notifications">
+              View all notifications
+              <ExternalLink className="h-3 w-3" />
+            </Link>
+          </Button>
+        </div>
       </DropdownMenuContent>
     </DropdownMenu>
   );

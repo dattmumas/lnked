@@ -262,7 +262,7 @@ export function NotificationList({
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="all">All</TabsTrigger>
           <TabsTrigger value="unread">
-            Unread {unreadCount > 0 && `(${unreadCount})`}
+            Unread {unreadCount > 0 && <span>({unreadCount})</span>}
           </TabsTrigger>
           <TabsTrigger value="follow">Follows</TabsTrigger>
         </TabsList>

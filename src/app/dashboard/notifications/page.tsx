@@ -1,6 +1,6 @@
 import { Suspense } from 'react';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
-import { notificationService } from '@/lib/notifications/service';
+import { NotificationService } from '@/lib/notifications/service';
 import { NotificationList } from '@/components/notifications/NotificationList';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Bell } from 'lucide-react';
@@ -16,6 +16,9 @@ async function NotificationsContent() {
   if (authError || !user) {
     redirect('/sign-in');
   }
+
+  // Create server-side notification service instance
+  const notificationService = new NotificationService();
 
   // Fetch initial notifications
   const initialData = await notificationService.getNotifications({
