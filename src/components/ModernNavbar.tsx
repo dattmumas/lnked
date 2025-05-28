@@ -30,13 +30,13 @@ import {
   User as UserIcon,
   Settings,
   LogOut,
-  Bell,
   Compass,
-  X,
   Search,
+  MessageCircle,
 } from 'lucide-react';
 import ModeToggle from '@/components/app/nav/ModeToggle';
 import SearchBar from '@/components/app/nav/SearchBar';
+import { NotificationDropdown } from '@/components/notifications/NotificationDropdown';
 
 const publicNavItems = [
   {
@@ -51,6 +51,11 @@ const authenticatedNavItems = [
     href: '/discover',
     label: 'Discover',
     icon: Compass,
+  },
+  {
+    href: '/chat',
+    label: 'Chat',
+    icon: MessageCircle,
   },
   {
     href: '/dashboard',
@@ -81,37 +86,7 @@ export default function ModernNavbar({
   const [isLoading, setIsLoading] = useState<boolean>(
     initialUser === undefined,
   );
-  const [notifications, setNotifications] = useState(3);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
-  const [notificationList, setNotificationList] = useState([
-    {
-      id: '1',
-      type: 'follower',
-      title: 'New follower',
-      message: 'John Doe started following you',
-      time: '2m ago',
-      color: 'bg-blue-500',
-      read: false,
-    },
-    {
-      id: '2',
-      type: 'like',
-      title: 'Post liked',
-      message: 'Your post "Getting Started with Next.js" received 5 new likes',
-      time: '1h ago',
-      color: 'bg-green-500',
-      read: false,
-    },
-    {
-      id: '3',
-      type: 'collaboration',
-      title: 'Collaboration invite',
-      message: 'You were invited to collaborate on "React Best Practices"',
-      time: '3h ago',
-      color: 'bg-purple-500',
-      read: false,
-    },
-  ]);
 
   const supabase = createSupabaseBrowserClient();
 
@@ -180,22 +155,6 @@ export default function ModernNavbar({
   };
 
   const isAuthPage = pathname === '/sign-in' || pathname === '/sign-up';
-
-  // Handle notification dismissal
-  const handleNotificationClick = () => {
-    setNotifications(0);
-    setNotificationList((prev) =>
-      prev.map((notification) => ({ ...notification, read: true })),
-    );
-  };
-
-  // Handle individual notification dismissal
-  const handleDismissNotification = (id: string) => {
-    setNotificationList((prev) =>
-      prev.filter((notification) => notification.id !== id),
-    );
-    setNotifications((prev) => Math.max(0, prev - 1));
-  };
 
   if (isAuthPage) {
     return (
@@ -311,93 +270,7 @@ export default function ModernNavbar({
                 </Button>
 
                 {/* Notifications */}
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="relative h-9 w-9 p-0"
-                    >
-                      <Bell className="h-4 w-4" />
-                      {notifications > 0 && (
-                        <Badge
-                          variant="destructive"
-                          className="absolute -top-1 -right-1 h-4 w-4 p-0 flex items-center justify-center text-[10px] font-medium"
-                        >
-                          {notifications}
-                        </Badge>
-                      )}
-                      <span className="sr-only">Notifications</span>
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-96 shadow-lg">
-                    <div className="flex items-center justify-between p-4 border-b">
-                      <h3 className="font-semibold text-base">Notifications</h3>
-                      {notifications > 0 && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="text-xs h-auto p-1 hover:bg-accent"
-                          onClick={handleNotificationClick}
-                        >
-                          Mark all as read
-                        </Button>
-                      )}
-                    </div>
-
-                    {notifications > 0 ? (
-                      <div className="max-h-96 overflow-y-auto">
-                        {notificationList.map((notification) => (
-                          <DropdownMenuItem
-                            key={notification.id}
-                            className="p-4 cursor-pointer focus:bg-accent group"
-                          >
-                            <div className="flex flex-col gap-2 w-full">
-                              <div className="flex items-start justify-between gap-2">
-                                <div className="flex items-center gap-3">
-                                  <div
-                                    className={`h-2.5 w-2.5 rounded-full ${notification.color} flex-shrink-0`}
-                                  />
-                                  <span className="font-medium text-sm">
-                                    {notification.title}
-                                  </span>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  <span className="text-xs text-foreground/60">
-                                    {notification.time}
-                                  </span>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleDismissNotification(
-                                        notification.id,
-                                      );
-                                    }}
-                                  >
-                                    <X className="h-3 w-3" />
-                                  </Button>
-                                </div>
-                              </div>
-                              <p className="text-sm text-foreground/60 pl-5">
-                                {notification.message}
-                              </p>
-                            </div>
-                          </DropdownMenuItem>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="p-12 text-center">
-                        <Bell className="h-10 w-10 mx-auto mb-4 text-foreground/30" />
-                        <p className="text-sm text-foreground/60">
-                          No notifications yet
-                        </p>
-                      </div>
-                    )}
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                <NotificationDropdown userId={user.id} />
 
                 {/* User Menu */}
                 <DropdownMenu
@@ -438,6 +311,12 @@ export default function ModernNavbar({
                         >
                           <UserIcon className="h-4 w-4" />
                           <span>Profile</span>
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild className="cursor-pointer">
+                        <Link href="/chat" className="gap-3 p-2">
+                          <MessageCircle className="h-4 w-4" />
+                          <span>Chat</span>
                         </Link>
                       </DropdownMenuItem>
                       <DropdownMenuItem asChild className="cursor-pointer">
@@ -566,6 +445,16 @@ export default function ModernNavbar({
                           <Link href="/posts/new">
                             <PenSquare className="h-5 w-5" />
                             <span className="font-medium">Write New Post</span>
+                          </Link>
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          className="w-full justify-start gap-3 h-11"
+                          asChild
+                        >
+                          <Link href="/chat">
+                            <MessageCircle className="h-5 w-5" />
+                            <span className="font-medium">Open Chat</span>
                           </Link>
                         </Button>
                       </div>

@@ -10,6 +10,7 @@ import {
 } from '@/components/ui/card';
 import EditUserSettingsForm from '@/components/app/settings/EditUserSettingsForm';
 import DeleteAccountSection from '@/components/app/settings/DeleteAccountSection';
+import { NotificationPreferences } from '@/components/notifications/NotificationPreferences';
 import {
   User,
   Bell,
@@ -146,40 +147,7 @@ export default async function UserSettingsPage() {
         </TabsContent>
 
         <TabsContent value="notifications" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Notification Preferences</CardTitle>
-              <CardDescription>
-                Choose what notifications you want to receive and how.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="font-medium">Email Notifications</h4>
-                    <p className="text-sm text-muted-foreground">
-                      Receive email updates for important events
-                    </p>
-                  </div>
-                  <div className="text-sm text-muted-foreground">
-                    Coming soon
-                  </div>
-                </div>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="font-medium">Push Notifications</h4>
-                    <p className="text-sm text-muted-foreground">
-                      Get notified about new followers and interactions
-                    </p>
-                  </div>
-                  <div className="text-sm text-muted-foreground">
-                    Coming soon
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <NotificationPreferences />
         </TabsContent>
 
         <TabsContent value="privacy" className="space-y-6">

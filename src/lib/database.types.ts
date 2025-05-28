@@ -7,50 +7,33 @@ export type Json =
   | Json[]
 
 export type Database = {
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          operationName?: string
+          query?: string
+          variables?: Json
+          extensions?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
   public: {
     Tables: {
-      agreements: {
-        Row: {
-          agreement_type: Database["public"]["Enums"]["agreement_type"]
-          created_at: string
-          id: string
-          party_a_id: string
-          party_a_type: Database["public"]["Enums"]["member_entity_type"]
-          party_b_id: string
-          party_b_type: Database["public"]["Enums"]["member_entity_type"]
-          status: string
-          stripe_object_id: string | null
-          terms: Json | null
-          updated_at: string
-        }
-        Insert: {
-          agreement_type: Database["public"]["Enums"]["agreement_type"]
-          created_at?: string
-          id?: string
-          party_a_id: string
-          party_a_type: Database["public"]["Enums"]["member_entity_type"]
-          party_b_id: string
-          party_b_type: Database["public"]["Enums"]["member_entity_type"]
-          status?: string
-          stripe_object_id?: string | null
-          terms?: Json | null
-          updated_at?: string
-        }
-        Update: {
-          agreement_type?: Database["public"]["Enums"]["agreement_type"]
-          created_at?: string
-          id?: string
-          party_a_id?: string
-          party_a_type?: Database["public"]["Enums"]["member_entity_type"]
-          party_b_id?: string
-          party_b_type?: Database["public"]["Enums"]["member_entity_type"]
-          status?: string
-          stripe_object_id?: string | null
-          terms?: Json | null
-          updated_at?: string
-        }
-        Relationships: []
-      }
       collective_invites: {
         Row: {
           accepted_at: string | null
@@ -105,33 +88,33 @@ export type Database = {
       collective_members: {
         Row: {
           collective_id: string
-          created_at: string
+          created_at: string | null
           id: string
           member_id: string
-          member_type: Database["public"]["Enums"]["member_entity_type"]
-          role: Database["public"]["Enums"]["collective_member_role"]
+          member_type: string | null
+          role: string | null
           share_percentage: number | null
-          updated_at: string
+          updated_at: string | null
         }
         Insert: {
           collective_id: string
-          created_at?: string
+          created_at?: string | null
           id?: string
           member_id: string
-          member_type?: Database["public"]["Enums"]["member_entity_type"]
-          role?: Database["public"]["Enums"]["collective_member_role"]
+          member_type?: string | null
+          role?: string | null
           share_percentage?: number | null
-          updated_at?: string
+          updated_at?: string | null
         }
         Update: {
           collective_id?: string
-          created_at?: string
+          created_at?: string | null
           id?: string
           member_id?: string
-          member_type?: Database["public"]["Enums"]["member_entity_type"]
-          role?: Database["public"]["Enums"]["collective_member_role"]
+          member_type?: string | null
+          role?: string | null
           share_percentage?: number | null
-          updated_at?: string
+          updated_at?: string | null
         }
         Relationships: [
           {
@@ -142,7 +125,7 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "collective_members_user_id_fkey"
+            foreignKeyName: "collective_members_member_id_fkey"
             columns: ["member_id"]
             isOneToOne: false
             referencedRelation: "users"
@@ -153,14 +136,14 @@ export type Database = {
       collectives: {
         Row: {
           cover_image_url: string | null
-          created_at: string
+          created_at: string | null
           description: string | null
           governance_model: string | null
           id: string
           intro_video_url: string | null
           logo_url: string | null
           name: string
-          owner_id: string
+          owner_id: string | null
           pinned_post_id: string | null
           slug: string
           stripe_account_id: string | null
@@ -172,14 +155,14 @@ export type Database = {
         }
         Insert: {
           cover_image_url?: string | null
-          created_at?: string
+          created_at?: string | null
           description?: string | null
           governance_model?: string | null
           id?: string
           intro_video_url?: string | null
           logo_url?: string | null
           name: string
-          owner_id: string
+          owner_id?: string | null
           pinned_post_id?: string | null
           slug: string
           stripe_account_id?: string | null
@@ -191,14 +174,14 @@ export type Database = {
         }
         Update: {
           cover_image_url?: string | null
-          created_at?: string
+          created_at?: string | null
           description?: string | null
           governance_model?: string | null
           id?: string
           intro_video_url?: string | null
           logo_url?: string | null
           name?: string
-          owner_id?: string
+          owner_id?: string | null
           pinned_post_id?: string | null
           slug?: string
           stripe_account_id?: string | null
@@ -437,7 +420,7 @@ export type Database = {
       featured_posts: {
         Row: {
           created_at: string | null
-          display_order: number
+          display_order: number | null
           id: string
           owner_id: string
           owner_type: string
@@ -445,7 +428,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string | null
-          display_order?: number
+          display_order?: number | null
           id?: string
           owner_id: string
           owner_type: string
@@ -453,7 +436,7 @@ export type Database = {
         }
         Update: {
           created_at?: string | null
-          display_order?: number
+          display_order?: number | null
           id?: string
           owner_id?: string
           owner_type?: string
@@ -471,19 +454,19 @@ export type Database = {
       }
       follows: {
         Row: {
-          created_at: string
+          created_at: string | null
           follower_id: string
           following_id: string
           following_type: string
         }
         Insert: {
-          created_at?: string
+          created_at?: string | null
           follower_id: string
           following_id: string
           following_type: string
         }
         Update: {
-          created_at?: string
+          created_at?: string | null
           follower_id?: string
           following_id?: string
           following_type?: string
@@ -500,29 +483,29 @@ export type Database = {
       }
       interactions: {
         Row: {
-          created_at: string
+          created_at: string | null
           entity_id: string
-          entity_type: Database["public"]["Enums"]["interaction_entity_type"]
+          entity_type: string
           id: string
-          interaction_type: Database["public"]["Enums"]["interaction_type"]
+          interaction_type: string
           metadata: Json | null
           user_id: string
         }
         Insert: {
-          created_at?: string
+          created_at?: string | null
           entity_id: string
-          entity_type: Database["public"]["Enums"]["interaction_entity_type"]
+          entity_type: string
           id?: string
-          interaction_type: Database["public"]["Enums"]["interaction_type"]
+          interaction_type: string
           metadata?: Json | null
           user_id: string
         }
         Update: {
-          created_at?: string
+          created_at?: string | null
           entity_id?: string
-          entity_type?: Database["public"]["Enums"]["interaction_entity_type"]
+          entity_type?: string
           id?: string
-          interaction_type?: Database["public"]["Enums"]["interaction_type"]
+          interaction_type?: string
           metadata?: Json | null
           user_id?: string
         }
@@ -675,6 +658,107 @@ export type Database = {
           },
         ]
       }
+      notification_preferences: {
+        Row: {
+          created_at: string | null
+          email_enabled: boolean | null
+          id: string
+          in_app_enabled: boolean | null
+          notification_type: Database["public"]["Enums"]["notification_type"]
+          push_enabled: boolean | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          email_enabled?: boolean | null
+          id?: string
+          in_app_enabled?: boolean | null
+          notification_type: Database["public"]["Enums"]["notification_type"]
+          push_enabled?: boolean | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          email_enabled?: boolean | null
+          id?: string
+          in_app_enabled?: boolean | null
+          notification_type?: Database["public"]["Enums"]["notification_type"]
+          push_enabled?: boolean | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notification_preferences_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notifications: {
+        Row: {
+          actor_id: string | null
+          created_at: string | null
+          entity_id: string | null
+          entity_type: string | null
+          id: string
+          message: string
+          metadata: Json | null
+          read_at: string | null
+          recipient_id: string
+          title: string
+          type: Database["public"]["Enums"]["notification_type"]
+          updated_at: string | null
+        }
+        Insert: {
+          actor_id?: string | null
+          created_at?: string | null
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          message: string
+          metadata?: Json | null
+          read_at?: string | null
+          recipient_id: string
+          title: string
+          type: Database["public"]["Enums"]["notification_type"]
+          updated_at?: string | null
+        }
+        Update: {
+          actor_id?: string | null
+          created_at?: string | null
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          message?: string
+          metadata?: Json | null
+          read_at?: string | null
+          recipient_id?: string
+          title?: string
+          type?: Database["public"]["Enums"]["notification_type"]
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_recipient_id_fkey"
+            columns: ["recipient_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       post_bookmarks: {
         Row: {
           created_at: string | null
@@ -710,33 +794,33 @@ export type Database = {
       }
       post_reactions: {
         Row: {
-          created_at: string
+          created_at: string | null
           post_id: string
           type: string
           user_id: string
         }
         Insert: {
-          created_at?: string
+          created_at?: string | null
           post_id: string
           type?: string
           user_id: string
         }
         Update: {
-          created_at?: string
+          created_at?: string | null
           post_id?: string
           type?: string
           user_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "likes_post_id_fkey"
+            foreignKeyName: "post_reactions_post_id_fkey"
             columns: ["post_id"]
             isOneToOne: false
             referencedRelation: "posts"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "likes_user_id_fkey"
+            foreignKeyName: "post_reactions_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "users"
@@ -786,15 +870,16 @@ export type Database = {
           author_id: string
           collective_id: string | null
           content: string | null
-          created_at: string
+          created_at: string | null
           dislike_count: number | null
           id: string
-          is_public: boolean
-          like_count: number
+          is_public: boolean | null
+          like_count: number | null
           meta_description: string | null
           published_at: string | null
           seo_title: string | null
-          status: Database["public"]["Enums"]["post_status_type"]
+          slug: string | null
+          status: string | null
           subtitle: string | null
           title: string
           tsv: unknown | null
@@ -805,15 +890,16 @@ export type Database = {
           author_id: string
           collective_id?: string | null
           content?: string | null
-          created_at?: string
+          created_at?: string | null
           dislike_count?: number | null
           id?: string
-          is_public?: boolean
-          like_count?: number
+          is_public?: boolean | null
+          like_count?: number | null
           meta_description?: string | null
           published_at?: string | null
           seo_title?: string | null
-          status?: Database["public"]["Enums"]["post_status_type"]
+          slug?: string | null
+          status?: string | null
           subtitle?: string | null
           title: string
           tsv?: unknown | null
@@ -824,15 +910,16 @@ export type Database = {
           author_id?: string
           collective_id?: string | null
           content?: string | null
-          created_at?: string
+          created_at?: string | null
           dislike_count?: number | null
           id?: string
-          is_public?: boolean
-          like_count?: number
+          is_public?: boolean | null
+          like_count?: number | null
           meta_description?: string | null
           published_at?: string | null
           seo_title?: string | null
-          status?: Database["public"]["Enums"]["post_status_type"]
+          slug?: string | null
+          status?: string | null
           subtitle?: string | null
           title?: string
           tsv?: unknown | null
@@ -855,106 +942,21 @@ export type Database = {
           },
         ]
       }
-      prices: {
-        Row: {
-          active: boolean | null
-          currency: string | null
-          description: string | null
-          id: string
-          interval: Database["public"]["Enums"]["price_interval"] | null
-          interval_count: number | null
-          metadata: Json | null
-          product_id: string | null
-          trial_period_days: number | null
-          type: Database["public"]["Enums"]["price_type"] | null
-          unit_amount: number | null
-        }
-        Insert: {
-          active?: boolean | null
-          currency?: string | null
-          description?: string | null
-          id: string
-          interval?: Database["public"]["Enums"]["price_interval"] | null
-          interval_count?: number | null
-          metadata?: Json | null
-          product_id?: string | null
-          trial_period_days?: number | null
-          type?: Database["public"]["Enums"]["price_type"] | null
-          unit_amount?: number | null
-        }
-        Update: {
-          active?: boolean | null
-          currency?: string | null
-          description?: string | null
-          id?: string
-          interval?: Database["public"]["Enums"]["price_interval"] | null
-          interval_count?: number | null
-          metadata?: Json | null
-          product_id?: string | null
-          trial_period_days?: number | null
-          type?: Database["public"]["Enums"]["price_type"] | null
-          unit_amount?: number | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "prices_product_id_fkey"
-            columns: ["product_id"]
-            isOneToOne: false
-            referencedRelation: "products"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      products: {
-        Row: {
-          active: boolean | null
-          collective_id: string | null
-          description: string | null
-          id: string
-          metadata: Json | null
-          name: string | null
-        }
-        Insert: {
-          active?: boolean | null
-          collective_id?: string | null
-          description?: string | null
-          id: string
-          metadata?: Json | null
-          name?: string | null
-        }
-        Update: {
-          active?: boolean | null
-          collective_id?: string | null
-          description?: string | null
-          id?: string
-          metadata?: Json | null
-          name?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "products_collective_id_fkey"
-            columns: ["collective_id"]
-            isOneToOne: false
-            referencedRelation: "collectives"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       recommendations: {
         Row: {
-          created_at: string
+          created_at: string | null
           score: number
           suggested_collective_id: string
           user_id: string
         }
         Insert: {
-          created_at?: string
+          created_at?: string | null
           score: number
           suggested_collective_id: string
           user_id: string
         }
         Update: {
-          created_at?: string
+          created_at?: string | null
           score?: number
           suggested_collective_id?: string
           user_id?: string
@@ -976,112 +978,68 @@ export type Database = {
           },
         ]
       }
-      subscription_plans: {
-        Row: {
-          active: boolean | null
-          benefits: Json | null
-          collective_id: string
-          created_at: string | null
-          id: string
-          monthly_cost: number
-          name: string
-          stripe_price_id: string
-          updated_at: string | null
-        }
-        Insert: {
-          active?: boolean | null
-          benefits?: Json | null
-          collective_id: string
-          created_at?: string | null
-          id?: string
-          monthly_cost: number
-          name: string
-          stripe_price_id: string
-          updated_at?: string | null
-        }
-        Update: {
-          active?: boolean | null
-          benefits?: Json | null
-          collective_id?: string
-          created_at?: string | null
-          id?: string
-          monthly_cost?: number
-          name?: string
-          stripe_price_id?: string
-          updated_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "subscription_plans_collective_id_fkey"
-            columns: ["collective_id"]
-            isOneToOne: false
-            referencedRelation: "collectives"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       subscriptions: {
         Row: {
           cancel_at: string | null
-          cancel_at_period_end: boolean
+          cancel_at_period_end: boolean | null
           canceled_at: string | null
           created: string
           current_period_end: string
           current_period_start: string
           ended_at: string | null
           id: string
-          inserted_at: string
+          inserted_at: string | null
           metadata: Json | null
           quantity: number | null
-          status: Database["public"]["Enums"]["subscription_status"]
+          status: string
           stripe_price_id: string | null
           target_entity_id: string
-          target_entity_type: Database["public"]["Enums"]["subscription_target_type"]
+          target_entity_type: string
           trial_end: string | null
           trial_start: string | null
-          updated_at: string
+          updated_at: string | null
           user_id: string
         }
         Insert: {
           cancel_at?: string | null
-          cancel_at_period_end?: boolean
+          cancel_at_period_end?: boolean | null
           canceled_at?: string | null
           created: string
           current_period_end: string
           current_period_start: string
           ended_at?: string | null
-          id: string
-          inserted_at?: string
+          id?: string
+          inserted_at?: string | null
           metadata?: Json | null
           quantity?: number | null
-          status: Database["public"]["Enums"]["subscription_status"]
+          status: string
           stripe_price_id?: string | null
           target_entity_id: string
-          target_entity_type: Database["public"]["Enums"]["subscription_target_type"]
+          target_entity_type: string
           trial_end?: string | null
           trial_start?: string | null
-          updated_at?: string
+          updated_at?: string | null
           user_id: string
         }
         Update: {
           cancel_at?: string | null
-          cancel_at_period_end?: boolean
+          cancel_at_period_end?: boolean | null
           canceled_at?: string | null
           created?: string
           current_period_end?: string
           current_period_start?: string
           ended_at?: string | null
           id?: string
-          inserted_at?: string
+          inserted_at?: string | null
           metadata?: Json | null
           quantity?: number | null
-          status?: Database["public"]["Enums"]["subscription_status"]
+          status?: string
           stripe_price_id?: string | null
           target_entity_id?: string
-          target_entity_type?: Database["public"]["Enums"]["subscription_target_type"]
+          target_entity_type?: string
           trial_end?: string | null
           trial_start?: string | null
-          updated_at?: string
+          updated_at?: string | null
           user_id?: string
         }
         Relationships: [
@@ -1124,7 +1082,7 @@ export type Database = {
           cover_image_url?: string | null
           embedding?: string | null
           full_name?: string | null
-          id: string
+          id?: string
           is_profile_public?: boolean | null
           pinned_post_id?: string | null
           role?: string | null
@@ -1176,251 +1134,67 @@ export type Database = {
       }
     }
     Views: {
-      collective_followers: {
-        Row: {
-          collective_id: string | null
-          created_at: string | null
-          follower_avatar: string | null
-          follower_id: string | null
-          follower_name: string | null
-          follower_username: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "follows_follower_id_fkey"
-            columns: ["follower_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      search_documents: {
-        Row: {
-          content_preview: string | null
-          document_id: string | null
-          document_type: string | null
-          title: string | null
-          tsv_document: unknown | null
-        }
-        Relationships: []
-      }
-      user_followers: {
-        Row: {
-          created_at: string | null
-          follower_avatar: string | null
-          follower_id: string | null
-          follower_name: string | null
-          follower_username: string | null
-          user_id: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "follows_follower_id_fkey"
-            columns: ["follower_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      user_following: {
-        Row: {
-          created_at: string | null
-          following_id: string | null
-          following_identifier: string | null
-          following_name: string | null
-          following_type: string | null
-          user_id: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "follows_follower_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
+      [_ in never]: never
     }
     Functions: {
-      binary_quantize: {
-        Args: { "": string } | { "": unknown }
-        Returns: unknown
-      }
-      get_follower_count: {
-        Args: { entity_id: string; entity_type: string }
+      cleanup_old_notifications: {
+        Args: Record<PropertyKey, never>
         Returns: number
       }
-      get_following_count: {
-        Args: { user_id: string; entity_type?: string }
-        Returns: number
+      create_default_notification_preferences: {
+        Args: {
+          p_user_id: string
+          p_notification_type: Database["public"]["Enums"]["notification_type"]
+        }
+        Returns: undefined
       }
-      get_subscriber_count: {
-        Args: { entity_id: string; entity_type: string }
-        Returns: number
+      create_notification: {
+        Args: {
+          p_recipient_id: string
+          p_actor_id: string
+          p_type: Database["public"]["Enums"]["notification_type"]
+          p_title: string
+          p_message: string
+          p_entity_type?: string
+          p_entity_id?: string
+          p_metadata?: Json
+        }
+        Returns: string
       }
       get_unread_message_count: {
         Args: { p_user_id: string; p_conversation_id: string }
         Returns: number
       }
-      get_user_feed: {
-        Args: { p_user_id: string; p_limit?: number; p_offset?: number }
-        Returns: {
-          id: string
-          title: string
-          content: string
-          created_at: string
-          published_at: string
-          is_public: boolean
-          author_id: string
-          author_full_name: string
-          collective_id: string
-          collective_name: string
-          collective_slug: string
-          like_count: number
-        }[]
-      }
-      halfvec_avg: {
-        Args: { "": number[] }
-        Returns: unknown
-      }
-      halfvec_out: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
-      halfvec_send: {
-        Args: { "": unknown }
-        Returns: string
-      }
-      halfvec_typmod_in: {
-        Args: { "": unknown[] }
+      get_unread_notification_count: {
+        Args: { p_user_id: string }
         Returns: number
-      }
-      hnsw_bit_support: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
-      hnsw_halfvec_support: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
-      hnsw_sparsevec_support: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
-      hnswhandler: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
-      increment_view_count: {
-        Args: { post_id_to_increment: string }
-        Returns: undefined
-      }
-      is_collective_owner: {
-        Args: { cid: string }
-        Returns: boolean
-      }
-      is_following: {
-        Args: {
-          follower_user_id: string
-          target_id: string
-          target_type: string
-        }
-        Returns: boolean
-      }
-      ivfflat_bit_support: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
-      ivfflat_halfvec_support: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
-      ivfflathandler: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
-      l2_norm: {
-        Args: { "": unknown } | { "": unknown }
-        Returns: number
-      }
-      l2_normalize: {
-        Args: { "": string } | { "": unknown } | { "": unknown }
-        Returns: string
       }
       mark_messages_as_read: {
         Args: { p_user_id: string; p_conversation_id: string }
         Returns: undefined
       }
-      sparsevec_out: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
-      sparsevec_send: {
-        Args: { "": unknown }
-        Returns: string
-      }
-      sparsevec_typmod_in: {
-        Args: { "": unknown[] }
-        Returns: number
-      }
-      vector_avg: {
-        Args: { "": number[] }
-        Returns: string
-      }
-      vector_dims: {
-        Args: { "": string } | { "": unknown }
-        Returns: number
-      }
-      vector_norm: {
-        Args: { "": string }
-        Returns: number
-      }
-      vector_out: {
-        Args: { "": string }
-        Returns: unknown
-      }
-      vector_send: {
-        Args: { "": string }
-        Returns: string
-      }
-      vector_typmod_in: {
-        Args: { "": unknown[] }
+      mark_notifications_as_read: {
+        Args: { p_user_id: string; p_notification_ids?: string[] }
         Returns: number
       }
     }
     Enums: {
-      agreement_type:
-        | "subscription"
-        | "one_time_payment"
-        | "revenue_share"
-        | "membership_fee"
-        | "ownership_transfer"
-        | "other"
-      collective_member_role: "admin" | "editor" | "author" | "owner"
-      interaction_entity_type: "collective" | "post" | "user"
-      interaction_type:
-        | "like"
-        | "unlike"
-        | "recommended_interested"
-        | "recommended_not_interested"
-        | "view"
-      member_entity_type: "user" | "collective"
-      post_status_type: "draft" | "active" | "removed"
-      price_interval: "month" | "year" | "week" | "day"
-      price_type: "recurring" | "one_time"
-      subscription_status:
-        | "trialing"
-        | "active"
-        | "canceled"
-        | "incomplete"
-        | "incomplete_expired"
-        | "past_due"
-        | "unpaid"
-        | "paused"
-      subscription_target_type: "user" | "collective"
+      notification_type:
+        | "follow"
+        | "unfollow"
+        | "post_like"
+        | "post_comment"
+        | "comment_reply"
+        | "comment_like"
+        | "post_published"
+        | "collective_invite"
+        | "collective_join"
+        | "collective_leave"
+        | "subscription_created"
+        | "subscription_cancelled"
+        | "mention"
+        | "post_bookmark"
+        | "featured_post"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1534,40 +1308,29 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {
-      agreement_type: [
-        "subscription",
-        "one_time_payment",
-        "revenue_share",
-        "membership_fee",
-        "ownership_transfer",
-        "other",
+      notification_type: [
+        "follow",
+        "unfollow",
+        "post_like",
+        "post_comment",
+        "comment_reply",
+        "comment_like",
+        "post_published",
+        "collective_invite",
+        "collective_join",
+        "collective_leave",
+        "subscription_created",
+        "subscription_cancelled",
+        "mention",
+        "post_bookmark",
+        "featured_post",
       ],
-      collective_member_role: ["admin", "editor", "author", "owner"],
-      interaction_entity_type: ["collective", "post", "user"],
-      interaction_type: [
-        "like",
-        "unlike",
-        "recommended_interested",
-        "recommended_not_interested",
-        "view",
-      ],
-      member_entity_type: ["user", "collective"],
-      post_status_type: ["draft", "active", "removed"],
-      price_interval: ["month", "year", "week", "day"],
-      price_type: ["recurring", "one_time"],
-      subscription_status: [
-        "trialing",
-        "active",
-        "canceled",
-        "incomplete",
-        "incomplete_expired",
-        "past_due",
-        "unpaid",
-        "paused",
-      ],
-      subscription_target_type: ["user", "collective"],
     },
   },
 } as const
+
