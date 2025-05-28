@@ -64,7 +64,7 @@ export default function SignUpPage() {
           return;
         }
 
-        setError(getAuthErrorMessage(signUpError, true));
+        setError(getAuthErrorMessage(signUpError));
       } else if (
         data.user &&
         data.user.identities &&
@@ -97,7 +97,7 @@ export default function SignUpPage() {
         return;
       }
 
-      setError(getAuthErrorMessage(err, true));
+      setError(getAuthErrorMessage(err));
     } finally {
       setIsLoading(false);
     }

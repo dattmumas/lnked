@@ -22,7 +22,6 @@ import type {
   NotificationPreferencesUpdate,
 } from '@/types/notifications';
 import { NOTIFICATION_CONFIGS } from '@/types/notifications';
-import { cn } from '@/lib/utils';
 
 interface NotificationPreferencesProps {
   className?: string;
@@ -39,7 +38,7 @@ export function NotificationPreferences({
 }: NotificationPreferencesProps) {
   const [preferences, setPreferences] = useState<
     Record<NotificationType, PreferenceState>
-  >({} as any);
+  >({} as Record<NotificationType, PreferenceState>);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
@@ -50,7 +49,8 @@ export function NotificationPreferences({
     const loadPreferences = async () => {
       try {
         const prefs = await clientNotificationService.getPreferences();
-        const prefsMap: Record<NotificationType, PreferenceState> = {} as any;
+        const prefsMap: Record<NotificationType, PreferenceState> =
+          {} as Record<NotificationType, PreferenceState>;
 
         // Initialize all notification types with defaults
         Object.keys(NOTIFICATION_CONFIGS).forEach((type) => {

@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Bell, CheckCheck, Trash2, Filter } from 'lucide-react';
+import { Bell, CheckCheck, Trash2 } from 'lucide-react';
 import { NotificationItem } from './NotificationItem';
 import {
   markNotificationsAsRead,

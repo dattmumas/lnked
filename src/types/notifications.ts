@@ -26,7 +26,7 @@ export interface Notification {
   message: string;
   entity_type: EntityType | null;
   entity_id: string | null;
-  metadata: Record<string, any>;
+  metadata: Record<string, unknown>;
   read_at: string | null;
   created_at: string;
   updated_at: string;
@@ -65,7 +65,7 @@ export interface CreateNotificationParams {
   message: string;
   entity_type?: EntityType;
   entity_id?: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 export interface NotificationFilters {
@@ -85,7 +85,7 @@ export interface NotificationResponse {
 export interface NotificationActionResult {
   success: boolean;
   error?: string;
-  data?: any;
+  data?: unknown;
 }
 
 // Notification display configuration
@@ -218,7 +218,7 @@ export function formatNotificationTime(createdAt: string): string {
 export function groupNotifications(notifications: Notification[]): Notification[][] {
   const groups: Notification[][] = [];
   const groupableTypes = Object.entries(NOTIFICATION_CONFIGS)
-    .filter(([_, config]) => config.groupable)
+    .filter(([, config]) => config.groupable)
     .map(([type]) => type as NotificationType);
 
   for (const notification of notifications) {

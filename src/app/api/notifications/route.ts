@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { notificationService } from '@/lib/notifications/service';
-import type { NotificationFilters } from '@/types/notifications';
+import type { NotificationFilters, NotificationType } from '@/types/notifications';
 
 export async function GET(req: NextRequest) {
   try {
@@ -19,8 +19,9 @@ export async function GET(req: NextRequest) {
     }
 
     const { searchParams } = new URL(req.url);
+    const typeParam = searchParams.get('type');
     const filters: NotificationFilters = {
-      type: searchParams.get('type') as any,
+      type: typeParam as NotificationType | undefined,
       read: searchParams.get('read') === 'true' ? true : searchParams.get('read') === 'false' ? false : undefined,
       limit: searchParams.get('limit') ? parseInt(searchParams.get('limit')!) : 20,
       offset: searchParams.get('offset') ? parseInt(searchParams.get('offset')!) : 0,

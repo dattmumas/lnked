@@ -1,5 +1,6 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
+import type { Json } from '@/lib/database.types';
 import type {
   Notification,
   NotificationPreferences,
@@ -8,7 +9,7 @@ import type {
   NotificationFilters,
   NotificationResponse,
   NotificationActionResult,
-  NotificationType,
+  EntityType,
 } from '@/types/notifications';
 
 export class NotificationService {
@@ -76,8 +77,18 @@ export class NotificationService {
       console.error('Failed to fetch unread count:', unreadError);
     }
 
+    // Transform the data to match our TypeScript interfaces
+    const transformedNotifications: Notification[] = (notifications || []).map(notification => ({
+      ...notification,
+      entity_type: notification.entity_type as EntityType | null,
+      metadata: notification.metadata as Record<string, unknown>,
+      created_at: notification.created_at || new Date().toISOString(),
+      updated_at: notification.updated_at || new Date().toISOString(),
+      actor: notification.actor || undefined,
+    }));
+
     return {
-      notifications: notifications || [],
+      notifications: transformedNotifications,
       total_count: count || 0,
       unread_count: unreadCount || 0,
       has_more: (count || 0) > offset + limit,
@@ -197,13 +208,13 @@ export class NotificationService {
     try {
       const { data, error } = await supabase.rpc('create_notification', {
         p_recipient_id: params.recipient_id,
-        p_actor_id: params.actor_id,
+        p_actor_id: params.actor_id || '',
         p_type: params.type,
         p_title: params.title,
         p_message: params.message,
-        p_entity_type: params.entity_type || null,
-        p_entity_id: params.entity_id || null,
-        p_metadata: params.metadata || {},
+        p_entity_type: params.entity_type || undefined,
+        p_entity_id: params.entity_id || undefined,
+        p_metadata: (params.metadata as Json) || undefined,
       });
 
       if (error) {
@@ -234,7 +245,15 @@ export class NotificationService {
       throw new Error(`Failed to fetch preferences: ${error.message}`);
     }
 
-    return data || [];
+    // Transform the data to match our TypeScript interfaces
+    return (data || []).map(pref => ({
+      ...pref,
+      email_enabled: pref.email_enabled ?? true,
+      push_enabled: pref.push_enabled ?? true,
+      in_app_enabled: pref.in_app_enabled ?? true,
+      created_at: pref.created_at || new Date().toISOString(),
+      updated_at: pref.updated_at || new Date().toISOString(),
+    })) as NotificationPreferences[];
   }
 
   /**
@@ -304,7 +323,7 @@ export class NotificationService {
           table: 'notifications',
           filter: `recipient_id=eq.${userId}`,
         },
-        async (payload: any) => {
+        async (payload: { new: Record<string, unknown> }) => {
           // Fetch the full notification with actor data
           const { data: notification } = await this.supabase!
             .from('notifications')
@@ -317,11 +336,20 @@ export class NotificationService {
                 avatar_url
               )
             `)
-            .eq('id', payload.new.id)
+            .eq('id', String(payload.new.id))
             .single();
 
           if (notification) {
-            callback(notification);
+            // Transform the data to match our TypeScript interfaces
+            const transformedNotification: Notification = {
+              ...notification,
+              entity_type: notification.entity_type as EntityType | null,
+              metadata: notification.metadata as Record<string, unknown>,
+              created_at: notification.created_at || new Date().toISOString(),
+              updated_at: notification.updated_at || new Date().toISOString(),
+              actor: notification.actor || undefined,
+            };
+            callback(transformedNotification);
           }
         }
       )

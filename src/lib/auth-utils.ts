@@ -79,7 +79,7 @@ export function formatRateLimitMessage(timeUntilReset: number, action: 'sign-in'
 }
 
 // Helper function to get user-friendly error messages
-export function getAuthErrorMessage(error: unknown, isSignUp: boolean = false): string {
+export function getAuthErrorMessage(error: unknown): string {
   if (!error || typeof error !== 'object' || !('message' in error)) {
     return 'An unexpected error occurred';
   }

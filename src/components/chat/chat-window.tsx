@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { MessageList } from './message-list';
-import { SimpleMessageList } from './simple-message-list';
 import { MessageInput } from './message-input';
 import { TypingIndicator } from './typing-indicator';
 import { ScrollArea } from '@/components/ui/scroll-area';

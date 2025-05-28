@@ -27,8 +27,8 @@ export function useNotifications(
 ): UseNotificationsReturn {
   const { autoFetch = true, realtime = true, filters = {} } = options;
 
-  // Memoize filters to prevent unnecessary re-renders using JSON.stringify for deep comparison
-  const memoizedFilters = useMemo(() => filters, [JSON.stringify(filters)]);
+  // Memoize filters to prevent unnecessary re-renders
+  const memoizedFilters = useMemo(() => filters, [filters]);
 
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);

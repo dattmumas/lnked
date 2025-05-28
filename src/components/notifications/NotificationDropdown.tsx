@@ -14,7 +14,6 @@ import {
 import { Bell, CheckCheck, Settings, ExternalLink } from 'lucide-react';
 import { NotificationItem } from './NotificationItem';
 import { useNotifications } from '@/lib/hooks/useNotifications';
-import { formatNotificationTime } from '@/types/notifications';
 import { cn } from '@/lib/utils';
 
 interface NotificationDropdownProps {
@@ -61,7 +60,7 @@ export function NotificationDropdown({
         return () => clearTimeout(timeoutId);
       }
     }
-  }, [isOpen, notifications.length, hasMarkedAsRead, markAsRead]);
+  }, [isOpen, notifications, hasMarkedAsRead, markAsRead]);
 
   // Reset the flag when dropdown closes
   useEffect(() => {
@@ -170,7 +169,7 @@ export function NotificationDropdown({
               <Bell className="h-8 w-8 mx-auto mb-3 text-muted-foreground" />
               <h4 className="font-medium mb-1">No new notifications</h4>
               <p className="text-sm text-muted-foreground">
-                You're all caught up! Check back later for updates.
+                You&apos;re all caught up! Check back later for updates.
               </p>
             </div>
           ) : (
