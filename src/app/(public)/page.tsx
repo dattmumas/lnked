@@ -331,7 +331,7 @@ export default function LandingPage() {
           position: fixed;
           pointer-events: none;
           transform: translate(-50%, -50%);
-          transition: all 0.3s ease;
+          transition: all 0s ease;
           z-index: 9998;
         }
 
