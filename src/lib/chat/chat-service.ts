@@ -177,23 +177,60 @@ export class ChatService {
       const user = await this.getCurrentUser();
       if (!user) throw new Error('User not authenticated');
 
+      // First, get all conversation IDs where the user is a participant
+      const { data: userConversations, error: convError } = await this.supabase
+        .from('conversation_participants')
+        .select('conversation_id')
+        .eq('user_id', user.id);
+
+      if (convError) throw convError;
+
+      const conversationIds = (userConversations?.map(c => c.conversation_id).filter(id => id !== null) || []) as string[];
+
+      if (conversationIds.length === 0) {
+        return { data: [], error: null };
+      }
+
+      // Then fetch full conversation data with ALL participants
       const { data, error } = await this.supabase
         .from('conversations')
         .select(`
           *,
+          created_by_user:users!conversations_created_by_fkey(id, full_name, username, avatar_url),
           participants:conversation_participants(
             *,
             user:users(id, full_name, username, avatar_url)
           )
         `)
-        .eq('participants.user_id', user.id) // fixed alias
+        .in('id', conversationIds)
         .order('last_message_at', { ascending: false });
 
       if (error) throw error;
 
-      // Get unread counts for each conversation (still N+1, can optimise later)
-      const conversationsWithUnread = await Promise.all(
+      // Get last message for each conversation separately
+      const conversationsWithLastMessage = await Promise.all(
         (data || []).map(async (conversation) => {
+          const { data: messages } = await this.supabase
+            .from('messages')
+            .select(`
+              *,
+              sender:users!messages_sender_id_fkey(id, full_name, username, avatar_url)
+            `)
+            .eq('conversation_id', conversation.id)
+            .is('deleted_at', null)
+            .order('created_at', { ascending: false })
+            .limit(1);
+
+          return {
+            ...conversation,
+            last_message: messages?.[0] || null,
+          };
+        }),
+      );
+
+      // Get unread counts for each conversation
+      const conversationsWithUnread = await Promise.all(
+        conversationsWithLastMessage.map(async (conversation) => {
           const { data: unreadCount } = await this.supabase.rpc('get_unread_message_count', {
               p_user_id: user.id,
               p_conversation_id: conversation.id,
@@ -237,10 +274,10 @@ export class ChatService {
         .from('messages')
         .select(`
           *,
-          sender:users(id, full_name, username, avatar_url),
+          sender:users!messages_sender_id_fkey(id, full_name, username, avatar_url),
           reply_to:messages(
             *,
-            sender:users(id, full_name, username, avatar_url)
+            sender:users!messages_sender_id_fkey(id, full_name, username, avatar_url)
           ),
           reactions:message_reactions(*)
         `)
@@ -300,10 +337,10 @@ export class ChatService {
         .insert(messageData)
         .select(`
           *,
-          sender:users(id, full_name, username, avatar_url),
+          sender:users!messages_sender_id_fkey(id, full_name, username, avatar_url),
           reply_to:messages(
             *,
-            sender:users(id, full_name, username, avatar_url)
+            sender:users!messages_sender_id_fkey(id, full_name, username, avatar_url)
           )
         `)
         .single();
@@ -396,7 +433,7 @@ export class ChatService {
         .from('messages')
         .select(`
           *,
-          sender:users(id, full_name, username, avatar_url)
+          sender:users!messages_sender_id_fkey(id, full_name, username, avatar_url)
         `)
         .textSearch('content', query)
         .is('deleted_at', null)
@@ -423,6 +460,32 @@ export class ChatService {
     const { data: { user } } = await this.supabase.auth.getUser();
     return user;
   }
+
+  /**
+   * Get current user with profile data
+   */
+  async getCurrentUserWithProfile() {
+    try {
+      const { data: { user } } = await this.supabase.auth.getUser();
+      if (!user) return null;
+
+      // Get user profile data
+      const { data: profile } = await this.supabase
+        .from('users')
+        .select('id, full_name, username, avatar_url')
+        .eq('id', user.id)
+        .single();
+
+      return {
+        ...user,
+        ...profile,
+        email: user.email,
+      };
+    } catch (error) {
+      console.error('Error fetching user profile:', error);
+      return null;
+    }
+  }
 }
 
 // Server-side chat service for SSR
@@ -441,21 +504,73 @@ export class ServerChatService {
       const { data: { user } } = await this.supabase.auth.getUser();
       if (!user) throw new Error('User not authenticated');
 
+      // First, get all conversation IDs where the user is a participant
+      const { data: userConversations, error: convError } = await this.supabase
+        .from('conversation_participants')
+        .select('conversation_id')
+        .eq('user_id', user.id);
+
+      if (convError) throw convError;
+
+      const conversationIds = (userConversations?.map(c => c.conversation_id).filter(id => id !== null) || []) as string[];
+
+      if (conversationIds.length === 0) {
+        return { data: [], error: null };
+      }
+
+      // Then fetch full conversation data with ALL participants
       const { data, error } = await this.supabase
         .from('conversations')
         .select(`
           *,
+          created_by_user:users!conversations_created_by_fkey(id, full_name, username, avatar_url),
           participants:conversation_participants(
             *,
             user:users(id, full_name, username, avatar_url)
           )
         `)
-        .eq('participants.user_id', user.id)
+        .in('id', conversationIds)
         .order('last_message_at', { ascending: false });
 
       if (error) throw error;
 
-      return { data: data as ConversationWithParticipants[], error: null };
+      // Get last message for each conversation separately
+      const conversationsWithLastMessage = await Promise.all(
+        (data || []).map(async (conversation) => {
+          const { data: messages } = await this.supabase
+            .from('messages')
+            .select(`
+              *,
+              sender:users!messages_sender_id_fkey(id, full_name, username, avatar_url)
+            `)
+            .eq('conversation_id', conversation.id)
+            .is('deleted_at', null)
+            .order('created_at', { ascending: false })
+            .limit(1);
+
+          return {
+            ...conversation,
+            last_message: messages?.[0] || null,
+          };
+        }),
+      );
+
+      // Get unread counts for each conversation
+      const conversationsWithUnread = await Promise.all(
+        conversationsWithLastMessage.map(async (conversation) => {
+          const { data: unreadCount } = await this.supabase.rpc('get_unread_message_count', {
+              p_user_id: user.id,
+              p_conversation_id: conversation.id,
+            });
+
+          return {
+            ...conversation,
+            unread_count: unreadCount || 0,
+          } as ConversationWithParticipants;
+        }),
+      );
+
+      return { data: conversationsWithUnread, error: null };
     } catch (error) {
       return { data: null, error: error as Error };
     }
@@ -470,10 +585,10 @@ export class ServerChatService {
         .from('messages')
         .select(`
           *,
-          sender:users(id, full_name, username, avatar_url),
+          sender:users!messages_sender_id_fkey(id, full_name, username, avatar_url),
           reply_to:messages(
             *,
-            sender:users(id, full_name, username, avatar_url)
+            sender:users!messages_sender_id_fkey(id, full_name, username, avatar_url)
           )
         `)
         .eq('conversation_id', conversationId)

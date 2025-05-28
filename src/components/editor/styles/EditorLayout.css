@@ -4,9 +4,21 @@
   padding: 0;
 }
 
+@media (max-width: 768px) {
+  :global(.editor-shell) {
+    @apply px-3 my-6;
+  }
+}
+
 @media (max-width: 640px) {
   :global(.editor-shell) {
-    @apply px-4;
+    @apply px-4 my-4;
+  }
+}
+
+@media (max-width: 480px) {
+  :global(.editor-shell) {
+    @apply px-2 my-2;
   }
 }
 
@@ -44,4 +56,51 @@
   display: block;
   width: 100%;
   overflow-x: auto;
+}
+
+/* Responsive editor content */
+@media (max-width: 768px) {
+  :global(.editor) {
+    font-size: 15px;
+    line-height: 1.6;
+  }
+
+  :global(.editor h1) {
+    font-size: 1.8rem;
+  }
+
+  :global(.editor h2) {
+    font-size: 1.5rem;
+  }
+
+  :global(.editor h3) {
+    font-size: 1.3rem;
+  }
+}
+
+@media (max-width: 480px) {
+  :global(.editor) {
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  :global(.editor h1) {
+    font-size: 1.6rem;
+  }
+
+  :global(.editor h2) {
+    font-size: 1.4rem;
+  }
+
+  :global(.editor h3) {
+    font-size: 1.2rem;
+  }
+
+  :global(.editor p) {
+    margin-bottom: 0.8rem;
+  }
+
+  :global(.editor ul, .editor ol) {
+    padding-left: 1.2rem;
+  }
 }

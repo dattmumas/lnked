@@ -5,6 +5,7 @@ import '@/components/lexical-playground/index.css';
 import './styles/EditorLayout.css';
 import './styles/Toolbar.css';
 import './styles/Menus.css';
+import './styles/ResponsiveEditor.css';
 
 interface PostEditorProps {
   initialContent?: string;

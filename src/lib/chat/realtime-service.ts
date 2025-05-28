@@ -83,10 +83,10 @@ export class RealtimeService {
               .from('messages')
               .select(`
                 *,
-                sender:users(id, full_name, username, avatar_url),
+                sender:users!messages_sender_id_fkey(id, full_name, username, avatar_url),
                 reply_to:messages(
                   *,
-                  sender:users(id, full_name, username, avatar_url)
+                  sender:users!messages_sender_id_fkey(id, full_name, username, avatar_url)
                 )
               `)
               .eq('id', newMessage.id)
@@ -116,10 +116,10 @@ export class RealtimeService {
               .from('messages')
               .select(`
                 *,
-                sender:users(id, full_name, username, avatar_url),
+                sender:users!messages_sender_id_fkey(id, full_name, username, avatar_url),
                 reply_to:messages(
                   *,
-                  sender:users(id, full_name, username, avatar_url)
+                  sender:users!messages_sender_id_fkey(id, full_name, username, avatar_url)
                 )
               `)
               .eq('id', updatedMessage.id)

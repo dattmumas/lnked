@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { clientNotificationService } from '@/lib/notifications/client-service';
 import type { Notification, NotificationFilters } from '@/types/notifications';
 
@@ -27,35 +27,62 @@ export function useNotifications(
 ): UseNotificationsReturn {
   const { autoFetch = true, realtime = true, filters = {} } = options;
 
+  // Memoize filters to prevent unnecessary re-renders using JSON.stringify for deep comparison
+  const memoizedFilters = useMemo(() => filters, [JSON.stringify(filters)]);
+
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Use ref to prevent multiple simultaneous requests
+  const isRequestInProgress = useRef(false);
+
+  // Debounce timer ref
+  const debounceTimer = useRef<NodeJS.Timeout | null>(null);
+
   const fetchNotifications = useCallback(
-    async (fetchFilters?: NotificationFilters) => {
-      if (!userId) return;
+    async (fetchFilters?: NotificationFilters, immediate = false) => {
+      if (!userId || isRequestInProgress.current) return;
 
-      setIsLoading(true);
-      setError(null);
+      // Clear any existing debounce timer
+      if (debounceTimer.current) {
+        clearTimeout(debounceTimer.current);
+      }
 
-      try {
-        const response = await clientNotificationService.getNotifications({
-          ...filters,
-          ...fetchFilters,
-        });
+      const performFetch = async () => {
+        isRequestInProgress.current = true;
+        setIsLoading(true);
+        setError(null);
 
-        setNotifications(response.notifications);
-        setUnreadCount(response.unread_count);
-      } catch (err) {
-        setError(
-          err instanceof Error ? err.message : 'Failed to fetch notifications',
-        );
-      } finally {
-        setIsLoading(false);
+        try {
+          const response = await clientNotificationService.getNotifications({
+            ...memoizedFilters,
+            ...fetchFilters,
+          });
+
+          setNotifications(response.notifications);
+          setUnreadCount(response.unread_count);
+        } catch (err) {
+          setError(
+            err instanceof Error
+              ? err.message
+              : 'Failed to fetch notifications',
+          );
+        } finally {
+          setIsLoading(false);
+          isRequestInProgress.current = false;
+        }
+      };
+
+      if (immediate) {
+        await performFetch();
+      } else {
+        // Debounce the request by 300ms
+        debounceTimer.current = setTimeout(performFetch, 300);
       }
     },
-    [userId, filters],
+    [userId, memoizedFilters],
   );
 
   const markAsRead = useCallback(
@@ -73,10 +100,13 @@ export function useNotifications(
           );
 
           if (notificationIds) {
-            const unreadToMark = notifications.filter(
-              (n) => notificationIds.includes(n.id) && !n.read_at,
-            ).length;
-            setUnreadCount((prev) => Math.max(0, prev - unreadToMark));
+            setNotifications((prev) => {
+              const unreadToMark = prev.filter(
+                (n) => notificationIds.includes(n.id) && !n.read_at,
+              ).length;
+              setUnreadCount((current) => Math.max(0, current - unreadToMark));
+              return prev;
+            });
           } else {
             setUnreadCount(0);
           }
@@ -89,7 +119,7 @@ export function useNotifications(
         );
       }
     },
-    [notifications],
+    [], // Remove notifications dependency to prevent infinite loops
   );
 
   const deleteNotifications = useCallback(
@@ -98,14 +128,14 @@ export function useNotifications(
         const result =
           await clientNotificationService.deleteNotifications(notificationIds);
         if (result.success) {
-          const unreadToDelete = notifications.filter(
-            (n) => notificationIds.includes(n.id) && !n.read_at,
-          ).length;
+          setNotifications((prev) => {
+            const unreadToDelete = prev.filter(
+              (n) => notificationIds.includes(n.id) && !n.read_at,
+            ).length;
 
-          setNotifications((prev) =>
-            prev.filter((n) => !notificationIds.includes(n.id)),
-          );
-          setUnreadCount((prev) => Math.max(0, prev - unreadToDelete));
+            setUnreadCount((current) => Math.max(0, current - unreadToDelete));
+            return prev.filter((n) => !notificationIds.includes(n.id));
+          });
         }
       } catch (err) {
         setError(
@@ -113,17 +143,21 @@ export function useNotifications(
         );
       }
     },
-    [notifications],
+    [], // Remove notifications dependency to prevent infinite loops
   );
 
   const refresh = useCallback(() => {
     return fetchNotifications();
   }, [fetchNotifications]);
 
+  // Use ref to track if initial fetch has been done
+  const initialFetchDone = useRef(false);
+
   // Initial fetch
   useEffect(() => {
-    if (autoFetch && userId) {
-      fetchNotifications();
+    if (autoFetch && userId && !initialFetchDone.current) {
+      initialFetchDone.current = true;
+      fetchNotifications(undefined, true); // Immediate fetch for initial load
     }
   }, [autoFetch, userId, fetchNotifications]);
 
@@ -143,6 +177,15 @@ export function useNotifications(
 
     return unsubscribe || undefined;
   }, [realtime, userId]);
+
+  // Cleanup debounce timer on unmount
+  useEffect(() => {
+    return () => {
+      if (debounceTimer.current) {
+        clearTimeout(debounceTimer.current);
+      }
+    };
+  }, []);
 
   return {
     notifications,

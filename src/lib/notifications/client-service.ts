@@ -13,11 +13,42 @@ import type {
 
 export class ClientNotificationService {
   private supabase = createSupabaseBrowserClient();
+  private requestCache = new Map<string, Promise<NotificationResponse>>();
+  private cacheTimeout = 1000; // 1 second cache
+
+  private clearCache() {
+    this.requestCache.clear();
+  }
 
   /**
    * Get notifications for the current user
    */
   async getNotifications(filters: NotificationFilters = {}): Promise<NotificationResponse> {
+    const { limit = 20, offset = 0, type, read } = filters;
+
+    // Create cache key based on filters
+    const cacheKey = JSON.stringify({ limit, offset, type, read });
+    
+    // Check if we have a cached request in progress
+    if (this.requestCache.has(cacheKey)) {
+      return this.requestCache.get(cacheKey)!;
+    }
+
+    // Create the request promise
+    const requestPromise = this.performGetNotifications(filters);
+    
+    // Cache the promise
+    this.requestCache.set(cacheKey, requestPromise);
+    
+    // Clear cache after timeout
+    setTimeout(() => {
+      this.requestCache.delete(cacheKey);
+    }, this.cacheTimeout);
+
+    return requestPromise;
+  }
+
+  private async performGetNotifications(filters: NotificationFilters = {}): Promise<NotificationResponse> {
     const { limit = 20, offset = 0, type, read } = filters;
 
     // Check if user is authenticated first
@@ -156,6 +187,8 @@ export class ClientNotificationService {
         }
       }
 
+      // Clear cache after successful operation
+      this.clearCache();
       return { success: true };
     } catch (error) {
       return {
@@ -189,6 +222,8 @@ export class ClientNotificationService {
         return { success: false, error: error.message };
       }
 
+      // Clear cache after successful operation
+      this.clearCache();
       return { success: true };
     } catch (error) {
       return {

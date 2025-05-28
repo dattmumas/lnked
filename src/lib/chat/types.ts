@@ -74,6 +74,7 @@ export type MessageWithSender = Message & {
     full_name: string | null;
     username: string | null;
     avatar_url: string | null;
+    email?: string | null;
   } | null;
   reply_to?: MessageWithSender | null;
   reactions?: MessageReaction[];
@@ -86,10 +87,17 @@ export type ConversationWithParticipants = Conversation & {
       full_name: string | null;
       username: string | null;
       avatar_url: string | null;
+      email?: string | null;
     };
   })[];
   last_message?: MessageWithSender | null;
   unread_count?: number;
+  created_by_user?: {
+    id: string;
+    full_name: string | null;
+    username: string | null;
+    avatar_url: string | null;
+  } | null;
 };
 
 // Real-time payload types following Supabase's patterns

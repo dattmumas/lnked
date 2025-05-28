@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { MessageList } from './message-list';
+import { SimpleMessageList } from './simple-message-list';
 import { MessageInput } from './message-input';
 import { TypingIndicator } from './typing-indicator';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -65,7 +66,16 @@ export function ChatWindow({
       const otherParticipant = conversation.participants.find(
         (p) => p.user_id !== currentUserId,
       );
-      return getDisplayName(otherParticipant?.user);
+      if (otherParticipant) {
+        return getDisplayName(otherParticipant.user);
+      }
+      if (conversation.created_by_user) {
+        return getDisplayName(conversation.created_by_user);
+      }
+      if (conversation.last_message?.sender) {
+        return getDisplayName(conversation.last_message.sender);
+      }
+      return 'Unknown';
     }
 
     return `${conversation.type === 'group' ? 'Group' : 'Channel'} Chat`;
@@ -81,7 +91,7 @@ export function ChatWindow({
       const isOnline = otherParticipant
         ? isUserOnline(otherParticipant.user_id)
         : false;
-      return isOnline ? 'Active now' : 'Offline';
+      return isOnline ? 'Online' : 'Offline';
     }
 
     return `${conversation.participants.length} members`;
@@ -93,7 +103,11 @@ export function ChatWindow({
     const otherParticipant = conversation.participants.find(
       (p) => p.user_id !== currentUserId,
     );
-    return otherParticipant?.user;
+    if (otherParticipant?.user) return otherParticipant.user;
+    if (conversation.created_by_user) return conversation.created_by_user;
+    if (conversation.last_message?.sender)
+      return conversation.last_message.sender;
+    return null;
   };
 
   // Auto-scroll to bottom when new messages arrive (if user is near bottom)

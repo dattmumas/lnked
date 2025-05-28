@@ -4,15 +4,37 @@
 
 /**
  * Get display name for a user with fallback chain
- * Priority: full_name -> username -> 'User'
+ * Priority: full_name -> username -> email-based name -> 'Anonymous'
  */
 export function getDisplayName(user: {
   full_name?: string | null;
   username?: string | null;
+  email?: string | null;
 } | null | undefined): string {
-  if (!user) return 'User';
+  if (!user) return 'Anonymous';
   
-  return user.full_name || user.username || 'User';
+  // Try full name first
+  if (user.full_name && user.full_name.trim()) {
+    return user.full_name;
+  }
+  
+  // Then username
+  if (user.username && user.username.trim()) {
+    return user.username;
+  }
+  
+  // Extract name from email if available
+  if (user.email) {
+    const emailName = user.email.split('@')[0];
+    // Convert email prefix to readable name (e.g., john.doe -> John Doe)
+    // This matches the extract_name_from_email function in our database
+    return emailName
+      .split(/[._-]/)
+      .map(part => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+      .join(' ');
+  }
+  
+  return 'Anonymous';
 }
 
 /**

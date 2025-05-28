@@ -27,6 +27,8 @@ export function NotificationDropdown({
   className,
 }: NotificationDropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [hasMarkedAsRead, setHasMarkedAsRead] = useState(false);
+
   const {
     notifications,
     unreadCount,
@@ -44,16 +46,29 @@ export function NotificationDropdown({
 
   // Mark all notifications as read when dropdown opens
   useEffect(() => {
-    if (isOpen && notifications.length > 0) {
+    if (isOpen && notifications.length > 0 && !hasMarkedAsRead) {
       const unreadNotificationIds = notifications
         .filter((n) => !n.read_at)
         .map((n) => n.id);
 
       if (unreadNotificationIds.length > 0) {
-        markAsRead(unreadNotificationIds);
+        setHasMarkedAsRead(true);
+        // Use a timeout to prevent immediate re-fetching
+        const timeoutId = setTimeout(() => {
+          markAsRead(unreadNotificationIds);
+        }, 500); // Increased timeout to prevent rapid requests
+
+        return () => clearTimeout(timeoutId);
       }
     }
-  }, [isOpen, notifications, markAsRead]);
+  }, [isOpen, notifications.length, hasMarkedAsRead, markAsRead]);
+
+  // Reset the flag when dropdown closes
+  useEffect(() => {
+    if (!isOpen) {
+      setHasMarkedAsRead(false);
+    }
+  }, [isOpen]);
 
   const handleMarkAllAsRead = async () => {
     if (unreadCount > 0) {

@@ -598,6 +598,54 @@ i.page-break,
   }
 }
 
+/* Enhanced mobile responsiveness */
+@media screen and (max-width: 768px) {
+  .dropdown-button-text {
+    display: none !important;
+  }
+
+  /* Hide less essential toolbar items on tablets */
+  .toolbar-item.font-family,
+  .toolbar-item.font-size {
+    display: none !important;
+  }
+
+  /* Make dropdowns more compact */
+  .dropdown {
+    min-width: 120px !important;
+  }
+
+  .dropdown .item {
+    padding: 6px 8px !important;
+    font-size: 12px !important;
+  }
+}
+
+@media screen and (max-width: 480px) {
+  /* Hide even more items on mobile phones */
+  .toolbar-item.font-family,
+  .toolbar-item.font-size,
+  .toolbar-item.code-language,
+  .toolbar-item.alignment {
+    display: none !important;
+  }
+
+  /* Make dropdowns even more compact */
+  .dropdown {
+    min-width: 100px !important;
+  }
+
+  .dropdown .item {
+    padding: 4px 6px !important;
+    font-size: 11px !important;
+  }
+
+  /* Reduce spacing in toolbar groups */
+  .toolbar-group + .toolbar-group {
+    margin-left: 2px !important;
+  }
+}
+
 .icon.paragraph {
   background-image: url(/text-paragraph.svg);
 }

@@ -34,11 +34,26 @@ export function ConversationList({
     if (conversation.title) return conversation.title;
 
     if (conversation.type === 'direct') {
-      // For direct messages, show the other participant's name
       const otherParticipant = conversation.participants.find(
         (p) => p.user_id !== currentUserId,
       );
-      return getDisplayName(otherParticipant?.user);
+      if (otherParticipant) {
+        return getDisplayName(otherParticipant.user);
+      }
+      // For direct messages, if we can't find the other participant,
+      // try to get name from last message sender (if it's not the current user)
+      if (
+        conversation.last_message?.sender &&
+        conversation.last_message.sender.id !== currentUserId
+      ) {
+        return getDisplayName(conversation.last_message.sender);
+      }
+      return 'Unknown User';
+    }
+
+    // For group/channel conversations, show creator as fallback
+    if (conversation.created_by_user) {
+      return getDisplayName(conversation.created_by_user);
     }
 
     return `${conversation.type === 'group' ? 'Group' : 'Channel'} Chat`;
@@ -51,7 +66,15 @@ export function ConversationList({
       const otherParticipant = conversation.participants.find(
         (p) => p.user_id !== currentUserId,
       );
-      return otherParticipant?.user.avatar_url;
+      if (otherParticipant?.user.avatar_url)
+        return otherParticipant.user.avatar_url;
+      // For direct messages, try avatar from last message sender (if it's not the current user)
+      if (
+        conversation.last_message?.sender?.avatar_url &&
+        conversation.last_message.sender.id !== currentUserId
+      ) {
+        return conversation.last_message.sender.avatar_url;
+      }
     }
     return null;
   };
@@ -92,6 +115,14 @@ export function ConversationList({
           const avatarUrl = getConversationAvatar(conversation);
           const Icon = getConversationIcon(conversation.type);
 
+          // Get other participant for direct messages
+          const otherParticipant =
+            conversation.type === 'direct'
+              ? conversation.participants.find(
+                  (p) => p.user_id !== currentUserId,
+                )
+              : null;
+
           // Check if any participant is online (for direct messages)
           const hasOnlineUser =
             conversation.type === 'direct'
@@ -119,7 +150,13 @@ export function ConversationList({
                     <Avatar className="h-9 w-9">
                       <AvatarImage src={avatarUrl || undefined} />
                       <AvatarFallback className="text-xs bg-primary/10 text-primary">
-                        {getUserInitials({ full_name: title })}
+                        {getUserInitials(
+                          otherParticipant?.user ||
+                            (conversation.last_message?.sender?.id !==
+                            currentUserId
+                              ? conversation.last_message?.sender
+                              : null) || { full_name: 'Unknown User' },
+                        )}
                       </AvatarFallback>
                     </Avatar>
                   ) : (

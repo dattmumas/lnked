@@ -51,8 +51,7 @@ export function MessageList({
           ? isUserOnline(message.sender.id)
           : false;
 
-        // Get the display name for the sender
-        const senderName = getDisplayName(message.sender);
+        // Removed senderName as it's no longer displayed
         const isConsecutive =
           index > 0 && messages[index - 1].sender_id === message.sender_id;
 
@@ -95,12 +94,10 @@ export function MessageList({
                 isOwnMessage ? 'items-end' : 'items-start',
               )}
             >
-              {/* Sender name and time */}
+              {/* Sender name and time - only show for first message in a group */}
               {showAvatar && !isOwnMessage && (
                 <div className="flex items-baseline gap-2 mb-0.5 px-1">
-                  <span className="text-xs font-medium text-foreground/80">
-                    {senderName}
-                  </span>
+                  {/* Removed sender name display */}
                   <span className="text-[10px] text-foreground/50">
                     {formatChatTime(message.created_at)}
                   </span>
@@ -109,9 +106,9 @@ export function MessageList({
 
               {/* Reply preview */}
               {message.reply_to && (
-                <div className="mb-1 p-1.5 bg-muted/50 rounded border-l-2 border-primary/50 text-[11px]">
-                  <div className="font-medium text-foreground/60">
-                    {getDisplayName(message.reply_to.sender)}
+                <div className="">
+                  <div className="text-xs font-medium text-foreground/80">
+                    {getDisplayName(message.sender)}
                   </div>
                   <div className="truncate text-foreground/50">
                     {message.reply_to.content}
