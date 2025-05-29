@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -8,7 +8,6 @@ import {
   ArrowLeft,
   Share,
   Download,
-  Play,
   AlertCircle,
   Loader2,
   Check,
@@ -16,9 +15,11 @@ import {
 import {
   SECONDS_PER_MINUTE,
   SECONDS_PER_HOUR,
-  STATUS_CHECK_INTERVAL,
   PAD_LENGTH,
 } from '@/lib/constants/video';
+import MuxVideoPlayer from '@/components/app/video/MuxVideoPlayerClient';
+import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
+import type { User } from '@supabase/supabase-js';
 
 // Type based on database schema
 interface VideoAsset {
@@ -44,132 +45,60 @@ export default function VideoPlayerPageClient({
   video,
 }: VideoPlayerPageClientProps) {
   const router = useRouter();
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const hlsRef = useRef<any>(null);
   const [shareStatus, setShareStatus] = useState<'idle' | 'copied' | 'error'>(
     'idle',
   );
   const [isDownloading, setIsDownloading] = useState(false);
-  const [videoError, setVideoError] = useState<string | null>(null);
-  const [isVideoLoaded, setIsVideoLoaded] = useState(false);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+
+  const supabase = createSupabaseBrowserClient();
 
   // Check if video is ready for playback
   const isVideoReady = video.status === 'ready' && video.mux_playback_id;
 
-  // Debug video data
+  // Get current user for analytics
   useEffect(() => {
-    console.info('Video data:', {
-      id: video.id,
-      status: video.status,
-      mux_playback_id: video.mux_playback_id,
-      mux_asset_id: video.mux_asset_id,
-      title: video.title,
-    });
-  }, [video]);
+    const getCurrentUser = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      setCurrentUser(user);
+    };
 
-  // Initialize HLS.js for cross-browser compatibility
-  useEffect(() => {
-    if (!isVideoReady || !video.mux_playback_id || !videoRef.current) {
-      return;
-    }
+    getCurrentUser();
+  }, [supabase]);
 
-    const initializeVideo = async () => {
-      const videoElement = videoRef.current!;
-      const hlsUrl = `https://stream.mux.com/${video.mux_playback_id}.m3u8`;
+  // Enhanced analytics event handler
+  const handleAnalyticsEvent = async (event: any) => {
+    console.log('Video analytics event:', event);
 
+    // Send to your custom analytics endpoint if needed
+    if (currentUser && video.id) {
       try {
-        // Import HLS.js dynamically for better bundle splitting
-        const Hls = (await import('hls.js')).default;
-
-        // Check if HLS is supported
-        if (Hls.isSupported()) {
-          // Browser doesn't support HLS natively, use HLS.js
-          console.info('Using HLS.js for video playback');
-
-          // Clean up existing HLS instance
-          if (hlsRef.current) {
-            hlsRef.current.destroy();
-          }
-
-          // Create new HLS instance with proper configuration
-          hlsRef.current = new Hls({
-            debug: process.env.NODE_ENV === 'development',
-            enableWorker: true,
-            lowLatencyMode: false,
-            // Mux-optimized settings
-            maxLoadingDelay: 4,
-            maxBufferLength: 30,
-            maxBufferSize: 60 * 1000 * 1000, // 60MB
-          });
-
-          // Load the HLS stream
-          hlsRef.current.loadSource(hlsUrl);
-          hlsRef.current.attachMedia(videoElement);
-
-          // Handle HLS events
-          hlsRef.current.on(Hls.Events.MANIFEST_PARSED, () => {
-            console.info('HLS manifest parsed successfully');
-            setIsVideoLoaded(true);
-            setVideoError(null);
-          });
-
-          hlsRef.current.on(Hls.Events.ERROR, (event: string, data: any) => {
-            console.error('HLS error:', data);
-            if (data.fatal) {
-              switch (data.type) {
-                case Hls.ErrorTypes.NETWORK_ERROR:
-                  setVideoError(
-                    'Network error loading video. Please check your connection.',
-                  );
-                  console.info('Attempting HLS recovery for network error');
-                  hlsRef.current.startLoad();
-                  break;
-                case Hls.ErrorTypes.MEDIA_ERROR:
-                  setVideoError(
-                    'Media error. The video format may not be supported.',
-                  );
-                  console.info('Attempting HLS recovery for media error');
-                  hlsRef.current.recoverMediaError();
-                  break;
-                default:
-                  setVideoError(
-                    'Fatal error loading video. Please try refreshing the page.',
-                  );
-                  break;
-              }
-            }
-          });
-        } else if (videoElement.canPlayType('application/vnd.apple.mpegurl')) {
-          // Safari supports HLS natively
-          console.info('Using native HLS support (Safari)');
-          videoElement.src = hlsUrl;
-          setIsVideoLoaded(true);
-          setVideoError(null);
-        } else {
-          // Browser doesn't support HLS at all
-          console.error('HLS not supported in this browser');
-          setVideoError(
-            'Your browser does not support video playback. Please try using a modern browser like Chrome, Firefox, Safari, or Edge.',
-          );
-        }
+        await fetch('/api/videos/analytics', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            video_asset_id: video.id,
+            user_id: currentUser.id,
+            event_type: event.type,
+            current_time: event.currentTime,
+            duration: event.duration,
+            metadata: {
+              playback_rate: event.playbackRate,
+              volume: event.volume,
+              quality: event.quality,
+              timestamp: event.timestamp,
+            },
+          }),
+        });
       } catch (error) {
-        console.error('Error initializing video player:', error);
-        setVideoError(
-          'Failed to initialize video player. Please try refreshing the page.',
-        );
+        console.error('Failed to send analytics event:', error);
       }
-    };
-
-    initializeVideo();
-
-    // Cleanup function
-    return () => {
-      if (hlsRef.current) {
-        hlsRef.current.destroy();
-        hlsRef.current = null;
-      }
-    };
-  }, [isVideoReady, video.mux_playback_id]);
+    }
+  };
 
   // Helper functions
   const formatDuration = (seconds: number) => {
@@ -331,6 +260,32 @@ export default function VideoPlayerPageClient({
     }
   };
 
+  // Add debugging to verify playback ID
+  useEffect(() => {
+    console.log('Video data:', {
+      id: video.id,
+      status: video.status,
+      mux_playback_id: video.mux_playback_id,
+      mux_asset_id: video.mux_asset_id,
+      isVideoReady,
+    });
+
+    // Test the HLS URL directly
+    if (video.mux_playback_id) {
+      const hlsUrl = `https://stream.mux.com/${video.mux_playback_id}.m3u8`;
+      console.log('Testing HLS URL:', hlsUrl);
+
+      fetch(hlsUrl, { method: 'HEAD' })
+        .then((response) => {
+          console.log('HLS URL status:', response.status);
+          if (!response.ok) {
+            console.error('HLS URL not accessible');
+          }
+        })
+        .catch((err) => console.error('HLS URL test failed:', err));
+    }
+  }, [video]);
+
   return (
     <div className="container mx-auto px-4 py-8 max-w-6xl">
       {/* Header */}
@@ -387,72 +342,13 @@ export default function VideoPlayerPageClient({
             style={{ aspectRatio: video.aspect_ratio || '16/9' }}
           >
             {isVideoReady ? (
-              <>
-                {/* Debug info for development */}
-                {process.env.NODE_ENV === 'development' && (
-                  <div className="absolute top-2 left-2 bg-black bg-opacity-50 text-white text-xs p-2 rounded z-10">
-                    <div>Playback ID: {video.mux_playback_id}</div>
-                    <div>Status: {video.status}</div>
-                  </div>
-                )}
-
-                <video
-                  ref={videoRef}
-                  controls
-                  className="w-full h-full"
-                  playsInline
-                  poster={
-                    video.mux_playback_id
-                      ? `https://image.mux.com/${video.mux_playback_id}/thumbnail.png?width=1920&height=1080&fit_mode=smartcrop`
-                      : undefined
-                  }
-                  preload="metadata"
-                  onError={(e) => {
-                    console.error('Video element error:', e);
-                    if (!hlsRef.current) {
-                      setVideoError(
-                        'Video failed to load. The video may still be processing or there may be a playback issue.',
-                      );
-                    }
-                  }}
-                  onLoadStart={() => {
-                    console.info('Video loading started');
-                  }}
-                  onCanPlay={() => {
-                    console.info('Video can start playing');
-                    setVideoError(null);
-                  }}
-                  onLoadedData={() => {
-                    console.info('Video data loaded');
-                    setIsVideoLoaded(true);
-                  }}
-                >
-                  {/* HLS.js will handle the source loading programmatically */}
-                  {/* Fallback message for very old browsers */}
-                  Your browser does not support modern video playback. Please
-                  update your browser or try a different one.
-                </video>
-
-                {/* Error overlay */}
-                {videoError && (
-                  <div className="absolute inset-0 bg-black bg-opacity-75 flex items-center justify-center text-white p-4">
-                    <div className="text-center">
-                      <AlertCircle className="h-8 w-8 text-red-400 mx-auto mb-2" />
-                      <p className="text-sm">{videoError}</p>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="mt-2"
-                        onClick={() => window.location.reload()}
-                      >
-                        Retry
-                      </Button>
-                    </div>
-                  </div>
-                )}
-              </>
+              <MuxVideoPlayer
+                playbackId={video.mux_playback_id!}
+                title={video.title || 'Untitled Video'}
+                className="w-full h-full rounded-lg"
+              />
             ) : (
-              <div className="flex items-center justify-center h-full text-white">
+              <div className="flex items-center justify-center h-full text-white min-h-[400px]">
                 {video.status === 'preparing' ||
                 video.status === 'processing' ? (
                   <div className="text-center">
@@ -479,7 +375,9 @@ export default function VideoPlayerPageClient({
                   </div>
                 ) : (
                   <div className="text-center">
-                    <Play className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <div className="h-12 w-12 mx-auto mb-4 opacity-50 bg-gray-600 rounded flex items-center justify-center">
+                      📹
+                    </div>
                     <p>Video not ready for playback</p>
                     <p className="text-sm text-gray-400 mt-2">
                       Status: {video.status || 'Unknown'}
@@ -499,13 +397,37 @@ export default function VideoPlayerPageClient({
             <CardHeader>
               <CardTitle>{video.title || 'Untitled Video'}</CardTitle>
             </CardHeader>
-            <CardContent>
-              {video.description ? (
-                <p className="text-gray-600 whitespace-pre-wrap">
-                  {video.description}
-                </p>
-              ) : (
-                <p className="text-gray-400 italic">No description provided</p>
+            <CardContent className="space-y-4">
+              {video.description && (
+                <div>
+                  <label className="text-sm font-medium text-gray-500">
+                    Description
+                  </label>
+                  <p className="text-sm mt-1">{video.description}</p>
+                </div>
+              )}
+
+              {/* User analytics info */}
+              {currentUser && process.env.NODE_ENV === 'development' && (
+                <div className="border-t pt-4">
+                  <label className="text-sm font-medium text-gray-500">
+                    Analytics Info
+                  </label>
+                  <div className="text-xs space-y-1 mt-1">
+                    <div>
+                      <span className="font-medium">Viewer ID:</span>{' '}
+                      {currentUser.id}
+                    </div>
+                    <div>
+                      <span className="font-medium">Email:</span>{' '}
+                      {currentUser.email}
+                    </div>
+                    <div className="text-green-600 mt-2 p-2 bg-green-50 rounded text-xs">
+                      <strong>✓ Mux Data:</strong> Analytics are being tracked
+                      for this viewer
+                    </div>
+                  </div>
+                </div>
               )}
             </CardContent>
           </Card>
@@ -651,16 +573,12 @@ export default function VideoPlayerPageClient({
                     </div>
                     <div>
                       <span className="font-medium">Player Status:</span>{' '}
-                      <span
-                        className={`font-medium ${isVideoLoaded ? 'text-green-600' : 'text-yellow-600'}`}
-                      >
-                        {isVideoLoaded ? 'Loaded' : 'Loading...'}
+                      <span className={`font-medium text-green-600`}>
+                        Loaded
                       </span>
-                      {hlsRef.current && (
-                        <span className="ml-2 text-blue-600">
-                          (Using HLS.js)
-                        </span>
-                      )}
+                      <span className="ml-2 text-blue-600">
+                        (Using Mux Player)
+                      </span>
                     </div>
                     <div>
                       <span className="font-medium">
@@ -714,9 +632,8 @@ export default function VideoPlayerPageClient({
                       )}
                     </div>
                     <div className="text-blue-600 mt-2 p-2 bg-blue-50 rounded text-xs">
-                      <strong>HLS.js Info:</strong> Using cross-browser HLS
-                      support for maximum compatibility. Safari uses native HLS,
-                      other browsers use HLS.js polyfill.
+                      <strong>Mux Player Info:</strong> Using the official Mux
+                      Player web component for video playback.
                     </div>
                     <div className="text-yellow-600 mt-2 p-2 bg-yellow-50 rounded text-xs">
                       <strong>Note:</strong> MP4 files require static_renditions

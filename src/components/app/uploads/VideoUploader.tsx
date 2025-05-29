@@ -451,7 +451,7 @@ export default function VideoUploader({
                     {upload.status === 'completed' && upload.asset_id && (
                       <div className="bg-green-50 border border-green-200 rounded p-2">
                         <p className="text-sm text-green-600">
-                          ✅ Upload completed! Asset ID: {upload.asset_id}
+                          Upload completed! Asset ID: {upload.asset_id}
                         </p>
                       </div>
                     )}

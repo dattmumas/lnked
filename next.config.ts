@@ -52,6 +52,17 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+  async rewrites() {
+    if (process.env.NODE_ENV === 'development') {
+      return [
+        {
+          source: '/mux-proxy/:path*',
+          destination: 'https://stream.mux.com/:path*',
+        },
+      ];
+    }
+    return [];
+  },
 };
 
 export default nextConfig;

@@ -27,7 +27,7 @@ import Image from 'next/image';
 
 // Import our components
 import VideoUploader from '@/components/app/uploads/VideoUploader';
-import MuxVideoPlayer from '@/components/app/video/MuxVideoPlayer';
+import MuxVideoPlayer from '@/components/app/video/MuxVideoPlayerClient';
 import Link from 'next/link';
 
 // Import constants
@@ -396,11 +396,8 @@ export default function VideoManagementDashboard() {
         </TabsContent>
 
         {/* Upload Tab */}
-        <TabsContent value="upload" className="space-y-6">
+        <TabsContent value="upload" className="">
           <Card>
-            <CardHeader>
-              <CardTitle>Upload Videos</CardTitle>
-            </CardHeader>
             <CardContent>
               <VideoUploader
                 onUploadComplete={(session) => {
@@ -745,9 +742,6 @@ function VideoCard({ video, isSelected, onSelect, onRefresh }: VideoCardProps) {
                   <MuxVideoPlayer
                     playbackId={playbackId}
                     title={video.title || 'Untitled Video'}
-                    viewerUserId="current-user"
-                    videoId={video.id}
-                    enableAnalytics
                     className="rounded-t-lg"
                   />
                 ) : (
