@@ -85,9 +85,9 @@ export default function FollowButton({
         return;
       }
 
-      const serverIsFollowing = !!data;
+      const serverIsFollowing = Boolean(data);
       if (serverIsFollowing !== isFollowing) {
-        console.log(
+        console.info(
           `Follow state sync: client=${isFollowing}, server=${serverIsFollowing}`,
         );
         setIsFollowing(serverIsFollowing);

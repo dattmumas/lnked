@@ -137,9 +137,9 @@ function EditorContent({
         <ListPlugin />
         <CheckListPlugin />
         <TablePlugin
-          hasCellMerge={true}
-          hasCellBackgroundColor={true}
-          hasHorizontalScroll={true}
+          hasCellMerge
+          hasCellBackgroundColor
+          hasHorizontalScroll
         />
         <LinkPlugin />
         <ClickableLinkPlugin disabled={!isEditable} />

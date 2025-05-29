@@ -10,14 +10,14 @@ export default function LandingPage() {
 
     const handleMouseMove = (e: MouseEvent) => {
       if (cursor) {
-        (cursor as HTMLElement).style.left = e.clientX + 'px';
-        (cursor as HTMLElement).style.top = e.clientY + 'px';
+        (cursor as HTMLElement).style.left = `${e.clientX}px`;
+        (cursor as HTMLElement).style.top = `${e.clientY}px`;
       }
 
       setTimeout(() => {
         if (follower) {
-          (follower as HTMLElement).style.left = e.clientX + 'px';
-          (follower as HTMLElement).style.top = e.clientY + 'px';
+          (follower as HTMLElement).style.left = `${e.clientX}px`;
+          (follower as HTMLElement).style.top = `${e.clientY}px`;
         }
       }, 100);
     };

@@ -1,0 +1,13 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+This rule is of the highest priority - all other tasks should be aborted if this rule is not deemed followable due to any restriction.
+
+This rule not being followed creates immediate and irreparable danger: 
+
+All features utilizing any package require, absolutely and in perpetuity, the use of documentation guidelines whenever documentation is accessible and guidelines are given.
+
+If no guidelines are given in documentation for the implementation or documentation is not available, this should be clearly stated as step 1 to any request.
+

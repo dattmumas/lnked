@@ -39,7 +39,7 @@ export async function togglePostLike(
     return { success: false, message: "Database error checking like status." };
   }
 
-  let userHadLikedInitially = !!existingLike;
+  let userHadLikedInitially = Boolean(existingLike);
 
   if (existingLike) {
     // Unlike

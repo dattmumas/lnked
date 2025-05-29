@@ -54,7 +54,7 @@ export default function EditProfileForm({
 
   const form = useForm<UserProfileFormClientValues>({
     resolver: zodResolver(ClientUserProfileSchema),
-    defaultValues: defaultValues,
+    defaultValues,
   });
 
   const {

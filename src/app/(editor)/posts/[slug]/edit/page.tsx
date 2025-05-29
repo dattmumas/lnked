@@ -20,7 +20,7 @@ export default async function EditPostPage({
 
   const { data: postData, error: postFetchError } = await supabase
     .from('posts')
-    .select('*, collective:collectives!collective_id(name, owner_id)') // Fetch needed fields
+    .select('*')
     .eq('id', slug)
     .single();
 
@@ -32,6 +32,17 @@ export default async function EditPostPage({
     notFound();
   }
 
+  // Fetch collective data separately if post belongs to a collective
+  let collectiveData = null;
+  if (postData.collective_id) {
+    const { data: collective } = await supabase
+      .from('collectives')
+      .select('id, name, slug, owner_id')
+      .eq('id', postData.collective_id)
+      .single();
+    collectiveData = collective;
+  }
+
   if ('id' in postData) {
     // safe to access postData.id, postData.author_id, etc.
   }
@@ -39,8 +50,8 @@ export default async function EditPostPage({
   // Permission check: User must be author or owner of the collective (if it's a collective post)
   const isAuthor = postData.author_id === user.id;
   let canEditCollectivePost = false;
-  if (postData.collective_id && postData.collective) {
-    if (postData.collective.owner_id === user.id) {
+  if (postData.collective_id && collectiveData) {
+    if (collectiveData.owner_id === user.id) {
       canEditCollectivePost = true;
     } else {
       // Check if user is an admin/editor member of the collective
@@ -72,11 +83,11 @@ export default async function EditPostPage({
 
   const initialPostData: PostDataType = {
     ...postData,
-    collective_name: postData.collective?.name,
+    collective_name: collectiveData?.name,
   };
 
-  const pageTitle = postData.collective?.name
-    ? `Edit Post in ${postData.collective.name}`
+  const pageTitle = collectiveData?.name
+    ? `Edit Post in ${collectiveData.name}`
     : 'Edit Personal Post';
 
   return (

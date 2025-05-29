@@ -97,8 +97,7 @@ export async function createPost(
       if (memberCheckError) {
         return { error: 'Error checking collective membership.' };
       }
-      isMember =
-        !!membership && ['admin', 'editor', 'author'].includes(membership.role);
+      isMember = membership != null && ['admin', 'editor', 'author'].includes(membership.role);
     }
 
     if (!isOwner && !isMember) {
@@ -127,7 +126,7 @@ export async function createPost(
     content,
     is_public,
     collective_id: collectiveId || null,
-    published_at: published_at,
+    published_at,
     status: db_status,
     view_count: 0,
     like_count: 0,
@@ -213,7 +212,7 @@ export async function updatePost(
     console.error('Error fetching post for update:', {
       postId,
       fetchError,
-      existingPost: !!existingPost,
+      existingPost: Boolean(existingPost),
     });
     return { error: 'Post not found or error fetching post data.' };
   }
@@ -234,7 +233,9 @@ export async function updatePost(
         .maybeSingle<MembershipRole>();
       if (memberCheckError)
         return { error: 'Error checking collective membership for edit.' };
-      if (membership) {
+      const canEditAsCollectiveMember =
+        membership && ['admin', 'editor', 'author'].includes(membership.role);
+      if (canEditAsCollectiveMember) {
         isCollectiveOwnerOrMember = true;
       }
     }

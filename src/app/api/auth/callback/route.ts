@@ -7,7 +7,7 @@ import type { CookieOptions } from "@supabase/ssr";
 export async function POST(request: Request) {
   const { event, session } = await request.json();
   if (process.env.NODE_ENV === "development") {
-    console.log("Auth callback triggered:", event);
+    console.info("Auth callback triggered:", event);
   }
 
   const response = NextResponse.json({ status: "success" });
@@ -20,13 +20,13 @@ export async function POST(request: Request) {
     },
     set(name: string, value: string, options?: CookieOptions) {
       if (process.env.NODE_ENV === "development") {
-        console.log(`Setting cookie: ${name}`);
+        console.info(`Setting cookie: ${name}`);
       }
       response.cookies.set(name, value, options);
     },
     remove(name: string, options?: CookieOptions) {
       if (process.env.NODE_ENV === "development") {
-        console.log(`Removing cookie: ${name}`);
+        console.info(`Removing cookie: ${name}`);
       }
       response.cookies.set(name, "", { ...options, maxAge: 0 });
     },
@@ -47,19 +47,19 @@ export async function POST(request: Request) {
 
     if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
       if (process.env.NODE_ENV === "development") {
-        console.log("Setting session in callback");
+        console.info("Setting session in callback");
       }
 
       // Explicitly log session data (without sensitive info)
       if (process.env.NODE_ENV === "development") {
         if (session) {
-          console.log("Session received:", {
-            hasSession: !!session,
+          console.info("Session received:", {
+            hasSession: Boolean(session),
             user_id: session.user?.id,
             expires_at: session.expires_at,
           });
         } else {
-          console.log("No session data received in callback");
+          console.info("No session data received in callback");
         }
       }
 
@@ -75,14 +75,14 @@ export async function POST(request: Request) {
       // Verify session was set
       const { data: sessionCheck } = await supabase.auth.getSession();
       if (process.env.NODE_ENV === "development") {
-        console.log(
+        console.info(
           "Session verification after setting:",
-          !!sessionCheck.session
+          Boolean(sessionCheck.session)
         );
       }
     } else if (event === "SIGNED_OUT") {
       if (process.env.NODE_ENV === "development") {
-        console.log("Signing out in callback");
+        console.info("Signing out in callback");
       }
       await supabase.auth.signOut();
     }

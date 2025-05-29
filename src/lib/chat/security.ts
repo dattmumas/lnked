@@ -24,7 +24,7 @@ export class ChatSecurity {
         .eq('user_id', currentUser)
         .single();
 
-      return !error && !!data;
+      return !error && Boolean(data);
     } catch {
       return false;
     }
@@ -46,7 +46,7 @@ export class ChatSecurity {
         .eq('role', 'admin')
         .single();
 
-      return !error && !!data;
+      return !error && Boolean(data);
     } catch {
       return false;
     }
@@ -95,7 +95,7 @@ export class ChatSecurity {
         .eq('sender_id', currentUser)
         .single();
 
-      return !error && !!data;
+      return !error && Boolean(data);
     } catch {
       return false;
     }
@@ -223,7 +223,7 @@ export class ServerChatSecurity {
         .eq('user_id', currentUser)
         .single();
 
-      return !error && !!data;
+      return !error && Boolean(data);
     } catch {
       return false;
     }

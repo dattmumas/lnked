@@ -55,7 +55,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const user = session.user;
+    const {user} = session;
     if (!user || !user.id || !user.email) {
       console.error('User data missing in session:', user);
       return NextResponse.json(
@@ -141,10 +141,10 @@ export async function POST(request: Request) {
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
     // Add a query param to success_url to identify the session for post-checkout handling if needed.
     const successUrl = `${siteUrl}${
-      redirectPath.startsWith('/') ? redirectPath : '/' + redirectPath
+      redirectPath.startsWith('/') ? redirectPath : `/${redirectPath}`
     }?stripe_session_id={CHECKOUT_SESSION_ID}`;
     const cancelUrl = `${siteUrl}${
-      redirectPath.startsWith('/') ? redirectPath : '/' + redirectPath
+      redirectPath.startsWith('/') ? redirectPath : `/${redirectPath}`
     }`;
 
     // --- Stripe Connect logic for collectives ---
@@ -179,8 +179,8 @@ export async function POST(request: Request) {
       subscription_data: {
         metadata: {
           userId: user.id, // The subscriber's ID
-          targetEntityType: targetEntityType, // What they are subscribing to
-          targetEntityId: targetEntityId, // The ID of what they are subscribing to
+          targetEntityType, // What they are subscribing to
+          targetEntityId, // The ID of what they are subscribing to
         },
         ...(transferData ? { transfer_data: transferData } : {}),
       },

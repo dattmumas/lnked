@@ -536,6 +536,62 @@ export type Database = {
           },
         ]
       }
+      live_streams: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          ended_at: string | null
+          id: string
+          mux_playback_id: string | null
+          mux_stream_id: string
+          mux_stream_key: string
+          started_at: string | null
+          status: string | null
+          stream_url: string | null
+          title: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          ended_at?: string | null
+          id?: string
+          mux_playback_id?: string | null
+          mux_stream_id: string
+          mux_stream_key: string
+          started_at?: string | null
+          status?: string | null
+          stream_url?: string | null
+          title?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          ended_at?: string | null
+          id?: string
+          mux_playback_id?: string | null
+          mux_stream_id?: string
+          mux_stream_key?: string
+          started_at?: string | null
+          status?: string | null
+          stream_url?: string | null
+          title?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "live_streams_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       message_reactions: {
         Row: {
           created_at: string | null
@@ -674,6 +730,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      mux_webhooks: {
+        Row: {
+          created_at: string | null
+          event_type: string
+          id: string
+          mux_asset_id: string | null
+          mux_stream_id: string | null
+          payload: Json | null
+          processed: boolean | null
+          processed_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          event_type: string
+          id?: string
+          mux_asset_id?: string | null
+          mux_stream_id?: string | null
+          payload?: Json | null
+          processed?: boolean | null
+          processed_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          event_type?: string
+          id?: string
+          mux_asset_id?: string | null
+          mux_stream_id?: string | null
+          payload?: Json | null
+          processed?: boolean | null
+          processed_at?: string | null
+        }
+        Relationships: []
       }
       notification_preferences: {
         Row: {
@@ -1271,6 +1360,120 @@ export type Database = {
             columns: ["pinned_post_id"]
             isOneToOne: false
             referencedRelation: "posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      video_analytics: {
+        Row: {
+          completion_rate: number | null
+          created_at: string | null
+          id: string
+          live_stream_id: string | null
+          quality_score: number | null
+          rebuffer_count: number | null
+          startup_time: number | null
+          video_asset_id: string | null
+          view_id: string | null
+          viewer_user_id: string | null
+          watch_time: number | null
+        }
+        Insert: {
+          completion_rate?: number | null
+          created_at?: string | null
+          id?: string
+          live_stream_id?: string | null
+          quality_score?: number | null
+          rebuffer_count?: number | null
+          startup_time?: number | null
+          video_asset_id?: string | null
+          view_id?: string | null
+          viewer_user_id?: string | null
+          watch_time?: number | null
+        }
+        Update: {
+          completion_rate?: number | null
+          created_at?: string | null
+          id?: string
+          live_stream_id?: string | null
+          quality_score?: number | null
+          rebuffer_count?: number | null
+          startup_time?: number | null
+          video_asset_id?: string | null
+          view_id?: string | null
+          viewer_user_id?: string | null
+          watch_time?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "video_analytics_live_stream_id_fkey"
+            columns: ["live_stream_id"]
+            isOneToOne: false
+            referencedRelation: "live_streams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "video_analytics_video_asset_id_fkey"
+            columns: ["video_asset_id"]
+            isOneToOne: false
+            referencedRelation: "video_assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "video_analytics_viewer_user_id_fkey"
+            columns: ["viewer_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      video_assets: {
+        Row: {
+          aspect_ratio: string | null
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          duration: number | null
+          id: string
+          mux_asset_id: string
+          mux_playback_id: string | null
+          status: string | null
+          title: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          aspect_ratio?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          duration?: number | null
+          id?: string
+          mux_asset_id: string
+          mux_playback_id?: string | null
+          status?: string | null
+          title?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          aspect_ratio?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          duration?: number | null
+          id?: string
+          mux_asset_id?: string
+          mux_playback_id?: string | null
+          status?: string | null
+          title?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "video_assets_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
         ]

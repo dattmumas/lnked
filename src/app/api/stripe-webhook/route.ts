@@ -54,7 +54,7 @@ export async function POST(req: Request) {
   }
 
   if (process.env.NODE_ENV === 'development') {
-    console.log(`Received event in Next.js route: ${event.type}`);
+    console.info(`Received event in Next.js route: ${event.type}`);
   }
 
   if (relevantEvents.has(event.type)) {
@@ -70,7 +70,7 @@ export async function POST(req: Request) {
             session.metadata?.targetEntityType &&
             session.metadata?.targetEntityId
           ) {
-            const userId = session.metadata.userId;
+            const {userId} = session.metadata;
             const stripeCustomerId =
               typeof session.customer === 'string'
                 ? session.customer
@@ -87,12 +87,12 @@ export async function POST(req: Request) {
                 customerErr.message,
               );
             else if (process.env.NODE_ENV === 'development')
-              console.log(
+              console.info(
                 `Customer mapping for user ${userId} updated (Next API).`,
               );
 
             if (process.env.NODE_ENV === 'development')
-              console.log(
+              console.info(
                 `Checkout session completed for user ${userId}, target: ${session.metadata.targetEntityType} - ${session.metadata.targetEntityId}`,
               );
           } else {
@@ -194,7 +194,7 @@ export async function POST(req: Request) {
             );
           } else {
             if (process.env.NODE_ENV === 'development')
-              console.log(
+              console.info(
                 `Subscription ${subscriptionObject.id} upserted for user ${subscriberUserId} (Next API).`,
               );
           }
@@ -234,7 +234,7 @@ export async function POST(req: Request) {
               );
             } else {
               if (process.env.NODE_ENV === 'development')
-                console.log(
+                console.info(
                   `Collective ${collective.id} Stripe status updated from webhook.`,
                 );
             }

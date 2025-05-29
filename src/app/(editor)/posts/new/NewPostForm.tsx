@@ -105,7 +105,7 @@ export default function NewPostForm({
     try {
       let result;
       if (createdPostId) {
-        console.log('Autosave: Updating existing post', { createdPostId });
+        console.info('Autosave: Updating existing post', { createdPostId });
         result = await updatePost(createdPostId, {
           ...payload,
         });
@@ -117,12 +117,12 @@ export default function NewPostForm({
           setAutosaveStatus('Add a title and content to save draft');
           return;
         }
-        console.log('Autosave: Creating new post');
+        console.info('Autosave: Creating new post');
         result = await createPost({
           ...payload,
         });
         if (result.data?.postId) {
-          console.log('Autosave: Post created with ID', result.data.postId);
+          console.info('Autosave: Post created with ID', result.data.postId);
           setCreatedPostId(result.data.postId);
         }
       }
@@ -186,12 +186,12 @@ export default function NewPostForm({
       };
 
       if (createdPostId) {
-        console.log('Publishing: Updating existing post', { createdPostId });
+        console.info('Publishing: Updating existing post', { createdPostId });
         result = await updatePost(createdPostId, {
           ...payload,
         });
       } else {
-        console.log('Publishing: Creating new post');
+        console.info('Publishing: Creating new post');
         result = await createPost({
           ...payload,
         });
@@ -216,7 +216,7 @@ export default function NewPostForm({
         }
         setServerError(errorMsg);
       } else if (result.data?.postId) {
-        const postId = result.data.postId;
+        const { postId } = result.data;
         reset();
         router.push(`/posts/${postId}`);
       }

@@ -62,7 +62,7 @@ export default async function DiscoverPage({
               key={rec.suggested_collective_id}
               collective={rec.collectives}
               score={rec.score}
-              showFeedbackButtons={true}
+              showFeedbackButtons
             />
           ))
         )}

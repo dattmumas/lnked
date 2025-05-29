@@ -48,7 +48,7 @@ export default function PostLikeButton({
         if (error) {
           console.error('Error fetching initial like state:', error.message);
         } else {
-          setUserHasLiked(!!like);
+          setUserHasLiked(Boolean(like));
         }
       } else if (initialUserHasLiked !== undefined) {
         setUserHasLiked(initialUserHasLiked);

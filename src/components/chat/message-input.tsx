@@ -53,7 +53,7 @@ export function MessageInput({
   }, [onStopTyping]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const value = e.target.value;
+    const {value} = e.target;
     setContent(value);
 
     if (value.trim()) {

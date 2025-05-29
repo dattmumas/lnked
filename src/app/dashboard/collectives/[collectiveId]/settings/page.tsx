@@ -67,8 +67,7 @@ export default async function CollectiveSettingsPage({
   const eligibleMembers = (members ?? [])
     .map((m) => m.user)
     .filter(
-      (u): u is Database['public']['Tables']['users']['Row'] =>
-        !!u && u.id !== authUser.id,
+      (u): u is NonNullable<typeof u> => Boolean(u) && u?.id !== authUser.id,
     )
     .map((u) => ({ id: u.id, full_name: u.full_name }));
 

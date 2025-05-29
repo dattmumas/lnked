@@ -124,7 +124,7 @@ export async function inviteUserToCollective(
   const memberData: TablesInsert<'collective_members'> = {
     collective_id: collectiveId,
     member_id: inviteeUser.id,
-    role: role,
+    role,
   };
 
   const { error: insertError } = await supabase
@@ -555,7 +555,7 @@ export async function deleteCollective({
   if (deleteError) {
     return {
       success: false,
-      error: 'Failed to delete collective: ' + deleteError.message,
+      error: `Failed to delete collective: ${deleteError.message}`,
     };
   }
   return { success: true };
@@ -612,7 +612,7 @@ export async function transferCollectiveOwnership({
   if (updateError) {
     return {
       success: false,
-      error: 'Failed to transfer ownership: ' + updateError.message,
+      error: `Failed to transfer ownership: ${updateError.message}`,
     };
   }
   // Update roles: set new owner to 'owner', old owner to 'editor'

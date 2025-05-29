@@ -91,7 +91,7 @@ export default async function Page({
       : Promise.resolve({ data: null }),
   ]);
 
-  const isFollowing = !!followData;
+  const isFollowing = Boolean(followData);
 
   let postsQuery = supabase
     .from('posts')

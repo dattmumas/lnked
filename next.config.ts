@@ -23,6 +23,10 @@ const nextConfig: NextConfig = {
         protocol: 'https',
         hostname: 'images.unsplash.com',
       },
+      {
+        protocol: 'https',
+        hostname: 'image.mux.com',
+      },
     ],
   },
   // Redirects - Consider removing these for better performance and simplicity

@@ -9,7 +9,15 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import StatsRow from '@/components/app/dashboard/organisms/StatsRow';
-import { BookOpen, Rss, Plus, AlertCircle, Info, List } from 'lucide-react';
+import {
+  BookOpen,
+  Rss,
+  Plus,
+  AlertCircle,
+  Info,
+  List,
+  Video,
+} from 'lucide-react';
 import RecentPostRow from '@/components/app/dashboard/organisms/RecentPostRow';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { redirect } from 'next/navigation';
@@ -150,7 +158,7 @@ export default async function DashboardManagementPage() {
         <Card className="w-full bg-background text-foreground shadow-sm">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Rss className="h-5 w-5" /> My Individual Newsletter
+              <Rss className="h-5 w-5" /> My Content
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -159,6 +167,11 @@ export default async function DashboardManagementPage() {
                 <Link href="/posts/new">
                   <Button variant="outline" size="sm">
                     <Plus className="h-4 w-4 mr-2" /> Write New Post
+                  </Button>
+                </Link>
+                <Link href="/dashboard/video-management">
+                  <Button variant="outline" size="sm">
+                    <Video className="h-4 w-4 mr-2" /> Video Management
                   </Button>
                 </Link>
                 {username && (

@@ -263,7 +263,7 @@ export class ChatService {
         await chatSecurity.logSecurityEvent({
           action: 'get_messages_denied',
           userId: user.id,
-          conversationId: conversationId,
+          conversationId,
           success: false,
           details: { reason: 'User not authorized to view messages in this conversation' },
         });

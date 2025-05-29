@@ -22,17 +22,26 @@ export default async function Page({
 
   const { data: followersData, error: followersError } = await supabase
     .from('follows')
-    .select(
-      'follower_id, follower:users!follower_id(id, full_name, avatar_url)',
-    )
-    .eq('following_id', collectiveData.id)
-    .eq('following_type', 'collective');
+    .select('follower_id')
+    .eq('following_id', collectiveData.id);
 
   if (followersError) {
     console.error('Error fetching followers:', followersError);
   }
 
-  const followers = followersData ?? [];
+  // Get user data for each follower
+  const followers = [];
+  if (followersData && followersData.length > 0) {
+    const followerIds = followersData.map((f) => f.follower_id);
+    const { data: usersData } = await supabase
+      .from('users')
+      .select('id, full_name, avatar_url')
+      .in('id', followerIds);
+
+    if (usersData) {
+      followers.push(...usersData.map((user) => ({ follower: user })));
+    }
+  }
 
   return (
     <div className="container mx-auto p-4 md:p-6">

@@ -65,7 +65,7 @@ async function getPostBySlugOrId(
       if (userId) {
         // Fetch user reaction
         const { data: userReaction } = await supabase
-          .from('post_reactions')
+          .from('post_reactions' as const)
           .select('type')
           .eq('post_id', slugOrId)
           .eq('user_id', userId)
@@ -73,7 +73,7 @@ async function getPostBySlugOrId(
 
         // Fetch user bookmark
         const { data: userBookmark } = await supabase
-          .from('post_bookmarks')
+          .from('post_bookmarks' as const)
           .select('post_id')
           .eq('post_id', slugOrId)
           .eq('user_id', userId)
@@ -126,7 +126,7 @@ async function getPostBySlugOrId(
     if (userId) {
       // Fetch user reaction
       const { data: userReaction } = await supabase
-        .from('post_reactions')
+        .from('post_reactions' as const)
         .select('type')
         .eq('post_id', slugOrId)
         .eq('user_id', userId)
@@ -134,7 +134,7 @@ async function getPostBySlugOrId(
 
       // Fetch user bookmark
       const { data: userBookmark } = await supabase
-        .from('post_bookmarks')
+        .from('post_bookmarks' as const)
         .select('post_id')
         .eq('post_id', slugOrId)
         .eq('user_id', userId)
@@ -223,7 +223,7 @@ export default async function PostBySlugPage({
       post.user_reaction?.reaction_type === 'dislike'
         ? post.user_reaction.reaction_type
         : null;
-    const initialBookmarked = !!post.user_bookmark?.id;
+    const initialBookmarked = Boolean(post.user_bookmark?.id);
 
     return (
       <>

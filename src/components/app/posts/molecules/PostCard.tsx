@@ -26,7 +26,7 @@ interface PostCardProps {
 
 export const truncateText = (text: string | null, maxLength = 150): string => {
   if (!text) return '';
-  return text.length <= maxLength ? text : text.substring(0, maxLength) + '...';
+  return text.length <= maxLength ? text : `${text.substring(0, maxLength)}...`;
 };
 
 export default function PostCard({ post, collectiveSlug }: PostCardProps) {

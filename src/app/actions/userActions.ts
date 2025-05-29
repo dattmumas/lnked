@@ -277,7 +277,7 @@ export async function deleteUserAccount(): Promise<{
     const message = err instanceof Error ? err.message : String(err);
     return {
       success: false,
-      error: 'Failed to delete Supabase Auth user: ' + message,
+      error: `Failed to delete Supabase Auth user: ${message}`,
     };
   }
 

@@ -5,7 +5,7 @@ import { getStripe } from "@/lib/stripe";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 export async function POST(req: Request, context: any) {
-  const collectiveId = context.params.collectiveId;
+  const {collectiveId} = context.params;
   if (!collectiveId) {
     return NextResponse.json(
       { error: "Missing collectiveId" },

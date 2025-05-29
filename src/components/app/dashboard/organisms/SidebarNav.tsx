@@ -6,6 +6,7 @@ import {
   Users2,
   Settings as SettingsIcon,
   ArrowUpRight,
+  Video,
 } from 'lucide-react';
 import Link from 'next/link';
 import { SidebarLink } from './SidebarLink';
@@ -26,6 +27,11 @@ const mainNavItems = [
     href: '/dashboard/posts',
     icon: FileText,
     label: 'My Posts',
+  },
+  {
+    href: '/dashboard/video-management',
+    icon: Video,
+    label: 'Video Management',
   },
 ];
 

@@ -46,7 +46,7 @@ export class RealtimeService {
       await chatSecurity.logSecurityEvent({
         action: 'realtime_subscription_denied',
         userId: user.id,
-        conversationId: conversationId,
+        conversationId,
         success: false,
         details: { reason: 'User not authorized to subscribe to this conversation' },
       });

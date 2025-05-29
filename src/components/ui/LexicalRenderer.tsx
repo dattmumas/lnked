@@ -295,7 +295,7 @@ export function LexicalRenderer({ contentJSON }: LexicalRendererProps) {
                 height={600}
                 className="rounded-lg shadow-lg w-full h-auto"
                 loading="lazy"
-                unoptimized={true}
+                unoptimized
                 onError={(e) => {
                   console.error('Image failed to load:', src);
                   (e.target as HTMLImageElement).style.display = 'none';
@@ -321,7 +321,7 @@ export function LexicalRenderer({ contentJSON }: LexicalRendererProps) {
               height={300}
               className="rounded inline-block mx-2"
               loading="lazy"
-              unoptimized={true}
+              unoptimized
               onError={(e) => {
                 (e.target as HTMLImageElement).style.display = 'none';
               }}
@@ -353,7 +353,7 @@ export function LexicalRenderer({ contentJSON }: LexicalRendererProps) {
                 height={400}
                 className="rounded-lg w-full h-auto"
                 loading="lazy"
-                unoptimized={true}
+                unoptimized
               />
             </div>
           );

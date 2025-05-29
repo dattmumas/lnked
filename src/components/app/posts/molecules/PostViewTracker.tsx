@@ -19,7 +19,7 @@ export default function PostViewTracker({ postId }: PostViewTrackerProps) {
 
     try {
       // Use sessionStorage to track if view was counted in this session
-      sessionTracked = !!sessionStorage.getItem(trackingKey);
+      sessionTracked = Boolean(sessionStorage.getItem(trackingKey));
     } catch (error) {
       console.warn('sessionStorage not available for view tracking:', error);
     }

@@ -34,7 +34,7 @@ export default function SignInPage() {
 
     try {
       if (process.env.NODE_ENV === 'development') {
-        console.log('Attempting sign in for:', formData.email);
+        console.info('Attempting sign in for:', formData.email);
       }
 
       // Record the attempt for rate limiting
@@ -75,7 +75,7 @@ export default function SignInPage() {
       }
 
       if (process.env.NODE_ENV === 'development') {
-        console.log('Sign in successful, session established');
+        console.info('Sign in successful, session established');
       }
 
       // Verify the session was actually stored with retry
@@ -86,9 +86,9 @@ export default function SignInPage() {
       );
 
       if (process.env.NODE_ENV === 'development') {
-        console.log(
+        console.info(
           'Session verification after login:',
-          !!sessionCheck.data.session,
+          Boolean(sessionCheck.data.session),
         );
       }
 
@@ -105,7 +105,7 @@ export default function SignInPage() {
       // This gives cookies time to be properly set across all contexts
       setTimeout(() => {
         if (process.env.NODE_ENV === 'development') {
-          console.log('Redirecting to dashboard after successful login');
+          console.info('Redirecting to dashboard after successful login');
         }
         router.push('/dashboard');
       }, 1000);

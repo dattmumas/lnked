@@ -14,5 +14,5 @@ export async function getUserSubscription(
     .eq("status", "active")
     .maybeSingle();
   if (error) throw error;
-  return !!data;
+  return Boolean(data);
 }

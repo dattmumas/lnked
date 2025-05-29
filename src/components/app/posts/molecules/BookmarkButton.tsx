@@ -29,7 +29,7 @@ export default function BookmarkButton({
       });
       if (res.ok) {
         const data = await res.json();
-        setBookmarked(!!data.bookmarked);
+        setBookmarked(Boolean(data.bookmarked));
       } else {
         setBookmarked(prevBookmarked);
       }

@@ -30,7 +30,7 @@ export function SecurityStatus({
 
         // Check basic authentication
         const user = await chatSecurity['getCurrentUserId']?.();
-        const isAuthenticated = !!user;
+        const isAuthenticated = Boolean(user);
 
         let canViewConversation = false;
         let canSendMessages = false;

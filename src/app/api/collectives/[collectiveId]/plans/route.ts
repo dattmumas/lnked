@@ -15,7 +15,7 @@ interface PlanRequestBody {
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function POST(req: Request, context: any) {
-  const collectiveId = context.params.collectiveId;
+  const {collectiveId} = context.params;
   if (!collectiveId) {
     return NextResponse.json(
       { error: "Missing collectiveId" },
@@ -137,7 +137,7 @@ export async function POST(req: Request, context: any) {
     unit_amount: price.unit_amount,
     currency: price.currency,
     interval: price.recurring?.interval,
-    trial_period_days: trial_period_days,
+    trial_period_days,
     active: true,
   });
   if (priceErr) {

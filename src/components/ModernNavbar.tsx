@@ -32,6 +32,7 @@ import {
   Compass,
   Search,
   MessageCircle,
+  Video,
 } from 'lucide-react';
 import ModeToggle from '@/components/app/nav/ModeToggle';
 import SearchBar from '@/components/app/nav/SearchBar';
@@ -322,6 +323,15 @@ export default function ModernNavbar({
                         <Link href="/dashboard/posts" className="gap-3 p-2">
                           <FileText className="h-4 w-4" />
                           <span>My Posts</span>
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild className="cursor-pointer">
+                        <Link
+                          href="/dashboard/video-management"
+                          className="gap-3 p-2"
+                        >
+                          <Video className="h-4 w-4" />
+                          <span>Video Management</span>
                         </Link>
                       </DropdownMenuItem>
                       <DropdownMenuItem asChild className="cursor-pointer">

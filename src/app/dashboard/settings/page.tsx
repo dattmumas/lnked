@@ -8,8 +8,8 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import EditUserSettingsForm from '@/components/app/settings/EditUserSettingsForm';
-import DeleteAccountSection from '@/components/app/settings/DeleteAccountSection';
+import EditUserSettingsForm from '@/components/app/uploads/settings/EditUserSettingsForm';
+import DeleteAccountSection from '@/components/app/uploads/settings/DeleteAccountSection';
 import { NotificationPreferences } from '@/components/notifications/NotificationPreferences';
 import {
   User,

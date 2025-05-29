@@ -99,7 +99,7 @@ export default async function ManageCollectiveMembersPage({
           Manage Members for: {collective.name}
         </h1>
         <Link
-          href={`/dashboard`}
+          href="/dashboard"
           className="text-sm text-accent hover:underline"
         >
           &larr; Back to Dashboard

@@ -38,7 +38,7 @@ export function PostMetadataBar({
             {...register("title")}
             placeholder="Title is Required"
             className="text-xl font-semibold px-3 py-2 border border-input rounded-md min-w-0"
-            aria-invalid={!!errors.title}
+            aria-invalid={Boolean(errors.title)}
             autoFocus
           />
         </div>

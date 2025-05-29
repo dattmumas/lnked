@@ -63,7 +63,7 @@ export function useFollowerData({
             );
           }
 
-          setIsFollowing(!!followData);
+          setIsFollowing(Boolean(followData));
         } else {
           setIsFollowing(false);
         }
@@ -135,7 +135,7 @@ export function useRealtimeFollowerData({
             );
           }
 
-          setIsFollowing(!!followData);
+          setIsFollowing(Boolean(followData));
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Unknown error');

@@ -112,7 +112,7 @@ export async function inviteMemberToCollective(
       if (inviteError) {
         return {
           success: false,
-          error: 'Failed to create invite: ' + inviteError.message,
+          error: `Failed to create invite: ${inviteError.message}`,
         };
       }
       // Fetch collective name for email
@@ -178,7 +178,7 @@ export async function inviteMemberToCollective(
       console.error('Error inviting member:', insertError);
       return {
         success: false,
-        error: 'Failed to invite member. ' + insertError.message,
+        error: `Failed to invite member. ${insertError.message}`,
       };
     }
 
@@ -240,7 +240,7 @@ export async function changeMemberRole({
   if (updateError) {
     return {
       success: false,
-      error: 'Failed to update role: ' + updateError.message,
+      error: `Failed to update role: ${updateError.message}`,
     };
   }
   return { success: true };
@@ -295,7 +295,7 @@ export async function removeMemberFromCollective({
   if (deleteError) {
     return {
       success: false,
-      error: 'Failed to remove member: ' + deleteError.message,
+      error: `Failed to remove member: ${deleteError.message}`,
     };
   }
   return { success: true };
@@ -345,7 +345,7 @@ export async function resendCollectiveInvite({
   if (updateError) {
     return {
       success: false,
-      error: 'Failed to resend invite: ' + updateError.message,
+      error: `Failed to resend invite: ${updateError.message}`,
     };
   }
   // Fetch invite details for email
@@ -410,7 +410,7 @@ export async function cancelCollectiveInvite({
   if (updateError) {
     return {
       success: false,
-      error: 'Failed to cancel invite: ' + updateError.message,
+      error: `Failed to cancel invite: ${updateError.message}`,
     };
   }
   return { success: true };
@@ -483,7 +483,7 @@ export async function acceptCollectiveInvite({
   if (addError) {
     return {
       success: false,
-      error: 'Failed to add you as a member: ' + addError.message,
+      error: `Failed to add you as a member: ${addError.message}`,
     };
   }
   await supabaseAdmin
