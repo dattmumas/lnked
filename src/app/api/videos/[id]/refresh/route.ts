@@ -42,8 +42,8 @@ export async function POST(
       );
     }
 
-    // Check if we have a valid MUX asset ID
-    if (!videoAsset.mux_asset_id) {
+    // If no upload or asset ID exists, nothing to refresh
+    if (!videoAsset.mux_upload_id && !videoAsset.mux_asset_id) {
       return NextResponse.json({
         success: true,
         video: videoAsset,
@@ -65,14 +65,13 @@ export async function POST(
     let responseMessage = '';
 
     // Following MUX's documented API patterns:
-    // Upload IDs (start with "upload-") use uploads.retrieve()
-    // Asset IDs use assets.retrieve()
-    if (videoAsset.mux_asset_id.startsWith('upload-')) {
-      console.info('Checking upload status for:', videoAsset.mux_asset_id);
+    // If we have an upload ID but no asset ID, check upload status
+    if (videoAsset.mux_upload_id && !videoAsset.mux_asset_id) {
+      console.info('Checking upload status for:', videoAsset.mux_upload_id);
       
       try {
         // Use MUX Direct Uploads API for upload IDs
-        const upload = await mux.video.uploads.retrieve(videoAsset.mux_asset_id);
+        const upload = await mux.video.uploads.retrieve(videoAsset.mux_upload_id);
         
         console.info('Upload status:', upload.status);
         console.info('Upload asset_id:', upload.asset_id);
@@ -123,8 +122,9 @@ export async function POST(
           error: 'Failed to check upload status from MUX'
         }, { status: 500 });
       }
-    } else {
-      // This is an asset ID - use MUX Assets API
+    } 
+    // If we have an asset ID, check asset status
+    else if (videoAsset.mux_asset_id) {
       console.info('Getting asset status for asset ID:', videoAsset.mux_asset_id);
       
       try {
@@ -146,62 +146,10 @@ export async function POST(
         console.info('Asset status:', asset.status);
       } catch (assetError: unknown) {
         console.error('Asset status check failed:', assetError);
-
-        // Type guard for MUX error
-        interface MuxError {
-          error?: {
-            messages?: string[];
-          };
-          message?: string;
-        }
-
-        const isMuxError = (err: unknown): err is MuxError => {
-          return typeof err === 'object' && err !== null && ('error' in err || 'message' in err);
-        };
-
-        // If MUX indicates we passed an Upload ID to the Assets API, fallback to uploads.retrieve
-        if (isMuxError(assetError)) {
-          const muxErrMsg: string | undefined = assetError.error?.messages?.[0] || assetError.message;
-          if (muxErrMsg && muxErrMsg.includes('Upload ID')) {
-            try {
-              console.info('Asset API says it is an Upload ID, falling back to uploads.retrieve');
-              const uploadFallback = await mux.video.uploads.retrieve(videoAsset.mux_asset_id);
-
-              // If this upload now has an asset_id, update database accordingly
-              if (uploadFallback.asset_id) {
-                updateData = {
-                  mux_asset_id: uploadFallback.asset_id,
-                  status: 'processing',
-                  updated_at: new Date().toISOString(),
-                };
-
-                responseMessage = 'Upload completed (fallback), asset created.';
-              } else {
-                updateData = {
-                  status: uploadFallback.status,
-                  updated_at: new Date().toISOString(),
-                };
-                responseMessage = `Upload in progress (fallback): ${uploadFallback.status}`;
-              }
-            } catch (fallbackErr) {
-              console.error('Fallback uploads.retrieve failed:', fallbackErr);
-              return NextResponse.json({
-                success: false,
-                error: 'Failed to retrieve video status from MUX'
-              }, { status: 500 });
-            }
-          } else {
-            return NextResponse.json({
-              success: false,
-              error: 'Failed to retrieve video status from MUX'
-            }, { status: 500 });
-          }
-        } else {
-          return NextResponse.json({
-            success: false,
-            error: 'Failed to retrieve video status from MUX'
-          }, { status: 500 });
-        }
+        return NextResponse.json({
+          success: false,
+          error: 'Failed to retrieve video status from MUX'
+        }, { status: 500 });
       }
     }
 

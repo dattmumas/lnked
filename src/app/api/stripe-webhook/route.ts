@@ -245,6 +245,10 @@ export async function POST(req: Request) {
           }
           break;
         }
+        default:
+          // This should not happen as we filter by relevantEvents, but handle it gracefully
+          console.warn(`Unhandled Stripe webhook event type: ${event.type}`);
+          break;
       }
     } catch (err) {
       console.error('Error handling Stripe webhook event:', err);

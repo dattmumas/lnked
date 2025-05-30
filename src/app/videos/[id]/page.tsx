@@ -3,6 +3,22 @@ import { notFound } from 'next/navigation';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import VideoPlayerPageClient from '@/components/app/video/VideoPlayerPageClient';
 
+// Type based on database schema
+interface VideoAsset {
+  id: string;
+  title: string | null;
+  description: string | null;
+  status: string | null;
+  duration: number | null;
+  aspect_ratio: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+  mux_asset_id: string;
+  mux_playback_id: string | null;
+  created_by: string | null;
+  mp4_support?: string | null; // 'none' | 'capped-1080p' | 'audio-only'
+}
+
 interface VideoPlayerPageProps {
   params: Promise<{ id: string }>;
 }
@@ -33,6 +49,11 @@ export default async function VideoPlayerPage({
     notFound();
   }
 
+  // Check if video has the required non-null fields
+  if (!video.mux_asset_id) {
+    notFound();
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <Suspense
@@ -42,7 +63,7 @@ export default async function VideoPlayerPage({
           </div>
         }
       >
-        <VideoPlayerPageClient video={video} />
+        <VideoPlayerPageClient video={video as VideoAsset} />
       </Suspense>
     </div>
   );

@@ -222,13 +222,16 @@ export async function deleteUserAccount(): Promise<{
       .eq('user_id', userId)
       .in('status', ['active', 'trialing']);
     if (subscriptions) {
-      for (const sub of subscriptions) {
-        try {
-          await stripe.subscriptions.cancel(sub.id);
-        } catch (err) {
-          console.error('Error cancelling Stripe subscription:', err);
-        }
-      }
+      // Cancel all subscriptions in parallel
+      await Promise.all(
+        subscriptions.map(async (sub) => {
+          try {
+            await stripe.subscriptions.cancel(sub.id);
+          } catch (err) {
+            console.error('Error cancelling Stripe subscription:', err);
+          }
+        })
+      );
     }
     // 3. Delete Stripe customer (if exists)
     const { data: customer } = await supabaseAdmin

@@ -1,17 +1,17 @@
-"use client";
+'use client';
 
-import React, { useState, useTransition, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { useForm, SubmitHandler } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
+import React, { useState, useTransition, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useForm, SubmitHandler } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import {
   CollectiveSettingsClientSchema,
   CollectiveSettingsClientFormValues,
-} from "@/lib/schemas/collectiveSettingsSchema";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+} from '@/lib/schemas/collectiveSettingsSchema';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import {
   Card,
   CardContent,
@@ -19,7 +19,7 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
+} from '@/components/ui/card';
 import {
   Table,
   TableBody,
@@ -27,26 +27,26 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
+} from '@/components/ui/table';
 import {
   updateCollectiveSettings,
   getCollectiveStripeStatus,
   deleteCollective,
   transferCollectiveOwnership,
-} from "@/app/actions/collectiveActions";
-import { Loader2 } from "lucide-react";
-import { useState as useClientState } from "react";
-import type { Database } from "@/lib/database.types";
+} from '@/app/actions/collectiveActions';
+import { Loader2 } from 'lucide-react';
+import { useState as useClientState } from 'react';
+import type { Database } from '@/lib/database.types';
 import {
   createPriceTier,
   deactivatePriceTier,
-} from "@/app/actions/subscriptionActions";
+} from '@/app/actions/subscriptionActions';
 
 interface SubscriptionTier {
   id: string;
   unit_amount: number | null;
   currency: string | null;
-  interval: Database["public"]["Enums"]["price_interval"] | null;
+  interval: Database['public']['Enums']['price_interval'] | null;
   description: string | null;
   active: boolean | null;
 }
@@ -71,9 +71,9 @@ export default function EditCollectiveSettingsForm({
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [tierError, setTierError] = useState<string | null>(null);
-  const [newAmount, setNewAmount] = useState<string>("");
-  const [newInterval, setNewInterval] = useState<"month" | "year">("month");
-  const [newName, setNewName] = useState<string>("");
+  const [newAmount, setNewAmount] = useState<string>('');
+  const [newInterval, setNewInterval] = useState<'month' | 'year'>('month');
+  const [newName, setNewName] = useState<string>('');
 
   const form = useForm<CollectiveSettingsClientFormValues>({
     resolver: zodResolver(CollectiveSettingsClientSchema),
@@ -90,8 +90,8 @@ export default function EditCollectiveSettingsForm({
   } = form;
 
   // Auto-generate slug from name if user hasn't manually edited slug much
-  const watchedName = watch("name");
-  const watchedSlug = watch("slug");
+  const watchedName = watch('name');
+  const watchedSlug = watch('slug');
 
   React.useEffect(() => {
     if (
@@ -99,7 +99,7 @@ export default function EditCollectiveSettingsForm({
       (watchedSlug === defaultValues.slug ||
         generateSlug(defaultValues.name) === watchedSlug)
     ) {
-      setValue("slug", generateSlug(watchedName), {
+      setValue('slug', generateSlug(watchedName), {
         shouldValidate: true,
         shouldDirty: true,
       });
@@ -115,19 +115,19 @@ export default function EditCollectiveSettingsForm({
   const generateSlug = (value: string) => {
     return value
       .toLowerCase()
-      .replace(/\s+/g, "-")
-      .replace(/[^a-z0-9-]/g, "")
+      .replace(/\s+/g, '-')
+      .replace(/[^a-z0-9-]/g, '')
       .substring(0, 50);
   };
 
-  const onSubmit: SubmitHandler<CollectiveSettingsClientFormValues> = async (
-    data
+  const onSubmit: SubmitHandler<CollectiveSettingsClientFormValues> = (
+    data,
   ) => {
     setError(null);
     setSuccessMessage(null);
 
     if (!isDirty) {
-      setSuccessMessage("No changes to save.");
+      setSuccessMessage('No changes to save.');
       return;
     }
 
@@ -137,7 +137,7 @@ export default function EditCollectiveSettingsForm({
         ...data,
         tags_string: data.tags_string
           ? data.tags_string
-              .split(",")
+              .split(',')
               .map((tag) => tag.trim())
               .filter((tag) => tag)
           : [],
@@ -149,12 +149,12 @@ export default function EditCollectiveSettingsForm({
           result.fieldErrors
             ? `${result.error} ${Object.values(result.fieldErrors)
                 .flat()
-                .join(", ")}`
-            : result.error
+                .join(', ')}`
+            : result.error,
         );
       } else {
         setSuccessMessage(
-          result.message || "Collective settings updated successfully!"
+          result.message || 'Collective settings updated successfully!',
         );
         const newSlug = result.updatedSlug || currentSlug;
         // Reset form with new default values which includes the potentially new slug
@@ -162,7 +162,7 @@ export default function EditCollectiveSettingsForm({
         // If slug changed, redirect to the new settings page URL for consistency
         if (result.updatedSlug && result.updatedSlug !== currentSlug) {
           router.push(
-            `/dashboard/collectives/${collectiveId}/settings?slug_changed_to=${newSlug}`
+            `/dashboard/collectives/${collectiveId}/settings?slug_changed_to=${newSlug}`,
           );
         } else {
           router.refresh(); // Refresh data on current page if slug didn't change
@@ -172,7 +172,10 @@ export default function EditCollectiveSettingsForm({
   };
 
   // Stripe Connect status state
-  const [stripeStatus, setStripeStatus] = useClientState<Record<string, unknown> | null>(null);
+  const [stripeStatus, setStripeStatus] = useClientState<Record<
+    string,
+    unknown
+  > | null>(null);
   const [stripeLoading, setStripeLoading] = useClientState(false);
   const [stripeError, setStripeError] = useClientState<string | null>(null);
 
@@ -181,7 +184,7 @@ export default function EditCollectiveSettingsForm({
     getCollectiveStripeStatus(collectiveId)
       .then((status) => setStripeStatus(status))
       .catch((err) =>
-        setStripeError(err?.message || "Failed to load Stripe status")
+        setStripeError(err?.message || 'Failed to load Stripe status'),
       )
       .finally(() => setStripeLoading(false));
   }, [collectiveId, setStripeLoading, setStripeStatus, setStripeError]);
@@ -192,16 +195,17 @@ export default function EditCollectiveSettingsForm({
     try {
       const res = await fetch(
         `/api/collectives/${collectiveId}/stripe-onboard`,
-        { method: "POST" }
+        { method: 'POST' },
       );
       const data = await res.json();
       if (data.url) {
         window.location.href = data.url;
       } else {
-        setStripeError(data.error || "Failed to get Stripe onboarding link");
+        setStripeError(data.error || 'Failed to get Stripe onboarding link');
       }
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Failed to connect to Stripe";
+      const message =
+        err instanceof Error ? err.message : 'Failed to connect to Stripe';
       setStripeError(message);
     } finally {
       setStripeLoading(false);
@@ -221,15 +225,15 @@ export default function EditCollectiveSettingsForm({
     if (result.success) {
       setDeleteSuccess(true);
       setTimeout(() => {
-        router.push("/dashboard/collectives");
+        router.push('/dashboard/collectives');
       }, 2000);
     } else {
-      setDeleteError(result.error || "Failed to delete collective.");
+      setDeleteError(result.error || 'Failed to delete collective.');
     }
   };
 
   // Transfer Ownership
-  const [transferTo, setTransferTo] = useClientState<string>("");
+  const [transferTo, setTransferTo] = useClientState<string>('');
   const [transferLoading, setTransferLoading] = useClientState(false);
   const [transferError, setTransferError] = useClientState<string | null>(null);
   const [transferSuccess, setTransferSuccess] = useClientState(false);
@@ -247,16 +251,16 @@ export default function EditCollectiveSettingsForm({
         router.refresh();
       }, 2000);
     } else {
-      setTransferError(result.error || "Failed to transfer ownership.");
+      setTransferError(result.error || 'Failed to transfer ownership.');
     }
   };
 
-  const handleAddTier = async (e: React.FormEvent) => {
+  const handleAddTier = (e: React.FormEvent) => {
     e.preventDefault();
     setTierError(null);
     const amount = parseInt(newAmount, 10);
     if (!amount) {
-      setTierError("Enter a valid amount in cents");
+      setTierError('Enter a valid amount in cents');
       return;
     }
     startTransition(async () => {
@@ -269,12 +273,12 @@ export default function EditCollectiveSettingsForm({
       if (result.success) {
         router.refresh();
       } else {
-        setTierError(result.error || "Failed to add tier");
+        setTierError(result.error || 'Failed to add tier');
       }
     });
   };
 
-  const handleDeactivateTier = async (priceId: string) => {
+  const handleDeactivateTier = (priceId: string) => {
     startTransition(async () => {
       const result = await deactivatePriceTier({
         collectiveId,
@@ -283,7 +287,7 @@ export default function EditCollectiveSettingsForm({
       if (result.success) {
         router.refresh();
       } else {
-        setTierError(result.error || "Failed to remove tier");
+        setTierError(result.error || 'Failed to remove tier');
       }
     });
   };
@@ -303,7 +307,7 @@ export default function EditCollectiveSettingsForm({
             <Label htmlFor="name">Collective Name</Label>
             <Input
               id="name"
-              {...register("name")}
+              {...register('name')}
               disabled={isPending || isSubmitting}
             />
             {errors.name && (
@@ -314,7 +318,7 @@ export default function EditCollectiveSettingsForm({
             <Label htmlFor="slug">URL Slug (/collectives/your-slug)</Label>
             <Input
               id="slug"
-              {...register("slug")}
+              {...register('slug')}
               disabled={isPending || isSubmitting}
             />
             {errors.slug && (
@@ -325,7 +329,7 @@ export default function EditCollectiveSettingsForm({
             <Label htmlFor="description">Description</Label>
             <Textarea
               id="description"
-              {...register("description")}
+              {...register('description')}
               placeholder="What is your collective about?"
               rows={4}
               disabled={isPending || isSubmitting}
@@ -340,7 +344,7 @@ export default function EditCollectiveSettingsForm({
             <Label htmlFor="tags_string">Tags (comma-separated)</Label>
             <Input
               id="tags_string"
-              {...register("tags_string")}
+              {...register('tags_string')}
               placeholder="e.g., web development, ai, nextjs"
               disabled={isPending || isSubmitting}
             />
@@ -369,7 +373,7 @@ export default function EditCollectiveSettingsForm({
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {stripeStatus?.status !== "active" ? (
+              {stripeStatus?.status !== 'active' ? (
                 <p className="text-muted-foreground">
                   Connect Stripe to manage tiers.
                 </p>
@@ -388,13 +392,11 @@ export default function EditCollectiveSettingsForm({
                       <TableBody>
                         {tiers.map((tier) => (
                           <TableRow key={tier.id}>
-                            <TableCell>
-                              {tier.description || tier.id}
-                            </TableCell>
+                            <TableCell>{tier.description || tier.id}</TableCell>
                             <TableCell>
                               {tier.unit_amount
                                 ? `$${(tier.unit_amount / 100).toFixed(2)}`
-                                : ""}
+                                : ''}
                             </TableCell>
                             <TableCell>{tier.interval}</TableCell>
                             <TableCell className="text-right">
@@ -402,11 +404,7 @@ export default function EditCollectiveSettingsForm({
                                 size="sm"
                                 variant="destructive"
                                 onClick={() => {
-                                  if (
-                                    window.confirm(
-                                      "Disable this tier?"
-                                    )
-                                  ) {
+                                  if (window.confirm('Disable this tier?')) {
                                     handleDeactivateTier(tier.id);
                                   }
                                 }}
@@ -438,7 +436,7 @@ export default function EditCollectiveSettingsForm({
                         className="border rounded-md p-2"
                         value={newInterval}
                         onChange={(e) =>
-                          setNewInterval(e.target.value as "month" | "year")
+                          setNewInterval(e.target.value as 'month' | 'year')
                         }
                       >
                         <option value="month">Monthly</option>
@@ -473,12 +471,12 @@ export default function EditCollectiveSettingsForm({
                 <p>Loading Stripe status...</p>
               ) : stripeError ? (
                 <p className="text-destructive">{stripeError}</p>
-              ) : stripeStatus?.status === "active" ? (
+              ) : stripeStatus?.status === 'active' ? (
                 <p className="text-success">
                   Stripe Connected: Account is active and ready to receive
                   payouts.
                 </p>
-              ) : stripeStatus?.status === "pending" ? (
+              ) : stripeStatus?.status === 'pending' ? (
                 <p className="text-warning">
                   Stripe Connected: Onboarding incomplete or pending
                   verification.
@@ -501,38 +499,38 @@ export default function EditCollectiveSettingsForm({
           </Card>
           {/* Danger Zone: Delete Collective */}
           <section className="mt-12 border-t pt-8">
-              <h2 className="text-xl font-bold text-destructive mb-2">
-                Delete Collective
-              </h2>
-              <p className="mb-4 text-muted-foreground">
-                This action is <b>irreversible</b>. All posts, members, invites,
-                and data for this collective will be permanently deleted. You
-                cannot undo this action.
+            <h2 className="text-xl font-bold text-destructive mb-2">
+              Delete Collective
+            </h2>
+            <p className="mb-4 text-muted-foreground">
+              This action is <b>irreversible</b>. All posts, members, invites,
+              and data for this collective will be permanently deleted. You
+              cannot undo this action.
+            </p>
+            {deleteError && (
+              <p className="text-destructive mb-2">{deleteError}</p>
+            )}
+            {deleteSuccess ? (
+              <p className="text-success mb-2">
+                Collective deleted. Redirecting...
               </p>
-              {deleteError && (
-                <p className="text-destructive mb-2">{deleteError}</p>
-              )}
-              {deleteSuccess ? (
-                <p className="text-success mb-2">
-                  Collective deleted. Redirecting...
-                </p>
-              ) : (
-                <Button
-                  variant="destructive"
-                  disabled={deleteLoading}
-                  onClick={() => {
-                    if (
-                      window.confirm(
-                        "Are you sure you want to delete this collective? This cannot be undone."
-                      )
-                    ) {
-                      handleDeleteCollective();
-                    }
-                  }}
-                >
-                  {deleteLoading ? "Deleting..." : "Delete Collective"}
-                </Button>
-              )}
+            ) : (
+              <Button
+                variant="destructive"
+                disabled={deleteLoading}
+                onClick={() => {
+                  if (
+                    window.confirm(
+                      'Are you sure you want to delete this collective? This cannot be undone.',
+                    )
+                  ) {
+                    handleDeleteCollective();
+                  }
+                }}
+              >
+                {deleteLoading ? 'Deleting...' : 'Delete Collective'}
+              </Button>
+            )}
           </section>
           {/* Transfer Ownership Section */}
           {eligibleMembers.length > 0 && (
@@ -569,14 +567,14 @@ export default function EditCollectiveSettingsForm({
                   onClick={() => {
                     if (
                       window.confirm(
-                        "Are you sure you want to transfer ownership? This cannot be undone."
+                        'Are you sure you want to transfer ownership? This cannot be undone.',
                       )
                     ) {
                       handleTransferOwnership();
                     }
                   }}
                 >
-                  {transferLoading ? "Transferring..." : "Transfer Ownership"}
+                  {transferLoading ? 'Transferring...' : 'Transfer Ownership'}
                 </Button>
               )}
             </section>

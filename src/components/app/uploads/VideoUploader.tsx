@@ -1,467 +1,176 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
+import MuxUploader from '@mux/mux-uploader-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Trash2, Upload, Video, AlertCircle, CheckCircle2 } from 'lucide-react';
-import { uploadService } from '@/lib/services/upload-service';
+import { Upload, CheckCircle2, AlertCircle } from 'lucide-react';
 
-// Simple inline Progress component
-const Progress = ({
-  value,
-  className = '',
-}: {
-  value: number;
-  className?: string;
-}) => (
-  <div className={`w-full bg-gray-200 rounded-full h-2 ${className}`}>
-    <div
-      className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-      style={{ width: `${Math.min(100, Math.max(0, value))}%` }}
-    />
-  </div>
-);
-
-interface VideoFile {
-  id: string;
-  file: File;
-  metadata: {
-    title: string;
-    description: string;
-    is_public: boolean;
-    collective_id?: string;
-  };
-  progress: number;
-  status: 'pending' | 'uploading' | 'completed' | 'failed';
-  error?: string;
-  asset_id?: string;
+interface VideoMetadata {
+  title: string;
+  description: string;
+  is_public: boolean;
+  collective_id?: string;
 }
 
 interface VideoUploaderProps {
-  onUploadComplete?: (assetId: string, metadata: VideoFile['metadata']) => void;
-  onUploadError?: (error: string) => void;
+  onUploadComplete?: (_assetId: string, _metadata: VideoMetadata) => void;
+  onUploadError?: (_error: string) => void;
   collectiveId?: string;
-  maxFiles?: number;
-  acceptedTypes?: string[];
 }
 
 export default function VideoUploader({
   onUploadComplete,
   onUploadError,
   collectiveId,
-  maxFiles = 5,
-  acceptedTypes = [
-    'video/mp4',
-    'video/quicktime',
-    'video/x-msvideo',
-    'video/webm',
-    'video/ogg',
-    'video/avi',
-    'video/mov',
-  ],
 }: VideoUploaderProps) {
-  const [uploads, setUploads] = useState<VideoFile[]>([]);
-  const [isUploading, setIsUploading] = useState(false);
+  const [uploadStatus, setUploadStatus] = useState<
+    'idle' | 'uploading' | 'completed' | 'error'
+  >('idle');
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [assetId, setAssetId] = useState<string | null>(null);
 
-  const createVideoFile = useCallback(
-    (file: File): VideoFile => {
-      return {
-        id: Math.random().toString(36).substr(2, 9),
-        file,
-        metadata: {
-          title: file.name.replace(/\.[^/.]+$/, ''), // Remove extension
+  // Function to get upload URL from API
+  const getUploadUrl = useCallback(async () => {
+    try {
+      const response = await fetch('/api/videos/upload-url', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: 'Untitled Video',
           description: '',
           is_public: false,
           collective_id: collectiveId,
-        },
-        progress: 0,
-        status: 'pending',
-      };
-    },
-    [collectiveId],
-  );
+        }),
+      });
 
-  const handleFileSelect = useCallback(
-    (event: React.ChangeEvent<HTMLInputElement>) => {
-      const files = Array.from(event.target.files || []);
-
-      // Validate file count
-      if (uploads.length + files.length > maxFiles) {
-        onUploadError?.(`Cannot upload more than ${maxFiles} files at once`);
-        return;
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({}));
+        throw new Error(error.error || `HTTP ${response.status}`);
       }
 
-      // Validate file types
-      const invalidFiles = files.filter(
-        (file) => !acceptedTypes.includes(file.type),
-      );
-      if (invalidFiles.length > 0) {
-        onUploadError?.(
-          `Invalid file types: ${invalidFiles.map((f) => f.name).join(', ')}`,
-        );
-        return;
+      const result = await response.json();
+      if (result.success && result.uploadUrl) {
+        // Store the video ID for later use
+        if (result.video?.id) {
+          setAssetId(result.video.id);
+        }
+        return result.uploadUrl;
+      } else {
+        throw new Error('Invalid API response');
       }
+    } catch (error) {
+      console.error('Failed to get upload URL:', error);
+      throw error;
+    }
+  }, [collectiveId]);
 
-      // Validate file sizes (5GB limit)
-      const oversizedFiles = files.filter(
-        (file) => file.size > 5 * 1024 * 1024 * 1024,
-      );
-      if (oversizedFiles.length > 0) {
-        onUploadError?.(
-          `Files exceed 5GB limit: ${oversizedFiles.map((f) => f.name).join(', ')}`,
-        );
-        return;
-      }
-
-      const newUploads = files.map(createVideoFile);
-      setUploads((prev) => [...prev, ...newUploads]);
-
-      // Clear the input
-      event.target.value = '';
-    },
-    [uploads.length, maxFiles, acceptedTypes, onUploadError, createVideoFile],
-  );
-
-  const updateUploadMetadata = useCallback(
-    (
-      uploadId: string,
-      field: keyof VideoFile['metadata'],
-      value: string | boolean | string[],
-    ) => {
-      setUploads((prev) =>
-        prev.map((upload) =>
-          upload.id === uploadId
-            ? { ...upload, metadata: { ...upload.metadata, [field]: value } }
-            : upload,
-        ),
-      );
-    },
-    [],
-  );
-
-  const removeUpload = useCallback((uploadId: string) => {
-    setUploads((prev) => prev.filter((upload) => upload.id !== uploadId));
+  const handleUploadStart = useCallback(() => {
+    setUploadStatus('uploading');
+    setUploadProgress(0);
+    setErrorMessage(null);
   }, []);
 
-  const startUpload = useCallback(
-    async (uploadId: string) => {
-      const upload = uploads.find((u) => u.id === uploadId);
-      if (!upload) return;
+  const handleProgress = useCallback((e: CustomEvent<number>) => {
+    setUploadProgress(e.detail);
+  }, []);
 
-      setUploads((prev) =>
-        prev.map((u) =>
-          u.id === uploadId ? { ...u, status: 'uploading', progress: 0 } : u,
-        ),
-      );
+  const handleSuccess = useCallback(() => {
+    setUploadStatus('completed');
+    setUploadProgress(100);
 
-      try {
-        const result = await uploadService.uploadVideo(
-          upload.file,
-          upload.metadata,
-          (percentage) => {
-            setUploads((prev) =>
-              prev.map((u) =>
-                u.id === uploadId ? { ...u, progress: percentage } : u,
-              ),
-            );
-          },
-        );
+    if (assetId) {
+      onUploadComplete?.(assetId, {
+        title: 'Untitled Video',
+        description: '',
+        is_public: false,
+        collective_id: collectiveId,
+      });
+    }
+  }, [assetId, collectiveId, onUploadComplete]);
 
-        if (result.success && result.data) {
-          setUploads((prev) =>
-            prev.map((u) =>
-              u.id === uploadId
-                ? {
-                    ...u,
-                    status: 'completed',
-                    progress: 100,
-                    asset_id: result.data!.asset_id,
-                  }
-                : u,
-            ),
-          );
-
-          onUploadComplete?.(result.data.asset_id, upload.metadata);
-        } else {
-          setUploads((prev) =>
-            prev.map((u) =>
-              u.id === uploadId
-                ? {
-                    ...u,
-                    status: 'failed',
-                    error: result.error || 'Upload failed',
-                  }
-                : u,
-            ),
-          );
-
-          onUploadError?.(result.error || 'Upload failed');
-        }
-      } catch (error) {
-        const errorMessage =
-          error instanceof Error ? error.message : 'Upload failed';
-
-        setUploads((prev) =>
-          prev.map((u) =>
-            u.id === uploadId
-              ? { ...u, status: 'failed', error: errorMessage }
-              : u,
-          ),
-        );
-
-        onUploadError?.(errorMessage);
-      }
+  const handleError = useCallback(
+    (e: CustomEvent<{ message?: string }>) => {
+      const message = e.detail?.message || 'Upload failed';
+      setUploadStatus('error');
+      setErrorMessage(message);
+      onUploadError?.(message);
     },
-    [uploads, onUploadComplete, onUploadError],
+    [onUploadError],
   );
 
-  const startAllUploads = useCallback(async () => {
-    const pendingUploads = uploads.filter((u) => u.status === 'pending');
-    if (pendingUploads.length === 0) return;
-
-    setIsUploading(true);
-
-    // Upload files sequentially to avoid overwhelming the server
-    for (const upload of pendingUploads) {
-      await startUpload(upload.id);
+  const getStatusIcon = () => {
+    switch (uploadStatus) {
+      case 'completed':
+        return <CheckCircle2 className="h-5 w-5 text-green-500" />;
+      case 'error':
+        return <AlertCircle className="h-5 w-5 text-red-500" />;
+      default:
+        return <Upload className="h-5 w-5" />;
     }
-
-    setIsUploading(false);
-  }, [uploads, startUpload]);
-
-  const formatFileSize = (bytes: number): string => {
-    const units = ['B', 'KB', 'MB', 'GB'];
-    let size = bytes;
-    let unitIndex = 0;
-
-    while (size >= 1024 && unitIndex < units.length - 1) {
-      size /= 1024;
-      unitIndex++;
-    }
-
-    return `${size.toFixed(1)} ${units[unitIndex]}`;
   };
 
-  const getStatusIcon = (status: VideoFile['status']) => {
-    switch (status) {
+  const getStatusBadge = () => {
+    switch (uploadStatus) {
+      case 'uploading':
+        return (
+          <Badge variant="secondary">Uploading... {uploadProgress}%</Badge>
+        );
       case 'completed':
-        return <CheckCircle2 className="h-4 w-4 text-green-500" />;
-      case 'failed':
-        return <AlertCircle className="h-4 w-4 text-red-500" />;
+        return <Badge variant="default">Completed</Badge>;
+      case 'error':
+        return <Badge variant="destructive">Error</Badge>;
       default:
-        return <Video className="h-4 w-4 text-blue-500" />;
+        return null;
     }
   };
 
   return (
     <div className="space-y-6">
-      {/* File Upload Section */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Upload className="h-5 w-5" />
-            Upload Videos
+          <CardTitle className="flex items-center justify-between">
+            <span className="flex items-center gap-2">
+              {getStatusIcon()}
+              Upload Videos
+            </span>
+            {getStatusBadge()}
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-              <Video className="mx-auto h-8 w-8 text-gray-400 mb-2" />
-              <div className="space-y-2">
-                <Label htmlFor="video-upload" className="cursor-pointer">
-                  <span className="text-sm font-medium text-blue-600 hover:text-blue-500">
-                    Choose video files
-                  </span>
-                  <span className="text-sm text-gray-500 ml-1">
-                    or drag and drop
-                  </span>
-                </Label>
-                <Input
-                  id="video-upload"
-                  type="file"
-                  multiple
-                  accept={acceptedTypes.join(',')}
-                  onChange={handleFileSelect}
-                  className="hidden"
-                />
-                <p className="text-xs text-gray-500">
-                  MP4, MOV, AVI, WebM up to 5GB each • Max {maxFiles} files
-                </p>
-              </div>
-            </div>
+            {/* MUX Uploader Component - Used as documented */}
+            {/* Note: Type assertions are required here due to MuxUploader's complex event handler types */}
+            {/* The component expects both React event handlers and DOM event listeners */}
+            {/* eslint-disable @typescript-eslint/no-explicit-any */}
+            <MuxUploader
+              endpoint={getUploadUrl}
+              onUploadStart={handleUploadStart}
+              onProgress={handleProgress as any}
+              onSuccess={handleSuccess}
+              onError={handleError as any}
+            />
+            {/* eslint-enable @typescript-eslint/no-explicit-any */}
 
-            {uploads.length > 0 && (
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">
-                  {uploads.length} file{uploads.length > 1 ? 's' : ''} selected
-                </span>
-                <Button
-                  onClick={startAllUploads}
-                  disabled={
-                    isUploading || uploads.every((u) => u.status !== 'pending')
-                  }
-                  className="flex items-center gap-2"
-                >
-                  <Upload className="h-4 w-4" />
-                  Upload All
-                </Button>
+            {/* Error Message */}
+            {uploadStatus === 'error' && errorMessage && (
+              <div className="bg-red-50 border border-red-200 rounded p-3">
+                <p className="text-sm text-red-600">{errorMessage}</p>
+              </div>
+            )}
+
+            {/* Success Message */}
+            {uploadStatus === 'completed' && assetId && (
+              <div className="bg-green-50 border border-green-200 rounded p-3">
+                <p className="text-sm text-green-600">
+                  Upload completed successfully! Video ID: {assetId}
+                </p>
               </div>
             )}
           </div>
         </CardContent>
       </Card>
-
-      {/* Upload Queue */}
-      {uploads.length > 0 && (
-        <div className="space-y-4">
-          <h3 className="text-lg font-semibold">Upload Queue</h3>
-
-          {uploads.map((upload) => (
-            <Card key={upload.id} className="relative">
-              <CardContent className="p-4">
-                <div className="flex items-start gap-4">
-                  <div className="flex-shrink-0">
-                    {getStatusIcon(upload.status)}
-                  </div>
-
-                  <div className="flex-1 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h4 className="font-medium">{upload.file.name}</h4>
-                        <p className="text-sm text-gray-500">
-                          {formatFileSize(upload.file.size)} •{' '}
-                          {upload.file.type}
-                        </p>
-                      </div>
-
-                      <div className="flex items-center gap-2">
-                        <Badge
-                          variant={
-                            upload.status === 'completed'
-                              ? 'default'
-                              : upload.status === 'failed'
-                                ? 'destructive'
-                                : upload.status === 'uploading'
-                                  ? 'secondary'
-                                  : 'outline'
-                          }
-                        >
-                          {upload.status}
-                        </Badge>
-
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => removeUpload(upload.id)}
-                          disabled={upload.status === 'uploading'}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-
-                    {/* Progress Bar */}
-                    {upload.status === 'uploading' && (
-                      <div className="space-y-1">
-                        <Progress value={upload.progress} className="h-2" />
-                        <p className="text-xs text-gray-500">
-                          {upload.progress}% uploaded
-                        </p>
-                      </div>
-                    )}
-
-                    {/* Error Message */}
-                    {upload.status === 'failed' && upload.error && (
-                      <div className="bg-red-50 border border-red-200 rounded p-2">
-                        <p className="text-sm text-red-600">{upload.error}</p>
-                      </div>
-                    )}
-
-                    {/* Metadata Form */}
-                    {upload.status === 'pending' && (
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-3 border-t">
-                        <div className="space-y-2">
-                          <Label htmlFor={`title-${upload.id}`}>Title</Label>
-                          <Input
-                            id={`title-${upload.id}`}
-                            value={upload.metadata.title}
-                            onChange={(e) =>
-                              updateUploadMetadata(
-                                upload.id,
-                                'title',
-                                e.target.value,
-                              )
-                            }
-                            placeholder="Video title"
-                          />
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label htmlFor={`description-${upload.id}`}>
-                            Description
-                          </Label>
-                          <Textarea
-                            id={`description-${upload.id}`}
-                            value={upload.metadata.description}
-                            onChange={(e) =>
-                              updateUploadMetadata(
-                                upload.id,
-                                'description',
-                                e.target.value,
-                              )
-                            }
-                            placeholder="Video description"
-                            rows={2}
-                          />
-                        </div>
-
-                        <div className="md:col-span-2 flex items-center gap-4">
-                          <label className="flex items-center gap-2">
-                            <input
-                              type="checkbox"
-                              checked={upload.metadata.is_public}
-                              onChange={(e) =>
-                                updateUploadMetadata(
-                                  upload.id,
-                                  'is_public',
-                                  e.target.checked,
-                                )
-                              }
-                              className="rounded"
-                            />
-                            <span className="text-sm">Make public</span>
-                          </label>
-
-                          <Button
-                            onClick={() => startUpload(upload.id)}
-                            disabled={!upload.metadata.title.trim()}
-                            size="sm"
-                          >
-                            Upload
-                          </Button>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Success State */}
-                    {upload.status === 'completed' && upload.asset_id && (
-                      <div className="bg-green-50 border border-green-200 rounded p-2">
-                        <p className="text-sm text-green-600">
-                          Upload completed! Asset ID: {upload.asset_id}
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
     </div>
   );
 }

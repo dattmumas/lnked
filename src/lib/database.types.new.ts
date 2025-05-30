@@ -1436,10 +1436,8 @@ export type Database = {
           description: string | null
           duration: number | null
           id: string
-          mp4_support: string | null
-          mux_asset_id: string | null
+          mux_asset_id: string
           mux_playback_id: string | null
-          mux_upload_id: string | null
           status: string | null
           title: string | null
           updated_at: string | null
@@ -1451,10 +1449,8 @@ export type Database = {
           description?: string | null
           duration?: number | null
           id?: string
-          mp4_support?: string | null
-          mux_asset_id?: string | null
+          mux_asset_id: string
           mux_playback_id?: string | null
-          mux_upload_id?: string | null
           status?: string | null
           title?: string | null
           updated_at?: string | null
@@ -1466,10 +1462,8 @@ export type Database = {
           description?: string | null
           duration?: number | null
           id?: string
-          mp4_support?: string | null
-          mux_asset_id?: string | null
+          mux_asset_id?: string
           mux_playback_id?: string | null
-          mux_upload_id?: string | null
           status?: string | null
           title?: string | null
           updated_at?: string | null
@@ -1582,24 +1576,6 @@ export type Database = {
           p_metadata?: Json
         }
         Returns: string
-      }
-      find_video_by_mux_id: {
-        Args: { p_mux_id: string }
-        Returns: {
-          aspect_ratio: string | null
-          created_at: string | null
-          created_by: string | null
-          description: string | null
-          duration: number | null
-          id: string
-          mp4_support: string | null
-          mux_asset_id: string | null
-          mux_playback_id: string | null
-          mux_upload_id: string | null
-          status: string | null
-          title: string | null
-          updated_at: string | null
-        }[]
       }
       get_follower_count: {
         Args: { entity_id: string; entity_type: string }

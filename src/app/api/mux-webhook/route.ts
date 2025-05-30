@@ -120,12 +120,12 @@ async function handleAssetReady(data: {
       updated_at: new Date().toISOString(),
     };
 
-    // MUX ready webhooks may fire before we've swapped the upload ID for the asset ID.
-    // Update the row where mux_asset_id matches EITHER the asset_id (data.id) OR the original upload_id.
+    // For asset.ready events, we update the record where mux_asset_id matches the asset ID
+    // If the record still has the upload ID in mux_upload_id, this means the asset was already created
     const { error: updateError } = await supabase
       .from('video_assets')
       .update(updateData)
-      .or(`mux_asset_id.eq.${data.id},mux_asset_id.eq.${data.upload_id ?? '___ignore___'}`);
+      .eq('mux_asset_id', data.id);
 
     if (updateError) {
       console.error('Failed to update asset:', updateError);
@@ -162,7 +162,7 @@ async function handleUploadAssetCreated(data: {
         status: 'processing',
         updated_at: new Date().toISOString(),
       })
-      .eq('mux_asset_id', data.upload_id); // Match by upload ID
+      .eq('mux_upload_id', data.upload_id); // Match by upload ID
 
     if (updateError) {
       console.error('Failed to link upload to asset:', updateError);

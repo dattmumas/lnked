@@ -30,9 +30,13 @@ export async function POST(request: NextRequest) {
 
     // Create MUX direct upload following their documentation
     const directUpload = await mux.video.uploads.create({
-      cors_origin: '*',
+      cors_origin: process.env.NODE_ENV === 'development' 
+        ? 'http://localhost:3000' 
+        : process.env.NEXT_PUBLIC_APP_URL || 'https://your-domain.com',
       new_asset_settings: {
         playback_policy: ['public'],
+        mp4_support: 'capped-1080p', // Enable MP4 downloads
+        encoding_tier: 'smart',
       },
     });
 
@@ -43,9 +47,11 @@ export async function POST(request: NextRequest) {
       .insert({
         title: title || null,
         description: description || null,
-        mux_asset_id: directUpload.id, // Store upload ID initially
+        mux_upload_id: directUpload.id,
+        mux_asset_id: null,
         status: 'preparing',
         created_by: user.id,
+        mp4_support: 'capped-1080p', // Store MP4 support setting
       })
       .select()
       .single();

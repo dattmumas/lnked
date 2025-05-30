@@ -119,54 +119,6 @@ export class MuxService {
   }
 
   /**
-   * Upload video file to MUX
-   * @param videoFile - File object or file path
-   * @param metadata - Video metadata
-   * @returns Promise with upload result
-   */
-  public async uploadVideo(
-    videoFile: File | string,
-    metadata: VideoMetadata = {}
-  ): Promise<MuxServiceResult> {
-    try {
-      // For direct file uploads, we need to create a direct upload first
-      const uploadResult = await this.createDirectUpload({
-        cors_origin: process.env.NEXT_PUBLIC_APP_URL || '*',
-        new_asset_settings: {
-          playback_policy: ['public'],
-          encoding_tier: 'smart',
-          normalize_audio: true,
-          test: process.env.NODE_ENV !== 'production',
-        },
-      });
-
-      if (!uploadResult.success || !uploadResult.data) {
-        return {
-          success: false,
-          error: 'Failed to create direct upload',
-          details: uploadResult.error,
-        };
-      }
-
-      return {
-        success: true,
-        data: {
-          upload: uploadResult.data,
-          metadata,
-          instructions: 'Use the upload URL to POST the video file directly to MUX',
-        },
-      };
-    } catch (error) {
-      console.error('MUX upload video error:', error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Unknown upload error',
-        details: error,
-      };
-    }
-  }
-
-  /**
    * Create MUX asset from URL or upload ID
    * @param input - Asset input (URL or upload ID)
    * @param options - Asset creation options
@@ -457,7 +409,7 @@ export class MuxService {
         typeof payload === 'string' ? JSON.parse(payload) : payload;
 
       // Process different webhook types
-      const result = await this.handleWebhookEvent(webhookData);
+      const result = this.handleWebhookEvent(webhookData);
 
       return {
         success: true,
@@ -509,7 +461,7 @@ export class MuxService {
    * @param webhookData - Parsed webhook data
    * @returns Promise with event handling result
    */
-  private async handleWebhookEvent(webhookData: WebhookPayload): Promise<Record<string, unknown>> {
+  private handleWebhookEvent(webhookData: WebhookPayload): Record<string, unknown> {
     const { type, object, data } = webhookData;
 
     console.info(`Processing MUX webhook: ${type} for ${object.type} ${object.id}`);
@@ -545,7 +497,7 @@ export class MuxService {
   /**
    * Handle asset ready webhook
    */
-  private async handleAssetReady(data: Record<string, unknown>): Promise<Record<string, unknown>> {
+  private handleAssetReady(data: Record<string, unknown>): Record<string, unknown> {
     console.info('Asset is ready for playback:', data);
     // Add your custom logic here (e.g., update database, send notifications)
     return { event: 'asset_ready', processed: true, data };
@@ -554,7 +506,7 @@ export class MuxService {
   /**
    * Handle asset error webhook
    */
-  private async handleAssetError(data: Record<string, unknown>): Promise<Record<string, unknown>> {
+  private handleAssetError(data: Record<string, unknown>): Record<string, unknown> {
     console.error('Asset processing failed:', data);
     // Add your custom logic here (e.g., notify user, retry logic)
     return { event: 'asset_error', processed: true, data };
@@ -563,7 +515,7 @@ export class MuxService {
   /**
    * Handle upload asset created webhook
    */
-  private async handleUploadAssetCreated(data: Record<string, unknown>): Promise<Record<string, unknown>> {
+  private handleUploadAssetCreated(data: Record<string, unknown>): Record<string, unknown> {
     console.info('Upload created asset:', data);
     // Add your custom logic here (e.g., link asset to user content)
     return { event: 'upload_asset_created', processed: true, data };
@@ -572,7 +524,7 @@ export class MuxService {
   /**
    * Handle upload cancelled webhook
    */
-  private async handleUploadCancelled(data: Record<string, unknown>): Promise<Record<string, unknown>> {
+  private handleUploadCancelled(data: Record<string, unknown>): Record<string, unknown> {
     console.warn('Upload was cancelled:', data);
     // Add your custom logic here (e.g., cleanup, user notification)
     return { event: 'upload_cancelled', processed: true, data };
@@ -581,7 +533,7 @@ export class MuxService {
   /**
    * Handle upload error webhook
    */
-  private async handleUploadError(data: Record<string, unknown>): Promise<Record<string, unknown>> {
+  private handleUploadError(data: Record<string, unknown>): Record<string, unknown> {
     console.error('Upload failed:', data);
     // Add your custom logic here (e.g., retry logic, user notification)
     return { event: 'upload_error', processed: true, data };
@@ -590,7 +542,7 @@ export class MuxService {
   /**
    * Handle live stream active webhook
    */
-  private async handleLiveStreamActive(data: Record<string, unknown>): Promise<Record<string, unknown>> {
+  private handleLiveStreamActive(data: Record<string, unknown>): Record<string, unknown> {
     console.info('Live stream is now active:', data);
     // Add your custom logic here (e.g., notify viewers, update UI)
     return { event: 'live_stream_active', processed: true, data };
@@ -599,7 +551,7 @@ export class MuxService {
   /**
    * Handle live stream idle webhook
    */
-  private async handleLiveStreamIdle(data: Record<string, unknown>): Promise<Record<string, unknown>> {
+  private handleLiveStreamIdle(data: Record<string, unknown>): Record<string, unknown> {
     console.info('Live stream is now idle:', data);
     // Add your custom logic here (e.g., save recording, update status)
     return { event: 'live_stream_idle', processed: true, data };

@@ -145,6 +145,7 @@ export default function NewPostForm({
       const handler = setTimeout(performAutosave, 3000);
       return () => clearTimeout(handler);
     }
+    return undefined;
   }, [currentTitle, currentContent, isDirty, currentStatus, performAutosave]);
 
   const onSubmit: SubmitHandler<NewPostFormValues> = async (data) => {

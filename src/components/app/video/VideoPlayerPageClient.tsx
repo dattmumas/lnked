@@ -41,6 +41,9 @@ interface VideoPlayerPageClientProps {
   video: VideoAsset;
 }
 
+// Constants
+const SHARE_STATUS_RESET_DELAY = 3000;
+
 export default function VideoPlayerPageClient({
   video,
 }: VideoPlayerPageClientProps) {
@@ -67,38 +70,6 @@ export default function VideoPlayerPageClient({
 
     getCurrentUser();
   }, [supabase]);
-
-  // Enhanced analytics event handler
-  const handleAnalyticsEvent = async (event: any) => {
-    console.log('Video analytics event:', event);
-
-    // Send to your custom analytics endpoint if needed
-    if (currentUser && video.id) {
-      try {
-        await fetch('/api/videos/analytics', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            video_asset_id: video.id,
-            user_id: currentUser.id,
-            event_type: event.type,
-            current_time: event.currentTime,
-            duration: event.duration,
-            metadata: {
-              playback_rate: event.playbackRate,
-              volume: event.volume,
-              quality: event.quality,
-              timestamp: event.timestamp,
-            },
-          }),
-        });
-      } catch (error) {
-        console.error('Failed to send analytics event:', error);
-      }
-    }
-  };
 
   // Helper functions
   const formatDuration = (seconds: number) => {
@@ -132,7 +103,7 @@ export default function VideoPlayerPageClient({
       if (navigator.clipboard && window.isSecureContext) {
         await navigator.clipboard.writeText(url);
         setShareStatus('copied');
-        console.info('Video link copied to clipboard');
+        console.warn('Video link copied to clipboard');
       } else {
         // Fallback for older browsers or non-secure contexts
         const textArea = document.createElement('textarea');
@@ -149,21 +120,21 @@ export default function VideoPlayerPageClient({
 
         if (successful) {
           setShareStatus('copied');
-          console.info('Video link copied to clipboard');
+          console.warn('Video link copied to clipboard');
         } else {
           throw new Error('Copy command was unsuccessful');
         }
       }
 
       // Reset status after 3 seconds
-      setTimeout(() => setShareStatus('idle'), 3000);
+      setTimeout(() => setShareStatus('idle'), SHARE_STATUS_RESET_DELAY);
     } catch (error) {
       console.error('Failed to copy to clipboard:', error);
       setShareStatus('error');
       alert(
         'Unable to copy link. Please copy the URL manually from your browser.',
       );
-      setTimeout(() => setShareStatus('idle'), 3000);
+      setTimeout(() => setShareStatus('idle'), SHARE_STATUS_RESET_DELAY);
     }
   };
 
@@ -176,30 +147,11 @@ export default function VideoPlayerPageClient({
     setIsDownloading(true);
 
     try {
-      // Try the new static renditions format first
-      const possibleMp4Urls = [
-        `https://stream.mux.com/${video.mux_playback_id}/highest.mp4`,
-        `https://stream.mux.com/${video.mux_playback_id}/capped-1080p.mp4`,
-        `https://stream.mux.com/${video.mux_playback_id}/high.mp4`, // Legacy format
-      ];
+      // Check if MP4 is enabled for this video
+      if (video.mp4_support === 'capped-1080p') {
+        // Use the known MP4 URL based on our upload settings
+        const downloadUrl = `https://stream.mux.com/${video.mux_playback_id}/medium.mp4`;
 
-      let downloadUrl = null;
-
-      // Check which MP4 format is available
-      for (const url of possibleMp4Urls) {
-        try {
-          const response = await fetch(url, { method: 'HEAD' });
-          if (response.ok) {
-            downloadUrl = url;
-            console.info('Found available MP4 at:', url);
-            break;
-          }
-        } catch (error) {
-          console.info('MP4 not available at:', url);
-        }
-      }
-
-      if (downloadUrl) {
         // Create download link
         const link = document.createElement('a');
         link.href = downloadUrl;
@@ -211,20 +163,14 @@ export default function VideoPlayerPageClient({
         link.click();
         document.body.removeChild(link);
 
-        console.info('Video download initiated from:', downloadUrl);
+        console.warn('Video download initiated from:', downloadUrl);
       } else {
         // No MP4 available - provide helpful information
         const helpMessage =
           `MP4 download is not available for this video.\n\n` +
-          `This happens because:\n` +
-          `• MP4 files must be enabled when uploading (static_renditions)\n` +
-          `• MP4 processing takes longer than streaming setup\n` +
-          `• The video may still be processing\n\n` +
-          `You can:\n` +
-          `1. Use the HLS stream URL for video downloaders\n` +
-          `2. Wait for MP4 processing to complete\n` +
-          `3. Contact support to enable MP4 downloads\n\n` +
-          `Would you like to copy the HLS stream URL instead?`;
+          `This video was uploaded without MP4 support enabled.\n\n` +
+          `Would you like to copy the HLS stream URL instead?\n` +
+          `You can use it with video downloader tools like yt-dlp or ffmpeg.`;
 
         const shouldCopyHLS = confirm(helpMessage);
 
@@ -252,7 +198,7 @@ export default function VideoPlayerPageClient({
         `Download failed. You can try:\n\n` +
           `1. Copy the HLS stream URL: ${hlsUrl}\n` +
           `2. Use video downloader tools (yt-dlp, ffmpeg, etc.)\n` +
-          `3. Wait and try again if the video is still processing\n\n` +
+          `3. Contact support if this issue persists\n\n` +
           `Note: MP4 downloads require static renditions to be enabled during upload.`,
       );
     } finally {
@@ -262,29 +208,14 @@ export default function VideoPlayerPageClient({
 
   // Add debugging to verify playback ID
   useEffect(() => {
-    console.log('Video data:', {
+    console.warn('Video data:', {
       id: video.id,
       status: video.status,
       mux_playback_id: video.mux_playback_id,
       mux_asset_id: video.mux_asset_id,
       isVideoReady,
     });
-
-    // Test the HLS URL directly
-    if (video.mux_playback_id) {
-      const hlsUrl = `https://stream.mux.com/${video.mux_playback_id}.m3u8`;
-      console.log('Testing HLS URL:', hlsUrl);
-
-      fetch(hlsUrl, { method: 'HEAD' })
-        .then((response) => {
-          console.log('HLS URL status:', response.status);
-          if (!response.ok) {
-            console.error('HLS URL not accessible');
-          }
-        })
-        .catch((err) => console.error('HLS URL test failed:', err));
-    }
-  }, [video]);
+  }, [video, isVideoReady]);
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-6xl">
@@ -345,6 +276,8 @@ export default function VideoPlayerPageClient({
               <MuxVideoPlayer
                 playbackId={video.mux_playback_id!}
                 title={video.title || 'Untitled Video'}
+                viewerId={currentUser?.id}
+                viewerEmail={currentUser?.email}
                 className="w-full h-full rounded-lg"
               />
             ) : (

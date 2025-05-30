@@ -20,7 +20,6 @@ import {
   Loader2,
   Settings,
   Radio,
-  RefreshCw,
   ExternalLink,
 } from 'lucide-react';
 import Image from 'next/image';
@@ -35,8 +34,11 @@ import {
   SECONDS_PER_MINUTE,
   PAD_LENGTH,
   PAD_CHARACTER,
-  VIDEOS_PER_PAGE,
 } from '@/lib/constants/video';
+
+// Constants
+const REFRESH_INTERVAL_MS = 5000;
+const VIDEOS_PER_PAGE = 20;
 
 // Types
 interface VideoAsset {
@@ -98,54 +100,111 @@ function StatusBadge({ status }: { status: string | null }) {
 }
 
 export default function VideoManagementDashboard() {
-  // State management
-  const [activeTab, setActiveTab] = useState('library');
   const [videos, setVideos] = useState<VideoAsset[]>([]);
-  const [selectedVideos, setSelectedVideos] = useState<Set<string>>(new Set());
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [sortBy, setSortBy] = useState<string>('created_at');
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState('library');
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [selectedVideos, setSelectedVideos] = useState<Set<string>>(new Set());
+  const [sortBy, setSortBy] = useState('created_at');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
 
   // Fetch videos
   const fetchVideos = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
-
     try {
+      setIsLoading(true);
+      setError(null);
+
       const params = new URLSearchParams({
         page: currentPage.toString(),
         limit: VIDEOS_PER_PAGE.toString(),
         search: searchQuery,
+        status: statusFilter,
         sort: sortBy,
+        order: sortOrder,
       });
 
-      if (statusFilter !== 'all') {
-        params.append('status', statusFilter);
-      }
-
       const response = await fetch(`/api/videos?${params}`);
-      if (!response.ok) {
-        throw new Error('Failed to fetch videos');
-      }
+      if (!response.ok) throw new Error('Failed to fetch videos');
 
       const result = await response.json();
-      setVideos(result.data.videos);
+      setVideos(result.data.videos || []);
       setTotalPages(Math.ceil(result.data.total / VIDEOS_PER_PAGE));
-    } catch (error) {
-      setError(
-        error instanceof Error ? error.message : 'Failed to fetch videos',
-      );
+    } catch {
+      setError('Failed to load videos');
     } finally {
       setIsLoading(false);
     }
-  }, [currentPage, searchQuery, statusFilter, sortBy]);
+  }, [currentPage, searchQuery, statusFilter, sortBy, sortOrder]);
 
-  // Load data on mount and tab change
+  // Automatic refresh for processing videos
+  useEffect(() => {
+    if (activeTab === 'library') {
+      // Function to refresh processing videos
+      const refreshProcessingVideos = async () => {
+        const processingVideos = videos.filter(
+          (video) =>
+            video.status === 'preparing' || video.status === 'processing',
+        );
+
+        if (processingVideos.length > 0) {
+          console.warn(
+            `Refreshing ${processingVideos.length} processing videos...`,
+          );
+
+          // Refresh each processing video
+          const refreshPromises = processingVideos.map(async (video) => {
+            try {
+              const response = await fetch(`/api/videos/${video.id}/refresh`, {
+                method: 'POST',
+              });
+
+              if (response.ok) {
+                const result = await response.json();
+                return result.video;
+              }
+              return null;
+            } catch (error) {
+              console.error(`Failed to refresh video ${video.id}:`, error);
+              return null;
+            }
+          });
+
+          const refreshedVideos = await Promise.all(refreshPromises);
+
+          // Update the videos state with refreshed data
+          setVideos((prevVideos) => {
+            return prevVideos.map((video) => {
+              const refreshedVideo = refreshedVideos.find(
+                (refreshed) => refreshed && refreshed.id === video.id,
+              );
+              return refreshedVideo || video;
+            });
+          });
+        }
+      };
+
+      // Initial refresh
+      refreshProcessingVideos();
+
+      // Set up interval for automatic refresh
+      const intervalId = setInterval(
+        refreshProcessingVideos,
+        REFRESH_INTERVAL_MS,
+      );
+
+      // Cleanup interval on unmount or when dependencies change
+      return () => clearInterval(intervalId);
+    }
+
+    return undefined;
+  }, [videos, activeTab]);
+
+  // Fetch videos when component mounts or filters change
   useEffect(() => {
     if (activeTab === 'library') {
       fetchVideos();
@@ -153,26 +212,30 @@ export default function VideoManagementDashboard() {
   }, [activeTab, fetchVideos]);
 
   // Handle video selection
-  const toggleVideoSelection = (videoId: string) => {
-    const newSelection = new Set(selectedVideos);
-    if (newSelection.has(videoId)) {
-      newSelection.delete(videoId);
-    } else {
-      newSelection.add(videoId);
-    }
-    setSelectedVideos(newSelection);
-  };
+  const toggleVideoSelection = useCallback((videoId: string) => {
+    setSelectedVideos((prev) => {
+      const newSelection = new Set(prev);
+      if (newSelection.has(videoId)) {
+        newSelection.delete(videoId);
+      } else {
+        newSelection.add(videoId);
+      }
+      return newSelection;
+    });
+  }, []);
 
-  const selectAllVideos = () => {
-    if (selectedVideos.size === videos.length) {
-      setSelectedVideos(new Set());
-    } else {
-      setSelectedVideos(new Set(videos.map((v) => v.id)));
-    }
-  };
+  const selectAllVideos = useCallback(() => {
+    setSelectedVideos((prev) => {
+      if (prev.size === videos.length) {
+        return new Set();
+      } else {
+        return new Set(videos.map((v) => v.id));
+      }
+    });
+  }, [videos]);
 
   // Bulk operations
-  const handleBulkDelete = async () => {
+  const handleBulkDelete = useCallback(async () => {
     if (selectedVideos.size === 0) return;
 
     const confirmed = window.confirm(
@@ -191,7 +254,63 @@ export default function VideoManagementDashboard() {
     } catch {
       setError('Failed to delete videos');
     }
-  };
+  }, [selectedVideos, fetchVideos]);
+
+  // Event handlers
+  const handleSearchChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      setSearchQuery(e.target.value);
+    },
+    [],
+  );
+
+  const handleStatusFilterChange = useCallback(
+    (e: React.ChangeEvent<HTMLSelectElement>) => {
+      setStatusFilter(e.target.value);
+    },
+    [],
+  );
+
+  const handleSortChange = useCallback(
+    (e: React.ChangeEvent<HTMLSelectElement>) => {
+      setSortBy(e.target.value);
+      setSortOrder('desc'); // Reset to desc when changing sort field
+    },
+    [],
+  );
+
+  const toggleViewMode = useCallback(() => {
+    setViewMode((prev) => (prev === 'grid' ? 'list' : 'grid'));
+  }, []);
+
+  const handleUploadClick = useCallback(() => {
+    setActiveTab('upload');
+  }, []);
+
+  const handleLiveStreamClick = useCallback(() => {
+    setActiveTab('live-streams');
+  }, []);
+
+  const handleUploadComplete = useCallback(
+    (session: string) => {
+      console.warn('Upload completed:', session);
+      setActiveTab('library');
+      fetchVideos();
+    },
+    [fetchVideos],
+  );
+
+  const handleUploadError = useCallback((uploadError: string) => {
+    setError(uploadError);
+  }, []);
+
+  const handlePreviousPage = useCallback(() => {
+    setCurrentPage((prev) => prev - 1);
+  }, []);
+
+  const handleNextPage = useCallback(() => {
+    setCurrentPage((prev) => prev + 1);
+  }, []);
 
   return (
     <div className="container mx-auto p-6 space-y-6">
@@ -204,14 +323,11 @@ export default function VideoManagementDashboard() {
           </p>
         </div>
         <div className="flex items-center space-x-2">
-          <Button onClick={() => setActiveTab('upload')}>
+          <Button onClick={handleUploadClick}>
             <Upload className="h-4 w-4 mr-2" />
             Upload Video
           </Button>
-          <Button
-            variant="outline"
-            onClick={() => setActiveTab('live-streams')}
-          >
+          <Button variant="outline" onClick={handleLiveStreamClick}>
             <Radio className="h-4 w-4 mr-2" />
             Go Live
           </Button>
@@ -261,13 +377,13 @@ export default function VideoManagementDashboard() {
                 <Input
                   placeholder="Search videos..."
                   value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onChange={handleSearchChange}
                   className="pl-10 w-64"
                 />
               </div>
               <select
                 value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
+                onChange={handleStatusFilterChange}
                 className="px-3 py-2 border rounded-md"
               >
                 <option value="all">All Status</option>
@@ -277,7 +393,7 @@ export default function VideoManagementDashboard() {
               </select>
               <select
                 value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
+                onChange={handleSortChange}
                 className="px-3 py-2 border rounded-md"
               >
                 <option value="created_at">Created Date</option>
@@ -303,13 +419,7 @@ export default function VideoManagementDashboard() {
                   </Button>
                 </div>
               )}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() =>
-                  setViewMode(viewMode === 'grid' ? 'list' : 'grid')
-                }
-              >
+              <Button variant="outline" size="sm" onClick={toggleViewMode}>
                 {viewMode === 'grid' ? (
                   <List className="h-4 w-4" />
                 ) : (
@@ -340,7 +450,7 @@ export default function VideoManagementDashboard() {
           ) : videos.length === 0 ? (
             <div className="text-center py-12">
               <p className="text-muted-foreground">No videos found</p>
-              <Button className="mt-4" onClick={() => setActiveTab('upload')}>
+              <Button className="mt-4" onClick={handleUploadClick}>
                 <Upload className="h-4 w-4 mr-2" />
                 Upload Your First Video
               </Button>
@@ -352,7 +462,7 @@ export default function VideoManagementDashboard() {
                   key={video.id}
                   video={video}
                   isSelected={selectedVideos.has(video.id)}
-                  onSelect={(videoId) => toggleVideoSelection(videoId)}
+                  onSelect={() => toggleVideoSelection(video.id)}
                   onRefresh={fetchVideos}
                 />
               ))}
@@ -364,7 +474,7 @@ export default function VideoManagementDashboard() {
                   key={video.id}
                   video={video}
                   isSelected={selectedVideos.has(video.id)}
-                  onSelect={(videoId) => toggleVideoSelection(videoId)}
+                  onSelect={() => toggleVideoSelection(video.id)}
                   onRefresh={fetchVideos}
                 />
               ))}
@@ -377,7 +487,7 @@ export default function VideoManagementDashboard() {
               <Button
                 variant="outline"
                 disabled={currentPage === 1}
-                onClick={() => setCurrentPage(currentPage - 1)}
+                onClick={handlePreviousPage}
               >
                 Previous
               </Button>
@@ -387,7 +497,7 @@ export default function VideoManagementDashboard() {
               <Button
                 variant="outline"
                 disabled={currentPage === totalPages}
-                onClick={() => setCurrentPage(currentPage + 1)}
+                onClick={handleNextPage}
               >
                 Next
               </Button>
@@ -400,15 +510,8 @@ export default function VideoManagementDashboard() {
           <Card>
             <CardContent>
               <VideoUploader
-                onUploadComplete={(session) => {
-                  console.warn('Upload completed:', session);
-                  setActiveTab('library');
-                  fetchVideos();
-                }}
-                onUploadError={(error) => {
-                  setError(error);
-                }}
-                maxFiles={10}
+                onUploadComplete={handleUploadComplete}
+                onUploadError={handleUploadError}
               />
             </CardContent>
           </Card>
@@ -664,66 +767,58 @@ export default function VideoManagementDashboard() {
 interface VideoCardProps {
   video: VideoAsset;
   isSelected: boolean;
-  onSelect: (videoId: string) => void;
+  onSelect: () => void;
   onRefresh: () => void;
 }
 
-function VideoCard({ video, isSelected, onSelect, onRefresh }: VideoCardProps) {
+// Memoized components to prevent re-renders
+const VideoCard = React.memo(function VideoCard({
+  video,
+  isSelected,
+  onSelect,
+  onRefresh,
+}: VideoCardProps) {
   const [showPlayer, setShowPlayer] = useState(false);
-  const [isRefreshing, setIsRefreshing] = useState(false);
 
-  const handleDelete = async (e: React.MouseEvent) => {
-    e.preventDefault(); // Prevent link navigation
-    e.stopPropagation(); // Prevent card click
-    if (!window.confirm('Are you sure you want to delete this video?')) return;
+  const handleDelete = useCallback(
+    async (e: React.MouseEvent) => {
+      e.preventDefault(); // Prevent link navigation
+      e.stopPropagation(); // Prevent card click
+      if (!window.confirm('Are you sure you want to delete this video?'))
+        return;
 
-    try {
-      const response = await fetch(`/api/videos/${video.id}`, {
-        method: 'DELETE',
-      });
+      try {
+        const response = await fetch(`/api/videos/${video.id}`, {
+          method: 'DELETE',
+        });
 
-      if (response.ok) {
-        onRefresh();
+        if (response.ok) {
+          onRefresh();
+        }
+      } catch (error) {
+        console.error('Failed to delete video:', error);
       }
-    } catch (error) {
-      console.error('Failed to delete video:', error);
-    }
-  };
+    },
+    [video.id, onRefresh],
+  );
 
-  const handleRefreshStatus = async (e: React.MouseEvent) => {
+  const handleCheckboxChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      e.preventDefault(); // Prevent link navigation
+      e.stopPropagation(); // Prevent card click
+      onSelect();
+    },
+    [onSelect],
+  );
+
+  const handlePlayClick = useCallback((e: React.MouseEvent) => {
     e.preventDefault(); // Prevent link navigation
     e.stopPropagation(); // Prevent card click
-    setIsRefreshing(true);
-    try {
-      const response = await fetch(`/api/videos/${video.id}/refresh`, {
-        method: 'POST',
-      });
-
-      if (response.ok) {
-        onRefresh();
-      }
-    } catch (error) {
-      console.error('Failed to refresh video status:', error);
-    } finally {
-      setIsRefreshing(false);
-    }
-  };
-
-  const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    e.preventDefault(); // Prevent link navigation
-    e.stopPropagation(); // Prevent card click
-    onSelect(video.id);
-  };
-
-  const handlePlayClick = (e: React.MouseEvent) => {
-    e.preventDefault(); // Prevent link navigation
-    e.stopPropagation(); // Prevent card click
-    setShowPlayer(!showPlayer);
-  };
+    setShowPlayer((prev) => !prev);
+  }, []);
 
   const playbackId = video.mux_playback_id;
   const isReady = video.status === 'ready' && playbackId;
-  const isPreparing = video.status === 'preparing';
 
   return (
     <Link href={`/videos/${video.id}`} className="block">
@@ -795,29 +890,14 @@ function VideoCard({ video, isSelected, onSelect, onRefresh }: VideoCardProps) {
 
               <div className="flex items-center justify-between">
                 <StatusBadge status={video.status} />
-                <div className="flex gap-1">
-                  {isPreparing && (
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      onClick={handleRefreshStatus}
-                      disabled={isRefreshing}
-                      title="Refresh status"
-                    >
-                      <RefreshCw
-                        className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`}
-                      />
-                    </Button>
-                  )}
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    onClick={handleDelete}
-                    title="Delete video"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  onClick={handleDelete}
+                  title="Delete video"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
               </div>
             </div>
           </div>
@@ -825,35 +905,18 @@ function VideoCard({ video, isSelected, onSelect, onRefresh }: VideoCardProps) {
       </Card>
     </Link>
   );
-}
+});
 
 // Video List Item Component
-function VideoListItem({
+const VideoListItem = React.memo(function VideoListItem({
   video,
   isSelected,
   onSelect,
   onRefresh,
 }: VideoCardProps) {
-  const [isRefreshing, setIsRefreshing] = useState(false);
+  const isReady = video.status === 'ready' && video.mux_playback_id;
 
-  const handleRefreshStatus = async () => {
-    setIsRefreshing(true);
-    try {
-      const response = await fetch(`/api/videos/${video.id}/refresh`, {
-        method: 'POST',
-      });
-
-      if (response.ok) {
-        onRefresh();
-      }
-    } catch (error) {
-      console.error('Failed to refresh video status:', error);
-    } finally {
-      setIsRefreshing(false);
-    }
-  };
-
-  const handleDelete = async () => {
+  const handleDelete = useCallback(async () => {
     if (!window.confirm('Are you sure you want to delete this video?')) return;
 
     try {
@@ -867,10 +930,27 @@ function VideoListItem({
     } catch (error) {
       console.error('Failed to delete video:', error);
     }
-  };
+  }, [video.id, onRefresh]);
 
-  const isReady = video.status === 'ready' && video.mux_playback_id;
-  const isPreparing = video.status === 'preparing';
+  const handleCheckboxChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      e.preventDefault();
+      e.stopPropagation();
+      onSelect();
+    },
+    [onSelect],
+  );
+
+  const handleThumbnailClick = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (isReady) {
+        window.open(`/videos/${video.id}`, '_blank');
+      }
+    },
+    [video.id, isReady],
+  );
 
   return (
     <Card className={`${isSelected ? 'ring-2 ring-primary' : ''}`}>
@@ -879,22 +959,12 @@ function VideoListItem({
           <input
             type="checkbox"
             checked={isSelected}
-            onChange={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              onSelect(video.id);
-            }}
+            onChange={handleCheckboxChange}
             className="mt-1 h-4 w-4 rounded"
           />
           <div
             className="w-16 h-12 bg-gray-100 rounded flex items-center justify-center cursor-pointer"
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              if (isReady) {
-                window.open(`/videos/${video.id}`, '_blank');
-              }
-            }}
+            onClick={handleThumbnailClick}
           >
             <Play className="h-4 w-4 text-gray-400" />
           </div>
@@ -909,19 +979,6 @@ function VideoListItem({
           </div>
           <div className="flex items-center space-x-2">
             <StatusBadge status={video.status} />
-            {isPreparing && (
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={handleRefreshStatus}
-                disabled={isRefreshing}
-                title="Refresh status from MUX"
-              >
-                <RefreshCw
-                  className={`h-3 w-3 ${isRefreshing ? 'animate-spin' : ''}`}
-                />
-              </Button>
-            )}
           </div>
           <div className="flex items-center space-x-1">
             {isReady ? (
@@ -950,4 +1007,4 @@ function VideoListItem({
       </CardContent>
     </Card>
   );
-}
+});

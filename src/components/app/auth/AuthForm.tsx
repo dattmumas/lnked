@@ -19,7 +19,7 @@ import { Terminal } from 'lucide-react';
 // Types
 interface AuthFormProps {
   mode: 'signIn' | 'signUp';
-  onSubmit: (formData: Record<string, string>) => Promise<void>;
+  onSubmit: (_formData: Record<string, string>) => Promise<void>;
   isLoading: boolean;
   error: string | null;
   message?: string | null;
@@ -29,11 +29,11 @@ interface AuthFormFieldsProps {
   mode: 'signIn' | 'signUp';
   isLoading: boolean;
   email: string;
-  setEmail: (value: string) => void;
+  setEmail: (_value: string) => void;
   password: string;
-  setPassword: (value: string) => void;
+  setPassword: (_value: string) => void;
   fullName?: string;
-  setFullName?: (value: string) => void;
+  setFullName?: (_value: string) => void;
 }
 
 interface AuthFormHeaderProps {

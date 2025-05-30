@@ -108,8 +108,8 @@ export default function EditPostForm({
   }, [initialData, reset]);
 
   const performAutosave = useCallback(async () => {
-    if (!isDirty) return;
-    if (currentStatus !== 'draft') return; // Only autosave actual drafts
+    if (!isDirty) return undefined;
+    if (currentStatus !== 'draft') return undefined; // Only autosave actual drafts
 
     setAutosaveStatus('Saving draft...');
     const dataToSave = getValues();
@@ -133,6 +133,7 @@ export default function EditPostForm({
       setAutosaveStatus('Draft saved.');
       reset(dataToSave); // Reset dirty state with current values
     }
+    return undefined;
   }, [isDirty, currentStatus, getValues, postId, reset]);
 
   useEffect(() => {
@@ -143,7 +144,7 @@ export default function EditPostForm({
     }
   }, [currentTitle, currentContent, isDirty, currentStatus, performAutosave]);
 
-  const onSubmit: SubmitHandler<EditPostFormValues> = async (data) => {
+  const onSubmit: SubmitHandler<EditPostFormValues> = (data) => {
     setServerError(null);
     setAutosaveStatus('');
 
@@ -189,7 +190,7 @@ export default function EditPostForm({
     });
   };
 
-  const handleDelete = async () => {
+  const handleDelete = () => {
     if (
       !window.confirm(
         'Are you sure you want to delete this post? This action cannot be undone.',

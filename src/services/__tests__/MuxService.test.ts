@@ -303,19 +303,18 @@ describe('MuxService', () => {
         const mockCreate = jest.fn().mockResolvedValue(mockUpload);
         (muxService as any).mux.video.uploads.create = mockCreate;
 
-        const result = await muxService.uploadVideo('video.mp4', {
-          title: 'Test Video',
-          viewer_user_id: 'user_123',
+        const result = await muxService.createDirectUpload({
+          cors_origin: '*',
+          new_asset_settings: {
+            playback_policy: ['public'],
+            encoding_tier: 'smart',
+            normalize_audio: true,
+            test: true
+          }
         });
 
         expect(result.success).toBe(true);
-        expect(result.data).toMatchObject({
-          upload: mockUpload,
-          metadata: {
-            title: 'Test Video',
-            viewer_user_id: 'user_123',
-          },
-        });
+        expect(result.data).toEqual(mockUpload);
       });
     });
   });
@@ -397,7 +396,7 @@ describe('Integration Tests', () => {
     (muxService as any).mux.video.assets.list = jest.fn().mockResolvedValue({ data: [] });
 
     // Test upload
-    const uploadResult = await muxService.uploadVideo('test.mp4');
+    const uploadResult = await muxService.createDirectUpload();
     expect(uploadResult.success).toBe(true);
 
     // Test asset retrieval

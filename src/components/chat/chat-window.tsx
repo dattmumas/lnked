@@ -21,7 +21,7 @@ interface ChatWindowProps {
   conversation?: ConversationWithParticipants;
   messages: MessageWithSender[];
   typingUsers: TypingType[];
-  onSendMessage: (data: {
+  onSendMessage: (_data: {
     conversation_id: string;
     content: string;
     message_type?: 'text' | 'image' | 'file' | 'system';
@@ -30,10 +30,10 @@ interface ChatWindowProps {
   }) => Promise<MessageWithSender | null>;
   onStartTyping: () => void;
   onStopTyping: () => void;
-  onAddReaction: (messageId: string, emoji: string) => Promise<void>;
-  onRemoveReaction: (messageId: string, emoji: string) => Promise<void>;
+  onAddReaction: (_messageId: string, _emoji: string) => Promise<void>;
+  onRemoveReaction: (_messageId: string, _emoji: string) => Promise<void>;
   currentUserId: string;
-  isUserOnline: (userId: string) => boolean;
+  isUserOnline: (_userId: string) => boolean;
 }
 
 export function ChatWindow({

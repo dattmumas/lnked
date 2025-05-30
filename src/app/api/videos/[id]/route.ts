@@ -42,24 +42,23 @@ export async function DELETE(
       );
     }
 
-    // Delete asset from MUX following their documentation
-    // Use the correct API based on ID type
-    if (videoAsset.mux_asset_id && videoAsset.mux_asset_id !== 'pending') {
-      try {
-        if (videoAsset.mux_asset_id.startsWith('upload-')) {
-          // This is an upload ID - use Direct Uploads API to cancel
-          await mux.video.uploads.cancel(videoAsset.mux_asset_id);
-          console.info('Cancelled MUX upload:', videoAsset.mux_asset_id);
-        } else {
-          // This is an asset ID - use Assets API to delete
-          await mux.video.assets.delete(videoAsset.mux_asset_id);
-          console.info('Deleted MUX asset:', videoAsset.mux_asset_id);
-        }
-      } catch (muxError: unknown) {
-        console.error('MUX deletion error:', muxError);
-        // Continue with database deletion even if MUX fails
-        // (asset might already be deleted or upload expired)
+    // Delete from MUX following their documentation
+    // Handle both upload cancellation and asset deletion based on proper fields
+    try {
+      // If we have an upload ID but no asset ID, cancel the upload
+      if (videoAsset.mux_upload_id && !videoAsset.mux_asset_id) {
+        await mux.video.uploads.cancel(videoAsset.mux_upload_id);
+        console.info('Cancelled MUX upload:', videoAsset.mux_upload_id);
+      } 
+      // If we have an asset ID, delete the asset
+      else if (videoAsset.mux_asset_id) {
+        await mux.video.assets.delete(videoAsset.mux_asset_id);
+        console.info('Deleted MUX asset:', videoAsset.mux_asset_id);
       }
+    } catch (muxError: unknown) {
+      console.error('MUX deletion error:', muxError);
+      // Continue with database deletion even if MUX fails
+      // (asset might already be deleted or upload expired)
     }
 
     // Delete from our database

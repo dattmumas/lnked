@@ -143,9 +143,6 @@ importers:
       geist:
         specifier: ^1.4.2
         version: 1.4.2(next@15.3.2(@babel/core@7.27.1)(@playwright/test@1.52.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)(sass@1.51.0))
-      hls.js:
-        specifier: ^1.6.2
-        version: 1.6.2
       katex:
         specifier: ^0.16.22
         version: 0.16.22
@@ -3785,9 +3782,6 @@ packages:
 
   hls.js@1.5.20:
     resolution: {integrity: sha512-uu0VXUK52JhihhnN/MVVo1lvqNNuhoxkonqgO3IpjvQiGpJBdIXMGkofjQb/j9zvV7a1SW8U9g1FslWx/1HOiQ==}
-
-  hls.js@1.6.2:
-    resolution: {integrity: sha512-rx+pETSCJEDThm/JCm8CuadcAC410cVjb1XVXFNDKFuylaayHk1+tFxhkjvnMDAfqsJHxZXDAJ3Uc2d5xQyWlQ==}
 
   hpagent@0.1.2:
     resolution: {integrity: sha512-ePqFXHtSQWAFXYmj+JtOTHr84iNrII4/QRlAAPPE+zqnKy4xJo7Ie1Y4kC7AdB+LxLxSTTzBMASsEcy0q8YyvQ==}
@@ -9812,8 +9806,6 @@ snapshots:
       function-bind: 1.1.2
 
   hls.js@1.5.20: {}
-
-  hls.js@1.6.2: {}
 
   hpagent@0.1.2:
     optional: true

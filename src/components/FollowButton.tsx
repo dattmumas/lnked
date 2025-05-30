@@ -100,13 +100,13 @@ export default function FollowButton({
   // Verify follow status periodically and on focus
   useEffect(() => {
     if (!actualCurrentUserId || actualCurrentUserId === targetUserId) {
-      return;
+      return undefined;
     }
 
     if (process.env.NODE_ENV === 'test') {
       // In tests, run a single verification without timers to avoid act warnings
       void verifyFollowStatus();
-      return;
+      return undefined;
     }
 
     verifyFollowStatus();
