@@ -1,7 +1,7 @@
 ---
 description: 
 globs: 
-alwaysApply: true
+alwaysApply: false
 ---
 Adhere to Next.js 13 App Router conventions: Organize files by feature and route, using the App Directory structure (e.g. page components in src/app/** and co-located page.tsx, layout.tsx, etc.) per Next.js best practices. Prefer Server Actions over API routes for form submissions and mutations that only the app itself needs (this keeps logic type-safe and reduces extra API layers). Use Next’s built-in features like Route Handlers for the few cases where external clients or webhooks require an API endpoint. Docs: Refer to the Next.js App Router official docs for guidance on file structure and new patterns (e.g. using use server directives) to ensure we leverage Next 13 capabilities correctly.
 Supabase integration and RLS: Use Supabase as the single source of truth for data, and respect its Row-Level Security (RLS) rules on the database side. On the server, utilize the Supabase Admin client for privileged actions (like in server actions) and the regular client for user-level queries – this matches how we create server and browser clients (createServerSupabaseClient, etc.). Avoid duplicating security logic in the app when RLS can enforce it in the DB. For example, rather than filtering by user ID in every query, define policies in Supabase and simply call .select() as the authenticated user. Always handle Supabase responses and errors robustly (log errors from .from(...).select() calls, etc., as seen in our API routes

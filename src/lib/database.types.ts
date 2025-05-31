@@ -316,6 +316,63 @@ export type Database = {
           },
         ]
       }
+      content_metadata: {
+        Row: {
+          category: string | null
+          content_id: string
+          content_type: string
+          created_at: string | null
+          description: string | null
+          duration: number | null
+          freshness_score: number | null
+          id: string
+          language: string | null
+          popularity_score: number | null
+          quality_score: number | null
+          tags: string[] | null
+          thumbnail_url: string | null
+          title: string
+          updated_at: string | null
+          word_count: number | null
+        }
+        Insert: {
+          category?: string | null
+          content_id: string
+          content_type: string
+          created_at?: string | null
+          description?: string | null
+          duration?: number | null
+          freshness_score?: number | null
+          id?: string
+          language?: string | null
+          popularity_score?: number | null
+          quality_score?: number | null
+          tags?: string[] | null
+          thumbnail_url?: string | null
+          title: string
+          updated_at?: string | null
+          word_count?: number | null
+        }
+        Update: {
+          category?: string | null
+          content_id?: string
+          content_type?: string
+          created_at?: string | null
+          description?: string | null
+          duration?: number | null
+          freshness_score?: number | null
+          id?: string
+          language?: string | null
+          popularity_score?: number | null
+          quality_score?: number | null
+          tags?: string[] | null
+          thumbnail_url?: string | null
+          title?: string
+          updated_at?: string | null
+          word_count?: number | null
+        }
+        Relationships: []
+      }
       conversation_participants: {
         Row: {
           conversation_id: string | null
@@ -1130,6 +1187,50 @@ export type Database = {
           },
         ]
       }
+      recommendation_cache: {
+        Row: {
+          algorithm_version: string | null
+          cache_key: string
+          cache_type: string
+          created_at: string | null
+          expires_at: string | null
+          id: string
+          metadata: Json | null
+          recommendations: Json
+          user_id: string | null
+        }
+        Insert: {
+          algorithm_version?: string | null
+          cache_key: string
+          cache_type: string
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string
+          metadata?: Json | null
+          recommendations: Json
+          user_id?: string | null
+        }
+        Update: {
+          algorithm_version?: string | null
+          cache_key?: string
+          cache_type?: string
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string
+          metadata?: Json | null
+          recommendations?: Json
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recommendation_cache_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       recommendations: {
         Row: {
           created_at: string
@@ -1279,6 +1380,62 @@ export type Database = {
             foreignKeyName: "subscriptions_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_preferences: {
+        Row: {
+          autoplay_videos: boolean | null
+          content_type_weights: Json | null
+          created_at: string | null
+          hide_seen_content: boolean | null
+          interested_topics: string[] | null
+          muted_authors: string[] | null
+          muted_collectives: string[] | null
+          muted_topics: string[] | null
+          prefer_following: boolean | null
+          prefer_popular: boolean | null
+          prefer_recent: boolean | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          autoplay_videos?: boolean | null
+          content_type_weights?: Json | null
+          created_at?: string | null
+          hide_seen_content?: boolean | null
+          interested_topics?: string[] | null
+          muted_authors?: string[] | null
+          muted_collectives?: string[] | null
+          muted_topics?: string[] | null
+          prefer_following?: boolean | null
+          prefer_popular?: boolean | null
+          prefer_recent?: boolean | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          autoplay_videos?: boolean | null
+          content_type_weights?: Json | null
+          created_at?: string | null
+          hide_seen_content?: boolean | null
+          interested_topics?: string[] | null
+          muted_authors?: string[] | null
+          muted_collectives?: string[] | null
+          muted_topics?: string[] | null
+          prefer_following?: boolean | null
+          prefer_popular?: boolean | null
+          prefer_recent?: boolean | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_preferences_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
             referencedRelation: "users"
             referencedColumns: ["id"]
           },
@@ -1559,6 +1716,10 @@ export type Database = {
         Args: { "": string } | { "": unknown }
         Returns: unknown
       }
+      cleanup_expired_cache: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       cleanup_old_notifications: {
         Args: Record<PropertyKey, never>
         Returns: number
@@ -1601,6 +1762,14 @@ export type Database = {
           updated_at: string | null
         }[]
       }
+      get_cached_recommendations: {
+        Args: {
+          p_user_id: string
+          p_cache_key: string
+          p_algorithm_version?: string
+        }
+        Returns: Json
+      }
       get_follower_count: {
         Args: { entity_id: string; entity_type: string }
         Returns: number
@@ -1636,6 +1805,13 @@ export type Database = {
           collective_name: string
           collective_slug: string
           like_count: number
+        }[]
+      }
+      get_user_preference_weights: {
+        Args: { p_user_id: string }
+        Returns: {
+          content_type: string
+          weight: number
         }[]
       }
       halfvec_avg: {
@@ -1674,8 +1850,22 @@ export type Database = {
         Args: { post_id_to_increment: string }
         Returns: undefined
       }
+      invalidate_user_cache: {
+        Args: { p_user_id: string }
+        Returns: undefined
+      }
       is_collective_owner: {
         Args: { cid: string }
+        Returns: boolean
+      }
+      is_content_muted: {
+        Args: {
+          p_user_id: string
+          p_content_id: string
+          p_author_id: string
+          p_collective_id: string
+          p_tags: string[]
+        }
         Returns: boolean
       }
       is_following: {

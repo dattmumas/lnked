@@ -1,203 +1,64 @@
-Understood. I will conduct a comprehensive audit of the video player implementation in the repository, with a focus on the MUX integration. This will include:
+## Project Overview
 
-- A complete list of all files related to the video player, with descriptions of their function
-- A review of potentially unnecessary or deprecated files
-- Detailed explanations of all functions and webhooks involved, including what data they retrieve and why
-- A dependency map showing how video player-related files interact with one another
-- An evaluation of whether a MUX SDK or alternative implementation could simplify the current system
+Lnked is a Next.js 13 application using Supabase for the backend, implementing a newsletter/content platform with video capabilities via Mux integration.
 
-I’ll notify you once this audit is complete.
+## Architecture
 
-# Video Player Functionality Audit
+- Frontend: Next.js 13 with App Router, React Server Components
+- Database: Supabase (PostgreSQL)
+- Video: Mux API integration
+- Auth: Supabase Auth
+- Payments: Stripe
+- UI Components: shadcn/ui pattern with Tailwind CSS
 
-## 1. **Related Files (Frontend & Backend)**
+## Coding Standards
 
-**Frontend Components:**
+- TypeScript for all new code
+- Server Components by default, Client Components only when needed
+- Zod schemas for validation
+- Server Actions for mutations
+- Tailwind CSS for styling
+- Use existing UI components from /components/ui/
 
-- **`src/components/app/uploads/VideoUploader.tsx`** – The main React component for video uploads. It provides a drag-and-drop interface, shows upload progress, and collects metadata (title, description, privacy). Internally it uses the `uploadService` to obtain a direct upload URL and PUT the file to Mux, following MUX’s direct upload guide. It supports multiple parallel uploads, progress tracking, and calls provided callbacks on completion or error.
+## Testing Requirements
 
-- **`src/lib/services/upload-service.ts`** – A client-side service that orchestrates the direct upload workflow to MUX. It defines `uploadVideo(file, metadata)` which (1) calls our API to get a direct upload URL, (2) performs the file upload via `PUT` to that URL (using XHR for progress events), and (3) returns the video’s asset ID when done. This strictly follows MUX’s “upload directly from the browser” pattern. The service wraps the API response (`upload_url` and new video record) into a simplified result and updates progress via a callback.
+- Jest for unit tests
+- Playwright for E2E tests
+- Run tests with: pnpm test
+- Minimum 80% coverage for new features
 
-- **`src/app/dashboard/video-management/page.tsx`** – A Next.js page that renders the **Video Management Dashboard** (see below) for the logged-in user. It simply wraps the `VideoManagementDashboard` component in some layout styling.
+## Database Conventions
 
-- **`src/components/app/dashboard/video/VideoManagementDashboard.tsx`** – The dashboard UI for managing videos. It fetches the user’s videos from the API and displays them in a grid or list view with controls for search, delete, etc. Each video item (rendered via internal `VideoCard` or `VideoListItem` subcomponents) shows the title, description, status badge, and either a thumbnail or an inline player. If a video is ready, a thumbnail image is shown (via Mux’s thumbnail API) with a play button overlay. Clicking play will replace the thumbnail with an embedded player. The component uses `MuxVideoPlayerClient` for inline playback, which loads the Mux player component dynamically. There are also options to refresh processing videos, and a delete button that triggers the API delete route for a video.
+- UUID primary keys
+- snake_case for column names
+- Timestamptz for dates
+- Row Level Security enabled
 
-- **`src/components/app/video/MuxVideoPlayer.tsx`** – A **custom video player component** built around Mux’s web player. It injects the official `<mux-player>` web component script and then uses `React.createElement('mux-player', {...})` to render the player with a long list of configured attributes and event handlers. This component implements custom controls overlay (play/pause, volume, fullscreen toggles, etc.) on top of the Mux player element and hooks into player events (play, pause, ended, error, etc.) to track analytics or update state. _Note:_ This file exists to provide a skinned player UI, but it is **not currently used in the dashboard or video page** – the app instead uses `MuxVideoPlayerClient/Simple` (see below) for simplicity. This suggests `MuxVideoPlayer.tsx` might be an experimental or legacy component.
+## API Conventions
 
-- **`src/components/app/video/MuxVideoPlayerSimple.tsx`** and **`MuxVideoPlayerClient.tsx`** – A lightweight integration of Mux’s official React player. `MuxVideoPlayerSimple.tsx` simply renders the `<MuxPlayer>` React component from the `@mux/mux-player-react` SDK with a given `playbackId` and title. `MuxVideoPlayerClient.tsx` wraps that in a Next.js dynamic import to disable SSR (avoiding hydration issues). In the dashboard’s video grid, this is the component actually used to embed a Mux player for a video when the user clicks play. Using the official Mux player this way provides a ready-made player with default controls for quick preview.
+- RESTful endpoints in /app/api/
+- Server Actions in /app/actions/
+- Return format: { data?: T, error?: string }
+- Always validate input with Zod
+- Use existing Supabase clients from /lib/supabase/
 
-- **`src/components/app/video/VideoPlayerPageClient.tsx`** – The client-side logic for the dedicated video playback page (at route `/videos/[id]`). This component receives a `VideoAsset` record and handles full-page viewing. It determines if the video is ready (`video.status === 'ready'` and has a playback ID). It then either initializes playback or shows appropriate messages. If ready, it renders a standard HTML5 `<video>` element (with a poster image from Mux) and uses **HLS.js** to play the Mux stream if the browser lacks native HLS support. Specifically, on mount it builds an HLS stream URL (`https://stream.mux.com/{playbackId}.m3u8`) and either attaches it via HLS.js (for Chrome/Firefox) or directly sets the video `src` for Safari which supports HLS natively. It also listens for HLS.js events to handle errors (with retries) and mark when the video is loaded. If the video is still processing or errored, the component displays a friendly status message or error notice instead of the video player. This page also includes buttons for sharing (copy link) and downloading. The **Download** button attempts to fetch an MP4 rendition of the video from Mux (checking various URLs like `.../highest.mp4`, `.../capped-1080p.mp4`) and, if available, triggers a download; if not, it guides the user to use the HLS URL as a fallback.
+## Component Structure
 
-**Backend (Server/API & Services):**
+- Reusable UI in /components/ui/
+- Feature components in /components/app/
+- Use existing UI components (Button, Card, etc.)
+- Client components only when needed (use client directive)
 
-- **`src/app/api/videos/upload-url/route.ts`** – **API route for upload URL generation**. Called via `POST /api/videos/upload-url`, this handler authenticates the user, then uses the Mux **Node SDK** to create a new direct upload URL. It specifies a CORS origin (currently `'*'`) and playback policy (currently hard-coded to `'public'`) when creating the upload. On success, it inserts a new row into the `video_assets` table with the returned upload ID from Mux (`mux_asset_id` set to the upload ID) and status “preparing”. The response back to the client includes the `uploadUrl` (for the browser to PUT the file) and the newly created video record. In summary, this function reserves a spot in our DB and obtains the Mux URL so the client can upload the video file **directly to Mux**.
+## Git Workflow
 
-- **`src/app/api/videos/route.ts`** – **API route for listing videos**. This `GET /api/videos` endpoint fetches the authenticated user’s videos from the database. It supports query parameters for pagination (`page`, `limit`), search by title, filtering by status, and sorting. It returns a JSON of `{ success: true, data: { videos: [...], total, page, limit } }` with the user’s video records. The dashboard calls this to populate the video library UI.
+- Branch naming: feat/description, fix/description
+- Commit format: "type: description"
+- PR should include tests
+- Keep PRs focused on single feature
 
-- **`src/app/api/videos/[id]/route.ts`** – **API route for deleting a video**. Invoked by `DELETE /api/videos/{id}`, this handler ensures the user owns the video, then attempts to delete the video both from Mux and our database. It uses the Mux Node client to differentiate between an **upload in progress** vs. a completed **asset**: if the stored `mux_asset_id` starts with “upload-”, it calls `mux.video.uploads.cancel()` to cancel the direct upload; otherwise it calls `mux.video.assets.delete()` to delete the asset on Mux. (Both calls are wrapped in try/catch – if Mux returns an error (e.g. asset already gone), it logs and proceeds to still remove our DB record.) Finally, it deletes the record from `video_assets` in Supabase and returns success. This route is used by the dashboard’s delete button (including bulk-delete).
+## File Naming
 
-- **`src/app/api/mux-webhook/route.ts`** – **MUX Webhook handler** for events from Mux. Mux calls this (`POST /api/mux-webhook`) when certain events occur (we configure Mux to send webhooks). The route verifies the request signature using our MUX_WEBHOOK_SECRET to ensure authenticity, then parses the JSON body. It currently handles two event types:
-
-  - **`video.upload.asset_created`** – fired when an upload is successfully converted into a new asset. The handler maps the temporary upload ID to the real asset ID in our DB. Specifically, it finds the video where `mux_asset_id` equals the Mux `upload_id` and updates that row: setting `mux_asset_id` to the new asset’s ID (from `data.id`) and status to “processing”. This effectively links our record to the permanent asset once Mux has it.
-  - **`video.asset.ready`** – fired when Mux has finished processing the video. The handler updates the video’s status to “ready” and records additional info: the video duration, aspect ratio, and the first playback ID provided by Mux. Because this event might arrive quickly (sometimes before the previous step completed), the update uses a flexible match: it updates any record whose `mux_asset_id` matches either the asset ID or the original upload ID, ensuring we catch the right record in either case. After this, the video record will have `mux_playback_id` filled and status “ready,” meaning it’s playable.
-
-  Other events are logged as unhandled (the code has placeholders for errors, cancellations, live stream events, etc., but those just log and return). The two events above complete the direct upload pipeline by transitioning the video through our statuses (“preparing” → “processing” → “ready”) without any user polling – all via webhook-driven updates.
-
-- **`src/services/MuxService.ts`** – A **comprehensive Mux API wrapper** class. This was implemented as a singleton service to encapsulate all Mux operations. It uses the official **`@mux/mux-node`** SDK (initialized with our credentials). The class provides methods corresponding to Mux’s API features, for example:
-
-  - `createDirectUpload(options)` – Creates a direct upload URL by calling `this.mux.video.uploads.create(...)` with given options.
-  - `uploadVideo(file, metadata)` – (Likely intended to combine creating an upload and perhaps using the above service on the server – though in practice our client does this directly; this may not be used).
-  - `getAsset(assetId)`, `deleteAsset(assetId)` – to retrieve or delete assets (the delete logic is used directly in the API route instead).
-  - `getPlaybackUrl(playbackId, options)` – to generate a signed playback URL or thumbnail (would use Mux’s signing mechanism).
-  - Webhook processing helpers: it has `verifyWebhookSignature` and `processWebhook(payload, signature)` to validate and route events, and stubs for handling each event type (`handleAssetReady`, `handleUploadAssetCreated`, etc.). Notably, these stubs currently just log and return; the actual DB updates are done in the API route instead, meaning this service isn’t fully hooked up in our request pipeline.
-
-  **Important:** In the current codebase, the API routes call Mux directly using the SDK (and perform their own webhook logic), rather than calling methods on `MuxService`. This suggests that while `MuxService.ts` is implemented (with tests and documentation), it might be **unused or redundant** at runtime. The direct approach in routes was likely chosen for simplicity, leaving `MuxService` as an abstraction layer that could potentially be used in the future or was part of a previous iteration.
-
-- **`src/lib/schemas/video.ts`** – Schemas and types for video-related data, used for validation. It includes Zod schemas for upload metadata (`title`, `description`, `is_public`, etc.) and for the `VideoAsset` object shape (representing a DB row). These schemas enforce our expected fields, e.g. allowed status values, title length limits from constants, etc. They appear to be used to validate input or shape data in our services. Notably, the `VideoAssetSchema` here might not perfectly match the actual DB in production – for example it uses `owner_id` and `mux_upload_id`, whereas our insert code uses `created_by` and we reuse `mux_asset_id` for uploads. This discrepancy suggests the schema was written to mirror an ideal or planned schema (as in our migration file), even if the code and existing DB use slightly different field names (see **Misconfigurations** below).
-
-- **Database (Supabase) setup:** The videos are stored in a `video_assets` table (likely in Supabase). The migration file shows a comprehensive schema including fields for Mux IDs, status, metadata, ownership, etc. Key fields are `mux_asset_id` (Mux asset ID or upload ID), `mux_playback_ids` (JSON array of playback IDs), `status` (preparing/ready/errored), and `owner_id` (user who uploaded), among others. Our implementation currently uses a single playback ID (we take the first one Mux returns) and sets `playback_policy` to public by default, so each video ends up with one `mux_playback_id`. The table also has `is_public` (whether the video is meant to be publicly accessible) which our API could use to decide playback policy, though right now the code always uses public playback (so `is_public` is effectively unused or always false/true without effect). The presence of extra fields (e.g. `mux_upload_id`, `mp4_support`, `encoding_tier`) in the DB schema shows the system can be extended, but many of these are currently left at defaults by the simplified implementation.
-
-## 2. **Redundant or Unused Files/Code**
-
-The audit identified a few files and code paths that appear to be **deprecated, duplicate, or not in active use:**
-
-- **MuxService.ts** – While fully implemented as a one-stop service for all Mux operations, the current API routes do not utilize it (they create their own Mux client instances or use Mux SDK calls directly). For example, the upload URL route creates a `new Mux()` client and calls `mux.video.uploads.create()` itself, rather than calling our `MuxService.createDirectUpload` method. Similarly, webhook verification and handling are done in the route file, not via `MuxService.processWebhook`. This makes the `MuxService` class somewhat redundant. It likely remains from an earlier design phase or as an abstraction for possible future use (especially for features like live streaming or generating signed URLs), but as of now, it’s essentially unused in production logic. Its existence adds some complexity (e.g. keeping it in sync with route logic), so if the simpler direct approach is sufficient, this service layer could potentially be removed or slimmed down to avoid confusion.
-
-- **Custom MuxVideoPlayer vs. MuxVideoPlayerSimple** – There are two approaches to video playback coexisting in the code:
-
-  - The **custom `MuxVideoPlayer.tsx`** that wraps the `<mux-player>` web component and adds custom controls, and
-  - The simpler use of Mux’s official React player (`MuxVideoPlayerSimple.tsx` via `MuxVideoPlayerClient.tsx`).
-
-  In the current UI, the simpler player is being used for inline previews on the dashboard, and the dedicated video page uses a separate HLS player implementation. The fully custom `MuxVideoPlayer.tsx` (with analytics hooks and a big control overlay) is not imported or used anywhere in the app at the moment. This suggests it may be legacy or experimental. It is potentially **safe to remove** if the team decides to standardize on using the official Mux player or the HLS approach exclusively. Maintaining both increases complexity – for instance, any bug fixes to one player path might be missed in the other. Consolidating to a single player strategy (see recommendations below) would simplify the codebase.
-
-- **Dual Playback Implementations** – As noted, we currently have **two different playback methods** in use: the Mux Player component (in the dashboard previews) and a custom HLS.js-based player (on the full video page). Both achieve the same end – streaming the video by playback ID – but with separate code. This duplication can lead to inconsistent behavior. For example, the HLS player has robust error handling and recovery logic for network issues, whereas the Mux player likely handles that internally (or might not expose errors the same way). Also, the UI/controls differ between them. If not intentionally needed, this dual approach is an area of over-complication. It would be simpler to pick one method for all playback to reduce maintenance overhead.
-
-- **Schema Mismatch (Unused fields)** – There are slight mismatches between the code’s usage and the DB/schema definitions:
-
-  - The code uses a `created_by` (or in some places calls it `owner_id`) field to track video ownership. The migration defines `owner_id`, but our insert code uses `created_by`. It’s likely the actual production DB has a column named `created_by` (hence the code working) and the migration is a newer plan. If `owner_id` is not present in the live DB, that part of the schema is effectively unused. This discrepancy should be resolved to avoid confusion – the code and DB should agree on the field name.
-  - The migration and schema define both `mux_asset_id` and `mux_upload_id`, implying the upload ID could be stored separately from the final asset ID. However, our implementation just uses `mux_asset_id` for both purposes (storing the temporary upload ID, then overwriting it with the asset ID on webhook). We never explicitly set or read `mux_upload_id` in code. This redundant field means extra complexity – e.g., our webhook update uses an `OR` condition to match either ID, which could be avoided by using distinct fields. If we’re not leveraging `mux_upload_id`, it could be removed from the schema, or the code could be updated to utilize it (e.g. store the initial upload ID there). Right now it’s effectively unused.
-  - Fields like `mux_playback_ids` (a JSON array) exist in the DB but we simplify by using a single `mux_playback_id` (first element) in code. Similarly `mp4_support`, `encoding_tier`, etc., are always defaulted and not set via our API. These aren’t causing runtime issues (since defaults apply) but represent extra configuration that our current “90% simpler” solution doesn’t exploit. They could be removed or left for future expansion. The presence of these fields is a remnant of the more “complex implementation” that was replaced; the new system doesn’t need them all, which suggests the overall integration could be tidied by trimming unused columns or code paths to match the simpler design.
-
-In summary, **MuxService.ts** and the **custom MuxVideoPlayer component** are prime candidates for deprecation. The system now leans on direct use of the Mux SDK and player, so these abstractions/duplicates add complexity without clear benefit. Likewise, consolidating the playback method and cleaning up schema usage will remove a lot of “noise” and potential misconfigurations, making the video system easier to maintain.
-
-## 3. **Function & Webhook Behavior in the Playback Pipeline**
-
-Below we detail each core function or webhook in the video pipeline, including what data it handles, its purpose, and usage status:
-
-- **`POST /api/videos/upload-url`** (Function: _generateUploadUrl_): This is the **start of the upload flow**. It receives a JSON body with video metadata (`title`, `description`, and optionally `is_public` and `collective_id`). It uses the Mux Node SDK to create a new direct upload and returns a one-time upload URL. **Data in:** user metadata (title, etc.). **Data out:** a JSON containing `uploadUrl` (the URL to which the client will upload the file) and a freshly created video record (with an `id` and initial status). **Purpose:** Allows the frontend to upload large video files **directly to Mux** (bypassing our server for the file transfer) while still registering the video in our database. **Usage:** Active – called by the `uploadService.createDirectUpload()` in the client when a user selects a video to upload. It is essential for initiating any new video upload.
-
-- **`PUT uploadUrl (Mux)`**: Though not an API route in our app, it’s worth noting in the flow – the upload URL returned by the above function is used by the browser to **PUT the video file to Mux’s storage**. This happens entirely on the client side via `uploadService.uploadToMux()` using an XHR request. If this step succeeds (the file is transferred), Mux will begin processing the video. If it fails (network error, etc.), the client will report an error and the video record remains in a “preparing” state until cleaned up (or retried).
-
-- \*\*Mux **Webhooks**:
-
-  - **`video.upload.asset_created`** (Webhook → `handleUploadAssetCreated`): **Data in:** Mux sends `{ id: <assetId>, upload_id: <tempUploadId>, status: "preparing" }` for this event. **Purpose:** This indicates the direct upload has been accepted and a permanent asset was created in Mux. Our handler uses this data to find the video entry where `mux_asset_id == upload_id` and replaces it with the real `assetId`, and sets status to “processing”. This effectively finalizes the association of our DB record with the Mux asset. **In use:** Yes – this event is handled in the webhook route and updates the DB. Immediately after this, our video’s `mux_asset_id` is now an actual asset ID that can be used for further API calls (and the record’s status moves from “preparing” to “processing”). This function is critical for ensuring the subsequent `asset.ready` event can find the record (since it might reference the asset ID).
-  - **`video.asset.ready`** (Webhook → `handleAssetReady`): **Data in:** Mux sends a payload with the asset `id`, `status == "ready"`, `duration`, `aspect_ratio`, and an array of `playback_ids`. **Purpose:** Signals that the video is fully processed and playable. Our handler updates the corresponding video row: sets `status` to “ready”, records the duration and aspect ratio, and stores the first playback ID (for streaming). It uses an `OR` query to match either the asset id or (just in case) the old upload id, to handle race conditions. After this, the video record is essentially complete – it has a playback ID and is marked ready for viewing. **In use:** Yes – this is handled in the webhook route and marks the final step in the pipeline (the summary confirms that webhook processing is “ready for MUX callbacks” and updates the record accordingly). Once this executes, the front-end will see the video as ready on next fetch.
-  - **Other webhook events**: The route logs any unhandled event types. The code stubs in MuxService (`handleAssetError`, `handleUploadCancelled`, etc.) show where one could add logic for failed or cancelled uploads. Currently, if Mux sends `video.asset.errored`, we would just log it; it might be prudent to update our DB status to “errored” in that case (right now the DB could remain “processing” without an update if an error event is not handled). Similarly, cancellations aren’t explicitly handled except logging. These functions exist but are effectively **no-ops** unless extended. So while the webhook route is functional, there is a bit of incomplete handling for error cases (something to address for completeness).
-
-- **`GET /api/videos`** (Function: _listVideos_): **Data in:** authentication (user JWT) and optional query params (`page`, `limit`, `search`, etc.). **Data out:** JSON list of the user’s video assets and basic pagination info. **Purpose:** Provide the client (dashboard) with the latest state of all videos. This is used on initial load of the video management page and also after certain actions (like after deleting videos or possibly after an upload completes, to refresh the list). **Usage:** Active – the dashboard calls this on mount (and on refresh actions) to populate the video library. It ensures the UI reflects any updates that came in via webhooks (e.g., a video’s status changing to “ready”).
-
-- **`DELETE /api/videos/[id]`** (Function: _deleteVideo_): **Data in:** the video ID (as a URL param) and user auth. **Data out:** success status (or error). **Purpose:** Remove a video, both from our DB and from Mux. It checks ownership and then calls Mux to delete the asset or cancel the upload depending on the state, then removes the DB entry. **Usage:** Active – the dashboard invokes this when the user clicks delete on a video or deletes multiple videos. This function helps keep our Mux account clean (so we’re not leaving behind orphaned assets/uploads) and keeps the database in sync. One thing to note: if a video is still processing (i.e., only an upload ID exists), the code calls `uploads.cancel` on Mux. If the upload already succeeded and turned into an asset by the time of deletion, we call `assets.delete`. If Mux deletion fails for some reason (network issue or asset already gone), we still go ahead and delete our DB record – thus the function prioritizes cleaning our system, while making a best-effort to inform Mux. This function is working and important for maintenance, with no indication it’s deprecated – it’s part of the “full lifecycle” management.
-
-- **Front-end Utility Functions**:
-
-  - **UploadService’s `uploadVideo`** – This client-side function ties together the upload flow. It _retrieves_ data from our API (the upload URL and a new video record) and then _sends_ the file data to Mux. It doesn’t directly manipulate global state, but returns the new video’s ID so the UI can react. The `VideoUploader` component uses this to update its state and trigger the `onUploadComplete` callback with the video’s ID and metadata. In essence, it ensures the user has a seamless one-click upload experience by hiding the complexity of the two-step process.
-  - **VideoPlayerPageClient’s HLS integration** – Not exactly a “function” in isolation, but it’s worth noting how it _retrieves_ data: the page’s server component fetches the video record by ID from the DB before rendering. The client component then _uses_ the `mux_playback_id` from that data to construct the stream URL and instantiate HLS.js. This is how the playback component gets the info it needs (playback URL, status, etc.) – all from the `VideoAsset` data we stored earlier via webhooks.
-
-Each of the above functions/webhooks is **active** in the current system except where noted (e.g., unused MuxService methods or unhandled webhook event types). Together, they implement a pipeline that: **creates upload URLs**, **receives files**, **updates video status via webhooks**, and **serves video playback data**. The design follows Mux’s best practices as claimed – direct uploads and webhook-driven updates – which is confirmed by the documentation comments and the working status (200 OK) of these endpoints.
-
-## 4. **Dependency Mapping of Components & Modules**
-
-The video player system involves several interconnected pieces. Here’s a high-level overview of how data flows and which components interact at each stage:
-
-- **Upload Flow:**
-
-  1. **User Action:** A user selects a video file in the **VideoUploader** component (or drags-and-drops it). They enter metadata like title/description in the UI.
-  2. **Client API Call:** The **VideoUploader** triggers `uploadService.uploadVideo()`, which first calls **`POST /api/videos/upload-url`** to get an upload URL. This API, in turn, uses **Mux** (via the Node SDK) to create a new upload and then writes a new **video_assets** row in the database with status “preparing”.
-  3. **Mux URL & DB Record:** The response from the API includes the Mux **upload URL** and the new video’s **ID** and metadata. The client now knows where to send the file and has a local copy of the video’s DB info (so it can optimistically update UI if needed).
-  4. **Direct File Upload:** The **browser** (still in `uploadService.uploadVideo`) now issues an HTTP **PUT** to the Mux-provided URL, sending the video file data. This goes **directly to Mux** – our server is not involved in the file transfer, avoiding bandwidth strain.
-  5. **Mux Processing:** Once the file is uploaded, Mux begins processing (transcoding, generating HLS stream, etc.). No further action is needed from the client at this point – the client might show the video in an “uploading/processing” state in the UI (the VideoUploader marks it as uploading then completed locally), but it’s essentially waiting for Mux now.
-  6. **Mux Webhook (Asset Created):** Mux sends a **`video.upload.asset_created`** webhook to our **backend**. The **mux-webhook route** receives it and updates the corresponding video record: it sets the stored `mux_asset_id` from the temporary upload ID to the new asset ID Mux just created. The video’s status becomes “processing” at this point. _(If this step didn’t happen, the next step might not find the record by asset ID, hence its importance.)_
-  7. **Mux Webhook (Asset Ready):** When processing is done, Mux sends a **`video.asset.ready`** webhook. Our handler then updates the video row again – setting status “ready”, writing the video’s duration, etc., and most critically, saving the **playback ID** for the video. This playback ID is what we’ll use to stream the video. After this update, the database now has all information needed for playback.
-  8. **UI Update:** The frontend might not know immediately that the video is ready. In our case, the dashboard isn’t maintaining an open socket or realtime subscription to the DB, so the user would see the video as “Processing...” until the next refresh. We provide a manual **Refresh** button in the UI for processing videos and also whenever the dashboard is visited or the user triggers a reload, the client calls **`GET /api/videos`** to get the latest list. That response will include updated statuses (e.g., the video now marked ready with a playback ID). In a more advanced setup, we could use Supabase’s realtime or a listener to auto-update the UI, but currently a user refresh or periodic polling (the constant `STATUS_CHECK_INTERVAL` suggests we _planned_ to poll every X seconds) would pick up the change. Either way, once **/api/videos** shows the video as ready, the upload pipeline is effectively complete – the video is stored, processed, and its info propagated to the client.
-
-- **Playback Flow (Dashboard Inline):**
-
-  1. On the **Video Management Dashboard**, when videos are listed, each ready video shows a thumbnail. If a user clicks the play button on a video card, the state `showPlayer` for that card turns true. At that moment, the component will render a \*\*`<MuxVideoPlayer>` component in place of the thumbnail.
-  2. **Mux Player Component:** The `MuxVideoPlayerClient` (which wraps `MuxVideoPlayerSimple`) loads the Mux web player SDK and injects a player configured with the video’s `playbackId`. This <mux-player> (or `<MuxPlayer>` React component) will **internally** fetch the stream from Mux (`stream.mux.com`) using that playback ID. We don’t manually call our server for this – the player knows the base URL by the playback ID and handles streaming and rendering.
-  3. **Playback:** The video then plays inline. The user can control it (play/pause/seek) using either Mux’s default controls or our overlay (in the current simple implementation, it’s just the default Mux controls). This inline player is _not_ sending any data back to our server; it’s streaming directly from Mux’s CDN. (However, if analytics is enabled with an `envKey`, the Mux player might send analytics events to Mux’s analytics service – but that’s on Mux’s side, not our app.)
-
-- **Playback Flow (Dedicated Page):**
-
-  1. When a user navigates to `/videos/[id]` (e.g., clicking the external link icon on a video card), Next.js will server-render that page. The **page’s `getVideoData`** function runs on the server, calling Supabase to fetch the video by ID. It returns the full video record (including status, playback IDs, etc.).
-  2. Next, the page loads the **VideoPlayerPageClient** component with that data. The client component sees, for example, `video.status = "ready"` and `mux_playback_id = "XYZ..."`.
-  3. **HLS Player Init:** On mount, VideoPlayerPageClient’s effect will create an HLS stream URL using the playback ID and load the HLS.js library if needed. It attaches the HLS instance to the HTML `<video>` element (ref `videoRef`). If the browser is Safari (supports HLS natively), the code simply sets the video’s `src` to the HLS URL and uses the browser’s native playback.
-  4. **Playback:** The video plays on this page, either through native playback or through HLS.js feeding the video element. The streaming content again comes directly from Mux (Mux’s CDN serving the .m3u8 playlist and .ts segments to the video element or HLS.js). Our server is not involved except that the initial page load fetched the video metadata.
-  5. **Auxiliary actions:** On this page, if the user clicks **Download**, the component will attempt to fetch an MP4. It tries a HEAD request on possible MP4 URLs on Mux’s domain. If found, it triggers a download in the browser. If not, it offers the user the HLS URL as a fallback (copy to clipboard). The **Share** button likely copies the page URL (so others with access can view the video) – not explicitly shown above, but the presence of a Share icon and clipboard logic suggests that.
-
-- **Delete Flow:**
-
-  1. The user can select one or many videos in the dashboard and hit **Delete**. The UI will call **`DELETE /api/videos/{id}`** for each selected video.
-  2. The API handler will for each: check the user’s auth and ownership, then call Mux to delete the asset or cancel the upload depending on the `mux_asset_id` prefix. Then it removes the video from the `video_assets` table.
-  3. After the deletion calls succeed, the dashboard calls **GET /api/videos** again to refresh the list. The deleted videos will no longer appear. (If one failed to delete on our side, an error message would show).
-  4. If an inline player was open for a deleted video or if someone was on the video’s page, the actual Mux streams might stop working once the asset is deleted at Mux. However, since we usually navigate away on deletion or remove it from UI, this conflict is minor. The key is our DB and Mux remain consistent (no record pointing to a non-existent asset).
-
-**Summary of Dependencies:** The front-end and back-end communicate strictly via the defined API routes, and the back-end communicates with Mux via their API and webhooks:
-
-- Frontend components (VideoUploader, Dashboard) **→** our **API routes** (`upload-url`, `videos`, `delete`) **→** Mux SDK or DB as needed.
-- Mux **→** our **webhook endpoint** (`mux-webhook`) **→** DB updates **→** Frontend (on next GET request) sees updated data.
-- Frontend playback components (MuxPlayer or HLS player) **→** Mux CDN (stream URLs) for actual video content.
-
-This design ensures that video files and streams do not overload our servers (direct Mux connections for big data), and our database is the source of truth for video metadata and status. The **diagram below** illustrates the core interactions:
-
-_(The above diagram text describes the step-by-step direct upload workflow, matching our implementation.)_
-
-## 5. **MUX SDK Usage & Simplification Recommendations**
-
-**Current MUX SDK usage:** The project is already leveraging official Mux SDKs on both backend and frontend:
-
-- On the **backend**, it uses **Mux’s Node SDK** (`@mux/mux-node`). We see this in `MuxService.ts` (constructing a Mux client with token ID/secret) and in the API routes (`upload-url` and `delete`) where `new Mux()` is used directly. Using the official SDK is beneficial – it provides convenient methods for common actions (creating uploads, deleting assets, etc.) without manually constructing HTTP calls. Our implementation follows Mux’s guide closely, and using `mux-node` has simplified tasks like creating the direct upload URL (one method call). **Recommendation:** Continue using this SDK. It ensures we handle Mux API calls correctly and will get updates/improvements from Mux. We might also use it more fully; for instance, `MuxService` includes methods for generating signed playback URLs and live streams – if those features become needed (e.g., private videos), the SDK will make it easier to implement.
-
-- On the **frontend**, we have integrated Mux’s official **Web Player**. Initially, the code injected the player script from CDN and used the custom integration (`MuxVideoPlayer.tsx`), but in the current state we favor the **`@mux/mux-player-react`** package (seen in `MuxVideoPlayerSimple.tsx`). This is essentially a React wrapper around Mux’s Web Component `<mux-player>`. By using this, the heavy lifting of cross-browser HLS support, UI controls, and even telemetry is handled by Mux’s library. We don’t need to manually implement video element logic or quality selection – the Mux player brings features out-of-the-box (e.g., an interactive playback speed menu, adaptive bitrate streaming, etc.). **Recommendation:** Standardize on the official Mux player for all playback experiences. This would mean using `<MuxPlayer>` (or `<mux-player>`) on the dedicated video page as well, instead of the custom HLS.js integration. The official player automatically falls back to Media Source Extensions for browsers that need it (similar to what HLS.js does) and supports captions, picture-in-picture, analytics, and other features by configuration. Replacing our manual HLS.js code with Mux’s player could greatly **simplify the code** – we’d drop a chunk of custom logic and reduce potential CORS or compatibility issues (the Mux player is well-tested across browsers).
-
-**CORS and connectivity considerations:** One possible cause of the “CORS issues” experienced might be related to how our HLS player or direct uploads were configured:
-
-- For **direct uploads**, Mux requires specifying allowed CORS origin(s) when creating the upload URL. We currently pass `'*'` (all origins), which is permissive and should avoid CORS failures during upload from any domain. If we had restricted it (e.g., to our exact domain) but an environment variable was mis-set or if our app is accessed from multiple domains (like a staging vs. prod domain), it could have caused CORS errors on upload. Using `'*'` avoids that, but in production we may want to set this to our known domain for security. We should double-check that `NEXT_PUBLIC_APP_URL` is correctly configured if we decide to use it instead of `*`. The summary documentation indicated using the app URL for CORS, so perhaps the intention is to narrow that down once we’re sure of the deployment domain. Ensuring this is configured properly will prevent any connectivity issues when uploading (e.g., if the wildcard were removed and not replaced with the correct origin, uploads would be blocked by Mux).
-- For **playback**, if we stick to Mux’s player, CORS is generally handled. Mux’s streaming URLs (`stream.mux.com`) are designed to be consumed in a browser; they send appropriate CORS headers so that media segments can be fetched by a web video element or XHR. Our HLS.js approach manually injects the stream – if not configured correctly, one potential issue is not setting the `crossOrigin` attribute on the video element. Mux player likely does this internally. If our HLS usage had any hiccup (e.g., maybe needing `videoRef.current.crossOrigin = 'anonymous'` for certain features like mixing canvas or for the poster image), it might manifest as a CORS error when trying to fetch the `.m3u8` or `.ts` segments. So far, we haven’t seen explicit CORS errors in the code, but it’s something to consider. Using the Mux player would likely simplify this as it manages those details.
-
-**Suggested Mux SDK integrations to simplify further:**
-
-1. **Use Mux Player everywhere:** As mentioned, replacing the custom HLS + `<video>` logic on the `/videos/[id]` page with the `<MuxPlayer>` component can unify the playback method. This reduces code (we can drop HLS.js and its event handling) and ensures consistency. The Mux player can be given the playback ID and will handle HLS, and we can still customize the appearance or controls if needed (via CSS or props). It also natively handles CORS and streaming intricacies, likely eliminating any “connectivity issues” that arise from our manual setup. The official SDK also makes it easy to enable things like **subtitles or analytics** by just adding props (for instance, if we wanted to collect viewer metrics, setting the `envKey` property would send analytics to Mux Data – our `MuxVideoPlayerProps` already anticipate an `envKey` prop).
-
-2. **Leverage Mux Node SDK more fully:** We already use it for creating uploads and deleting assets. We might also use it for:
-
-   - **Webhook signature verification:** Right now we manually compute the HMAC for webhook signatures. Mux’s Node SDK provides a helper for this (`Mux.Webhooks.verifyHeader(...)` in some versions). Using the official helper (if available in our version) could reduce custom crypto code and ensure we’re aligned with Mux’s recommendations. It’s a minor improvement since our code is working, but worth noting.
-   - **Generating signed URLs:** If we start using `is_public = false` (private videos), we will need to generate signed playback URLs or tokens. The Node SDK can generate playback tokens, which we could then append as a query param or use with the Mux player. Currently our system defaults to public playback (no tokens needed), simplifying things. If privacy is required in future, integrating Mux’s secure video URL flow would be the right approach (MuxService already has a `getPlaybackUrl` stub for this).
-   - **Live streaming:** Our migration and service code hint at support for live streams (a `live_streams` table and methods like `createLiveStream`). If live streaming is on the roadmap, continuing to use the Mux Node SDK will be crucial. It provides methods to create and manage live streams and to retrieve their playback IDs. This isn’t directly part of “video player playback” for VOD, but it’s in the orbit of video functionality. The current code doesn’t surface live streaming in the UI yet, but the presence of those items means we’d likely integrate them similarly (with webhooks for stream events, etc.).
-
-3. **Eliminate custom code where an SDK can handle it:** Our approach is already relatively lean, but one area to review is the **upload progress** and chunking. The current direct upload uses a single PUT (which is fine for smaller videos). If we encounter connectivity issues uploading very large files, Mux now offers a “resumable upload” approach (Tus protocol) via their **Multipart uploads** API. There might be an official Mux JavaScript SDK or sample for chunked uploads (to allow resume). Right now, we have a simpler approach (retry the whole upload if it fails). If large uploads and reliability are a concern, adopting Mux’s recommended approach for resumable uploads (Mux has a guide for multipart uploads) could be worthwhile. That might involve using an SDK or library (Mux has a beta JS library for this, or we use Tus directly). It’s a more advanced scenario – just a note that sticking with official tools as they become available will likely improve stability.
-
-**Why official SDKs help simplify & stabilize:**
-
-- They are maintained by Mux, meaning any updates for new features or bug fixes (especially around browser quirks, CORS, streaming performance) are handled for us.
-- Using the Mux player SDK eliminates a whole class of potential errors in video playback – our current HLS implementation is quite solid, but it’s essentially duplicating what Mux’s player does. The Mux player also ensures best practices (for example, it automatically attaches the correct cross-origin attributes, handles text tracks, etc.). By using it, we reduce our custom code by \~300+ lines and rely on a proven solution.
-- The Node SDK ensures we use the Mux API correctly. It abstracts the HTTP calls and gives clear methods. This reduces misconfiguration – for example, it will construct the proper endpoint for deleting an asset so we don’t accidentally call wrong URLs. It also might handle retries internally. Our code already benefits from this (notice how clean the upload creation call is).
-- Consistency: If we align everything to use Mux’s tools, our integration will be more consistent. Right now, there’s a slight divergence (Mux player vs HLS.js). Consistency will make debugging easier (we won’t have to recall two different code paths depending on context).
-
-**Recommendation Summary:** The system is largely on the right track by “following MUX’s documentation exactly”. To further simplify and resolve any lingering issues, we should **remove the duplicated/unused components**, and fully embrace the **Mux SDKs**:
-
-- Use **`@mux/mux-player`** (web component or React version) for all video playback, dropping the custom HLS.js player unless there’s a specific need it fulfills that Mux’s player cannot. This will likely solve any odd playback or CORS edge cases, since the SDK has those covered.
-- Continue using **`@mux/mux-node`** for all server-side operations (we already do for upload and delete). We can also route all Mux API interactions through our `MuxService` to centralize error handling and logging – or simplify by removing `MuxService` if we prefer the direct approach, but either way, using the SDK’s methods is preferable to manual REST calls.
-- If not already done, consider using Mux’s **Data/Insights**: The Mux player allows sending analytics events (requires an environment key). This doesn’t simplify code per se, but it can help stabilize the integration by providing metrics on playback failures, rebuffering, etc., which could inform us if users still face connectivity issues (e.g., if certain networks block HLS, etc.). Enabling that is as easy as one prop on the player (and configuring an env key).
-
-Finally, double-check configuration like **CORS origins** for production and **webhook secrets**. The current hard-coded `WEBHOOK_SECRET` fallback in code should be replaced with an environment variable (which it tries to use). Ensuring those values are correctly set will prevent any signature verification problems or upload blocking in a deployed scenario.
-
-By adopting the above recommendations, we aim to **simplify the video player system** to its essential elements (upload, webhook update, playback) with minimal custom glue. This reduces points of failure and should resolve the CORS/connectivity issues observed. In short, trust Mux’s tools where possible – they are built to handle the heavy lifting of video streaming so we can focus on our application logic.
-
-**Sources:**
-
-- Mux direct upload integration and webhook handling (video system design)
-- Implementation of upload URL API and Mux upload creation
-- Webhook handlers updating video status and playback IDs
-- Frontend use of Mux player SDK vs HLS.js for playback
-- Mux player integration via official React SDK
-- Mux Node SDK usage for asset deletion
+- Components: PascalCase.tsx
+- Utilities: camelCase.ts
+- Types: types.ts or inline
+- Tests: _.test.ts or _.spec.ts
