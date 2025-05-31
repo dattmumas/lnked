@@ -1,0 +1,39 @@
+---
+description: Defines canonical paths for core Memory Bank files.
+globs: memory-bank-paths.mdc
+alwaysApply: true
+---
+# DOCUMENTATION AND MARKDOWN FILE ORGANIZATION
+
+**CRITICAL:** All markdown (.md) files must be created and maintained within the `docs/` directory at the project root. This ensures consistent documentation organization and prevents clutter in the project root.
+
+## Required Directory Structure
+
+* **Documentation Root:** `docs/` - All markdown files, project documentation, and related files
+* **Archive Directory:** `docs/archive/` - Completed task archives and historical documentation
+* **Active Project Files:** Direct children of `docs/` for current project documentation
+
+## Specific File Locations
+
+* **Task Files:** `docs/tasks.md` - Active task tracking and checklists
+* **Context Files:** `docs/activeContext.md`, `docs/progress.md` - Project state and progress tracking
+* **Project Documentation:** `docs/projectbrief.md`, `docs/productContext.md`, `docs/systemPatterns.md`
+* **Technical Documentation:** `docs/techContext.md`, `docs/style-guide.md`
+* **Decision Records:** `docs/creative_decisions.md`, `docs/risk_assessment.md`
+* **Analysis Documents:** `docs/migration_strategy.md`, `docs/tailwind_patterns.md`, `docs/css_audit_report.md`
+* **Archived Tasks:** `docs/archive/archive-[task_id].md`
+* **Backup Files:** `docs/tasks.md.bak`, `docs/tasks_backup_*.md`
+
+## Enforcement Rules
+
+**Mandatory Documentation Location:** 
+- ALL .md files MUST be created in `docs/` directory or its subdirectories
+- NO .md files should exist in the project root
+- NO .md files should be created outside the `docs/` hierarchy
+
+**Verification Mandate:** Before any `create_file` or `edit_file` operation on markdown files:
+1. Verify the path starts with `docs/`
+2. If creating a new markdown file, ensure it is placed in `docs/` or appropriate subdirectory
+3. If a markdown file is found in the root, it should be moved to `docs/`
+
+**Archive Organization:** Completed tasks and historical documentation should be moved to `docs/archive/` with descriptive filenames including dates or task identifiers.

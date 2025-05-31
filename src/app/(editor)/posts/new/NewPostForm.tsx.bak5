@@ -1,7 +1,5 @@
 'use client';
 
-import '@/components/editor/styles/EditorStyles.css';
-
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useForm, SubmitHandler, FormProvider } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
