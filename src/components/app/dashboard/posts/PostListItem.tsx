@@ -42,6 +42,7 @@ type DashboardPost = {
   likeCount?: number;
   comments?: any[] | null;
   isFeatured?: boolean;
+  video?: { id: string; title: string | null } | null;
 };
 
 export interface PostListItemProps {
@@ -51,6 +52,7 @@ export interface PostListItemProps {
   onSelect?: () => void;
   showCollective?: boolean;
   compact?: boolean;
+  tableMode?: boolean;
 }
 
 /**
@@ -65,6 +67,7 @@ export default function PostListItem({
   onSelect,
   showCollective = false,
   compact = false,
+  tableMode = false,
 }: PostListItemProps) {
   const [isDeleting, setIsDeleting] = useState(false);
   const [isPending, startTransition] = useTransition();
@@ -131,6 +134,104 @@ export default function PostListItem({
   const views = post.view_count || 0;
   const comments = post.comments?.length || 0;
 
+  // Helper functions for URL routing
+  const getPostViewUrl = (post: DashboardPost) => {
+    return post.video ? `/videos/${post.video.id}` : `/posts/${post.id}`;
+  };
+
+  const getPostEditUrl = (post: DashboardPost) => {
+    // Video posts don't have edit functionality yet, so keep routing to post edit
+    return `/posts/${post.id}/edit`;
+  };
+
+  // Table mode - render as table rows
+  if (tableMode) {
+    return (
+      <tr
+        className={`hover:bg-muted/50 transition-colors ${isSelected ? 'bg-muted' : ''}`}
+      >
+        <td className="px-4 py-3">
+          <div className="flex items-center gap-2">
+            {onSelect && (
+              <input
+                type="checkbox"
+                checked={isSelected}
+                onChange={onSelect}
+                className="h-4 w-4 rounded border-border accent-accent"
+              />
+            )}
+            <div className="min-w-0 flex-1">
+              <Link href={getPostViewUrl(post)} className="group block">
+                <h3 className="font-medium text-foreground truncate group-hover:text-accent transition-colors">
+                  {post.title}
+                </h3>
+              </Link>
+              {post.description && (
+                <p className="text-sm text-muted-foreground line-clamp-1 mt-1">
+                  {post.description}
+                </p>
+              )}
+            </div>
+          </div>
+        </td>
+        <td className="px-4 py-3">
+          <Badge variant={getStatusVariant(post)}>{getStatusLabel(post)}</Badge>
+        </td>
+        <td className="px-4 py-3 text-muted-foreground">
+          {formatDate(post.published_at || post.created_at)}
+        </td>
+        <td className="px-4 py-3 text-muted-foreground">
+          {likes > 0 ? likes.toLocaleString() : '—'}
+        </td>
+        <td className="px-4 py-3">
+          <div className="flex items-center gap-1">
+            <Button size="sm" variant="ghost" asChild>
+              <Link href={getPostEditUrl(post)}>
+                <Edit className="h-4 w-4" />
+              </Link>
+            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button size="sm" variant="ghost">
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem asChild>
+                  <Link
+                    href={getPostViewUrl(post)}
+                    className="flex items-center gap-2"
+                  >
+                    <ExternalLink className="h-4 w-4" />
+                    {post.video ? 'View Video' : 'View Post'}
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link
+                    href={getPostEditUrl(post)}
+                    className="flex items-center gap-2"
+                  >
+                    <Edit className="h-4 w-4" />
+                    Edit Post
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={handleDelete}
+                  disabled={isDeleting}
+                  className="text-destructive focus:text-destructive focus:bg-destructive/10"
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  {isDeleting ? 'Deleting...' : 'Delete Post'}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </td>
+      </tr>
+    );
+  }
+
   if (compact) {
     return (
       <div
@@ -152,7 +253,7 @@ export default function PostListItem({
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-component">
             <div className="min-w-0 flex-1">
-              <Link href={`/posts/${post.id}`} className="group block">
+              <Link href={getPostViewUrl(post)} className="group block">
                 <h3 className="font-medium text-content-primary truncate group-hover:text-content-accent transition-colors transition-fast">
                   {post.title}
                 </h3>
@@ -185,7 +286,7 @@ export default function PostListItem({
                 className="micro-interaction nav-hover"
                 asChild
               >
-                <Link href={`/posts/${post.id}/edit`}>
+                <Link href={getPostEditUrl(post)}>
                   <Edit className="h-4 w-4" />
                 </Link>
               </Button>
@@ -206,16 +307,16 @@ export default function PostListItem({
                 >
                   <DropdownMenuItem asChild>
                     <Link
-                      href={`/posts/${post.id}`}
+                      href={getPostViewUrl(post)}
                       className="flex items-center gap-2"
                     >
                       <ExternalLink className="h-4 w-4" />
-                      View Post
+                      {post.video ? 'View Video' : 'View Post'}
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
                     <Link
-                      href={`/posts/${post.id}/edit`}
+                      href={getPostEditUrl(post)}
                       className="flex items-center gap-2"
                     >
                       <Edit className="h-4 w-4" />
@@ -266,7 +367,7 @@ export default function PostListItem({
               {/* Title and status */}
               <div className="flex items-start justify-between gap-component">
                 <Link
-                  href={`/posts/${post.id}`}
+                  href={getPostViewUrl(post)}
                   className="group flex-1 min-w-0"
                 >
                   <h3 className="text-lg font-semibold text-content-primary group-hover:text-content-accent transition-colors transition-fast line-clamp-2">
@@ -352,16 +453,16 @@ export default function PostListItem({
           >
             <DropdownMenuItem asChild>
               <Link
-                href={`/posts/${post.id}`}
+                href={getPostViewUrl(post)}
                 className="flex items-center gap-2"
               >
                 <ExternalLink className="h-4 w-4" />
-                View Post
+                {post.video ? 'View Video' : 'View Post'}
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
               <Link
-                href={`/posts/${post.id}/edit`}
+                href={getPostEditUrl(post)}
                 className="flex items-center gap-2"
               >
                 <Edit className="h-4 w-4" />

@@ -1,23 +1,24 @@
-import { createServerSupabaseClient } from "@/lib/supabase/server";
-import { redirect } from "next/navigation";
-import PostListItem from "@/components/app/dashboard/posts/PostListItem";
-import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
-import Link from "next/link";
-import type { Database, Enums } from "@/lib/database.types";
+import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { redirect } from 'next/navigation';
+import PostListItem from '@/components/app/dashboard/posts/PostListItem';
+import { Button } from '@/components/ui/button';
+import { Plus } from 'lucide-react';
+import Link from 'next/link';
+import type { Database, Enums } from '@/lib/database.types';
 
 // Use a type alias for DashboardPost
-export type DashboardPost = Database["public"]["Tables"]["posts"]["Row"] & {
+export type DashboardPost = Database['public']['Tables']['posts']['Row'] & {
   collective?: { id: string; name: string; slug: string } | null;
   post_reactions?: { count: number; type?: string }[] | null;
   likeCount?: number;
   isFeatured?: boolean;
+  video?: { id: string; title: string | null } | null;
 };
 
 // Type for collectives user can post to
 type PublishingTargetCollective = Pick<
-  Database["public"]["Tables"]["collectives"]["Row"],
-  "id" | "name" | "slug"
+  Database['public']['Tables']['collectives']['Row'],
+  'id' | 'name' | 'slug'
 >;
 
 export default async function MyPostsPage() {
@@ -29,45 +30,55 @@ export default async function MyPostsPage() {
   } = await supabase.auth.getSession();
 
   if (authErrorSession || !session || !session.user) {
-    redirect("/sign-in");
+    redirect('/sign-in');
   }
 
   const userId = session.user.id;
 
   // Fetch all posts authored by the user (personal and collective)
   const { data: posts, error: postsError } = await supabase
-    .from("posts")
+    .from('posts')
     .select(
       `
       *,
       collective:collectives!collective_id(id, name, slug),
       post_reactions:post_reactions!post_id(count)
-    `
+    `,
     )
-    .eq("author_id", userId)
-    .order("created_at", { ascending: false });
+    .eq('author_id', userId)
+    .order('created_at', { ascending: false });
+
+  // Fetch videos created by the user to map video posts
+  const { data: videos, error: videosError } = await supabase
+    .from('video_assets')
+    .select('id, title')
+    .eq('created_by', userId);
+
+  if (videosError) {
+    console.error('Error fetching videos:', videosError.message);
+  }
 
   // Fetch collectives the user owns
   const { data: ownedCollectives, error: ownedError } = await supabase
-    .from("collectives")
-    .select("id, name, slug")
-    .eq("owner_id", userId)
-    .order("name", { ascending: true });
+    .from('collectives')
+    .select('id, name, slug')
+    .eq('owner_id', userId)
+    .order('name', { ascending: true });
 
   // Fetch collectives the user is a member of (editor or author roles might be relevant for posting)
   const { data: memberCollectivesData, error: memberError } = await supabase
-    .from("collective_members")
-    .select("role, collective:collectives!inner(id, name, slug)")
-    .eq("member_id", userId)
-    .in("role", [
-      "admin",
-      "editor",
-      "author",
-    ] as Enums<"collective_member_role">[])
-    .order("collective(name)", { ascending: true });
+    .from('collective_members')
+    .select('role, collective:collectives!inner(id, name, slug)')
+    .eq('member_id', userId)
+    .in('role', [
+      'admin',
+      'editor',
+      'author',
+    ] as Enums<'collective_member_role'>[])
+    .order('collective(name)', { ascending: true });
 
   if (postsError || ownedError || memberError) {
-    console.error("Error fetching data for My Posts page:", {
+    console.error('Error fetching data for My Posts page:', {
       postsError: JSON.stringify(postsError),
       ownedError: JSON.stringify(ownedError),
       memberError: JSON.stringify(memberError),
@@ -94,11 +105,11 @@ export default async function MyPostsPage() {
           !addedCollectiveIds.has(membership.collective.id)
         ) {
           publishingCollectives.push(
-            membership.collective as PublishingTargetCollective
+            membership.collective as PublishingTargetCollective,
           );
           addedCollectiveIds.add(membership.collective.id);
         }
-      }
+      },
     );
   }
 
@@ -116,17 +127,31 @@ export default async function MyPostsPage() {
     (featuredPosts ?? []).map((fp: { post_id: string }) => fp.post_id),
   );
 
-  // Map posts to include likeCount (count only 'like' reactions)
+  // Create a mapping of video post titles to video IDs
+  const videoMap = new Map<string, { id: string; title: string | null }>();
+  if (videos) {
+    videos.forEach((video) => {
+      // Match the title pattern used in getOrCreatePostForVideo
+      const videoPostTitle = `Video: ${video.title || video.id}`;
+      videoMap.set(videoPostTitle, video);
+    });
+  }
+
+  // Map posts to include likeCount and video information
   const postsWithLikeCount = (posts as DashboardPost[]).map(
-    (post: DashboardPost) => ({
-      ...post,
-      likeCount: Array.isArray(post.post_reactions)
-        ? post.post_reactions.filter(
-            (r: { type?: string }) => r.type === "like"
-          ).length
-        : 0,
-      isFeatured: featuredIds.has(post.id),
-    })
+    (post: DashboardPost) => {
+      const video = videoMap.get(post.title) || null;
+      return {
+        ...post,
+        likeCount: Array.isArray(post.post_reactions)
+          ? post.post_reactions.filter(
+              (r: { type?: string }) => r.type === 'like',
+            ).length
+          : 0,
+        isFeatured: featuredIds.has(post.id),
+        video,
+      };
+    },
   );
 
   const renderNewPostButton = () => {
@@ -169,7 +194,7 @@ export default async function MyPostsPage() {
             </thead>
             <tbody className="divide-y divide-border">
               {postsWithLikeCount.map((post) => (
-                <PostListItem key={post.id} post={post} />
+                <PostListItem key={post.id} post={post} tableMode={true} />
               ))}
             </tbody>
           </table>

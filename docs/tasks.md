@@ -171,3 +171,40 @@ The comment system integration for videos and text posts has been **successfully
 **Current Status**: All systems fully operational with zero technical issues
 
 ---
+
+## 🐛 **BUG FIXES**
+
+**Date**: 2025-05-31  
+**Bug**: DOM nesting validation error in dashboard posts table  
+**Issue**: `<div>` (Card component) being rendered inside `<tbody>` element causing hydration error  
+**Root Cause**: PostListItem component was rendering Card components inside table structure, violating HTML semantics
+
+**Resolution**:
+
+- ✅ Added `tableMode` prop to PostListItem component
+- ✅ Created table-specific rendering that returns `<tr>` elements instead of `<div>` cards
+- ✅ Updated dashboard posts page to use `tableMode={true}`
+- ✅ Maintained all existing functionality while fixing HTML structure
+- ✅ Verified TypeScript compilation successful
+
+**Result**: Clean HTML structure with no DOM nesting violations
+
+---
+
+**Date**: 2025-05-31  
+**Bug**: Video posts linking to /posts/ URLs instead of /videos/ URLs in dashboard  
+**Issue**: Video posts in `/dashboard/posts` were routing to `/posts/{postId}` instead of `/videos/{videoId}`  
+**Root Cause**: PostListItem component wasn't aware of video-post relationships for proper routing
+
+**Resolution**:
+
+- ✅ Modified dashboard query to fetch video information and map to posts
+- ✅ Updated DashboardPost type to include video metadata
+- ✅ Added helper functions `getPostViewUrl()` and `getPostEditUrl()` for correct routing
+- ✅ Updated all Link components to use video URLs when appropriate
+- ✅ Enhanced dropdown menus to show "View Video" vs "View Post" text
+- ✅ Verified TypeScript compilation successful
+
+**Result**: Video posts now correctly route to `/videos/{videoId}` in dashboard
+
+---
