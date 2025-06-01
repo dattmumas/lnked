@@ -384,10 +384,10 @@ const eslintConfig = [
     },
   },
   {
-    // Lexical playground files - RELAXED RULES
-    files: ['**/lexical-playground/**/*.{ts,tsx}'],
+    // Lexical editor files (migrated from playground) - RELAXED RULES
+    files: ['**/editor/**/*.{ts,tsx}'],
     rules: {
-      // Relax rules for Lexical playground code
+      // Relax rules for Lexical editor code (migrated from playground)
       'no-underscore-dangle': 'off', // Lexical uses many __ prefixed properties
       'no-unused-vars': 'off', // Many unused parameters in Lexical
       'prefer-destructuring': 'off',

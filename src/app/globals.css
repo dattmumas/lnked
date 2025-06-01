@@ -14,7 +14,59 @@
   --spacing-md: 1.5rem; /* 24px */
   --spacing-lg: 2rem; /* 32px */
   --spacing-xl: 3rem; /* 48px */
+  --spacing-2xl: 4rem; /* 64px */
   --spacing: var(--spacing-xs);
+
+  /* Enhanced Design Tokens - Semantic Aliases */
+  --component-gap: var(--spacing-sm); /* 16px - between related elements */
+  --section-gap: var(--spacing-lg); /* 32px - between sections */
+  --page-gap: var(--spacing-xl); /* 48px - major page divisions */
+
+  /* Component-specific sizing tokens */
+  --card-padding-sm: 0.75rem; /* 12px - compact card padding */
+  --card-padding-md: 1.5rem; /* 24px - standard card padding */
+  --card-padding-lg: 2rem; /* 32px - spacious card padding */
+
+  /* Animation timing tokens */
+  --transition-fast: 150ms ease-out; /* Fast UI feedback */
+  --transition-normal: 200ms ease-out; /* Standard transitions */
+  --transition-slow: 300ms ease-out; /* Deliberate animations */
+  --easing-out: cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* Semantic Theme Integration Tokens */
+  /* Surface hierarchy (background layers) */
+  --surface-base: var(--background); /* Page background */
+  --surface-elevated-1: var(--card); /* Card backgrounds */
+  --surface-elevated-2: var(--popover); /* Modal/popover backgrounds */
+  --surface-elevated-3: var(--muted); /* Highlighted areas */
+
+  /* Interaction states (hover, focus, active) */
+  --interaction-idle: transparent;
+  --interaction-hover: hsl(var(--muted) / 0.5);
+  --interaction-active: hsl(var(--muted) / 0.8);
+  --interaction-focus: hsl(var(--accent) / 0.2);
+  --interaction-disabled: hsl(var(--muted) / 0.3);
+
+  /* Content hierarchy (text colors) */
+  --content-primary: var(--foreground); /* Primary text */
+  --content-secondary: var(--muted-foreground); /* Secondary text */
+  --content-accent: var(--accent); /* Accent text/links */
+  --content-success: var(--success); /* Success states */
+  --content-warning: var(--warning); /* Warning states */
+  --content-error: var(--destructive); /* Error states */
+
+  /* Border hierarchy */
+  --border-subtle: hsl(var(--border) / 0.3);
+  --border-normal: var(--border);
+  --border-strong: hsl(var(--border) / 1.5);
+  --border-accent: var(--accent);
+
+  /* Component-specific semantic tokens */
+  --card-background: var(--surface-elevated-1);
+  --card-border: var(--border-subtle);
+  --button-primary-bg: var(--accent);
+  --button-primary-hover: hsl(var(--accent) / 0.9);
+
   /* softened light palette */
   --card: oklch(0.985 0 0);
   --card-foreground: oklch(0.12 0 0);
@@ -58,6 +110,13 @@
   --spacing-lg: 2rem;
   --spacing-xl: 3rem;
   --spacing: var(--spacing-xs);
+
+  /* Dark mode semantic tokens automatically inherit through base token changes */
+  /* Interaction states adjust for dark mode */
+  --interaction-hover: hsl(var(--muted) / 0.3);
+  --interaction-active: hsl(var(--muted) / 0.6);
+  --interaction-focus: hsl(var(--accent) / 0.15);
+
   --card: oklch(0.205 0 0);
   --card-foreground: oklch(0.985 0 0);
   --popover: oklch(0.205 0 0);
@@ -120,6 +179,19 @@
   h6 {
     @apply text-foreground font-semibold tracking-tight;
     font-family: var(--font-playfair);
+  }
+
+  /* Typography Scale Enhancement - Context-Aware Sizing */
+  .editor-context {
+    font-size: 1.125em; /* 18px base in editor for comfortable writing */
+  }
+
+  .dashboard-context h1 {
+    @apply text-2xl; /* Compact dashboard headings */
+  }
+
+  .mobile-context h1 {
+    @apply text-2xl; /* Mobile optimization */
   }
 
   /* Additional base styles */
@@ -311,6 +383,189 @@ body {
 
 /* Newspaper-inspired styles */
 @layer components {
+  /* Enhanced Design System - Pattern Components */
+
+  /* Base card pattern using semantic tokens */
+  .pattern-card {
+    @apply rounded-lg border bg-card text-card-foreground shadow-sm;
+    background: hsl(var(--card-background));
+    border: 1px solid hsl(var(--card-border));
+    color: hsl(var(--content-primary));
+  }
+
+  /* Interactive card pattern */
+  .pattern-card-interactive {
+    @apply pattern-card cursor-pointer transition-colors;
+    transition-duration: var(--transition-fast);
+  }
+
+  .pattern-card-interactive:hover {
+    background: hsl(var(--interaction-hover));
+  }
+
+  /* Elevated card pattern */
+  .pattern-card-elevated {
+    @apply pattern-card shadow-md;
+    transition: box-shadow var(--transition-normal);
+  }
+
+  .pattern-card-elevated:hover {
+    @apply shadow-lg;
+  }
+
+  /* Stack layout pattern */
+  .pattern-stack {
+    @apply flex flex-col;
+    gap: var(--component-gap);
+  }
+
+  /* Responsive grid pattern */
+  .pattern-grid-responsive {
+    @apply grid gap-4 md:gap-6;
+    @apply grid-cols-1 md:grid-cols-2 lg:grid-cols-3;
+  }
+
+  /* Dashboard grid pattern */
+  .dashboard-grid {
+    @apply grid gap-component;
+  }
+
+  .dashboard-grid-primary {
+    @apply dashboard-grid;
+    @apply grid-cols-1 sm:grid-cols-2 lg:grid-cols-4;
+  }
+
+  .dashboard-grid-secondary {
+    @apply dashboard-grid;
+    @apply grid-cols-2 sm:grid-cols-3 lg:grid-cols-4;
+  }
+
+  .dashboard-grid-revenue {
+    @apply dashboard-grid;
+    @apply grid-cols-1 sm:grid-cols-2;
+  }
+
+  /* Video-specific patterns */
+  .video-grid {
+    @apply grid gap-section;
+    @apply grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4;
+  }
+
+  /* Content grid patterns */
+  .content-grid {
+    @apply grid gap-section;
+  }
+
+  .content-grid-dashboard {
+    @apply content-grid;
+    @apply grid-cols-1 md:grid-cols-2;
+  }
+
+  /* Editor content pattern */
+  .editor-content {
+    @apply w-full px-4;
+    @apply md:max-w-2xl md:mx-auto md:px-6;
+    @apply lg:max-w-4xl lg:px-8;
+  }
+
+  /* Interactive States - Context-Aware with Motion Preferences */
+  .micro-interaction {
+    transition:
+      background-color var(--transition-fast),
+      box-shadow var(--transition-fast);
+  }
+
+  /* Respect motion preferences */
+  @media (prefers-reduced-motion: no-preference) {
+    .micro-interaction {
+      transition: all var(--transition-normal);
+    }
+
+    .micro-interaction.btn-scale:hover {
+      transform: scale(1.02);
+    }
+
+    .micro-interaction.card-lift:hover {
+      transform: translateY(-1px);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .micro-interaction {
+      transition: background-color var(--transition-fast);
+    }
+
+    .micro-interaction.btn-scale:hover,
+    .micro-interaction.card-lift:hover {
+      transform: none;
+    }
+  }
+
+  /* Context-specific interaction patterns */
+  .btn-hover:hover {
+    background: hsl(var(--button-primary-hover));
+  }
+
+  .card-hover:hover {
+    box-shadow: 0 4px 12px hsl(var(--foreground) / 0.08);
+  }
+
+  .nav-hover:hover {
+    background: hsl(var(--interaction-hover));
+  }
+
+  /* Navigation Patterns - Context-Adaptive */
+
+  /* Horizontal Navigation (Desktop) */
+  .nav-horizontal .nav-item {
+    @apply relative px-4 py-2 transition-colors;
+    transition-duration: var(--transition-fast);
+  }
+
+  .nav-horizontal .nav-item::after {
+    content: '';
+    @apply absolute bottom-0 left-0 right-0;
+    height: 2px;
+    background: hsl(var(--accent));
+    transform: scaleX(0);
+    transition: transform var(--transition-normal);
+  }
+
+  .nav-horizontal .nav-item:hover::after,
+  .nav-horizontal .nav-item[aria-current='page']::after {
+    transform: scaleX(1);
+  }
+
+  /* Sidebar Navigation (Dashboard) */
+  .nav-sidebar .nav-item {
+    @apply relative px-4 py-3 rounded-md mb-1 transition-colors;
+    transition-duration: var(--transition-fast);
+  }
+
+  .nav-sidebar .nav-item:hover {
+    background: hsl(var(--interaction-hover));
+  }
+
+  .nav-sidebar .nav-item[aria-current='page'] {
+    background: hsl(var(--accent) / 0.15);
+    border-left: 3px solid hsl(var(--accent));
+    color: hsl(var(--accent));
+    font-weight: 500;
+  }
+
+  /* Mobile Navigation (Sheet) */
+  .nav-mobile .nav-item {
+    @apply px-4 py-3 rounded-lg mb-2 transition-colors;
+    transition-duration: var(--transition-fast);
+  }
+
+  .nav-mobile .nav-item:hover,
+  .nav-mobile .nav-item[aria-current='page'] {
+    background: hsl(var(--accent));
+    color: hsl(var(--accent-foreground));
+  }
+
+  /* Existing styles preserved */
   .newspaper-texture {
     background-image: repeating-linear-gradient(
       transparent,
@@ -648,5 +903,94 @@ body {
     .text-quaternary {
       color: hsl(var(--foreground) / 0.65);
     }
+  }
+
+  /* Enhanced Design System - Utility Extensions */
+
+  /* Semantic gap utilities */
+  .gap-component {
+    gap: var(--component-gap);
+  }
+
+  .gap-section {
+    gap: var(--section-gap);
+  }
+
+  .gap-page {
+    gap: var(--page-gap);
+  }
+
+  /* Card padding utilities */
+  .p-card-sm {
+    padding: var(--card-padding-sm);
+  }
+
+  .p-card-md {
+    padding: var(--card-padding-md);
+  }
+
+  .p-card-lg {
+    padding: var(--card-padding-lg);
+  }
+
+  /* Transition timing utilities */
+  .transition-fast {
+    transition-duration: var(--transition-fast);
+  }
+
+  .transition-normal {
+    transition-duration: var(--transition-normal);
+  }
+
+  .transition-slow {
+    transition-duration: var(--transition-slow);
+  }
+
+  /* Surface utilities using semantic tokens */
+  .bg-surface-base {
+    background: hsl(var(--surface-base));
+  }
+
+  .bg-surface-elevated-1 {
+    background: hsl(var(--surface-elevated-1));
+  }
+
+  .bg-surface-elevated-2 {
+    background: hsl(var(--surface-elevated-2));
+  }
+
+  /* Interaction state utilities */
+  .bg-interaction-hover {
+    background: hsl(var(--interaction-hover));
+  }
+
+  .bg-interaction-active {
+    background: hsl(var(--interaction-active));
+  }
+
+  .bg-interaction-focus {
+    background: hsl(var(--interaction-focus));
+  }
+
+  /* Content color utilities */
+  .text-content-primary {
+    color: hsl(var(--content-primary));
+  }
+
+  .text-content-secondary {
+    color: hsl(var(--content-secondary));
+  }
+
+  .text-content-accent {
+    color: hsl(var(--content-accent));
+  }
+
+  /* Border utilities */
+  .border-subtle {
+    border-color: hsl(var(--border-subtle));
+  }
+
+  .border-strong {
+    border-color: hsl(var(--border-strong));
   }
 }

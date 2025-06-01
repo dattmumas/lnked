@@ -1,134 +1,385 @@
 'use client';
 
+import React, { useState } from 'react';
 import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Edit, Eye, Trash2, Pin, PinOff } from 'lucide-react';
+import { Button } from '@/components/primitives/Button';
+import { Card } from '@/components/primitives/Card';
+import {
+  MoreHorizontal,
+  Eye,
+  Heart,
+  MessageSquare,
+  Calendar,
+  Edit,
+  Trash2,
+  ExternalLink,
+  Users,
+  BookOpen,
+} from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { useTransition } from 'react';
 import { deletePost, featurePost } from '@/app/actions/postActions';
 import { useRouter } from 'next/navigation';
-import type { Database } from '@/lib/database.types';
 
-type PostRow = Database['public']['Tables']['posts']['Row'];
-interface DashboardPost extends PostRow {
-  slug?: string | null;
+type DashboardPost = {
+  id: string;
+  title: string;
+  slug?: string;
+  published_at: string | null;
+  created_at: string;
+  description?: string | null;
+  view_count?: number | null;
   collective?: { id: string; name: string; slug: string } | null;
   likes?: { count: number }[] | null;
   post_reactions?: { count: number; type?: string }[] | null;
   likeCount?: number;
+  comments?: any[] | null;
   isFeatured?: boolean;
-}
+};
 
-interface PostListItemProps {
+export interface PostListItemProps {
   post: DashboardPost;
+  onDelete?: (id: string) => void;
+  isSelected?: boolean;
+  onSelect?: () => void;
+  showCollective?: boolean;
+  compact?: boolean;
 }
 
-function getStatus(post: DashboardPost) {
-  if (!post.published_at) return 'Draft';
-  if (post.published_at && new Date(post.published_at) > new Date())
-    return 'Scheduled';
-  return 'Published';
-}
-
-export default function PostListItem({ post }: PostListItemProps) {
+/**
+ * Enhanced PostListItem component using our design system.
+ * Provides consistent post display with improved visual hierarchy,
+ * interaction states, and responsive design.
+ */
+export default function PostListItem({
+  post,
+  onDelete,
+  isSelected = false,
+  onSelect,
+  showCollective = false,
+  compact = false,
+}: PostListItemProps) {
+  const [isDeleting, setIsDeleting] = useState(false);
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
-  const status = getStatus(post);
-  const statusColor =
-    status === 'Draft'
-      ? 'outline'
-      : status === 'Scheduled'
-        ? 'secondary'
-        : 'default';
+
+  const handleDelete = async () => {
+    if (!window.confirm('Are you sure you want to delete this post?')) return;
+
+    setIsDeleting(true);
+    try {
+      if (onDelete) {
+        await onDelete(post.id);
+      } else {
+        await deletePost(post.id);
+      }
+      router.refresh();
+    } catch (error) {
+      console.error('Failed to delete post:', error);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const getStatusVariant = (post: DashboardPost) => {
+    if (!post.published_at) return 'secondary'; // draft
+    if (post.published_at && new Date(post.published_at) > new Date())
+      return 'outline'; // scheduled
+    return 'default'; // published
+  };
+
+  const getStatusLabel = (post: DashboardPost) => {
+    if (!post.published_at) return 'Draft';
+    if (post.published_at && new Date(post.published_at) > new Date())
+      return 'Scheduled';
+    return 'Published';
+  };
+
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) return 'Never';
+    try {
+      const date = new Date(dateString);
+      const now = new Date();
+      const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+      if (diffInSeconds < 60) return 'Just now';
+      if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
+      if (diffInSeconds < 86400)
+        return `${Math.floor(diffInSeconds / 3600)}h ago`;
+      if (diffInSeconds < 2592000)
+        return `${Math.floor(diffInSeconds / 86400)}d ago`;
+
+      return date.toLocaleDateString();
+    } catch {
+      return 'Invalid date';
+    }
+  };
+
+  // Calculate engagement metrics from existing post data
   const likes =
     typeof post.likeCount === 'number'
       ? post.likeCount
       : post.likes?.[0]?.count || post.post_reactions?.[0]?.count || 0;
-  const publishDate = post.published_at || post.created_at;
-  const postUrl = post.slug
-    ? `/posts/${post.slug}`
-    : post.collective
-      ? `/collectives/${post.collective.slug}/${post.id}`
-      : `/posts/${post.id}`;
-  const editUrl = `/posts/${post.id}/edit`;
 
-  const handleToggleFeature = () => {
-    startTransition(async () => {
-      await featurePost(post.id, !post.isFeatured);
-      router.refresh();
-    });
-  };
+  const views = post.view_count || 0;
+  const comments = post.comments?.length || 0;
 
-  const handleDelete = () => {
-    if (window.confirm('Are you sure you want to delete this post?')) {
-      startTransition(async () => {
-        await deletePost(post.id);
-        router.refresh();
-      });
-    }
-  };
+  if (compact) {
+    return (
+      <div
+        className={`flex items-center gap-component p-card-sm border-b border-border-subtle transition-colors transition-fast hover:bg-interaction-hover ${
+          isSelected ? 'bg-interaction-focus border-accent' : ''
+        }`}
+      >
+        {/* Selection checkbox */}
+        {onSelect && (
+          <input
+            type="checkbox"
+            checked={isSelected}
+            onChange={onSelect}
+            className="h-4 w-4 rounded border-border-subtle accent-accent micro-interaction"
+          />
+        )}
+
+        {/* Post content */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-start justify-between gap-component">
+            <div className="min-w-0 flex-1">
+              <Link href={`/posts/${post.id}`} className="group block">
+                <h3 className="font-medium text-content-primary truncate group-hover:text-content-accent transition-colors transition-fast">
+                  {post.title}
+                </h3>
+              </Link>
+              <div className="flex items-center gap-2 mt-1">
+                <Badge
+                  variant={getStatusVariant(post)}
+                  className="micro-interaction"
+                >
+                  {getStatusLabel(post)}
+                </Badge>
+                {showCollective && post.collective && (
+                  <span className="text-xs text-content-secondary flex items-center gap-1">
+                    <Users className="h-3 w-3" />
+                    {post.collective.name}
+                  </span>
+                )}
+                <span className="text-xs text-content-secondary flex items-center gap-1">
+                  <Calendar className="h-3 w-3" />
+                  {formatDate(post.published_at || post.created_at)}
+                </span>
+              </div>
+            </div>
+
+            {/* Action buttons */}
+            <div className="flex items-center gap-1 flex-shrink-0">
+              <Button
+                size="sm"
+                variant="ghost"
+                className="micro-interaction nav-hover"
+                asChild
+              >
+                <Link href={`/posts/${post.id}/edit`}>
+                  <Edit className="h-4 w-4" />
+                </Link>
+              </Button>
+
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="micro-interaction nav-hover"
+                  >
+                    <MoreHorizontal className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                  align="end"
+                  className="bg-surface-elevated-1 border-border-subtle"
+                >
+                  <DropdownMenuItem asChild>
+                    <Link
+                      href={`/posts/${post.id}`}
+                      className="flex items-center gap-2"
+                    >
+                      <ExternalLink className="h-4 w-4" />
+                      View Post
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link
+                      href={`/posts/${post.id}/edit`}
+                      className="flex items-center gap-2"
+                    >
+                      <Edit className="h-4 w-4" />
+                      Edit Post
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator className="border-border-subtle" />
+                  <DropdownMenuItem
+                    onClick={handleDelete}
+                    disabled={isDeleting}
+                    className="text-destructive focus:text-destructive focus:bg-destructive/10"
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    {isDeleting ? 'Deleting...' : 'Delete Post'}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <tr className="hover:bg-muted/50 transition-colors">
-      <td className="px-4 py-2 whitespace-nowrap max-w-xs">
-        <div className="flex items-center gap-2">
-          <Link href={postUrl} className="font-medium hover:underline">
-            {post.title}
-          </Link>
-          {post.collective && (
-            <Badge variant="secondary" className="ml-1">
-              {post.collective.name}
-            </Badge>
+    <Card
+      size="md"
+      className={`pattern-card micro-interaction card-lift transition-all transition-normal ${
+        isSelected ? 'ring-2 ring-accent border-accent' : ''
+      }`}
+    >
+      {/* Header */}
+      <div className="flex items-start justify-between gap-component">
+        <div className="flex items-start gap-component flex-1 min-w-0">
+          {/* Selection checkbox */}
+          {onSelect && (
+            <input
+              type="checkbox"
+              checked={isSelected}
+              onChange={onSelect}
+              className="h-4 w-4 rounded border-border-subtle accent-accent micro-interaction mt-1"
+            />
           )}
-        </div>
-      </td>
-      <td className="px-4 py-2">
-        <Badge variant={statusColor} className="capitalize">
-          {status}
-        </Badge>
-      </td>
-      <td className="px-4 py-2">
-        {publishDate ? new Date(publishDate).toLocaleDateString() : 'N/A'}
-      </td>
-      <td className="px-4 py-2 tabular-nums">{likes}</td>
-      <td className="px-4 py-2">
-        <div className="flex gap-1">
-          <Button asChild variant="ghost" size="icon" aria-label="View post">
-            <Link href={postUrl}>
-              <Eye className="h-4 w-4" />
-            </Link>
-          </Button>
-          <Button asChild variant="ghost" size="icon" aria-label="Edit post">
-            <Link href={editUrl}>
-              <Edit className="h-4 w-4" />
-            </Link>
-          </Button>
-          {status === 'Published' && (
-            <Button
-              variant="ghost"
-              size="icon"
-              aria-label={post.isFeatured ? 'Unpin post' : 'Pin post'}
-              onClick={handleToggleFeature}
-              disabled={isPending}
-            >
-              {post.isFeatured ? (
-                <PinOff className="h-4 w-4" />
-              ) : (
-                <Pin className="h-4 w-4" />
+
+          {/* Post content */}
+          <div className="flex-1 min-w-0">
+            <div className="pattern-stack gap-component">
+              {/* Title and status */}
+              <div className="flex items-start justify-between gap-component">
+                <Link
+                  href={`/posts/${post.id}`}
+                  className="group flex-1 min-w-0"
+                >
+                  <h3 className="text-lg font-semibold text-content-primary group-hover:text-content-accent transition-colors transition-fast line-clamp-2">
+                    {post.title}
+                  </h3>
+                </Link>
+                <Badge
+                  variant={getStatusVariant(post)}
+                  className="micro-interaction flex-shrink-0"
+                >
+                  {getStatusLabel(post)}
+                </Badge>
+              </div>
+
+              {/* Content snippet from post description */}
+              {post.description && (
+                <p className="text-content-secondary text-sm line-clamp-2">
+                  {post.description}
+                </p>
               )}
-            </Button>
-          )}
-          <Button
-            variant="destructive"
-            size="icon"
-            aria-label="Delete post"
-            onClick={handleDelete}
-            disabled={isPending}
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
+
+              {/* Metadata */}
+              <div className="flex flex-wrap items-center gap-component text-xs text-content-secondary">
+                {showCollective && post.collective && (
+                  <div className="flex items-center gap-1">
+                    <Users className="h-3 w-3" />
+                    <Link
+                      href={`/collectives/${post.collective.slug}`}
+                      className="hover:text-content-accent transition-colors transition-fast"
+                    >
+                      {post.collective.name}
+                    </Link>
+                  </div>
+                )}
+
+                <div className="flex items-center gap-1">
+                  <Calendar className="h-3 w-3" />
+                  {formatDate(post.published_at || post.created_at)}
+                </div>
+              </div>
+
+              {/* Engagement metrics */}
+              {(views > 0 || likes > 0 || comments > 0) && (
+                <div className="flex items-center gap-component text-xs text-content-secondary border-t border-border-subtle pt-component">
+                  {views > 0 && (
+                    <div className="flex items-center gap-1">
+                      <Eye className="h-3 w-3" />
+                      {views.toLocaleString()} views
+                    </div>
+                  )}
+                  {likes > 0 && (
+                    <div className="flex items-center gap-1">
+                      <Heart className="h-3 w-3" />
+                      {likes.toLocaleString()} likes
+                    </div>
+                  )}
+                  {comments > 0 && (
+                    <div className="flex items-center gap-1">
+                      <MessageSquare className="h-3 w-3" />
+                      {comments.toLocaleString()} comments
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
         </div>
-      </td>
-    </tr>
+
+        {/* Action menu */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="micro-interaction nav-hover flex-shrink-0"
+            >
+              <MoreHorizontal className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent
+            align="end"
+            className="bg-surface-elevated-1 border-border-subtle"
+          >
+            <DropdownMenuItem asChild>
+              <Link
+                href={`/posts/${post.id}`}
+                className="flex items-center gap-2"
+              >
+                <ExternalLink className="h-4 w-4" />
+                View Post
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link
+                href={`/posts/${post.id}/edit`}
+                className="flex items-center gap-2"
+              >
+                <Edit className="h-4 w-4" />
+                Edit Post
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator className="border-border-subtle" />
+            <DropdownMenuItem
+              onClick={handleDelete}
+              disabled={isDeleting}
+              className="text-destructive focus:text-destructive focus:bg-destructive/10"
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              {isDeleting ? 'Deleting...' : 'Delete Post'}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+    </Card>
   );
 }

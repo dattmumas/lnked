@@ -31,10 +31,11 @@ export function SidebarLink({
           <Link
             href={href}
             className={cn(
-              'flex items-center justify-center p-2 rounded-md transition-colors',
+              'flex items-center justify-center p-component rounded-lg transition-all transition-fast',
+              'micro-interaction nav-hover',
               isActive
-                ? 'bg-sidebar-accent/10 text-sidebar-accent'
-                : 'text-sidebar-foreground/70 hover:bg-sidebar-accent/5 hover:text-sidebar-foreground',
+                ? 'bg-accent/20 text-accent border border-accent/30'
+                : 'text-content-secondary hover:text-content-primary hover:bg-interaction-hover',
             )}
             aria-label={label}
             aria-current={isActive ? 'page' : undefined}
@@ -45,7 +46,7 @@ export function SidebarLink({
         <Tooltip.Content
           side="right"
           align="center"
-          className="z-50 px-2 py-1 rounded bg-popover text-foreground text-xs shadow-md"
+          className="z-50 px-component py-1 rounded-md bg-surface-elevated-2 text-content-primary text-xs shadow-lg border border-border-subtle backdrop-blur-sm"
         >
           {label}
         </Tooltip.Content>
@@ -57,15 +58,29 @@ export function SidebarLink({
     <Link
       href={href}
       className={cn(
-        'flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md transition-colors',
+        'flex items-center gap-component px-component py-component text-sm font-medium rounded-lg',
+        'transition-all transition-fast micro-interaction nav-hover',
+        'group relative overflow-hidden',
         isActive
-          ? 'bg-sidebar-accent/10 text-sidebar-accent font-medium'
-          : 'text-sidebar-foreground/70 hover:bg-sidebar-accent/5 hover:text-sidebar-foreground',
+          ? 'bg-accent/20 text-accent font-semibold'
+          : 'text-content-secondary hover:text-content-primary hover:bg-interaction-hover',
       )}
       aria-current={isActive ? 'page' : undefined}
     >
-      {Icon && <Icon className="size-4 shrink-0" />}
-      <span>{label}</span>
+      {Icon && (
+        <Icon
+          className={cn(
+            'size-4 shrink-0 transition-transform transition-fast',
+            'group-hover:scale-110',
+            isActive ? 'text-accent' : '',
+          )}
+        />
+      )}
+      <span className="truncate">{label}</span>
+
+      {isActive && (
+        <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-4 bg-accent rounded-r-full" />
+      )}
     </Link>
   );
 }

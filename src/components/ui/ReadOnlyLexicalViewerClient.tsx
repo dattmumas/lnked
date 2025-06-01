@@ -13,107 +13,105 @@ import { TablePlugin } from '@lexical/react/LexicalTablePlugin';
 import { HorizontalRulePlugin } from '@lexical/react/LexicalHorizontalRulePlugin';
 import { TabIndentationPlugin } from '@lexical/react/LexicalTabIndentationPlugin';
 import { ClickableLinkPlugin } from '@lexical/react/LexicalClickableLinkPlugin';
-import PlaygroundNodes from '@/components/lexical-playground/nodes/PlaygroundNodes';
-import PlaygroundEditorTheme from '@/components/lexical-playground/themes/PlaygroundEditorTheme';
-import AutoLinkPlugin from '@/components/lexical-playground/plugins/AutoLinkPlugin';
-import LinkPlugin from '@/components/lexical-playground/plugins/LinkPlugin';
-import YouTubePlugin from '@/components/lexical-playground/plugins/YouTubePlugin';
-import TwitterPlugin from '@/components/lexical-playground/plugins/TwitterPlugin';
-import FigmaPlugin from '@/components/lexical-playground/plugins/FigmaPlugin';
-import EmojisPlugin from '@/components/lexical-playground/plugins/EmojisPlugin';
-import TableOfContentsPlugin from '@/components/lexical-playground/plugins/TableOfContentsPlugin';
-import CollapsiblePlugin from '@/components/lexical-playground/plugins/CollapsiblePlugin';
-import EmojiPickerPlugin from '@/components/lexical-playground/plugins/EmojiPickerPlugin';
-import TabFocusPlugin from '@/components/lexical-playground/plugins/TabFocusPlugin';
-import StickyPlugin from '@/components/lexical-playground/plugins/StickyPlugin';
-import KeywordsPlugin from '@/components/lexical-playground/plugins/KeywordsPlugin';
-import ContentEditable from '@/components/lexical-playground/ui/ContentEditable';
+import PlaygroundNodes from '@/components/editor/nodes/PlaygroundNodes';
+import PlaygroundEditorTheme from '@/components/editor/themes/PlaygroundEditorTheme';
+import AutoLinkPlugin from '@/components/editor/plugins/formatting/AutoLinkPlugin';
+import LinkPlugin from '@/components/editor/plugins/formatting/LinkPlugin';
+import YouTubePlugin from '@/components/editor/plugins/media/YouTubePlugin';
+import TwitterPlugin from '@/components/editor/plugins/media/TwitterPlugin';
+import FigmaPlugin from '@/components/editor/plugins/media/FigmaPlugin';
+import EmojisPlugin from '@/components/editor/plugins/input/EmojisPlugin';
+import TableOfContentsPlugin from '@/components/editor/plugins/layout/TableOfContentsPlugin';
+import CollapsiblePlugin from '@/components/editor/plugins/interactive/CollapsiblePlugin';
+import EmojiPickerPlugin from '@/components/editor/plugins/input/EmojiPickerPlugin';
+import TabFocusPlugin from '@/components/editor/plugins/input/TabFocusPlugin';
+import StickyPlugin from '@/components/editor/plugins/interactive/StickyPlugin';
+import KeywordsPlugin from '@/components/editor/plugins/formatting/KeywordsPlugin';
+import ContentEditable from '@/components/editor/ui/inputs/ContentEditable';
 
 // Dynamic imports for client-only plugins
 const PollPlugin = dynamic(
-  () => import('@/components/lexical-playground/plugins/PollPlugin'),
+  () => import('@/components/editor/plugins/interactive/PollPlugin'),
   { ssr: false },
 );
 const CodeHighlightPlugin = dynamic(
-  () => import('@/components/lexical-playground/plugins/CodeHighlightPlugin'),
+  () => import('@/components/editor/plugins/formatting/CodeHighlightPlugin'),
   { ssr: false },
 );
 const PageBreakPlugin = dynamic(
-  () => import('@/components/lexical-playground/plugins/PageBreakPlugin'),
+  () => import('@/components/editor/plugins/layout/PageBreakPlugin'),
   { ssr: false },
 );
 const LayoutPlugin = dynamic(
   () =>
-    import(
-      '@/components/lexical-playground/plugins/LayoutPlugin/LayoutPlugin'
-    ).then((mod) => mod.LayoutPlugin),
+    import('@/components/editor/plugins/layout/LayoutPlugin/LayoutPlugin').then(
+      (mod) => mod.LayoutPlugin,
+    ),
   { ssr: false },
 );
 const AutoEmbedPlugin = dynamic(
-  () => import('@/components/lexical-playground/plugins/AutoEmbedPlugin'),
+  () => import('@/components/editor/plugins/layout/AutoEmbedPlugin'),
   { ssr: false },
 );
 const FloatingLinkEditorPlugin = dynamic(
-  () =>
-    import('@/components/lexical-playground/plugins/FloatingLinkEditorPlugin'),
+  () => import('@/components/editor/plugins/toolbar/FloatingLinkEditorPlugin'),
   { ssr: false },
 );
 const CodeActionMenuPlugin = dynamic(
-  () => import('@/components/lexical-playground/plugins/CodeActionMenuPlugin'),
+  () => import('@/components/editor/plugins/formatting/CodeActionMenuPlugin'),
   { ssr: false },
 );
 const TableCellResizer = dynamic(
-  () => import('@/components/lexical-playground/plugins/TableCellResizer'),
+  () => import('@/components/editor/plugins/layout/TableCellResizer'),
   { ssr: false },
 );
 const ContextMenuPlugin = dynamic(
-  () => import('@/components/lexical-playground/plugins/ContextMenuPlugin'),
+  () => import('@/components/editor/plugins/toolbar/ContextMenuPlugin'),
   { ssr: false },
 );
 const SpecialTextPlugin = dynamic(
-  () => import('@/components/lexical-playground/plugins/SpecialTextPlugin'),
+  () => import('@/components/editor/plugins/formatting/SpecialTextPlugin'),
   { ssr: false },
 );
 const TableActionMenuPlugin = dynamic(
-  () => import('@/components/lexical-playground/plugins/TableActionMenuPlugin'),
+  () => import('@/components/editor/plugins/layout/TableActionMenuPlugin'),
   { ssr: false },
 );
 const TableHoverActionsPlugin = dynamic(
-  () =>
-    import('@/components/lexical-playground/plugins/TableHoverActionsPlugin'),
+  () => import('@/components/editor/plugins/layout/TableHoverActionsPlugin'),
   { ssr: false },
 );
 const MaxLengthPlugin = dynamic(
   () =>
-    import('@/components/lexical-playground/plugins/MaxLengthPlugin').then(
+    import('@/components/editor/plugins/input/MaxLengthPlugin').then(
       (mod) => mod.MaxLengthPlugin,
     ),
   { ssr: false },
 );
 const ComponentPickerPlugin = dynamic(
-  () => import('@/components/lexical-playground/plugins/ComponentPickerPlugin'),
+  () => import('@/components/editor/plugins/interactive/ComponentPickerPlugin'),
   { ssr: false },
 );
 const ImagesPlugin = dynamic(
-  () => import('@/components/lexical-playground/plugins/ImagesPlugin'),
+  () => import('@/components/editor/plugins/media/ImagesPlugin'),
   { ssr: false },
 );
 const SpeechToTextPlugin = dynamic(
-  () => import('@/components/lexical-playground/plugins/SpeechToTextPlugin'),
+  () => import('@/components/editor/plugins/input/SpeechToTextPlugin'),
   { ssr: false },
 );
 const InlineImagePlugin = dynamic(
-  () => import('@/components/lexical-playground/plugins/InlineImagePlugin'),
+  () => import('@/components/editor/plugins/media/InlineImagePlugin'),
   { ssr: false },
 );
 const DragDropPastePlugin = dynamic(
-  () => import('@/components/lexical-playground/plugins/DragDropPastePlugin'),
+  () => import('@/components/editor/plugins/input/DragDropPastePlugin'),
   { ssr: false },
 );
 const FloatingTextFormatToolbarPlugin = dynamic(
   () =>
     import(
-      '@/components/lexical-playground/plugins/FloatingTextFormatToolbarPlugin'
+      '@/components/editor/plugins/toolbar/FloatingTextFormatToolbarPlugin'
     ),
   { ssr: false },
 );

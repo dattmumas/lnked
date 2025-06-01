@@ -9,7 +9,7 @@ import {
   MoreVertical,
   FileText,
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/primitives/Button';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -35,57 +35,76 @@ export function QuickActionsBar({
   return (
     <div
       className={cn(
-        'flex items-center gap-2 p-2 rounded-lg bg-muted/30 backdrop-blur-sm',
-        'border border-border/50',
+        'flex items-center gap-component p-card-sm rounded-lg',
+        'bg-surface-elevated-2 backdrop-blur-sm',
+        'border border-border-subtle shadow-sm',
+        'micro-interaction transition-fast',
         className,
       )}
     >
-      {/* SEO Settings */}
-      <Button variant="ghost" size="sm" onClick={onSeoClick} className="gap-2">
-        <Search className="h-4 w-4" />
+      {/* SEO Settings with enhanced interaction */}
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={onSeoClick}
+        leftIcon={<Search className="h-4 w-4" />}
+        className="micro-interaction nav-hover"
+      >
         <span className="hidden sm:inline">SEO</span>
       </Button>
 
-      {/* Preview */}
+      {/* Visual separator */}
+      <div className="w-px h-6 bg-border-subtle" />
+
+      {/* Preview with enhanced interaction */}
       <Button
         variant="ghost"
         size="sm"
         onClick={onPreviewClick}
-        className="gap-2"
+        leftIcon={<Eye className="h-4 w-4" />}
+        className="micro-interaction nav-hover"
       >
-        <Eye className="h-4 w-4" />
         <span className="hidden sm:inline">Preview</span>
       </Button>
 
-      {/* Share */}
+      {/* Share with enhanced interaction */}
       <Button
         variant="ghost"
         size="sm"
         onClick={onShareClick}
-        className="gap-2"
+        leftIcon={<Share2 className="h-4 w-4" />}
+        className="micro-interaction nav-hover"
       >
-        <Share2 className="h-4 w-4" />
         <span className="hidden sm:inline">Share</span>
       </Button>
 
-      {/* More Options */}
+      {/* Flexible spacer */}
+      <div className="flex-1" />
+
+      {/* More Options with enhanced styling */}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="icon" className="h-8 w-8">
-            <MoreVertical className="h-4 w-4" />
-          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 micro-interaction nav-hover"
+            leftIcon={<MoreVertical className="h-4 w-4" />}
+          />
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-48">
-          <DropdownMenuItem>
-            <FileText className="mr-2 h-4 w-4" />
+        <DropdownMenuContent
+          align="end"
+          className="w-52 bg-surface-elevated-2 border-border-subtle shadow-lg"
+        >
+          <DropdownMenuItem className="gap-component cursor-pointer micro-interaction nav-hover">
+            <FileText className="h-4 w-4" />
             Export as Markdown
           </DropdownMenuItem>
-          <DropdownMenuItem>
-            <Settings className="mr-2 h-4 w-4" />
+          <DropdownMenuItem className="gap-component cursor-pointer micro-interaction nav-hover">
+            <Settings className="h-4 w-4" />
             Editor Settings
           </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem className="text-muted-foreground">
+          <DropdownMenuSeparator className="bg-border-subtle" />
+          <DropdownMenuItem className="text-content-secondary cursor-pointer">
             Keyboard Shortcuts
           </DropdownMenuItem>
         </DropdownMenuContent>

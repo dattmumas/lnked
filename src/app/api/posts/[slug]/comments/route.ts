@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
-import { getCommentsByPostId } from '@/lib/data/comments';
+import { getCommentsByPostId, getOrCreatePostForVideo, addComment } from '@/lib/data/comments';
 
 export async function GET(
   req: NextRequest,
@@ -9,22 +9,38 @@ export async function GET(
   const { slug } = await params;
   const supabase = await createServerSupabaseClient();
 
-  const { data: postRecord } = await supabase
-    .from('posts')
-    .select('id')
-    .eq('slug', slug)
-    .maybeSingle<{ id: string }>();
+  let postId: string;
 
-  if (!postRecord) {
-    return NextResponse.json({ error: 'Post not found' }, { status: 404 });
+  // Handle video slugs (format: video-{videoId})
+  if (slug.startsWith('video-')) {
+    const videoId = slug.replace('video-', '');
+    try {
+      const post = await getOrCreatePostForVideo(videoId);
+      postId = post.id;
+    } catch (e: unknown) {
+      const error = e instanceof Error ? e : new Error('Unknown error');
+      return NextResponse.json({ error: error.message }, { status: 404 });
+    }
+  } else {
+    // Handle regular post IDs (the slug parameter is actually a post ID)
+    const { data: postRecord } = await supabase
+      .from('posts')
+      .select('id')
+      .eq('id', slug)
+      .maybeSingle<{ id: string }>();
+
+    if (!postRecord) {
+      return NextResponse.json({ error: 'Post not found' }, { status: 404 });
+    }
+    postId = postRecord.id;
   }
 
   try {
-    const comments = await getCommentsByPostId(postRecord.id);
+    const comments = await getCommentsByPostId(postId);
     return NextResponse.json({ comments });
   } catch (e: unknown) {
     const error = e instanceof Error ? e : new Error('Unknown error');
-    return NextResponse.json({ error: error.message }, { status: 404 });
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
 
@@ -35,16 +51,31 @@ export async function POST(
   const { slug } = await params;
   const supabase = await createServerSupabaseClient();
 
-  const { data: postRecord } = await supabase
-    .from('posts')
-    .select('id')
-    .eq('slug', slug)
-    .maybeSingle<{ id: string }>();
+  let postId: string;
 
-  if (!postRecord) {
-    return NextResponse.json({ error: 'Post not found' }, { status: 404 });
+  // Handle video slugs (format: video-{videoId})
+  if (slug.startsWith('video-')) {
+    const videoId = slug.replace('video-', '');
+    try {
+      const post = await getOrCreatePostForVideo(videoId);
+      postId = post.id;
+    } catch (e: unknown) {
+      const error = e instanceof Error ? e : new Error('Unknown error');
+      return NextResponse.json({ error: error.message }, { status: 404 });
+    }
+  } else {
+    // Handle regular post IDs (the slug parameter is actually a post ID)
+    const { data: postRecord } = await supabase
+      .from('posts')
+      .select('id')
+      .eq('id', slug)
+      .maybeSingle<{ id: string }>();
+
+    if (!postRecord) {
+      return NextResponse.json({ error: 'Post not found' }, { status: 404 });
+    }
+    postId = postRecord.id;
   }
-  const postId = postRecord.id;
 
   const {
     data: { user },
@@ -77,23 +108,20 @@ export async function POST(
     );
   }
 
-  const { data: inserted, error: insertError } = await supabase
-    .from('comments')
-    .insert({
-      post_id: postId,
-      user_id: user.id,
+  try {
+    const comment = await addComment({
+      postId,
+      userId: user.id,
       content: content.trim(),
-      parent_id: parent_id || null,
-    })
-    .select()
-    .maybeSingle();
+      parentId: parent_id || undefined,
+    });
 
-  if (insertError || !inserted) {
+    return NextResponse.json({ success: true, comment });
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Failed to add comment';
     return NextResponse.json(
-      { error: insertError?.message || 'Failed to add comment' },
+      { error: errorMessage },
       { status: 500 },
     );
   }
-
-  return NextResponse.json({ success: true, comment: inserted });
 }

@@ -1,7 +1,7 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-import '@/components/lexical-playground/index.css';
+import './styles/PlaygroundBase.css';
 import './styles/EditorLayout.css';
 import './styles/Toolbar.css';
 import './styles/Menus.css';

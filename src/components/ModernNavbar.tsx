@@ -203,7 +203,7 @@ export default function ModernNavbar({
               className="text-2xl font-extrabold-serif tracking-tight flex items-center gap-0.5 select-none hover:opacity-80 transition-opacity"
               style={{ letterSpacing: '-0.04em' }}
             >
-              Lnked<span className="text-red-500 text-3xl leading-none">.</span>
+              Lnked<span className="text-accent text-2xl leading-none">.</span>
             </Link>
 
             {/* Nav Items - Desktop */}
@@ -215,7 +215,7 @@ export default function ModernNavbar({
                   <Link
                     key={item.href}
                     href={item.href}
-                    className={`flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md transition-all duration-150 ${
+                    className={`flex items-center gap-2 px-3 py-2 text-smrounded-md transition-all duration-150 ${
                       isActive
                         ? 'bg-accent text-accent-foreground'
                         : 'text-foreground/70 hover:text-foreground hover:bg-accent/50'

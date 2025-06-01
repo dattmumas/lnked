@@ -229,7 +229,7 @@ export default function NewPostForm({
   };
 
   const settingsSidebar = (
-    <div className="space-y-6">
+    <div className="pattern-stack">
       {/* Publish Settings Card */}
       <PublishSettingsCard
         status={currentStatus}
@@ -248,10 +248,15 @@ export default function NewPostForm({
         postId={createdPostId}
       />
 
-      {/* Server Error */}
+      {/* Server Error with enhanced styling */}
       {serverError && (
-        <Alert variant="destructive" className="text-xs">
-          <AlertDescription className="text-xs">{serverError}</AlertDescription>
+        <Alert
+          variant="destructive"
+          className="pattern-card border-destructive bg-destructive/5"
+        >
+          <AlertDescription className="text-sm text-destructive">
+            {serverError}
+          </AlertDescription>
         </Alert>
       )}
     </div>
@@ -261,36 +266,49 @@ export default function NewPostForm({
     <FormProvider {...form}>
       <SEOSettingsDrawer open={seoDrawerOpen} onOpenChange={setSeoDrawerOpen} />
       <EditorLayout settingsSidebar={settingsSidebar} pageTitle={pageTitle}>
-        <div className="space-y-6">
-          {/* Quick Actions Bar */}
+        <div className="pattern-stack gap-section">
+          {/* Quick Actions Bar with enhanced spacing */}
           <QuickActionsBar
             onSeoClick={() => setSeoDrawerOpen(true)}
-            className="mb-8"
+            className="mb-6"
           />
 
-          <Input
-            id="title"
-            {...form.register('title')}
-            placeholder="Enter post title..."
-            className="w-full h-16 text-4xl font-bold font-serif border-none p-1 focus:ring-0 focus:outline-none placeholder:text-foreground/50"
-          />
-          {errors.title && (
-            <p className="text-destructive text-sm">
-              {errors.title.message as string}
-            </p>
-          )}
-          <Input
-            id="subtitle"
-            {...form.register('subtitle')}
-            placeholder="Add a subtitle..."
-            className="w-full text-2xl font-medium italic font-serif text-foreground/70 border-none p-1 focus:ring-0 focus:outline-none placeholder:text-foreground/50"
-          />
-          {errors.subtitle && (
-            <p className="text-destructive text-sm">
-              {errors.subtitle.message as string}
-            </p>
-          )}
-          {editorComponent}
+          {/* Enhanced title input with editor typography */}
+          <div className="editor-context">
+            <Input
+              id="title"
+              {...form.register('title')}
+              placeholder="Enter post title..."
+              className="w-full h-auto min-h-[4rem] text-4xl font-bold font-serif border-none p-0 bg-transparent focus:ring-0 focus:outline-none placeholder:text-content-secondary/60 text-content-primary resize-none"
+            />
+            {errors.title && (
+              <p className="text-destructive text-sm mt-2 flex items-center gap-component">
+                <span className="w-1 h-1 bg-destructive rounded-full" />
+                {errors.title.message as string}
+              </p>
+            )}
+          </div>
+
+          {/* Enhanced subtitle input with editor typography */}
+          <div className="editor-context">
+            <Input
+              id="subtitle"
+              {...form.register('subtitle')}
+              placeholder="Add a subtitle..."
+              className="w-full h-auto min-h-[3rem] text-2xl font-medium italic font-serif text-content-secondary border-none p-0 bg-transparent focus:ring-0 focus:outline-none placeholder:text-content-secondary/50 resize-none"
+            />
+            {errors.subtitle && (
+              <p className="text-destructive text-sm mt-2 flex items-center gap-component">
+                <span className="w-1 h-1 bg-destructive rounded-full" />
+                {errors.subtitle.message as string}
+              </p>
+            )}
+          </div>
+
+          {/* Enhanced editor content area */}
+          <div className="min-h-[500px] pt-4 border-t border-border-subtle">
+            {editorComponent}
+          </div>
         </div>
       </EditorLayout>
     </FormProvider>

@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import type { ReactNode } from 'react';
 import { Menu, X } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/primitives/Button';
 import { cn } from '@/lib/utils';
 
 interface EditorLayoutProps {
@@ -24,62 +24,72 @@ export default function EditorLayout({
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Mobile sidebar toggle */}
+    <div className="min-h-screen bg-surface-base">
+      {/* Mobile sidebar toggle with enhanced interaction */}
       {settingsSidebar && (
-        <div className="lg:hidden fixed bottom-4 right-4 z-50">
+        <div className="lg:hidden fixed bottom-6 right-6 z-50">
           <Button
             onClick={() => setSidebarOpen(!sidebarOpen)}
             size="icon"
-            className="rounded-full shadow-lg"
-          >
-            {sidebarOpen ? (
-              <X className="h-5 w-5" />
-            ) : (
-              <Menu className="h-5 w-5" />
-            )}
-          </Button>
+            variant="default"
+            className="rounded-full shadow-lg micro-interaction btn-scale"
+            leftIcon={
+              sidebarOpen ? (
+                <X className="h-5 w-5" />
+              ) : (
+                <Menu className="h-5 w-5" />
+              )
+            }
+          />
         </div>
       )}
 
-      {/* Mobile sidebar overlay */}
+      {/* Mobile sidebar overlay with design tokens */}
       {settingsSidebar && sidebarOpen && (
         <div
-          className="lg:hidden fixed inset-0 bg-black/50 z-40"
+          className="lg:hidden fixed inset-0 bg-black/50 z-40 transition-opacity transition-fast"
           onClick={() => setSidebarOpen(false)}
         />
       )}
 
+      {/* Enhanced container with semantic spacing */}
       <div className="mx-auto max-w-[1800px] px-4 sm:px-6 lg:px-8">
-        <div className="flex gap-4">
-          {/* Settings sidebar - Left side */}
+        <div className="flex gap-section">
+          {/* Settings sidebar - Enhanced panel separation */}
           {settingsSidebar && (
             <>
-              {/* Mobile sidebar */}
+              {/* Mobile sidebar with pattern styling */}
               <aside
                 className={cn(
-                  'lg:hidden fixed left-0 top-0 h-full w-60 bg-background z-50 transform transition-transform duration-300 ease-in-out',
+                  'lg:hidden fixed left-0 top-0 h-full w-72 bg-surface-elevated-1 z-50',
+                  'transform transition-transform duration-300 ease-in-out',
+                  'border-r border-border-subtle shadow-xl',
                   sidebarOpen ? 'translate-x-0' : '-translate-x-full',
                 )}
               >
-                <div className="p-6 h-full overflow-y-auto">
+                <div className="p-card-md h-full overflow-y-auto pattern-stack">
                   {settingsSidebar}
                 </div>
               </aside>
 
-              {/* Desktop sidebar */}
-              <aside className="hidden lg:block w-60 flex-shrink-0 pt-8">
-                <div className="sticky top-8">{settingsSidebar}</div>
+              {/* Desktop sidebar with enhanced panel styling */}
+              <aside className="hidden lg:block w-72 flex-shrink-0 pt-page-gap">
+                <div className="sticky top-8 bg-surface-elevated-1 rounded-lg border border-border-subtle p-card-md shadow-sm">
+                  <div className="pattern-stack">{settingsSidebar}</div>
+                </div>
               </aside>
             </>
           )}
 
-          {/* Main writing area - Much wider */}
-          <main className="flex-1 min-w-0 pt-8 pb-16">
-            <div className="mx-auto max-w-5xl">{children}</div>
+          {/* Main writing area with editor context */}
+          <main className="flex-1 min-w-0 pt-page-gap pb-16">
+            <div className="mx-auto max-w-4xl editor-content">
+              {/* Typography context wrapper for editor-specific sizing */}
+              <div className="editor-context">{children}</div>
+            </div>
           </main>
 
-          {/* Right spacer for balance - desktop only, minimal */}
+          {/* Right spacer for visual balance */}
           {settingsSidebar && (
             <div className="hidden xl:block w-32 flex-shrink-0" />
           )}

@@ -17,6 +17,7 @@ import {
   SECONDS_PER_HOUR,
   PAD_LENGTH,
 } from '@/lib/constants/video';
+import CommentsSection from '@/components/app/posts/organisms/CommentsSection';
 import MuxVideoPlayer from '@/components/app/video/MuxVideoPlayerClient';
 import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
 import type { User } from '@supabase/supabase-js';
@@ -580,6 +581,13 @@ export default function VideoPlayerPageClient({
             </CardContent>
           </Card>
         </div>
+      </div>
+      {/* Comments Section */}
+      <div className="mt-6">
+        <CommentsSection
+          postSlug={`video-${video.id}`}
+          currentUserId={currentUser?.id || null}
+        />
       </div>
     </div>
   );

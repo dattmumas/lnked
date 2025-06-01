@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import { Card } from '@/components/primitives/Card';
+import { Button } from '@/components/primitives/Button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -63,7 +63,7 @@ const formatDuration = (seconds?: number) => {
   return `${minutes}:${remainingSeconds.toString().padStart(PAD_LENGTH, PAD_CHARACTER)}`;
 };
 
-// StatusBadge component
+// Enhanced StatusBadge component with design tokens
 function StatusBadge({ status }: { status: string | null }) {
   const getStatusVariant = (status: string | null) => {
     switch (status) {
@@ -95,7 +95,9 @@ function StatusBadge({ status }: { status: string | null }) {
   };
 
   return (
-    <Badge variant={getStatusVariant(status)}>{getStatusLabel(status)}</Badge>
+    <Badge variant={getStatusVariant(status)} className="micro-interaction">
+      {getStatusLabel(status)}
+    </Badge>
   );
 }
 
@@ -313,150 +315,195 @@ export default function VideoManagementDashboard() {
   }, []);
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Video Management</h1>
-          <p className="text-muted-foreground">
+    <div className="pattern-stack gap-section">
+      {/* Enhanced Header with design tokens */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-component">
+        <div className="pattern-stack gap-1">
+          <h1 className="text-3xl font-bold text-content-primary tracking-tight">
+            Video Management
+          </h1>
+          <p className="text-content-secondary">
             Manage your video library, live streams, and analytics
           </p>
         </div>
-        <div className="flex items-center space-x-2">
-          <Button onClick={handleUploadClick}>
-            <Upload className="h-4 w-4 mr-2" />
+        <div className="flex items-center gap-component">
+          <Button
+            onClick={handleUploadClick}
+            leftIcon={<Upload className="h-4 w-4" />}
+            className="micro-interaction btn-scale"
+          >
             Upload Video
           </Button>
-          <Button variant="outline" onClick={handleLiveStreamClick}>
-            <Radio className="h-4 w-4 mr-2" />
+          <Button
+            variant="outline"
+            onClick={handleLiveStreamClick}
+            leftIcon={<Radio className="h-4 w-4" />}
+            className="micro-interaction nav-hover"
+          >
             Go Live
           </Button>
         </div>
       </div>
 
-      {/* Error Alert */}
+      {/* Enhanced Error Alert */}
       {error && (
-        <Alert variant="destructive">
+        <Alert
+          variant="destructive"
+          className="pattern-card border-destructive"
+        >
           <AlertCircle className="h-4 w-4" />
-          <AlertDescription>{error}</AlertDescription>
+          <AlertDescription className="text-destructive">
+            {error}
+          </AlertDescription>
         </Alert>
       )}
 
-      {/* Main Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-5">
-          <TabsTrigger value="library">
-            <Grid className="h-4 w-4 mr-2" />
+      {/* Enhanced Main Tabs */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="grid w-full grid-cols-5 bg-surface-elevated-2 border border-border-subtle">
+          <TabsTrigger
+            value="library"
+            className="flex items-center gap-1.5 micro-interaction nav-hover"
+          >
+            <Grid className="h-4 w-4" />
             Library
           </TabsTrigger>
-          <TabsTrigger value="upload">
-            <Upload className="h-4 w-4 mr-2" />
+          <TabsTrigger
+            value="upload"
+            className="flex items-center gap-1.5 micro-interaction nav-hover"
+          >
+            <Upload className="h-4 w-4" />
             Upload
           </TabsTrigger>
-          <TabsTrigger value="live-streams">
-            <Radio className="h-4 w-4 mr-2" />
-            Live Streams
+          <TabsTrigger
+            value="live-streams"
+            className="flex items-center gap-1.5 micro-interaction nav-hover"
+          >
+            <Radio className="h-4 w-4" />
+            Live
           </TabsTrigger>
-          <TabsTrigger value="analytics">
-            <BarChart3 className="h-4 w-4 mr-2" />
+          <TabsTrigger
+            value="analytics"
+            className="flex items-center gap-1.5 micro-interaction nav-hover"
+          >
+            <BarChart3 className="h-4 w-4" />
             Analytics
           </TabsTrigger>
-          <TabsTrigger value="settings">
-            <Settings className="h-4 w-4 mr-2" />
+          <TabsTrigger
+            value="settings"
+            className="flex items-center gap-1.5 micro-interaction nav-hover"
+          >
+            <Settings className="h-4 w-4" />
             Settings
           </TabsTrigger>
         </TabsList>
 
-        {/* Video Library Tab */}
-        <TabsContent value="library" className="space-y-6">
-          {/* Library Controls */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search videos..."
-                  value={searchQuery}
-                  onChange={handleSearchChange}
-                  className="pl-10 w-64"
+        {/* Enhanced Video Library Tab */}
+        <TabsContent value="library" className="pattern-stack gap-section">
+          {/* Enhanced Library Controls */}
+          <Card size="md" className="pattern-card">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-component">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-component">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-content-secondary" />
+                  <Input
+                    placeholder="Search videos..."
+                    value={searchQuery}
+                    onChange={handleSearchChange}
+                    className="pl-10 w-64 border-border-subtle focus:border-accent transition-colors transition-fast"
+                  />
+                </div>
+                <select
+                  value={statusFilter}
+                  onChange={handleStatusFilterChange}
+                  className="px-3 py-2 border border-border-subtle rounded-md bg-surface-base text-content-primary micro-interaction focus:border-accent transition-colors transition-fast"
+                >
+                  <option value="all">All Status</option>
+                  <option value="ready">Ready</option>
+                  <option value="preparing">Preparing</option>
+                  <option value="errored">Errored</option>
+                </select>
+                <select
+                  value={sortBy}
+                  onChange={handleSortChange}
+                  className="px-3 py-2 border border-border-subtle rounded-md bg-surface-base text-content-primary micro-interaction focus:border-accent transition-colors transition-fast"
+                >
+                  <option value="created_at">Created Date</option>
+                  <option value="title">Title</option>
+                  <option value="duration">Duration</option>
+                  <option value="view_count">Views</option>
+                </select>
+              </div>
+
+              <div className="flex items-center gap-component">
+                {selectedVideos.size > 0 && (
+                  <div className="flex items-center gap-component">
+                    <span className="text-sm text-content-secondary">
+                      {selectedVideos.size} selected
+                    </span>
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      onClick={handleBulkDelete}
+                      leftIcon={<Trash2 className="h-4 w-4" />}
+                      className="micro-interaction btn-scale"
+                    >
+                      Delete
+                    </Button>
+                  </div>
+                )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={toggleViewMode}
+                  className="micro-interaction nav-hover"
+                  leftIcon={
+                    viewMode === 'grid' ? (
+                      <List className="h-4 w-4" />
+                    ) : (
+                      <Grid className="h-4 w-4" />
+                    )
+                  }
                 />
               </div>
-              <select
-                value={statusFilter}
-                onChange={handleStatusFilterChange}
-                className="px-3 py-2 border rounded-md"
-              >
-                <option value="all">All Status</option>
-                <option value="ready">Ready</option>
-                <option value="preparing">Preparing</option>
-                <option value="errored">Errored</option>
-              </select>
-              <select
-                value={sortBy}
-                onChange={handleSortChange}
-                className="px-3 py-2 border rounded-md"
-              >
-                <option value="created_at">Created Date</option>
-                <option value="title">Title</option>
-                <option value="duration">Duration</option>
-                <option value="view_count">Views</option>
-              </select>
             </div>
 
-            <div className="flex items-center space-x-2">
-              {selectedVideos.size > 0 && (
-                <div className="flex items-center space-x-2">
-                  <span className="text-sm text-muted-foreground">
-                    {selectedVideos.size} selected
-                  </span>
-                  <Button
-                    size="sm"
-                    variant="destructive"
-                    onClick={handleBulkDelete}
-                  >
-                    <Trash2 className="h-4 w-4 mr-1" />
-                    Delete
-                  </Button>
-                </div>
-              )}
-              <Button variant="outline" size="sm" onClick={toggleViewMode}>
-                {viewMode === 'grid' ? (
-                  <List className="h-4 w-4" />
-                ) : (
-                  <Grid className="h-4 w-4" />
-                )}
-              </Button>
-            </div>
-          </div>
+            {/* Enhanced Bulk Selection */}
+            {videos.length > 0 && (
+              <div className="flex items-center gap-component pt-component border-t border-border-subtle">
+                <input
+                  type="checkbox"
+                  checked={selectedVideos.size === videos.length}
+                  onChange={selectAllVideos}
+                  className="h-4 w-4 rounded border-border-subtle accent-accent micro-interaction"
+                />
+                <span className="text-sm text-content-secondary">
+                  Select all videos
+                </span>
+              </div>
+            )}
+          </Card>
 
-          {/* Bulk Selection */}
-          {videos.length > 0 && (
-            <div className="flex items-center space-x-2">
-              <input
-                type="checkbox"
-                checked={selectedVideos.size === videos.length}
-                onChange={selectAllVideos}
-                className="mt-1 h-4 w-4 rounded"
-              />
-              <span className="text-sm">Select all videos</span>
-            </div>
-          )}
-
-          {/* Video Grid/List */}
+          {/* Enhanced Video Grid/List with video-grid pattern */}
           {isLoading ? (
             <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin" />
+              <Loader2 className="h-8 w-8 animate-spin text-content-accent" />
             </div>
           ) : videos.length === 0 ? (
-            <div className="text-center py-12">
-              <p className="text-muted-foreground">No videos found</p>
-              <Button className="mt-4" onClick={handleUploadClick}>
-                <Upload className="h-4 w-4 mr-2" />
-                Upload Your First Video
-              </Button>
-            </div>
+            <Card size="lg" className="pattern-card text-center">
+              <div className="pattern-stack gap-component items-center">
+                <p className="text-content-secondary">No videos found</p>
+                <Button
+                  onClick={handleUploadClick}
+                  leftIcon={<Upload className="h-4 w-4" />}
+                  className="micro-interaction btn-scale"
+                >
+                  Upload Your First Video
+                </Button>
+              </div>
+            </Card>
           ) : viewMode === 'grid' ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            <div className="video-grid">
               {videos.map((video) => (
                 <VideoCard
                   key={video.id}
@@ -468,36 +515,40 @@ export default function VideoManagementDashboard() {
               ))}
             </div>
           ) : (
-            <div className="space-y-2">
-              {videos.map((video) => (
-                <VideoListItem
-                  key={video.id}
-                  video={video}
-                  isSelected={selectedVideos.has(video.id)}
-                  onSelect={() => toggleVideoSelection(video.id)}
-                  onRefresh={fetchVideos}
-                />
-              ))}
-            </div>
+            <Card size="md" className="pattern-card overflow-hidden">
+              <div className="divide-y divide-border-subtle">
+                {videos.map((video) => (
+                  <VideoListItem
+                    key={video.id}
+                    video={video}
+                    isSelected={selectedVideos.has(video.id)}
+                    onSelect={() => toggleVideoSelection(video.id)}
+                    onRefresh={fetchVideos}
+                  />
+                ))}
+              </div>
+            </Card>
           )}
 
-          {/* Pagination */}
+          {/* Enhanced Pagination */}
           {totalPages > 1 && (
-            <div className="flex items-center justify-center space-x-2">
+            <div className="flex items-center justify-center gap-component">
               <Button
                 variant="outline"
                 disabled={currentPage === 1}
                 onClick={handlePreviousPage}
+                className="micro-interaction nav-hover"
               >
                 Previous
               </Button>
-              <span className="text-sm">
+              <span className="text-sm text-content-secondary px-component">
                 Page {currentPage} of {totalPages}
               </span>
               <Button
                 variant="outline"
                 disabled={currentPage === totalPages}
                 onClick={handleNextPage}
+                className="micro-interaction nav-hover"
               >
                 Next
               </Button>
@@ -505,257 +556,55 @@ export default function VideoManagementDashboard() {
           )}
         </TabsContent>
 
-        {/* Upload Tab */}
-        <TabsContent value="upload" className="">
-          <Card>
-            <CardContent>
-              <VideoUploader
-                onUploadComplete={handleUploadComplete}
-                onUploadError={handleUploadError}
-              />
-            </CardContent>
+        {/* Other tabs content remains the same for now */}
+        <TabsContent value="upload">
+          <Card size="lg" className="pattern-card">
+            <VideoUploader
+              onUploadComplete={handleUploadComplete}
+              onUploadError={handleUploadError}
+            />
           </Card>
         </TabsContent>
 
-        {/* Live Streams Tab */}
-        <TabsContent value="live-streams" className="space-y-6">
-          <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-bold">Live Streaming with MUX</h2>
-          </div>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <Radio className="h-5 w-5 mr-2" />
-                MUX Live Streaming
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                <h3 className="font-semibold text-red-900 mb-2">
-                  🔴 Live Streaming Features
-                </h3>
-                <p className="text-red-800 text-sm mb-3">
-                  MUX provides powerful live streaming capabilities with
-                  low-latency delivery, automatic scaling, and global CDN
-                  distribution.
-                </p>
-                <div className="space-y-2 text-sm">
-                  <h4 className="font-medium text-red-900">Key Features:</h4>
-                  <ul className="text-red-800 space-y-1 ml-4">
-                    <li>
-                      • <strong>Low-Latency Streaming</strong> - Real-time
-                      interaction
-                    </li>
-                    <li>
-                      • <strong>Automatic Scaling</strong> - Handle any audience
-                      size
-                    </li>
-                    <li>
-                      • <strong>Global CDN</strong> - Worldwide content delivery
-                    </li>
-                    <li>
-                      • <strong>Stream Recording</strong> - Automatically save
-                      streams as VOD
-                    </li>
-                    <li>
-                      • <strong>Real-time Analytics</strong> - Monitor stream
-                      performance
-                    </li>
-                  </ul>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Card>
-                  <CardContent className="p-4">
-                    <h4 className="font-semibold mb-2">📚 Getting Started</h4>
-                    <p className="text-sm text-muted-foreground mb-3">
-                      Follow MUX's comprehensive live streaming guide
-                    </p>
-                    <Button variant="outline" size="sm" asChild>
-                      <a
-                        href="https://docs.mux.com/guides/video/create-live-streams"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        Live Streaming Guide
-                      </a>
-                    </Button>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardContent className="p-4">
-                    <h4 className="font-semibold mb-2">🛠️ API Reference</h4>
-                    <p className="text-sm text-muted-foreground mb-3">
-                      Detailed API documentation for live stream management
-                    </p>
-                    <Button variant="outline" size="sm" asChild>
-                      <a
-                        href="https://docs.mux.com/api-reference/video#live-streams"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        API Documentation
-                      </a>
-                    </Button>
-                  </CardContent>
-                </Card>
-              </div>
-
-              <div className="border-t pt-4">
-                <h4 className="font-semibold mb-2">🚀 Implementation Steps</h4>
-                <div className="text-sm text-muted-foreground space-y-2">
-                  <p>
-                    <strong>1.</strong> Create live stream via MUX API
-                  </p>
-                  <p>
-                    <strong>2.</strong> Configure stream settings (latency,
-                    recording, etc.)
-                  </p>
-                  <p>
-                    <strong>3.</strong> Use RTMP endpoint to broadcast from
-                    OBS/encoder
-                  </p>
-                  <p>
-                    <strong>4.</strong> Embed MUX Player for viewers
-                  </p>
-                  <p>
-                    <strong>5.</strong> Monitor with MUX Data analytics
-                  </p>
-                </div>
-              </div>
-
-              <div className="bg-gray-50 border rounded-lg p-4">
-                <p className="text-sm text-gray-600">
-                  <strong>Note:</strong> Live streaming features will be
-                  implemented following MUX's official documentation patterns.
-                  This ensures optimal performance and reliability.
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Analytics Tab */}
-        <TabsContent value="analytics" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <BarChart3 className="h-5 w-5 mr-2" />
-                Video Analytics with MUX Data
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <h3 className="font-semibold text-blue-900 mb-2">
-                  📊 MUX Data Analytics
-                </h3>
-                <p className="text-blue-800 text-sm mb-3">
-                  MUX provides comprehensive video analytics through{' '}
-                  <strong>MUX Data</strong>. Get detailed insights into video
-                  performance, viewer engagement, and quality metrics.
-                </p>
-                <div className="space-y-2 text-sm">
-                  <h4 className="font-medium text-blue-900">
-                    Available Metrics:
-                  </h4>
-                  <ul className="text-blue-800 space-y-1 ml-4">
-                    <li>
-                      • <strong>Views & Watch Time</strong> - Total plays and
-                      engagement
-                    </li>
-                    <li>
-                      • <strong>Quality of Experience</strong> - Startup time,
-                      rebuffering, errors
-                    </li>
-                    <li>
-                      • <strong>Audience Insights</strong> - Geographic
-                      distribution, devices
-                    </li>
-                    <li>
-                      • <strong>Real-time Monitoring</strong> - Live performance
-                      tracking
-                    </li>
-                  </ul>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Card>
-                  <CardContent className="p-4">
-                    <h4 className="font-semibold mb-2">🚀 Getting Started</h4>
-                    <p className="text-sm text-muted-foreground mb-3">
-                      Follow MUX's official documentation to implement analytics
-                    </p>
-                    <Button variant="outline" size="sm" asChild>
-                      <a
-                        href="https://docs.mux.com/guides/data/get-started-mux-data"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        View MUX Data Guide
-                      </a>
-                    </Button>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardContent className="p-4">
-                    <h4 className="font-semibold mb-2">📈 Dashboard Access</h4>
-                    <p className="text-sm text-muted-foreground mb-3">
-                      Access your video analytics directly in the MUX Dashboard
-                    </p>
-                    <Button variant="outline" size="sm" asChild>
-                      <a
-                        href="https://dashboard.mux.com"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        Open MUX Dashboard
-                      </a>
-                    </Button>
-                  </CardContent>
-                </Card>
-              </div>
-
-              <div className="border-t pt-4">
-                <h4 className="font-semibold mb-2">
-                  🔧 Implementation Options
-                </h4>
-                <div className="text-sm text-muted-foreground space-y-2">
-                  <p>
-                    <strong>Option 1:</strong> Use MUX Dashboard for analytics
-                    (recommended for most use cases)
-                  </p>
-                  <p>
-                    <strong>Option 2:</strong> Integrate MUX Data API for custom
-                    analytics dashboards
-                  </p>
-                  <p>
-                    <strong>Option 3:</strong> Use MUX Player SDK for real-time
-                    analytics tracking
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Settings Tab */}
-        <TabsContent value="settings" className="space-y-6">
-          <h2 className="text-2xl font-bold">Settings</h2>
-          <Card>
-            <CardHeader>
-              <CardTitle>Video Settings</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground">
-                Configure default video settings, encoding preferences, and
-                more.
+        <TabsContent value="live-streams">
+          <Card size="lg" className="pattern-card text-center">
+            <div className="pattern-stack gap-component items-center">
+              <Radio className="h-12 w-12 text-content-accent" />
+              <h3 className="text-xl font-semibold text-content-primary">
+                Live Streaming
+              </h3>
+              <p className="text-content-secondary">
+                Live streaming features coming soon!
               </p>
-            </CardContent>
+            </div>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="analytics">
+          <Card size="lg" className="pattern-card text-center">
+            <div className="pattern-stack gap-component items-center">
+              <BarChart3 className="h-12 w-12 text-content-accent" />
+              <h3 className="text-xl font-semibold text-content-primary">
+                Video Analytics
+              </h3>
+              <p className="text-content-secondary">
+                Analytics dashboard coming soon!
+              </p>
+            </div>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="settings">
+          <Card size="lg" className="pattern-card text-center">
+            <div className="pattern-stack gap-component items-center">
+              <Settings className="h-12 w-12 text-content-accent" />
+              <h3 className="text-xl font-semibold text-content-primary">
+                Video Settings
+              </h3>
+              <p className="text-content-secondary">
+                Settings panel coming soon!
+              </p>
+            </div>
           </Card>
         </TabsContent>
       </Tabs>
@@ -763,7 +612,7 @@ export default function VideoManagementDashboard() {
   );
 }
 
-// Video Card Component
+// Enhanced VideoCard component with design tokens
 interface VideoCardProps {
   video: VideoAsset;
   isSelected: boolean;
@@ -771,139 +620,174 @@ interface VideoCardProps {
   onRefresh: () => void;
 }
 
-// Memoized components to prevent re-renders
 const VideoCard = React.memo(function VideoCard({
   video,
   isSelected,
   onSelect,
   onRefresh,
 }: VideoCardProps) {
-  const [showPlayer, setShowPlayer] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
-  const handleDelete = useCallback(
-    async (e: React.MouseEvent) => {
-      e.preventDefault(); // Prevent link navigation
-      e.stopPropagation(); // Prevent card click
-      if (!window.confirm('Are you sure you want to delete this video?'))
-        return;
+  const handleDelete = async () => {
+    if (!window.confirm('Are you sure you want to delete this video?')) return;
 
-      try {
-        const response = await fetch(`/api/videos/${video.id}`, {
-          method: 'DELETE',
-        });
-
-        if (response.ok) {
-          onRefresh();
-        }
-      } catch (error) {
-        console.error('Failed to delete video:', error);
+    setIsDeleting(true);
+    try {
+      const response = await fetch(`/api/videos/${video.id}`, {
+        method: 'DELETE',
+      });
+      if (response.ok) {
+        onRefresh();
       }
-    },
-    [video.id, onRefresh],
-  );
+    } catch (error) {
+      console.error('Failed to delete video:', error);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
-  const handleCheckboxChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      e.preventDefault(); // Prevent link navigation
-      e.stopPropagation(); // Prevent card click
-      onSelect();
-    },
-    [onSelect],
-  );
+  const handleRefresh = async () => {
+    if (video.status !== 'preparing' && video.status !== 'processing') return;
 
-  const handlePlayClick = useCallback((e: React.MouseEvent) => {
-    e.preventDefault(); // Prevent link navigation
-    e.stopPropagation(); // Prevent card click
-    setShowPlayer((prev) => !prev);
-  }, []);
-
-  const playbackId = video.mux_playback_id;
-  const isReady = video.status === 'ready' && playbackId;
+    setIsRefreshing(true);
+    try {
+      const response = await fetch(`/api/videos/${video.id}/refresh`, {
+        method: 'POST',
+      });
+      if (response.ok) {
+        onRefresh();
+      }
+    } catch (error) {
+      console.error('Failed to refresh video:', error);
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
 
   return (
-    <Link href={`/videos/${video.id}`} className="block">
-      <Card className="group hover:shadow-lg transition-all cursor-pointer">
-        <CardContent className="p-4">
-          <div className="flex items-start gap-3">
-            <input
-              type="checkbox"
-              checked={isSelected}
-              onChange={handleCheckboxChange}
-              className="mt-1 h-4 w-4 rounded"
-            />
-            <div className="flex-1">
-              <div className="aspect-video bg-gray-100 rounded-lg overflow-hidden mb-3 relative">
-                {showPlayer && playbackId ? (
-                  <MuxVideoPlayer
-                    playbackId={playbackId}
-                    title={video.title || 'Untitled Video'}
-                    className="rounded-t-lg"
-                  />
-                ) : (
-                  <>
-                    {playbackId ? (
-                      <Image
-                        src={`https://image.mux.com/${playbackId}/thumbnail.png?width=640&height=360`}
-                        alt={video.title || 'Video thumbnail'}
-                        className="w-full h-full object-cover"
-                        width={640}
-                        height={360}
-                      />
-                    ) : (
-                      <div className="w-full h-full bg-gray-200 flex items-center justify-center">
-                        <div className="text-center">
-                          <Play className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-                          <p className="text-sm text-gray-500">
-                            {video.status === 'preparing'
-                              ? 'Processing...'
-                              : 'No preview'}
-                          </p>
-                        </div>
-                      </div>
-                    )}
-                    {isReady && (
-                      <Button
-                        size="icon"
-                        variant="secondary"
-                        className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2"
-                        onClick={handlePlayClick}
-                      >
-                        <Play className="h-4 w-4" />
-                      </Button>
-                    )}
-                    {/* Hover overlay with link hint */}
-                    <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-opacity flex items-center justify-center">
-                      <ExternalLink className="h-8 w-8 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
-                    </div>
-                  </>
-                )}
-              </div>
+    <Card
+      size="md"
+      className={`pattern-card micro-interaction card-lift relative ${
+        isSelected ? 'ring-2 ring-accent border-accent' : ''
+      }`}
+    >
+      {/* Selection checkbox */}
+      <div className="absolute top-2 left-2 z-10">
+        <input
+          type="checkbox"
+          checked={isSelected}
+          onChange={onSelect}
+          className="h-4 w-4 rounded border-border-subtle accent-accent micro-interaction"
+        />
+      </div>
 
-              <h3 className="font-medium text-lg mb-1">
-                {video.title || 'Untitled Video'}
-              </h3>
-              {video.description && (
-                <p className="text-sm text-gray-600 mb-2 line-clamp-2">
-                  {video.description}
-                </p>
-              )}
-
-              <div className="flex items-center justify-between">
-                <StatusBadge status={video.status} />
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  onClick={handleDelete}
-                  title="Delete video"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
+      {/* Video thumbnail */}
+      <div className="relative aspect-video bg-surface-elevated-2 rounded-t-lg overflow-hidden">
+        {video.mux_playback_id ? (
+          <Image
+            src={`https://image.mux.com/${video.mux_playback_id}/thumbnail.jpg?width=400&height=225&fit_mode=smartcrop&time=1`}
+            alt={video.title || 'Video thumbnail'}
+            fill
+            className="object-cover transition-transform transition-normal hover:scale-105"
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center">
+            <Play className="h-12 w-12 text-content-secondary" />
           </div>
-        </CardContent>
-      </Card>
-    </Link>
+        )}
+
+        {/* Duration overlay */}
+        {video.duration && (
+          <div className="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded">
+            {formatDuration(video.duration)}
+          </div>
+        )}
+      </div>
+
+      {/* Video info */}
+      <div className="pattern-stack gap-component">
+        <div className="pattern-stack gap-1">
+          <h3 className="font-semibold text-content-primary truncate">
+            {video.title || `Video ${video.id.slice(0, 8)}`}
+          </h3>
+          <StatusBadge status={video.status} />
+        </div>
+
+        {video.description && (
+          <p className="text-sm text-content-secondary line-clamp-2">
+            {video.description}
+          </p>
+        )}
+
+        <div className="text-xs text-content-secondary">
+          Created:{' '}
+          {video.created_at
+            ? new Date(video.created_at).toLocaleDateString()
+            : 'N/A'}
+        </div>
+
+        {/* Action buttons */}
+        <div className="flex justify-between items-center pt-component border-t border-border-subtle">
+          <div className="flex gap-1">
+            {video.mux_playback_id && (
+              <Button
+                size="sm"
+                variant="ghost"
+                className="micro-interaction nav-hover"
+                asChild
+              >
+                <Link href={`/videos/${video.id}`}>
+                  <Play className="h-4 w-4" />
+                </Link>
+              </Button>
+            )}
+            <Button
+              size="sm"
+              variant="ghost"
+              className="micro-interaction nav-hover"
+              onClick={() => {
+                /* Edit handler */
+              }}
+            >
+              <Edit className="h-4 w-4" />
+            </Button>
+          </div>
+
+          <div className="flex gap-1">
+            {(video.status === 'preparing' ||
+              video.status === 'processing') && (
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={isRefreshing}
+                onClick={handleRefresh}
+                className="micro-interaction btn-scale"
+              >
+                {isRefreshing ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <ExternalLink className="h-4 w-4" />
+                )}
+              </Button>
+            )}
+            <Button
+              size="sm"
+              variant="destructive"
+              disabled={isDeleting}
+              onClick={handleDelete}
+              className="micro-interaction btn-scale"
+            >
+              {isDeleting ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Trash2 className="h-4 w-4" />
+              )}
+            </Button>
+          </div>
+        </div>
+      </div>
+    </Card>
   );
 });
 
@@ -914,97 +798,151 @@ const VideoListItem = React.memo(function VideoListItem({
   onSelect,
   onRefresh,
 }: VideoCardProps) {
-  const isReady = video.status === 'ready' && video.mux_playback_id;
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
-  const handleDelete = useCallback(async () => {
+  const handleDelete = async () => {
     if (!window.confirm('Are you sure you want to delete this video?')) return;
 
+    setIsDeleting(true);
     try {
       const response = await fetch(`/api/videos/${video.id}`, {
         method: 'DELETE',
       });
-
       if (response.ok) {
         onRefresh();
       }
     } catch (error) {
       console.error('Failed to delete video:', error);
+    } finally {
+      setIsDeleting(false);
     }
-  }, [video.id, onRefresh]);
+  };
 
-  const handleCheckboxChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      e.preventDefault();
-      e.stopPropagation();
-      onSelect();
-    },
-    [onSelect],
-  );
+  const handleRefresh = async () => {
+    if (video.status !== 'preparing' && video.status !== 'processing') return;
 
-  const handleThumbnailClick = useCallback(
-    (e: React.MouseEvent) => {
-      e.preventDefault();
-      e.stopPropagation();
-      if (isReady) {
-        window.open(`/videos/${video.id}`, '_blank');
+    setIsRefreshing(true);
+    try {
+      const response = await fetch(`/api/videos/${video.id}/refresh`, {
+        method: 'POST',
+      });
+      if (response.ok) {
+        onRefresh();
       }
-    },
-    [video.id, isReady],
-  );
+    } catch (error) {
+      console.error('Failed to refresh video:', error);
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
 
   return (
-    <Card className={`${isSelected ? 'ring-2 ring-primary' : ''}`}>
-      <CardContent className="p-4">
-        <div className="flex items-center space-x-4">
-          <input
-            type="checkbox"
-            checked={isSelected}
-            onChange={handleCheckboxChange}
-            className="mt-1 h-4 w-4 rounded"
+    <div
+      className={`flex items-center gap-component p-card-sm transition-colors transition-fast hover:bg-interaction-hover ${
+        isSelected ? 'bg-interaction-focus' : ''
+      }`}
+    >
+      {/* Selection checkbox */}
+      <input
+        type="checkbox"
+        checked={isSelected}
+        onChange={onSelect}
+        className="h-4 w-4 rounded border-border-subtle accent-accent micro-interaction"
+      />
+
+      {/* Video thumbnail */}
+      <div className="relative w-24 h-14 bg-surface-elevated-2 rounded overflow-hidden flex-shrink-0">
+        {video.mux_playback_id ? (
+          <Image
+            src={`https://image.mux.com/${video.mux_playback_id}/thumbnail.jpg?width=96&height=56&fit_mode=smartcrop&time=1`}
+            alt={video.title || 'Video thumbnail'}
+            fill
+            className="object-cover"
           />
-          <div
-            className="w-16 h-12 bg-gray-100 rounded flex items-center justify-center cursor-pointer"
-            onClick={handleThumbnailClick}
-          >
-            <Play className="h-4 w-4 text-gray-400" />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center">
+            <Play className="h-6 w-6 text-content-secondary" />
           </div>
-          <div className="flex-1">
-            <h3 className="font-semibold">{video.title || 'Untitled Video'}</h3>
-            <p className="text-sm text-muted-foreground">
-              {video.description || 'No description'}
-            </p>
+        )}
+      </div>
+
+      {/* Video details */}
+      <div className="flex-1 min-w-0">
+        <div className="flex items-start justify-between gap-component">
+          <div className="min-w-0 flex-1">
+            <h3 className="font-medium text-content-primary truncate">
+              {video.title || `Video ${video.id.slice(0, 8)}`}
+            </h3>
+            <div className="flex items-center gap-2 mt-1">
+              <StatusBadge status={video.status} />
+              <span className="text-xs text-content-secondary">
+                {formatDuration(video.duration ?? undefined)}
+              </span>
+              <span className="text-xs text-content-secondary">
+                {video.created_at
+                  ? new Date(video.created_at).toLocaleDateString()
+                  : 'N/A'}
+              </span>
+            </div>
           </div>
-          <div className="text-sm text-muted-foreground">
-            {formatDuration(video.duration ?? undefined)}
-          </div>
-          <div className="flex items-center space-x-2">
-            <StatusBadge status={video.status} />
-          </div>
-          <div className="flex items-center space-x-1">
-            {isReady ? (
-              <Link href={`/videos/${video.id}`} target="_blank">
-                <Button size="sm" variant="ghost">
-                  <ExternalLink className="h-4 w-4" />
-                </Button>
-              </Link>
-            ) : (
+
+          {/* Action buttons */}
+          <div className="flex gap-1 flex-shrink-0">
+            {video.mux_playback_id && (
               <Button
                 size="sm"
                 variant="ghost"
-                disabled={!video.mux_playback_id}
+                className="micro-interaction nav-hover"
+                asChild
               >
-                <Play className="h-4 w-4" />
+                <Link href={`/videos/${video.id}`}>
+                  <Play className="h-4 w-4" />
+                </Link>
               </Button>
             )}
-            <Button size="sm" variant="ghost">
+            <Button
+              size="sm"
+              variant="ghost"
+              className="micro-interaction nav-hover"
+              onClick={() => {
+                /* Edit handler */
+              }}
+            >
               <Edit className="h-4 w-4" />
             </Button>
-            <Button size="sm" variant="ghost" onClick={handleDelete}>
-              <Trash2 className="h-4 w-4" />
+            {(video.status === 'preparing' ||
+              video.status === 'processing') && (
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={isRefreshing}
+                onClick={handleRefresh}
+                className="micro-interaction btn-scale"
+              >
+                {isRefreshing ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <ExternalLink className="h-4 w-4" />
+                )}
+              </Button>
+            )}
+            <Button
+              size="sm"
+              variant="destructive"
+              disabled={isDeleting}
+              onClick={handleDelete}
+              className="micro-interaction btn-scale"
+            >
+              {isDeleting ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Trash2 className="h-4 w-4" />
+              )}
             </Button>
           </div>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 });

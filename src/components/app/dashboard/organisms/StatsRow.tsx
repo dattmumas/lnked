@@ -1,4 +1,5 @@
-import { Card, CardContent } from '@/components/ui/card';
+import React from 'react';
+import { MetricCard } from '@/components/primitives/Card';
 import {
   Users2,
   FileText,
@@ -46,26 +47,17 @@ export default function StatsRow({
   openRate = '0%',
   publishedThisMonth = 0,
 }: StatsRowProps) {
-  const stats: StatItem[] = [
+  // Organize stats into primary and secondary for better visual hierarchy
+  const primaryStats: StatItem[] = [
     {
       label: 'Subscribers',
-      value: subscriberCount,
+      value: subscriberCount.toLocaleString(),
       icon: Users2,
     },
     {
       label: 'Followers',
-      value: followerCount,
+      value: followerCount.toLocaleString(),
       icon: Heart,
-    },
-    {
-      label: 'Posts',
-      value: totalPosts,
-      icon: FileText,
-    },
-    {
-      label: 'Collectives',
-      value: collectiveCount,
-      icon: BookOpen,
     },
     {
       label: 'Total Views',
@@ -77,54 +69,97 @@ export default function StatsRow({
       value: totalLikes.toLocaleString(),
       icon: TrendingUp,
     },
+  ];
+
+  const secondaryStats: StatItem[] = [
     {
-      label: 'Monthly Revenue',
-      value: monthlyRevenue,
-      icon: DollarSign,
-      prefix: '$',
+      label: 'Posts',
+      value: totalPosts,
+      icon: FileText,
     },
     {
-      label: 'Pending Payout',
-      value: pendingPayout,
-      icon: DollarSign,
-      prefix: '$',
-    },
-    {
-      label: 'Open Rate',
-      value: openRate,
-      icon: Mail,
+      label: 'Collectives',
+      value: collectiveCount,
+      icon: BookOpen,
     },
     {
       label: 'Published This Month',
       value: publishedThisMonth,
       icon: Calendar,
     },
+    {
+      label: 'Open Rate',
+      value: openRate,
+      icon: Mail,
+    },
+  ];
+
+  const revenueStats: StatItem[] = [
+    {
+      label: 'Monthly Revenue',
+      value: monthlyRevenue.toLocaleString(),
+      icon: DollarSign,
+      prefix: '$',
+    },
+    {
+      label: 'Pending Payout',
+      value: pendingPayout.toLocaleString(),
+      icon: DollarSign,
+      prefix: '$',
+    },
   ];
 
   return (
-    <Card className="w-full border-border/50">
-      <CardContent className="p-4">
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-10 gap-4">
-          {stats.map((stat) => (
-            <div
+    <div className="pattern-stack gap-section">
+      {/* Primary metrics - most important KPIs */}
+      <div className="dashboard-grid dashboard-grid-primary">
+        {primaryStats.map((stat) => {
+          const Icon = stat.icon;
+          return (
+            <MetricCard
               key={stat.label}
-              className="flex flex-col items-center text-center space-y-1 min-w-0"
-            >
-              <div className="flex items-center justify-center w-8 h-8 rounded-full bg-accent/10">
-                <stat.icon className="h-4 w-4 text-accent-foreground/70" />
-              </div>
-              <div className="text-lg font-semibold tabular-nums">
-                {stat.prefix}
-                {stat.value}
-                {stat.suffix}
-              </div>
-              <div className="text-xs text-muted-foreground font-medium leading-tight">
-                {stat.label}
-              </div>
-            </div>
-          ))}
+              label={stat.label}
+              value={`${stat.prefix || ''}${stat.value}${stat.suffix || ''}`}
+              icon={<Icon className="h-5 w-5" />}
+              className="micro-interaction card-lift"
+            />
+          );
+        })}
+      </div>
+
+      {/* Secondary metrics - content and engagement */}
+      <div className="dashboard-grid dashboard-grid-secondary">
+        {secondaryStats.map((stat) => {
+          const Icon = stat.icon;
+          return (
+            <MetricCard
+              key={stat.label}
+              label={stat.label}
+              value={`${stat.prefix || ''}${stat.value}${stat.suffix || ''}`}
+              icon={<Icon className="h-4 w-4" />}
+              className="micro-interaction card-lift"
+            />
+          );
+        })}
+      </div>
+
+      {/* Revenue metrics - financial data */}
+      {(monthlyRevenue > 0 || pendingPayout > 0) && (
+        <div className="dashboard-grid dashboard-grid-revenue">
+          {revenueStats.map((stat) => {
+            const Icon = stat.icon;
+            return (
+              <MetricCard
+                key={stat.label}
+                label={stat.label}
+                value={`${stat.prefix || ''}${stat.value}${stat.suffix || ''}`}
+                icon={<Icon className="h-4 w-4" />}
+                className="micro-interaction card-lift"
+              />
+            );
+          })}
         </div>
-      </CardContent>
-    </Card>
+      )}
+    </div>
   );
 }

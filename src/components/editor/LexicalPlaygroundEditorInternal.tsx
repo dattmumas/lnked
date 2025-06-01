@@ -17,54 +17,65 @@ import { RichTextPlugin } from '@lexical/react/LexicalRichTextPlugin';
 import { TabIndentationPlugin } from '@lexical/react/LexicalTabIndentationPlugin';
 import { TablePlugin } from '@lexical/react/LexicalTablePlugin';
 
-// Import playground components - but avoid problematic ones
-import PlaygroundNodes from '@/components/lexical-playground/nodes/PlaygroundNodes';
-import PlaygroundEditorTheme from '@/components/lexical-playground/themes/PlaygroundEditorTheme';
-import { ToolbarContext } from '@/components/lexical-playground/context/ToolbarContext';
-import { SharedHistoryContext } from '@/components/lexical-playground/context/SharedHistoryContext';
-import AutoLinkPlugin from '@/components/lexical-playground/plugins/AutoLinkPlugin';
-import CodeHighlightPlugin from '@/components/lexical-playground/plugins/CodeHighlightPlugin';
-import ComponentPickerPlugin from '@/components/lexical-playground/plugins/ComponentPickerPlugin';
-import EmojisPlugin from '@/components/lexical-playground/plugins/EmojisPlugin';
-import { LayoutPlugin } from '@/components/lexical-playground/plugins/LayoutPlugin/LayoutPlugin';
-import LinkPlugin from '@/components/lexical-playground/plugins/LinkPlugin';
-import MarkdownShortcutPlugin from '@/components/lexical-playground/plugins/MarkdownShortcutPlugin';
-import ToolbarPlugin from '@/components/lexical-playground/plugins/ToolbarPlugin';
-import ContentEditable from '@/components/lexical-playground/ui/ContentEditable';
-import PlusButtonPlugin from './plugins/PlusButtonPlugin';
-import AutoEmbedPlugin from '@/components/lexical-playground/plugins/AutoEmbedPlugin';
-import YouTubePlugin from '@/components/lexical-playground/plugins/YouTubePlugin';
-import TwitterPlugin from '@/components/lexical-playground/plugins/TwitterPlugin';
-import FigmaPlugin from '@/components/lexical-playground/plugins/FigmaPlugin';
+// Import reorganized editor components
+import PlaygroundNodes from './nodes/PlaygroundNodes';
+import PlaygroundEditorTheme from './themes/PlaygroundEditorTheme';
+import { ToolbarContext } from './context/ToolbarContext';
+import { SharedHistoryContext } from './context/SharedHistoryContext';
 
-// --- BEGIN AUTO-GENERATED PLUGIN IMPORTS ---
-import DraggableBlockPlugin from '@/components/lexical-playground/plugins/DraggableBlockPlugin';
-import ImagesPlugin from '@/components/lexical-playground/plugins/ImagesPlugin';
-import TableOfContentsPlugin from '@/components/lexical-playground/plugins/TableOfContentsPlugin';
-import ShortcutsPlugin from '@/components/lexical-playground/plugins/ShortcutsPlugin';
-import CollapsiblePlugin from '@/components/lexical-playground/plugins/CollapsiblePlugin';
-import EmojiPickerPlugin from '@/components/lexical-playground/plugins/EmojiPickerPlugin';
-import SpeechToTextPlugin from '@/components/lexical-playground/plugins/SpeechToTextPlugin';
-import TabFocusPlugin from '@/components/lexical-playground/plugins/TabFocusPlugin';
-import StickyPlugin from '@/components/lexical-playground/plugins/StickyPlugin';
-import InlineImagePlugin from '@/components/lexical-playground/plugins/InlineImagePlugin';
-import FloatingTextFormatToolbarPlugin from '@/components/lexical-playground/plugins/FloatingTextFormatToolbarPlugin';
-import DragDropPastePlugin from '@/components/lexical-playground/plugins/DragDropPastePlugin';
-import KeywordsPlugin from '@/components/lexical-playground/plugins/KeywordsPlugin';
-import TableHoverActionsPlugin from '@/components/lexical-playground/plugins/TableHoverActionsPlugin';
-import PageBreakPlugin from '@/components/lexical-playground/plugins/PageBreakPlugin';
-import EquationsPlugin from '@/components/lexical-playground/plugins/EquationsPlugin';
-import ExcalidrawPlugin from '@/components/lexical-playground/plugins/ExcalidrawPlugin';
-import FloatingLinkEditorPlugin from '@/components/lexical-playground/plugins/FloatingLinkEditorPlugin';
-import { MaxLengthPlugin } from '@/components/lexical-playground/plugins/MaxLengthPlugin';
-import AutocompletePlugin from '@/components/lexical-playground/plugins/AutocompletePlugin';
-import ContextMenuPlugin from '@/components/lexical-playground/plugins/ContextMenuPlugin';
-import SpecialTextPlugin from '@/components/lexical-playground/plugins/SpecialTextPlugin';
-import CodeActionMenuPlugin from '@/components/lexical-playground/plugins/CodeActionMenuPlugin';
-import TableActionMenuPlugin from '@/components/lexical-playground/plugins/TableActionMenuPlugin';
-import PollPlugin from '@/components/lexical-playground/plugins/PollPlugin';
-import TableCellResizer from '@/components/lexical-playground/plugins/TableCellResizer';
-// --- END AUTO-GENERATED PLUGIN IMPORTS ---
+// Formatting plugins
+import AutoLinkPlugin from './plugins/formatting/AutoLinkPlugin';
+import CodeHighlightPlugin from './plugins/formatting/CodeHighlightPlugin';
+import LinkPlugin from './plugins/formatting/LinkPlugin';
+import MarkdownShortcutPlugin from './plugins/formatting/MarkdownShortcutPlugin';
+import KeywordsPlugin from './plugins/formatting/KeywordsPlugin';
+import SpecialTextPlugin from './plugins/formatting/SpecialTextPlugin';
+import CodeActionMenuPlugin from './plugins/formatting/CodeActionMenuPlugin';
+
+// Interactive plugins
+import ComponentPickerPlugin from './plugins/interactive/ComponentPickerPlugin';
+import DraggableBlockPlugin from './plugins/interactive/DraggableBlockPlugin';
+import CollapsiblePlugin from './plugins/interactive/CollapsiblePlugin';
+import StickyPlugin from './plugins/interactive/StickyPlugin';
+import EquationsPlugin from './plugins/interactive/EquationsPlugin';
+import PollPlugin from './plugins/interactive/PollPlugin';
+
+// Input plugins
+import EmojisPlugin from './plugins/input/EmojisPlugin';
+import EmojiPickerPlugin from './plugins/input/EmojiPickerPlugin';
+import SpeechToTextPlugin from './plugins/input/SpeechToTextPlugin';
+import TabFocusPlugin from './plugins/input/TabFocusPlugin';
+import ShortcutsPlugin from './plugins/input/ShortcutsPlugin';
+import DragDropPastePlugin from './plugins/input/DragDropPastePlugin';
+import { MaxLengthPlugin } from './plugins/input/MaxLengthPlugin';
+import AutocompletePlugin from './plugins/input/AutocompletePlugin';
+
+// Layout plugins
+import { LayoutPlugin } from './plugins/layout/LayoutPlugin/LayoutPlugin';
+import TableOfContentsPlugin from './plugins/layout/TableOfContentsPlugin';
+import TableHoverActionsPlugin from './plugins/layout/TableHoverActionsPlugin';
+import PageBreakPlugin from './plugins/layout/PageBreakPlugin';
+import TableActionMenuPlugin from './plugins/layout/TableActionMenuPlugin';
+import TableCellResizer from './plugins/layout/TableCellResizer';
+import AutoEmbedPlugin from './plugins/layout/AutoEmbedPlugin';
+
+// Media plugins
+import ImagesPlugin from './plugins/media/ImagesPlugin';
+import InlineImagePlugin from './plugins/media/InlineImagePlugin';
+import YouTubePlugin from './plugins/media/YouTubePlugin';
+import TwitterPlugin from './plugins/media/TwitterPlugin';
+import FigmaPlugin from './plugins/media/FigmaPlugin';
+import ExcalidrawPlugin from './plugins/media/ExcalidrawPlugin';
+
+// Toolbar plugins
+import ToolbarPlugin from './plugins/toolbar/ToolbarPlugin';
+import FloatingTextFormatToolbarPlugin from './plugins/toolbar/FloatingTextFormatToolbarPlugin';
+import FloatingLinkEditorPlugin from './plugins/toolbar/FloatingLinkEditorPlugin';
+import ContextMenuPlugin from './plugins/toolbar/ContextMenuPlugin';
+
+// UI components
+import ContentEditable from './ui/inputs/ContentEditable';
+import PlusButtonPlugin from './plugins/PlusButtonPlugin';
 
 interface PostEditorProps {
   initialContent?: string;
@@ -136,11 +147,7 @@ function EditorContent({
         <CodeHighlightPlugin />
         <ListPlugin />
         <CheckListPlugin />
-        <TablePlugin
-          hasCellMerge
-          hasCellBackgroundColor
-          hasHorizontalScroll
-        />
+        <TablePlugin hasCellMerge hasCellBackgroundColor hasHorizontalScroll />
         <LinkPlugin />
         <ClickableLinkPlugin disabled={!isEditable} />
         <HorizontalRulePlugin />

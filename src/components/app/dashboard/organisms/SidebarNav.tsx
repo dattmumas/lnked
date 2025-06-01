@@ -48,11 +48,17 @@ export function SidebarNav({
   collapsed = false,
 }: SidebarNavProps) {
   return (
-    <div className={collapsed ? 'space-y-2 px-0' : 'space-y-6 px-2'}>
-      {/* Main section */}
+    <div
+      className={
+        collapsed ? 'pattern-stack gap-component' : 'pattern-stack gap-section'
+      }
+    >
+      {/* Main navigation section */}
       <nav
         className={
-          collapsed ? 'flex flex-col items-center gap-2' : 'flex flex-col gap-1'
+          collapsed
+            ? 'flex flex-col items-center gap-component'
+            : 'pattern-stack gap-1'
         }
         aria-label={collapsed ? 'Collapsed Main' : 'Main'}
       >
@@ -68,11 +74,11 @@ export function SidebarNav({
         ))}
       </nav>
 
-      {/* Collectives section */}
+      {/* Collectives section with enhanced styling */}
       <div>
         {!collapsed && (
-          <div className="px-3 py-2 flex items-center justify-between">
-            <h2 className="text-xs uppercase tracking-wider font-medium text-sidebar-foreground/60">
+          <div className="px-component py-component flex items-center justify-between">
+            <h2 className="text-xs uppercase tracking-wider font-medium text-content-secondary">
               Collectives
             </h2>
           </div>
@@ -80,16 +86,16 @@ export function SidebarNav({
         <nav
           className={
             collapsed
-              ? 'flex flex-col items-center gap-2'
-              : 'flex flex-col gap-1'
+              ? 'flex flex-col items-center gap-component'
+              : 'pattern-stack gap-1'
           }
           aria-label={collapsed ? 'Collapsed Collectives' : 'Collectives'}
         >
           {collectives.length === 0
             ? !collapsed && (
-                <span className="text-xs text-muted-foreground px-3 py-1">
+                <div className="px-component py-1 text-xs text-content-secondary">
                   No collectives
-                </span>
+                </div>
               )
             : collectives.map((col) =>
                 collapsed ? (
@@ -103,7 +109,7 @@ export function SidebarNav({
                 ) : (
                   <div
                     key={col.id}
-                    className="flex items-center justify-between pr-2"
+                    className="flex items-center justify-between pr-component group"
                   >
                     <SidebarLink
                       href={`/dashboard/collectives/${col.id}`}
@@ -112,7 +118,7 @@ export function SidebarNav({
                     />
                     <Link
                       href={`/${col.slug}`}
-                      className="text-muted-foreground hover:text-accent"
+                      className="text-content-secondary hover:text-content-accent transition-colors transition-fast micro-interaction opacity-0 group-hover:opacity-100"
                       aria-label={`View ${col.name}`}
                     >
                       <ArrowUpRight className="size-4" />
@@ -123,11 +129,11 @@ export function SidebarNav({
         </nav>
       </div>
 
-      {/* Settings section */}
+      {/* Settings section with enhanced styling */}
       <div>
         {!collapsed && (
-          <div className="px-3 py-2">
-            <h2 className="text-xs uppercase tracking-wider font-medium text-sidebar-foreground/60">
+          <div className="px-component py-component">
+            <h2 className="text-xs uppercase tracking-wider font-medium text-content-secondary">
               Settings
             </h2>
           </div>
@@ -135,8 +141,8 @@ export function SidebarNav({
         <nav
           className={
             collapsed
-              ? 'flex flex-col items-center gap-2'
-              : 'flex flex-col gap-1'
+              ? 'flex flex-col items-center gap-component'
+              : 'pattern-stack gap-1'
           }
           aria-label={collapsed ? 'Collapsed Settings' : 'Settings'}
         >

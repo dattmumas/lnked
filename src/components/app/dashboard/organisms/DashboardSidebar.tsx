@@ -1,11 +1,11 @@
-"use client";
+'use client';
 
-import { Plus } from "lucide-react";
-import { cn } from "@/lib/utils";
-import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import type { CollectiveSummary } from "./DashboardShell";
-import { SidebarNav } from "./SidebarNav";
+import { Plus } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import Link from 'next/link';
+import { Button } from '@/components/primitives/Button';
+import type { CollectiveSummary } from './DashboardShell';
+import { SidebarNav } from './SidebarNav';
 
 interface DashboardSidebarProps {
   className?: string;
@@ -21,47 +21,54 @@ export function DashboardSidebar({
   return (
     <aside
       className={cn(
-        "bg-sidebar text-sidebar-foreground flex flex-col border-r border-sidebar-border h-full transition-all duration-200 overflow-y-auto",
-        collapsed ? "w-16" : "w-64 py-4",
-        className
+        'bg-surface-elevated-1 text-content-primary flex flex-col',
+        'border-r border-border-subtle h-full transition-all transition-normal overflow-y-auto',
+        'shadow-sm backdrop-blur-sm',
+        collapsed ? 'w-16' : 'w-64 p-card-md',
+        className,
       )}
       aria-label="Dashboard sidebar"
     >
       <div
-        className={cn("px-4 mb-6", collapsed && "text-center pl-0 pr-0 mb-2")}
-      >
-        <Link
-          href="/"
-          className={cn(
-            "flex items-center gap-2 font-semibold",
-            collapsed ? "justify-center text-xl" : "text-lg"
-          )}
-        >
-          <span className="text-sidebar-primary">
-            {collapsed ? "L" : "Lnked"}
-          </span>
-        </Link>
-      </div>
+        className={cn(
+          'mb-section flex items-center',
+          collapsed ? 'justify-center mb-component' : 'gap-component',
+        )}
+      ></div>
 
-      {/* Navigation sections */}
-      <SidebarNav collectives={collectives} collapsed={collapsed} />
+      <div className="flex-1 overflow-y-auto">
+        <SidebarNav collectives={collectives} collapsed={collapsed} />
+      </div>
 
       <div
         className={cn(
-          "mt-auto px-4 py-4 flex justify-center",
-          collapsed && "px-0 py-2"
+          'mt-auto flex justify-center border-t border-border-subtle pt-component',
+          collapsed ? 'px-0' : 'px-0',
         )}
       >
         {collapsed ? (
-          <Button asChild variant="outline" size="icon">
+          <Button
+            variant="default"
+            size="icon"
+            className="micro-interaction btn-scale rounded-lg"
+            asChild
+          >
             <Link href="/posts/new">
               <Plus className="h-5 w-5" aria-label="Create Post" />
             </Link>
           </Button>
         ) : (
-          <Button variant="outline" size="sm" asChild className="w-full">
-            <Link href="/posts/new">
-              <Plus className="size-4 mr-2" />
+          <Button
+            variant="default"
+            size="sm"
+            className="w-full micro-interaction btn-scale"
+            asChild
+          >
+            <Link
+              href="/posts/new"
+              className="flex items-center justify-center gap-2"
+            >
+              <Plus className="size-4" />
               Create Post
             </Link>
           </Button>

@@ -1,13 +1,7 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/primitives/Button';
 import Link from 'next/link';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+import { Card } from '@/components/primitives/Card';
 import StatsRow from '@/components/app/dashboard/organisms/StatsRow';
 import {
   BookOpen,
@@ -131,155 +125,209 @@ export default async function DashboardManagementPage() {
     ).length || 0;
 
   return (
-    <>
-      {/* Dashboard Page Header - Sticky within the scrollable area defined in DashboardShell */}
-      {/* The DashboardShell provides p-4 md:p-6. This sticky header will live INSIDE that padding. */}
-      {/* top-0 here means top of the scrollable container. */}
+    <div className="pattern-stack gap-section">
+      {/* Enhanced Stats Row with design system integration */}
+      <StatsRow
+        subscriberCount={subscriberCount || 0}
+        followerCount={followerCount || 0}
+        totalPosts={personalPosts?.length || 0}
+        collectiveCount={ownedCollectives?.length || 0}
+        totalViews={totalViews}
+        totalLikes={totalLikes}
+        monthlyRevenue={0} // TODO: Implement when payment system is ready
+        pendingPayout={0} // TODO: Implement when payout system is ready
+        openRate="0%" // TODO: Implement when email tracking is ready
+        publishedThisMonth={publishedThisMonth}
+      />
 
-      {/* Stats Row - Thin focused metrics */}
-      <div className="mb-6">
-        <StatsRow
-          subscriberCount={subscriberCount || 0}
-          followerCount={followerCount || 0}
-          totalPosts={personalPosts?.length || 0}
-          collectiveCount={ownedCollectives?.length || 0}
-          totalViews={totalViews}
-          totalLikes={totalLikes}
-          monthlyRevenue={0} // TODO: Implement when payment system is ready
-          pendingPayout={0} // TODO: Implement when payout system is ready
-          openRate="0%" // TODO: Implement when email tracking is ready
-          publishedThisMonth={publishedThisMonth}
-        />
-      </div>
-
-      {/* Main content sections in a grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
-        {/* Individual Newsletter */}
-        <Card className="w-full bg-background text-foreground shadow-sm">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Rss className="h-5 w-5" /> My Content
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 pt-2 w-full">
-              <div className="flex flex-wrap gap-2">
-                <Link href="/posts/new">
-                  <Button variant="outline" size="sm">
-                    <Plus className="h-4 w-4 mr-2" /> Write New Post
-                  </Button>
-                </Link>
-                <Link href="/dashboard/video-management">
-                  <Button variant="outline" size="sm">
-                    <Video className="h-4 w-4 mr-2" /> Video Management
-                  </Button>
-                </Link>
-                {username && (
-                  <Button asChild variant="outline" size="sm">
-                    <Link href={`/profile/${username}`}>View Profile</Link>
-                  </Button>
-                )}
-                <Button asChild variant="ghost" size="sm">
-                  <Link href="/dashboard/my-newsletter/subscribers">
-                    Subscribers
-                  </Link>
-                </Button>
+      {/* Enhanced main content sections with improved grid */}
+      <div className="content-grid-dashboard">
+        {/* Individual Newsletter - Enhanced with design tokens */}
+        <Card size="lg" className="pattern-card micro-interaction">
+          <div className="pattern-stack">
+            {/* Enhanced header with better typography */}
+            <div className="flex items-center gap-component">
+              <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-surface-elevated-2 border border-border-subtle">
+                <Rss className="h-5 w-5 text-content-accent" />
+              </div>
+              <div>
+                <h2 className="text-content-primary font-semibold text-lg tracking-tight">
+                  My Content
+                </h2>
+                <p className="text-content-secondary text-sm">
+                  Personal posts and articles
+                </p>
               </div>
             </div>
+
+            {/* Enhanced action buttons with improved spacing */}
+            <div className="flex flex-wrap gap-component">
+              <Button
+                variant="default"
+                size="sm"
+                leftIcon={<Plus className="h-4 w-4" />}
+                className="micro-interaction btn-scale"
+                asChild
+              >
+                <Link href="/posts/new">Write New Post</Link>
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                leftIcon={<Video className="h-4 w-4" />}
+                className="micro-interaction nav-hover"
+                asChild
+              >
+                <Link href="/dashboard/video-management">Video Management</Link>
+              </Button>
+              {username && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="micro-interaction nav-hover"
+                  asChild
+                >
+                  <Link href={`/profile/${username}`}>View Profile</Link>
+                </Button>
+              )}
+              <Button
+                variant="ghost"
+                size="sm"
+                className="micro-interaction nav-hover"
+                asChild
+              >
+                <Link href="/dashboard/my-newsletter/subscribers">
+                  Subscribers
+                </Link>
+              </Button>
+            </div>
+
+            {/* Enhanced posts display */}
             {personalPosts && personalPosts.length > 0 ? (
-              <Card className="border-border shadow-sm mt-4">
-                <CardContent className="p-0">
-                  <div className="divide-y divide-border">
-                    {personalPosts
-                      .slice(0, MAX_RECENT_PERSONAL_POSTS_DISPLAY)
-                      .map((post: PersonalPost) => (
-                        <RecentPostRow
-                          key={post.id}
-                          id={post.id}
-                          title={post.title}
-                          status={post.is_public ? 'published' : 'draft'}
-                          date={post.published_at || post.created_at}
-                        />
-                      ))}
-                  </div>
-                </CardContent>
+              <Card
+                size="md"
+                className="pattern-card border border-border-subtle"
+              >
+                <div className="divide-y divide-border-subtle">
+                  {personalPosts
+                    .slice(0, MAX_RECENT_PERSONAL_POSTS_DISPLAY)
+                    .map((post: PersonalPost) => (
+                      <RecentPostRow
+                        key={post.id}
+                        id={post.id}
+                        title={post.title}
+                        status={post.is_public ? 'published' : 'draft'}
+                        date={post.published_at || post.created_at}
+                      />
+                    ))}
+                </div>
               </Card>
             ) : (
-              <Alert className="mt-4">
-                <Info className="h-4 w-4" />
-                <AlertTitle>No Personal Posts Yet</AlertTitle>
-                <AlertDescription>
+              <Alert className="pattern-card border-border-subtle bg-surface-elevated-1">
+                <Info className="h-4 w-4 text-content-accent" />
+                <AlertTitle className="text-content-primary">
+                  No Personal Posts Yet
+                </AlertTitle>
+                <AlertDescription className="text-content-secondary">
                   You haven&apos;t written any personal posts. Click &quot;Write
                   New Post&quot; to get started!
                 </AlertDescription>
               </Alert>
             )}
+
+            {/* Enhanced view all button */}
             {personalPosts &&
               personalPosts.length > MAX_RECENT_PERSONAL_POSTS_DISPLAY && (
-                <div className="mt-4 text-center">
-                  <Button asChild variant="outline" size="sm">
-                    <Link href="/dashboard/posts">
-                      <List className="h-4 w-4 mr-2" /> View All My Posts
-                    </Link>
+                <div className="text-center">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    leftIcon={<List className="h-4 w-4" />}
+                    className="micro-interaction nav-hover"
+                    asChild
+                  >
+                    <Link href="/dashboard/posts">View All My Posts</Link>
                   </Button>
                 </div>
               )}
-          </CardContent>
+          </div>
         </Card>
 
-        {/* Owned Collectives */}
-        <Card className="w-full bg-background text-foreground shadow-sm">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <BookOpen className="h-5 w-5" /> My Owned Collectives
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center justify-between gap-2 pt-4 w-full">
-              <Button asChild size="sm">
-                <Link href="/dashboard/collectives/new">
-                  <Plus className="h-4 w-4 mr-2" /> Create Collective
-                </Link>
-              </Button>
+        {/* Owned Collectives - Enhanced with design tokens */}
+        <Card size="lg" className="pattern-card micro-interaction">
+          <div className="pattern-stack">
+            {/* Enhanced header with better typography */}
+            <div className="flex items-center gap-component">
+              <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-surface-elevated-2 border border-border-subtle">
+                <BookOpen className="h-5 w-5 text-content-accent" />
+              </div>
+              <div>
+                <h2 className="text-content-primary font-semibold text-lg tracking-tight">
+                  My Owned Collectives
+                </h2>
+                <p className="text-content-secondary text-sm">
+                  Communities you manage
+                </p>
+              </div>
             </div>
+
+            {/* Enhanced create button */}
+            <Button
+              variant="default"
+              size="sm"
+              leftIcon={<Plus className="h-4 w-4" />}
+              className="micro-interaction btn-scale w-fit"
+              asChild
+            >
+              <Link href="/dashboard/collectives/new">Create Collective</Link>
+            </Button>
+
+            {/* Enhanced collectives display */}
             {ownedCollectives && ownedCollectives.length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full mt-4">
+              <div className="dashboard-grid dashboard-grid-secondary">
                 {ownedCollectives.map((collective: OwnedCollective) => (
                   <Card
                     key={collective.id}
-                    className="flex flex-col min-w-[220px] w-full"
+                    size="md"
+                    className="pattern-card micro-interaction card-lift flex flex-col"
                   >
-                    <CardHeader>
-                      <CardTitle className="font-serif text-lg font-semibold truncate">
-                        {collective.name}
-                      </CardTitle>
-                      <CardDescription className="truncate">
-                        {collective.description}
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="mt-auto pt-0">
-                      <Button asChild size="sm" className="w-full">
+                    <div className="pattern-stack flex-1">
+                      <div>
+                        <h3 className="font-serif text-lg font-semibold text-content-primary truncate">
+                          {collective.name}
+                        </h3>
+                        <p className="text-content-secondary text-sm truncate mt-1">
+                          {collective.description}
+                        </p>
+                      </div>
+                      <Button
+                        size="sm"
+                        className="w-full micro-interaction btn-scale mt-auto"
+                        asChild
+                      >
                         <Link href={`/collectives/${collective.slug}`}>
                           View Collective
                         </Link>
                       </Button>
-                    </CardContent>
+                    </div>
                   </Card>
                 ))}
               </div>
             ) : (
-              <Alert className="mt-4">
-                <AlertCircle className="h-4 w-4" />
-                <AlertTitle>No Collectives Yet</AlertTitle>
-                <AlertDescription>
+              <Alert className="pattern-card border-border-subtle bg-surface-elevated-1">
+                <AlertCircle className="h-4 w-4 text-content-accent" />
+                <AlertTitle className="text-content-primary">
+                  No Collectives Yet
+                </AlertTitle>
+                <AlertDescription className="text-content-secondary">
                   You don&apos;t own any collectives. Click &quot;Create
                   Collective&quot; to start one!
                 </AlertDescription>
               </Alert>
             )}
-          </CardContent>
+          </div>
         </Card>
       </div>
-    </>
+    </div>
   );
 }
