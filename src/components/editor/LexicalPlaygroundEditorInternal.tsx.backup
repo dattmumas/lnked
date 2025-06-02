@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { LexicalComposer } from '@lexical/react/LexicalComposer';
 import { OnChangePlugin } from '@lexical/react/LexicalOnChangePlugin';
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
@@ -85,25 +85,15 @@ interface PostEditorProps {
 
 function LoadInitialJsonPlugin({ json }: { json?: string }) {
   const [editor] = useLexicalComposerContext();
-  const hasLoadedInitialContent = useRef(false);
 
   useEffect(() => {
-    // Only load initial content once, when the component first mounts
-    if (!json || hasLoadedInitialContent.current) return;
-
-    // Use setTimeout to defer the editor state setting outside of React's render cycle
-    // This prevents the flushSync error
-    const timer = setTimeout(() => {
-      try {
-        editor.setEditorState(editor.parseEditorState(json));
-        hasLoadedInitialContent.current = true;
-      } catch (err) {
-        console.error('Could not parse initialContent JSON', err);
-      }
-    }, 0);
-
-    return () => clearTimeout(timer);
-  }, [editor]); // Remove json from dependency array to prevent re-running
+    if (!json) return;
+    try {
+      editor.setEditorState(editor.parseEditorState(json));
+    } catch (err) {
+      console.error('Could not parse initialContent JSON', err);
+    }
+  }, [editor, json]);
 
   return null;
 }
@@ -121,16 +111,6 @@ function EditorContent({
   const [activeEditor, setActiveEditor] = useState(editor);
   const [isLinkEditMode, setIsLinkEditMode] = useState<boolean>(false);
   const isEditable = true;
-
-  // Stabilize onChange to prevent unnecessary re-renders that cause focus loss
-  const stableOnChange = useCallback(
-    (state: unknown) => {
-      if (onChange) {
-        onChange(JSON.stringify(state));
-      }
-    },
-    [onChange],
-  );
 
   return (
     <div className="editor-shell w-full">
@@ -214,7 +194,10 @@ function EditorContent({
 
         {initialContent && <LoadInitialJsonPlugin json={initialContent} />}
         {onChange && (
-          <OnChangePlugin onChange={stableOnChange} ignoreSelectionChange />
+          <OnChangePlugin
+            onChange={(state) => onChange(JSON.stringify(state))}
+            ignoreSelectionChange
+          />
         )}
       </div>
     </div>

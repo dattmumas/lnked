@@ -5,6 +5,7 @@ import ModernNavbar from '@/components/ModernNavbar';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { ContrastEnhancer } from '@/components/ContrastEnhancer';
 import { Source_Serif_4 } from 'next/font/google';
+import { QueryProvider } from '@/components/providers/query-provider';
 
 const sourceSerif = Source_Serif_4({
   subsets: ['latin'],
@@ -43,18 +44,20 @@ export default async function RootLayout({
       <body
         className={`min-h-screen bg-background w-full ${sourceSerif.variable}`}
       >
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-          disableTransitionOnChange
-        >
-          <ContrastEnhancer />
-          <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-md border-b border-border/50">
-            <ModernNavbar initialUser={user} initialUsername={username} />
-          </header>
-          <main>{children}</main>
-        </ThemeProvider>
+        <QueryProvider>
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="system"
+            enableSystem
+            disableTransitionOnChange
+          >
+            <ContrastEnhancer />
+            <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-md border-b border-border/50">
+              <ModernNavbar initialUser={user} initialUsername={username} />
+            </header>
+            <main>{children}</main>
+          </ThemeProvider>
+        </QueryProvider>
       </body>
     </html>
   );

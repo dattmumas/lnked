@@ -1,5 +1,7 @@
 'use client';
 
+import { memo } from 'react';
+
 import dynamic from 'next/dynamic';
 import './styles/PlaygroundBase.css';
 import './styles/EditorLayout.css';
@@ -46,6 +48,8 @@ const LexicalPlaygroundEditor = dynamic(
   },
 );
 
-export default function PostEditor(props: PostEditorProps) {
+function PostEditor(props: PostEditorProps) {
   return <LexicalPlaygroundEditor {...props} />;
 }
+
+export default memo(PostEditor);

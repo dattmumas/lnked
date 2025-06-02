@@ -1039,12 +1039,16 @@ export type Database = {
           is_public: boolean
           like_count: number
           meta_description: string | null
+          metadata: Json
+          post_type: Database["public"]["Enums"]["post_type_enum"]
           published_at: string | null
           seo_title: string | null
           status: Database["public"]["Enums"]["post_status_type"]
           subtitle: string | null
+          thumbnail_url: string | null
           title: string
           tsv: unknown | null
+          updated_at: string | null
           view_count: number | null
         }
         Insert: {
@@ -1058,12 +1062,16 @@ export type Database = {
           is_public?: boolean
           like_count?: number
           meta_description?: string | null
+          metadata?: Json
+          post_type?: Database["public"]["Enums"]["post_type_enum"]
           published_at?: string | null
           seo_title?: string | null
           status?: Database["public"]["Enums"]["post_status_type"]
           subtitle?: string | null
+          thumbnail_url?: string | null
           title: string
           tsv?: unknown | null
+          updated_at?: string | null
           view_count?: number | null
         }
         Update: {
@@ -1077,12 +1085,16 @@ export type Database = {
           is_public?: boolean
           like_count?: number
           meta_description?: string | null
+          metadata?: Json
+          post_type?: Database["public"]["Enums"]["post_type_enum"]
           published_at?: string | null
           seo_title?: string | null
           status?: Database["public"]["Enums"]["post_status_type"]
           subtitle?: string | null
+          thumbnail_url?: string | null
           title?: string
           tsv?: unknown | null
+          updated_at?: string | null
           view_count?: number | null
         }
         Relationships: [
@@ -1975,6 +1987,7 @@ export type Database = {
         | "post_bookmark"
         | "featured_post"
       post_status_type: "draft" | "active" | "removed"
+      post_type_enum: "text" | "video"
       price_interval: "month" | "year" | "week" | "day"
       price_type: "recurring" | "one_time"
       subscription_status:
@@ -2138,6 +2151,7 @@ export const Constants = {
         "featured_post",
       ],
       post_status_type: ["draft", "active", "removed"],
+      post_type_enum: ["text", "video"],
       price_interval: ["month", "year", "week", "day"],
       price_type: ["recurring", "one_time"],
       subscription_status: [

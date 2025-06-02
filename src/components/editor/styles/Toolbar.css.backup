@@ -4,21 +4,21 @@
   display: flex;
   margin-bottom: 1px;
   background: hsl(var(--background));
-  padding: var(--spacing-xs);
+  padding: 2px 4px;
   border-top-left-radius: 0;
   border-top-right-radius: 0;
   vertical-align: middle;
   flex-wrap: nowrap;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
-  height: 48px; /* 6 * 8px */
-  min-height: 48px; /* 6 * 8px */
+  height: 44px;
+  min-height: 44px;
   position: sticky;
   top: 0;
   z-index: 2;
   overflow-y: hidden;
   border-bottom: 1px solid hsl(var(--border));
-  box-shadow: 0 2px 8px hsl(var(--foreground) / 0.08);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   width: 100%;
   max-width: 100%;
 }
@@ -27,16 +27,16 @@
 @media (max-width: 768px) {
   .toolbar {
     padding: 1px 2px;
-    height: 40px; /* 5 * 8px */
-    min-height: 40px; /* 5 * 8px */
+    height: 40px;
+    min-height: 40px;
   }
 }
 
 @media (max-width: 480px) {
   .toolbar {
     padding: 1px;
-    height: 32px; /* 4 * 8px */
-    min-height: 32px; /* 4 * 8px */
+    height: 36px;
+    min-height: 36px;
   }
 }
 
@@ -57,10 +57,10 @@ button[class*='toolbar-item'],
   align-items: center;
   justify-content: center;
   color: hsl(var(--foreground) / 0.4);
-  border-radius: var(--radius);
-  transition: all var(--transition-fast);
-  min-width: 32px; /* 4 * 8px */
-  height: 32px;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+  min-width: 30px;
+  height: 30px;
   position: relative;
   -webkit-appearance: none;
   appearance: none;
@@ -70,11 +70,11 @@ button[class*='toolbar-item'],
 @media (max-width: 768px) {
   button[class*='toolbar-item'],
   .toolbar-item {
-    padding: var(--spacing-xs);
+    padding: 2px 4px;
     margin-right: 1px;
     min-width: 28px;
     height: 28px;
-    border-radius: calc(var(--radius) - 2px);
+    border-radius: 4px;
   }
 }
 
@@ -389,7 +389,7 @@ button[class*='toolbar-item']:focus-visible,
   width: 45px;
   padding: 3px 6px;
   border: 1px solid hsl(var(--border));
-  border-radius: calc(var(--radius) - 2px);
+  border-radius: 4px;
   background: hsl(var(--background));
   color: hsl(var(--foreground));
   font-size: 13px;
@@ -485,7 +485,7 @@ button[class*='toolbar-item']:focus-visible,
   background-color: hsl(var(--accent)) !important;
   color: hsl(var(--accent-foreground)) !important;
   transform: translateY(-1px);
-  box-shadow: 0 2px 8px hsl(var(--foreground) / 0.08);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .lexical-playground .editor-shell .toolbar button.toolbar-item.spaced.active,
@@ -499,7 +499,3 @@ button[class*='toolbar-item']:focus-visible,
 .lexical-playground .editor-shell .toolbar button {
   transition: all 0.15s ease !important;
 }
-/* Enhanced Overflow Handling - Phase 4 Improvements */
-.toolbar::-webkit-scrollbar { height: 4px; } .toolbar::-webkit-scrollbar-thumb { background: hsl(var(--foreground) / 0.3); border-radius: 2px; }
-.toolbar { scroll-behavior: smooth; scroll-snap-type: x proximity; } .toolbar-group { scroll-snap-align: start; }
-@media (max-width: 480px) { .toolbar-item { min-height: 44px; } }
