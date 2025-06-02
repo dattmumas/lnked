@@ -15,7 +15,6 @@ import {
   Trash2,
   ExternalLink,
   Users,
-  BookOpen,
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -24,8 +23,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { useTransition } from 'react';
-import { deletePost, featurePost } from '@/app/actions/postActions';
+import { deletePost } from '@/app/actions/postActions';
 import { useRouter } from 'next/navigation';
 
 type DashboardPost = {
@@ -40,14 +38,14 @@ type DashboardPost = {
   likes?: { count: number }[] | null;
   post_reactions?: { count: number; type?: string }[] | null;
   likeCount?: number;
-  comments?: any[] | null;
+  comments?: { id: string; content: string }[] | null;
   isFeatured?: boolean;
   video?: { id: string; title: string | null } | null;
 };
 
 export interface PostListItemProps {
   post: DashboardPost;
-  onDelete?: (id: string) => void;
+  onDelete?: (_id: string) => void;
   isSelected?: boolean;
   onSelect?: () => void;
   showCollective?: boolean;
@@ -70,7 +68,6 @@ export default function PostListItem({
   tableMode = false,
 }: PostListItemProps) {
   const [isDeleting, setIsDeleting] = useState(false);
-  const [isPending, startTransition] = useTransition();
   const router = useRouter();
 
   const handleDelete = async () => {

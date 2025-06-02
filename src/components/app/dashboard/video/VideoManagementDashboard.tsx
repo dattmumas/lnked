@@ -26,7 +26,6 @@ import Image from 'next/image';
 
 // Import our components
 import VideoUploader from '@/components/app/uploads/VideoUploader';
-import MuxVideoPlayer from '@/components/app/video/MuxVideoPlayerClient';
 import Link from 'next/link';
 
 // Import constants
@@ -39,6 +38,7 @@ import {
 // Constants
 const REFRESH_INTERVAL_MS = 5000;
 const VIDEOS_PER_PAGE = 20;
+const VIDEO_ID_DISPLAY_LENGTH = 8;
 
 // Types
 interface VideoAsset {
@@ -709,7 +709,8 @@ const VideoCard = React.memo(function VideoCard({
       <div className="pattern-stack gap-component">
         <div className="pattern-stack gap-1">
           <h3 className="font-semibold text-content-primary truncate">
-            {video.title || `Video ${video.id.slice(0, 8)}`}
+            {video.title ||
+              `Video ${video.id.slice(0, VIDEO_ID_DISPLAY_LENGTH)}`}
           </h3>
           <StatusBadge status={video.status} />
         </div>
@@ -872,7 +873,8 @@ const VideoListItem = React.memo(function VideoListItem({
         <div className="flex items-start justify-between gap-component">
           <div className="min-w-0 flex-1">
             <h3 className="font-medium text-content-primary truncate">
-              {video.title || `Video ${video.id.slice(0, 8)}`}
+              {video.title ||
+                `Video ${video.id.slice(0, VIDEO_ID_DISPLAY_LENGTH)}`}
             </h3>
             <div className="flex items-center gap-2 mt-1">
               <StatusBadge status={video.status} />

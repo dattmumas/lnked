@@ -12,7 +12,7 @@ export interface PostFormData {
   meta_description?: string;
   thumbnail_url?: string;
   post_type: Database['public']['Enums']['post_type_enum'];
-  metadata: Record<string, any>;
+  metadata: Record<string, unknown>;
   is_public: boolean;
   status: 'draft' | 'active' | 'removed';
   collective_id?: string;
@@ -32,15 +32,15 @@ interface PostEditorStore {
   isLoading: boolean;
 
   // Actions
-  updateFormData: (updates: Partial<PostFormData>) => void;
-  setCurrentPage: (page: 'editor' | 'details') => void;
+  updateFormData: (_updates: Partial<PostFormData>) => void;
+  setCurrentPage: (_page: 'editor' | 'details') => void;
   markClean: () => void;
   markSaving: () => void;
   markSaved: () => void;
   markError: () => void;
   resetForm: () => void;
-  initializeForm: (data: PostFormData) => void;
-  setLoading: (loading: boolean) => void;
+  initializeForm: (_data: PostFormData) => void;
+  setLoading: (_loading: boolean) => void;
 }
 
 // Default form data
@@ -59,7 +59,7 @@ const defaultFormData: PostFormData = {
 };
 
 // Create the store
-export const usePostEditorStore = create<PostEditorStore>((set, get) => ({
+export const usePostEditorStore = create<PostEditorStore>((set) => ({
   // Initial state
   formData: defaultFormData,
   originalData: null,

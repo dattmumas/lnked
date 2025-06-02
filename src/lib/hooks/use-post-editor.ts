@@ -2,10 +2,12 @@ import { useEffect, useCallback, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
 import { usePostEditorStore, PostFormData } from '@/lib/stores/post-editor-store';
+import { User } from '@supabase/supabase-js';
+import { Json } from '@/lib/database.types';
 
 // Simple client-side user hook
 const useUser = () => {
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -74,7 +76,7 @@ export const useAutoSavePost = () => {
         meta_description: data.meta_description || null,
         thumbnail_url: data.thumbnail_url || null,
         post_type: data.post_type,
-        metadata: data.metadata || {},
+        metadata: (data.metadata || {}) as Json,
         is_public: data.is_public,
         status: data.status,
         collective_id: data.collective_id || null,
@@ -110,7 +112,7 @@ export const useAutoSavePost = () => {
       markSaving();
     },
     onSuccess: (savedPost) => {
-      console.log('✅ Auto-save successful');
+      console.warn('✅ Auto-save successful');
       markSaved();
       
       // Update the store with the post ID only if it's a new post (current form data has no ID)
@@ -158,14 +160,14 @@ export const usePostData = (postId?: string) => {
         meta_description: data.meta_description || '',
         thumbnail_url: data.thumbnail_url || '',
         post_type: data.post_type,
-        metadata: (data.metadata as Record<string, any>) || {},
+        metadata: (data.metadata as Record<string, unknown>) || {},
         is_public: data.is_public ?? false,
         status: (data.status as 'draft' | 'active' | 'removed') || 'draft',
         collective_id: data.collective_id || undefined,
         published_at: data.published_at || undefined,
       };
     },
-    enabled: !!postId,
+    enabled: Boolean(postId),
     staleTime: 1000 * 60 * 5, // 5 minutes
   });
 };
@@ -194,7 +196,7 @@ export const usePostEditor = (postId?: string) => {
     // Check all conditions for auto-save
     if (store.isDirty && store.formData && store.formData.title?.trim() && user?.id) {
       const timer = setTimeout(() => {
-        console.log('🚀 Auto-saving post...');
+        console.warn('🚀 Auto-saving post...');
         // The store.formData already contains the post ID (if it exists)
         const dataToSave = {
           ...store.formData,
@@ -207,6 +209,8 @@ export const usePostEditor = (postId?: string) => {
         clearTimeout(timer);
       };
     }
+
+    return undefined;
   }, [store.formData, store.isDirty, autoSave, user?.id, isLoadingPost]);
 
   // Manual save function
@@ -218,6 +222,8 @@ export const usePostEditor = (postId?: string) => {
       };
       return autoSave.mutateAsync(dataToSave);
     }
+
+    return undefined;
   }, [store.formData, autoSave, user?.id]);
 
   // Publish post function
@@ -239,7 +245,9 @@ export const usePostEditor = (postId?: string) => {
       
       return autoSave.mutateAsync(dataToSave);
     }
-  }, [store.formData, autoSave, user?.id, store]);
+
+    return undefined;
+  }, [store, autoSave, user?.id]);
 
   return {
     // Form data and state
