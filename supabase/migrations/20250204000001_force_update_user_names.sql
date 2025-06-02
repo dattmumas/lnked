@@ -33,7 +33,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql IMMUTABLE;
 
--- Update the sync function to use better name extraction
+-- Update the sync function to use better name extraction and prioritize username from metadata
 CREATE OR REPLACE FUNCTION public.sync_user_from_auth()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -44,10 +44,11 @@ BEGIN
     COALESCE(
       NEW.raw_user_meta_data->>'full_name',
       NEW.raw_user_meta_data->>'name',
+      NEW.raw_user_meta_data->>'username', -- Use username as display name if no full_name
       extract_name_from_email(NEW.email)
     ),
     COALESCE(
-      NEW.raw_user_meta_data->>'username',
+      NEW.raw_user_meta_data->>'username', -- Prioritize username from sign-up form
       LOWER(SPLIT_PART(NEW.email, '@', 1))
     ),
     NEW.raw_user_meta_data->>'avatar_url',
@@ -56,16 +57,24 @@ BEGIN
   ON CONFLICT (id) DO UPDATE
   SET 
     full_name = COALESCE(
+      NEW.raw_user_meta_data->>'full_name',
+      NEW.raw_user_meta_data->>'name', 
       EXCLUDED.full_name, 
       users.full_name,
+      NEW.raw_user_meta_data->>'username',
       extract_name_from_email(NEW.email)
     ),
     username = COALESCE(
+      NEW.raw_user_meta_data->>'username', -- Always prioritize username from metadata
       EXCLUDED.username,
       users.username,
       LOWER(SPLIT_PART(NEW.email, '@', 1))
     ),
-    avatar_url = COALESCE(EXCLUDED.avatar_url, users.avatar_url),
+    avatar_url = COALESCE(
+      NEW.raw_user_meta_data->>'avatar_url',
+      EXCLUDED.avatar_url, 
+      users.avatar_url
+    ),
     updated_at = NOW();
   
   RETURN NEW;

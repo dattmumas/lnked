@@ -1,8 +1,7 @@
-Editor issues -
+The current site design distinguishes between posts by collectives, and posts by individuals.
 
-Please conduct a full review of the post editor and new post editor:
+I want to change this to get rid of the ability for collectives to create posts themselves.
 
-    The editor is exiting the canvas after each keystroke
-    the subtitle line has dissapeared
-    the style is not in line with the style guide.
-    The toolbar is overflowing and tools are no longer accessible.
+Instead, indidual profiles can create posts and post them to collectives. This will need to be customizable for future options around sharing, but this is a redesign to the creation process.
+
+On the new post settings page, their should be an option abotu where the post will actually be shared. A menu should show all the collectives the person is a member of and give the option to post it to multiple.

@@ -38,13 +38,15 @@ export default async function Page({
   let collectives: CollectiveResult[] = [];
 
   if (q && q.length > 0) {
+    // Search posts using ilike for title and subtitle
     const { data: postsData } = await supabase
       .from('posts')
       .select('*, collective:collectives!posts_collective_id_fkey(slug)')
       .eq('is_public', true)
       .not('published_at', 'is', null)
-      .textSearch('tsv', q, { type: 'websearch' })
-      .limit(10);
+      .or(`title.ilike.%${q}%,subtitle.ilike.%${q}%,content.ilike.%${q}%`)
+      .order('published_at', { ascending: false })
+      .limit(20);
 
     posts =
       (
@@ -59,19 +61,21 @@ export default async function Page({
         current_user_has_liked: undefined,
       })) || [];
 
+    // Search users using ilike for username and full_name
     const { data: usersData } = await supabase
       .from('users')
-      .select('id, full_name, bio, avatar_url')
-      .textSearch('tsv', q, { type: 'websearch' })
-      .limit(10);
+      .select('id, username, full_name, bio, avatar_url')
+      .or(`username.ilike.%${q}%,full_name.ilike.%${q}%,bio.ilike.%${q}%`)
+      .limit(20);
 
-    users = (usersData as UserResult[] | null) || [];
+    users = (usersData as (UserResult & { username?: string })[] | null) || [];
 
+    // Search collectives using ilike for name and description
     const { data: collectivesData } = await supabase
       .from('collectives')
       .select('id, name, slug, description, tags')
-      .textSearch('tsv', q, { type: 'websearch' })
-      .limit(10);
+      .or(`name.ilike.%${q}%,description.ilike.%${q}%`)
+      .limit(20);
 
     collectives = (collectivesData as CollectiveResult[] | null) || [];
   }
@@ -117,18 +121,53 @@ export default async function Page({
       {users.length > 0 && (
         <div>
           <h2 className="text-2xl font-semibold mb-4">Users</h2>
-          <ul className="space-y-2">
-            {users.map((u) => (
-              <li key={u.id} className="">
-                <span className="font-medium text-accent">
-                  {u.full_name || 'Unnamed User'}
-                </span>
-                {u.bio && (
-                  <p className="text-sm text-muted-foreground">{u.bio}</p>
+          <div className="space-y-4">
+            {users.map((user) => (
+              <div
+                key={user.id}
+                className="flex items-center gap-4 p-4 border border-border rounded-lg hover:bg-accent/5 transition-colors"
+              >
+                {user.avatar_url && (
+                  <img
+                    src={user.avatar_url}
+                    alt={user.full_name || (user as any).username || 'User'}
+                    className="w-12 h-12 rounded-full object-cover"
+                  />
                 )}
-              </li>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium">
+                      {user.full_name ||
+                        (user as any).username ||
+                        'Unnamed User'}
+                    </span>
+                    {(user as any).username && (
+                      <span className="text-sm text-muted-foreground">
+                        @{(user as any).username}
+                      </span>
+                    )}
+                  </div>
+                  {user.bio && (
+                    <p className="text-sm text-muted-foreground mt-1">
+                      {user.bio}
+                    </p>
+                  )}
+                  {(user as any).username && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="mt-2"
+                      asChild
+                    >
+                      <a href={`/profile/${(user as any).username}`}>
+                        View Profile
+                      </a>
+                    </Button>
+                  )}
+                </div>
+              </div>
             ))}
-          </ul>
+          </div>
         </div>
       )}
 

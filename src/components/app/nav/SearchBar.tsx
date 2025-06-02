@@ -4,6 +4,8 @@ import { useState, useRef, useEffect } from 'react';
 import { Search, X, TrendingUp, Clock } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
 
 interface SearchResult {
   id: string;
@@ -11,36 +13,13 @@ interface SearchResult {
   type: 'post' | 'user' | 'collective';
   description?: string;
   href: string;
+  avatarUrl?: string;
+  slug?: string;
 }
 
 interface SearchBarProps {
   className?: string;
 }
-
-// Mock search results - in real implementation, this would come from an API
-const mockResults: SearchResult[] = [
-  {
-    id: '1',
-    title: 'Getting Started with Next.js 14',
-    type: 'post',
-    description: 'A comprehensive guide to the latest features',
-    href: '/posts/getting-started-nextjs-14',
-  },
-  {
-    id: '2',
-    title: 'John Doe',
-    type: 'user',
-    description: 'Full-stack developer and tech writer',
-    href: '/profile/johndoe',
-  },
-  {
-    id: '3',
-    title: 'React Developers Collective',
-    type: 'collective',
-    description: 'Community for React enthusiasts',
-    href: '/collectives/react-developers',
-  },
-];
 
 const recentSearches = [
   'Next.js tutorials',
@@ -61,34 +40,98 @@ export default function SearchBar({ className }: SearchBarProps) {
   const [isLoading, setIsLoading] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const router = useRouter();
+  const supabase = createSupabaseBrowserClient();
 
-  // Mock search function
+  // Real search function using Supabase
   const performSearch = async (searchQuery: string) => {
-    setIsLoading(true);
-    // Simulate API delay
-    await new Promise((resolve) => setTimeout(resolve, 300));
-
-    if (searchQuery.trim()) {
-      const filtered = mockResults.filter(
-        (result) =>
-          result.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          result.description?.toLowerCase().includes(searchQuery.toLowerCase()),
-      );
-      setResults(filtered);
-    } else {
+    if (!searchQuery.trim()) {
       setResults([]);
+      return;
     }
-    setIsLoading(false);
+
+    setIsLoading(true);
+    try {
+      const searchResults: SearchResult[] = [];
+
+      // Search posts (limit to 3 for dropdown)
+      const { data: postsData } = await supabase
+        .from('posts')
+        .select(
+          'id, title, subtitle, collective:collectives!posts_collective_id_fkey(slug)',
+        )
+        .eq('is_public', true)
+        .not('published_at', 'is', null)
+        .or(`title.ilike.%${searchQuery}%,subtitle.ilike.%${searchQuery}%`)
+        .limit(3);
+
+      if (postsData) {
+        postsData.forEach((post) => {
+          searchResults.push({
+            id: post.id,
+            title: post.title,
+            type: 'post',
+            description: post.subtitle || undefined,
+            href: `/posts/${post.id}`,
+          });
+        });
+      }
+
+      // Search users (limit to 3 for dropdown)
+      const { data: usersData } = await supabase
+        .from('users')
+        .select('id, username, full_name, bio, avatar_url')
+        .or(`username.ilike.%${searchQuery}%,full_name.ilike.%${searchQuery}%`)
+        .limit(3);
+
+      if (usersData) {
+        usersData.forEach((user) => {
+          if (user.username) {
+            searchResults.push({
+              id: user.id,
+              title: user.full_name || user.username,
+              type: 'user',
+              description: user.bio || undefined,
+              href: `/profile/${user.username}`,
+              avatarUrl: user.avatar_url || undefined,
+            });
+          }
+        });
+      }
+
+      // Search collectives (limit to 3 for dropdown)
+      const { data: collectivesData } = await supabase
+        .from('collectives')
+        .select('id, name, slug, description')
+        .or(`name.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%`)
+        .limit(3);
+
+      if (collectivesData) {
+        collectivesData.forEach((collective) => {
+          searchResults.push({
+            id: collective.id,
+            title: collective.name,
+            type: 'collective',
+            description: collective.description || undefined,
+            href: `/collectives/${collective.slug}`,
+            slug: collective.slug,
+          });
+        });
+      }
+
+      setResults(searchResults);
+    } catch (error) {
+      console.error('Search error:', error);
+      setResults([]);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   useEffect(() => {
     const delayedSearch = setTimeout(() => {
-      if (query) {
-        performSearch(query);
-      } else {
-        setResults([]);
-      }
-    }, 150);
+      performSearch(query);
+    }, 300);
 
     return () => clearTimeout(delayedSearch);
   }, [query]);
@@ -112,6 +155,13 @@ export default function SearchBar({ className }: SearchBarProps) {
     setQuery('');
     setResults([]);
     inputRef.current?.focus();
+  };
+
+  const handleEnterPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && query.trim()) {
+      setIsOpen(false);
+      router.push(`/search?q=${encodeURIComponent(query.trim())}`);
+    }
   };
 
   const getTypeIcon = (type: SearchResult['type']) => {
@@ -152,6 +202,7 @@ export default function SearchBar({ className }: SearchBarProps) {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onFocus={() => setIsOpen(true)}
+          onKeyDown={handleEnterPress}
           className="
             w-full pl-10 pr-10 py-2.5 text-sm
             bg-background/60 backdrop-blur-md border border-border/60 rounded-xl
@@ -291,13 +342,23 @@ export default function SearchBar({ className }: SearchBarProps) {
 
               {/* Footer */}
               <div className="px-3 py-2 bg-accent/5 border-t border-border/30">
-                <p className="text-xs text-muted-foreground text-center">
-                  Press{' '}
-                  <kbd className="px-1 py-0.5 bg-accent/20 rounded text-xs">
-                    Enter
-                  </kbd>{' '}
-                  to search
-                </p>
+                {query && results.length > 0 ? (
+                  <Link
+                    href={`/search?q=${encodeURIComponent(query.trim())}`}
+                    onClick={() => setIsOpen(false)}
+                    className="block text-center text-sm text-accent hover:text-accent/80 transition-colors duration-150"
+                  >
+                    View all results for "{query}"
+                  </Link>
+                ) : (
+                  <p className="text-xs text-muted-foreground text-center">
+                    Press{' '}
+                    <kbd className="px-1 py-0.5 bg-accent/20 rounded text-xs">
+                      Enter
+                    </kbd>{' '}
+                    to search
+                  </p>
+                )}
               </div>
             </div>
           </motion.div>

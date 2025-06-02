@@ -23,8 +23,14 @@ import {
   Video,
   Upload,
   Sparkles,
+  Users,
+  Share2,
 } from 'lucide-react';
-import { usePostEditor } from '@/lib/hooks/use-post-editor';
+import { useEnhancedPostEditor } from '@/hooks/posts/useEnhancedPostEditor';
+import {
+  CollectiveSelectionSummary,
+  CollectiveValidationFeedback,
+} from '@/components/app/posts/collective-selection';
 
 export default function NewPostDetailsPage() {
   const router = useRouter();
@@ -35,7 +41,9 @@ export default function NewPostDetailsPage() {
     savePost,
     publishPost,
     setCurrentPage,
-  } = usePostEditor();
+    selectedCollectives,
+    setSelectedCollectives,
+  } = useEnhancedPostEditor();
 
   // Set current page for state management
   useEffect(() => {
@@ -51,14 +59,29 @@ export default function NewPostDetailsPage() {
   };
 
   const handlePublish = async () => {
-    await publishPost();
-    router.push('/dashboard/posts');
+    try {
+      await publishPost();
+      router.push('/dashboard/posts');
+    } catch (error) {
+      console.error('Failed to publish post:', error);
+      // Error will be handled by the enhanced error system
+    }
   };
 
   const handlePreview = () => {
     // TODO: Implement preview functionality
     console.info('Preview functionality to be implemented');
   };
+
+  const handleCollectiveSelectionChange = (collectiveIds: string[]) => {
+    setSelectedCollectives(collectiveIds);
+  };
+
+  // Check if post is ready to publish
+  const canPublish =
+    formData.title.trim() &&
+    formData.content.trim() &&
+    selectedCollectives.length > 0;
 
   return (
     <div className="min-h-screen bg-background">
@@ -94,10 +117,10 @@ export default function NewPostDetailsPage() {
             </Button>
             <Button
               onClick={handlePublish}
-              disabled={!formData.title.trim() || !formData.content.trim()}
+              disabled={!canPublish}
               className="flex items-center gap-2"
             >
-              <Globe className="h-4 w-4" />
+              <Share2 className="h-4 w-4" />
               Publish Post
             </Button>
           </div>
@@ -107,6 +130,38 @@ export default function NewPostDetailsPage() {
       {/* Main content */}
       <main className="px-4 py-8">
         <div className="max-w-2xl mx-auto space-y-8">
+          {/* Collective Selection - New Feature */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Users className="h-5 w-5" />
+                Share with Collectives
+              </CardTitle>
+              <CardDescription>
+                Choose which collectives to share this post with. You can select
+                multiple collectives where you have posting permissions.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <CollectiveSelectionSummary
+                selectedCollectiveIds={selectedCollectives}
+                onSelectionChange={handleCollectiveSelectionChange}
+                placeholder="Select collectives to share your post with"
+                showRoles={true}
+              />
+
+              {/* Real-time validation feedback */}
+              <div className="mt-4">
+                <CollectiveValidationFeedback
+                  selectedCollectiveIds={selectedCollectives}
+                  minSelections={1}
+                  showPermissionWarnings={true}
+                  showCollectiveInfo={true}
+                />
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Post Type Selection */}
           <Card>
             <CardHeader>
@@ -286,7 +341,7 @@ export default function NewPostDetailsPage() {
                     <p className="text-sm text-muted-foreground">
                       {formData.is_public
                         ? 'Anyone can see this post'
-                        : 'Only you and collaborators can see this post'}
+                        : 'Only collective members can see this post'}
                     </p>
                   </div>
                 </div>
@@ -298,7 +353,7 @@ export default function NewPostDetailsPage() {
                 />
               </div>
 
-              {/* Status display */}
+              {/* Enhanced status display with collective info */}
               <div className="pt-4 border-t">
                 <Label className="text-sm font-medium">Current Status</Label>
                 <p className="text-sm text-muted-foreground capitalize">
@@ -310,7 +365,35 @@ export default function NewPostDetailsPage() {
                     </span>
                   )}
                 </p>
+
+                {/* Show selected collectives count */}
+                {selectedCollectives.length > 0 && (
+                  <p className="text-sm text-blue-600 mt-1">
+                    Ready to share with {selectedCollectives.length} collective
+                    {selectedCollectives.length !== 1 ? 's' : ''}
+                  </p>
+                )}
               </div>
+
+              {/* Publishing requirements */}
+              {!canPublish && (
+                <div className="pt-4 border-t bg-amber-50 rounded-lg p-3">
+                  <h4 className="text-sm font-medium text-amber-800 mb-2">
+                    Before you can publish:
+                  </h4>
+                  <ul className="text-sm text-amber-700 space-y-1">
+                    {!formData.title.trim() && (
+                      <li>• Add a title to your post</li>
+                    )}
+                    {!formData.content.trim() && (
+                      <li>• Add content to your post</li>
+                    )}
+                    {selectedCollectives.length === 0 && (
+                      <li>• Select at least one collective to share with</li>
+                    )}
+                  </ul>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>

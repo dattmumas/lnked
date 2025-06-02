@@ -955,6 +955,61 @@ export type Database = {
           },
         ]
       }
+      post_collectives: {
+        Row: {
+          collective_id: string
+          display_order: number | null
+          id: string
+          metadata: Json | null
+          post_id: string
+          shared_at: string | null
+          shared_by: string
+          status: string | null
+        }
+        Insert: {
+          collective_id: string
+          display_order?: number | null
+          id?: string
+          metadata?: Json | null
+          post_id: string
+          shared_at?: string | null
+          shared_by: string
+          status?: string | null
+        }
+        Update: {
+          collective_id?: string
+          display_order?: number | null
+          id?: string
+          metadata?: Json | null
+          post_id?: string
+          shared_at?: string | null
+          shared_by?: string
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "post_collectives_collective_id_fkey"
+            columns: ["collective_id"]
+            isOneToOne: false
+            referencedRelation: "collectives"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "post_collectives_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "posts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "post_collectives_shared_by_fkey"
+            columns: ["shared_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       post_reactions: {
         Row: {
           created_at: string
@@ -1043,6 +1098,7 @@ export type Database = {
           post_type: Database["public"]["Enums"]["post_type_enum"]
           published_at: string | null
           seo_title: string | null
+          sharing_settings: Json | null
           status: Database["public"]["Enums"]["post_status_type"]
           subtitle: string | null
           thumbnail_url: string | null
@@ -1066,6 +1122,7 @@ export type Database = {
           post_type?: Database["public"]["Enums"]["post_type_enum"]
           published_at?: string | null
           seo_title?: string | null
+          sharing_settings?: Json | null
           status?: Database["public"]["Enums"]["post_status_type"]
           subtitle?: string | null
           thumbnail_url?: string | null
@@ -1089,6 +1146,7 @@ export type Database = {
           post_type?: Database["public"]["Enums"]["post_type_enum"]
           published_at?: string | null
           seo_title?: string | null
+          sharing_settings?: Json | null
           status?: Database["public"]["Enums"]["post_status_type"]
           subtitle?: string | null
           thumbnail_url?: string | null
@@ -1754,6 +1812,10 @@ export type Database = {
           p_entity_id?: string
           p_metadata?: Json
         }
+        Returns: string
+      }
+      extract_name_from_email: {
+        Args: { email: string }
         Returns: string
       }
       find_video_by_mux_id: {

@@ -35,9 +35,38 @@ export default function SignUpPage() {
       return;
     }
 
+    // Validate username format
+    const username = formData.username;
+    if (!username || username.length < 3 || username.length > 20) {
+      setError('Username must be between 3 and 20 characters long');
+      setIsLoading(false);
+      return;
+    }
+
+    if (!/^[a-z0-9_]+$/.test(username)) {
+      setError(
+        'Username can only contain lowercase letters, numbers, and underscores',
+      );
+      setIsLoading(false);
+      return;
+    }
+
     try {
       // Record the attempt for rate limiting
       rateLimiterRef.current.recordAttempt();
+
+      // Check if username is already taken
+      const { data: existingUser } = await supabase
+        .from('users')
+        .select('username')
+        .eq('username', username)
+        .single();
+
+      if (existingUser) {
+        setError('Username is already taken. Please choose another one.');
+        setIsLoading(false);
+        return;
+      }
 
       const { data, error: signUpError } = await retryWithBackoff(
         () =>
@@ -46,7 +75,7 @@ export default function SignUpPage() {
             password: formData.password,
             options: {
               data: {
-                full_name: formData.fullName,
+                username: formData.username,
               },
               // emailRedirectTo: `${window.location.origin}/auth/callback`, // Uncomment if email confirmation is enabled
             },

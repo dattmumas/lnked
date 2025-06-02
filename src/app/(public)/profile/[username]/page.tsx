@@ -1,6 +1,15 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { notFound } from 'next/navigation';
-import ProfileFeed from '@/components/app/profile/ProfileFeed';
+import {
+  ProfileLayout,
+  ProfileContentGrid,
+  ProfileHeroContainer,
+  SocialSidebarContainer,
+  ContentAreaContainer,
+} from '@/components/app/profile/layout/ProfileLayout';
+import { ProfileHero } from '@/components/app/profile/hero/ProfileHero';
+import { SocialSidebar } from '@/components/app/profile/social/SocialSidebar';
+import { ContentArea } from '@/components/app/profile/content/ContentArea';
 import type { MicroPost } from '@/components/app/profile/MicrothreadPanel';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
@@ -13,7 +22,7 @@ import { getSubscriptionStatus } from '@/app/actions/subscriptionActions';
 
 type PostRow = Database['public']['Tables']['posts']['Row'];
 
-export default async function Page({
+export default async function ProfilePage({
   params,
   searchParams,
 }: {
@@ -24,14 +33,13 @@ export default async function Page({
   const { q } = await searchParams;
   const supabase = await createServerSupabaseClient();
 
+  // Server-side user verification for basic access control
   const {
     data: { user: authUser },
   } = await supabase.auth.getUser();
 
-  // First try to find user by username, if not found try by ID (for backward compatibility)
+  // Basic profile existence check
   let profile;
-  let profileError;
-
   if (username) {
     const { data: profileData } = await supabase
       .from('users')
@@ -41,7 +49,6 @@ export default async function Page({
 
     if (profileData) {
       profile = profileData;
-      profileError = null;
     } else {
       // If username lookup failed, try by ID (backward compatibility)
       const { data: idProfileData, error: idError } = await supabase
@@ -51,12 +58,13 @@ export default async function Page({
         .single();
 
       profile = idProfileData;
-      profileError = idError;
+      if (idError || !profile) {
+        notFound();
+      }
     }
   }
 
-  if (profileError || !profile) {
-    console.error('Error fetching user', username, profileError);
+  if (!profile) {
     notFound();
   }
 
@@ -192,128 +200,23 @@ export default async function Page({
   }
 
   return (
-    <div className="container mx-auto p-4 md:p-6">
-      <header className="mb-8 pb-6 border-b border-accent/10 flex flex-col items-center">
-        <div className="flex flex-col items-center gap-2 mb-4">
-          {profile.avatar_url && (
-            <Image
-              src={profile.avatar_url}
-              alt={`${profile.full_name ?? 'User'} avatar`}
-              width={160}
-              height={160}
-              className="rounded-full object-cover"
-            />
-          )}
-          <h1 className="text-5xl font-extrabold tracking-tight text-center">
-            {profile.full_name ?? 'User'}
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            <Link
-              href={`/profile/${profile.username || profile.id}/followers`}
-              className="hover:underline"
-            >
-              {followerCount ?? 0} follower
-              {(followerCount ?? 0) === 1 ? '' : 's'}
-            </Link>{' '}
-            – {subscriberCount ?? 0} subscriber
-            {(subscriberCount ?? 0) === 1 ? '' : 's'}
-          </p>
-          {profile.tags && profile.tags.length > 0 && (
-            <div className="flex flex-wrap justify-center gap-1 mt-1">
-              {profile.tags.map((tag) => (
-                <Badge key={tag} variant="secondary">
-                  #{tag}
-                </Badge>
-              ))}
-            </div>
-          )}
-        </div>
-        {profile.bio && (
-          <div className="bg-card shadow rounded-xl p-6 max-w-2xl w-full text-center mx-auto">
-            <p className="text-lg text-muted-foreground">{profile.bio}</p>
-          </div>
-        )}
-        <div className="mt-4 w-full max-w-md">
-          <form action="" className="flex items-center gap-2">
-            <input
-              type="search"
-              name="q"
-              placeholder="Search this profile..."
-              className="w-full px-3 py-2 border border-border rounded-md bg-background text-sm"
-            />
-            <Button type="submit" size="sm" variant="outline">
-              Search
-            </Button>
-          </form>
-        </div>
-        {isOwner ? (
-          <div className="mt-4">
-            <Button asChild variant="outline">
-              <Link href="/dashboard/profile/edit">Edit Profile</Link>
-            </Button>
-          </div>
-        ) : (
-          <div className="mt-4 space-y-4">
-            {/* Follow Section - Free notifications */}
-            <div className="text-center">
-              <FollowButton
-                targetUserId={profile.id}
-                targetUserName={profile.full_name ?? 'User'}
-                initialIsFollowing={isFollowing}
-                currentUserId={authUser?.id}
-              />
-              <p className="text-xs text-muted-foreground mt-1">
-                Get notified when {profile.full_name ?? 'this user'} publishes
-                new posts
-              </p>
-            </div>
+    <ProfileLayout username={profile.username || username}>
+      <ProfileContentGrid>
+        {/* Profile Hero Section - 65% width on desktop */}
+        <ProfileHeroContainer>
+          <ProfileHero />
+        </ProfileHeroContainer>
 
-            {/* Subscribe Section - Paid access */}
-            <div className="text-center">
-              <SubscribeButton
-                targetEntityType="user"
-                targetEntityId={profile.id}
-                targetName={profile.full_name ?? ''}
-                tiers={tiers}
-              />
-              <p className="text-xs text-muted-foreground mt-1">
-                Access exclusive content and support{' '}
-                {profile.full_name ?? 'this creator'}
-              </p>
-            </div>
-          </div>
-        )}
-      </header>
+        {/* Social Sidebar - 35% width on desktop */}
+        <SocialSidebarContainer>
+          <SocialSidebar />
+        </SocialSidebarContainer>
 
-      <main>
-        {posts && posts.length > 0 ? (
-          <ProfileFeed
-            posts={posts}
-            pinnedPost={pinned ?? undefined}
-            microPosts={microPosts}
-          />
-        ) : (
-          <div className="text-center py-10">
-            {q ? (
-              <>
-                <h2 className="text-2xl font-semibold mb-2">
-                  No posts found for your search.
-                </h2>
-                <p className="text-muted-foreground">
-                  Try a different search term.
-                </p>
-              </>
-            ) : (
-              <>
-                <h2 className="text-2xl font-semibold mb-2">No posts yet!</h2>
-                <p className="text-muted-foreground">
-                  This user hasn&apos;t published any posts. Check back later!
-                </p>
-              </>
-            )}
-          </div>
-        )}
-      </main>
-    </div>
+        {/* Content Area - Full width below hero and sidebar */}
+        <ContentAreaContainer>
+          <ContentArea />
+        </ContentAreaContainer>
+      </ProfileContentGrid>
+    </ProfileLayout>
   );
 }

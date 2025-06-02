@@ -1,7 +1,7 @@
-"use client";
+'use client';
 
-import Link from "next/link";
-import { Button } from "@/components/ui/button";
+import Link from 'next/link';
+import { Button } from '@/components/ui/button';
 import {
   Card,
   CardContent,
@@ -9,20 +9,20 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Settings, LogOut, Users2, Plus } from "lucide-react";
-import type { Database } from "@/lib/database.types";
-import * as React from "react";
-import { removeUserFromCollective } from "@/app/actions/collectiveActions";
+} from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Settings, LogOut, Users2, Plus, Edit } from 'lucide-react';
+import type { Database } from '@/lib/database.types';
+import * as React from 'react';
+import { removeUserFromCollective } from '@/app/actions/collectiveActions';
 
-type Collective = Database["public"]["Tables"]["collectives"]["Row"];
+type Collective = Database['public']['Tables']['collectives']['Row'];
 export type CollectiveMemberRole =
-  Database["public"]["Enums"]["collective_member_role"];
+  Database['public']['Enums']['collective_member_role'];
 
 interface DashboardCollectiveCardProps {
   collective: Collective;
-  role: "Owner" | CollectiveMemberRole;
+  role: 'Owner' | CollectiveMemberRole;
   memberId?: string; // For leave action, if user is not owner
   subscriberCount?: number;
 }
@@ -34,10 +34,10 @@ export default function DashboardCollectiveCard({
   subscriberCount,
 }: DashboardCollectiveCardProps) {
   const handleLeaveCollective = async () => {
-    if (role === "Owner") return;
+    if (role === 'Owner') return;
     if (!memberId) {
-      console.error("Member ID is required to leave a collective.");
-      alert("Error: Could not leave collective. Member ID missing.");
+      console.error('Member ID is required to leave a collective.');
+      alert('Error: Could not leave collective. Member ID missing.');
       return;
     }
     if (
@@ -45,22 +45,28 @@ export default function DashboardCollectiveCard({
     ) {
       const result = await removeUserFromCollective(collective.id, memberId);
       if (result.success) {
-        alert(result.message || "Successfully left collective.");
+        alert(result.message || 'Successfully left collective.');
       } else {
-        alert(`Failed to leave collective: ${result.error || "Unknown error"}`);
+        alert(`Failed to leave collective: ${result.error || 'Unknown error'}`);
       }
     }
   };
+
+  // Check if user can post to this collective
+  const canPost =
+    role === 'Owner' || ['admin', 'editor', 'author'].includes(role as string);
 
   return (
     <Card className="flex flex-col h-full">
       <CardHeader>
         <div className="flex justify-between items-start gap-2">
           <CardTitle className="hover:text-accent line-clamp-1 break-all">
-            <Link href={`/collectives/${collective.slug}`}>{collective.name}</Link>
+            <Link href={`/collectives/${collective.slug}`}>
+              {collective.name}
+            </Link>
           </CardTitle>
           <Badge
-            variant={role === "Owner" ? "default" : "secondary"}
+            variant={role === 'Owner' ? 'default' : 'secondary'}
             className="capitalize flex-shrink-0"
           >
             {role}
@@ -73,13 +79,13 @@ export default function DashboardCollectiveCard({
         )}
       </CardHeader>
       <CardContent className="flex-grow text-sm">
-        {role === "Owner" && (
+        {role === 'Owner' && (
           <div className="space-y-1.5 text-xs text-muted-foreground pt-2 mt-2 border-t border-border">
             <div className="flex items-center">
-              <Users2 className="h-3.5 w-3.5 mr-1.5 text-sky-600 dark:text-sky-400" />{" "}
-              Subscribers:{" "}
+              <Users2 className="h-3.5 w-3.5 mr-1.5 text-sky-600 dark:text-sky-400" />{' '}
+              Subscribers:{' '}
               <span className="font-semibold ml-1 text-foreground">
-                {subscriberCount ?? "0"}
+                {subscriberCount ?? '0'}
               </span>
             </div>
           </div>
@@ -99,22 +105,23 @@ export default function DashboardCollectiveCard({
             <Users2 className="h-4 w-4 mr-1.5" /> View
           </Link>
         </Button>
-        {role === "Owner" && (
+        {canPost && (
           <Button
             variant="default"
             size="sm"
             asChild
             className="flex-grow basis-1/3 sm:basis-auto"
+            title={`Create a post and share it with ${collective.name}`}
           >
             <Link
-              href={`/posts/new?collectiveId=${collective.id}`}
+              href="/posts/new"
               className="flex items-center justify-center w-full"
             >
-              <Plus className="h-4 w-4 mr-1.5" /> Add Post
+              <Edit className="h-4 w-4 mr-1.5" /> Create Post
             </Link>
           </Button>
         )}
-        {role === "Owner" ? (
+        {role === 'Owner' ? (
           <>
             <Button
               variant="outline"

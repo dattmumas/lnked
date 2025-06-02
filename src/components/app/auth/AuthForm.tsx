@@ -32,8 +32,8 @@ interface AuthFormFieldsProps {
   setEmail: (_value: string) => void;
   password: string;
   setPassword: (_value: string) => void;
-  fullName?: string;
-  setFullName?: (_value: string) => void;
+  username?: string;
+  setUsername?: (_value: string) => void;
 }
 
 interface AuthFormHeaderProps {
@@ -66,24 +66,35 @@ const AuthFormFieldsComponent: React.FC<AuthFormFieldsProps> = ({
   setEmail,
   password,
   setPassword,
-  fullName,
-  setFullName,
+  username,
+  setUsername,
 }) => (
   <>
-    {mode === 'signUp' && setFullName && (
+    {mode === 'signUp' && setUsername && (
       <div className="space-y-2">
-        <Label htmlFor="fullName">Full Name</Label>
+        <Label htmlFor="username">Username</Label>
         <Input
-          id="fullName"
+          id="username"
           type="text"
-          placeholder="Your Name"
+          placeholder="username"
           required
-          value={fullName}
-          onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-            setFullName(e.target.value)
-          }
+          value={username}
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+            // Convert to lowercase and remove invalid characters
+            const value = e.target.value
+              .toLowerCase()
+              .replace(/[^a-z0-9_]/g, '');
+            setUsername(value);
+          }}
           disabled={isLoading}
+          pattern="^[a-z0-9_]+$"
+          minLength={3}
+          maxLength={20}
+          title="Username must be 3-20 characters long and contain only lowercase letters, numbers, and underscores"
         />
+        <p className="text-xs text-muted-foreground">
+          3-20 characters, lowercase letters, numbers, and underscores only
+        </p>
       </div>
     )}
     <div className="space-y-2">
@@ -152,13 +163,13 @@ export default function AuthForm({
 }: AuthFormProps) {
   const [email, setEmail] = useState<string>('');
   const [password, setPassword] = useState<string>('');
-  const [fullName, setFullName] = useState<string>('');
+  const [username, setUsername] = useState<string>('');
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const formData: Record<string, string> = { email, password };
     if (mode === 'signUp') {
-      formData.fullName = fullName;
+      formData.username = username;
     }
     onSubmit(formData);
   };
@@ -196,8 +207,8 @@ export default function AuthForm({
               setEmail={setEmail}
               password={password}
               setPassword={setPassword}
-              fullName={mode === 'signUp' ? fullName : undefined}
-              setFullName={mode === 'signUp' ? setFullName : undefined}
+              username={mode === 'signUp' ? username : undefined}
+              setUsername={mode === 'signUp' ? setUsername : undefined}
             />
             {error && (
               <Alert variant="destructive" className="mt-4">

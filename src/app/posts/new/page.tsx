@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, Save } from 'lucide-react';
-import { usePostEditor } from '@/lib/hooks/use-post-editor';
+import { useEnhancedPostEditor } from '@/hooks/posts/useEnhancedPostEditor';
 import dynamic from 'next/dynamic';
 
 // Dynamic import for the editor to avoid SSR issues
@@ -27,7 +27,7 @@ export default function NewPostEditorPage() {
     isDirty,
     savePost,
     setCurrentPage,
-  } = usePostEditor();
+  } = useEnhancedPostEditor();
 
   // Set current page for state management
   useEffect(() => {
