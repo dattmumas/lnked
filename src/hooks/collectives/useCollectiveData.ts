@@ -66,23 +66,26 @@ export function useCollectiveStats(collectiveId: string) {
     queryFn: async () => {
       const supabase = createSupabaseBrowserClient();
       
-      // Get member count
-      const { count: memberCount } = await supabase
-        .from('collective_members')
-        .select('*', { count: 'exact', head: true })
-        .eq('collective_id', collectiveId);
+      // Use the optimized RPC function instead of separate count queries
+      // Type assertion needed since RPC function isn't in generated types yet
+      const { data, error } = await (supabase as any)
+        .rpc('get_collective_stats', { collective_id: collectiveId });
 
-      // Get follower count  
-      const { count: followerCount } = await supabase
-        .from('follows')
-        .select('*', { count: 'exact', head: true })
-        .eq('following_id', collectiveId)
-        .eq('following_type', 'collective');
+      if (error) throw error;
+      
+      // Parse the JSON response from the RPC function
+      const stats = data as {
+        member_count: number;
+        follower_count: number;
+      };
 
       return {
-        memberCount: memberCount || 0,
-        followerCount: followerCount || 0,
+        memberCount: stats.member_count || 0,
+        followerCount: stats.follower_count || 0,
       };
     },
+    // Enable caching for 5 minutes to reduce database load
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes
   });
 }

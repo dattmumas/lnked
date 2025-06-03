@@ -22,6 +22,10 @@ import { getSubscriptionStatus } from '@/app/actions/subscriptionActions';
 
 type PostRow = Database['public']['Tables']['posts']['Row'];
 
+// Enable ISR with 5-minute revalidation for profile pages
+// Profile data may change more frequently than collective data
+export const revalidate = 300; // 5 minutes
+
 export default async function ProfilePage({
   params,
   searchParams,

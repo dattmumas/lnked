@@ -261,3 +261,5 @@ const ArticleRow = React.memo<{
     </Link>
   );
 });
+
+ArticleRow.displayName = 'ArticleRow';

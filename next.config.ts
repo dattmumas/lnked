@@ -52,6 +52,66 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+  experimental: {
+    optimizePackageImports: [
+      'lucide-react',
+      '@radix-ui/react-avatar',
+      '@radix-ui/react-dialog',
+      '@radix-ui/react-dropdown-menu',
+      '@radix-ui/react-label',
+      '@radix-ui/react-radio-group',
+      '@radix-ui/react-select',
+      '@radix-ui/react-slot',
+      '@radix-ui/react-switch',
+      '@radix-ui/react-tabs',
+      '@radix-ui/react-tooltip',
+    ],
+  },
+  webpack: (config, { isServer }) => {
+    // Exclude test files and scripts from build
+    config.module.rules.push({
+      test: /\.(ts|tsx)$/,
+      include: [
+        /scripts\//,
+        /\.test\./,
+        /\.spec\./,
+        /__tests__/,
+      ],
+      use: 'ignore-loader',
+    });
+
+    // Optimize webpack configuration for better bundle sizes
+    if (config.optimization && !isServer) {
+      config.optimization.splitChunks = {
+        chunks: 'all',
+        cacheGroups: {
+          vendor: {
+            test: /[\\/]node_modules[\\/]/,
+            name: 'vendors',
+            chunks: 'all',
+          },
+          lexical: {
+            test: /[\\/]node_modules[\\/]@?lexical/,
+            name: 'lexical',
+            chunks: 'all',
+            priority: 10,
+          },
+          radix: {
+            test: /[\\/]node_modules[\\/]@radix-ui/,
+            name: 'radix',
+            chunks: 'all',
+            priority: 10,
+          },
+        },
+      };
+    }
+    return config;
+  },
 };
 
-export default nextConfig;
+// Bundle analyzer configuration
+const withBundleAnalyzer = require('@next/bundle-analyzer')({
+  enabled: process.env.ANALYZE === 'true',
+});
+
+export default withBundleAnalyzer(nextConfig);
