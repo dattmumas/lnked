@@ -4,6 +4,10 @@ import React from 'react';
 import { useProfileContext } from '@/lib/hooks/profile';
 import type { ProfileHeroProps } from '@/lib/hooks/profile/types';
 import { useFollowMutation } from '@/lib/hooks/profile';
+import {
+  getOptimizedAvatarUrl,
+  generateUserInitials,
+} from '@/lib/utils/avatar';
 
 /**
  * Profile Hero Component - Main profile display section (65% desktop width)
@@ -94,7 +98,7 @@ export function ProfileHero({ className = '' }: ProfileHeroProps) {
 }
 
 /**
- * Avatar Card Component - Displays user avatar with edit capability
+ * Avatar Card Component - Displays user avatar with edit capability using Supabase transformations
  */
 function AvatarCard({
   src,
@@ -113,13 +117,18 @@ function AvatarCard({
 
   // Generate initials from full name or username
   const initials = React.useMemo(() => {
-    const name = profile.fullName || profile.username;
-    return name
-      .split(' ')
-      .map((word) => word.charAt(0).toUpperCase())
-      .slice(0, 2)
-      .join('');
+    return generateUserInitials(profile.fullName, profile.username);
   }, [profile.fullName, profile.username]);
+
+  // Get optimized avatar URL with appropriate size and quality
+  const optimizedAvatarUrl = React.useMemo(() => {
+    return getOptimizedAvatarUrl(src, {
+      width: size,
+      height: size,
+      quality: size >= 128 ? 85 : 80, // Higher quality for larger avatars
+      resize: 'cover',
+    });
+  }, [src, size]);
 
   return (
     <div className={`avatar-card relative ${className}`}>
@@ -148,11 +157,18 @@ function AvatarCard({
           editable ? (e) => e.key === 'Enter' && onEdit?.() : undefined
         }
       >
-        {src ? (
+        {optimizedAvatarUrl ? (
           <img
-            src={src}
+            src={optimizedAvatarUrl}
             alt={`${profile.fullName || profile.username} avatar`}
             className="w-full h-full object-cover"
+            loading="lazy"
+            onError={(e) => {
+              // Fallback to original URL if optimized version fails
+              if (src && optimizedAvatarUrl !== src) {
+                e.currentTarget.src = src;
+              }
+            }}
           />
         ) : (
           <div

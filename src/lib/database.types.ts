@@ -7,50 +7,33 @@ export type Json =
   | Json[]
 
 export type Database = {
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          operationName?: string
+          query?: string
+          variables?: Json
+          extensions?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
   public: {
     Tables: {
-      agreements: {
-        Row: {
-          agreement_type: Database["public"]["Enums"]["agreement_type"]
-          created_at: string
-          id: string
-          party_a_id: string
-          party_a_type: Database["public"]["Enums"]["member_entity_type"]
-          party_b_id: string
-          party_b_type: Database["public"]["Enums"]["member_entity_type"]
-          status: string
-          stripe_object_id: string | null
-          terms: Json | null
-          updated_at: string
-        }
-        Insert: {
-          agreement_type: Database["public"]["Enums"]["agreement_type"]
-          created_at?: string
-          id?: string
-          party_a_id: string
-          party_a_type: Database["public"]["Enums"]["member_entity_type"]
-          party_b_id: string
-          party_b_type: Database["public"]["Enums"]["member_entity_type"]
-          status?: string
-          stripe_object_id?: string | null
-          terms?: Json | null
-          updated_at?: string
-        }
-        Update: {
-          agreement_type?: Database["public"]["Enums"]["agreement_type"]
-          created_at?: string
-          id?: string
-          party_a_id?: string
-          party_a_type?: Database["public"]["Enums"]["member_entity_type"]
-          party_b_id?: string
-          party_b_type?: Database["public"]["Enums"]["member_entity_type"]
-          status?: string
-          stripe_object_id?: string | null
-          terms?: Json | null
-          updated_at?: string
-        }
-        Relationships: []
-      }
       collective_invites: {
         Row: {
           accepted_at: string | null
@@ -105,33 +88,33 @@ export type Database = {
       collective_members: {
         Row: {
           collective_id: string
-          created_at: string
+          created_at: string | null
           id: string
           member_id: string
-          member_type: Database["public"]["Enums"]["member_entity_type"]
-          role: Database["public"]["Enums"]["collective_member_role"]
+          member_type: string | null
+          role: string | null
           share_percentage: number | null
-          updated_at: string
+          updated_at: string | null
         }
         Insert: {
           collective_id: string
-          created_at?: string
+          created_at?: string | null
           id?: string
           member_id: string
-          member_type?: Database["public"]["Enums"]["member_entity_type"]
-          role?: Database["public"]["Enums"]["collective_member_role"]
+          member_type?: string | null
+          role?: string | null
           share_percentage?: number | null
-          updated_at?: string
+          updated_at?: string | null
         }
         Update: {
           collective_id?: string
-          created_at?: string
+          created_at?: string | null
           id?: string
           member_id?: string
-          member_type?: Database["public"]["Enums"]["member_entity_type"]
-          role?: Database["public"]["Enums"]["collective_member_role"]
+          member_type?: string | null
+          role?: string | null
           share_percentage?: number | null
-          updated_at?: string
+          updated_at?: string | null
         }
         Relationships: [
           {
@@ -142,7 +125,7 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "collective_members_user_id_fkey"
+            foreignKeyName: "collective_members_member_id_fkey"
             columns: ["member_id"]
             isOneToOne: false
             referencedRelation: "users"
@@ -153,14 +136,14 @@ export type Database = {
       collectives: {
         Row: {
           cover_image_url: string | null
-          created_at: string
+          created_at: string | null
           description: string | null
           governance_model: string | null
           id: string
           intro_video_url: string | null
           logo_url: string | null
           name: string
-          owner_id: string
+          owner_id: string | null
           pinned_post_id: string | null
           slug: string
           stripe_account_id: string | null
@@ -172,14 +155,14 @@ export type Database = {
         }
         Insert: {
           cover_image_url?: string | null
-          created_at?: string
+          created_at?: string | null
           description?: string | null
           governance_model?: string | null
           id?: string
           intro_video_url?: string | null
           logo_url?: string | null
           name: string
-          owner_id: string
+          owner_id?: string | null
           pinned_post_id?: string | null
           slug: string
           stripe_account_id?: string | null
@@ -191,14 +174,14 @@ export type Database = {
         }
         Update: {
           cover_image_url?: string | null
-          created_at?: string
+          created_at?: string | null
           description?: string | null
           governance_model?: string | null
           id?: string
           intro_video_url?: string | null
           logo_url?: string | null
           name?: string
-          owner_id?: string
+          owner_id?: string | null
           pinned_post_id?: string | null
           slug?: string
           stripe_account_id?: string | null
@@ -231,6 +214,7 @@ export type Database = {
           created_at: string | null
           id: string
           type: string
+          updated_at: string | null
           user_id: string
         }
         Insert: {
@@ -238,6 +222,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           type: string
+          updated_at?: string | null
           user_id: string
         }
         Update: {
@@ -245,6 +230,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           type?: string
+          updated_at?: string | null
           user_id?: string
         }
         Relationships: [
@@ -315,63 +301,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
-      }
-      content_metadata: {
-        Row: {
-          category: string | null
-          content_id: string
-          content_type: string
-          created_at: string | null
-          description: string | null
-          duration: number | null
-          freshness_score: number | null
-          id: string
-          language: string | null
-          popularity_score: number | null
-          quality_score: number | null
-          tags: string[] | null
-          thumbnail_url: string | null
-          title: string
-          updated_at: string | null
-          word_count: number | null
-        }
-        Insert: {
-          category?: string | null
-          content_id: string
-          content_type: string
-          created_at?: string | null
-          description?: string | null
-          duration?: number | null
-          freshness_score?: number | null
-          id?: string
-          language?: string | null
-          popularity_score?: number | null
-          quality_score?: number | null
-          tags?: string[] | null
-          thumbnail_url?: string | null
-          title: string
-          updated_at?: string | null
-          word_count?: number | null
-        }
-        Update: {
-          category?: string | null
-          content_id?: string
-          content_type?: string
-          created_at?: string | null
-          description?: string | null
-          duration?: number | null
-          freshness_score?: number | null
-          id?: string
-          language?: string | null
-          popularity_score?: number | null
-          quality_score?: number | null
-          tags?: string[] | null
-          thumbnail_url?: string | null
-          title?: string
-          updated_at?: string | null
-          word_count?: number | null
-        }
-        Relationships: []
       }
       conversation_participants: {
         Row: {
@@ -494,27 +423,30 @@ export type Database = {
       featured_posts: {
         Row: {
           created_at: string | null
-          display_order: number
+          display_order: number | null
           id: string
           owner_id: string
           owner_type: string
           post_id: string
+          updated_at: string | null
         }
         Insert: {
           created_at?: string | null
-          display_order?: number
+          display_order?: number | null
           id?: string
           owner_id: string
           owner_type: string
           post_id: string
+          updated_at?: string | null
         }
         Update: {
           created_at?: string | null
-          display_order?: number
+          display_order?: number | null
           id?: string
           owner_id?: string
           owner_type?: string
           post_id?: string
+          updated_at?: string | null
         }
         Relationships: [
           {
@@ -528,22 +460,25 @@ export type Database = {
       }
       follows: {
         Row: {
-          created_at: string
+          created_at: string | null
           follower_id: string
           following_id: string
           following_type: string
+          updated_at: string | null
         }
         Insert: {
-          created_at?: string
+          created_at?: string | null
           follower_id: string
           following_id: string
           following_type: string
+          updated_at?: string | null
         }
         Update: {
-          created_at?: string
+          created_at?: string | null
           follower_id?: string
           following_id?: string
           following_type?: string
+          updated_at?: string | null
         }
         Relationships: [
           {
@@ -557,30 +492,33 @@ export type Database = {
       }
       interactions: {
         Row: {
-          created_at: string
+          created_at: string | null
           entity_id: string
-          entity_type: Database["public"]["Enums"]["interaction_entity_type"]
+          entity_type: string
           id: string
-          interaction_type: Database["public"]["Enums"]["interaction_type"]
+          interaction_type: string
           metadata: Json | null
+          updated_at: string | null
           user_id: string
         }
         Insert: {
-          created_at?: string
+          created_at?: string | null
           entity_id: string
-          entity_type: Database["public"]["Enums"]["interaction_entity_type"]
+          entity_type: string
           id?: string
-          interaction_type: Database["public"]["Enums"]["interaction_type"]
+          interaction_type: string
           metadata?: Json | null
+          updated_at?: string | null
           user_id: string
         }
         Update: {
-          created_at?: string
+          created_at?: string | null
           entity_id?: string
-          entity_type?: Database["public"]["Enums"]["interaction_entity_type"]
+          entity_type?: string
           id?: string
-          interaction_type?: Database["public"]["Enums"]["interaction_type"]
+          interaction_type?: string
           metadata?: Json | null
+          updated_at?: string | null
           user_id?: string
         }
         Relationships: [
@@ -595,56 +533,97 @@ export type Database = {
       }
       live_streams: {
         Row: {
+          collective_id: string | null
           created_at: string | null
-          created_by: string | null
           description: string | null
           ended_at: string | null
           id: string
-          mux_playback_id: string | null
+          is_public: boolean | null
+          latency_mode: string | null
+          max_continuous_duration: number | null
+          mux_metadata: Json | null
+          mux_playback_ids: Json | null
           mux_stream_id: string
-          mux_stream_key: string
+          owner_id: string
+          playback_policy: string | null
+          reconnect_window: number | null
+          record_stream: boolean | null
+          recorded_asset_id: string | null
           started_at: string | null
-          status: string | null
-          stream_url: string | null
-          title: string | null
+          status: string
+          stream_key: string
+          title: string
+          tsv: unknown | null
           updated_at: string | null
         }
         Insert: {
+          collective_id?: string | null
           created_at?: string | null
-          created_by?: string | null
           description?: string | null
           ended_at?: string | null
           id?: string
-          mux_playback_id?: string | null
+          is_public?: boolean | null
+          latency_mode?: string | null
+          max_continuous_duration?: number | null
+          mux_metadata?: Json | null
+          mux_playback_ids?: Json | null
           mux_stream_id: string
-          mux_stream_key: string
+          owner_id: string
+          playback_policy?: string | null
+          reconnect_window?: number | null
+          record_stream?: boolean | null
+          recorded_asset_id?: string | null
           started_at?: string | null
-          status?: string | null
-          stream_url?: string | null
-          title?: string | null
+          status?: string
+          stream_key: string
+          title: string
+          tsv?: unknown | null
           updated_at?: string | null
         }
         Update: {
+          collective_id?: string | null
           created_at?: string | null
-          created_by?: string | null
           description?: string | null
           ended_at?: string | null
           id?: string
-          mux_playback_id?: string | null
+          is_public?: boolean | null
+          latency_mode?: string | null
+          max_continuous_duration?: number | null
+          mux_metadata?: Json | null
+          mux_playback_ids?: Json | null
           mux_stream_id?: string
-          mux_stream_key?: string
+          owner_id?: string
+          playback_policy?: string | null
+          reconnect_window?: number | null
+          record_stream?: boolean | null
+          recorded_asset_id?: string | null
           started_at?: string | null
-          status?: string | null
-          stream_url?: string | null
-          title?: string | null
+          status?: string
+          stream_key?: string
+          title?: string
+          tsv?: unknown | null
           updated_at?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "live_streams_created_by_fkey"
-            columns: ["created_by"]
+            foreignKeyName: "live_streams_collective_id_fkey"
+            columns: ["collective_id"]
+            isOneToOne: false
+            referencedRelation: "collectives"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "live_streams_owner_id_fkey"
+            columns: ["owner_id"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "live_streams_recorded_asset_id_fkey"
+            columns: ["recorded_asset_id"]
+            isOneToOne: false
+            referencedRelation: "video_assets"
             referencedColumns: ["id"]
           },
         ]
@@ -791,35 +770,65 @@ export type Database = {
       mux_webhooks: {
         Row: {
           created_at: string | null
-          event_type: string
+          error_message: string | null
           id: string
-          mux_asset_id: string | null
-          mux_stream_id: string | null
-          payload: Json | null
-          processed: boolean | null
+          live_stream_id: string | null
+          mux_webhook_id: string
+          payload: Json
           processed_at: string | null
+          retry_count: number | null
+          signature: string
+          status: string
+          updated_at: string | null
+          video_asset_id: string | null
+          webhook_type: string
         }
         Insert: {
           created_at?: string | null
-          event_type: string
+          error_message?: string | null
           id?: string
-          mux_asset_id?: string | null
-          mux_stream_id?: string | null
-          payload?: Json | null
-          processed?: boolean | null
+          live_stream_id?: string | null
+          mux_webhook_id: string
+          payload: Json
           processed_at?: string | null
+          retry_count?: number | null
+          signature: string
+          status?: string
+          updated_at?: string | null
+          video_asset_id?: string | null
+          webhook_type: string
         }
         Update: {
           created_at?: string | null
-          event_type?: string
+          error_message?: string | null
           id?: string
-          mux_asset_id?: string | null
-          mux_stream_id?: string | null
-          payload?: Json | null
-          processed?: boolean | null
+          live_stream_id?: string | null
+          mux_webhook_id?: string
+          payload?: Json
           processed_at?: string | null
+          retry_count?: number | null
+          signature?: string
+          status?: string
+          updated_at?: string | null
+          video_asset_id?: string | null
+          webhook_type?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "mux_webhooks_live_stream_id_fkey"
+            columns: ["live_stream_id"]
+            isOneToOne: false
+            referencedRelation: "live_streams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mux_webhooks_video_asset_id_fkey"
+            columns: ["video_asset_id"]
+            isOneToOne: false
+            referencedRelation: "video_assets"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       notification_preferences: {
         Row: {
@@ -926,16 +935,19 @@ export type Database = {
         Row: {
           created_at: string | null
           post_id: string
+          updated_at: string | null
           user_id: string
         }
         Insert: {
           created_at?: string | null
           post_id: string
+          updated_at?: string | null
           user_id: string
         }
         Update: {
           created_at?: string | null
           post_id?: string
+          updated_at?: string | null
           user_id?: string
         }
         Relationships: [
@@ -955,90 +967,38 @@ export type Database = {
           },
         ]
       }
-      post_collectives: {
-        Row: {
-          collective_id: string
-          display_order: number | null
-          id: string
-          metadata: Json | null
-          post_id: string
-          shared_at: string | null
-          shared_by: string
-          status: string | null
-        }
-        Insert: {
-          collective_id: string
-          display_order?: number | null
-          id?: string
-          metadata?: Json | null
-          post_id: string
-          shared_at?: string | null
-          shared_by: string
-          status?: string | null
-        }
-        Update: {
-          collective_id?: string
-          display_order?: number | null
-          id?: string
-          metadata?: Json | null
-          post_id?: string
-          shared_at?: string | null
-          shared_by?: string
-          status?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "post_collectives_collective_id_fkey"
-            columns: ["collective_id"]
-            isOneToOne: false
-            referencedRelation: "collectives"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "post_collectives_post_id_fkey"
-            columns: ["post_id"]
-            isOneToOne: false
-            referencedRelation: "posts"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "post_collectives_shared_by_fkey"
-            columns: ["shared_by"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       post_reactions: {
         Row: {
-          created_at: string
+          created_at: string | null
           post_id: string
           type: string
+          updated_at: string | null
           user_id: string
         }
         Insert: {
-          created_at?: string
+          created_at?: string | null
           post_id: string
           type?: string
+          updated_at?: string | null
           user_id: string
         }
         Update: {
-          created_at?: string
+          created_at?: string | null
           post_id?: string
           type?: string
+          updated_at?: string | null
           user_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "likes_post_id_fkey"
+            foreignKeyName: "post_reactions_post_id_fkey"
             columns: ["post_id"]
             isOneToOne: false
             referencedRelation: "posts"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "likes_user_id_fkey"
+            foreignKeyName: "post_reactions_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "users"
@@ -1050,18 +1010,21 @@ export type Database = {
         Row: {
           id: string
           post_id: string
+          updated_at: string | null
           user_id: string | null
           viewed_at: string | null
         }
         Insert: {
           id?: string
           post_id: string
+          updated_at?: string | null
           user_id?: string | null
           viewed_at?: string | null
         }
         Update: {
           id?: string
           post_id?: string
+          updated_at?: string | null
           user_id?: string | null
           viewed_at?: string | null
         }
@@ -1088,18 +1051,18 @@ export type Database = {
           author_id: string
           collective_id: string | null
           content: string | null
-          created_at: string
+          created_at: string | null
           dislike_count: number | null
           id: string
-          is_public: boolean
-          like_count: number
+          is_public: boolean | null
+          like_count: number | null
           meta_description: string | null
           metadata: Json
           post_type: Database["public"]["Enums"]["post_type_enum"]
           published_at: string | null
           seo_title: string | null
-          sharing_settings: Json | null
-          status: Database["public"]["Enums"]["post_status_type"]
+          slug: string | null
+          status: string | null
           subtitle: string | null
           thumbnail_url: string | null
           title: string
@@ -1112,18 +1075,18 @@ export type Database = {
           author_id: string
           collective_id?: string | null
           content?: string | null
-          created_at?: string
+          created_at?: string | null
           dislike_count?: number | null
           id?: string
-          is_public?: boolean
-          like_count?: number
+          is_public?: boolean | null
+          like_count?: number | null
           meta_description?: string | null
           metadata?: Json
           post_type?: Database["public"]["Enums"]["post_type_enum"]
           published_at?: string | null
           seo_title?: string | null
-          sharing_settings?: Json | null
-          status?: Database["public"]["Enums"]["post_status_type"]
+          slug?: string | null
+          status?: string | null
           subtitle?: string | null
           thumbnail_url?: string | null
           title: string
@@ -1136,18 +1099,18 @@ export type Database = {
           author_id?: string
           collective_id?: string | null
           content?: string | null
-          created_at?: string
+          created_at?: string | null
           dislike_count?: number | null
           id?: string
-          is_public?: boolean
-          like_count?: number
+          is_public?: boolean | null
+          like_count?: number | null
           meta_description?: string | null
           metadata?: Json
           post_type?: Database["public"]["Enums"]["post_type_enum"]
           published_at?: string | null
           seo_title?: string | null
-          sharing_settings?: Json | null
-          status?: Database["public"]["Enums"]["post_status_type"]
+          slug?: string | null
+          status?: string | null
           subtitle?: string | null
           thumbnail_url?: string | null
           title?: string
@@ -1172,152 +1135,26 @@ export type Database = {
           },
         ]
       }
-      prices: {
-        Row: {
-          active: boolean | null
-          currency: string | null
-          description: string | null
-          id: string
-          interval: Database["public"]["Enums"]["price_interval"] | null
-          interval_count: number | null
-          metadata: Json | null
-          product_id: string | null
-          trial_period_days: number | null
-          type: Database["public"]["Enums"]["price_type"] | null
-          unit_amount: number | null
-        }
-        Insert: {
-          active?: boolean | null
-          currency?: string | null
-          description?: string | null
-          id: string
-          interval?: Database["public"]["Enums"]["price_interval"] | null
-          interval_count?: number | null
-          metadata?: Json | null
-          product_id?: string | null
-          trial_period_days?: number | null
-          type?: Database["public"]["Enums"]["price_type"] | null
-          unit_amount?: number | null
-        }
-        Update: {
-          active?: boolean | null
-          currency?: string | null
-          description?: string | null
-          id?: string
-          interval?: Database["public"]["Enums"]["price_interval"] | null
-          interval_count?: number | null
-          metadata?: Json | null
-          product_id?: string | null
-          trial_period_days?: number | null
-          type?: Database["public"]["Enums"]["price_type"] | null
-          unit_amount?: number | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "prices_product_id_fkey"
-            columns: ["product_id"]
-            isOneToOne: false
-            referencedRelation: "products"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      products: {
-        Row: {
-          active: boolean | null
-          collective_id: string | null
-          description: string | null
-          id: string
-          metadata: Json | null
-          name: string | null
-        }
-        Insert: {
-          active?: boolean | null
-          collective_id?: string | null
-          description?: string | null
-          id: string
-          metadata?: Json | null
-          name?: string | null
-        }
-        Update: {
-          active?: boolean | null
-          collective_id?: string | null
-          description?: string | null
-          id?: string
-          metadata?: Json | null
-          name?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "products_collective_id_fkey"
-            columns: ["collective_id"]
-            isOneToOne: false
-            referencedRelation: "collectives"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      recommendation_cache: {
-        Row: {
-          algorithm_version: string | null
-          cache_key: string
-          cache_type: string
-          created_at: string | null
-          expires_at: string | null
-          id: string
-          metadata: Json | null
-          recommendations: Json
-          user_id: string | null
-        }
-        Insert: {
-          algorithm_version?: string | null
-          cache_key: string
-          cache_type: string
-          created_at?: string | null
-          expires_at?: string | null
-          id?: string
-          metadata?: Json | null
-          recommendations: Json
-          user_id?: string | null
-        }
-        Update: {
-          algorithm_version?: string | null
-          cache_key?: string
-          cache_type?: string
-          created_at?: string | null
-          expires_at?: string | null
-          id?: string
-          metadata?: Json | null
-          recommendations?: Json
-          user_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "recommendation_cache_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       recommendations: {
         Row: {
-          created_at: string
+          created_at: string | null
           score: number
           suggested_collective_id: string
+          updated_at: string | null
           user_id: string
         }
         Insert: {
-          created_at?: string
+          created_at?: string | null
           score: number
           suggested_collective_id: string
+          updated_at?: string | null
           user_id: string
         }
         Update: {
-          created_at?: string
+          created_at?: string | null
           score?: number
           suggested_collective_id?: string
+          updated_at?: string | null
           user_id?: string
         }
         Relationships: [
@@ -1337,112 +1174,68 @@ export type Database = {
           },
         ]
       }
-      subscription_plans: {
-        Row: {
-          active: boolean | null
-          benefits: Json | null
-          collective_id: string
-          created_at: string | null
-          id: string
-          monthly_cost: number
-          name: string
-          stripe_price_id: string
-          updated_at: string | null
-        }
-        Insert: {
-          active?: boolean | null
-          benefits?: Json | null
-          collective_id: string
-          created_at?: string | null
-          id?: string
-          monthly_cost: number
-          name: string
-          stripe_price_id: string
-          updated_at?: string | null
-        }
-        Update: {
-          active?: boolean | null
-          benefits?: Json | null
-          collective_id?: string
-          created_at?: string | null
-          id?: string
-          monthly_cost?: number
-          name?: string
-          stripe_price_id?: string
-          updated_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "subscription_plans_collective_id_fkey"
-            columns: ["collective_id"]
-            isOneToOne: false
-            referencedRelation: "collectives"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       subscriptions: {
         Row: {
           cancel_at: string | null
-          cancel_at_period_end: boolean
+          cancel_at_period_end: boolean | null
           canceled_at: string | null
           created: string
           current_period_end: string
           current_period_start: string
           ended_at: string | null
           id: string
-          inserted_at: string
+          inserted_at: string | null
           metadata: Json | null
           quantity: number | null
-          status: Database["public"]["Enums"]["subscription_status"]
+          status: string
           stripe_price_id: string | null
           target_entity_id: string
-          target_entity_type: Database["public"]["Enums"]["subscription_target_type"]
+          target_entity_type: string
           trial_end: string | null
           trial_start: string | null
-          updated_at: string
+          updated_at: string | null
           user_id: string
         }
         Insert: {
           cancel_at?: string | null
-          cancel_at_period_end?: boolean
+          cancel_at_period_end?: boolean | null
           canceled_at?: string | null
           created: string
           current_period_end: string
           current_period_start: string
           ended_at?: string | null
-          id: string
-          inserted_at?: string
+          id?: string
+          inserted_at?: string | null
           metadata?: Json | null
           quantity?: number | null
-          status: Database["public"]["Enums"]["subscription_status"]
+          status: string
           stripe_price_id?: string | null
           target_entity_id: string
-          target_entity_type: Database["public"]["Enums"]["subscription_target_type"]
+          target_entity_type: string
           trial_end?: string | null
           trial_start?: string | null
-          updated_at?: string
+          updated_at?: string | null
           user_id: string
         }
         Update: {
           cancel_at?: string | null
-          cancel_at_period_end?: boolean
+          cancel_at_period_end?: boolean | null
           canceled_at?: string | null
           created?: string
           current_period_end?: string
           current_period_start?: string
           ended_at?: string | null
           id?: string
-          inserted_at?: string
+          inserted_at?: string | null
           metadata?: Json | null
           quantity?: number | null
-          status?: Database["public"]["Enums"]["subscription_status"]
+          status?: string
           stripe_price_id?: string | null
           target_entity_id?: string
-          target_entity_type?: Database["public"]["Enums"]["subscription_target_type"]
+          target_entity_type?: string
           trial_end?: string | null
           trial_start?: string | null
-          updated_at?: string
+          updated_at?: string | null
           user_id?: string
         }
         Relationships: [
@@ -1455,61 +1248,62 @@ export type Database = {
           },
         ]
       }
-      user_preferences: {
+      upload_sessions: {
         Row: {
-          autoplay_videos: boolean | null
-          content_type_weights: Json | null
-          created_at: string | null
-          hide_seen_content: boolean | null
-          interested_topics: string[] | null
-          muted_authors: string[] | null
-          muted_collectives: string[] | null
-          muted_topics: string[] | null
-          prefer_following: boolean | null
-          prefer_popular: boolean | null
-          prefer_recent: boolean | null
-          updated_at: string | null
+          completed_at: string | null
+          content_type: string
+          created_at: string
+          error_details: Json | null
+          expires_at: string
+          file_size: number
+          filename: string
+          id: string
+          metadata: Json | null
+          progress: Json | null
+          resume_info: Json | null
+          status: string
+          updated_at: string
+          upload_id: string
+          upload_url: string
           user_id: string
         }
         Insert: {
-          autoplay_videos?: boolean | null
-          content_type_weights?: Json | null
-          created_at?: string | null
-          hide_seen_content?: boolean | null
-          interested_topics?: string[] | null
-          muted_authors?: string[] | null
-          muted_collectives?: string[] | null
-          muted_topics?: string[] | null
-          prefer_following?: boolean | null
-          prefer_popular?: boolean | null
-          prefer_recent?: boolean | null
-          updated_at?: string | null
+          completed_at?: string | null
+          content_type: string
+          created_at?: string
+          error_details?: Json | null
+          expires_at: string
+          file_size: number
+          filename: string
+          id?: string
+          metadata?: Json | null
+          progress?: Json | null
+          resume_info?: Json | null
+          status?: string
+          updated_at?: string
+          upload_id: string
+          upload_url: string
           user_id: string
         }
         Update: {
-          autoplay_videos?: boolean | null
-          content_type_weights?: Json | null
-          created_at?: string | null
-          hide_seen_content?: boolean | null
-          interested_topics?: string[] | null
-          muted_authors?: string[] | null
-          muted_collectives?: string[] | null
-          muted_topics?: string[] | null
-          prefer_following?: boolean | null
-          prefer_popular?: boolean | null
-          prefer_recent?: boolean | null
-          updated_at?: string | null
+          completed_at?: string | null
+          content_type?: string
+          created_at?: string
+          error_details?: Json | null
+          expires_at?: string
+          file_size?: number
+          filename?: string
+          id?: string
+          metadata?: Json | null
+          progress?: Json | null
+          resume_info?: Json | null
+          status?: string
+          updated_at?: string
+          upload_id?: string
+          upload_url?: string
           user_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "user_preferences_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: true
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       users: {
         Row: {
@@ -1541,7 +1335,7 @@ export type Database = {
           cover_image_url?: string | null
           embedding?: string | null
           full_name?: string | null
-          id: string
+          id?: string
           is_profile_public?: boolean | null
           pinned_post_id?: string | null
           role?: string | null
@@ -1593,43 +1387,58 @@ export type Database = {
       }
       video_analytics: {
         Row: {
-          completion_rate: number | null
+          browser: string | null
+          country_code: string | null
           created_at: string | null
+          device_type: string | null
           id: string
+          ip_address: unknown | null
           live_stream_id: string | null
-          quality_score: number | null
-          rebuffer_count: number | null
-          startup_time: number | null
+          metadata: Json | null
+          metric_type: string
+          playback_duration: number | null
+          playback_position: number | null
+          quality: string | null
+          session_id: string | null
+          user_agent: string | null
           video_asset_id: string | null
-          view_id: string | null
-          viewer_user_id: string | null
-          watch_time: number | null
+          viewer_id: string | null
         }
         Insert: {
-          completion_rate?: number | null
+          browser?: string | null
+          country_code?: string | null
           created_at?: string | null
+          device_type?: string | null
           id?: string
+          ip_address?: unknown | null
           live_stream_id?: string | null
-          quality_score?: number | null
-          rebuffer_count?: number | null
-          startup_time?: number | null
+          metadata?: Json | null
+          metric_type: string
+          playback_duration?: number | null
+          playback_position?: number | null
+          quality?: string | null
+          session_id?: string | null
+          user_agent?: string | null
           video_asset_id?: string | null
-          view_id?: string | null
-          viewer_user_id?: string | null
-          watch_time?: number | null
+          viewer_id?: string | null
         }
         Update: {
-          completion_rate?: number | null
+          browser?: string | null
+          country_code?: string | null
           created_at?: string | null
+          device_type?: string | null
           id?: string
+          ip_address?: unknown | null
           live_stream_id?: string | null
-          quality_score?: number | null
-          rebuffer_count?: number | null
-          startup_time?: number | null
+          metadata?: Json | null
+          metric_type?: string
+          playback_duration?: number | null
+          playback_position?: number | null
+          quality?: string | null
+          session_id?: string | null
+          user_agent?: string | null
           video_asset_id?: string | null
-          view_id?: string | null
-          viewer_user_id?: string | null
-          watch_time?: number | null
+          viewer_id?: string | null
         }
         Relationships: [
           {
@@ -1647,8 +1456,8 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "video_analytics_viewer_user_id_fkey"
-            columns: ["viewer_user_id"]
+            foreignKeyName: "video_analytics_viewer_id_fkey"
+            columns: ["viewer_id"]
             isOneToOne: false
             referencedRelation: "users"
             referencedColumns: ["id"]
@@ -1658,138 +1467,123 @@ export type Database = {
       video_assets: {
         Row: {
           aspect_ratio: string | null
+          collective_id: string | null
           created_at: string | null
-          created_by: string | null
+          created_by: string
           description: string | null
           duration: number | null
+          encoding_tier: string | null
+          error_details: Json | null
+          file_size: number | null
+          file_type: string | null
           id: string
+          is_public: boolean | null
+          max_resolution_tier: string | null
           mp4_support: string | null
           mux_asset_id: string | null
+          mux_metadata: Json | null
           mux_playback_id: string | null
           mux_upload_id: string | null
-          status: string | null
+          normalize_audio: boolean | null
+          original_filename: string | null
+          playback_policy: string | null
+          post_id: string | null
+          processed_at: string | null
+          resolution_tier: string | null
+          status: string
           title: string | null
+          tsv: unknown | null
           updated_at: string | null
         }
         Insert: {
           aspect_ratio?: string | null
+          collective_id?: string | null
           created_at?: string | null
-          created_by?: string | null
+          created_by: string
           description?: string | null
           duration?: number | null
+          encoding_tier?: string | null
+          error_details?: Json | null
+          file_size?: number | null
+          file_type?: string | null
           id?: string
+          is_public?: boolean | null
+          max_resolution_tier?: string | null
           mp4_support?: string | null
           mux_asset_id?: string | null
+          mux_metadata?: Json | null
           mux_playback_id?: string | null
           mux_upload_id?: string | null
-          status?: string | null
+          normalize_audio?: boolean | null
+          original_filename?: string | null
+          playback_policy?: string | null
+          post_id?: string | null
+          processed_at?: string | null
+          resolution_tier?: string | null
+          status?: string
           title?: string | null
+          tsv?: unknown | null
           updated_at?: string | null
         }
         Update: {
           aspect_ratio?: string | null
+          collective_id?: string | null
           created_at?: string | null
-          created_by?: string | null
+          created_by?: string
           description?: string | null
           duration?: number | null
+          encoding_tier?: string | null
+          error_details?: Json | null
+          file_size?: number | null
+          file_type?: string | null
           id?: string
+          is_public?: boolean | null
+          max_resolution_tier?: string | null
           mp4_support?: string | null
           mux_asset_id?: string | null
+          mux_metadata?: Json | null
           mux_playback_id?: string | null
           mux_upload_id?: string | null
-          status?: string | null
+          normalize_audio?: boolean | null
+          original_filename?: string | null
+          playback_policy?: string | null
+          post_id?: string | null
+          processed_at?: string | null
+          resolution_tier?: string | null
+          status?: string
           title?: string | null
+          tsv?: unknown | null
           updated_at?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "video_assets_created_by_fkey"
+            foreignKeyName: "video_assets_collective_id_fkey"
+            columns: ["collective_id"]
+            isOneToOne: false
+            referencedRelation: "collectives"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "video_assets_owner_id_fkey"
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "video_assets_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "posts"
             referencedColumns: ["id"]
           },
         ]
       }
     }
     Views: {
-      collective_followers: {
-        Row: {
-          collective_id: string | null
-          created_at: string | null
-          follower_avatar: string | null
-          follower_id: string | null
-          follower_name: string | null
-          follower_username: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "follows_follower_id_fkey"
-            columns: ["follower_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      search_documents: {
-        Row: {
-          content_preview: string | null
-          document_id: string | null
-          document_type: string | null
-          title: string | null
-          tsv_document: unknown | null
-        }
-        Relationships: []
-      }
-      user_followers: {
-        Row: {
-          created_at: string | null
-          follower_avatar: string | null
-          follower_id: string | null
-          follower_name: string | null
-          follower_username: string | null
-          user_id: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "follows_follower_id_fkey"
-            columns: ["follower_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      user_following: {
-        Row: {
-          created_at: string | null
-          following_id: string | null
-          following_identifier: string | null
-          following_name: string | null
-          following_type: string | null
-          user_id: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "follows_follower_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
+      [_ in never]: never
     }
     Functions: {
-      binary_quantize: {
-        Args: { "": string } | { "": unknown }
-        Returns: unknown
-      }
-      cleanup_expired_cache: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
       cleanup_old_notifications: {
         Args: Record<PropertyKey, never>
         Returns: number
@@ -1818,44 +1612,6 @@ export type Database = {
         Args: { email: string }
         Returns: string
       }
-      find_video_by_mux_id: {
-        Args: { p_mux_id: string }
-        Returns: {
-          aspect_ratio: string | null
-          created_at: string | null
-          created_by: string | null
-          description: string | null
-          duration: number | null
-          id: string
-          mp4_support: string | null
-          mux_asset_id: string | null
-          mux_playback_id: string | null
-          mux_upload_id: string | null
-          status: string | null
-          title: string | null
-          updated_at: string | null
-        }[]
-      }
-      get_cached_recommendations: {
-        Args: {
-          p_user_id: string
-          p_cache_key: string
-          p_algorithm_version?: string
-        }
-        Returns: Json
-      }
-      get_follower_count: {
-        Args: { entity_id: string; entity_type: string }
-        Returns: number
-      }
-      get_following_count: {
-        Args: { user_id: string; entity_type?: string }
-        Returns: number
-      }
-      get_subscriber_count: {
-        Args: { entity_id: string; entity_type: string }
-        Returns: number
-      }
       get_unread_message_count: {
         Args: { p_user_id: string; p_conversation_id: string }
         Returns: number
@@ -1864,110 +1620,8 @@ export type Database = {
         Args: { p_user_id: string }
         Returns: number
       }
-      get_user_feed: {
-        Args: { p_user_id: string; p_limit?: number; p_offset?: number }
-        Returns: {
-          id: string
-          title: string
-          content: string
-          created_at: string
-          published_at: string
-          is_public: boolean
-          author_id: string
-          author_full_name: string
-          collective_id: string
-          collective_name: string
-          collective_slug: string
-          like_count: number
-        }[]
-      }
-      get_user_preference_weights: {
-        Args: { p_user_id: string }
-        Returns: {
-          content_type: string
-          weight: number
-        }[]
-      }
-      halfvec_avg: {
-        Args: { "": number[] }
-        Returns: unknown
-      }
-      halfvec_out: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
-      halfvec_send: {
-        Args: { "": unknown }
-        Returns: string
-      }
-      halfvec_typmod_in: {
-        Args: { "": unknown[] }
-        Returns: number
-      }
-      hnsw_bit_support: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
-      hnsw_halfvec_support: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
-      hnsw_sparsevec_support: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
-      hnswhandler: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
-      increment_view_count: {
-        Args: { post_id_to_increment: string }
-        Returns: undefined
-      }
-      invalidate_user_cache: {
-        Args: { p_user_id: string }
-        Returns: undefined
-      }
-      is_collective_owner: {
-        Args: { cid: string }
-        Returns: boolean
-      }
-      is_content_muted: {
-        Args: {
-          p_user_id: string
-          p_content_id: string
-          p_author_id: string
-          p_collective_id: string
-          p_tags: string[]
-        }
-        Returns: boolean
-      }
-      is_following: {
-        Args: {
-          follower_user_id: string
-          target_id: string
-          target_type: string
-        }
-        Returns: boolean
-      }
-      ivfflat_bit_support: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
-      ivfflat_halfvec_support: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
-      ivfflathandler: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
-      l2_norm: {
-        Args: { "": unknown } | { "": unknown }
-        Returns: number
-      }
-      l2_normalize: {
-        Args: { "": string } | { "": unknown } | { "": unknown }
+      get_user_email: {
+        Args: { user_id: string }
         Returns: string
       }
       mark_messages_as_read: {
@@ -1978,60 +1632,8 @@ export type Database = {
         Args: { p_user_id: string; p_notification_ids?: string[] }
         Returns: number
       }
-      sparsevec_out: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
-      sparsevec_send: {
-        Args: { "": unknown }
-        Returns: string
-      }
-      sparsevec_typmod_in: {
-        Args: { "": unknown[] }
-        Returns: number
-      }
-      vector_avg: {
-        Args: { "": number[] }
-        Returns: string
-      }
-      vector_dims: {
-        Args: { "": string } | { "": unknown }
-        Returns: number
-      }
-      vector_norm: {
-        Args: { "": string }
-        Returns: number
-      }
-      vector_out: {
-        Args: { "": string }
-        Returns: unknown
-      }
-      vector_send: {
-        Args: { "": string }
-        Returns: string
-      }
-      vector_typmod_in: {
-        Args: { "": unknown[] }
-        Returns: number
-      }
     }
     Enums: {
-      agreement_type:
-        | "subscription"
-        | "one_time_payment"
-        | "revenue_share"
-        | "membership_fee"
-        | "ownership_transfer"
-        | "other"
-      collective_member_role: "admin" | "editor" | "author" | "owner"
-      interaction_entity_type: "collective" | "post" | "user"
-      interaction_type:
-        | "like"
-        | "unlike"
-        | "recommended_interested"
-        | "recommended_not_interested"
-        | "view"
-      member_entity_type: "user" | "collective"
       notification_type:
         | "follow"
         | "unfollow"
@@ -2048,20 +1650,7 @@ export type Database = {
         | "mention"
         | "post_bookmark"
         | "featured_post"
-      post_status_type: "draft" | "active" | "removed"
       post_type_enum: "text" | "video"
-      price_interval: "month" | "year" | "week" | "day"
-      price_type: "recurring" | "one_time"
-      subscription_status:
-        | "trialing"
-        | "active"
-        | "canceled"
-        | "incomplete"
-        | "incomplete_expired"
-        | "past_due"
-        | "unpaid"
-        | "paused"
-      subscription_target_type: "user" | "collective"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -2175,26 +1764,11 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {
-      agreement_type: [
-        "subscription",
-        "one_time_payment",
-        "revenue_share",
-        "membership_fee",
-        "ownership_transfer",
-        "other",
-      ],
-      collective_member_role: ["admin", "editor", "author", "owner"],
-      interaction_entity_type: ["collective", "post", "user"],
-      interaction_type: [
-        "like",
-        "unlike",
-        "recommended_interested",
-        "recommended_not_interested",
-        "view",
-      ],
-      member_entity_type: ["user", "collective"],
       notification_type: [
         "follow",
         "unfollow",
@@ -2212,21 +1786,8 @@ export const Constants = {
         "post_bookmark",
         "featured_post",
       ],
-      post_status_type: ["draft", "active", "removed"],
       post_type_enum: ["text", "video"],
-      price_interval: ["month", "year", "week", "day"],
-      price_type: ["recurring", "one_time"],
-      subscription_status: [
-        "trialing",
-        "active",
-        "canceled",
-        "incomplete",
-        "incomplete_expired",
-        "past_due",
-        "unpaid",
-        "paused",
-      ],
-      subscription_target_type: ["user", "collective"],
     },
   },
 } as const
+

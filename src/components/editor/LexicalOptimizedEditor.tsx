@@ -43,7 +43,6 @@ import TabFocusPlugin from './plugins/input/TabFocusPlugin';
 import ShortcutsPlugin from './plugins/input/ShortcutsPlugin';
 import DragDropPastePlugin from './plugins/input/DragDropPastePlugin';
 import { MaxLengthPlugin } from './plugins/input/MaxLengthPlugin';
-import AutocompletePlugin from './plugins/input/AutocompletePlugin';
 
 // Essential layout plugins
 import { LayoutPlugin } from './plugins/layout/LayoutPlugin/LayoutPlugin';
@@ -192,7 +191,6 @@ function EditorContent({
           setIsLinkEditMode={setIsLinkEditMode}
         />
         <MaxLengthPlugin maxLength={10000} />
-        <AutocompletePlugin />
         <ContextMenuPlugin />
         <SpecialTextPlugin />
         <CodeActionMenuPlugin />

@@ -22,9 +22,9 @@ interface AuthorCarouselProps {
 
 export function AuthorCarousel({ collectiveSlug }: AuthorCarouselProps) {
   const { data: collective } = useCollectiveData(collectiveSlug);
-  const { data: members, isLoading } = useCollectiveMembers(
-    collective?.id || '',
-  );
+  const { data: members, isLoading } = useCollectiveMembers(collective?.id!, {
+    enabled: !!collective?.id,
+  });
 
   const scrollLeft = () => {
     const carousel = document.getElementById('author-carousel');
@@ -56,7 +56,7 @@ export function AuthorCarousel({ collectiveSlug }: AuthorCarouselProps) {
     );
   }
 
-  if (!members || members.length === 0) {
+  if (!members || !Array.isArray(members) || members.length === 0) {
     return (
       <div className="author-carousel-container">
         <h2 className="text-xl font-semibold mb-4">Contributors</h2>
@@ -105,7 +105,7 @@ export function AuthorCarousel({ collectiveSlug }: AuthorCarouselProps) {
           style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
         >
           <TooltipProvider>
-            {displayMembers.map((member) => (
+            {displayMembers.map((member: any) => (
               <Tooltip key={member.id}>
                 <TooltipTrigger asChild>
                   <Link

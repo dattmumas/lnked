@@ -244,7 +244,7 @@ export default async function PostBySlugPage({
                 <Share2 className="h-4 w-4" />
               </Button>
               <BookmarkButton
-                postSlug={post.id}
+                postId={post.id}
                 initialBookmarked={initialBookmarked}
                 disabled={!user?.id}
               />
@@ -332,7 +332,7 @@ export default async function PostBySlugPage({
               {/* Reaction Bar */}
               <div className="border-y py-4">
                 <PostReactionButtons
-                  postSlug={post.id}
+                  id={post.id}
                   initialLikeCount={initialLikeCount}
                   initialDislikeCount={initialDislikeCount}
                   initialUserReaction={initialUserReaction}
@@ -390,7 +390,7 @@ export default async function PostBySlugPage({
               <div className="mt-12">
                 <h2 className="text-2xl font-bold mb-8">Comments</h2>
                 <CommentsSection
-                  postSlug={post.id}
+                  postId={post.id}
                   currentUserId={user?.id ?? null}
                 />
               </div>

@@ -1,13 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
-// import { toggleCommentReaction } from '@/lib/data/reactions';
-// import { getCurrentUser } from '@/lib/auth'; // Implement as needed
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: Promise<{ _commentId: string }> },
+  { params }: { params: Promise<{ commentId: string }> },
 ) {
-  const { _commentId: commentId } = await params;
+  const { commentId } = await params;
   const supabase = await createServerSupabaseClient();
 
   const {
@@ -99,4 +97,4 @@ export async function POST(
     dislikeCount: dislikeCount ?? 0,
     userReaction,
   });
-}
+} 

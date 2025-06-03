@@ -360,7 +360,7 @@ export default function VideoManagementDashboard() {
 
       {/* Enhanced Main Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-5 bg-surface-elevated-2 border border-border-subtle">
+        <TabsList className="grid w-full grid-cols-5 bg-surface-elevated-2">
           <TabsTrigger
             value="library"
             className="flex items-center gap-1.5 micro-interaction nav-hover"
@@ -470,12 +470,12 @@ export default function VideoManagementDashboard() {
 
             {/* Enhanced Bulk Selection */}
             {videos.length > 0 && (
-              <div className="flex items-center gap-component pt-component border-t border-border-subtle">
+              <div className="flex items-center gap-component pt-2">
                 <input
                   type="checkbox"
                   checked={selectedVideos.size === videos.length}
                   onChange={selectAllVideos}
-                  className="h-4 w-4 rounded border-border-subtle accent-accent micro-interaction"
+                  className="h-4 w-4 rounded accent-accent micro-interaction"
                 />
                 <span className="text-sm text-content-secondary">
                   Select all videos

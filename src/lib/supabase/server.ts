@@ -3,7 +3,6 @@ import { createServerClient } from "@supabase/ssr";
 import type { Database } from "../database.types";
 
 export async function createServerSupabaseClient() {
-
   const cookieStore = await cookies();
 
   const supabase = createServerClient<Database>(
@@ -12,7 +11,23 @@ export async function createServerSupabaseClient() {
     {
       cookies: {
         get: async (name) => {
-          return (await cookieStore.get(name))?.value;
+          return cookieStore.get(name)?.value;
+        },
+        set: async (name, value, options) => {
+          try {
+            cookieStore.set(name, value, options);
+          } catch (error) {
+            // Server Component may be trying to set cookies - this is expected in some cases
+            console.warn('Warning: Cannot set cookies in Server Component context');
+          }
+        },
+        remove: async (name, options) => {
+          try {
+            cookieStore.set(name, '', { ...options, maxAge: 0 });
+          } catch (error) {
+            // Server Component may be trying to remove cookies - this is expected in some cases
+            console.warn('Warning: Cannot remove cookies in Server Component context');
+          }
         },
       },
     }

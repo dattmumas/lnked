@@ -22,7 +22,6 @@ interface FeaturedPost {
   post_type: 'text' | 'video';
   author: string | null;
   published_at: string | null;
-  slug: string;
 }
 
 export function FeaturedMedia({
@@ -53,8 +52,7 @@ export function FeaturedMedia({
           .from('posts')
           .select(
             `
-            id, title, subtitle, thumbnail_url, post_type, author, published_at,
-            slug: posts(slug)
+            id, title, subtitle, thumbnail_url, post_type, author, published_at
           `,
           )
           .eq('collective_id', collective.id)
@@ -72,8 +70,7 @@ export function FeaturedMedia({
         .from('posts')
         .select(
           `
-          id, title, subtitle, thumbnail_url, post_type, author, published_at,
-          slug: posts(slug)
+          id, title, subtitle, thumbnail_url, post_type, author, published_at
         `,
         )
         .in('id', postIds);
@@ -143,7 +140,7 @@ export function FeaturedMedia({
         {featuredPosts.map((post) => (
           <Link
             key={post.id}
-            href={`/posts/${post.slug || post.id}`}
+            href={`/posts/${post.id}`}
             className="group block"
           >
             <div className="featured-media-card rounded-lg border bg-card shadow-sm overflow-hidden hover:shadow-md transition-shadow">

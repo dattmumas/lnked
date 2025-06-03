@@ -276,6 +276,9 @@ export const useEnhancedPostEditor = (postId?: string) => {
       const dataToSave = {
         ...store.formData,
         author_id: user.id,
+        // Ensure selected_collectives is properly included
+        selected_collectives: store.selectedCollectives,
+        collective_sharing_settings: store.collectiveSharingSettings,
       };
       return autoSave.mutateAsync(dataToSave);
     }
@@ -310,6 +313,9 @@ export const useEnhancedPostEditor = (postId?: string) => {
         status: 'active' as const,
         is_public: true,
         published_at: new Date().toISOString(),
+        // Ensure selected_collectives is properly included
+        selected_collectives: store.selectedCollectives,
+        collective_sharing_settings: store.collectiveSharingSettings,
       };
       
       store.updateFormData({

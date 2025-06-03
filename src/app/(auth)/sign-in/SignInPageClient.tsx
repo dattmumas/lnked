@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
-import { useRouter } from 'next/navigation.js';
+import { useRouter, useSearchParams } from 'next/navigation.js';
 import AuthForm from '@/components/app/auth/AuthForm';
 import {
   RateLimiter,
@@ -14,6 +14,17 @@ import {
 
 export default function SignInPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const purge = searchParams.get('purge') === '1';
+
+  // Clear stale browser tokens if instructed by middleware
+  useEffect(() => {
+    if (purge) {
+      const supabase = createSupabaseBrowserClient();
+      supabase.auth.signOut();
+    }
+  }, [purge]);
+
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [rateLimitMessage, setRateLimitMessage] = useState<string | null>(null);

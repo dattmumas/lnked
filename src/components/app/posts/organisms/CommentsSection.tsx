@@ -27,7 +27,7 @@ interface Comment {
 }
 
 interface CommentsSectionProps {
-  postSlug: string;
+  postId: string;
   currentUserId: string | null;
 }
 
@@ -50,7 +50,7 @@ const formatTimeAgo = (dateString: string) => {
 };
 
 export default function CommentsSection({
-  postSlug,
+  postId,
   currentUserId,
 }: CommentsSectionProps) {
   const [comments, setComments] = useState<Comment[]>([]);
@@ -66,16 +66,16 @@ export default function CommentsSection({
   }, []);
 
   useEffect(() => {
-    fetch(`/api/posts/${postSlug}/comments`)
+    fetch(`/api/posts/${postId}/comments`)
       .then((res) => res.json())
       .then((data) => setComments(data.comments || []))
       .finally(() => setIsLoading(false));
-  }, [postSlug]);
+  }, [postId]);
 
   const handlePost = async (parent_id?: string) => {
     if (!newComment.trim()) return;
     setPosting(true);
-    const res = await fetch(`/api/posts/${postSlug}/comments`, {
+    const res = await fetch(`/api/posts/${postId}/comments`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ content: newComment, parent_id }),

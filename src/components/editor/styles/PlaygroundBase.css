@@ -721,9 +721,19 @@ i.page-break,
   display: block;
   color: #444;
   margin: 5px 0;
-  background-color: rgba(238, 238, 238, 0.7);
+  background-color: rgba(0, 0, 0, 0.08);
   padding: 5px 10px;
   border-radius: 10px;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .switch {
+    color: #e5e5e5;
+    background-color: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+  }
 }
 
 #rich-text-switch {
@@ -744,7 +754,7 @@ i.page-break,
 }
 
 .switch button {
-  background-color: rgb(206, 208, 212);
+  background-color: #d1d5db; /* Light gray for inactive state */
   height: 24px;
   box-sizing: border-box;
   border-radius: 12px;
@@ -754,12 +764,22 @@ i.page-break,
   position: relative;
   outline: none;
   cursor: pointer;
-  transition: background-color 0.1s;
+  transition: background-color 0.2s ease;
   border: 2px solid transparent;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+
+/* Dark mode switch button */
+@media (prefers-color-scheme: dark) {
+  .switch button {
+    background-color: #374151; /* Dark gray for inactive state */
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  }
 }
 
 .switch button:focus-visible {
-  border-color: blue;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3);
 }
 
 .switch button span {
@@ -771,11 +791,27 @@ i.page-break,
   height: 20px;
   border-radius: 12px;
   background-color: white;
-  transition: transform 0.2s;
+  transition: transform 0.2s ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+/* Dark mode switch span */
+@media (prefers-color-scheme: dark) {
+  .switch button span {
+    background-color: #f9fafb;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+  }
 }
 
 .switch button[aria-checked='true'] {
-  background-color: rgb(24, 119, 242);
+  background-color: #3b82f6; /* Blue for active state */
+}
+
+/* Dark mode active state */
+@media (prefers-color-scheme: dark) {
+  .switch button[aria-checked='true'] {
+    background-color: #2563eb; /* Darker blue for dark mode */
+  }
 }
 
 .switch button[aria-checked='true'] span {

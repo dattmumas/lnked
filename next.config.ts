@@ -14,10 +14,12 @@ const nextConfig: NextConfig = {
     '@lexical/markdown',
   ],
   images: {
+    loader: 'custom',
+    loaderFile: './supabase-image-loader.js',
     remotePatterns: [
       {
         protocol: 'https',
-        hostname: '**.supabase.co',
+        hostname: '**.supabase.co',        
       },
       {
         protocol: 'https',
@@ -29,6 +31,8 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  
+
   // Redirects - Consider removing these for better performance and simplicity
   // Most apps don't need vanity URLs and they add complexity + performance overhead
   async redirects() {
@@ -80,31 +84,7 @@ const nextConfig: NextConfig = {
       use: 'ignore-loader',
     });
 
-    // Optimize webpack configuration for better bundle sizes
-    if (config.optimization && !isServer) {
-      config.optimization.splitChunks = {
-        chunks: 'all',
-        cacheGroups: {
-          vendor: {
-            test: /[\\/]node_modules[\\/]/,
-            name: 'vendors',
-            chunks: 'all',
-          },
-          lexical: {
-            test: /[\\/]node_modules[\\/]@?lexical/,
-            name: 'lexical',
-            chunks: 'all',
-            priority: 10,
-          },
-          radix: {
-            test: /[\\/]node_modules[\\/]@radix-ui/,
-            name: 'radix',
-            chunks: 'all',
-            priority: 10,
-          },
-        },
-      };
-    }
+    // Let Next.js handle chunk splitting automatically to avoid MIME type conflicts
     return config;
   },
 };

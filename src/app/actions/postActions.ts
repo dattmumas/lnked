@@ -65,6 +65,7 @@ export async function createPost(
     content,
     is_public,
     collectiveId,
+    selected_collectives = [],
     published_at,
     author,
     seo_title,
@@ -72,39 +73,61 @@ export async function createPost(
   } = validatedFields.data;
   let collectiveSlug: string | null = null;
 
-  if (collectiveId) {
-    const { data: collectiveData, error: collectiveCheckError } = await supabase
-      .from('collectives')
-      .select('id, owner_id, slug')
-      .eq('id', collectiveId as string)
-      .single<{ id: string; owner_id: string; slug: string }>();
-    if (collectiveCheckError || !collectiveData) {
-      return {
-        error: 'Collective not found or error fetching it.',
-        fieldErrors: { collectiveId: ['Invalid collective.'] },
-      };
-    }
-    collectiveSlug = collectiveData.slug;
-    const isOwner = collectiveData.owner_id === user.id;
-    let isMember = false;
-    if (!isOwner) {
-      const { data: membership, error: memberCheckError } = await supabase
-        .from('collective_members')
-        .select('role')
-        .eq('collective_id', collectiveId as string)
-        .eq('user_id', user.id as string)
-        .maybeSingle<{ role: string }>();
-      if (memberCheckError) {
-        return { error: 'Error checking collective membership.' };
+  // Handle legacy single collective or new multi-collective
+  const collectivesToValidate = collectiveId ? [collectiveId] : selected_collectives;
+  const collectiveValidationResults: Array<{ id: string; slug: string; canPost: boolean }> = [];
+
+  // Validate permissions for all selected collectives
+  if (collectivesToValidate.length > 0) {
+    for (const cId of collectivesToValidate) {
+      const { data: collectiveData, error: collectiveCheckError } = await supabase
+        .from('collectives')
+        .select('id, owner_id, slug')
+        .eq('id', cId)
+        .single<{ id: string; owner_id: string; slug: string }>();
+      
+      if (collectiveCheckError || !collectiveData) {
+        return {
+          error: `Collective not found: ${cId}`,
+          fieldErrors: { selected_collectives: [`Invalid collective: ${cId}`] },
+        };
       }
-      isMember = membership != null && ['admin', 'editor', 'author'].includes(membership.role);
+
+      const isOwner = collectiveData.owner_id === user.id;
+      let isMember = false;
+      
+      if (!isOwner) {
+        const { data: membership, error: memberCheckError } = await supabase
+          .from('collective_members')
+          .select('role')
+          .eq('collective_id', cId)
+          .eq('user_id', user.id)
+          .maybeSingle<{ role: string }>();
+          
+        if (memberCheckError) {
+          return { error: 'Error checking collective membership.' };
+        }
+        
+        isMember = membership != null && ['admin', 'editor', 'author'].includes(membership.role);
+      }
+
+      if (!isOwner && !isMember) {
+        return {
+          error: `You do not have permission to post to collective: ${collectiveData.slug}`,
+          fieldErrors: { selected_collectives: [`Permission denied for collective: ${collectiveData.slug}`] },
+        };
+      }
+
+      collectiveValidationResults.push({
+        id: cId,
+        slug: collectiveData.slug,
+        canPost: true
+      });
     }
 
-    if (!isOwner && !isMember) {
-      return {
-        error: 'You do not have permission to post to this collective.',
-        fieldErrors: { collectiveId: ['Permission denied.'] },
-      };
+    // For backward compatibility, set collectiveSlug to the first collective's slug
+    if (collectiveValidationResults.length > 0) {
+      collectiveSlug = collectiveValidationResults[0].slug;
     }
   }
 
@@ -150,11 +173,39 @@ export async function createPost(
     return { error: 'Failed to create post for an unknown reason.' };
   }
 
-  revalidatePath('/dashboard');
-  if (collectiveSlug) {
-    revalidatePath(`/collectives/${collectiveSlug}`);
-    revalidatePath(`/collectives/${collectiveSlug}/${postSlug}`);
+  // Create post-collective associations for multi-collective support
+  if (selected_collectives.length > 0) {
+    const postCollectiveInserts = selected_collectives.map(collectiveId => ({
+      post_id: newPost.id,
+      collective_id: collectiveId,
+      shared_by: user.id,
+      status: db_status === 'active' ? 'published' as const : 'draft' as const,
+      shared_at: new Date().toISOString(),
+      display_order: 0,
+      metadata: {}
+    }));
+
+    const { error: associationError } = await supabase
+      .from('post_collectives')
+      .insert(postCollectiveInserts);
+
+    if (associationError) {
+      console.error('Error creating post-collective associations:', associationError);
+      // Don't fail the entire operation, but log the error
+      console.warn('Post created successfully but collective associations failed');
+    }
   }
+
+  revalidatePath('/dashboard');
+  
+  // Revalidate paths for all associated collectives
+  if (collectiveValidationResults.length > 0) {
+    for (const collective of collectiveValidationResults) {
+      revalidatePath(`/collectives/${collective.slug}`);
+      revalidatePath(`/collectives/${collective.slug}/${postSlug}`);
+    }
+  }
+  
   revalidatePath(`/posts/${postSlug}`);
 
   return {

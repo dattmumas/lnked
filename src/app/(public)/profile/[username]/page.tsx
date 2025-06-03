@@ -130,8 +130,10 @@ export default async function ProfilePage({
   }
 
   const isOwner = authUser?.id === profile.id;
-  const subscriptionStatus = await getSubscriptionStatus('user', profile.id);
-  const isSubscribed = subscriptionStatus?.isSubscribed;
+  // TODO: Fix subscription status check for user profiles
+  // const subscriptionStatus = await getSubscriptionStatus('user', profile.id);
+  // const isSubscribed = subscriptionStatus?.isSubscribed;
+  const isSubscribed = false; // Temporarily disabled
 
   if (isOwner) {
     // Owners can see all their posts

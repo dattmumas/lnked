@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { ThumbsUp, ThumbsDown } from 'lucide-react';
 
 interface PostReactionButtonsProps {
-  postSlug: string;
+  id: string;
   initialLikeCount: number;
   initialDislikeCount: number;
   initialUserReaction: 'like' | 'dislike' | null;
@@ -13,7 +13,7 @@ interface PostReactionButtonsProps {
 }
 
 export default function PostReactionButtons({
-  postSlug,
+  id,
   initialLikeCount,
   initialDislikeCount,
   initialUserReaction,
@@ -53,7 +53,7 @@ export default function PostReactionButtons({
     setLikeCount(newLikeCount);
     setDislikeCount(newDislikeCount);
     startTransition(async () => {
-      const res = await fetch(`/api/posts/${postSlug}/reactions`, {
+      const res = await fetch(`/api/posts/${id}/reactions`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ type }),

@@ -4,7 +4,6 @@ export { default as PollComponent } from './PollComponent';
 export { StickyNode } from './StickyNode';
 export { default as StickyComponent } from './StickyComponent';
 export { MentionNode } from './MentionNode';
-export { AutocompleteNode } from './AutocompleteNode';
 export { EmojiNode } from './EmojiNode';
 export { EquationNode } from './EquationNode';
 export { default as EquationComponent } from './EquationComponent';

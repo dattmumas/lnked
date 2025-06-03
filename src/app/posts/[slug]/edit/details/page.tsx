@@ -23,8 +23,14 @@ import {
   Video,
   Upload,
   Sparkles,
+  Users,
+  Share2,
 } from 'lucide-react';
-import { usePostEditor } from '@/lib/hooks/use-post-editor';
+import { useEnhancedPostEditor } from '@/hooks/posts/useEnhancedPostEditor';
+import {
+  CollectiveSelectionSummary,
+  CollectiveValidationFeedback,
+} from '@/components/app/posts/collective-selection';
 
 export default function EditPostDetailsPage() {
   const router = useRouter();
@@ -39,7 +45,9 @@ export default function EditPostDetailsPage() {
     savePost,
     publishPost,
     setCurrentPage,
-  } = usePostEditor(postId);
+    selectedCollectives,
+    setSelectedCollectives,
+  } = useEnhancedPostEditor(postId);
 
   // Set current page for state management
   useEffect(() => {
@@ -55,14 +63,26 @@ export default function EditPostDetailsPage() {
   };
 
   const handlePublish = async () => {
-    await publishPost();
-    router.push('/dashboard/posts');
+    try {
+      await publishPost();
+      router.push('/dashboard/posts');
+    } catch (error) {
+      console.error('Failed to publish post:', error);
+      // Error will be handled by the enhanced error system
+    }
   };
 
   const handlePreview = () => {
     // Open preview in new tab
     window.open(`/posts/${postId}`, '_blank');
   };
+
+  const handleCollectiveSelectionChange = (collectiveIds: string[]) => {
+    setSelectedCollectives(collectiveIds);
+  };
+
+  // Check if post is ready to publish
+  const canPublish = formData.title.trim() && formData.content.trim();
 
   // Show loading state while post data is being fetched
   if (isLoading) {
@@ -116,20 +136,20 @@ export default function EditPostDetailsPage() {
             {formData.status === 'draft' && (
               <Button
                 onClick={handlePublish}
-                disabled={!formData.title.trim() || !formData.content.trim()}
+                disabled={!canPublish}
                 className="flex items-center gap-2"
               >
-                <Globe className="h-4 w-4" />
+                <Share2 className="h-4 w-4" />
                 Publish Post
               </Button>
             )}
             {formData.status === 'active' && (
               <Button
                 onClick={handlePublish}
-                disabled={!formData.title.trim() || !formData.content.trim()}
+                disabled={!canPublish}
                 className="flex items-center gap-2"
               >
-                <Globe className="h-4 w-4" />
+                <Share2 className="h-4 w-4" />
                 Update Post
               </Button>
             )}
@@ -159,6 +179,38 @@ export default function EditPostDetailsPage() {
               </CardContent>
             </Card>
           )}
+
+          {/* Collective Selection - Enhanced Feature */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Users className="h-5 w-5" />
+                Share with Collectives
+              </CardTitle>
+              <CardDescription>
+                Choose which collectives to share this post with. You can select
+                multiple collectives where you have posting permissions.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <CollectiveSelectionSummary
+                selectedCollectiveIds={selectedCollectives}
+                onSelectionChange={handleCollectiveSelectionChange}
+                placeholder="Select collectives to share your post with"
+                showRoles={true}
+              />
+
+              {/* Real-time validation feedback */}
+              <div className="mt-4">
+                <CollectiveValidationFeedback
+                  selectedCollectiveIds={selectedCollectives}
+                  minSelections={0}
+                  showPermissionWarnings={true}
+                  showCollectiveInfo={true}
+                />
+              </div>
+            </CardContent>
+          </Card>
 
           {/* Post Type Selection */}
           <Card>
@@ -276,13 +328,6 @@ export default function EditPostDetailsPage() {
               )}
 
               {/* AI generation option */}
-              <Button
-                variant="ghost"
-                className="w-full flex items-center gap-2"
-              >
-                <Sparkles className="h-4 w-4" />
-                Generate with AI
-              </Button>
             </CardContent>
           </Card>
 
@@ -334,7 +379,6 @@ export default function EditPostDetailsPage() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Globe className="h-5 w-5" />
                 Publishing Settings
               </CardTitle>
               <CardDescription>Control who can see your post</CardDescription>
@@ -348,7 +392,9 @@ export default function EditPostDetailsPage() {
                     <Lock className="h-5 w-5 text-orange-600" />
                   )}
                   <div>
-                    <Label className="text-base">Public Post</Label>
+                    <Label className="text-base">
+                      {formData.is_public ? 'Public Post' : 'Private Post'}
+                    </Label>
                     <p className="text-sm text-muted-foreground">
                       {formData.is_public
                         ? 'Anyone can see this post'
@@ -376,7 +422,32 @@ export default function EditPostDetailsPage() {
                     </span>
                   )}
                 </p>
+
+                {/* Show selected collectives count */}
+                {selectedCollectives.length > 0 && (
+                  <p className="text-sm text-blue-600 mt-1">
+                    Ready to share with {selectedCollectives.length} collective
+                    {selectedCollectives.length !== 1 ? 's' : ''}
+                  </p>
+                )}
               </div>
+
+              {/* Publishing requirements */}
+              {!canPublish && (
+                <div className="pt-4 border-t bg-amber-50 rounded-lg p-3">
+                  <h4 className="text-sm font-medium text-amber-800 mb-2">
+                    Before you can publish:
+                  </h4>
+                  <ul className="text-sm text-amber-700 space-y-1">
+                    {!formData.title.trim() && (
+                      <li>• Add a title to your post</li>
+                    )}
+                    {!formData.content.trim() && (
+                      <li>• Add content to your post</li>
+                    )}
+                  </ul>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>

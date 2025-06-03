@@ -31,6 +31,8 @@ const baseFields = {
   published_at: z.string().optional().nullable(),
   // Author field for editor byline (separate from author_id for flexibility)
   author: z.string().max(100).optional().nullable(),
+  // Multi-collective support
+  selected_collectives: z.array(z.string().uuid()).optional().default([]),
 };
 
 const applyPublishRefinement = <T extends z.ZodTypeAny>(schema: T) =>
@@ -99,6 +101,7 @@ export const BasePostServerSchema = z.object({
   subtitle: z.string().max(300).optional().nullable(),
   content: z.string().min(10, 'Content must be at least 10 characters'),
   collectiveId: z.string().uuid().optional(),
+  selected_collectives: z.array(z.string().uuid()).optional().default([]),
   author: z.string().max(100).optional().nullable(),
   seo_title: z.string().max(60).optional().nullable(),
   meta_description: z.string().max(160).optional().nullable(),
@@ -124,6 +127,7 @@ export const PostFormToDbSchema = z.object({
   content: z.string(),
   author_id: z.string().uuid(),
   collective_id: z.string().uuid().optional().nullable(),
+  selected_collectives: z.array(z.string().uuid()).optional().default([]),
   status: z.enum(['draft', 'published', 'scheduled']).transform((val) => {
     // Transform form status to database enum
     switch (val) {

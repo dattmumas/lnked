@@ -35,6 +35,17 @@ export default function SignUpPage() {
       return;
     }
 
+    const fullName = formData.fullName;
+    if (
+      !fullName ||
+      fullName.trim().length < 2 ||
+      fullName.trim().length > 100
+    ) {
+      setError('Full name must be between 2 and 100 characters long');
+      setIsLoading(false);
+      return;
+    }
+
     // Validate username format
     const username = formData.username;
     if (!username || username.length < 3 || username.length > 20) {
@@ -76,6 +87,7 @@ export default function SignUpPage() {
             options: {
               data: {
                 username: formData.username,
+                full_name: formData.fullName,
               },
               // emailRedirectTo: `${window.location.origin}/auth/callback`, // Uncomment if email confirmation is enabled
             },

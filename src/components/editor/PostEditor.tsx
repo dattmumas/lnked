@@ -15,9 +15,9 @@ interface PostEditorProps {
   onChange?: (json: string) => void;
 }
 
-// Dynamically import the actual editor to avoid SSR issues
-const LexicalPlaygroundEditor = dynamic(
-  () => import('./LexicalPlaygroundEditorInternal'),
+// Dynamically import the optimized editor to avoid SSR issues
+const LexicalOptimizedEditorComponent = dynamic(
+  () => import('./LexicalOptimizedEditor'),
   {
     ssr: false,
     loading: () => (
@@ -49,7 +49,7 @@ const LexicalPlaygroundEditor = dynamic(
 );
 
 function PostEditor(props: PostEditorProps) {
-  return <LexicalPlaygroundEditor {...props} />;
+  return <LexicalOptimizedEditorComponent {...props} />;
 }
 
 export default memo(PostEditor);

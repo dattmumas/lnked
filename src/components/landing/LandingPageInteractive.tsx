@@ -175,6 +175,9 @@ export default function LandingPageInteractive() {
       document.body.appendChild(canvasEl);
     }
 
+    // Store resize cleanup function to call in main cleanup
+    let resizeCleanup: (() => void) | null = null;
+
     const canvasElement = document.getElementById(
       'canvas-bg',
     ) as HTMLCanvasElement;
@@ -190,6 +193,11 @@ export default function LandingPageInteractive() {
         };
 
         window.addEventListener('resize', handleResize);
+
+        // Store cleanup function
+        resizeCleanup = () => {
+          window.removeEventListener('resize', handleResize);
+        };
 
         class Particle {
           x: number;
@@ -307,10 +315,6 @@ export default function LandingPageInteractive() {
             }, 100 * index);
           });
         });
-
-        return () => {
-          window.removeEventListener('resize', handleResize);
-        };
       }
     }
 
@@ -334,10 +338,37 @@ export default function LandingPageInteractive() {
     }
 
     return () => {
+      // Remove event listeners
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mousemove', handleHeroMouseMove);
       window.removeEventListener('scroll', handleParallaxScroll);
       window.removeEventListener('scroll', handleOptimizedScroll);
+
+      // Remove created DOM elements to prevent persistence across pages
+      const canvasElement = document.getElementById('canvas-bg');
+      if (canvasElement) {
+        canvasElement.remove();
+      }
+
+      const cursorElement = document.querySelector('.cursor');
+      if (cursorElement) {
+        cursorElement.remove();
+      }
+
+      const followerElement = document.querySelector('.cursor-follower');
+      if (followerElement) {
+        followerElement.remove();
+      }
+
+      const scrollProgressElement = document.querySelector('.scroll-progress');
+      if (scrollProgressElement) {
+        scrollProgressElement.remove();
+      }
+
+      // Call resize cleanup function
+      if (resizeCleanup) {
+        resizeCleanup();
+      }
     };
   }, []);
 

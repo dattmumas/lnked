@@ -5,13 +5,13 @@ import { Button } from '@/components/ui/button';
 import { Bookmark, BookmarkCheck } from 'lucide-react';
 
 interface BookmarkButtonProps {
-  postSlug: string;
+  postId: string;
   initialBookmarked: boolean;
   disabled?: boolean;
 }
 
 export default function BookmarkButton({
-  postSlug,
+  postId,
   initialBookmarked,
   disabled = false,
 }: BookmarkButtonProps) {
@@ -23,7 +23,7 @@ export default function BookmarkButton({
     const prevBookmarked = bookmarked;
     setBookmarked(!bookmarked);
     startTransition(async () => {
-      const res = await fetch(`/api/posts/${postSlug}/bookmark`, {
+      const res = await fetch(`/api/posts/${postId}/bookmark`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
       });

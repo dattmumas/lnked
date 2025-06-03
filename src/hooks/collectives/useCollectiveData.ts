@@ -39,7 +39,7 @@ export function useCollectiveData(slug: string) {
   });
 }
 
-export function useCollectiveMembers(collectiveId: string) {
+export function useCollectiveMembers(collectiveId: string, options?: any) {
   return useQuery({
     queryKey: ['collective-members', collectiveId],
     queryFn: async () => {
@@ -57,23 +57,21 @@ export function useCollectiveMembers(collectiveId: string) {
       if (error) throw error;
       return data as CollectiveMember[];
     },
+    ...options, // Allow overriding with enabled: false
   });
 }
 
-export function useCollectiveStats(collectiveId: string) {
+export function useCollectiveStats(collectiveId: string, options?: any) {
   return useQuery({
     queryKey: ['collective-stats', collectiveId],
     queryFn: async () => {
       const supabase = createSupabaseBrowserClient();
       
-      // Use the optimized RPC function instead of separate count queries
-      // Type assertion needed since RPC function isn't in generated types yet
       const { data, error } = await (supabase as any)
         .rpc('get_collective_stats', { collective_id: collectiveId });
 
       if (error) throw error;
       
-      // Parse the JSON response from the RPC function
       const stats = data as {
         member_count: number;
         follower_count: number;
@@ -84,8 +82,8 @@ export function useCollectiveStats(collectiveId: string) {
         followerCount: stats.follower_count || 0,
       };
     },
-    // Enable caching for 5 minutes to reduce database load
     staleTime: 5 * 60 * 1000, // 5 minutes
     gcTime: 10 * 60 * 1000, // 10 minutes
+    ...options, // Allow overriding with enabled: false
   });
 }

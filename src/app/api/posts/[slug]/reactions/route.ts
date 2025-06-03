@@ -7,19 +7,25 @@ export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ slug: string }> },
 ) {
-  const { slug } = await params;
+  const { slug: postId } = await params;
   const supabase = await createServerSupabaseClient();
 
+  // Validate that postId is a valid UUID
+  const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(postId);
+  if (!isUUID) {
+    return NextResponse.json({ error: 'Invalid post ID' }, { status: 400 });
+  }
+
+  // Check if post exists
   const { data: postRecord } = await supabase
     .from('posts')
     .select('id')
-    .eq('slug', slug)
+    .eq('id', postId)
     .maybeSingle<{ id: string }>();
 
   if (!postRecord) {
     return NextResponse.json({ error: 'Post not found' }, { status: 404 });
   }
-  const postId = postRecord.id;
 
   const {
     data: { user },

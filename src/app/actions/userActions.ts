@@ -6,6 +6,12 @@ import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import { getStripe } from '@/lib/stripe';
+import { 
+  AVATAR_CONFIG, 
+  generateAvatarFilename, 
+  extractFilePathFromUrl, 
+  isSupabaseStorageUrl 
+} from '@/lib/utils/avatar';
 
 // Schema for validating user profile updates
 // Adjust fields and validation rules as necessary
@@ -122,39 +128,11 @@ export async function updateUserProfile(
     }
   }
 
-  let avatarUrlToSave: string | null = avatar_url || null;
-
-  // Handle new avatar upload if a data URL is provided
-  if (avatar_url && avatar_url.startsWith('data:')) {
-    const match = avatar_url.match(/^data:(.+);base64,(.*)$/);
-    if (match) {
-      const mimeType = match[1];
-      const base64Data = match[2];
-      const buffer = Buffer.from(base64Data, 'base64');
-      const extension = mimeType.split('/')[1] || 'png';
-      const filePath = `user-${user.id}/${Date.now()}.${extension}`;
-
-      const { error: uploadError } = await supabaseAdmin.storage
-        .from('avatars')
-        .upload(filePath, buffer, {
-          contentType: mimeType,
-          upsert: true,
-        });
-
-      if (uploadError) {
-        console.error('Error uploading avatar:', uploadError);
-        return {
-          success: false,
-          error: `Failed to upload avatar: ${uploadError.message}`,
-        };
-      }
-
-      const { data: publicUrlData } = supabaseAdmin.storage
-        .from('avatars')
-        .getPublicUrl(filePath);
-      avatarUrlToSave = publicUrlData.publicUrl;
-    }
-  }
+  // For avatar_url, we expect either:
+  // 1. null/empty (no avatar or removing avatar)
+  // 2. A valid URL (keeping existing avatar or setting new one)
+  // The actual file upload should be handled separately via a dedicated upload endpoint
+  const avatarUrlToSave: string | null = avatar_url || null;
 
   const profileUpdate: TablesUpdate<'users'> = {
     full_name,
@@ -181,9 +159,143 @@ export async function updateUserProfile(
   // Revalidate paths that display user profile information
   revalidatePath('/dashboard');
   revalidatePath('/dashboard/profile/edit');
-  // Revalidate dashboard but no longer revalidate old user profile path
+  revalidatePath('/dashboard/settings');
 
   return { success: true, message: 'Profile updated successfully.' };
+}
+
+// New function specifically for handling avatar uploads
+export async function uploadAvatar(
+  formData: FormData
+): Promise<{ success: boolean; avatarUrl?: string; error?: string }> {
+  const supabase = await createServerSupabaseClient();
+
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+
+  if (authError || !user) {
+    return {
+      success: false,
+      error: 'You must be logged in to upload an avatar.',
+    };
+  }
+
+  const file = formData.get('avatar') as File;
+  if (!file) {
+    return {
+      success: false,
+      error: 'No file provided.',
+    };
+  }
+
+  try {
+    // Get current user data to check for existing avatar
+    const { data: currentUser } = await supabase
+      .from('users')
+      .select('avatar_url')
+      .eq('id', user.id)
+      .single();
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      return {
+        success: false,
+        error: 'File must be an image (JPEG, PNG, WebP, etc.).',
+      };
+    }
+
+    // Validate file size
+    if (file.size > AVATAR_CONFIG.maxSize) {
+      return {
+        success: false,
+        error: 'Image size must be less than 10MB.',
+      };
+    }
+
+    // Generate file path using utility function
+    const filePath = generateAvatarFilename(user.id, file.type);
+
+    // Upload new avatar to Supabase storage
+    const { error: uploadError } = await supabaseAdmin.storage
+      .from(AVATAR_CONFIG.bucket)
+      .upload(filePath, file, {
+        contentType: file.type,
+        upsert: false, // Don't overwrite, create new file
+        cacheControl: AVATAR_CONFIG.cacheControl,
+      });
+
+    if (uploadError) {
+      console.error('Error uploading avatar to Supabase storage:', uploadError);
+      return {
+        success: false,
+        error: `Failed to upload avatar: ${uploadError.message}`,
+      };
+    }
+
+    // Get the public URL for the new avatar
+    const { data: publicUrlData } = supabaseAdmin.storage
+      .from(AVATAR_CONFIG.bucket)
+      .getPublicUrl(filePath);
+
+    if (!publicUrlData.publicUrl) {
+      return {
+        success: false,
+        error: 'Failed to generate avatar URL.',
+      };
+    }
+
+    const avatarUrl = publicUrlData.publicUrl;
+
+    // Update user's avatar_url in database
+    const { error: updateError } = await supabase
+      .from('users')
+      .update({ avatar_url: avatarUrl })
+      .eq('id', user.id);
+
+    if (updateError) {
+      console.error('Error updating user avatar URL:', updateError);
+      return {
+        success: false,
+        error: 'Failed to update avatar URL in database.',
+      };
+    }
+
+    // Clean up old avatar if it exists and was stored in our bucket
+    if (currentUser?.avatar_url && isSupabaseStorageUrl(currentUser.avatar_url)) {
+      try {
+        const oldFilePath = extractFilePathFromUrl(currentUser.avatar_url, AVATAR_CONFIG.bucket);
+        
+        if (oldFilePath) {
+          // Delete old avatar (don't await to avoid blocking the response)
+          supabaseAdmin.storage
+            .from(AVATAR_CONFIG.bucket)
+            .remove([oldFilePath])
+            .catch(error => {
+              console.warn('Could not delete old avatar:', error.message);
+            });
+        }
+      } catch (error) {
+        // Log warning but don't fail the operation
+        console.warn('Error cleaning up old avatar:', error);
+      }
+    }
+
+    // Revalidate paths that display user profile information
+    revalidatePath('/dashboard');
+    revalidatePath('/dashboard/profile/edit');
+    revalidatePath('/dashboard/settings');
+
+    return { success: true, avatarUrl };
+
+  } catch (error) {
+    console.error('Error processing avatar upload:', error);
+    return {
+      success: false,
+      error: 'Failed to process avatar upload. Please try again.',
+    };
+  }
 }
 
 export async function deleteUserAccount(): Promise<{

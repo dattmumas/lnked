@@ -6,14 +6,14 @@ export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ slug: string }> },
 ) {
-  const { slug } = await params;
+  const { slug: postIdOrSlug } = await params;
   const supabase = await createServerSupabaseClient();
 
   let postId: string;
 
   // Handle video slugs (format: video-{videoId})
-  if (slug.startsWith('video-')) {
-    const videoId = slug.replace('video-', '');
+  if (postIdOrSlug.startsWith('video-')) {
+    const videoId = postIdOrSlug.replace('video-', '');
     try {
       const post = await getOrCreatePostForVideo(videoId);
       postId = post.id;
@@ -22,11 +22,16 @@ export async function GET(
       return NextResponse.json({ error: error.message }, { status: 404 });
     }
   } else {
-    // Handle regular post IDs (the slug parameter is actually a post ID)
+    // Handle regular post IDs - validate UUID format
+    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(postIdOrSlug);
+    if (!isUUID) {
+      return NextResponse.json({ error: 'Invalid post ID' }, { status: 400 });
+    }
+
     const { data: postRecord } = await supabase
       .from('posts')
       .select('id')
-      .eq('id', slug)
+      .eq('id', postIdOrSlug)
       .maybeSingle<{ id: string }>();
 
     if (!postRecord) {
@@ -48,14 +53,14 @@ export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ slug: string }> },
 ) {
-  const { slug } = await params;
+  const { slug: postIdOrSlug } = await params;
   const supabase = await createServerSupabaseClient();
 
   let postId: string;
 
   // Handle video slugs (format: video-{videoId})
-  if (slug.startsWith('video-')) {
-    const videoId = slug.replace('video-', '');
+  if (postIdOrSlug.startsWith('video-')) {
+    const videoId = postIdOrSlug.replace('video-', '');
     try {
       const post = await getOrCreatePostForVideo(videoId);
       postId = post.id;
@@ -64,11 +69,16 @@ export async function POST(
       return NextResponse.json({ error: error.message }, { status: 404 });
     }
   } else {
-    // Handle regular post IDs (the slug parameter is actually a post ID)
+    // Handle regular post IDs - validate UUID format
+    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(postIdOrSlug);
+    if (!isUUID) {
+      return NextResponse.json({ error: 'Invalid post ID' }, { status: 400 });
+    }
+
     const { data: postRecord } = await supabase
       .from('posts')
       .select('id')
-      .eq('id', slug)
+      .eq('id', postIdOrSlug)
       .maybeSingle<{ id: string }>();
 
     if (!postRecord) {

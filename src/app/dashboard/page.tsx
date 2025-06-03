@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import RecentPostRow from '@/components/app/dashboard/organisms/RecentPostRow';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { redirect } from 'next/navigation';
 
 const MAX_RECENT_PERSONAL_POSTS_DISPLAY = 3;
 
@@ -37,18 +38,16 @@ export const dynamic = 'force-dynamic';
 export default async function DashboardManagementPage() {
   const supabase = await createServerSupabaseClient();
 
-  // OPTIMIZATION: Removed redundant auth check since middleware already protects /dashboard/* routes
-  // Get user from middleware-verified session for RPC calls
+  // Get session to retrieve user reliably
   const {
-    data: { user },
-  } = await supabase.auth.getUser();
+    data: { session },
+  } = await supabase.auth.getSession();
 
-  if (!user) {
-    // This should never happen due to middleware, but safety check
-    throw new Error('User not found - middleware should have redirected');
+  if (!session?.user) {
+    redirect('/sign-in?redirect=/dashboard');
   }
 
-  const userId = user.id;
+  const userId = session.user.id;
 
   // OPTIMIZATION: Use parallel queries instead of serial
   // Reduced from 7 serial queries to 2 parallel RPC calls
@@ -60,14 +59,14 @@ export default async function DashboardManagementPage() {
       // Single RPC call replaces 4 separate queries (subscriptions, follows, views, likes)
       // Using type assertion since RPC function is not in generated types yet
       (supabase as any)
-        .rpc('get_user_dashboard_stats', { user_id: userId })
+        .rpc('get_user_dashboard_stats', { user_id_param: userId })
         .single(),
 
       // Single RPC call replaces 3 separate queries (profile, posts, collectives)
       // Using type assertion since RPC function is not in generated types yet
       (supabase as any)
         .rpc('get_user_dashboard_content', {
-          user_id: userId,
+          user_id_param: userId,
           posts_limit: MAX_RECENT_PERSONAL_POSTS_DISPLAY,
         })
         .single(),

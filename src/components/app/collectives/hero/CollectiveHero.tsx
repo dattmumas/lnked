@@ -17,7 +17,9 @@ interface CollectiveHeroProps {
 
 export function CollectiveHero({ collectiveSlug }: CollectiveHeroProps) {
   const { data: collective, isLoading } = useCollectiveData(collectiveSlug);
-  const { data: stats } = useCollectiveStats(collective?.id || '');
+  const { data: stats } = useCollectiveStats(collective?.id!, {
+    enabled: !!collective?.id,
+  });
   const [currentUser, setCurrentUser] = useState<{ id: string } | null>(null);
   const [isLoadingUser, setIsLoadingUser] = useState(true);
 

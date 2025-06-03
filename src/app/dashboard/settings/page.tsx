@@ -67,6 +67,7 @@ export default async function UserSettingsPage() {
     full_name: userProfile.full_name || '',
     username: userProfile.username || '',
     bio: userProfile.bio || '',
+    avatar_url: userProfile.avatar_url || '',
     tags_string: Array.isArray(userProfile.tags)
       ? userProfile.tags.join(', ')
       : '',

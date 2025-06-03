@@ -37,7 +37,7 @@ interface ValidationMessage {
 export function CollectiveValidationFeedback({
   selectedCollectiveIds,
   maxSelections,
-  minSelections = 1,
+  minSelections = 0,
   showPermissionWarnings = true,
   showSelectionLimits = true,
   showCollectiveInfo = true,
@@ -56,8 +56,8 @@ export function CollectiveValidationFeedback({
     const messages: ValidationMessage[] = [];
     const selectedCount = selectedCollectiveIds.length;
 
-    // Check minimum selections
-    if (selectedCount < minSelections) {
+    // Check minimum selections - only show if minSelections > 0
+    if (minSelections > 0 && selectedCount < minSelections) {
       messages.push({
         level: 'error',
         message: `You must select at least ${minSelections} collective${minSelections !== 1 ? 's' : ''} to publish this post.`,
@@ -105,17 +105,26 @@ export function CollectiveValidationFeedback({
       }
     }
 
-    // Success message
+    // Success message - updated logic
     if (
       selectedCount >= minSelections &&
       (!maxSelections || selectedCount <= maxSelections) &&
-      selectedCollectives.every((c) => c.can_post)
+      (selectedCollectives.length === 0 ||
+        selectedCollectives.every((c) => c.can_post))
     ) {
-      messages.push({
-        level: 'success',
-        message: `Ready to share with ${selectedCount} collective${selectedCount !== 1 ? 's' : ''}.`,
-        icon: CheckCircle2,
-      });
+      if (selectedCount > 0) {
+        messages.push({
+          level: 'success',
+          message: `Ready to share with ${selectedCount} collective${selectedCount !== 1 ? 's' : ''}.`,
+          icon: CheckCircle2,
+        });
+      } else if (minSelections === 0) {
+        messages.push({
+          level: 'info',
+          message: 'Post will be published to your personal newsletter only.',
+          icon: CheckCircle2,
+        });
+      }
     }
 
     // Info about collective reach
@@ -266,14 +275,14 @@ function ValidationAlert({ message }: ValidationAlertProps) {
 export function CompactCollectiveValidationFeedback(
   props: CollectiveValidationFeedbackProps,
 ) {
-  const { selectedCollectiveIds, maxSelections, minSelections = 1 } = props;
+  const { selectedCollectiveIds, maxSelections, minSelections = 0 } = props;
   const selectedCount = selectedCollectiveIds.length;
 
   let status: 'valid' | 'invalid' | 'warning' = 'valid';
   let message = '';
   let icon = CheckCircle2;
 
-  if (selectedCount < minSelections) {
+  if (minSelections > 0 && selectedCount < minSelections) {
     status = 'invalid';
     message = `Select ${minSelections - selectedCount} more`;
     icon = AlertCircle;
@@ -287,7 +296,11 @@ export function CompactCollectiveValidationFeedback(
     icon = AlertTriangle;
   } else {
     status = 'valid';
-    message = `${selectedCount} selected`;
+    if (selectedCount > 0) {
+      message = `${selectedCount} selected`;
+    } else {
+      message = 'Personal only';
+    }
     icon = CheckCircle2;
   }
 

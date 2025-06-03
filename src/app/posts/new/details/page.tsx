@@ -78,10 +78,7 @@ export default function NewPostDetailsPage() {
   };
 
   // Check if post is ready to publish
-  const canPublish =
-    formData.title.trim() &&
-    formData.content.trim() &&
-    selectedCollectives.length > 0;
+  const canPublish = formData.title.trim() && formData.content.trim();
 
   return (
     <div className="min-h-screen bg-background">
@@ -154,7 +151,7 @@ export default function NewPostDetailsPage() {
               <div className="mt-4">
                 <CollectiveValidationFeedback
                   selectedCollectiveIds={selectedCollectives}
-                  minSelections={1}
+                  minSelections={0}
                   showPermissionWarnings={true}
                   showCollectiveInfo={true}
                 />
@@ -265,13 +262,6 @@ export default function NewPostDetailsPage() {
               )}
 
               {/* AI generation option */}
-              <Button
-                variant="ghost"
-                className="w-full flex items-center gap-2"
-              >
-                <Sparkles className="h-4 w-4" />
-                Generate with AI
-              </Button>
             </CardContent>
           </Card>
 
@@ -337,7 +327,9 @@ export default function NewPostDetailsPage() {
                     <Lock className="h-5 w-5 text-orange-600" />
                   )}
                   <div>
-                    <Label className="text-base">Public Post</Label>
+                    <Label className="text-base">
+                      {formData.is_public ? 'Public Post' : 'Private Post'}
+                    </Label>
                     <p className="text-sm text-muted-foreground">
                       {formData.is_public
                         ? 'Anyone can see this post'
@@ -387,9 +379,6 @@ export default function NewPostDetailsPage() {
                     )}
                     {!formData.content.trim() && (
                       <li>• Add content to your post</li>
-                    )}
-                    {selectedCollectives.length === 0 && (
-                      <li>• Select at least one collective to share with</li>
                     )}
                   </ul>
                 </div>

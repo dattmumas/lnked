@@ -32,6 +32,8 @@ interface AuthFormFieldsProps {
   setEmail: (_value: string) => void;
   password: string;
   setPassword: (_value: string) => void;
+  fullName?: string; // Add full_name
+  setFullName?: (_value: string) => void;
   username?: string;
   setUsername?: (_value: string) => void;
 }
@@ -66,10 +68,32 @@ const AuthFormFieldsComponent: React.FC<AuthFormFieldsProps> = ({
   setEmail,
   password,
   setPassword,
+  fullName,
+  setFullName,
   username,
   setUsername,
 }) => (
   <>
+    {/* Full Name field (required for sign-up) */}
+    {mode === 'signUp' && setFullName && (
+      <div className="space-y-2">
+        <Label htmlFor="fullName">Full Name</Label>
+        <Input
+          id="fullName"
+          type="text"
+          placeholder="John Doe"
+          required
+          value={fullName}
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+            setFullName(e.target.value)
+          }
+          disabled={isLoading}
+          minLength={2}
+          maxLength={100}
+          title="Full name must be 2-100 characters long"
+        />
+      </div>
+    )}
     {mode === 'signUp' && setUsername && (
       <div className="space-y-2">
         <Label htmlFor="username">Username</Label>
@@ -109,6 +133,7 @@ const AuthFormFieldsComponent: React.FC<AuthFormFieldsProps> = ({
           setEmail(e.target.value)
         }
         disabled={isLoading}
+        autoComplete="email"
       />
     </div>
     <div className="space-y-2">
@@ -124,6 +149,7 @@ const AuthFormFieldsComponent: React.FC<AuthFormFieldsProps> = ({
           setPassword(e.target.value)
         }
         disabled={isLoading}
+        autoComplete={mode === 'signUp' ? 'new-password' : 'current-password'}
       />
     </div>
   </>
@@ -163,12 +189,14 @@ export default function AuthForm({
 }: AuthFormProps) {
   const [email, setEmail] = useState<string>('');
   const [password, setPassword] = useState<string>('');
+  const [fullName, setFullName] = useState<string>('');
   const [username, setUsername] = useState<string>('');
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const formData: Record<string, string> = { email, password };
     if (mode === 'signUp') {
+      formData.fullName = fullName;
       formData.username = username;
     }
     onSubmit(formData);
@@ -209,6 +237,8 @@ export default function AuthForm({
               setPassword={setPassword}
               username={mode === 'signUp' ? username : undefined}
               setUsername={mode === 'signUp' ? setUsername : undefined}
+              fullName={mode === 'signUp' ? fullName : undefined}
+              setFullName={mode === 'signUp' ? setFullName : undefined}
             />
             {error && (
               <Alert variant="destructive" className="mt-4">

@@ -152,8 +152,15 @@ export function CreateConversationModal({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-background rounded-lg shadow-lg w-full max-w-md max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      {/* Backdrop - completely opaque */}
+      <div
+        className="absolute inset-0 bg-white dark:bg-gray-900"
+        onClick={() => onOpenChange(false)}
+      />
+
+      {/* Modal content */}
+      <div className="relative bg-background border shadow-xl rounded-lg w-full max-w-md max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b">
           <h2 className="text-lg font-semibold">Create New Conversation</h2>

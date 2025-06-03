@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
 import type { User, Session } from '@supabase/supabase-js';
 import { Button } from './ui/button';
@@ -37,6 +37,7 @@ import {
 import ModeToggle from '@/components/app/nav/ModeToggle';
 import SearchBar from '@/components/app/nav/SearchBar';
 import { NotificationDropdown } from '@/components/notifications/NotificationDropdown';
+import { getOptimizedAvatarUrl } from '@/lib/utils/avatar';
 
 const publicNavItems = [
   {
@@ -89,6 +90,28 @@ export default function ModernNavbar({
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
 
   const supabase = createSupabaseBrowserClient();
+
+  // Memoized optimized avatar URLs for different sizes in the navbar
+  const optimizedAvatarUrls = useMemo(() => {
+    if (!userMetadata.avatar_url) return null;
+
+    return {
+      // Small avatar for dropdown menu (36px)
+      small: getOptimizedAvatarUrl(userMetadata.avatar_url, {
+        width: 36,
+        height: 36,
+        quality: 80,
+        resize: 'cover',
+      }),
+      // Medium avatar for mobile sheet (48px)
+      medium: getOptimizedAvatarUrl(userMetadata.avatar_url, {
+        width: 48,
+        height: 48,
+        quality: 80,
+        resize: 'cover',
+      }),
+    };
+  }, [userMetadata.avatar_url]);
 
   useEffect(() => {
     if (initialUser === undefined) {
@@ -285,7 +308,10 @@ export default function ModernNavbar({
                     >
                       <Avatar className="h-9 w-9">
                         <AvatarImage
-                          src={userMetadata.avatar_url}
+                          src={
+                            optimizedAvatarUrls?.small ||
+                            userMetadata.avatar_url
+                          }
                           alt={userMetadata.full_name || username || 'User'}
                         />
                         <AvatarFallback className="text-xs font-medium">
@@ -398,7 +424,10 @@ export default function ModernNavbar({
                       <div className="flex items-center gap-4 p-4 rounded-lg bg-accent/30">
                         <Avatar className="h-12 w-12">
                           <AvatarImage
-                            src={userMetadata.avatar_url}
+                            src={
+                              optimizedAvatarUrls?.medium ||
+                              userMetadata.avatar_url
+                            }
                             alt={userMetadata.full_name || username || 'User'}
                           />
                           <AvatarFallback className="text-sm font-medium">
