@@ -57,9 +57,6 @@ export default function VideoPlayerPageClient({
 
   const supabase = createSupabaseBrowserClient();
 
-  // Check if video is ready for playback
-  const isVideoReady = video.status === 'ready' && video.mux_playback_id;
-
   // Get current user for analytics
   useEffect(() => {
     const getCurrentUser = async () => {
@@ -104,7 +101,7 @@ export default function VideoPlayerPageClient({
       if (navigator.clipboard && window.isSecureContext) {
         await navigator.clipboard.writeText(url);
         setShareStatus('copied');
-        console.warn('Video link copied to clipboard');
+        console.log('Video link copied to clipboard');
       } else {
         // Fallback for older browsers or non-secure contexts
         const textArea = document.createElement('textarea');
@@ -121,7 +118,7 @@ export default function VideoPlayerPageClient({
 
         if (successful) {
           setShareStatus('copied');
-          console.warn('Video link copied to clipboard');
+          console.log('Video link copied to clipboard');
         } else {
           throw new Error('Copy command was unsuccessful');
         }
@@ -164,7 +161,7 @@ export default function VideoPlayerPageClient({
         link.click();
         document.body.removeChild(link);
 
-        console.warn('Video download initiated from:', downloadUrl);
+        console.log('Video download initiated from:', downloadUrl);
       } else {
         // No MP4 available - provide helpful information
         const helpMessage =
@@ -207,17 +204,6 @@ export default function VideoPlayerPageClient({
     }
   };
 
-  // Add debugging to verify playback ID
-  useEffect(() => {
-    console.warn('Video data:', {
-      id: video.id,
-      status: video.status,
-      mux_playback_id: video.mux_playback_id,
-      mux_asset_id: video.mux_asset_id,
-      isVideoReady,
-    });
-  }, [video, isVideoReady]);
-
   return (
     <div className="container mx-auto px-4 py-8 max-w-6xl">
       {/* Header */}
@@ -244,7 +230,7 @@ export default function VideoPlayerPageClient({
                 ? 'Copied!'
                 : 'Error'}
           </Button>
-          {isVideoReady && (
+          {video.mux_playback_id && (
             <Button
               variant="outline"
               size="sm"
@@ -266,58 +252,33 @@ export default function VideoPlayerPageClient({
         </div>
       </div>
 
-      {/* Video Player */}
+      {/* Video Player - Always show MUX Player, it handles all states internally */}
       <Card className="mb-6">
         <CardContent className="p-0">
           <div
             className="relative bg-black rounded-lg overflow-hidden"
             style={{ aspectRatio: video.aspect_ratio || '16/9' }}
           >
-            {isVideoReady ? (
+            {video.mux_playback_id ? (
               <MuxVideoPlayer
-                playbackId={video.mux_playback_id!}
+                playbackId={video.mux_playback_id}
                 title={video.title || 'Untitled Video'}
                 viewerId={currentUser?.id}
                 viewerEmail={currentUser?.email}
                 className="w-full h-full rounded-lg"
               />
             ) : (
+              // Only show this if there's genuinely no playback ID
               <div className="flex items-center justify-center h-full text-white min-h-[400px]">
-                {video.status === 'preparing' ||
-                video.status === 'processing' ? (
-                  <div className="text-center">
-                    <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
-                    <p className="text-lg font-medium">
-                      Video is being processed...
-                    </p>
-                    <p className="text-sm text-gray-300 mt-2">
-                      This usually takes a few minutes
-                    </p>
-                    <p className="text-xs text-gray-400 mt-4">
-                      Status: {video.status}
-                    </p>
-                  </div>
-                ) : video.status === 'errored' ? (
-                  <div className="text-center">
-                    <AlertCircle className="h-12 w-12 text-red-400 mx-auto mb-4" />
-                    <p className="text-lg font-medium text-red-400">
-                      Video processing failed
-                    </p>
-                    <p className="text-sm text-gray-300 mt-2">
-                      Please try uploading again
-                    </p>
-                  </div>
-                ) : (
-                  <div className="text-center">
-                    <div className="h-12 w-12 mx-auto mb-4 opacity-50 bg-gray-600 rounded flex items-center justify-center">
-                      📹
-                    </div>
-                    <p>Video not ready for playback</p>
-                    <p className="text-sm text-gray-400 mt-2">
-                      Status: {video.status || 'Unknown'}
-                    </p>
-                  </div>
-                )}
+                <div className="text-center">
+                  <AlertCircle className="h-12 w-12 text-red-400 mx-auto mb-4" />
+                  <p className="text-lg font-medium text-red-400">
+                    Video not available
+                  </p>
+                  <p className="text-sm text-gray-300 mt-2">
+                    No playback ID found for this video
+                  </p>
+                </div>
               </div>
             )}
           </div>
@@ -338,29 +299,6 @@ export default function VideoPlayerPageClient({
                     Description
                   </label>
                   <p className="text-sm mt-1">{video.description}</p>
-                </div>
-              )}
-
-              {/* User analytics info */}
-              {currentUser && process.env.NODE_ENV === 'development' && (
-                <div className="border-t pt-4">
-                  <label className="text-sm font-medium text-gray-500">
-                    Analytics Info
-                  </label>
-                  <div className="text-xs space-y-1 mt-1">
-                    <div>
-                      <span className="font-medium">Viewer ID:</span>{' '}
-                      {currentUser.id}
-                    </div>
-                    <div>
-                      <span className="font-medium">Email:</span>{' '}
-                      {currentUser.email}
-                    </div>
-                    <div className="text-green-600 mt-2 p-2 bg-green-50 rounded text-xs">
-                      <strong>✓ Mux Data:</strong> Analytics are being tracked
-                      for this viewer
-                    </div>
-                  </div>
                 </div>
               )}
             </CardContent>
@@ -461,131 +399,15 @@ export default function VideoPlayerPageClient({
                   </p>
                 )}
               </div>
-
-              {isVideoReady && video.mux_playback_id && (
-                <div>
-                  <label className="text-sm font-medium text-gray-500">
-                    Playback ID
-                  </label>
-                  <p className="text-xs font-mono bg-gray-100 p-2 rounded break-all">
-                    {video.mux_playback_id}
-                  </p>
-                </div>
-              )}
-
-              {video.mux_asset_id && (
-                <div>
-                  <label className="text-sm font-medium text-gray-500">
-                    Asset ID
-                  </label>
-                  <p className="text-xs font-mono bg-gray-100 p-2 rounded break-all">
-                    {video.mux_asset_id}
-                  </p>
-                </div>
-              )}
-
-              {process.env.NODE_ENV === 'development' && (
-                <div className="border-t pt-4">
-                  <label className="text-sm font-medium text-gray-500">
-                    Debug Info
-                  </label>
-                  <div className="text-xs space-y-1 mt-1">
-                    <div>
-                      <span className="font-medium">HLS URL (Primary):</span>{' '}
-                      {video.mux_playback_id ? (
-                        <a
-                          href={`https://stream.mux.com/${video.mux_playback_id}.m3u8`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-blue-600 hover:underline break-all"
-                        >
-                          https://stream.mux.com/{video.mux_playback_id}.m3u8
-                        </a>
-                      ) : (
-                        'N/A'
-                      )}
-                    </div>
-                    <div>
-                      <span className="font-medium">Player Status:</span>{' '}
-                      <span className={`font-medium text-green-600`}>
-                        Loaded
-                      </span>
-                      <span className="ml-2 text-blue-600">
-                        (Using Mux Player)
-                      </span>
-                    </div>
-                    <div>
-                      <span className="font-medium">
-                        MP4 URLs (if enabled):
-                      </span>{' '}
-                      {video.mux_playback_id ? (
-                        <div className="ml-2 space-y-1">
-                          <div>
-                            <span className="text-gray-600">Modern:</span>{' '}
-                            <a
-                              href={`https://stream.mux.com/${video.mux_playback_id}/highest.mp4`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-blue-600 hover:underline break-all"
-                            >
-                              https://stream.mux.com/{video.mux_playback_id}
-                              /highest.mp4
-                            </a>
-                          </div>
-                          <div>
-                            <span className="text-gray-600">Legacy:</span>{' '}
-                            <a
-                              href={`https://stream.mux.com/${video.mux_playback_id}/high.mp4`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-blue-600 hover:underline break-all"
-                            >
-                              https://stream.mux.com/{video.mux_playback_id}
-                              /high.mp4
-                            </a>
-                          </div>
-                        </div>
-                      ) : (
-                        'N/A'
-                      )}
-                    </div>
-                    <div>
-                      <span className="font-medium">Thumbnail:</span>{' '}
-                      {video.mux_playback_id ? (
-                        <a
-                          href={`https://image.mux.com/${video.mux_playback_id}/thumbnail.png`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-blue-600 hover:underline break-all"
-                        >
-                          https://image.mux.com/{video.mux_playback_id}
-                          /thumbnail.png
-                        </a>
-                      ) : (
-                        'N/A'
-                      )}
-                    </div>
-                    <div className="text-blue-600 mt-2 p-2 bg-blue-50 rounded text-xs">
-                      <strong>Mux Player Info:</strong> Using the official Mux
-                      Player web component for video playback.
-                    </div>
-                    <div className="text-yellow-600 mt-2 p-2 bg-yellow-50 rounded text-xs">
-                      <strong>Note:</strong> MP4 files require static_renditions
-                      to be enabled during asset creation. If 404 errors occur,
-                      the video may need MP4 support enabled or may still be
-                      processing.
-                    </div>
-                  </div>
-                </div>
-              )}
             </CardContent>
           </Card>
         </div>
       </div>
+
       {/* Comments Section */}
       <div className="mt-6">
         <CommentsSection
-          postSlug={`video-${video.id}`}
+          postId={`video-${video.id}`}
           currentUserId={currentUser?.id || null}
         />
       </div>

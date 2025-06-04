@@ -685,15 +685,27 @@ const VideoCard = React.memo(function VideoCard({
       {/* Video thumbnail */}
       <div className="relative aspect-video bg-surface-elevated-2 rounded-t-lg overflow-hidden">
         {video.mux_playback_id ? (
-          <Image
-            src={`https://image.mux.com/${video.mux_playback_id}/thumbnail.jpg?width=400&height=225&fit_mode=smartcrop&time=1`}
-            alt={video.title || 'Video thumbnail'}
-            fill
-            className="object-cover transition-transform transition-normal hover:scale-105"
-          />
+          <>
+            <Image
+              src={`https://image.mux.com/${video.mux_playback_id}/thumbnail.jpg?width=400&height=225&fit_mode=smartcrop&time=1`}
+              alt={video.title || 'Video thumbnail'}
+              fill
+              className="object-cover transition-transform transition-normal hover:scale-105"
+              onError={(e) => {
+                // If thumbnail fails, MUX is still processing - hide the broken image
+                e.currentTarget.style.display = 'none';
+              }}
+            />
+            {/* Play icon overlay */}
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+              <div className="w-16 h-16 bg-black/70 rounded-full flex items-center justify-center">
+                <Play className="h-8 w-8 text-white ml-1" />
+              </div>
+            </div>
+          </>
         ) : (
           <div className="w-full h-full flex items-center justify-center">
-            <Play className="h-12 w-12 text-content-secondary" />
+            <Loader2 className="h-8 w-8 animate-spin text-content-secondary" />
           </div>
         )}
 

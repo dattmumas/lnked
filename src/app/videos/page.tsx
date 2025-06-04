@@ -1,8 +1,8 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
-import HomePageClient from './HomePageClient';
+import VideosPageClient from './VideosPageClient';
 
-export default async function HomePage() {
+export default async function VideosPage() {
   // Server-side authentication check
   const supabase = await createServerSupabaseClient();
   const {
@@ -12,16 +12,9 @@ export default async function HomePage() {
 
   // If there's an auth error or no user, redirect to sign-in
   if (authError || !user) {
-    redirect('/sign-in?redirect=/home');
+    redirect('/sign-in?redirect=/videos');
   }
 
-  // Fetch user profile for authenticated user
-  const { data: profile } = await supabase
-    .from('users')
-    .select('id, username, full_name, avatar_url, bio')
-    .eq('id', user.id)
-    .single();
-
   // Pass user data to client component
-  return <HomePageClient user={user} profile={profile} />;
+  return <VideosPageClient user={user} />;
 }

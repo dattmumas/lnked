@@ -58,6 +58,22 @@ async function getPostBySlugOrId(
         return { data: null, error: 'Post not found' };
       }
 
+      // Get real like/dislike counts from post_reactions table
+      const [{ count: likeCount }, { count: dislikeCount }] = await Promise.all(
+        [
+          supabase
+            .from('post_reactions')
+            .select('*', { count: 'exact', head: true })
+            .eq('post_id', slugOrId)
+            .eq('type', 'like'),
+          supabase
+            .from('post_reactions')
+            .select('*', { count: 'exact', head: true })
+            .eq('post_id', slugOrId)
+            .eq('type', 'dislike'),
+        ],
+      );
+
       let reactionData = null;
       let bookmarkData = null;
 
@@ -91,7 +107,9 @@ async function getPostBySlugOrId(
             ? { reaction_type: reactionData.type }
             : null,
           user_bookmark: bookmarkData ? { id: bookmarkData.post_id } : null,
-          likes: null, // We'll use the like_count field from posts table
+          // Use real counts from post_reactions table
+          real_like_count: likeCount ?? 0,
+          real_dislike_count: dislikeCount ?? 0,
         },
         error: null,
       };
@@ -118,6 +136,20 @@ async function getPostBySlugOrId(
     if (!postData) {
       return { data: null, error: 'Post not found' };
     }
+
+    // Get real like/dislike counts from post_reactions table
+    const [{ count: likeCount }, { count: dislikeCount }] = await Promise.all([
+      supabase
+        .from('post_reactions')
+        .select('*', { count: 'exact', head: true })
+        .eq('post_id', slugOrId)
+        .eq('type', 'like'),
+      supabase
+        .from('post_reactions')
+        .select('*', { count: 'exact', head: true })
+        .eq('post_id', slugOrId)
+        .eq('type', 'dislike'),
+    ]);
 
     let reactionData = null;
     let bookmarkData = null;
@@ -151,7 +183,9 @@ async function getPostBySlugOrId(
           ? { reaction_type: reactionData.type }
           : null,
         user_bookmark: bookmarkData ? { id: bookmarkData.post_id } : null,
-        likes: null, // We'll use the like_count field from posts table
+        // Use real counts from post_reactions table
+        real_like_count: likeCount ?? 0,
+        real_dislike_count: dislikeCount ?? 0,
       },
       error: null,
     };
@@ -216,8 +250,8 @@ export default async function PostBySlugPage({
 
     const readingTime = calculateReadingTime(post.content);
     const viewCount = post.view_count || 0;
-    const initialLikeCount = post.like_count || 0;
-    const initialDislikeCount = post.dislike_count || 0;
+    const initialLikeCount = post.real_like_count || 0;
+    const initialDislikeCount = post.real_dislike_count || 0;
     const initialUserReaction =
       post.user_reaction?.reaction_type === 'like' ||
       post.user_reaction?.reaction_type === 'dislike'

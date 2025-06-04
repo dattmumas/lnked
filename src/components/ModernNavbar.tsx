@@ -24,12 +24,10 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   Menu,
   PenSquare,
-  LayoutDashboard,
   FileText,
   User as UserIcon,
   Settings,
   LogOut,
-  Compass,
   Search,
   MessageCircle,
   Video,
@@ -39,31 +37,9 @@ import SearchBar from '@/components/app/nav/SearchBar';
 import { NotificationDropdown } from '@/components/notifications/NotificationDropdown';
 import { getOptimizedAvatarUrl } from '@/lib/utils/avatar';
 
-const publicNavItems = [
-  {
-    href: '/discover',
-    label: 'Discover',
-    icon: Compass,
-  },
-];
-
-const authenticatedNavItems = [
-  {
-    href: '/discover',
-    label: 'Discover',
-    icon: Compass,
-  },
-  {
-    href: '/chat',
-    label: 'Chat',
-    icon: MessageCircle,
-  },
-  {
-    href: '/dashboard',
-    label: 'Dashboard',
-    icon: LayoutDashboard,
-  },
-];
+// Navigation items removed - now handled by GlobalSidebar
+const publicNavItems: never[] = [];
+const authenticatedNavItems: never[] = [];
 
 export interface ModernNavbarProps {
   initialUser?: User | null;
@@ -195,12 +171,7 @@ export default function ModernNavbar({
     );
   }
 
-  const isActiveRoute = (href: string) => {
-    if (href === '/dashboard') {
-      return pathname === '/dashboard';
-    }
-    return pathname.startsWith(href);
-  };
+  // isActiveRoute function removed - navigation now handled by GlobalSidebar
 
   const getUserInitials = () => {
     const name = userMetadata.full_name || username || user?.email;
@@ -229,27 +200,7 @@ export default function ModernNavbar({
               Lnked<span className="text-accent text-2xl leading-none">.</span>
             </Link>
 
-            {/* Nav Items - Desktop */}
-            <div className="hidden md:flex items-center gap-1">
-              {(user ? authenticatedNavItems : publicNavItems).map((item) => {
-                const Icon = item.icon;
-                const isActive = isActiveRoute(item.href);
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    className={`flex items-center gap-2 px-3 py-2 text-smrounded-md transition-all duration-150 ${
-                      isActive
-                        ? 'bg-accent text-accent-foreground'
-                        : 'text-foreground/70 hover:text-foreground hover:bg-accent/50'
-                    }`}
-                  >
-                    <Icon className="h-4 w-4" />
-                    <span>{item.label}</span>
-                  </Link>
-                );
-              })}
-            </div>
+            {/* Nav Items - Desktop - Removed, now handled by GlobalSidebar */}
           </div>
 
           {/* Center: Search - Desktop */}
@@ -444,31 +395,7 @@ export default function ModernNavbar({
                         </div>
                       </div>
 
-                      {/* Navigation */}
-                      <div className="space-y-2">
-                        <p className="text-xs font-semibold text-foreground/60 uppercase tracking-wider px-3">
-                          Navigation
-                        </p>
-                        {authenticatedNavItems.map((item) => {
-                          const Icon = item.icon;
-                          const isActive = isActiveRoute(item.href);
-                          return (
-                            <Button
-                              key={item.href}
-                              variant={isActive ? 'secondary' : 'ghost'}
-                              className="w-full justify-start gap-3 h-11"
-                              asChild
-                            >
-                              <Link href={item.href}>
-                                <Icon className="h-5 w-5" />
-                                <span className="font-medium">
-                                  {item.label}
-                                </span>
-                              </Link>
-                            </Button>
-                          );
-                        })}
-                      </div>
+                      {/* Navigation - Removed, now handled by GlobalSidebar */}
 
                       {/* Actions */}
                       <div className="space-y-2">

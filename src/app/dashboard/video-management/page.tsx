@@ -1,4 +1,4 @@
-import VideoManagementDashboard from '@/components/app/dashboard/video/VideoManagementDashboard';
+import VideoManagementDashboard from '@/components/app/video/manage/VideoManagementDashboard';
 
 export default function VideoManagementPage() {
   return (

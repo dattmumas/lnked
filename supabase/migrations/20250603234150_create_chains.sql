@@ -30,12 +30,12 @@ BEGIN
 
   /* Only extend if interaction_entity_type exists */
   IF EXISTS (SELECT 1 FROM pg_type WHERE typname = 'interaction_entity_type') THEN
-    IF NOT EXISTS (
-      SELECT 1 FROM pg_enum
-      WHERE enumtypid = 'interaction_entity_type'::regtype
-        AND enumlabel = 'chain'
-    ) THEN
-      ALTER TYPE public.interaction_entity_type ADD VALUE 'chain';
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_enum
+    WHERE enumtypid = 'interaction_entity_type'::regtype
+      AND enumlabel = 'chain'
+  ) THEN
+    ALTER TYPE public.interaction_entity_type ADD VALUE 'chain';
     END IF;
   END IF;
 
@@ -204,27 +204,27 @@ BEGIN
      OR (EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'collectives') 
          AND EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'posts')) THEN
     
-    CREATE OR REPLACE VIEW public.search_documents AS
-      SELECT 'collective'  AS document_type, id AS document_id, name      AS title,
+CREATE OR REPLACE VIEW public.search_documents AS
+  SELECT 'collective'  AS document_type, id AS document_id, name      AS title,
              description   AS content_preview, 
              setweight(to_tsvector('simple', coalesce(name,'')), 'A') ||
              setweight(to_tsvector('simple', coalesce(description,'')), 'B') AS tsv_document
-        FROM public.collectives
-      UNION ALL
+    FROM public.collectives
+  UNION ALL
       SELECT 'user',        id, full_name, bio,
              setweight(to_tsvector('simple', coalesce(full_name,'')), 'A') ||
              setweight(to_tsvector('simple', coalesce(bio,'')), 'B') AS tsv_document
-        FROM public.users
-      UNION ALL
+    FROM public.users
+  UNION ALL
       SELECT 'post',        id, title, left(content,200),
              setweight(to_tsvector('simple', coalesce(title,'')), 'A') ||
              setweight(to_tsvector('simple', coalesce(content,'')), 'B') AS tsv_document
-        FROM public.posts
-       WHERE is_public = true AND status = 'active'
-      UNION ALL
-      SELECT 'chain',       id, substr(content,1,100), substr(content,1,200), tsv
-        FROM public.chains
-       WHERE visibility = 'public' AND status = 'active';
+    FROM public.posts
+   WHERE is_public = true AND status = 'active'
+  UNION ALL
+  SELECT 'chain',       id, substr(content,1,100), substr(content,1,200), tsv
+    FROM public.chains
+   WHERE visibility = 'public' AND status = 'active';
   END IF;
 END$$;
 

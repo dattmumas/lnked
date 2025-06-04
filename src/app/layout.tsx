@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 import { ThemeProvider } from 'next-themes';
 import ModernNavbar from '@/components/ModernNavbar';
+import GlobalSidebar from '@/components/app/nav/GlobalSidebar';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { ContrastEnhancer } from '@/components/ContrastEnhancer';
 import { Source_Serif_4 } from 'next/font/google';
@@ -55,7 +56,8 @@ export default async function RootLayout({
             <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-md border-b border-border/50">
               <ModernNavbar initialUser={user} initialUsername={username} />
             </header>
-            <main>{children}</main>
+            {user && <GlobalSidebar />}
+            <main className={user ? 'ml-16' : ''}>{children}</main>
           </ThemeProvider>
         </QueryProvider>
       </body>
