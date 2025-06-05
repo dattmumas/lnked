@@ -28,8 +28,7 @@ type AuthHandlerContext = AuthResult & {
 /**
  * Middleware to check if user is authenticated
  */
-export async function requireAuth(request: NextRequest) {
-  void request; // Parameter required by interface but not used
+export async function requireAuth(_request: NextRequest) {
   const supabase = await createServerSupabaseClient();
   
   const {
@@ -67,7 +66,7 @@ export async function requireConversationAccess(
   
   if (!hasAccess) {
     // Log security event
-    console.log('Chat Security Event:', {
+    console.warn('Chat Security Event:', {
       action: 'api_access_denied',
       userId: user.id,
       conversationId,

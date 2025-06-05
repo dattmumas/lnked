@@ -14,8 +14,8 @@ import { chatSecurity } from './security';
 export class RealtimeService {
   private supabase = createSupabaseBrowserClient();
   private channels: Map<string, RealtimeChannel> = new Map();
-  private messageHandlers: Map<string, (message: MessageWithSender) => void> = new Map();
-  private typingHandlers: Map<string, (typing: TypingIndicator[]) => void> = new Map();
+  private messageHandlers: Map<string, (_message: MessageWithSender) => void> = new Map();
+  private typingHandlers: Map<string, (_typing: TypingIndicator[]) => void> = new Map();
   private typingTimeout: Map<string, NodeJS.Timeout> = new Map();
 
   /**
@@ -24,12 +24,12 @@ export class RealtimeService {
   async subscribeToConversation(
     conversationId: string,
     callbacks: {
-      onMessage?: (message: MessageWithSender) => void;
-      onTyping?: (typing: TypingIndicator[]) => void;
-      onMessageUpdate?: (message: MessageWithSender) => void;
-      onMessageDelete?: (messageId: string) => void;
-      onUserJoin?: (userId: string) => void;
-      onUserLeave?: (userId: string) => void;
+      onMessage?: (_message: MessageWithSender) => void;
+      onTyping?: (_typing: TypingIndicator[]) => void;
+      onMessageUpdate?: (_message: MessageWithSender) => void;
+      onMessageDelete?: (_messageId: string) => void;
+      onUserJoin?: (_userId: string) => void;
+      onUserLeave?: (_userId: string) => void;
     }
   ) {
     const channelName = `conversation:${conversationId}`;
@@ -192,7 +192,7 @@ export class RealtimeService {
     // Subscribe to the channel (keeping original API since receive doesn't exist)
     channel.subscribe((status) => {
       if (status === 'SUBSCRIBED') {
-      console.log(`Subscribed to conversation ${conversationId}`);
+      console.info(`Subscribed to conversation ${conversationId}`);
       
       // Announce user joining
       if (callbacks.onUserJoin) {
@@ -368,7 +368,7 @@ export class RealtimeService {
   private handleTypingStart(
     conversationId: string,
     payload: BroadcastMessage['payload'],
-    onTyping?: (typing: TypingIndicator[]) => void
+    onTyping?: (_typing: TypingIndicator[]) => void
   ) {
     if (!payload.user_id || !onTyping) return;
 
@@ -399,7 +399,7 @@ export class RealtimeService {
   private handleTypingStop(
     conversationId: string,
     payload: BroadcastMessage['payload'],
-    onTyping?: (typing: TypingIndicator[]) => void
+    onTyping?: (_typing: TypingIndicator[]) => void
   ) {
     if (!payload.user_id || !onTyping) return;
 

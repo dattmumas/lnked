@@ -48,9 +48,12 @@ export const useVideoUploadState = () => {
     setUploadId(null);
   }, []);
 
-  const upload = useCallback(async (file: File, uploadUrl: string) => {
+  const upload = useCallback((file: File, uploadUrl: string) => {
     setUploading();
     setError(null);
+
+    const HTTP_OK_MIN = 200;
+    const HTTP_OK_MAX = 300;
 
     try {
       // Create XMLHttpRequest to track upload progress
@@ -67,7 +70,7 @@ export const useVideoUploadState = () => {
 
         // Handle completion
         xhr.addEventListener('load', () => {
-          if (xhr.status >= 200 && xhr.status < 300) {
+          if (xhr.status >= HTTP_OK_MIN && xhr.status < HTTP_OK_MAX) {
             setProcessing();
             resolve();
           } else {

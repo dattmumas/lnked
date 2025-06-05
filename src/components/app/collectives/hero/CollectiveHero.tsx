@@ -19,7 +19,7 @@ export function CollectiveHero({ collectiveSlug }: CollectiveHeroProps) {
   const { data: collective, isLoading } = useCollectiveData(collectiveSlug);
   const { data: stats } = useCollectiveStats(collective?.id!, {
     enabled: !!collective?.id,
-  });
+  }) as { data: { memberCount: number; followerCount: number } | undefined };
   const [currentUser, setCurrentUser] = useState<{ id: string } | null>(null);
   const [isLoadingUser, setIsLoadingUser] = useState(true);
 

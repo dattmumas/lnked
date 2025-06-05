@@ -2,16 +2,22 @@
 
 import { useState, useCallback, useMemo } from 'react';
 
+const STEP_UPLOAD = 0;
+const STEP_DETAILS = 1;
+const STEP_SETTINGS = 2;
+const STEP_PREVIEW = 3;
+const STEP_PUBLISH = 4;
+
 export const WIZARD_STEPS = [
-  { id: 0, name: 'Upload', description: 'Select and upload your video file' },
-  { id: 1, name: 'Details', description: 'Add title, description, and tags' },
-  { id: 2, name: 'Settings', description: 'Configure privacy and quality' },
-  { id: 3, name: 'Preview', description: 'Preview how it will appear in feed' },
-  { id: 4, name: 'Publish', description: 'Confirm and publish your video' },
+  { id: STEP_UPLOAD, name: 'Upload', description: 'Select and upload your video file' },
+  { id: STEP_DETAILS, name: 'Details', description: 'Add title, description, and tags' },
+  { id: STEP_SETTINGS, name: 'Settings', description: 'Configure privacy and quality' },
+  { id: STEP_PREVIEW, name: 'Preview', description: 'Preview how it will appear in feed' },
+  { id: STEP_PUBLISH, name: 'Publish', description: 'Confirm and publish your video' },
 ] as const;
 
 export const useStepNavigation = (canProceed: boolean = true) => {
-  const [currentStep, setCurrentStep] = useState(0);
+  const [currentStep, setCurrentStep] = useState(STEP_UPLOAD);
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
 
   const totalSteps = WIZARD_STEPS.length;
@@ -24,7 +30,7 @@ export const useStepNavigation = (canProceed: boolean = true) => {
   }, [canProceed, currentStep, totalSteps]);
 
   const previous = useCallback(() => {
-    if (currentStep > 0) {
+    if (currentStep > STEP_UPLOAD) {
       setCurrentStep((prev) => prev - 1);
     }
   }, [currentStep]);
@@ -33,7 +39,7 @@ export const useStepNavigation = (canProceed: boolean = true) => {
     (step: number) => {
       // Allow navigation to completed steps or current step
       if (
-        step >= 0 && 
+        step >= STEP_UPLOAD && 
         step < totalSteps && 
         (completedSteps.has(step) || step <= currentStep)
       ) {
@@ -48,14 +54,14 @@ export const useStepNavigation = (canProceed: boolean = true) => {
   }, []);
 
   const reset = useCallback(() => {
-    setCurrentStep(0);
+    setCurrentStep(STEP_UPLOAD);
     setCompletedSteps(new Set());
   }, []);
 
   // Computed properties
-  const isFirstStep = currentStep === 0;
+  const isFirstStep = currentStep === STEP_UPLOAD;
   const isLastStep = currentStep === totalSteps - 1;
-  const canGoBack = currentStep > 0;
+  const canGoBack = currentStep > STEP_UPLOAD;
   const canGoNext = canProceed && currentStep < totalSteps - 1;
   
   const currentStepInfo = WIZARD_STEPS[currentStep];

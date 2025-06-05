@@ -34,11 +34,10 @@ export async function retryWithBackoff<T>(
   maxRetries: number = 3,
   baseDelay: number = 1000
 ): Promise<T> {
-  let lastError: Error;
+  let lastError: Error | undefined;
   
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
-      // eslint-disable-next-line no-await-in-loop -- Intentional serial retry with exponential backoff
       return await fn();
     } catch (error) {
       lastError = error as Error;
@@ -57,12 +56,13 @@ export async function retryWithBackoff<T>(
       
       // Exponential backoff with jitter
       const delay = baseDelay * Math.pow(2, attempt) + Math.random() * 1000;
-      // eslint-disable-next-line no-await-in-loop -- Intentional delay between retries
-      await new Promise(resolve => setTimeout(resolve, delay));
+      await new Promise<void>(resolve => {
+        setTimeout(() => resolve(), delay);
+      });
     }
   }
   
-  throw lastError!;
+  throw new Error(lastError?.message || 'All retry attempts failed');
 }
 
 // Helper function to check if an error is a rate limit error
