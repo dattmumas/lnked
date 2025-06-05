@@ -30,7 +30,7 @@ const navigationItems = [
 const createContentItems = [
   { icon: Edit, label: 'New Post', href: '/posts/new' },
   { icon: Video, label: 'Upload Video', href: '/videos/upload' },
-  { icon: Video, label: 'Videos', href: '/videos' },
+  { icon: Video, label: 'Video Library', href: '/dashboard/video-management' },
 ];
 
 export default function GlobalSidebar() {
@@ -50,8 +50,8 @@ export default function GlobalSidebar() {
     if (href === '/dashboard/my-newsletter/subscribers') {
       return pathname.startsWith('/dashboard/my-newsletter');
     }
-    if (href === '/videos') {
-      return pathname === '/videos' || pathname.startsWith('/videos/');
+    if (href === '/dashboard/video-management') {
+      return pathname === '/dashboard/video-management';
     }
     return pathname.startsWith(href);
   };

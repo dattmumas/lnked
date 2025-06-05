@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import { Card } from '@/components/primitives/Card';
 import { Button } from '@/components/primitives/Button';
 import { Input } from '@/components/ui/input';
@@ -25,7 +26,6 @@ import {
 import Image from 'next/image';
 
 // Import our components
-import VideoUploader from '@/components/app/uploads/VideoUploader';
 import Link from 'next/link';
 
 // Import constants
@@ -285,26 +285,16 @@ export default function VideoManagementDashboard() {
     setViewMode((prev) => (prev === 'grid' ? 'list' : 'grid'));
   }, []);
 
+  const router = useRouter();
+
   const handleUploadClick = useCallback(() => {
-    setActiveTab('upload');
-  }, []);
+    router.push('/videos/upload');
+  }, [router]);
 
   const handleLiveStreamClick = useCallback(() => {
     setActiveTab('live-streams');
   }, []);
 
-  const handleUploadComplete = useCallback(
-    (session: string) => {
-      console.warn('Upload completed:', session);
-      setActiveTab('library');
-      fetchVideos();
-    },
-    [fetchVideos],
-  );
-
-  const handleUploadError = useCallback((uploadError: string) => {
-    setError(uploadError);
-  }, []);
 
   const handlePreviousPage = useCallback(() => {
     setCurrentPage((prev) => prev - 1);
@@ -360,20 +350,13 @@ export default function VideoManagementDashboard() {
 
       {/* Enhanced Main Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-5 bg-surface-elevated-2">
+        <TabsList className="grid w-full grid-cols-4 bg-surface-elevated-2">
           <TabsTrigger
             value="library"
             className="flex items-center gap-1.5 micro-interaction nav-hover"
           >
             <Grid className="h-4 w-4" />
             Library
-          </TabsTrigger>
-          <TabsTrigger
-            value="upload"
-            className="flex items-center gap-1.5 micro-interaction nav-hover"
-          >
-            <Upload className="h-4 w-4" />
-            Upload
           </TabsTrigger>
           <TabsTrigger
             value="live-streams"
@@ -558,11 +541,13 @@ export default function VideoManagementDashboard() {
 
         {/* Other tabs content remains the same for now */}
         <TabsContent value="upload">
-          <Card size="lg" className="pattern-card">
-            <VideoUploader
-              onUploadComplete={handleUploadComplete}
-              onUploadError={handleUploadError}
-            />
+          <Card size="lg" className="pattern-card text-center p-8 space-y-4">
+            <p className="text-sm text-content-secondary">
+              Use the upload wizard to add new videos
+            </p>
+            <Button asChild>
+              <Link href="/videos/upload">Go to Upload Wizard</Link>
+            </Button>
           </Card>
         </TabsContent>
 
