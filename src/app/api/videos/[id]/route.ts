@@ -61,13 +61,10 @@ export async function PATCH(
 
     console.log('PATCH /api/videos/[id] - Existing video found:', existingVideo);
 
-    // Only update columns that ACTUALLY exist in the database
+    // Enhanced update data handling - support all video_assets columns
     const updateData: any = {};
     
-    // These are the ONLY columns that exist in video_assets table:
-    // id, mux_asset_id, mux_playback_id, title, description, duration, 
-    // status, aspect_ratio, created_by, created_at, updated_at, mux_upload_id, mp4_support
-    
+    // Core metadata fields
     if (body.title !== undefined) {
       updateData.title = body.title;
     }
@@ -75,23 +72,79 @@ export async function PATCH(
     if (body.description !== undefined) {
       updateData.description = body.description;
     }
+
+    // Enhanced metadata fields (new columns)
+    if (body.is_public !== undefined) {
+      updateData.is_public = body.is_public;
+    }
+
+    if (body.playback_policy !== undefined) {
+      updateData.playback_policy = body.playback_policy;
+    }
+
+    if (body.encoding_tier !== undefined) {
+      updateData.encoding_tier = body.encoding_tier;
+    }
+
+    // Handle privacy setting mapping (as per architecture design)
+    if (body.privacySetting !== undefined) {
+      updateData.is_public = body.privacySetting === 'public';
+      updateData.playback_policy = body.privacySetting === 'public' ? 'public' : 'signed';
+    }
+
+    // Collective and post associations
+    if (body.collective_id !== undefined) {
+      // Validate collective access if setting collective_id
+      if (body.collective_id) {
+        const { data: membership, error: membershipError } = await supabase
+          .from('collective_members')
+          .select('id')
+          .eq('collective_id', body.collective_id)
+          .eq('user_id', user.id)
+          .single();
+
+        if (membershipError || !membership) {
+          return NextResponse.json(
+            { error: 'Not authorized to assign video to this collective' },
+            { status: 403 }
+          );
+        }
+      }
+      updateData.collective_id = body.collective_id;
+    }
+
+    if (body.post_id !== undefined) {
+      // Validate post ownership if setting post_id
+      if (body.post_id) {
+        const { data: post, error: postError } = await supabase
+          .from('posts')
+          .select('id, author_id')
+          .eq('id', body.post_id)
+          .single();
+
+        if (postError || !post || post.author_id !== user.id) {
+          return NextResponse.json(
+            { error: 'Not authorized to attach video to this post' },
+            { status: 403 }
+          );
+        }
+      }
+      updateData.post_id = body.post_id;
+    }
     
-    // Handle publishing by updating status (only column that exists)
+    // Handle publishing status
     if (body.is_published !== undefined) {
       updateData.status = body.is_published ? 'ready' : 'preparing';
     }
-    
-    // Silently ignore ALL other form fields since they have no database columns:
-    // - privacy_setting (no is_public column)
-    // - collective_id (no collective_id column)
-    // - encoding_tier (no encoding_tier column)
-    // - tags (no tags column)
-    // - thumbnail_url (no thumbnail_url column)
-    // - published_at (no processed_at column)
-    
-         console.log('PATCH /api/videos/[id] - Filtered update data (only existing columns):', updateData);
 
-    // Update in database
+    // Legacy status field support
+    if (body.status !== undefined) {
+      updateData.status = body.status;
+    }
+
+    console.log('PATCH /api/videos/[id] - Enhanced update data:', updateData);
+
+    // Update in database with enhanced field support
     const { data: updatedVideo, error: updateError } = await supabase
       .from('video_assets')
       .update(updateData)

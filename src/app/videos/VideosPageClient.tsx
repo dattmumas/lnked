@@ -12,11 +12,12 @@ import Link from 'next/link';
 // Constants for refresh logic
 const REFRESH_INTERVAL_MS = 5000; // 5 seconds
 
+// Updated interface to match enhanced schema
 interface VideoAsset {
   id: string;
   title: string | null;
   description: string | null;
-  status: string;
+  status: string | null; // Made nullable to match database schema
   duration: number | null;
   created_at: string | null;
   mux_asset_id: string | null;
@@ -112,7 +113,7 @@ export default function VideosPageClient({ user }: VideosPageClientProps) {
         );
         if (refreshedVideo && refreshedVideo.status !== video.status) {
           console.log(
-            `Video ${video.id} status updated: ${video.status} -> ${refreshedVideo.status}`,
+            `Video ${video.id} status updated: ${video.status || 'null'} -> ${refreshedVideo.status || 'null'}`,
           );
         }
         return refreshedVideo || video;
@@ -163,7 +164,7 @@ export default function VideosPageClient({ user }: VideosPageClientProps) {
     });
   };
 
-  const getStatusColor = (status: string) => {
+  const getStatusColor = (status: string | null) => {
     switch (status) {
       case 'ready':
         return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400';
@@ -302,7 +303,7 @@ export default function VideosPageClient({ user }: VideosPageClientProps) {
                     {video.title || 'Untitled Video'}
                   </CardTitle>
                   <Badge className={getStatusColor(video.status)}>
-                    {video.status}
+                    {video.status || 'Unknown'}
                   </Badge>
                 </div>
                 {video.description && (
