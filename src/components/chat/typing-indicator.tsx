@@ -1,5 +1,3 @@
-'use client';
-
 import type { TypingIndicator as TypingType } from '@/lib/chat/types';
 
 interface TypingIndicatorProps {

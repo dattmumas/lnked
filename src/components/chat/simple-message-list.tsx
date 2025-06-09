@@ -1,5 +1,3 @@
-'use client';
-
 import { cn } from '@/lib/utils';
 import { formatChatTime } from '@/lib/chat/utils';
 import type { MessageWithSender } from '@/lib/chat/types';

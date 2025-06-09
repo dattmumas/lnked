@@ -30,14 +30,19 @@ export default async function RootLayout({
     data: { user },
   } = await supabase.auth.getUser();
 
-  let username: string | null = null;
+  let profile: {
+    username: string | null;
+    full_name: string | null;
+    avatar_url: string | null;
+  } | null = null;
+
   if (user) {
-    const { data: profile } = await supabase
+    const { data: profileData } = await supabase
       .from('users')
-      .select('username')
+      .select('username, full_name, avatar_url')
       .eq('id', user.id)
       .single();
-    username = profile?.username ?? null;
+    profile = profileData;
   }
 
   return (
@@ -54,7 +59,7 @@ export default async function RootLayout({
           >
             <ContrastEnhancer />
             <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-md border-b border-border/50">
-              <ModernNavbar initialUser={user} initialUsername={username} />
+              <ModernNavbar initialUser={user} initialProfile={profile} />
             </header>
             {user && <GlobalSidebar />}
             <main className={user ? 'ml-16' : ''}>{children}</main>

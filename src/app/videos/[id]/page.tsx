@@ -1,7 +1,11 @@
 import { Suspense } from 'react';
 import { notFound } from 'next/navigation';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
-import VideoPlayerPageClient from '@/components/app/video/VideoPlayerPageClient';
+import VideoDetailsServer from '@/components/app/video/VideoDetailsServer';
+import VideoPlayerClient from '@/components/app/video/VideoPlayerClient';
+import CommentsHybrid from '@/components/app/posts/organisms/CommentsHybrid';
+import { VideoPlayerSkeleton } from '@/components/ui/VideoPlayerSkeleton';
+import { CommentsSkeleton } from '@/components/ui/CommentsSkeleton';
 import { RightSidebar } from '@/components/app/chains/RightSidebar';
 
 // Type based on database schema
@@ -73,18 +77,28 @@ export default async function VideoPlayerPage({
 
   return (
     <div className="min-h-screen bg-background flex flex-col lg:flex-row">
-      {/* Main content: player + comments */}
+      {/* Main content: video details + player + comments */}
       <main className="flex-1 flex flex-col items-center py-8">
-        <Suspense
-          fallback={
-            <div className="flex items-center justify-center min-h-screen">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-            </div>
-          }
-        >
-          <VideoPlayerPageClient video={video as VideoAsset} />
+        {/* Video metadata - renders immediately (no Suspense) */}
+        <VideoDetailsServer video={video as VideoAsset} />
+
+        {/* Video player - independent Suspense boundary */}
+        <Suspense fallback={<VideoPlayerSkeleton />}>
+          <VideoPlayerClient
+            video={{
+              id: video.id,
+              title: video.title,
+              mux_playback_id: video.mux_playback_id,
+            }}
+          />
+        </Suspense>
+
+        {/* Comments section - parallel Suspense boundary */}
+        <Suspense fallback={<CommentsSkeleton />}>
+          <CommentsHybrid postId={`video-${video.id}`} />
         </Suspense>
       </main>
+
       {/* Right sidebar: chains (desktop only) */}
       {user && profile && <RightSidebar user={user} profile={profile} />}
     </div>

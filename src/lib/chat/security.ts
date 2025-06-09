@@ -188,7 +188,7 @@ export class ChatSecurity {
   }): Promise<void> {
     try {
       // In a production environment, you might want to log to a dedicated security log table
-      console.log('Chat Security Event:', {
+      console.info('Chat Security Event:', {
         ...event,
         timestamp: new Date().toISOString(),
       });

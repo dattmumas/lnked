@@ -36,7 +36,7 @@ export const useEnhancedAutoSavePost = () => {
       const { data: { session }, error: authError } = await supabase.auth.getSession();
       if (authError) {
         console.error('Auth error:', authError);
-        throw new Error(`Authentication error: ${authError.message}`);
+        throw new Error(`Authentication error: ${authError.message}`); 
       }
 
       if (!session?.user) {

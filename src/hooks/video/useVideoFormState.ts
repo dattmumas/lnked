@@ -2,6 +2,12 @@
 
 import { useState, useCallback, useMemo } from 'react';
 
+// Constants for validation rules
+const MIN_TITLE_LENGTH = 3;
+const MAX_TITLE_LENGTH = 100;
+const MAX_DESCRIPTION_LENGTH = 5000;
+const MAX_TAGS_COUNT = 10;
+
 export interface VideoFormData {
   title: string;
   description: string;
@@ -34,20 +40,20 @@ const validateFormData = (data: VideoFormData): ValidationErrors => {
   // Title validation
   if (!data.title.trim()) {
     errors.title = 'Title is required';
-  } else if (data.title.trim().length < 3) {
-    errors.title = 'Title must be at least 3 characters';
-  } else if (data.title.length > 100) {
-    errors.title = 'Title must be 100 characters or less';
+  } else if (data.title.trim().length < MIN_TITLE_LENGTH) {
+    errors.title = `Title must be at least ${MIN_TITLE_LENGTH} characters`;
+  } else if (data.title.length > MAX_TITLE_LENGTH) {
+    errors.title = `Title must be ${MAX_TITLE_LENGTH} characters or less`;
   }
 
   // Description validation (optional but has limits)
-  if (data.description.length > 5000) {
-    errors.description = 'Description must be 5000 characters or less';
+  if (data.description.length > MAX_DESCRIPTION_LENGTH) {
+    errors.description = `Description must be ${MAX_DESCRIPTION_LENGTH} characters or less`;
   }
 
   // Tags validation
-  if (data.tags.length > 10) {
-    errors.tags = 'Maximum 10 tags allowed';
+  if (data.tags.length > MAX_TAGS_COUNT) {
+    errors.tags = `Maximum ${MAX_TAGS_COUNT} tags allowed`;
   }
 
   return errors;

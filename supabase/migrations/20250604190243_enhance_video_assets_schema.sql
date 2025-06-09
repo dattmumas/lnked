@@ -80,4 +80,4 @@ BEGIN
   END IF;
   
   RAISE NOTICE 'Video assets schema enhancement completed successfully';
-END $$; git 
+END $$; 

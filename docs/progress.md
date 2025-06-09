@@ -2,19 +2,37 @@
 
 ## Completed Projects
 
-1. **Tailwind/CSS System Refactor** (May 31, 2025) - COMPLETE ✅
+1. **"use client" Audit & Performance Optimization** (January 6, 2025) - COMPLETE ✅
+
+   - Archive: `docs/archive/archive-use-client-audit-20250106.md`
+   - Rating: ⭐⭐⭐⭐⭐ EXCEPTIONAL SUCCESS
+   - Impact: 10 components optimized for server-side rendering, 15-25% bundle size reduction, established server/client architectural patterns, fixed critical Lexical JSON parsing bug
+
+2. **Redundant Like/Reaction Logic Consolidation** (January 6, 2025) - COMPLETE ✅
+
+   - Archive: `docs/archive/archive-reaction-logic-consolidation-20250106.md`
+   - Rating: ⭐⭐⭐⭐⭐ EXCEPTIONAL SUCCESS
+   - Impact: Eliminated ~150 lines of duplicate code, unified API patterns, created reusable reaction components
+
+3. **ModernNavbar Data Logic Refactor** (June 1, 2025) - COMPLETE ✅
+
+   - Archive: `docs/archive/archive-modern-navbar-refactor-20250601.md`
+   - Rating: ⭐⭐⭐⭐⭐ HIGHLY SUCCESSFUL
+   - Impact: Centralized auth state, improved performance by removing client-side fetches, and simplified component logic.
+
+4. **Tailwind/CSS System Refactor** (May 31, 2025) - COMPLETE ✅
 
    - Archive: docs/archive/tailwind-css-refactor-2025-05-31.md
    - Rating: ⭐⭐⭐⭐⭐ HIGHLY SUCCESSFUL
    - Impact: 20%+ CSS optimization, zero breaking changes
 
-2. **Lexical-Playground Reorganization** (May 31, 2025) - COMPLETE ✅
+5. **Lexical-Playground Reorganization** (May 31, 2025) - COMPLETE ✅
 
    - Archive: docs/archive/lexical-playground-reorganization-2025-05-31.md
    - Rating: ⭐⭐⭐⭐⭐ PERFECT SUCCESS
    - Impact: 67 files reorganized, zero functionality loss, 5x process efficiency improvement
 
-3. **Comprehensive UI/UX Improvement** (May 31, 2025) - COMPLETE ✅
+6. **Comprehensive UI/UX Improvement** (May 31, 2025) - COMPLETE ✅
    - Archive: docs/archive/ui-ux-improvement-2025-05-31.md
    - Rating: ⭐⭐⭐⭐⭐ EXCEPTIONAL SUCCESS
    - Impact: 4 major pages enhanced, complete design system foundation, 50+ semantic tokens, zero breaking changes
@@ -180,3 +198,5 @@ The comment system integration for videos and text posts has been delivered with
 
 - Legacy feed refactor & video post integration: ✅ Completed & Archived
 - See reflection: memory-bank/reflection/reflection-legacy-feed-refactor.md
+- CommentsSection Refactor: ✅ Completed & Archived
+- See reflection: `memory-bank/reflection/reflection-comments-section-refactor.md`

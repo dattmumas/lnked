@@ -6,6 +6,16 @@ import { useVideoUploadState } from './useVideoUploadState';
 import { useStepNavigation } from './useStepNavigation';
 import { useVideoProcessing } from './useVideoProcessing';
 
+// Constants for upload steps
+const UPLOAD_STEP = 0;
+const DETAILS_STEP = 1;
+const SETTINGS_STEP = 2;
+const PREVIEW_STEP = 3;
+const PUBLISH_STEP = 4;
+
+// Constants for timeouts
+const AUTO_SAVE_DELAY = 1000;
+
 export const useVideoUpload = (collectiveId?: string) => {
   // Sub-hooks for specific concerns
   const formState = useVideoFormState();
@@ -18,15 +28,15 @@ export const useVideoUpload = (collectiveId?: string) => {
   // Step-specific validation logic
   const canProceedFromCurrentStep = useMemo(() => {
     switch (stepNavigation.currentStep) {
-      case 0: // Upload step - only need successful upload
+      case UPLOAD_STEP: // Upload step - only need successful upload
         return uploadState.isComplete;
-      case 1: // Details step - need valid form data
+      case DETAILS_STEP: // Details step - need valid form data
         return formState.isValid;
-      case 2: // Settings step - form should still be valid
+      case SETTINGS_STEP: // Settings step - form should still be valid
         return formState.isValid;
-      case 3: // Preview step - need valid form and video upload (processing is OK)
+      case PREVIEW_STEP: // Preview step - need valid form and video upload (processing is OK)
         return formState.isValid && uploadState.isComplete;
-      case 4: // Publish step - everything should be ready
+      case PUBLISH_STEP: // Publish step - everything should be ready
         return formState.isValid && videoProcessing.canPublish;
       default:
         return false;
@@ -39,7 +49,7 @@ export const useVideoUpload = (collectiveId?: string) => {
       if (formState.data.title || formState.data.description) {
         localStorage.setItem('video-upload-draft', JSON.stringify(formState.data));
       }
-    }, 1000);
+    }, AUTO_SAVE_DELAY);
 
     return () => clearTimeout(timeoutId);
   }, [formState.data]);
@@ -55,14 +65,14 @@ export const useVideoUpload = (collectiveId?: string) => {
         console.error('Failed to load saved draft:', error);
       }
     }
-  }, [formState.update]);
+  }, [formState]);
 
   // Set collective ID if provided
   useEffect(() => {
     if (collectiveId && !formState.data.collectiveId) {
       formState.update({ collectiveId });
     }
-  }, [collectiveId, formState.data.collectiveId, formState.update]);
+  }, [collectiveId, formState]);
 
   // Main upload operation
   const uploadVideo = useCallback(async (file: File) => {
@@ -76,7 +86,7 @@ export const useVideoUpload = (collectiveId?: string) => {
       await uploadState.upload(file, uploadUrl);
       
       // Mark upload step as complete and move to next step
-      stepNavigation.markStepComplete(0);
+      stepNavigation.markStepComplete(UPLOAD_STEP);
       stepNavigation.next();
       
       uploadState.setComplete();
@@ -145,7 +155,7 @@ export const useVideoUpload = (collectiveId?: string) => {
 
     // TEMPORARILY DISABLED: Metadata updates fail because many form fields don't exist in DB
     // TODO: Re-enable once we decide how to handle form fields that have no database columns
-    // if (stepNavigation.currentStep === 1 || stepNavigation.currentStep === 2) {
+    // if (stepNavigation.currentStep === DETAILS_STEP || stepNavigation.currentStep === SETTINGS_STEP) {
     //   updateMetadata();
     // }
 
@@ -218,10 +228,10 @@ export const useVideoUpload = (collectiveId?: string) => {
     reset,
 
     // Status helpers for UI
-    isReadyToUpload: stepNavigation.currentStep === 0 && !uploadState.isUploading,
-    isReadyForDetails: stepNavigation.currentStep === 1 && uploadState.isComplete,
-    isReadyForSettings: stepNavigation.currentStep === 2,
-    isReadyForPreview: stepNavigation.currentStep === 3 && uploadState.isComplete,
-    isReadyToPublish: stepNavigation.currentStep === 4 && formState.isValid,
+    isReadyToUpload: stepNavigation.currentStep === UPLOAD_STEP && !uploadState.isUploading,
+    isReadyForDetails: stepNavigation.currentStep === DETAILS_STEP && uploadState.isComplete,
+    isReadyForSettings: stepNavigation.currentStep === SETTINGS_STEP,
+    isReadyForPreview: stepNavigation.currentStep === PREVIEW_STEP && uploadState.isComplete,
+    isReadyToPublish: stepNavigation.currentStep === PUBLISH_STEP && formState.isValid,
   };
 }; 

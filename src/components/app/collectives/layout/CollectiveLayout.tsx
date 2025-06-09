@@ -1,5 +1,3 @@
-'use client';
-
 import React from 'react';
 import { CollectiveHero } from '../hero/CollectiveHero';
 import { AuthorCarousel } from '../carousel/AuthorCarousel';

@@ -2,11 +2,13 @@ import { createServerSupabaseClient } from '@/lib/supabase/server';
 import type { Database } from '@/lib/database.types';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
+import { Suspense } from 'react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import PostReactionButtons from '@/components/app/posts/molecules/PostReactionButtons';
 import BookmarkButton from '@/components/app/posts/molecules/BookmarkButton';
-import CommentsSection from '@/components/app/posts/organisms/CommentsSection';
+import CommentsHybrid from '@/components/app/posts/organisms/CommentsHybrid';
+import { CommentsSkeleton } from '@/components/ui/CommentsSkeleton';
 import PostViewTracker from '@/components/app/posts/molecules/PostViewTracker';
 import { ReadOnlyLexicalViewer } from '@/components/ui/ReadOnlyLexicalViewer';
 import { ChevronLeft, Edit, Share2, MoreHorizontal } from 'lucide-react';
@@ -423,10 +425,9 @@ export default async function PostBySlugPage({
               {/* Comments Section */}
               <div className="mt-12">
                 <h2 className="text-2xl font-bold mb-8">Comments</h2>
-                <CommentsSection
-                  postId={post.id}
-                  currentUserId={user?.id ?? null}
-                />
+                <Suspense fallback={<CommentsSkeleton />}>
+                  <CommentsHybrid postId={post.id} />
+                </Suspense>
               </div>
             </footer>
           </div>

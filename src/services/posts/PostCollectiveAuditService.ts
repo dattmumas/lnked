@@ -1,7 +1,6 @@
 import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
 import { 
-  PostCollectiveError,
-  PostCollectiveServiceResponse 
+  PostCollectiveError
 } from '@/types/enhanced-database.types';
 
 // Audit log entry types
@@ -93,7 +92,7 @@ export class PostCollectiveAuditService {
         await this.trackErrorMetrics(operation, error, userId);
       }
 
-      console.log(`[PostCollectiveAudit] ${operation}:`, logEntry);
+      console.info(`[PostCollectiveAudit] ${operation}:`, logEntry);
     } catch (loggingError) {
       console.error('Failed to log post-collective operation:', loggingError);
     }
@@ -325,7 +324,7 @@ export class PostCollectiveAuditService {
     };
 
     // In a real application, this might be sent to an analytics service
-    console.log(`[PostCollectiveMetrics] Success:`, successMetric);
+    console.info(`[PostCollectiveMetrics] Success:`, successMetric);
   }
 
   /**

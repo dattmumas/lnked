@@ -283,7 +283,7 @@ export function useChat() {
       },
     });
     } else {
-      console.log('Realtime disabled - using polling/manual refresh only');
+      console.info('Realtime disabled - using polling/manual refresh only');
     }
     
     // Set up auto-refresh as backup (every 30 seconds)

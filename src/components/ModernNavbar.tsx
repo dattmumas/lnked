@@ -1,11 +1,11 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState, useMemo } from 'react';
 import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
-import type { User, Session } from '@supabase/supabase-js';
+import type { User } from '@supabase/supabase-js';
+import { useUser } from '@/hooks/useUser';
 import { Button } from './ui/button';
 import {
   Sheet,
@@ -37,120 +37,81 @@ import SearchBar from '@/components/app/nav/SearchBar';
 import { NotificationDropdown } from '@/components/notifications/NotificationDropdown';
 import { getOptimizedAvatarUrl } from '@/lib/utils/avatar';
 
-// Navigation items removed - now handled by GlobalSidebar
+// Navigation items are now handled by GlobalSidebar
 const publicNavItems: never[] = [];
 const authenticatedNavItems: never[] = [];
 
 export interface ModernNavbarProps {
   initialUser?: User | null;
-  initialUsername?: string | null;
+  initialProfile?: {
+    username: string | null;
+    full_name: string | null;
+    avatar_url: string | null;
+  } | null;
 }
 
 export default function ModernNavbar({
   initialUser,
-  initialUsername,
+  initialProfile,
 }: ModernNavbarProps) {
   const router = useRouter();
   const pathname = usePathname();
-  const [user, setUser] = useState<User | null>(initialUser ?? null);
+  const { user, loading } = useUser();
   const [username, setUsername] = useState<string | null>(
-    initialUsername ?? null,
+    initialProfile?.username ?? null,
   );
-  const [userMetadata, setUserMetadata] = useState<{
-    full_name?: string;
-    avatar_url?: string;
-  }>({});
-  const [isLoading, setIsLoading] = useState<boolean>(
-    initialUser === undefined,
-  );
+  const [userMetadata, setUserMetadata] = useState({
+    full_name: initialProfile?.full_name ?? null,
+    avatar_url: initialProfile?.avatar_url ?? null,
+  });
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
 
   const supabase = createSupabaseBrowserClient();
 
-  // Memoized optimized avatar URLs for different sizes in the navbar
+  // Memoized optimized avatar URLs
   const optimizedAvatarUrls = useMemo(() => {
     if (!userMetadata.avatar_url) return null;
-
     return {
-      // Small avatar for dropdown menu (36px)
       small: getOptimizedAvatarUrl(userMetadata.avatar_url, {
         width: 36,
         height: 36,
-        quality: 80,
-        resize: 'cover',
       }),
-      // Medium avatar for mobile sheet (48px)
       medium: getOptimizedAvatarUrl(userMetadata.avatar_url, {
         width: 48,
         height: 48,
-        quality: 80,
-        resize: 'cover',
       }),
     };
   }, [userMetadata.avatar_url]);
 
   useEffect(() => {
-    if (initialUser === undefined) {
-      supabase.auth
-        .getUser()
-        .then(async ({ data }: { data: { user: User | null } }) => {
-          setUser(data.user);
-          if (data.user) {
-            const { data: profile } = await supabase
-              .from('users')
-              .select('username, full_name, avatar_url')
-              .eq('id', data.user.id)
-              .single();
-            setUsername(profile?.username ?? null);
+    // If the user object is available from the hook but we don't have profile data, fetch it.
+    // This handles client-side sign-ins where initialProfile isn't available.
+    if (user && !username && !userMetadata.full_name) {
+      supabase
+        .from('users')
+        .select('username, full_name, avatar_url')
+        .eq('id', user.id)
+        .single()
+        .then(({ data: profile }) => {
+          if (profile) {
+            setUsername(profile.username);
             setUserMetadata({
-              full_name: profile?.full_name ?? undefined,
-              avatar_url: profile?.avatar_url ?? undefined,
+              full_name: profile.full_name,
+              avatar_url: profile.avatar_url,
             });
           }
-          setIsLoading(false);
         });
-    } else {
-      setIsLoading(false);
+    } else if (!user) {
+      // Clear profile data on sign out
+      setUsername(null);
+      setUserMetadata({ full_name: null, avatar_url: null });
     }
-
-    const { data: authListener } = supabase.auth.onAuthStateChange(
-      async (event: string, session: Session | null) => {
-        setUser(session?.user ?? null);
-        if (session?.user) {
-          const { data: profile } = await supabase
-            .from('users')
-            .select('username, full_name, avatar_url')
-            .eq('id', session.user.id)
-            .single();
-          setUsername(profile?.username ?? null);
-          setUserMetadata({
-            full_name: profile?.full_name ?? undefined,
-            avatar_url: profile?.avatar_url ?? undefined,
-          });
-        } else {
-          setUsername(null);
-          setUserMetadata({});
-        }
-
-        fetch('/api/auth/callback', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ event, session }),
-        });
-      },
-    );
-
-    return () => {
-      authListener.subscription.unsubscribe();
-    };
-  }, [initialUser, supabase]);
+  }, [user, username, userMetadata.full_name, supabase]);
 
   const handleSignOut = async () => {
-    setIsLoading(true);
     await supabase.auth.signOut();
-    setUser(null);
     router.push('/');
-    setIsLoading(false);
+    // No need to set user/loading state manually, the useUser hook handles it.
   };
 
   const isAuthPage = pathname === '/sign-in' || pathname === '/sign-up';
@@ -171,8 +132,6 @@ export default function ModernNavbar({
     );
   }
 
-  // isActiveRoute function removed - navigation now handled by GlobalSidebar
-
   const getUserInitials = () => {
     const name = userMetadata.full_name || username || user?.email;
     return name
@@ -189,9 +148,7 @@ export default function ModernNavbar({
     <nav className="w-full">
       <div className="w-full px-4 md:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
-          {/* Left: Logo + Nav */}
           <div className="flex items-center gap-8">
-            {/* Logo */}
             <Link
               href="/"
               className="text-2xl font-extrabold-serif tracking-tight flex items-center gap-0.5 select-none hover:opacity-80 transition-opacity"
@@ -199,27 +156,22 @@ export default function ModernNavbar({
             >
               Lnked<span className="text-accent text-2xl leading-none">.</span>
             </Link>
-
-            {/* Nav Items - Desktop - Removed, now handled by GlobalSidebar */}
           </div>
 
-          {/* Center: Search - Desktop */}
           {user && (
             <div className="hidden lg:block flex-1 max-w-xl mx-8">
               <SearchBar className="w-full h-9" />
             </div>
           )}
 
-          {/* Right: Actions */}
           <div className="flex items-center gap-2">
-            {isLoading ? (
+            {loading ? (
               <div className="flex items-center gap-3">
                 <div className="h-10 w-20 rounded-lg bg-muted animate-pulse" />
                 <div className="h-10 w-10 rounded-full bg-muted animate-pulse" />
               </div>
             ) : user ? (
               <>
-                {/* Write Button - Desktop */}
                 <Button
                   variant="default"
                   size="sm"
@@ -232,7 +184,6 @@ export default function ModernNavbar({
                   </Link>
                 </Button>
 
-                {/* Search Button - Mobile */}
                 <Button
                   variant="ghost"
                   size="sm"
@@ -243,10 +194,8 @@ export default function ModernNavbar({
                   <span className="sr-only">Search</span>
                 </Button>
 
-                {/* Notifications */}
                 <NotificationDropdown userId={user.id} />
 
-                {/* User Menu */}
                 <DropdownMenu
                   open={isUserMenuOpen}
                   onOpenChange={setIsUserMenuOpen}
@@ -261,7 +210,8 @@ export default function ModernNavbar({
                         <AvatarImage
                           src={
                             optimizedAvatarUrls?.small ||
-                            userMetadata.avatar_url
+                            userMetadata.avatar_url ||
+                            undefined
                           }
                           alt={userMetadata.full_name || username || 'User'}
                         />
@@ -352,7 +302,6 @@ export default function ModernNavbar({
             <div className="h-5 w-px bg-border mx-1" />
             <ModeToggle />
 
-            {/* Mobile Menu - Only show when user is logged in */}
             {user && (
               <div className="md:hidden">
                 <Sheet>
@@ -368,13 +317,13 @@ export default function ModernNavbar({
                     </SheetTitle>
 
                     <div className="flex flex-col gap-6 mt-8">
-                      {/* User Info */}
                       <div className="flex items-center gap-4 p-4 rounded-lg bg-accent/30">
                         <Avatar className="h-12 w-12">
                           <AvatarImage
                             src={
                               optimizedAvatarUrls?.medium ||
-                              userMetadata.avatar_url
+                              userMetadata.avatar_url ||
+                              undefined
                             }
                             alt={userMetadata.full_name || username || 'User'}
                           />
@@ -392,9 +341,6 @@ export default function ModernNavbar({
                         </div>
                       </div>
 
-                      {/* Navigation - Removed, now handled by GlobalSidebar */}
-
-                      {/* Actions */}
                       <div className="space-y-2">
                         <p className="text-xs font-semibold text-foreground/60 uppercase tracking-wider px-3">
                           Actions
@@ -421,7 +367,6 @@ export default function ModernNavbar({
                         </Button>
                       </div>
 
-                      {/* Account */}
                       <div className="space-y-2">
                         <p className="text-xs font-semibold text-foreground/60 uppercase tracking-wider px-3">
                           Account

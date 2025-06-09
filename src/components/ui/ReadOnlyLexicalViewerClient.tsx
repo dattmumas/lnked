@@ -120,6 +120,39 @@ interface ReadOnlyLexicalViewerClientProps {
   contentJSON: string;
 }
 
+// Helper function to validate if content is valid Lexical JSON
+function validateLexicalJSON(content: string): string | null {
+  if (!content || !content.trim()) {
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(content);
+    // Check if it has the basic Lexical structure
+    if (parsed && typeof parsed === 'object' && parsed.root) {
+      return content;
+    }
+    return null;
+  } catch {
+    // Not valid JSON, return null
+    return null;
+  }
+}
+
+// Error fallback component for invalid content
+function InvalidContentFallback({ content }: { content: string }) {
+  return (
+    <div className="bg-muted/10 border border-muted rounded-lg p-6 my-4">
+      <p className="text-muted-foreground text-sm mb-2">
+        This content cannot be displayed in the rich editor. Showing as text:
+      </p>
+      <div className="prose prose-sm dark:prose-invert">
+        <p className="whitespace-pre-wrap">{content}</p>
+      </div>
+    </div>
+  );
+}
+
 function LoadInitialJsonPlugin({ json }: { json?: string }) {
   const [editor] = useLexicalComposerContext();
   React.useEffect(() => {
@@ -138,19 +171,36 @@ function LoadInitialJsonPlugin({ json }: { json?: string }) {
 export function ReadOnlyLexicalViewerClient({
   contentJSON,
 }: ReadOnlyLexicalViewerClientProps) {
+  // Validate the JSON content first
+  const validatedJSON = React.useMemo(() => {
+    return validateLexicalJSON(contentJSON);
+  }, [contentJSON]);
+
+  // If content is not valid Lexical JSON, show fallback
+  if (!validatedJSON) {
+    if (!contentJSON || !contentJSON.trim()) {
+      return (
+        <div className="text-muted-foreground italic text-center py-8">
+          No content available.
+        </div>
+      );
+    }
+    return <InvalidContentFallback content={contentJSON} />;
+  }
+
   const initialConfig = React.useMemo(
     () => ({
       namespace: 'Playground',
       theme: PlaygroundEditorTheme,
       nodes: [...PlaygroundNodes],
-      editorState: contentJSON,
+      editorState: validatedJSON,
       editable: false,
       readOnly: true,
       onError(error: Error) {
-        console.error(error);
+        console.error('Lexical editor error:', error);
       },
     }),
-    [contentJSON],
+    [validatedJSON],
   );
 
   return (
