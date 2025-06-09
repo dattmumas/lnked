@@ -342,8 +342,8 @@ export function RightSidebar({
   const { chains, loading, error, refetch } = useChains();
   const chainInteractions = useChainInteractions(user.id);
   return (
-    <div className="w-112 bg-white dark:bg-gray-900 border-l border-gray-200 dark:border-gray-700 hidden lg:block">
-      <div className="sticky top-16 h-[calc(100vh-4rem)] overflow-hidden flex flex-col">
+    <div className="fixed right-0 top-16 w-112 h-[calc(100vh-4rem)] bg-white dark:bg-gray-900 border-l border-gray-200 dark:border-gray-700 hidden lg:block z-20">
+      <div className="h-full overflow-hidden flex flex-col">
         {/* Header */}
         <div className="p-5 border-b border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between">

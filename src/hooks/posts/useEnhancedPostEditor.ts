@@ -7,10 +7,6 @@ import {
 } from '@/lib/stores/enhanced-post-editor-store';
 import { useUser } from '@/hooks/useUser';
 import { postCollectiveService } from '@/services/posts/PostCollectiveService';
-import { 
-  EnhancedPostFormData,
-  PostCollectiveServiceResponse 
-} from '@/types/enhanced-database.types';
 import { Json } from '@/lib/database.types';
 
 // Enhanced auto-save mutation hook with multi-collective support

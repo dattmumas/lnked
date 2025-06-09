@@ -78,7 +78,7 @@ export default async function VideoPlayerPage({
   return (
     <div className="min-h-screen bg-background flex flex-col lg:flex-row">
       {/* Main content: video details + player + comments */}
-      <main className="flex-1 flex flex-col items-center py-8">
+      <main className="ml-16 w-[calc(100%-4rem)] lg:w-[calc(100%-4rem-28rem)] flex flex-col items-center py-8">
         {/* Video metadata - renders immediately (no Suspense) */}
         <VideoDetailsServer video={video as VideoAsset} />
 

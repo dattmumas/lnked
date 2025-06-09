@@ -9,6 +9,13 @@ import {
   type UpdatePostServerValues,
 } from '@/lib/schemas/postSchemas';
 import { revalidatePath } from 'next/cache';
+import { supabaseAdmin } from '@/lib/supabaseAdmin';
+import { 
+  THUMBNAIL_CONFIG, 
+  generateThumbnailFilename, 
+  extractThumbnailFilePathFromUrl, 
+  isSupabaseStorageUrl 
+} from '@/lib/utils/thumbnail';
 
 type CreatePostFormValues = CreatePostServerValues;
 
@@ -525,4 +532,185 @@ export async function featurePost(
   }
 
   return { success: true };
+}
+
+// Thumbnail upload function for posts
+export async function uploadThumbnail(
+  formData: FormData,
+  postId?: string
+): Promise<{ success: boolean; thumbnailUrl?: string; error?: string }> {
+  const supabase = await createServerSupabaseClient();
+
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+
+  if (authError || !user) {
+    return {
+      success: false,
+      error: 'You must be logged in to upload a thumbnail.',
+    };
+  }
+
+  const file = formData.get('thumbnail') as File;
+  if (!file) {
+    return {
+      success: false,
+      error: 'No file provided.',
+    };
+  }
+
+  try {
+    // If postId is provided, check if user has permission to edit the post
+    if (postId) {
+      const { data: post, error: postError } = await supabase
+        .from('posts')
+        .select('author_id, collective_id, collective:collectives!collective_id(owner_id)')
+        .eq('id', postId)
+        .single();
+
+      if (postError || !post) {
+        return {
+          success: false,
+          error: 'Post not found or access denied.',
+        };
+      }
+
+      const isAuthor = post.author_id === user.id;
+      let hasPermission = isAuthor;
+
+      // Check collective permissions if post belongs to a collective
+      if (!isAuthor && post.collective_id && post.collective) {
+        const isCollectiveOwner = post.collective.owner_id === user.id;
+        if (isCollectiveOwner) {
+          hasPermission = true;
+        } else {
+          // Check if user is a collective member with edit permissions
+          const { data: membership } = await supabase
+            .from('collective_members')
+            .select('role')
+            .eq('collective_id', post.collective_id)
+            .eq('user_id', user.id)
+            .single();
+
+          if (membership && ['admin', 'editor'].includes(membership.role)) {
+            hasPermission = true;
+          }
+        }
+      }
+
+      if (!hasPermission) {
+        return {
+          success: false,
+          error: 'You do not have permission to update this post.',
+        };
+      }
+    }
+
+    // Validate file type and size
+    if (!file.type.startsWith('image/')) {
+      return {
+        success: false,
+        error: 'File must be an image (JPEG, PNG, WebP).',
+      };
+    }
+
+    if (file.size > THUMBNAIL_CONFIG.maxSize) {
+      return {
+        success: false,
+        error: 'Image size must be less than 15MB.',
+      };
+    }
+
+    // Generate file path using utility function
+    const filePath = generateThumbnailFilename(user.id, postId, file.type);
+
+    // Upload thumbnail to Supabase storage
+    const { error: uploadError } = await supabaseAdmin.storage
+      .from(THUMBNAIL_CONFIG.bucket)
+      .upload(filePath, file, {
+        contentType: file.type,
+        upsert: false, // Don't overwrite, create new file
+        cacheControl: THUMBNAIL_CONFIG.cacheControl,
+      });
+
+    if (uploadError) {
+      console.error('Error uploading thumbnail to Supabase storage:', uploadError);
+      return {
+        success: false,
+        error: `Failed to upload thumbnail: ${uploadError.message}`,
+      };
+    }
+
+    // Get the public URL for the new thumbnail
+    const { data: publicUrlData } = supabaseAdmin.storage
+      .from(THUMBNAIL_CONFIG.bucket)
+      .getPublicUrl(filePath);
+
+    if (!publicUrlData.publicUrl) {
+      return {
+        success: false,
+        error: 'Failed to generate thumbnail URL.',
+      };
+    }
+
+    const thumbnailUrl = publicUrlData.publicUrl;
+
+    // If postId is provided, update the post's thumbnail_url in database
+    if (postId) {
+      // Get current post data to check for existing thumbnail
+      const { data: currentPost } = await supabase
+        .from('posts')
+        .select('thumbnail_url')
+        .eq('id', postId)
+        .single();
+
+      const { error: updateError } = await supabase
+        .from('posts')
+        .update({ thumbnail_url: thumbnailUrl })
+        .eq('id', postId);
+
+      if (updateError) {
+        console.error('Error updating post thumbnail URL:', updateError);
+        return {
+          success: false,
+          error: 'Failed to update thumbnail URL in database.',
+        };
+      }
+
+      // Clean up old thumbnail if it exists and was stored in our bucket
+      if (currentPost?.thumbnail_url && isSupabaseStorageUrl(currentPost.thumbnail_url)) {
+        try {
+          const oldFilePath = extractThumbnailFilePathFromUrl(currentPost.thumbnail_url);
+          
+          if (oldFilePath) {
+            // Delete old thumbnail (don't await to avoid blocking the response)
+            supabaseAdmin.storage
+              .from(THUMBNAIL_CONFIG.bucket)
+              .remove([oldFilePath])
+              .catch(error => {
+                console.warn('Could not delete old thumbnail:', error.message);
+              });
+          }
+        } catch (error) {
+          // Log warning but don't fail the operation
+          console.warn('Error cleaning up old thumbnail:', error);
+        }
+      }
+
+      // Revalidate relevant paths
+      revalidatePath('/dashboard/posts');
+      revalidatePath(`/posts/${postId}`);
+    }
+
+    return { success: true, thumbnailUrl };
+
+  } catch (error) {
+    console.error('Error processing thumbnail upload:', error);
+    return {
+      success: false,
+      error: 'Failed to process thumbnail upload. Please try again.',
+    };
+  }
 }

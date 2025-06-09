@@ -16,14 +16,18 @@ import {
   ChevronRight,
   Users,
   Plus,
+  FileText,
+  LayoutDashboard,
 } from 'lucide-react';
 
 // Enhanced main navigation with Videos moved up as per creative design
 const navigationItems = [
   { icon: Home, label: 'Home', href: '/home' },
   { icon: Compass, label: 'Explore', href: '/discover' },
-  { icon: Video, label: 'Videos', href: '/videos' }, // Moved up per creative design
+  { icon: Video, label: 'Videos', href: '/videos' },
+  { icon: FileText, label: 'Posts', href: '/dashboard/posts' },
   { icon: UserIcon, label: 'Profile', href: '/profile' },
+  { icon: LayoutDashboard, label: 'Dashboard', href: '/dashboard' },
   { icon: Settings, label: 'Settings', href: '/dashboard/settings' },
 ];
 
@@ -34,7 +38,7 @@ const actionItems = [
     icon: Video,
     label: 'Upload Video',
     href: '/videos/upload',
-    variant: 'secondary',
+    variant: 'primary',
   },
 ];
 

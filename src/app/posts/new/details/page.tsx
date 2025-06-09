@@ -19,18 +19,18 @@ import {
   Eye,
   Globe,
   Lock,
-  FileText,
-  Video,
   Upload,
-  Sparkles,
   Users,
   Share2,
+  X,
+  Loader2,
 } from 'lucide-react';
 import { useEnhancedPostEditor } from '@/hooks/posts/useEnhancedPostEditor';
 import {
   CollectiveSelectionSummary,
   CollectiveValidationFeedback,
 } from '@/components/app/posts/collective-selection';
+import { useThumbnailUpload } from '@/hooks/posts/useThumbnailUpload';
 
 export default function NewPostDetailsPage() {
   const router = useRouter();
@@ -75,6 +75,23 @@ export default function NewPostDetailsPage() {
 
   const handleCollectiveSelectionChange = (collectiveIds: string[]) => {
     setSelectedCollectives(collectiveIds);
+  };
+
+  // Thumbnail upload functionality
+  const thumbnailUpload = useThumbnailUpload({
+    postId: formData.id, // Will be undefined for new posts
+    onUploadSuccess: (thumbnailUrl) => {
+      updateFormData({ thumbnail_url: thumbnailUrl });
+    },
+    onUploadError: (error) => {
+      console.error('Thumbnail upload error:', error);
+      // Could add a toast notification here
+    },
+  });
+
+  const handleRemoveThumbnail = () => {
+    updateFormData({ thumbnail_url: '' });
+    thumbnailUpload.clearError();
   };
 
   // Check if post is ready to publish
@@ -159,43 +176,6 @@ export default function NewPostDetailsPage() {
             </CardContent>
           </Card>
 
-          {/* Post Type Selection */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <FileText className="h-5 w-5" />
-                Post Type
-              </CardTitle>
-              <CardDescription>
-                Choose the type of content for your post
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 gap-4">
-                <Button
-                  variant={
-                    formData.post_type === 'text' ? 'default' : 'outline'
-                  }
-                  onClick={() => updateFormData({ post_type: 'text' })}
-                  className="h-20 flex-col gap-2"
-                >
-                  <FileText className="h-6 w-6" />
-                  <span>Text Post</span>
-                </Button>
-                <Button
-                  variant={
-                    formData.post_type === 'video' ? 'default' : 'outline'
-                  }
-                  onClick={() => updateFormData({ post_type: 'video' })}
-                  className="h-20 flex-col gap-2"
-                >
-                  <Video className="h-6 w-6" />
-                  <span>Video Post</span>
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-
           {/* Post Details */}
           <Card>
             <CardHeader>
@@ -235,33 +215,136 @@ export default function NewPostDetailsPage() {
                 Post Thumbnail
               </CardTitle>
               <CardDescription>
-                Add a thumbnail image for your post
+                Add a thumbnail image for your post (JPEG, PNG, WebP up to 15MB)
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {/* Upload area */}
-              <div className="border-2 border-dashed border-muted rounded-lg p-8 text-center">
-                <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
-                <p className="text-sm text-muted-foreground mb-2">
-                  Drop an image here or click to upload
-                </p>
-                <Button variant="outline" size="sm">
-                  Choose File
-                </Button>
-              </div>
-
-              {/* Thumbnail preview */}
-              {formData.thumbnail_url && (
-                <div className="aspect-video rounded-lg bg-muted overflow-hidden">
-                  <img
-                    src={formData.thumbnail_url}
-                    alt="Post thumbnail"
-                    className="w-full h-full object-cover"
-                  />
+              {/* Current thumbnail or upload area */}
+              {formData.thumbnail_url ? (
+                <div className="space-y-4">
+                  <div className="aspect-video rounded-lg bg-muted overflow-hidden relative">
+                    <img
+                      src={formData.thumbnail_url}
+                      alt="Post thumbnail"
+                      className="w-full h-full object-cover"
+                    />
+                    {thumbnailUpload.isUploading && (
+                      <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                        <div className="text-center text-white">
+                          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2" />
+                          <p className="text-sm">Uploading...</p>
+                          {thumbnailUpload.uploadProgress > 0 && (
+                            <div className="w-32 bg-white/20 rounded-full h-2 mx-auto mt-2">
+                              <div
+                                className="bg-white rounded-full h-2 transition-all duration-300"
+                                style={{
+                                  width: `${thumbnailUpload.uploadProgress}%`,
+                                }}
+                              />
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        document.getElementById('thumbnail-input')?.click()
+                      }
+                      disabled={thumbnailUpload.isUploading}
+                      className="px-3 py-2 text-sm border border-border rounded-md hover:bg-muted transition-colors disabled:opacity-50"
+                    >
+                      Change Image
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleRemoveThumbnail}
+                      disabled={thumbnailUpload.isUploading}
+                      className="px-3 py-2 text-sm border border-destructive text-destructive rounded-md hover:bg-destructive/10 transition-colors disabled:opacity-50"
+                    >
+                      <X className="h-4 w-4 mr-1 inline" />
+                      Remove
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div
+                  className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors cursor-pointer ${
+                    thumbnailUpload.isDragOver
+                      ? 'border-primary bg-primary/5'
+                      : 'border-border hover:border-primary/50'
+                  } ${thumbnailUpload.isUploading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  onDragOver={thumbnailUpload.handleDragOver}
+                  onDragLeave={thumbnailUpload.handleDragLeave}
+                  onDrop={thumbnailUpload.handleDrop}
+                  onClick={() =>
+                    !thumbnailUpload.isUploading &&
+                    document.getElementById('thumbnail-input')?.click()
+                  }
+                >
+                  {thumbnailUpload.isUploading ? (
+                    <div className="text-center">
+                      <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2 text-muted-foreground" />
+                      <p className="text-sm text-muted-foreground mb-2">
+                        Uploading thumbnail...
+                      </p>
+                      {thumbnailUpload.uploadProgress > 0 && (
+                        <div className="w-32 bg-muted rounded-full h-2 mx-auto">
+                          <div
+                            className="bg-primary rounded-full h-2 transition-all duration-300"
+                            style={{
+                              width: `${thumbnailUpload.uploadProgress}%`,
+                            }}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <>
+                      <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
+                      <p className="text-sm text-muted-foreground mb-2">
+                        {thumbnailUpload.isDragOver
+                          ? 'Drop your image here'
+                          : 'Drop an image here or click to browse'}
+                      </p>
+                      <Button variant="outline" size="sm" type="button">
+                        Choose File
+                      </Button>
+                      <p className="text-xs text-muted-foreground mt-2">
+                        Recommended: 1200×630px (1.91:1 ratio)
+                      </p>
+                    </>
+                  )}
                 </div>
               )}
 
-              {/* AI generation option */}
+              {/* Hidden File Input */}
+              <input
+                id="thumbnail-input"
+                type="file"
+                accept="image/jpeg,image/jpg,image/png,image/webp"
+                onChange={thumbnailUpload.handleFileSelect}
+                disabled={thumbnailUpload.isUploading}
+                className="hidden"
+              />
+
+              {/* Upload Error */}
+              {thumbnailUpload.uploadError && (
+                <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
+                  <p className="text-sm text-destructive mb-2">
+                    {thumbnailUpload.uploadError}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={thumbnailUpload.clearError}
+                    className="text-xs text-destructive hover:underline"
+                  >
+                    Dismiss
+                  </button>
+                </div>
+              )}
             </CardContent>
           </Card>
 

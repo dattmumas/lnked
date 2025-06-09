@@ -5,15 +5,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
 import { Button } from '@/components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import {
   PlusCircle,
@@ -800,7 +792,7 @@ function CenterFeed({ user }: { user: User }) {
 
   if (loading || !postInteractions.initialized) {
     return (
-      <div className="flex-1 max-w-4xl mx-auto px-6 py-6">
+      <div className="w-full max-w-4xl mx-auto px-6 py-6">
         <div className="flex items-center justify-center py-12">
           <Loader2 className="w-8 h-8 animate-spin text-accent" />
           <span className="ml-2 text-muted-foreground">
@@ -813,7 +805,7 @@ function CenterFeed({ user }: { user: User }) {
 
   if (error) {
     return (
-      <div className="flex-1 max-w-4xl mx-auto px-6 py-6">
+      <div className="w-full max-w-4xl mx-auto px-6 py-6">
         <div className="text-center py-12">
           <p className="text-destructive mb-4">Error loading feed: {error}</p>
           <Button onClick={() => window.location.reload()}>Retry</Button>
@@ -823,7 +815,7 @@ function CenterFeed({ user }: { user: User }) {
   }
 
   return (
-    <div className="flex-1 max-w-4xl mx-auto px-6 py-6">
+    <div className="w-full max-w-4xl mx-auto px-6 py-6">
       {/* Filter Toggles */}
       <div className="flex gap-2 mb-6 p-1 bg-muted rounded-lg w-fit">
         {(['all', 'posts', 'videos'] as const).map((filterType) => (
@@ -1078,8 +1070,8 @@ function RightSidebar({
   const chainInteractions = useChainInteractions(user.id);
 
   return (
-    <div className="w-112 bg-white dark:bg-gray-900 border-l border-gray-200 dark:border-gray-700 hidden lg:block">
-      <div className="sticky top-16 h-[calc(100vh-4rem)] overflow-hidden flex flex-col">
+    <div className="fixed right-0 top-16 w-112 h-[calc(100vh-4rem)] bg-white dark:bg-gray-900 border-l border-gray-200 dark:border-gray-700 hidden lg:block z-20">
+      <div className="h-full overflow-hidden flex flex-col">
         {/* Header */}
         <div className="p-5 border-b border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between">
@@ -1363,16 +1355,13 @@ export default function HomePageClient({ user, profile }: HomePageClientProps) {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      {/* Three-Zone Layout */}
-      <div className="flex">
-        {/* Center Feed - Main Content Stream */}
-        <main className="flex-1 lg:mr-112 transition-all duration-300">
-          <CenterFeed user={user} />
-        </main>
+      {/* Center Feed - Main Content Stream */}
+      <main className="ml-16 w-[calc(100%-4rem)] lg:w-[calc(100%-4rem-28rem)] flex justify-center">
+        <CenterFeed user={user} />
+      </main>
 
-        {/* Right Sidebar - Chains Activity Feed */}
-        <RightSidebar user={user} profile={profile} />
-      </div>
+      {/* Right Sidebar - Chains Activity Feed (Fixed Position) */}
+      <RightSidebar user={user} profile={profile} />
 
       {/* Enhanced Floating Action Button for Mobile */}
       <FloatingCreateButton />
