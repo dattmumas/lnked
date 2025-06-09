@@ -1,6 +1,6 @@
-# MUX Service
+# MUX Integration
 
-A simple service for MUX video streaming integration following their documented direct upload approach.
+Direct MUX video streaming integration following their documented best practices using the official MUX Node SDK.
 
 ## Setup
 
@@ -26,13 +26,18 @@ const result = await uploadService.uploadVideo(file, {
 });
 ```
 
-### Direct MUX Integration
+### Direct MUX SDK Integration
 
 ```typescript
-import { muxService } from '@/services/MuxService';
+import Mux from '@mux/mux-node';
+
+const mux = new Mux({
+  tokenId: process.env.MUX_TOKEN_ID!,
+  tokenSecret: process.env.MUX_TOKEN_SECRET!,
+});
 
 // Create direct upload URL
-const uploadResult = await muxService.createDirectUpload({
+const directUpload = await mux.video.uploads.create({
   cors_origin: 'https://yoursite.com',
   new_asset_settings: {
     playback_policy: ['public'],
@@ -41,15 +46,15 @@ const uploadResult = await muxService.createDirectUpload({
 });
 
 // Upload file directly to MUX
-// PUT file to uploadResult.data.url
+// PUT file to directUpload.url
 ```
 
 ## How it works
 
 1. Client requests upload URL from `/api/videos/upload-url`
-2. Server creates MUX direct upload URL and saves metadata to database
+2. Server creates MUX direct upload URL using official SDK and saves metadata to database
 3. Client uploads file directly to MUX using PUT request
 4. MUX processes video and sends webhooks when ready
 5. Webhook handler updates database with asset status
 
-The system is designed to be simple and leverage MUX's built-in capabilities rather than reimplementing video upload management.
+The system uses MUX's official Node SDK directly in API routes, following their recommended integration patterns without custom wrappers.

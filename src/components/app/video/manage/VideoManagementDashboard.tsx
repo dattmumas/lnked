@@ -25,7 +25,7 @@ import {
 import Image from 'next/image';
 
 // Import our components
-import VideoUploader from '@/components/app/uploads/VideoUploader';
+
 import Link from 'next/link';
 
 // Import constants
@@ -285,25 +285,8 @@ export default function VideoManagementDashboard() {
     setViewMode((prev) => (prev === 'grid' ? 'list' : 'grid'));
   }, []);
 
-  const handleUploadClick = useCallback(() => {
-    setActiveTab('upload');
-  }, []);
-
   const handleLiveStreamClick = useCallback(() => {
     setActiveTab('live-streams');
-  }, []);
-
-  const handleUploadComplete = useCallback(
-    (session: string) => {
-      console.warn('Upload completed:', session);
-      setActiveTab('library');
-      fetchVideos();
-    },
-    [fetchVideos],
-  );
-
-  const handleUploadError = useCallback((uploadError: string) => {
-    setError(uploadError);
   }, []);
 
   const handlePreviousPage = useCallback(() => {
@@ -315,24 +298,16 @@ export default function VideoManagementDashboard() {
   }, []);
 
   return (
-    <div className="pattern-stack gap-section">
+    <div className="p-2 pattern-stack gap-section">
       {/* Enhanced Header with design tokens */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-component">
-        <div className="pattern-stack gap-1">
-          <h1 className="text-3xl font-bold text-content-primary tracking-tight">
-            Video Management
-          </h1>
-          <p className="text-content-secondary">
-            Manage your video library, live streams, and analytics
-          </p>
-        </div>
         <div className="flex items-center gap-component">
           <Button
-            onClick={handleUploadClick}
+            asChild
             leftIcon={<Upload className="h-4 w-4" />}
             className="micro-interaction btn-scale"
           >
-            Upload Video
+            <Link href="/videos/upload">Upload Video</Link>
           </Button>
           <Button
             variant="outline"
@@ -360,20 +335,13 @@ export default function VideoManagementDashboard() {
 
       {/* Enhanced Main Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-5 bg-surface-elevated-2">
+        <TabsList className="grid w-full grid-cols-4 bg-surface-elevated-2">
           <TabsTrigger
             value="library"
             className="flex items-center gap-1.5 micro-interaction nav-hover"
           >
             <Grid className="h-4 w-4" />
             Library
-          </TabsTrigger>
-          <TabsTrigger
-            value="upload"
-            className="flex items-center gap-1.5 micro-interaction nav-hover"
-          >
-            <Upload className="h-4 w-4" />
-            Upload
           </TabsTrigger>
           <TabsTrigger
             value="live-streams"
@@ -494,11 +462,11 @@ export default function VideoManagementDashboard() {
               <div className="pattern-stack gap-component items-center">
                 <p className="text-content-secondary">No videos found</p>
                 <Button
-                  onClick={handleUploadClick}
+                  asChild
                   leftIcon={<Upload className="h-4 w-4" />}
                   className="micro-interaction btn-scale"
                 >
-                  Upload Your First Video
+                  <Link href="/videos/upload">Upload Your First Video</Link>
                 </Button>
               </div>
             </Card>
@@ -554,16 +522,6 @@ export default function VideoManagementDashboard() {
               </Button>
             </div>
           )}
-        </TabsContent>
-
-        {/* Other tabs content remains the same for now */}
-        <TabsContent value="upload">
-          <Card size="lg" className="pattern-card">
-            <VideoUploader
-              onUploadComplete={handleUploadComplete}
-              onUploadError={handleUploadError}
-            />
-          </Card>
         </TabsContent>
 
         <TabsContent value="live-streams">

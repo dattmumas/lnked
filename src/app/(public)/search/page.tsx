@@ -21,6 +21,17 @@ export default async function Page({
     like_count?: number | null;
     dislike_count?: number | null;
     current_user_has_liked?: boolean;
+    author: {
+      id: string;
+      username: string | null;
+      full_name: string | null;
+      avatar_url: string | null;
+    };
+    collective?: {
+      id: string;
+      name: string;
+      slug: string;
+    } | null;
   };
 
   type UserResult = Pick<
@@ -41,7 +52,22 @@ export default async function Page({
     // Search posts using ilike for title and subtitle
     const { data: postsData } = await supabase
       .from('posts')
-      .select('*, collective:collectives!posts_collective_id_fkey(slug)')
+      .select(
+        `
+        *,
+        author:users!author_id (
+          id,
+          username,
+          full_name,
+          avatar_url
+        ),
+        collective:collectives!posts_collective_id_fkey (
+          id,
+          name,
+          slug
+        )
+      `,
+      )
       .eq('is_public', true)
       .not('published_at', 'is', null)
       .or(`title.ilike.%${q}%,subtitle.ilike.%${q}%,content.ilike.%${q}%`)
@@ -49,16 +75,25 @@ export default async function Page({
       .limit(20);
 
     posts =
-      (
-        postsData as
-          | (PostRow & { collective?: { slug: string } | null })[]
-          | null
-      )?.map((p) => ({
+      (postsData as any[])?.map((p) => ({
         ...p,
         like_count: p.like_count ?? 0,
         dislike_count: p.dislike_count ?? 0,
         collective_slug: p.collective?.slug ?? null,
         current_user_has_liked: undefined,
+        author: {
+          id: p.author?.id || '',
+          username: p.author?.username || null,
+          full_name: p.author?.full_name || null,
+          avatar_url: p.author?.avatar_url || null,
+        },
+        collective: p.collective
+          ? {
+              id: p.collective.id,
+              name: p.collective.name,
+              slug: p.collective.slug,
+            }
+          : null,
       })) || [];
 
     // Search users using ilike for username and full_name
@@ -110,8 +145,27 @@ export default async function Page({
             {posts.map((post) => (
               <PostCard
                 key={post.id}
-                post={post}
-                collectiveSlug={post.collective_slug ?? null}
+                post={{
+                  id: post.id,
+                  title: post.title,
+                  content: post.content,
+                  meta_description: post.meta_description,
+                  thumbnail_url: post.thumbnail_url,
+                  slug: (post as any).slug || null,
+                  created_at: post.created_at,
+                  post_type: (post.post_type as 'text' | 'video') || 'text',
+                  metadata: post.metadata,
+                  author: post.author,
+                  collective: post.collective,
+                }}
+                interactions={{
+                  isLiked: false,
+                  isDisliked: false,
+                  isBookmarked: false,
+                  likeCount: post.like_count || 0,
+                  dislikeCount: post.dislike_count || 0,
+                  commentCount: 0,
+                }}
               />
             ))}
           </div>

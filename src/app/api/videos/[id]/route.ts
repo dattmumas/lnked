@@ -61,90 +61,76 @@ export async function PATCH(
 
     console.log('PATCH /api/videos/[id] - Existing video found:', existingVideo);
 
-    // Enhanced update data handling - support all video_assets columns
     const updateData: any = {};
-    
+    const has = (key: string) => Object.prototype.hasOwnProperty.call(body, key);
+
     // Core metadata fields
-    if (body.title !== undefined) {
-      updateData.title = body.title;
-    }
+    if (has('title')) updateData.title = body.title;
+    if (has('description')) updateData.description = body.description;
     
-    if (body.description !== undefined) {
-      updateData.description = body.description;
-    }
-
-    // Enhanced metadata fields (new columns)
-    if (body.is_public !== undefined) {
-      updateData.is_public = body.is_public;
-    }
-
-    if (body.playback_policy !== undefined) {
-      updateData.playback_policy = body.playback_policy;
-    }
-
-    if (body.encoding_tier !== undefined) {
-      updateData.encoding_tier = body.encoding_tier;
-    }
-
-    // Handle privacy setting mapping (as per architecture design)
-    if (body.privacySetting !== undefined) {
-      updateData.is_public = body.privacySetting === 'public';
-      updateData.playback_policy = body.privacySetting === 'public' ? 'public' : 'signed';
-    }
-
-    // Collective and post associations
-    if (body.collective_id !== undefined) {
-      // Validate collective access if setting collective_id
-      if (body.collective_id) {
-        const { data: membership, error: membershipError } = await supabase
-          .from('collective_members')
-          .select('id')
-          .eq('collective_id', body.collective_id)
-          .eq('user_id', user.id)
-          .single();
-
-        if (membershipError || !membership) {
-          return NextResponse.json(
-            { error: 'Not authorized to assign video to this collective' },
-            { status: 403 }
-          );
-        }
-      }
-      updateData.collective_id = body.collective_id;
-    }
-
-    if (body.post_id !== undefined) {
-      // Validate post ownership if setting post_id
-      if (body.post_id) {
-        const { data: post, error: postError } = await supabase
+    // Handle publishing status - create post when video is published
+    let newPostId = null;
+    if (has('is_published') && body.is_published) {
+      // Create a new post for this video if it doesn't already have one
+      if (!(existingVideo as any).post_id) {
+        const { data: newPost, error: postError } = await supabase
           .from('posts')
-          .select('id, author_id')
-          .eq('id', body.post_id)
+          .insert({
+            title: existingVideo.title || `Video: ${existingVideo.title || 'Untitled'}`,
+            content: existingVideo.description || '',
+            author_id: user.id,
+            status: 'active',
+            is_public: updateData.is_public ?? (existingVideo as any).is_public ?? true,
+            published_at: new Date().toISOString(),
+            type: 'video',
+            collective_id: updateData.collective_id ?? (existingVideo as any).collective_id,
+          })
+          .select('id')
           .single();
 
-        if (postError || !post || post.author_id !== user.id) {
+        if (postError) {
+          console.error('Failed to create post for video:', postError);
           return NextResponse.json(
-            { error: 'Not authorized to attach video to this post' },
-            { status: 403 }
+            { error: 'Failed to create post for video' },
+            { status: 500 }
           );
         }
+
+        newPostId = newPost.id;
+        updateData.post_id = newPostId;
       }
-      updateData.post_id = body.post_id;
+    }
+    // Note: We don't set a status here. 'is_published' is a metadata flag.
+    // The actual video 'status' (preparing, ready, errored) is controlled by Mux webhooks.
+
+    // Handle privacy setting mapping from client-side 'privacySetting'
+    if (has('privacy_setting')) {
+      updateData.is_public = body.privacy_setting === 'public';
+      updateData.playback_policy = body.privacy_setting === 'public' ? 'public' : 'signed';
+    }
+
+    // Direct mapping for other potential fields from the database schema
+    if (has('encoding_tier')) updateData.encoding_tier = body.encoding_tier;
+    if (has('collective_id')) updateData.collective_id = body.collective_id;
+    if (has('post_id')) updateData.post_id = body.post_id;
+    
+    // Set updated_at timestamp for any change
+    if (Object.keys(updateData).length > 0) {
+      updateData.updated_at = new Date().toISOString();
     }
     
-    // Handle publishing status
-    if (body.is_published !== undefined) {
-      updateData.status = body.is_published ? 'ready' : 'preparing';
+    console.log('PATCH /api/videos/[id] - Update data prepared:', updateData);
+
+    // Update in database if there are changes
+    if (Object.keys(updateData).length === 0) {
+      console.log('PATCH /api/videos/[id] - No changes to apply.');
+      return NextResponse.json({
+        success: true,
+        video: existingVideo,
+        message: 'No changes detected.',
+      });
     }
-
-    // Legacy status field support
-    if (body.status !== undefined) {
-      updateData.status = body.status;
-    }
-
-    console.log('PATCH /api/videos/[id] - Enhanced update data:', updateData);
-
-    // Update in database with enhanced field support
+    
     const { data: updatedVideo, error: updateError } = await supabase
       .from('video_assets')
       .update(updateData)
@@ -257,43 +243,61 @@ export async function DELETE(
       );
     }
 
-    // Delete from MUX following their documentation
-    // Handle both upload cancellation and asset deletion based on proper fields
     try {
-      // If we have an upload ID but no asset ID, cancel the upload
-      if (videoAsset.mux_upload_id && !videoAsset.mux_asset_id) {
-        await mux.video.uploads.cancel(videoAsset.mux_upload_id);
-        console.info('Cancelled MUX upload:', videoAsset.mux_upload_id);
-      } 
-      // If we have an asset ID, delete the asset
-      else if (videoAsset.mux_asset_id) {
+      // Step 1: Delete MUX resources first
+      if (videoAsset.mux_asset_id) {
+        // If an asset exists, delete the asset
         await mux.video.assets.delete(videoAsset.mux_asset_id);
         console.info('Deleted MUX asset:', videoAsset.mux_asset_id);
-      }
-    } catch (muxError: unknown) {
-      console.error('MUX deletion error:', muxError);
-      // Continue with database deletion even if MUX fails
-      // (asset might already be deleted or upload expired)
+      } else if (videoAsset.mux_upload_id) {
+        // If only an upload exists (asset not created yet), cancel the upload
+        // This can still fail if the upload completes between the DB fetch and this call, so we wrap it
+        try {
+          await mux.video.uploads.cancel(videoAsset.mux_upload_id);
+          console.info('Cancelled MUX upload:', videoAsset.mux_upload_id);
+        } catch (muxError: any) {
+          // It's safe to ignore a 400 error here, which Mux sends if the upload is already complete or cancelled
+          if (muxError?.status !== 400) {
+            throw muxError; // Re-throw if it's not the expected error
+          }
+          console.warn('Mux upload cancellation failed (likely already complete):', muxError.error?.messages);
+        }
     }
 
-    // Delete from our database
+      // Step 2: Delete the record from Supabase database
     const { error: deleteError } = await supabase
       .from('video_assets')
       .delete()
-      .eq('id', videoId)
-      .eq('created_by', user.id);
+        .eq('id', videoId);
 
     if (deleteError) {
       console.error('Database deletion error:', deleteError);
+        // If MUX deletion worked but DB failed, we have an orphan record
+        // This is a candidate for a retry mechanism or manual cleanup
+        return NextResponse.json(
+          { error: 'Failed to delete video from database after deleting from MUX' },
+          { status: 500 }
+        );
+      }
+
+      console.log('Successfully deleted video record:', videoId);
+      return NextResponse.json({
+        success: true,
+        message: 'Video deleted successfully',
+      });
+    } catch (muxError: any) {
+      console.error('MUX deletion error:', muxError);
+      // Return a specific error if MUX fails
       return NextResponse.json(
-        { error: 'Failed to delete video from database' },
+        {
+          error: `Failed to delete MUX asset: ${muxError.message || 'Unknown MUX error'}`,
+          details: muxError.error
+        },
         { status: 500 }
       );
     }
-
-    return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Video deletion error:', error);
+    console.error('DELETE /api/videos/[id] - Unexpected error:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

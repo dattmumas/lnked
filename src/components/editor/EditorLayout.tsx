@@ -83,7 +83,7 @@ export default function EditorLayout({
 
           {/* Main writing area with editor context */}
           <main className="flex-1 min-w-0 pt-page-gap pb-16">
-            <div className="mx-auto max-w-4xl editor-content">
+            <div className="mx-auto max-w-5xl editor-content">
               {/* Typography context wrapper for editor-specific sizing */}
               <div className="editor-context">{children}</div>
             </div>

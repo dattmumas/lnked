@@ -500,6 +500,22 @@ button[class*='toolbar-item']:focus-visible,
   transition: all 0.15s ease !important;
 }
 /* Enhanced Overflow Handling - Phase 4 Improvements */
-.toolbar::-webkit-scrollbar { height: 4px; } .toolbar::-webkit-scrollbar-thumb { background: hsl(var(--foreground) / 0.3); border-radius: 2px; }
-.toolbar { scroll-behavior: smooth; scroll-snap-type: x proximity; } .toolbar-group { scroll-snap-align: start; }
-@media (max-width: 480px) { .toolbar-item { min-height: 44px; } }
+.toolbar::-webkit-scrollbar {
+  height: 4px;
+}
+.toolbar::-webkit-scrollbar-thumb {
+  background: hsl(var(--foreground) / 0.3);
+  border-radius: 2px;
+}
+.toolbar {
+  scroll-behavior: smooth;
+  scroll-snap-type: x proximity;
+}
+.toolbar-group {
+  scroll-snap-align: start;
+}
+@media (max-width: 480px) {
+  .toolbar-item {
+    min-height: 44px;
+  }
+}

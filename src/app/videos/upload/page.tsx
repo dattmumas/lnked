@@ -37,7 +37,7 @@ export default async function VideoUploadPage({
             </div>
             <div className="flex items-center space-x-4">
               <a
-                href="/dashboard/video-management"
+                href="/videos"
                 className="text-sm text-muted-foreground hover:text-foreground transition-colors"
               >
                 Manage Videos

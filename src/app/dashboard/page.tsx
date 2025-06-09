@@ -236,7 +236,7 @@ export default async function DashboardManagementPage() {
                 className="micro-interaction nav-hover"
                 asChild
               >
-                <Link href="/dashboard/video-management">Video Management</Link>
+                <Link href="/videos">Video Management</Link>
               </Button>
               {username && (
                 <Button

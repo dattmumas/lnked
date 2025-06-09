@@ -303,10 +303,7 @@ export default function ModernNavbar({
                         </Link>
                       </DropdownMenuItem>
                       <DropdownMenuItem asChild className="cursor-pointer">
-                        <Link
-                          href="/dashboard/video-management"
-                          className="gap-3 p-2"
-                        >
+                        <Link href="/videos" className="gap-3 p-2">
                           <Video className="h-4 w-4" />
                           <span>Video Management</span>
                         </Link>

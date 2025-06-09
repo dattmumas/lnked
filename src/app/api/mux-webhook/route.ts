@@ -3,7 +3,7 @@ import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import crypto from 'node:crypto';
 
 // MUX webhook signing secret
-const WEBHOOK_SECRET = process.env.MUX_WEBHOOK_SECRET || 'dnc1qcjo4fe022874u62ms5hmk0gm13h';
+const WEBHOOK_SECRET = process.env.MUX_WEBHOOK_SECRET;
 
 /**
  * POST /api/mux-webhook
@@ -14,6 +14,14 @@ export async function POST(request: NextRequest) {
   console.log('🔵 [MUX-WEBHOOK] Incoming webhook request received');
   
   try {
+    if (!WEBHOOK_SECRET) {
+      console.error('❌ [MUX-WEBHOOK] Critical: MUX_WEBHOOK_SECRET is not set in environment variables. Aborting.');
+      return NextResponse.json(
+        { error: 'Webhook secret is not configured on the server.' },
+        { status: 500 }
+      );
+    }
+    
     console.log('🔵 [MUX-WEBHOOK] Reading request body...');
     // Get the raw body for signature verification
     const rawBody = await request.text();
@@ -33,7 +41,7 @@ export async function POST(request: NextRequest) {
 
     console.log('🔵 [MUX-WEBHOOK] Verifying webhook signature...');
     console.log('🔵 [MUX-WEBHOOK] Using webhook secret:', WEBHOOK_SECRET ? `${WEBHOOK_SECRET.substring(0, 8)}...` : 'NOT SET');
-    
+
     // Verify the signature
     if (!isValidMuxSignature(rawBody, signatureHeader, WEBHOOK_SECRET)) {
       console.error('❌ [MUX-WEBHOOK] Invalid webhook signature - authentication failed');
@@ -58,11 +66,11 @@ export async function POST(request: NextRequest) {
     switch (type) {
       case 'video.asset.ready':
         console.log('🟢 [MUX-WEBHOOK] Routing to handleAssetReady');
-        await handleAssetReady(data);
+      await handleAssetReady(data);
         break;
       case 'video.upload.asset_created':
         console.log('🟢 [MUX-WEBHOOK] Routing to handleUploadAssetCreated');
-        await handleUploadAssetCreated(data);
+      await handleUploadAssetCreated(data);
         break;
       case 'video.asset.errored':
         console.log('🔴 [MUX-WEBHOOK] Routing to handleAssetErrored');
@@ -284,7 +292,7 @@ async function handleUploadAssetCreated(data: {
 
     console.log('🟢 [UPLOAD-CREATED] Update data:', JSON.stringify(updateData, null, 2));
     console.log('🟢 [UPLOAD-CREATED] Searching for video record with upload_id:', data.upload_id);
-
+    
     // Find video by upload ID and update with asset ID
     const { data: updateResult, error: updateError } = await supabase
       .from('video_assets')
@@ -356,7 +364,7 @@ async function handleAssetErrored(data: {
     const updateData = {
       status: 'errored' as const,
       error_details: errorDetails,
-      updated_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
     };
 
     console.log('🔴 [ASSET-ERROR] Update data:', JSON.stringify(updateData, null, 2));

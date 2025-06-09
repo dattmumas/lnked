@@ -33,6 +33,8 @@ export interface VideoAsset {
   updated_at: string;
   mux_upload_id: string | null;
   mp4_support: string | null; // default 'none'
+  published_at?: string | null;
+  post_id?: string | null;
   // Form-compatibility fields (derived/defaults for backward compatibility)
   privacy_setting?: string;
   encoding_tier?: string;

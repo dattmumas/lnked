@@ -1,20 +1,23 @@
-import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
-import VideosPageClient from './VideosPageClient';
+import { createServerSupabaseClient } from '@/lib/supabase/server';
+import VideoManagementDashboard from '@/components/app/video/manage/VideoManagementDashboard';
 
 export default async function VideosPage() {
-  // Server-side authentication check
   const supabase = await createServerSupabaseClient();
+
+  // Check authentication
   const {
     data: { user },
     error: authError,
   } = await supabase.auth.getUser();
 
-  // If there's an auth error or no user, redirect to sign-in
   if (authError || !user) {
-    redirect('/sign-in?redirect=/videos');
+    redirect('/sign-in');
   }
 
-  // Pass user data to client component
-  return <VideosPageClient user={user} />;
+  return (
+    <div className="min-h-screen bg-background">
+      <VideoManagementDashboard />
+    </div>
+  );
 }

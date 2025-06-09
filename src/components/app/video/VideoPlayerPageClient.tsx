@@ -89,7 +89,7 @@ export default function VideoPlayerPageClient({
       router.back();
     } else {
       // Fallback to dashboard if no history
-      router.push('/dashboard/video-management');
+      router.push('/videos');
     }
   };
 
