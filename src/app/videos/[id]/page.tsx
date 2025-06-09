@@ -2,6 +2,7 @@ import { Suspense } from 'react';
 import { notFound } from 'next/navigation';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import VideoPlayerPageClient from '@/components/app/video/VideoPlayerPageClient';
+import { RightSidebar } from '@/components/app/chains/RightSidebar';
 
 // Type based on database schema
 interface VideoAsset {
@@ -54,17 +55,38 @@ export default async function VideoPlayerPage({
     notFound();
   }
 
+  // Fetch user and profile for RightSidebar
+  const supabase = await createServerSupabaseClient();
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+  let profile = null;
+  if (user) {
+    const { data } = await supabase
+      .from('users')
+      .select('id, username, full_name, avatar_url, bio')
+      .eq('id', user.id)
+      .single();
+    profile = data;
+  }
+
   return (
-    <div className="min-h-screen bg-background">
-      <Suspense
-        fallback={
-          <div className="flex items-center justify-center min-h-screen">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-          </div>
-        }
-      >
-        <VideoPlayerPageClient video={video as VideoAsset} />
-      </Suspense>
+    <div className="min-h-screen bg-background flex flex-col lg:flex-row">
+      {/* Main content: player + comments */}
+      <main className="flex-1 flex flex-col items-center py-8">
+        <Suspense
+          fallback={
+            <div className="flex items-center justify-center min-h-screen">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            </div>
+          }
+        >
+          <VideoPlayerPageClient video={video as VideoAsset} />
+        </Suspense>
+      </main>
+      {/* Right sidebar: chains (desktop only) */}
+      {user && profile && <RightSidebar user={user} profile={profile} />}
     </div>
   );
 }

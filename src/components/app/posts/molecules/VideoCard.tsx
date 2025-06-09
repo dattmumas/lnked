@@ -7,6 +7,7 @@ import PostCardHeader from './PostCardHeader';
 import PostCardFooter from './PostCardFooter';
 import VideoThumbnail from './VideoThumbnail';
 import { cn } from '@/lib/utils';
+import { useState, useRef } from 'react';
 
 interface Author {
   id: string;
@@ -90,15 +91,31 @@ export default function VideoCard({
         : post.content
       : undefined;
 
-  const handleVideoClick = () => {
-    // Navigate to the post detail page where the video player will be shown
-    router.push(postUrl);
+  // --- In-feed video playback state ---
+  const [isPlaying, setIsPlaying] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  const handlePlayClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsPlaying(true);
   };
+
+  const handleVideoEnded = () => {
+    setIsPlaying(false);
+  };
+
+  const handleVideoPause = () => {
+    // Only restore thumbnail if paused by user (not by switching tabs, etc.)
+    setIsPlaying(false);
+  };
+
+  // If no playbackId, fallback to detail page navigation
+  const canPlayInline = post.metadata?.playbackId && !isProcessing && !hasError;
 
   return (
     <Card
       className={cn(
-        'overflow-hidden hover:shadow-lg transition-all duration-200 hover:ring-2 hover:ring-primary/20 hover:scale-[1.02]',
+        'overflow-hidden border border-border drop-shadow-sm hover:shadow-lg transition-all duration-200 hover:ring-2 hover:ring-primary/20 hover:scale-[1.02]',
         className,
       )}
     >
@@ -113,16 +130,57 @@ export default function VideoCard({
           isFollowing={isFollowing}
         />
 
-        {/* Video Thumbnail */}
-        <div className="mb-4">
-          <VideoThumbnail
-            thumbnailUrl={post.thumbnail_url}
-            duration={post.metadata?.duration}
-            playbackId={post.metadata?.playbackId}
-            isProcessing={isProcessing}
-            onClick={handleVideoClick}
-            className="w-full"
-          />
+        {/* Video Player or Thumbnail */}
+        <div className="mb-4 relative">
+          {isPlaying && canPlayInline ? (
+            <video
+              ref={videoRef}
+              src={`https://stream.mux.com/${post.metadata?.playbackId}.m3u8`}
+              poster={post.thumbnail_url || undefined}
+              controls
+              autoPlay
+              playsInline
+              className="w-full rounded-lg bg-black aspect-video"
+              onEnded={handleVideoEnded}
+              onPause={handleVideoPause}
+            />
+          ) : (
+            <button
+              type="button"
+              className="group w-full aspect-video relative focus:outline-none"
+              onClick={
+                canPlayInline ? handlePlayClick : () => router.push(postUrl)
+              }
+              aria-label="Play video"
+            >
+              <VideoThumbnail
+                thumbnailUrl={post.thumbnail_url}
+                duration={post.metadata?.duration}
+                playbackId={post.metadata?.playbackId}
+                isProcessing={isProcessing}
+                className="w-full"
+              />
+              {/* Play overlay */}
+              {canPlayInline && !isProcessing && !hasError && (
+                <span className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                  <svg
+                    className="w-16 h-16 text-white opacity-90 group-hover:scale-110 transition-transform"
+                    fill="currentColor"
+                    viewBox="0 0 64 64"
+                  >
+                    <circle
+                      cx="32"
+                      cy="32"
+                      r="32"
+                      fill="black"
+                      fillOpacity="0.4"
+                    />
+                    <polygon points="26,20 50,32 26,44" fill="white" />
+                  </svg>
+                </span>
+              )}
+            </button>
+          )}
         </div>
 
         {/* Content */}

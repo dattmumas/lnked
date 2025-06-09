@@ -37,6 +37,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
+import PostCard from '@/components/app/posts/molecules/PostCard';
 
 interface UserProfile {
   id: string;
@@ -801,8 +802,8 @@ function CenterFeed({ user }: { user: User }) {
     return (
       <div className="flex-1 max-w-4xl mx-auto px-6 py-6">
         <div className="flex items-center justify-center py-12">
-          <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
-          <span className="ml-2 text-gray-500">
+          <Loader2 className="w-8 h-8 animate-spin text-accent" />
+          <span className="ml-2 text-muted-foreground">
             {loading ? 'Loading feed...' : 'Loading interactions...'}
           </span>
         </div>
@@ -814,7 +815,7 @@ function CenterFeed({ user }: { user: User }) {
     return (
       <div className="flex-1 max-w-4xl mx-auto px-6 py-6">
         <div className="text-center py-12">
-          <p className="text-red-500 mb-4">Error loading feed: {error}</p>
+          <p className="text-destructive mb-4">Error loading feed: {error}</p>
           <Button onClick={() => window.location.reload()}>Retry</Button>
         </div>
       </div>
@@ -824,7 +825,7 @@ function CenterFeed({ user }: { user: User }) {
   return (
     <div className="flex-1 max-w-4xl mx-auto px-6 py-6">
       {/* Filter Toggles */}
-      <div className="flex gap-2 mb-6 p-1 bg-gray-100 dark:bg-gray-800 rounded-lg w-fit">
+      <div className="flex gap-2 mb-6 p-1 bg-muted rounded-lg w-fit">
         {(['all', 'posts', 'videos'] as const).map((filterType) => (
           <button
             key={filterType}
@@ -832,8 +833,8 @@ function CenterFeed({ user }: { user: User }) {
             className={cn(
               'px-4 py-2 rounded-md text-sm font-medium transition-all duration-200',
               filter === filterType
-                ? 'bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-white'
-                : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white',
+                ? 'bg-background shadow-sm text-foreground'
+                : 'text-muted-foreground hover:text-foreground',
             )}
           >
             {filterType.charAt(0).toUpperCase() + filterType.slice(1)}
@@ -844,207 +845,68 @@ function CenterFeed({ user }: { user: User }) {
       {/* Feed Items */}
       {filteredItems.length === 0 ? (
         <div className="text-center py-12">
-          <p className="text-gray-500">
+          <p className="text-muted-foreground">
             No {filter === 'all' ? 'content' : filter} found.
           </p>
-          <p className="text-sm text-gray-400 mt-2">
+          <p className="text-sm text-muted-foreground/70 mt-2">
             Check back later for new posts!
           </p>
         </div>
       ) : (
-        <div className="space-y-8">
-          {filteredItems.map((item) => (
-            <Card
-              key={item.id}
-              className="overflow-hidden hover:shadow-lg transition-shadow duration-200 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700"
-            >
-              {item.type === 'video' && item.thumbnail_url && (
-                <div className="relative aspect-video bg-gray-100 dark:bg-gray-800">
-                  <div className="absolute inset-0 bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-800" />
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <Play className="w-16 h-16 text-white opacity-80" />
-                  </div>
-                  {item.duration && (
-                    <div className="absolute bottom-3 right-3 bg-black/70 text-white text-sm px-2 py-1 rounded">
-                      {item.duration}
-                    </div>
-                  )}
-                </div>
-              )}
+        <div className="space-y-6">
+          {filteredItems.map((item) => {
+            // Transform FeedItem to PostCard format
+            const unifiedPost = {
+              id: item.id,
+              title: item.title,
+              content: item.content || null,
+              meta_description: null,
+              thumbnail_url: item.thumbnail_url || null,
+              slug: null,
+              created_at: item.published_at,
+              post_type:
+                item.type === 'video' ? ('video' as const) : ('text' as const),
+              metadata: item.duration ? { duration: item.duration } : null,
+              author: {
+                id: '', // Not available in FeedItem
+                username: item.author.username,
+                full_name: item.author.name,
+                avatar_url: item.author.avatar_url || null,
+              },
+              collective: item.collective
+                ? {
+                    id: '', // Not available in FeedItem
+                    name: item.collective.name,
+                    slug: item.collective.slug,
+                  }
+                : null,
+            };
 
-              <CardHeader className="pb-4 px-6 pt-6">
-                <div className="flex items-center gap-4 mb-4">
-                  <Avatar className="w-10 h-10">
-                    {item.author.avatar_url ? (
-                      <AvatarImage
-                        src={item.author.avatar_url}
-                        alt={item.author.name}
-                      />
-                    ) : (
-                      <AvatarFallback>
-                        {item.author.name
-                          .split(' ')
-                          .map((n) => n[0])
-                          .join('')}
-                      </AvatarFallback>
-                    )}
-                  </Avatar>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium text-base">
-                        {item.author.name}
-                      </span>
-                      <span className="text-gray-500 text-sm">
-                        @{item.author.username}
-                      </span>
-                      <span className="text-gray-400 text-sm">•</span>
-                      <span className="text-gray-500 text-sm">
-                        {item.published_at}
-                      </span>
-                      {item.collective && (
-                        <>
-                          <span className="text-gray-400 text-sm">in</span>
-                          <Link
-                            href={`/collectives/${item.collective.slug}`}
-                            className="text-blue-500 text-sm hover:underline"
-                          >
-                            {item.collective.name}
-                          </Link>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                  <Badge variant="outline" className="text-xs">
-                    {item.type}
-                  </Badge>
-                </div>
+            const interactions = {
+              isLiked: postInteractions.likedPosts.has(item.id),
+              isDisliked: postInteractions.dislikedPosts.has(item.id),
+              isBookmarked: postInteractions.bookmarkedPosts.has(item.id),
+              likeCount: item.stats.likes,
+              dislikeCount: item.stats.dislikes,
+              commentCount: item.stats.comments,
+              viewCount: item.stats.views,
+            };
 
-                <CardTitle className="text-2xl leading-tight mb-3">
-                  <Link
-                    href={`/posts/${item.id}`}
-                    className="hover:text-blue-600 transition-colors"
-                  >
-                    {item.title}
-                  </Link>
-                </CardTitle>
-                {item.content && (
-                  <CardDescription className="text-base line-clamp-3 text-gray-600 dark:text-gray-300">
-                    {extractTextFromLexical(item.content)}
-                  </CardDescription>
-                )}
-              </CardHeader>
-
-              <CardContent className="pt-0 px-6 pb-6">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-6">
-                    {/* Like/Dislike Buttons */}
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => postInteractions.toggleLike(item.id)}
-                        className={cn(
-                          'flex items-center gap-3 px-4 py-2 rounded-full text-sm transition-all duration-200',
-                          postInteractions.likedPosts.has(item.id)
-                            ? 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400'
-                            : 'text-gray-500 hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20',
-                        )}
-                      >
-                        <ThumbsUp
-                          className={cn(
-                            'w-5 h-5',
-                            postInteractions.likedPosts.has(item.id) &&
-                              'fill-current',
-                          )}
-                        />
-                        <span className="font-medium">{item.stats.likes}</span>
-                      </button>
-                      <button
-                        onClick={() => postInteractions.toggleDislike(item.id)}
-                        className={cn(
-                          'flex items-center gap-3 px-4 py-2 rounded-full text-sm transition-all duration-200',
-                          postInteractions.dislikedPosts.has(item.id)
-                            ? 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400'
-                            : 'text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20',
-                        )}
-                      >
-                        <ThumbsDown
-                          className={cn(
-                            'w-5 h-5',
-                            postInteractions.dislikedPosts.has(item.id) &&
-                              'fill-current',
-                          )}
-                        />
-                        <span className="font-medium">
-                          {item.stats.dislikes || 0}
-                        </span>
-                      </button>
-                    </div>
-
-                    {/* Comments Button */}
-                    <button
-                      onClick={() =>
-                        postInteractions.navigateToComments(item.id)
-                      }
-                      className="flex items-center gap-3 text-gray-500 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 px-4 py-2 rounded-full transition-all duration-200"
-                    >
-                      <MessageCircle className="w-5 h-5" />
-                      <span className="text-sm font-medium">
-                        {item.stats.comments}
-                      </span>
-                    </button>
-
-                    {/* Views */}
-                    {item.stats.views && (
-                      <div className="flex items-center gap-3 text-gray-500 px-4 py-2">
-                        <TrendingUp className="w-5 h-5" />
-                        <span className="text-sm font-medium">
-                          {item.stats.views}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="flex items-center gap-3">
-                    {/* Bookmark Button */}
-                    <button
-                      onClick={() => postInteractions.toggleBookmark(item.id)}
-                      className={cn(
-                        'p-3 rounded-full transition-all duration-200',
-                        postInteractions.bookmarkedPosts.has(item.id)
-                          ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400'
-                          : 'text-gray-500 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20',
-                      )}
-                    >
-                      <Bookmark
-                        className={cn(
-                          'w-5 h-5',
-                          postInteractions.bookmarkedPosts.has(item.id) &&
-                            'fill-current',
-                        )}
-                      />
-                    </button>
-
-                    {/* Share Button */}
-                    <button
-                      onClick={() =>
-                        postInteractions.sharePost(item.id, item.title)
-                      }
-                      className="p-3 text-gray-500 hover:text-green-500 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-full transition-all duration-200"
-                    >
-                      <Share2 className="w-5 h-5" />
-                    </button>
-
-                    {/* External Link */}
-                    <Link
-                      href={`/posts/${item.id}`}
-                      className="p-3 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-full transition-all duration-200"
-                    >
-                      <ExternalLink className="w-5 h-5" />
-                    </Link>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+            return (
+              <PostCard
+                key={item.id}
+                post={unifiedPost}
+                interactions={interactions}
+                onToggleLike={() => postInteractions.toggleLike(item.id)}
+                onToggleDislike={() => postInteractions.toggleDislike(item.id)}
+                onToggleBookmark={() =>
+                  postInteractions.toggleBookmark(item.id)
+                }
+                currentUserId={user.id}
+                showFollowButton={false}
+              />
+            );
+          })}
         </div>
       )}
     </div>

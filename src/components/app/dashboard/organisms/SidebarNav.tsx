@@ -233,7 +233,7 @@ export function SidebarNav({
             <Button size="sm" asChild className="w-full">
               <Link href="/posts/new">
                 <Plus className="h-4 w-4 mr-2" />
-                Write Post
+                Write Article
               </Link>
             </Button>
             <Button size="sm" asChild className="w-full">

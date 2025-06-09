@@ -111,7 +111,7 @@ export default function ArticleCard({
   return (
     <Card
       className={cn(
-        'overflow-hidden hover:shadow-lg transition-all duration-200 hover:ring-2 hover:ring-primary/20 hover:scale-[1.02]',
+        'overflow-hidden border border-border drop-shadow-sm hover:shadow-lg transition-all duration-200 hover:ring-2 hover:ring-primary/20 hover:scale-[1.02]',
         className,
       )}
     >
