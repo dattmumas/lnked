@@ -185,7 +185,7 @@ export const useEnhancedPostData = (postId?: string) => {
         meta_description: data.meta_description || '',
         thumbnail_url: data.thumbnail_url || '',
         post_type: data.post_type,
-        metadata: metadata,
+        metadata,
         is_public: data.is_public ?? false,
         status: data.status || 'draft',
         

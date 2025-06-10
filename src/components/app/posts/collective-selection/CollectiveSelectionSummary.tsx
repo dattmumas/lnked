@@ -299,7 +299,7 @@ function CollectiveCard({
 export function CompactCollectiveSelectionSummary(
   props: CollectiveSelectionSummaryProps,
 ) {
-  return <CollectiveSelectionSummary {...props} compact={true} />;
+  return <CollectiveSelectionSummary {...props} compact />;
 }
 
 // Loading skeleton

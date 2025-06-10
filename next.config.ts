@@ -89,7 +89,7 @@ const nextConfig: NextConfig = {
   },
   eslint: {
     // Allow production builds to complete even if ESLint errors remain.
-    ignoreDuringBuilds: true,
+    ignoreDuringBuilds: false,
   },
 };
 

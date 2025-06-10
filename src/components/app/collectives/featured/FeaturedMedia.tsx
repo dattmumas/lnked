@@ -77,7 +77,7 @@ export function FeaturedMedia({
 
       return posts || [];
     },
-    enabled: !!collective?.id,
+    enabled: Boolean(collective?.id),
   });
 
   const getOverlayIcon = (postType: string) => {

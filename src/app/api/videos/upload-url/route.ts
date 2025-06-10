@@ -102,7 +102,7 @@ export async function POST(request: NextRequest) {
       new_asset_settings: {
         playback_policy: [playback_policy],
         mp4_support: 'capped-1080p',
-        encoding_tier: encoding_tier,
+        encoding_tier,
       },
     });
 

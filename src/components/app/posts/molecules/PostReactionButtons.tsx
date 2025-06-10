@@ -69,7 +69,7 @@ export default function PostReactionButtons({
       disabled={disabled}
       size="md"
       variant="default"
-      showCounts={true}
+      showCounts
       className=""
     />
   );

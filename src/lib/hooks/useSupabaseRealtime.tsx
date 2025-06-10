@@ -25,7 +25,7 @@ export function useSupabaseRealtime<T = unknown>(
       filterStr = `${table}:${filter.column}=eq.${filter.value}`;
       channel = supabase.channel(filterStr);
     }
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     (channel as any)
       .on(
         'postgres_changes',

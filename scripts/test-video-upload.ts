@@ -43,7 +43,7 @@ async function testVideoUpload() {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${authData.session.access_token}`,
+      Authorization: `Bearer ${authData.session.access_token}`,
     },
     body: JSON.stringify({
       title: 'Test Video Upload',
@@ -60,7 +60,7 @@ async function testVideoUpload() {
   const uploadData = await uploadResponse.json();
   console.log('✅ Got upload URL');
   console.log('  Video ID:', uploadData.video?.id);
-  console.log('  Upload URL:', uploadData.uploadUrl?.substring(0, 50) + '...');
+  console.log('  Upload URL:', `${uploadData.uploadUrl?.substring(0, 50)}...`);
 
   // 4. Check video status
   if (uploadData.video?.id) {
@@ -92,7 +92,7 @@ async function testVideoUpload() {
     const refreshResponse = await fetch(`${API_URL}/api/videos/${video.id}/refresh`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${authData.session.access_token}`,
+        Authorization: `Bearer ${authData.session.access_token}`,
       },
     });
 
@@ -108,7 +108,7 @@ async function testVideoUpload() {
     console.log('\n📋 Next steps to complete the test:');
     console.log('1. Use the upload URL with the MUX Uploader component to upload a video');
     console.log('2. The webhook should update the video status when processing completes');
-    console.log('3. Check the video at: ' + API_URL + '/videos/' + video.id);
+    console.log(`3. Check the video at: ${API_URL}/videos/${video.id}`);
   }
 
   console.log('\n✨ Test complete!');

@@ -51,7 +51,7 @@ export async function middleware(request: NextRequest) {
   )
     return NextResponse.error(); // env mis-config
 
-  let response = NextResponse.next();
+  const response = NextResponse.next();
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,

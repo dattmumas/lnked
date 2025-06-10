@@ -94,7 +94,7 @@ export function usePostInteractions({
           ...prev,
           isLiked: userReaction === 'like',
           isDisliked: userReaction === 'dislike',
-          isBookmarked: !!userBookmark,
+          isBookmarked: Boolean(userBookmark),
           likeCount: likesCount,
           dislikeCount: dislikesCount,
           commentCount: commentCount?.length || 0,

@@ -162,7 +162,7 @@ export default function ArticleCard({
           onToggleLike={onToggleLike}
           onToggleDislike={onToggleDislike}
           onToggleBookmark={onToggleBookmark}
-          showViewCount={true}
+          showViewCount
         />
       </CardContent>
     </Card>

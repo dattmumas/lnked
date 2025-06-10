@@ -1,6 +1,11 @@
 'use client';
 
 import React, { useCallback, useState } from 'react';
+
+// Constants
+const GB_TO_BYTES = 1024 * 1024 * 1024;
+const MAX_FILE_SIZE_GB = 2;
+const FILE_SIZE_DECIMAL_PLACES = 2;
 import { Upload, AlertCircle, CheckCircle2, Loader2, Film } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -39,9 +44,9 @@ export function UploadStep({ videoUpload }: UploadStepProps) {
     }
 
     // Check file size (2GB limit)
-    const maxSize = 2 * 1024 * 1024 * 1024; // 2GB in bytes
+    const maxSize = MAX_FILE_SIZE_GB * GB_TO_BYTES; // 2GB in bytes
     if (file.size > maxSize) {
-      return 'File size must be less than 2GB';
+      return `File size must be less than ${MAX_FILE_SIZE_GB}GB`;
     }
 
     return null;
@@ -90,7 +95,7 @@ export function UploadStep({ videoUpload }: UploadStepProps) {
     const k = 1024;
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    return `${parseFloat((bytes / Math.pow(k, i)).toFixed(FILE_SIZE_DECIMAL_PLACES))} ${sizes[i]}`;
   };
 
   const getUploadStatusContent = () => {
@@ -195,7 +200,7 @@ export function UploadStep({ videoUpload }: UploadStepProps) {
             Choose File
           </Button>
           <p className="text-xs text-muted-foreground mt-4">
-            Supports MP4, MOV, AVI up to 2GB
+            Supports MP4, MOV, AVI up to {MAX_FILE_SIZE_GB}GB
           </p>
 
           <input

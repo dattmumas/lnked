@@ -378,7 +378,7 @@ function ContentCard({
 
   const handleCardClick = () => {
     // TODO: Navigate to post detail page
-    console.log('Navigate to post:', post.id);
+    console.info('Navigate to post:', post.id);
   };
 
   return (

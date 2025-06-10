@@ -384,7 +384,7 @@ export function CollectiveSelectionModal({
                       (Boolean(isAtMaxSelections) &&
                         !localSelectedIds.includes(collective.id))
                     }
-                    showMemberCount={true}
+                    showMemberCount
                   />
                 ))}
               </div>

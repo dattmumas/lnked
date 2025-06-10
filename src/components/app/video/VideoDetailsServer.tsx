@@ -1,5 +1,10 @@
 import { formatDistanceToNow } from 'date-fns';
 
+// Constants
+const SECONDS_PER_HOUR = 3600;
+const SECONDS_PER_MINUTE = 60;
+const PADDING_LENGTH = 2;
+
 // Type based on database schema
 interface VideoAsset {
   id: string;
@@ -23,14 +28,14 @@ interface VideoDetailsServerProps {
 function formatDuration(seconds: number | null): string {
   if (!seconds) return 'Unknown duration';
 
-  const hours = Math.floor(seconds / 3600);
-  const minutes = Math.floor((seconds % 3600) / 60);
-  const remainingSeconds = Math.floor(seconds % 60);
+  const hours = Math.floor(seconds / SECONDS_PER_HOUR);
+  const minutes = Math.floor((seconds % SECONDS_PER_HOUR) / SECONDS_PER_MINUTE);
+  const remainingSeconds = Math.floor(seconds % SECONDS_PER_MINUTE);
 
   if (hours > 0) {
-    return `${hours}:${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+    return `${hours}:${minutes.toString().padStart(PADDING_LENGTH, '0')}:${remainingSeconds.toString().padStart(PADDING_LENGTH, '0')}`;
   }
-  return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+  return `${minutes}:${remainingSeconds.toString().padStart(PADDING_LENGTH, '0')}`;
 }
 
 function formatUploadDate(dateString: string | null): string {

@@ -101,7 +101,7 @@ export async function unsubscribeFromEntity(
       }
     );
     if (process.env.NODE_ENV === "development") {
-      console.log(
+      console.info(
         "Stripe subscription set to cancel at period end:",
         updatedStripeSubscription.id
       );

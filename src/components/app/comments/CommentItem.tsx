@@ -86,7 +86,7 @@ export const CommentItem: React.FC<CommentItemProps> = ({
             comment={comment}
             onReply={handleReplyClick}
             onReaction={handleReaction}
-            showReplyButton={true}
+            showReplyButton
           />
 
           {/* Reply Form */}

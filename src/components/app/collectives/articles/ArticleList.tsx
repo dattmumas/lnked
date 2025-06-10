@@ -84,7 +84,7 @@ export function ArticleList({ collectiveSlug }: ArticleListProps) {
       ) => {
         return lastPage.hasMore ? pages.length : undefined;
       },
-      enabled: !!collective?.id,
+      enabled: Boolean(collective?.id),
     });
 
   const allPosts = useMemo(() => {
@@ -196,7 +196,7 @@ const ArticleRow = React.memo<{
   };
 
   const getReadingTime = (title: string, subtitle: string | null) => {
-    const wordCount = (title + ' ' + (subtitle || '')).split(' ').length;
+    const wordCount = (`${title} ${subtitle || ''}`).split(' ').length;
     const readingTime = Math.max(1, Math.ceil(wordCount / 200)); // ~200 words per minute
     return `${readingTime} min read`;
   };

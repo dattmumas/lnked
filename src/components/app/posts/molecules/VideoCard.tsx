@@ -221,7 +221,7 @@ export default function VideoCard({
           onToggleLike={onToggleLike}
           onToggleDislike={onToggleDislike}
           onToggleBookmark={onToggleBookmark}
-          showViewCount={true}
+          showViewCount
         />
       </CardContent>
     </Card>

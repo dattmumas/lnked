@@ -184,7 +184,7 @@ async function fetchFollowStatus(username: string): Promise<{ isFollowing: boole
     .eq('following_type', 'user')
     .single();
 
-  return { isFollowing: !!data };
+  return { isFollowing: Boolean(data) };
 }
 
 async function fetchProfilePosts(
@@ -427,7 +427,7 @@ export function useProfilePosts(
     },
     staleTime: 2 * 60 * 1000, // 2 minutes
     gcTime: 5 * 60 * 1000, // 5 minutes
-    enabled: !!username && username.trim() !== '', // Only run query if username is valid
+    enabled: Boolean(username) && username.trim() !== '', // Only run query if username is valid
     retry: (failureCount, error) => {
       // Don't retry on certain errors
       if (error instanceof NotFoundError || error instanceof ProfileError) {

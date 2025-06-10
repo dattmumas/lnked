@@ -158,10 +158,10 @@ const config: Config = {
     },
     // Define a custom size utility for consistent icon sizing
     size: {
-      "4": "1rem",
-      "8": "2rem",
-      "12": "3rem",
-      "16": "4rem",
+      4: "1rem",
+      8: "2rem",
+      12: "3rem",
+      16: "4rem",
     },
   },
   plugins: [typographyPlugin, animatePlugin],

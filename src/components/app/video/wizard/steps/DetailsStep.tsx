@@ -1,6 +1,11 @@
 'use client';
 
 import React, { useState } from 'react';
+
+// Constants
+const MAX_TAGS = 10;
+const TITLE_WARNING_THRESHOLD = 90;
+const DESCRIPTION_WARNING_THRESHOLD = 4500;
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -30,7 +35,11 @@ export function DetailsStep({ videoUpload }: DetailsStepProps) {
 
   const addTag = () => {
     const tag = newTag.trim().toLowerCase();
-    if (tag && !formData.tags.includes(tag) && formData.tags.length < 10) {
+    if (
+      tag &&
+      !formData.tags.includes(tag) &&
+      formData.tags.length < MAX_TAGS
+    ) {
       updateFormData({ tags: [...formData.tags, tag] });
       setNewTag('');
     }
@@ -84,7 +93,7 @@ export function DetailsStep({ videoUpload }: DetailsStepProps) {
                 'text-xs',
                 validationErrors.title
                   ? 'text-destructive'
-                  : titleLength > 90
+                  : titleLength > TITLE_WARNING_THRESHOLD
                     ? 'text-orange-500'
                     : 'text-muted-foreground',
               )}
@@ -117,7 +126,7 @@ export function DetailsStep({ videoUpload }: DetailsStepProps) {
                 'text-xs',
                 validationErrors.description
                   ? 'text-destructive'
-                  : descriptionLength > 4500
+                  : descriptionLength > DESCRIPTION_WARNING_THRESHOLD
                     ? 'text-orange-500'
                     : 'text-muted-foreground',
               )}
@@ -134,7 +143,7 @@ export function DetailsStep({ videoUpload }: DetailsStepProps) {
             Tags
           </Label>
           <p className="text-sm text-muted-foreground">
-            Add tags to help people discover your video (up to 10 tags)
+            Add tags to help people discover your video (up to {MAX_TAGS} tags)
           </p>
 
           {/* Tag Input */}
@@ -145,14 +154,14 @@ export function DetailsStep({ videoUpload }: DetailsStepProps) {
               value={newTag}
               onChange={(e) => setNewTag(e.target.value)}
               onKeyPress={handleTagKeyPress}
-              disabled={formData.tags.length >= 10}
+              disabled={formData.tags.length >= MAX_TAGS}
               className="flex-1"
             />
             <Button
               type="button"
               variant="outline"
               onClick={addTag}
-              disabled={!newTag.trim() || formData.tags.length >= 10}
+              disabled={!newTag.trim() || formData.tags.length >= MAX_TAGS}
               size="sm"
             >
               <Plus className="h-4 w-4" />
@@ -186,7 +195,7 @@ export function DetailsStep({ videoUpload }: DetailsStepProps) {
           )}
 
           <p className="text-xs text-muted-foreground">
-            {formData.tags.length}/10 tags
+            {formData.tags.length}/{MAX_TAGS} tags
           </p>
         </div>
 

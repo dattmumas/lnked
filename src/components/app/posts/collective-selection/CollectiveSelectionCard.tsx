@@ -244,7 +244,7 @@ export function CollectiveSelectionCard({
 export function CompactCollectiveSelectionCard(
   props: CollectiveSelectionCardProps,
 ) {
-  return <CollectiveSelectionCard {...props} compact={true} />;
+  return <CollectiveSelectionCard {...props} compact />;
 }
 
 // Loading skeleton

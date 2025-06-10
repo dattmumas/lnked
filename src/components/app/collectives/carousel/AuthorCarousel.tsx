@@ -23,7 +23,7 @@ interface AuthorCarouselProps {
 export function AuthorCarousel({ collectiveSlug }: AuthorCarouselProps) {
   const { data: collective } = useCollectiveData(collectiveSlug);
   const { data: members, isLoading } = useCollectiveMembers(collective?.id!, {
-    enabled: !!collective?.id,
+    enabled: Boolean(collective?.id),
   });
 
   const scrollLeft = () => {

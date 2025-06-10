@@ -70,7 +70,7 @@ export const useCollectiveMemberships = (includeNonPostable = false) => {
         });
 
       // Sort by role priority (owner > admin > editor > author) and then by name
-      const rolePriority = { 'owner': 4, 'admin': 3, 'editor': 2, 'author': 1 };
+      const rolePriority = { owner: 4, admin: 3, editor: 2, author: 1 };
       
       return collectivesWithPermissions.sort((a, b) => {
         const aPriority = rolePriority[a.user_role] || 0;

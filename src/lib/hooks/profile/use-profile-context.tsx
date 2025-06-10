@@ -84,8 +84,8 @@ export function ProfileContextProvider({
     const permissions = {
       canEdit: isOwner, // Only owner can edit
       canDelete: isOwner, // Only owner can delete
-      canFollow: !isOwner && !!currentUserId, // Can't follow yourself, must be authenticated
-      canMessage: !isOwner && !!currentUserId, // Can't message yourself, must be authenticated
+      canFollow: !isOwner && Boolean(currentUserId), // Can't follow yourself, must be authenticated
+      canMessage: !isOwner && Boolean(currentUserId), // Can't message yourself, must be authenticated
     };
 
     return {

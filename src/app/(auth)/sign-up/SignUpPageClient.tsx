@@ -35,7 +35,7 @@ export default function SignUpPage() {
       return;
     }
 
-    const fullName = formData.fullName;
+    const {fullName} = formData;
     if (
       !fullName ||
       fullName.trim().length < 2 ||
@@ -47,7 +47,7 @@ export default function SignUpPage() {
     }
 
     // Validate username format
-    const username = formData.username;
+    const {username} = formData;
     if (!username || username.length < 3 || username.length > 20) {
       setError('Username must be between 3 and 20 characters long');
       setIsLoading(false);

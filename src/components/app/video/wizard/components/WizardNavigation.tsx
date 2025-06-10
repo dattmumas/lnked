@@ -5,6 +5,11 @@ import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight, Upload, Loader2, X } from 'lucide-react';
 import { WIZARD_STEPS } from '@/hooks/video/useStepNavigation';
 
+// Step constants
+const STEP_UPLOAD = 0;
+const STEP_DETAILS = 1;
+const STEP_SETTINGS = 2;
+
 interface WizardNavigationProps {
   currentStep: number;
   canGoBack: boolean;
@@ -38,11 +43,11 @@ export function WizardNavigation({
     }
 
     switch (currentStep) {
-      case 0:
+      case STEP_UPLOAD:
         return 'Continue to Details';
-      case 1:
+      case STEP_DETAILS:
         return 'Continue to Settings';
-      case 2:
+      case STEP_SETTINGS:
         return 'Ready to Publish';
       default:
         return 'Continue';

@@ -34,7 +34,7 @@ export class CommentsV2Service {
     this.supabase = supabase || createSupabaseBrowserClient();
 
     const defaultValidator = async (entityId: string) => {
-      return !!entityId;
+      return Boolean(entityId);
     };
 
     this.entityValidators = {

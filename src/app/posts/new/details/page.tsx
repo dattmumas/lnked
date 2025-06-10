@@ -161,7 +161,7 @@ export default function NewPostDetailsPage() {
                 selectedCollectiveIds={selectedCollectives}
                 onSelectionChange={handleCollectiveSelectionChange}
                 placeholder="Select collectives to share your post with"
-                showRoles={true}
+                showRoles
               />
 
               {/* Real-time validation feedback */}
@@ -169,8 +169,8 @@ export default function NewPostDetailsPage() {
                 <CollectiveValidationFeedback
                   selectedCollectiveIds={selectedCollectives}
                   minSelections={0}
-                  showPermissionWarnings={true}
-                  showCollectiveInfo={true}
+                  showPermissionWarnings
+                  showCollectiveInfo
                 />
               </div>
             </CardContent>

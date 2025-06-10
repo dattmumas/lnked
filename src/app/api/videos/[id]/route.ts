@@ -70,7 +70,7 @@ export async function PATCH(
     
     // Handle publishing status - videos are now published without creating posts
     // Users can manually create posts that reference videos if needed
-    let newPostId = null;
+    const newPostId = null;
     // Note: Automatic post creation has been disabled
     // Videos can exist independently of posts
     // Note: We don't set a status here. 'is_published' is a metadata flag.

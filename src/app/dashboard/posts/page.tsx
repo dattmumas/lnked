@@ -194,7 +194,7 @@ export default async function MyPostsPage() {
             </thead>
             <tbody className="divide-y divide-border">
               {postsWithLikeCount.map((post) => (
-                <PostListItem key={post.id} post={post} tableMode={true} />
+                <PostListItem key={post.id} post={post} tableMode />
               ))}
             </tbody>
           </table>

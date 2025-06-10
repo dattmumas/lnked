@@ -13,7 +13,7 @@ export default async function CollectiveLayout({
 }) {
   const { slug } = await params;
   if (process.env.NODE_ENV === 'development') {
-    console.log('Rendering layout for collective slug:', slug);
+    console.info('Rendering layout for collective slug:', slug);
   }
 
   return (

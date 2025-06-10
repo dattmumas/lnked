@@ -416,7 +416,7 @@ function useChainInteractions(userId: string) {
   const shareChain = (chainId: string, content: string) => {
     if (navigator.share) {
       navigator.share({
-        title: content.slice(0, 50) + '...',
+        title: `${content.slice(0, 50)}...`,
         url: `${window.location.origin}/chains/${chainId}`,
       });
     } else {

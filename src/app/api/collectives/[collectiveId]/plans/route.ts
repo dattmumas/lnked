@@ -13,7 +13,7 @@ interface PlanRequestBody {
   description?: string;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 export async function POST(req: Request, context: any) {
   const {collectiveId} = context.params;
   if (!collectiveId) {

@@ -65,7 +65,7 @@ export default function GlobalSidebar() {
         data: { user },
         error,
       } = await supabase.auth.getUser();
-      setIsAuthenticated(!!(user && !error));
+      setIsAuthenticated(Boolean(user && !error));
     };
 
     checkAuth();

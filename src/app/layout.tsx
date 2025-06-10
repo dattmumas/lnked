@@ -50,7 +50,7 @@ export default async function RootLayout({
   }
 
   // Determine if we should show authenticated layout
-  const isAuthenticated = !!(user && !authError);
+  const isAuthenticated = Boolean(user && !authError);
 
   return (
     <html lang="en" suppressHydrationWarning>

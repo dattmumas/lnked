@@ -1,6 +1,12 @@
 'use client';
 
 import React from 'react';
+
+// Step constants
+const STEP_UPLOAD = 0;
+const STEP_DETAILS = 1;
+const STEP_SETTINGS = 2;
+const STEP_PUBLISH = 3;
 import { Card } from '@/components/ui/card';
 import { useVideoUpload } from '@/hooks/video/useVideoUpload';
 import { StepIndicator } from './components/StepIndicator';
@@ -33,13 +39,13 @@ export default function VideoUploadWizard({
 
   const renderCurrentStep = () => {
     switch (videoUpload.currentStep) {
-      case 0:
+      case STEP_UPLOAD:
         return <UploadStep key="upload" videoUpload={videoUpload} />;
-      case 1:
+      case STEP_DETAILS:
         return <DetailsStep key="details" videoUpload={videoUpload} />;
-      case 2:
+      case STEP_SETTINGS:
         return <SettingsStep key="settings" videoUpload={videoUpload} />;
-      case 3:
+      case STEP_PUBLISH:
         return (
           <PublishStep
             key="publish"
