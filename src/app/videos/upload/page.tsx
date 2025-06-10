@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation';
+import Link from 'next/link';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import VideoUploadPageClient from '@/components/app/video/wizard/VideoUploadPageClient';
 
@@ -36,18 +37,18 @@ export default async function VideoUploadPage({
               </div>
             </div>
             <div className="flex items-center space-x-4">
-              <a
+              <Link
                 href="/videos"
                 className="text-sm text-muted-foreground hover:text-foreground transition-colors"
               >
                 Manage Videos
-              </a>
-              <a
+              </Link>
+              <Link
                 href="/home"
                 className="text-sm text-muted-foreground hover:text-foreground transition-colors"
               >
                 Back to Home
-              </a>
+              </Link>
             </div>
           </div>
         </div>
