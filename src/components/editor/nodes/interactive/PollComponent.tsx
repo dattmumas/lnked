@@ -61,7 +61,7 @@ function PollOptionComponent({
   const checkedIndex = votesArray.indexOf(clientID);
   const checked = checkedIndex !== -1;
   const votes = votesArray.length;
-  const text = option.text;
+  const {text} = option;
 
   return (
     <div className="PollNode__optionContainer">
@@ -97,10 +97,10 @@ function PollOptionComponent({
           type="text"
           value={text}
           onChange={(e) => {
-            const target = e.target;
-            const value = target.value;
-            const selectionStart = target.selectionStart;
-            const selectionEnd = target.selectionEnd;
+            const {target} = e;
+            const {value} = target;
+            const {selectionStart} = target;
+            const {selectionEnd} = target;
             withPollNode(
               (node) => {
                 node.setOptionText(option, value);

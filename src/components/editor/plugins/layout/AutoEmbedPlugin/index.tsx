@@ -182,7 +182,7 @@ function AutoEmbedMenuItem({
       ref={option.setRefElement}
       role="option"
       aria-selected={isSelected}
-      id={'typeahead-item-' + index}
+      id={`typeahead-item-${index}`}
       onMouseEnter={onMouseEnter}
       onClick={onClick}
     >

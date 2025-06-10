@@ -111,7 +111,7 @@ export default function ExcalidrawModal({
     let modalOverlayElement: HTMLElement | null = null;
 
     const clickOutsideHandler = (event: MouseEvent) => {
-      const target = event.target;
+      const {target} = event;
       if (
         excaliDrawModelRef.current !== null &&
         isDOMNode(target) &&

@@ -290,7 +290,7 @@ function hex2rgb(hex: string): RGB {
     hex
       .replace(
         /^#?([a-f\d])([a-f\d])([a-f\d])$/i,
-        (m, r, g, b) => '#' + r + r + g + g + b + b,
+        (m, r, g, b) => `#${r}${r}${g}${g}${b}${b}`,
       )
       .substring(1)
       .match(/.{2}/g) || []
@@ -343,7 +343,7 @@ function hsv2rgb({ h, s, v }: HSV): RGB {
 }
 
 function rgb2hex({ b, g, r }: RGB): string {
-  return '#' + [r, g, b].map((x) => x.toString(16).padStart(2, '0')).join('');
+  return `#${[r, g, b].map((x) => x.toString(16).padStart(2, '0')).join('')}`;
 }
 
 function transformColor<M extends keyof Color, C extends Color[M]>(

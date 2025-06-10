@@ -80,7 +80,7 @@ export default function FontSize({
     }
 
     setInputValue(String(updatedFontSize));
-    updateFontSizeInSelection(editor, String(updatedFontSize) + 'px', null);
+    updateFontSizeInSelection(editor, `${String(updatedFontSize)}px`, null);
     setInputChangeFlag(false);
   };
 

@@ -54,7 +54,7 @@ function YouTubeComponent({
         src={`https://www.youtube-nocookie.com/embed/${videoID}`}
         frameBorder="0"
         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-        allowFullScreen={true}
+        allowFullScreen
         title="YouTube video"
       />
     </BlockWithAlignableContents>

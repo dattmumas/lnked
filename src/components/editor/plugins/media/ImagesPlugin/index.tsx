@@ -281,7 +281,7 @@ function $onDragStart(event: DragEvent): boolean {
   if (!node) {
     return false;
   }
-  const dataTransfer = event.dataTransfer;
+  const {dataTransfer} = event;
   if (!dataTransfer) {
     return false;
   }
@@ -372,13 +372,11 @@ declare global {
 }
 
 function canDropImage(event: DragEvent): boolean {
-  const target = event.target;
-  return !!(
-    isHTMLElement(target) &&
+  const {target} = event;
+  return Boolean(isHTMLElement(target) &&
     !target.closest('code, span.editor-image') &&
     isHTMLElement(target.parentElement) &&
-    target.parentElement.closest('div.ContentEditable__root')
-  );
+    target.parentElement.closest('div.ContentEditable__root'));
 }
 
 function getDragSelection(event: DragEvent): Range | null | undefined {

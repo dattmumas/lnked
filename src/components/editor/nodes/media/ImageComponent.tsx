@@ -481,7 +481,7 @@ export default function ImageComponent({
                 <CollaborationPlugin
                   id={caption.getKey()}
                   providerFactory={createWebsocketProvider}
-                  shouldBootstrap={true}
+                  shouldBootstrap
                 />
               ) : (
                 <HistoryPlugin externalHistoryState={historyState} />

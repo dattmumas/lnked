@@ -112,7 +112,7 @@ export function InsertTableDialog({
   return (
     <>
       <TextInput
-        placeholder={'# of rows (1-500)'}
+        placeholder="# of rows (1-500)"
         label="Rows"
         onChange={setRows}
         value={rows}
@@ -120,7 +120,7 @@ export function InsertTableDialog({
         type="number"
       />
       <TextInput
-        placeholder={'# of columns (1-50)'}
+        placeholder="# of columns (1-50)"
         label="Columns"
         onChange={setColumns}
         value={columns}

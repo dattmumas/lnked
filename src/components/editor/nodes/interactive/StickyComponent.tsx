@@ -44,12 +44,12 @@ function positionSticky(
   stickyElem: HTMLElement,
   positioning: Positioning,
 ): void {
-  const style = stickyElem.style;
-  const rootElementRect = positioning.rootElementRect;
+  const {style} = stickyElem;
+  const {rootElementRect} = positioning;
   const rectLeft = rootElementRect !== null ? rootElementRect.left : 0;
   const rectTop = rootElementRect !== null ? rootElementRect.top : 0;
-  style.top = rectTop + positioning.y + 'px';
-  style.left = rectLeft + positioning.x + 'px';
+  style.top = `${rectTop + positioning.y}px`;
+  style.left = `${rectLeft + positioning.x}px`;
 }
 
 export default function StickyComponent({
@@ -147,7 +147,7 @@ export default function StickyComponent({
   const handlePointerMove = (event: PointerEvent) => {
     const stickyContainer = stickyContainerRef.current;
     const positioning = positioningRef.current;
-    const rootElementRect = positioning.rootElementRect;
+    const {rootElementRect} = positioning;
     const zoom = calculateZoomLevel(stickyContainer);
     if (
       stickyContainer !== null &&
@@ -253,7 +253,7 @@ export default function StickyComponent({
             <CollaborationPlugin
               id={caption.getKey()}
               providerFactory={createWebsocketProvider}
-              shouldBootstrap={true}
+              shouldBootstrap
             />
           ) : (
             <HistoryPlugin externalHistoryState={historyState} />

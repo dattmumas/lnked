@@ -11,8 +11,8 @@ import {ElementNode, RangeSelection, TextNode} from 'lexical';
 export function getSelectedNode(
   selection: RangeSelection,
 ): TextNode | ElementNode {
-  const anchor = selection.anchor;
-  const focus = selection.focus;
+  const {anchor} = selection;
+  const {focus} = selection;
   const anchorNode = selection.anchor.getNode();
   const focusNode = selection.focus.getNode();
   if (anchorNode === focusNode) {

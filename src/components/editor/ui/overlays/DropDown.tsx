@@ -94,7 +94,7 @@ function DropDownItems({
       return;
     }
 
-    const key = event.key;
+    const {key} = event;
 
     if (['Escape', 'ArrowUp', 'ArrowDown', 'Tab'].includes(key)) {
       event.preventDefault();
@@ -193,7 +193,7 @@ export default function DropDown({
 
     if (button !== null && showDropDown) {
       const handle = (event: MouseEvent) => {
-        const target = event.target;
+        const {target} = event;
         if (!isDOMNode(target)) {
           return;
         }

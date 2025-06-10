@@ -17,7 +17,7 @@ import {useRef, useState} from 'react';
 const DRAGGABLE_BLOCK_MENU_CLASSNAME = 'draggable-block-menu';
 
 function isOnMenu(element: HTMLElement): boolean {
-  return !!element.closest(`.${DRAGGABLE_BLOCK_MENU_CLASSNAME}`);
+  return Boolean(element.closest(`.${DRAGGABLE_BLOCK_MENU_CLASSNAME}`));
 }
 
 export default function DraggableBlockPlugin({

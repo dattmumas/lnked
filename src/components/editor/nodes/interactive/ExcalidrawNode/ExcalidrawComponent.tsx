@@ -215,13 +215,13 @@ export default function ExcalidrawComponent({
           {(isSelected || isResizing) && isEditable && (
             <ImageResizer
               buttonRef={captionButtonRef}
-              showCaption={true}
+              showCaption
               setShowCaption={() => null}
               imageRef={imageContainerRef}
               editor={editor}
               onResizeStart={onResizeStart}
               onResizeEnd={onResizeEnd}
-              captionsEnabled={true}
+              captionsEnabled
             />
           )}
         </button>

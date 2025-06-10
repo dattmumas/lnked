@@ -34,7 +34,7 @@ export function createWebsocketProvider(
   // @ts-expect-error - WebsocketProvider type mismatch with Provider interface
   return new WebsocketProvider(
     WEBSOCKET_ENDPOINT,
-    WEBSOCKET_SLUG + '/' + WEBSOCKET_ID + '/' + id,
+    `${WEBSOCKET_SLUG}/${WEBSOCKET_ID}/${id}`,
     doc,
     {
       connect: false,

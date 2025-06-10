@@ -50,7 +50,7 @@ function FigmaComponent({
         height="315"
         src={`https://www.figma.com/embed?embed_host=lexical&url=\
         https://www.figma.com/file/${documentID}`}
-        allowFullScreen={true}
+        allowFullScreen
       />
     </BlockWithAlignableContents>
   );

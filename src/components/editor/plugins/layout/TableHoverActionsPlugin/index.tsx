@@ -124,8 +124,7 @@ function TableHoverActionsContainer({
         } = (tableDOMElement as HTMLTableElement).getBoundingClientRect();
 
         // Adjust for using the scrollable table container
-        const parentElement = (tableDOMElement as HTMLTableElement)
-          .parentElement;
+        const {parentElement} = (tableDOMElement as HTMLTableElement);
         let tableHasScroll = false;
         if (
           parentElement &&
@@ -285,7 +284,7 @@ function getMouseInfo(
   tableDOMNode: HTMLElement | null;
   isOutside: boolean;
 } {
-  const target = event.target;
+  const {target} = event;
   const tableCellClass = getThemeSelector(getTheme, 'tableCell');
 
   if (isHTMLElement(target)) {

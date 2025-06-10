@@ -37,7 +37,7 @@ export function MaxLengthPlugin({ maxLength }: { maxLength: number }): null {
       const textContentSize = rootNode.getTextContentSize();
       if (prevTextContentSize !== textContentSize) {
         const delCount = textContentSize - maxLength;
-        const anchor = selection.anchor;
+        const {anchor} = selection;
 
         if (delCount > 0) {
           // Restore the old editor state instead if the last

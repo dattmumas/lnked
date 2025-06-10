@@ -225,7 +225,7 @@ export class ImageNode extends DecoratorNode<JSX.Element> {
 
   createDOM(config: EditorConfig): HTMLElement {
     const span = document.createElement('span');
-    const theme = config.theme;
+    const {theme} = config;
     const className = theme.image;
     if (className !== undefined) {
       span.className = className;
@@ -257,7 +257,7 @@ export class ImageNode extends DecoratorNode<JSX.Element> {
         showCaption={this.__showCaption}
         caption={this.__caption}
         captionsEnabled={this.__captionsEnabled}
-        resizable={true}
+        resizable
       />
     );
   }

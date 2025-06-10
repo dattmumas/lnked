@@ -749,7 +749,7 @@ function TableCellActionMenuContainer({
     const menu = menuButtonRef.current;
     const selection = $getSelection();
     const nativeSelection = getDOMSelection(editor._window);
-    const activeElement = document.activeElement;
+    const {activeElement} = document;
     function disable() {
       if (menu) {
         menu.classList.remove('table-cell-action-button-container--active');

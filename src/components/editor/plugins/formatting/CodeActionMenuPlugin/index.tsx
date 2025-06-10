@@ -165,7 +165,7 @@ function getMouseInfo(event: MouseEvent): {
   codeDOMNode: HTMLElement | null;
   isOutside: boolean;
 } {
-  const target = event.target;
+  const {target} = event;
 
   if (isHTMLElement(target)) {
     const codeDOMNode = target.closest<HTMLElement>(

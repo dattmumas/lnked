@@ -149,8 +149,8 @@ function TableOfContentsList({
                   onClick={() => scrollToNode(key, index)}
                   role="button"
                   tabIndex={0}>
-                  {('' + text).length > 20
-                    ? text.substring(0, 20) + '...'
+                  {(`${text}`).length > 20
+                    ? `${text.substring(0, 20)}...`
                     : text}
                 </div>
                 <br />
@@ -173,8 +173,8 @@ function TableOfContentsList({
                       selectedKey === key ? 'selected-heading' : ''
                     }
                     `}>
-                    {('' + text).length > 27
-                      ? text.substring(0, 27) + '...'
+                    {(`${text}`).length > 27
+                      ? `${text.substring(0, 27)}...`
                       : text}
                   </li>
                 </div>

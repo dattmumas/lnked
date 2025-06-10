@@ -106,7 +106,7 @@ export class ExcalidrawNode extends DecoratorNode<JSX.Element> {
   // View
   createDOM(config: EditorConfig): HTMLElement {
     const span = document.createElement('span');
-    const theme = config.theme;
+    const {theme} = config;
     const className = theme.image;
     if (className !== undefined) {
       span.className = className;

@@ -29,7 +29,7 @@ export type SerializedMentionNode = Spread<
 function $convertMentionElement(
   domNode: HTMLElement,
 ): DOMConversionOutput | null {
-  const textContent = domNode.textContent;
+  const {textContent} = domNode;
   const mentionName = domNode.getAttribute('data-lexical-mention-name');
 
   if (textContent !== null) {

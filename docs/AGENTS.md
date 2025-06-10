@@ -62,3 +62,5 @@ Lnked is a Next.js 13 application using Supabase for the backend, implementing a
 - Utilities: camelCase.ts
 - Types: types.ts or inline
 - Tests: _.test.ts or _.spec.ts
+
+MOST IMPORTANT INSTRUCTION:: FIX ALL LINT ERRORS

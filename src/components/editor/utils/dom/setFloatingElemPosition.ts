@@ -41,7 +41,7 @@ export function setFloatingElemPosition(
         textNode.nodeType === Node.ELEMENT_NODE
           ? (textNode as Element)
           : (textNode.parentElement as Element);
-      const textAlign = window.getComputedStyle(textElement).textAlign;
+      const {textAlign} = window.getComputedStyle(textElement);
 
       if (textAlign === 'right' || textAlign === 'end') {
         // For end-aligned text, position the toolbar relative to the text end

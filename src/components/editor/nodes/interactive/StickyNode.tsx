@@ -67,7 +67,7 @@ export class StickyNode extends DecoratorNode<JSX.Element> {
     serializedNode: LexicalUpdateJSON<SerializedStickyNode>,
   ): this {
     const stickyNode = super.updateFromJSON(serializedNode);
-    const caption = serializedNode.caption;
+    const {caption} = serializedNode;
     const nestedEditor = stickyNode.__caption;
     const editorState = nestedEditor.parseEditorState(caption.editorState);
     if (!editorState.isEmpty()) {

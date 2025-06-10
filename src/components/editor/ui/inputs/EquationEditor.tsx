@@ -34,7 +34,7 @@ function EquationEditor(
         className="EquationEditor_inlineEditor"
         value={equation}
         onChange={onChange}
-        autoFocus={true}
+        autoFocus
         ref={forwardedRef as RefObject<HTMLInputElement>}
       />
       <span className="EquationEditor_dollarSign">$</span>

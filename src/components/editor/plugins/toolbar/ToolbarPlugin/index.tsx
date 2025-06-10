@@ -241,13 +241,13 @@ function BlockFormatDropDown({
     <DropDown
       disabled={disabled}
       buttonClassName="toolbar-item block-controls"
-      buttonIconClassName={'icon block-type ' + blockType}
+      buttonIconClassName={`icon block-type ${blockType}`}
       buttonLabel={blockTypeToBlockName[blockType]}
       buttonAriaLabel="Formatting options for text style"
     >
       <DropDownItem
         className={
-          'item wide ' + dropDownActiveClass(blockType === 'paragraph')
+          `item wide ${dropDownActiveClass(blockType === 'paragraph')}`
         }
         onClick={handleFormatParagraph}
       >
@@ -258,7 +258,7 @@ function BlockFormatDropDown({
         <span className="shortcut">{SHORTCUTS.NORMAL}</span>
       </DropDownItem>
       <DropDownItem
-        className={'item wide ' + dropDownActiveClass(blockType === 'h1')}
+        className={`item wide ${dropDownActiveClass(blockType === 'h1')}`}
         onClick={handleFormatH1}
       >
         <div className="icon-text-container">
@@ -268,7 +268,7 @@ function BlockFormatDropDown({
         <span className="shortcut">{SHORTCUTS.HEADING1}</span>
       </DropDownItem>
       <DropDownItem
-        className={'item wide ' + dropDownActiveClass(blockType === 'h2')}
+        className={`item wide ${dropDownActiveClass(blockType === 'h2')}`}
         onClick={handleFormatH2}
       >
         <div className="icon-text-container">
@@ -278,7 +278,7 @@ function BlockFormatDropDown({
         <span className="shortcut">{SHORTCUTS.HEADING2}</span>
       </DropDownItem>
       <DropDownItem
-        className={'item wide ' + dropDownActiveClass(blockType === 'h3')}
+        className={`item wide ${dropDownActiveClass(blockType === 'h3')}`}
         onClick={handleFormatH3}
       >
         <div className="icon-text-container">
@@ -288,7 +288,7 @@ function BlockFormatDropDown({
         <span className="shortcut">{SHORTCUTS.HEADING3}</span>
       </DropDownItem>
       <DropDownItem
-        className={'item wide ' + dropDownActiveClass(blockType === 'number')}
+        className={`item wide ${dropDownActiveClass(blockType === 'number')}`}
         onClick={handleFormatNumberedList}
       >
         <div className="icon-text-container">
@@ -298,7 +298,7 @@ function BlockFormatDropDown({
         <span className="shortcut">{SHORTCUTS.NUMBERED_LIST}</span>
       </DropDownItem>
       <DropDownItem
-        className={'item wide ' + dropDownActiveClass(blockType === 'bullet')}
+        className={`item wide ${dropDownActiveClass(blockType === 'bullet')}`}
         onClick={handleFormatBulletList}
       >
         <div className="icon-text-container">
@@ -308,7 +308,7 @@ function BlockFormatDropDown({
         <span className="shortcut">{SHORTCUTS.BULLET_LIST}</span>
       </DropDownItem>
       <DropDownItem
-        className={'item wide ' + dropDownActiveClass(blockType === 'check')}
+        className={`item wide ${dropDownActiveClass(blockType === 'check')}`}
         onClick={handleFormatCheckList}
       >
         <div className="icon-text-container">
@@ -318,7 +318,7 @@ function BlockFormatDropDown({
         <span className="shortcut">{SHORTCUTS.CHECK_LIST}</span>
       </DropDownItem>
       <DropDownItem
-        className={'item wide ' + dropDownActiveClass(blockType === 'quote')}
+        className={`item wide ${dropDownActiveClass(blockType === 'quote')}`}
         onClick={handleFormatQuote}
       >
         <div className="icon-text-container">
@@ -328,7 +328,7 @@ function BlockFormatDropDown({
         <span className="shortcut">{SHORTCUTS.QUOTE}</span>
       </DropDownItem>
       <DropDownItem
-        className={'item wide ' + dropDownActiveClass(blockType === 'code')}
+        className={`item wide ${dropDownActiveClass(blockType === 'code')}`}
         onClick={handleFormatCode}
       >
         <div className="icon-text-container">
@@ -384,7 +384,7 @@ function FontDropDown({
   return (
     <DropDown
       disabled={disabled}
-      buttonClassName={'toolbar-item ' + style}
+      buttonClassName={`toolbar-item ${style}`}
       buttonLabel={value}
       buttonIconClassName={
         style === 'font-family' ? 'icon block-type font-family' : ''
@@ -515,14 +515,14 @@ function ElementFormatDropdown({
       <Divider />
       <DropDownItem onClick={handleOutdent} className="item wide">
         <div className="icon-text-container">
-          <i className={'icon ' + (isRTL ? 'indent' : 'outdent')} />
+          <i className={`icon ${isRTL ? 'indent' : 'outdent'}`} />
           <span className="text">Outdent</span>
         </div>
         <span className="shortcut">{SHORTCUTS.OUTDENT}</span>
       </DropDownItem>
       <DropDownItem onClick={handleIndent} className="item wide">
         <div className="icon-text-container">
-          <i className={'icon ' + (isRTL ? 'outdent' : 'indent')} />
+          <i className={`icon ${isRTL ? 'outdent' : 'indent'}`} />
           <span className="text">Indent</span>
         </div>
         <span className="shortcut">{SHORTCUTS.INDENT}</span>
@@ -556,9 +556,9 @@ export default function ToolbarPlugin({
         const rootElement = activeEditor.getRootElement();
         updateToolbarState(
           'isImageCaption',
-          !!rootElement?.parentElement?.classList.contains(
+          Boolean(rootElement?.parentElement?.classList.contains(
             'image-caption-container',
-          ),
+          )),
         );
       } else {
         updateToolbarState('isImageCaption', false);
@@ -1007,7 +1007,7 @@ export default function ToolbarPlugin({
           <div className="toolbar-group">
             <FontDropDown
               disabled={!isEditable}
-              style={'font-family'}
+              style="font-family"
               value={toolbarState.fontFamily}
               editor={activeEditor}
             />
@@ -1024,7 +1024,7 @@ export default function ToolbarPlugin({
               disabled={!isEditable}
               onClick={handleFormatBold}
               className={
-                'toolbar-item spaced ' + (toolbarState.isBold ? 'active' : '')
+                `toolbar-item spaced ${toolbarState.isBold ? 'active' : ''}`
               }
               title={`Bold (${SHORTCUTS.BOLD})`}
               type="button"
@@ -1036,7 +1036,7 @@ export default function ToolbarPlugin({
               disabled={!isEditable}
               onClick={handleFormatItalic}
               className={
-                'toolbar-item spaced ' + (toolbarState.isItalic ? 'active' : '')
+                `toolbar-item spaced ${toolbarState.isItalic ? 'active' : ''}`
               }
               title={`Italic (${SHORTCUTS.ITALIC})`}
               type="button"
@@ -1048,8 +1048,8 @@ export default function ToolbarPlugin({
               disabled={!isEditable}
               onClick={handleFormatUnderline}
               className={
-                'toolbar-item spaced ' +
-                (toolbarState.isUnderline ? 'active' : '')
+                `toolbar-item spaced ${ 
+                toolbarState.isUnderline ? 'active' : ''}`
               }
               title={`Underline (${SHORTCUTS.UNDERLINE})`}
               type="button"
@@ -1062,7 +1062,7 @@ export default function ToolbarPlugin({
                 disabled={!isEditable}
                 onClick={handleFormatCode}
                 className={
-                  'toolbar-item spaced ' + (toolbarState.isCode ? 'active' : '')
+                  `toolbar-item spaced ${toolbarState.isCode ? 'active' : ''}`
                 }
                 title={`Insert code block (${SHORTCUTS.INSERT_CODE_BLOCK})`}
                 type="button"
@@ -1075,7 +1075,7 @@ export default function ToolbarPlugin({
               disabled={!isEditable}
               onClick={insertLink}
               className={
-                'toolbar-item spaced ' + (toolbarState.isLink ? 'active' : '')
+                `toolbar-item spaced ${toolbarState.isLink ? 'active' : ''}`
               }
               aria-label="Insert link"
               title={`Insert link (${SHORTCUTS.INSERT_LINK})`}
@@ -1111,7 +1111,7 @@ export default function ToolbarPlugin({
               <DropDownItem
                 onClick={handleFormatLowercase}
                 className={
-                  'item wide ' + dropDownActiveClass(toolbarState.isLowercase)
+                  `item wide ${dropDownActiveClass(toolbarState.isLowercase)}`
                 }
                 title="Lowercase"
                 aria-label="Format text to lowercase"
@@ -1125,7 +1125,7 @@ export default function ToolbarPlugin({
               <DropDownItem
                 onClick={handleFormatUppercase}
                 className={
-                  'item wide ' + dropDownActiveClass(toolbarState.isUppercase)
+                  `item wide ${dropDownActiveClass(toolbarState.isUppercase)}`
                 }
                 title="Uppercase"
                 aria-label="Format text to uppercase"
@@ -1139,7 +1139,7 @@ export default function ToolbarPlugin({
               <DropDownItem
                 onClick={handleFormatCapitalize}
                 className={
-                  'item wide ' + dropDownActiveClass(toolbarState.isCapitalize)
+                  `item wide ${dropDownActiveClass(toolbarState.isCapitalize)}`
                 }
                 title="Capitalize"
                 aria-label="Format text to capitalize"
@@ -1153,8 +1153,8 @@ export default function ToolbarPlugin({
               <DropDownItem
                 onClick={handleFormatStrikethrough}
                 className={
-                  'item wide ' +
-                  dropDownActiveClass(toolbarState.isStrikethrough)
+                  `item wide ${ 
+                  dropDownActiveClass(toolbarState.isStrikethrough)}`
                 }
                 title="Strikethrough"
                 aria-label="Format text with a strikethrough"
@@ -1168,7 +1168,7 @@ export default function ToolbarPlugin({
               <DropDownItem
                 onClick={handleFormatSubscript}
                 className={
-                  'item wide ' + dropDownActiveClass(toolbarState.isSubscript)
+                  `item wide ${dropDownActiveClass(toolbarState.isSubscript)}`
                 }
                 title="Subscript"
                 aria-label="Format text with a subscript"
@@ -1182,7 +1182,7 @@ export default function ToolbarPlugin({
               <DropDownItem
                 onClick={handleFormatSuperscript}
                 className={
-                  'item wide ' + dropDownActiveClass(toolbarState.isSuperscript)
+                  `item wide ${dropDownActiveClass(toolbarState.isSuperscript)}`
                 }
                 title="Superscript"
                 aria-label="Format text with a superscript"
@@ -1196,7 +1196,7 @@ export default function ToolbarPlugin({
               <DropDownItem
                 onClick={handleFormatHighlight}
                 className={
-                  'item wide ' + dropDownActiveClass(toolbarState.isHighlight)
+                  `item wide ${dropDownActiveClass(toolbarState.isHighlight)}`
                 }
                 title="Highlight"
                 aria-label="Format text with a highlight"

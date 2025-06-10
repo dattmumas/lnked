@@ -79,7 +79,7 @@ export default function EquationComponent({
           SELECTION_CHANGE_COMMAND,
           (payload) => {
             void payload;
-            const activeElement = document.activeElement;
+            const {activeElement} = document;
             const inputElem = inputRef.current;
             if (inputElem !== activeElement) {
               onHide();
@@ -92,7 +92,7 @@ export default function EquationComponent({
           KEY_ESCAPE_COMMAND,
           (payload) => {
             void payload;
-            const activeElement = document.activeElement;
+            const {activeElement} = document;
             const inputElem = inputRef.current;
             if (inputElem === activeElement) {
               onHide(true);

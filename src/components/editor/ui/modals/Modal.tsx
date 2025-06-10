@@ -42,7 +42,7 @@ function PortalImpl({
       }
     };
     const clickOutsideHandler = (event: MouseEvent) => {
-      const target = event.target;
+      const {target} = event;
       if (
         modalRef.current !== null &&
         isDOMNode(target) &&

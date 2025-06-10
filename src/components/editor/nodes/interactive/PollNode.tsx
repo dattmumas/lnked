@@ -160,7 +160,7 @@ export class PollNode extends DecoratorNode<JSX.Element> {
       if (index === -1) {
         return prevOptions;
       }
-      const votes = option.votes;
+      const {votes} = option;
       const votesClone = Array.from(votes);
       const voteIndex = votes.indexOf(clientID);
       if (voteIndex === -1) {

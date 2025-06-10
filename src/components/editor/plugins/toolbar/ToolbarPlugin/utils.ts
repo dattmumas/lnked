@@ -147,7 +147,7 @@ export const updateFontSize = (
 ) => {
   if (inputValue !== '') {
     const nextFontSize = calculateNextFontSize(Number(inputValue), updateType);
-    updateFontSizeInSelection(editor, String(nextFontSize) + 'px', null);
+    updateFontSizeInSelection(editor, `${String(nextFontSize)}px`, null);
   } else {
     updateFontSizeInSelection(editor, null, updateType);
   }
@@ -235,8 +235,8 @@ export const clearFormatting = (editor: LexicalEditor) => {
   editor.update(() => {
     const selection = $getSelection();
     if ($isRangeSelection(selection) || $isTableSelection(selection)) {
-      const anchor = selection.anchor;
-      const focus = selection.focus;
+      const {anchor} = selection;
+      const {focus} = selection;
       const nodes = selection.getNodes();
       const extractedNodes = selection.extract();
 

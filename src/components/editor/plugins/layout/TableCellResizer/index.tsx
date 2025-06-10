@@ -107,7 +107,7 @@ function TableCellResizer({editor}: {editor: LexicalEditor}): JSX.Element {
     }
 
     const onPointerMove = (event: PointerEvent) => {
-      const target = event.target;
+      const {target} = event;
       if (!isHTMLElement(target)) {
         return;
       }

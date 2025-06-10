@@ -46,7 +46,7 @@ export default function LexicalContentEditable({
     <ContentEditable
       className="ContentEditable__root"
       {...contentEditableProps}
-      spellCheck={true}
+      spellCheck
       autoCorrect="on"
       autoCapitalize="on"
       readOnly={readOnly}
