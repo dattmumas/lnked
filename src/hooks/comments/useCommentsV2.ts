@@ -11,6 +11,7 @@ import {
   ReactionType,
 } from '@/types/comments-v2';
 import { RealtimeChannel } from '@supabase/supabase-js';
+import { useUser } from '@/hooks/useUser';
 
 interface UseCommentsV2Props {
   entityType: CommentEntityType;
@@ -39,6 +40,8 @@ export function useCommentsV2({
   // Pagination state
   const offsetRef = useRef(0);
   const subscriptionRef = useRef<RealtimeChannel | null>(null);
+
+  const { user, loading: userLoading } = useUser();
 
   // Transform API comments to UI threads
   const transformToThreads = useCallback(
@@ -140,20 +143,23 @@ export function useCommentsV2({
   // Add a new comment
   const addComment = useCallback(
     async (content: string, parentId?: string) => {
-      if (submitting) return;
+      if (submitting || userLoading) return;
+
+      // Ensure user is authenticated
+      if (!user?.id) {
+        const authError = new Error('You must be logged in to comment.');
+        setError(authError.message);
+        throw authError;
+      }
 
       try {
         setSubmitting(true);
         setError(null);
 
-        // This assumes you have a way to get the current user's ID.
-        // Replace with your actual user management logic.
-        const userId = '...'; // FAKE USER ID
-
         await commentsV2Service.addComment(
           entityType,
           entityId,
-          userId,
+          user.id,
           content,
           parentId
         );
@@ -185,20 +191,24 @@ export function useCommentsV2({
         setSubmitting(false);
       }
     },
-    [entityType, entityId, submitting, loadComments, loadReplies]
+    [entityType, entityId, submitting, loadComments, loadReplies, user, userLoading]
   );
 
   // Toggle reaction on a comment
   const toggleReaction = useCallback(
     async (commentId: string, reactionType: ReactionType) => {
       try {
-        // This assumes you have a way to get the current user's ID.
-        // Replace with your actual user management logic.
-        const userId = '...'; // FAKE USER ID
+        if (userLoading) return;
+
+        if (!user?.id) {
+          const authError = new Error('You must be logged in to react to comments.');
+          setError(authError.message);
+          throw authError;
+        }
 
         const result = await commentsV2Service.toggleReaction(
           commentId,
-          userId,
+          user.id,
           reactionType
         );
 
@@ -233,7 +243,7 @@ export function useCommentsV2({
         );
       }
     },
-    []
+    [user, userLoading]
   );
 
   // Load more comments (pagination)

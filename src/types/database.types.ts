@@ -7,31 +7,6 @@ export type Json =
   | Json[]
 
 export type Database = {
-  graphql_public: {
-    Tables: {
-      [_ in never]: never
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      graphql: {
-        Args: {
-          operationName?: string
-          query?: string
-          variables?: Json
-          extensions?: Json
-        }
-        Returns: Json
-      }
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
-  }
   public: {
     Tables: {
       agreements: {
@@ -2463,7 +2438,14 @@ export type Database = {
       post_type_enum: "text" | "video"
       price_interval: "month" | "year" | "week" | "day"
       price_type: "recurring" | "one_time"
-      reaction_type: "like" | "heart" | "laugh" | "angry" | "sad" | "wow"
+      reaction_type:
+        | "like"
+        | "heart"
+        | "laugh"
+        | "angry"
+        | "sad"
+        | "wow"
+        | "dislike"
       report_status: "pending" | "reviewed" | "resolved" | "dismissed"
       subscription_status:
         | "trialing"
@@ -2588,9 +2570,6 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
-  graphql_public: {
-    Enums: {},
-  },
   public: {
     Enums: {
       agreement_type: [
@@ -2637,7 +2616,15 @@ export const Constants = {
       post_type_enum: ["text", "video"],
       price_interval: ["month", "year", "week", "day"],
       price_type: ["recurring", "one_time"],
-      reaction_type: ["like", "heart", "laugh", "angry", "sad", "wow"],
+      reaction_type: [
+        "like",
+        "heart",
+        "laugh",
+        "angry",
+        "sad",
+        "wow",
+        "dislike",
+      ],
       report_status: ["pending", "reviewed", "resolved", "dismissed"],
       subscription_status: [
         "trialing",
@@ -2653,4 +2640,3 @@ export const Constants = {
     },
   },
 } as const
-

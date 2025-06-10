@@ -61,7 +61,7 @@ export function PublishStep({ videoUpload, onComplete }: PublishStepProps) {
               <CheckCircle className="h-4 w-4 text-green-500" />
             </div>
             <div className="flex items-center justify-between text-sm">
-              <span>Publishing to feed...</span>
+              <span>Publishing video...</span>
               <Loader2 className="h-4 w-4 animate-spin text-blue-500" />
             </div>
           </div>
@@ -80,8 +80,8 @@ export function PublishStep({ videoUpload, onComplete }: PublishStepProps) {
         </div>
         <h2 className="text-2xl font-semibold mb-2">Ready to Publish!</h2>
         <p className="text-muted-foreground">
-          Your video "{formData.title}" is ready to be published to the
-          platform.
+          Your video "{formData.title}" is ready to be published and made
+          available for viewing.
         </p>
       </div>
 
@@ -181,9 +181,9 @@ export function PublishStep({ videoUpload, onComplete }: PublishStepProps) {
                   <span className="text-xs font-semibold text-blue-600">2</span>
                 </div>
                 <div>
-                  <p className="font-medium">Feed Publication</p>
+                  <p className="font-medium">Video Publishing</p>
                   <p className="text-sm text-muted-foreground">
-                    Your video will appear in the home feed for your audience
+                    Your video will be made available for viewing and sharing
                   </p>
                 </div>
               </div>

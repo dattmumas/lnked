@@ -1,11 +1,13 @@
 // Universal Polymorphic Comment System Types
 // Corresponds to supabase/migrations/20250106100000_create_polymorphic_comment_system.sql
 
+import type { Enums } from '@/types/database.types';
+
 // Entity types that can have comments
 export type CommentEntityType = 'video' | 'post' | 'collective' | 'profile';
 
 // Reaction types available for comments
-export type ReactionType = 'like' | 'heart' | 'laugh' | 'angry' | 'sad' | 'wow';
+export type ReactionType = Enums<'reaction_type'>;
 
 // Report status for moderation
 export type ReportStatus = 'pending' | 'reviewed' | 'resolved' | 'dismissed';
@@ -43,7 +45,17 @@ export interface CommentWithAuthor {
   is_pinned?: boolean;
   created_at: string;
   updated_at: string;
+  // Alias for backward compatibility
+  user?: {
+    id: string;
+    username: string;
+    full_name: string;
+    avatar_url: string | null;
+  };
 }
+
+export type CommentWithUser = CommentWithAuthor;
+export type CommentReactionType = ReactionType;
 
 // Comment reaction aggregation
 export interface Reaction {

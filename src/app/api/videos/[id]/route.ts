@@ -68,38 +68,11 @@ export async function PATCH(
     if (has('title')) updateData.title = body.title;
     if (has('description')) updateData.description = body.description;
     
-    // Handle publishing status - create post when video is published
+    // Handle publishing status - videos are now published without creating posts
+    // Users can manually create posts that reference videos if needed
     let newPostId = null;
-    if (has('is_published') && body.is_published) {
-      // Create a new post for this video if it doesn't already have one
-      if (!(existingVideo as any).post_id) {
-        const { data: newPost, error: postError } = await supabase
-          .from('posts')
-          .insert({
-            title: existingVideo.title || `Video: ${existingVideo.title || 'Untitled'}`,
-            content: existingVideo.description || '',
-            author_id: user.id,
-            status: 'active',
-            is_public: updateData.is_public ?? (existingVideo as any).is_public ?? true,
-            published_at: new Date().toISOString(),
-            type: 'video',
-            collective_id: updateData.collective_id ?? (existingVideo as any).collective_id,
-          })
-          .select('id')
-          .single();
-
-        if (postError) {
-          console.error('Failed to create post for video:', postError);
-          return NextResponse.json(
-            { error: 'Failed to create post for video' },
-            { status: 500 }
-          );
-        }
-
-        newPostId = newPost.id;
-        updateData.post_id = newPostId;
-      }
-    }
+    // Note: Automatic post creation has been disabled
+    // Videos can exist independently of posts
     // Note: We don't set a status here. 'is_published' is a metadata flag.
     // The actual video 'status' (preparing, ready, errored) is controlled by Mux webhooks.
 

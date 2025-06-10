@@ -9,7 +9,7 @@ interface TogglePostReactionArgs {
 interface ToggleCommentReactionArgs {
   commentId: string;
   userId: string;
-  type: "like" | "dislike";
+  reaction_type: "like" | "dislike";
 }
 
 export async function togglePostReaction({
@@ -32,12 +32,18 @@ export async function togglePostReaction({
 export async function toggleCommentReaction({
   commentId,
   userId,
-  type,
+  reaction_type,
 }: ToggleCommentReactionArgs) {
   const supabase = await createServerSupabaseClient();
   const { data, error } = await supabase
     .from("comment_reactions")
-    .upsert([{ comment_id: commentId, user_id: userId, type }], {
+    .upsert([
+      {
+        comment_id: commentId,
+        user_id: userId,
+        reaction_type,
+      },
+    ], {
       onConflict: "comment_id,user_id",
     })
     .select()

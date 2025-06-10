@@ -43,8 +43,6 @@ export function WizardNavigation({
       case 1:
         return 'Continue to Settings';
       case 2:
-        return 'Preview Video';
-      case 3:
         return 'Ready to Publish';
       default:
         return 'Continue';

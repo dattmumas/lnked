@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
+import type { TablesInsert, Enums } from '@/types/database.types';
 
 export async function POST(
   req: NextRequest,
@@ -20,14 +21,14 @@ export async function POST(
     );
   }
 
-  let body: { type?: string };
+  let body: { reaction_type?: Enums<'reaction_type'> };
   try {
     body = await req.json();
   } catch {
     return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
   }
-  const { type } = body;
-  if (type !== 'like' && type !== 'dislike') {
+  const { reaction_type } = body;
+  if (reaction_type !== 'like' && reaction_type !== 'dislike') {
     return NextResponse.json(
       { error: 'Invalid reaction type' },
       { status: 400 },
@@ -37,7 +38,7 @@ export async function POST(
   // Check for existing reaction
   const { data: existing, error: existingError } = await supabase
     .from('comment_reactions')
-    .select('type')
+    .select('reaction_type')
     .eq('comment_id', commentId)
     .eq('user_id', user.id)
     .maybeSingle();
@@ -46,10 +47,10 @@ export async function POST(
     return NextResponse.json({ error: 'Database error' }, { status: 500 });
   }
 
-  let userReaction: 'like' | 'dislike' | null = null;
+  let userReaction: Enums<'reaction_type'> | null = null;
 
   if (existing) {
-    if (existing.type === type) {
+    if (existing.reaction_type === reaction_type) {
       // Toggle off (remove reaction)
       await supabase
         .from('comment_reactions')
@@ -64,17 +65,23 @@ export async function POST(
         .delete()
         .eq('comment_id', commentId)
         .eq('user_id', user.id);
-      await supabase
-        .from('comment_reactions')
-        .insert({ comment_id: commentId, user_id: user.id, type });
-      userReaction = type;
+      const payload: TablesInsert<'comment_reactions'> = {
+        comment_id: commentId,
+        user_id: user.id,
+        reaction_type,
+      };
+      await supabase.from('comment_reactions').insert(payload);
+      userReaction = reaction_type;
     }
   } else {
     // No reaction, insert new
-    await supabase
-      .from('comment_reactions')
-      .insert({ comment_id: commentId, user_id: user.id, type });
-    userReaction = type;
+    const payload2: TablesInsert<'comment_reactions'> = {
+      comment_id: commentId,
+      user_id: user.id,
+      reaction_type,
+    };
+    await supabase.from('comment_reactions').insert(payload2);
+    userReaction = reaction_type;
   }
 
   // Get new like/dislike counts
@@ -83,12 +90,12 @@ export async function POST(
       .from('comment_reactions')
       .select('*', { count: 'exact', head: true })
       .eq('comment_id', commentId)
-      .eq('type', 'like'),
+      .eq('reaction_type', 'like'),
     supabase
       .from('comment_reactions')
       .select('*', { count: 'exact', head: true })
       .eq('comment_id', commentId)
-      .eq('type', 'dislike'),
+      .eq('reaction_type', 'dislike'),
   ]);
 
   return NextResponse.json({

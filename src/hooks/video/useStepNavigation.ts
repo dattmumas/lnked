@@ -5,14 +5,12 @@ import { useState, useCallback, useMemo } from 'react';
 const STEP_UPLOAD = 0;
 const STEP_DETAILS = 1;
 const STEP_SETTINGS = 2;
-const STEP_PREVIEW = 3;
-const STEP_PUBLISH = 4;
+const STEP_PUBLISH = 3;
 
 export const WIZARD_STEPS = [
   { id: STEP_UPLOAD, name: 'Upload', description: 'Select and upload your video file' },
   { id: STEP_DETAILS, name: 'Details', description: 'Add title, description, and tags' },
   { id: STEP_SETTINGS, name: 'Settings', description: 'Configure privacy and quality' },
-  { id: STEP_PREVIEW, name: 'Preview', description: 'Preview how it will appear in feed' },
   { id: STEP_PUBLISH, name: 'Publish', description: 'Confirm and publish your video' },
 ] as const;
 

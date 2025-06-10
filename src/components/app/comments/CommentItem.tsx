@@ -3,8 +3,8 @@
 import React, { useState } from 'react';
 import {
   CommentThread,
-  CommentReactionType,
-  CommentWithUser,
+  ReactionType,
+  CommentWithAuthor,
 } from '@/types/comments-v2';
 import { CommentForm } from './CommentForm';
 import { CommentActions } from './CommentActions';
@@ -15,7 +15,7 @@ import { formatDistanceToNow } from 'date-fns';
 interface CommentItemProps {
   thread: CommentThread;
   onReply: (parentId: string, content: string) => void;
-  onReaction: (commentId: string, reactionType: CommentReactionType) => void;
+  onReaction: (commentId: string, reactionType: ReactionType) => void;
   onLoadReplies: (commentId: string) => void;
   className?: string;
 }
@@ -29,6 +29,7 @@ export const CommentItem: React.FC<CommentItemProps> = ({
 }) => {
   const [showReplyForm, setShowReplyForm] = useState(false);
   const { comment } = thread;
+  const user = comment.user || comment.author;
 
   const handleReplySubmit = (content: string) => {
     onReply(comment.id, content);
@@ -39,7 +40,7 @@ export const CommentItem: React.FC<CommentItemProps> = ({
     setShowReplyForm(!showReplyForm);
   };
 
-  const handleReaction = (reactionType: CommentReactionType) => {
+  const handleReaction = (reactionType: ReactionType) => {
     onReaction(comment.id, reactionType);
   };
 
@@ -52,9 +53,9 @@ export const CommentItem: React.FC<CommentItemProps> = ({
       <div className="flex gap-3">
         {/* Avatar */}
         <Avatar className="h-8 w-8 flex-shrink-0">
-          <AvatarImage src={comment.user.avatar_url || ''} />
+          <AvatarImage src={user.avatar_url || ''} />
           <AvatarFallback className="text-xs">
-            {comment.user.full_name?.[0] || comment.user.username?.[0] || 'U'}
+            {user.full_name?.[0] || user.username?.[0] || 'U'}
           </AvatarFallback>
         </Avatar>
 
@@ -63,7 +64,7 @@ export const CommentItem: React.FC<CommentItemProps> = ({
           {/* Comment Header */}
           <div className="flex items-center gap-2 mb-2">
             <span className="text-sm font-semibold text-foreground">
-              {comment.user.full_name || comment.user.username}
+              {user.full_name || user.username}
             </span>
             <span className="text-xs text-muted-foreground">
               {formattedTime}
@@ -93,7 +94,7 @@ export const CommentItem: React.FC<CommentItemProps> = ({
             <div className="mt-4">
               <CommentForm
                 onSubmit={handleReplySubmit}
-                placeholder={`Reply to ${comment.user.username}...`}
+                placeholder={`Reply to ${user.username}...`}
                 buttonText="Reply"
                 className="pl-0"
               />

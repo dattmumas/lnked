@@ -3,13 +3,22 @@
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { isValidReactionType } from "@/lib/utils/reactionHelpers";
+import { ReactionType } from '@/types/comments-v2';
+import type { TablesInsert } from '@/types/database.types';
 
-interface CommentReactionResult {
+// Reaction result types simplified to like/dislike only
+export interface ReactionState {
+  likeCount: number;
+  dislikeCount: number;
+  userReaction: ReactionType | null;
+}
+
+export interface CommentReactionResult {
   success: boolean;
   message?: string;
   likeCount?: number;
   dislikeCount?: number;
-  userReaction?: 'like' | 'dislike' | null;
+  userReaction?: ReactionType | null;
 }
 
 export async function toggleCommentReaction(
@@ -20,10 +29,12 @@ export async function toggleCommentReaction(
   const supabase = await createServerSupabaseClient();
 
   // Validate reaction type
-  if (!isValidReactionType(type)) {
-    return { 
-      success: false, 
-      message: "Invalid reaction type. Must be 'like' or 'dislike'." 
+  const validReactionTypes = ['like', 'dislike'] as const;
+  type ValidReactionType = typeof validReactionTypes[number];
+  if (!validReactionTypes.includes(type as ValidReactionType)) {
+    return {
+      success: false,
+      message: "Invalid reaction type. Must be 'like' or 'dislike'."
     };
   }
 
@@ -40,7 +51,7 @@ export async function toggleCommentReaction(
     // Check for existing reaction
     const { data: existing, error: existingError } = await supabase
       .from('comment_reactions')
-      .select('type')
+      .select('reaction_type')
       .eq('comment_id', commentId)
       .eq('user_id', user.id)
       .maybeSingle();
@@ -50,10 +61,10 @@ export async function toggleCommentReaction(
       return { success: false, message: "Database error checking reaction status." };
     }
 
-    let userReaction: 'like' | 'dislike' | null = null;
+    let userReaction: ReactionType | null = null;
 
     if (existing) {
-      if (existing.type === type) {
+      if (existing.reaction_type === type) {
         // Toggle off (remove reaction)
         const { error: deleteError } = await supabase
           .from('comment_reactions')
@@ -79,27 +90,39 @@ export async function toggleCommentReaction(
           return { success: false, message: "Failed to update reaction." };
         }
 
+        const payload: TablesInsert<'comment_reactions'> = {
+          comment_id: commentId,
+          user_id: user.id,
+          reaction_type: type as ReactionType,
+        };
+
         const { error: insertError } = await supabase
           .from('comment_reactions')
-          .insert({ comment_id: commentId, user_id: user.id, type });
+          .insert(payload as any);
 
         if (insertError) {
           console.error("Error adding new comment reaction:", insertError);
           return { success: false, message: "Failed to add reaction." };
         }
-        userReaction = type;
+        userReaction = type as ValidReactionType;
       }
     } else {
       // No existing reaction, add new one
+      const payload2: TablesInsert<'comment_reactions'> = {
+        comment_id: commentId,
+        user_id: user.id,
+        reaction_type: type as ReactionType,
+      };
+
       const { error: insertError } = await supabase
         .from('comment_reactions')
-        .insert({ comment_id: commentId, user_id: user.id, type });
+        .insert(payload2 as any);
 
       if (insertError) {
         console.error("Error adding comment reaction:", insertError);
         return { success: false, message: "Failed to add reaction." };
       }
-      userReaction = type;
+      userReaction = type as ValidReactionType;
     }
 
     // Get updated reaction counts
@@ -108,12 +131,12 @@ export async function toggleCommentReaction(
         .from('comment_reactions')
         .select('*', { count: 'exact', head: true })
         .eq('comment_id', commentId)
-        .eq('type', 'like'),
+        .eq('reaction_type', 'like'),
       supabase
         .from('comment_reactions')
         .select('*', { count: 'exact', head: true })
         .eq('comment_id', commentId)
-        .eq('type', 'dislike'),
+        .eq('reaction_type', 'dislike' as ReactionType),
     ]);
 
     // Revalidate relevant paths
@@ -123,7 +146,7 @@ export async function toggleCommentReaction(
     // Could also revalidate other paths if needed (e.g., user profiles, feeds)
 
     const actionMessage = existing 
-      ? (existing.type === type 
+      ? (existing.reaction_type === type 
           ? `Comment reaction removed successfully.`
           : `Comment reaction updated successfully.`)
       : `Comment reaction added successfully.`;

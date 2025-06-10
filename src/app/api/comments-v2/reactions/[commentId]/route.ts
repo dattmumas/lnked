@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { commentsV2Service } from '@/lib/services/comments-v2';
-import { CommentReactionType, CommentValidationError, CommentPermissionError, CommentNotFoundError } from '@/types/comments-v2';
+import { ReactionType, CommentValidationError, CommentPermissionError, CommentNotFoundError } from '@/types/comments-v2';
 
 export async function POST(
   request: NextRequest, 
@@ -11,17 +11,18 @@ export async function POST(
     const body = await request.json();
     const { reaction_type } = body;
 
-    if (!reaction_type || !['like', 'heart', 'laugh', 'angry', 'sad', 'wow'].includes(reaction_type)) {
+    if (!reaction_type || !['like', 'dislike'].includes(reaction_type)) {
       return NextResponse.json(
         { error: 'Valid reaction_type is required' }, 
         { status: 400 }
       );
     }
 
-    const result = await commentsV2Service.toggleReaction({
-      comment_id: commentId,
-      reaction_type: reaction_type as CommentReactionType
-    });
+    const result = await commentsV2Service.toggleReaction(
+      commentId,
+      '',
+      reaction_type as ReactionType,
+    );
 
     return NextResponse.json(result);
 

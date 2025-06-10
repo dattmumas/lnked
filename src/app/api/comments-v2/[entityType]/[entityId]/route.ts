@@ -21,12 +21,12 @@ export async function GET(
       return NextResponse.json({ error: 'Limit must be between 1 and 100' }, { status: 400 });
     }
 
-    const comments = await commentsV2Service.getComments({
-      entity_type: entityType as CommentEntityType,
-      entity_id: entityId,
+    const comments = await commentsV2Service.getComments(
+      entityType as CommentEntityType,
+      entityId,
+      offset / limit + 1,
       limit,
-      offset
-    });
+    );
 
     return NextResponse.json({
       comments,
@@ -60,12 +60,13 @@ export async function POST(
       return NextResponse.json({ error: 'Content is required' }, { status: 400 });
     }
 
-    const result = await commentsV2Service.addComment({
-      entity_type: entityType as CommentEntityType,
-      entity_id: entityId,
+    const result = await commentsV2Service.addComment(
+      entityType as CommentEntityType,
+      entityId,
+      '',
       content,
-      parent_id: parent_id || undefined
-    });
+      parent_id || undefined,
+    );
 
     return NextResponse.json(result, { status: 201 });
 

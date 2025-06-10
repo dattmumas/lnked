@@ -93,7 +93,15 @@ export class CommentsV2Service {
       throw new Error(`Failed to fetch comments: ${error.message || error.details || JSON.stringify(error)}`);
     }
 
-    return data?.map((row: any) => row.comment_data) || [];
+    return (
+      data?.map((row: any) => {
+        const comment = row.comment_data;
+        if (comment && comment.author) {
+          comment.user = comment.author; // backward compatibility
+        }
+        return comment;
+      }) || []
+    );
   }
 
   async getCommentReplies(
@@ -133,7 +141,9 @@ export class CommentsV2Service {
 
     if (error) {
       console.error('Error adding comment:', error);
-      throw new Error(`Failed to add comment: ${error.message}`);
+      throw new Error(
+        `Failed to add comment: ${error.message || error.details || JSON.stringify(error)}`
+      );
     }
 
     if (!data) return null;
@@ -151,6 +161,9 @@ export class CommentsV2Service {
       return null;
     }
 
+    if (newComment && (newComment as any).author) {
+      (newComment as any).user = (newComment as any).author;
+    }
     return newComment as unknown as CommentWithAuthor;
   }
 

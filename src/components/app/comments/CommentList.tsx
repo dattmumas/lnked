@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { CommentThread, CommentReactionType } from '@/types/comments-v2';
+import { CommentThread, ReactionType } from '@/types/comments-v2';
 import { CommentItem } from './CommentItem';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -10,7 +10,7 @@ interface CommentListProps {
   comments: CommentThread[];
   loading: boolean;
   onReply: (parentId: string, content: string) => void;
-  onReaction: (commentId: string, reactionType: CommentReactionType) => void;
+  onReaction: (commentId: string, reactionType: ReactionType) => void;
   onLoadMore: () => void;
   onLoadReplies: (commentId: string) => void;
   hasMoreComments: boolean;

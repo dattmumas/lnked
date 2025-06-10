@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { CommentEntityType, CommentReactionType } from '@/types/comments-v2';
+import { CommentEntityType, ReactionType } from '@/types/comments-v2';
 import { useCommentsV2 } from '@/hooks/comments/useCommentsV2';
 import { CommentStats } from './CommentStats';
 import { CommentForm } from './CommentForm';
@@ -54,7 +54,7 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
 
   const handleReaction = async (
     commentId: string,
-    reactionType: CommentReactionType,
+    reactionType: ReactionType,
   ) => {
     try {
       await toggleReaction(commentId, reactionType);

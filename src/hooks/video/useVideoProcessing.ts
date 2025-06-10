@@ -167,7 +167,10 @@ export const useVideoProcessing = () => {
 
       if (!response.ok) {
         const error = await response.json().catch(() => ({}));
-        throw new Error(error.error || `Failed to publish video: ${response.status}`);
+        throw new Error(
+          error.error ||
+            `Failed to publish video: ${response.status} ${response.statusText}`,
+        );
       }
 
       const publishedAsset = await response.json();

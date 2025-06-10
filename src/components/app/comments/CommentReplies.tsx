@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { CommentThread, CommentReactionType } from '@/types/comments-v2';
+import { CommentThread, ReactionType } from '@/types/comments-v2';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { CommentActions } from './CommentActions';
@@ -12,7 +12,7 @@ interface CommentRepliesProps {
   thread: CommentThread;
   onLoadReplies: (commentId: string) => void;
   onReply: (parentId: string, content: string) => void;
-  onReaction: (commentId: string, reactionType: CommentReactionType) => void;
+  onReaction: (commentId: string, reactionType: ReactionType) => void;
   className?: string;
 }
 
@@ -89,7 +89,7 @@ export const CommentReplies: React.FC<CommentRepliesProps> = ({
 
 interface ReplyItemProps {
   reply: any; // CommentWithUser type
-  onReaction: (commentId: string, reactionType: CommentReactionType) => void;
+  onReaction: (commentId: string, reactionType: ReactionType) => void;
 }
 
 const ReplyItem: React.FC<ReplyItemProps> = ({ reply, onReaction }) => {
@@ -97,7 +97,7 @@ const ReplyItem: React.FC<ReplyItemProps> = ({ reply, onReaction }) => {
     addSuffix: true,
   });
 
-  const handleReaction = (reactionType: CommentReactionType) => {
+  const handleReaction = (reactionType: ReactionType) => {
     onReaction(reply.id, reactionType);
   };
 

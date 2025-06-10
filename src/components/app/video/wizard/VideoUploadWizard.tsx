@@ -8,7 +8,7 @@ import { WizardNavigation } from './components/WizardNavigation';
 import { UploadStep } from './steps/UploadStep';
 import { DetailsStep } from './steps/DetailsStep';
 import { SettingsStep } from './steps/SettingsStep';
-import { PreviewStep } from './steps/PreviewStep';
+
 import { PublishStep } from './steps/PublishStep';
 
 interface VideoUploadWizardProps {
@@ -40,8 +40,6 @@ export default function VideoUploadWizard({
       case 2:
         return <SettingsStep key="settings" videoUpload={videoUpload} />;
       case 3:
-        return <PreviewStep key="preview" videoUpload={videoUpload} />;
-      case 4:
         return (
           <PublishStep
             key="publish"

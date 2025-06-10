@@ -1,9 +1,14 @@
 'use client';
 
 import React from 'react';
-import { CommentWithUser, CommentReactionType } from '@/types/comments-v2';
+import { CommentWithAuthor, ReactionType } from '@/types/comments-v2';
 import { Button } from '@/components/ui/button';
-import { Heart, MessageCircle, MoreHorizontal } from 'lucide-react';
+import {
+  ThumbsUp,
+  ThumbsDown,
+  MessageCircle,
+  MoreHorizontal,
+} from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -12,9 +17,9 @@ import {
 } from '@/components/ui/dropdown-menu';
 
 interface CommentActionsProps {
-  comment: CommentWithUser;
+  comment: CommentWithAuthor;
   onReply: () => void;
-  onReaction: (reactionType: CommentReactionType) => void;
+  onReaction: (reactionType: ReactionType) => void;
   showReplyButton?: boolean;
   className?: string;
 }
@@ -26,46 +31,38 @@ export const CommentActions: React.FC<CommentActionsProps> = ({
   showReplyButton = true,
   className = '',
 }) => {
-  // Get like count from reactions
   const likeReaction = comment.reactions?.find((r) => r.type === 'like');
+  const dislikeReaction = comment.reactions?.find((r) => r.type === 'dislike');
   const likeCount = likeReaction?.count || 0;
+  const dislikeCount = dislikeReaction?.count || 0;
 
-  const heartReaction = comment.reactions?.find((r) => r.type === 'heart');
-  const heartCount = heartReaction?.count || 0;
-
-  const handleLike = () => {
-    onReaction('like');
-  };
-
-  const handleHeart = () => {
-    onReaction('heart');
+  const handleReaction = (reactionType: ReactionType) => {
+    onReaction(reactionType);
   };
 
   return (
-    <div className={`flex items-center gap-4 ${className}`}>
+    <div className={`flex items-center gap-2 text-sm ${className}`}>
       {/* Like Button */}
       <Button
         variant="ghost"
         size="sm"
-        onClick={handleLike}
+        onClick={() => handleReaction('like')}
         className="h-6 px-2 text-muted-foreground hover:text-foreground hover:bg-muted/50"
       >
-        <Heart className="h-3 w-3 mr-1" />
+        <ThumbsUp className="h-3 w-3 mr-1" />
         {likeCount > 0 && <span className="text-xs">{likeCount}</span>}
       </Button>
 
-      {/* Heart Button */}
-      {heartCount > 0 && (
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={handleHeart}
-          className="h-6 px-2 text-muted-foreground hover:text-foreground hover:bg-muted/50"
-        >
-          <Heart className="h-3 w-3 mr-1 fill-red-500 text-red-500" />
-          <span className="text-xs">{heartCount}</span>
-        </Button>
-      )}
+      {/* Dislike Button */}
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={() => handleReaction('dislike')}
+        className="h-6 px-2 text-muted-foreground hover:text-foreground hover:bg-muted/50"
+      >
+        <ThumbsDown className="h-3 w-3 mr-1" />
+        {dislikeCount > 0 && <span className="text-xs">{dislikeCount}</span>}
+      </Button>
 
       {/* Reply Button */}
       {showReplyButton && (
@@ -80,25 +77,20 @@ export const CommentActions: React.FC<CommentActionsProps> = ({
         </Button>
       )}
 
-      {/* More Menu */}
+      {/* More Options */}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button
             variant="ghost"
             size="sm"
-            className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground hover:bg-muted/50"
+            className="h-6 w-6 px-0 text-muted-foreground hover:text-foreground hover:bg-muted/50"
           >
-            <MoreHorizontal className="h-3 w-3" />
-            <span className="sr-only">More options</span>
+            <MoreHorizontal className="h-4 w-4" />
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="start" className="w-40">
-          <DropdownMenuItem>
-            <span className="text-sm">Report</span>
-          </DropdownMenuItem>
-          <DropdownMenuItem>
-            <span className="text-sm">Copy link</span>
-          </DropdownMenuItem>
+        <DropdownMenuContent>
+          <DropdownMenuItem>Report</DropdownMenuItem>
+          <DropdownMenuItem>Copy link</DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
     </div>

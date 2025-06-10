@@ -125,7 +125,18 @@ export async function POST(
     } 
     // If we have an asset ID, check asset status
     else if (videoAsset.mux_asset_id) {
-      console.info('Getting asset status for asset ID:', videoAsset.mux_asset_id);
+      // Guard against invalid asset IDs
+      if (!videoAsset.mux_asset_id.trim()) {
+        return NextResponse.json(
+          { success: false, error: 'Invalid MUX Asset ID' },
+          { status: 400 },
+        );
+      }
+      
+      console.info(
+        'Getting asset status for asset ID:',
+        videoAsset.mux_asset_id,
+      );
       
       try {
         const asset = await mux.video.assets.retrieve(videoAsset.mux_asset_id);
@@ -146,10 +157,13 @@ export async function POST(
         console.info('Asset status:', asset.status);
       } catch (assetError: unknown) {
         console.error('Asset status check failed:', assetError);
-        return NextResponse.json({
-          success: false,
-          error: 'Failed to retrieve video status from MUX'
-        }, { status: 500 });
+        return NextResponse.json(
+          {
+            success: false,
+            error: 'Failed to retrieve video status from MUX',
+          },
+          { status: 500 },
+        );
       }
     }
 

@@ -10,8 +10,7 @@ import { useVideoProcessing } from './useVideoProcessing';
 const UPLOAD_STEP = 0;
 const DETAILS_STEP = 1;
 const SETTINGS_STEP = 2;
-const PREVIEW_STEP = 3;
-const PUBLISH_STEP = 4;
+const PUBLISH_STEP = 3;
 
 // Constants for timeouts
 const AUTO_SAVE_DELAY = 1000;
@@ -34,8 +33,6 @@ export const useVideoUpload = (collectiveId?: string) => {
         return formState.isValid;
       case SETTINGS_STEP: // Settings step - form should still be valid
         return formState.isValid;
-      case PREVIEW_STEP: // Preview step - need valid form and video upload (processing is OK)
-        return formState.isValid && uploadState.isComplete;
       case PUBLISH_STEP: // Publish step - everything should be ready
         return formState.isValid && videoProcessing.canPublish;
       default:
@@ -65,14 +62,16 @@ export const useVideoUpload = (collectiveId?: string) => {
         console.error('Failed to load saved draft:', error);
       }
     }
-  }, [formState]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Set collective ID if provided
   useEffect(() => {
     if (collectiveId && !formState.data.collectiveId) {
       formState.update({ collectiveId });
     }
-  }, [collectiveId, formState]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [collectiveId]);
 
   // Main upload operation
   const uploadVideo = useCallback(async (file: File) => {
@@ -231,7 +230,6 @@ export const useVideoUpload = (collectiveId?: string) => {
     isReadyToUpload: stepNavigation.currentStep === UPLOAD_STEP && !uploadState.isUploading,
     isReadyForDetails: stepNavigation.currentStep === DETAILS_STEP && uploadState.isComplete,
     isReadyForSettings: stepNavigation.currentStep === SETTINGS_STEP,
-    isReadyForPreview: stepNavigation.currentStep === PREVIEW_STEP && uploadState.isComplete,
     isReadyToPublish: stepNavigation.currentStep === PUBLISH_STEP && formState.isValid,
   };
 }; 
