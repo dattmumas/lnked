@@ -1,24 +1,36 @@
 import { dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { FlatCompat } from '@eslint/eslintrc';
+import js from '@eslint/js';
+import tsParser from '@typescript-eslint/parser';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 const compat = new FlatCompat({
   baseDirectory: __dirname,
+  recommendedConfig: js.configs.recommended,
 });
 
 const eslintConfig = [
   ...compat.extends(
     'eslint:recommended',
-    'plugin:@typescript-eslint/recommended',
     'plugin:react/recommended',
     'plugin:react-hooks/recommended',
     'plugin:jsx-a11y/recommended',
     'next/core-web-vitals',
-    'next/typescript'
+    'next/typescript',
   ),
+  {
+    files: ['**/*.{ts,tsx}'],
+    languageOptions: {
+      parser: tsParser,
+      parserOptions: {
+        project: ['./tsconfig.json'],
+        tsconfigRootDir: __dirname,
+      },
+    },
+  },
   {
     rules: {
       // CORE SAFETY RULES
@@ -42,8 +54,8 @@ const eslintConfig = [
       'no-return-await': 'error',
       'consistent-return': 'error',
       'array-callback-return': 'error',
-      'eqeqeq': ['error', 'always'],
-      'yoda': 'error',
+      eqeqeq: ['error', 'always'],
+      yoda: 'error',
       'default-case': 'error',
       'default-case-last': 'error',
       'no-restricted-properties': [
@@ -57,7 +69,10 @@ const eslintConfig = [
       ],
 
       // TYPESCRIPT SAFETY
-      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        { argsIgnorePattern: '^_' },
+      ],
       '@typescript-eslint/no-explicit-any': 'error',
       '@typescript-eslint/explicit-function-return-type': [
         'error',
@@ -71,7 +86,10 @@ const eslintConfig = [
       'react/no-unescaped-entities': 'error',
       'react/display-name': 'error',
       'react/jsx-boolean-value': ['error', 'never'],
-      'react/jsx-curly-brace-presence': ['error', { props: 'never', children: 'never' }],
+      'react/jsx-curly-brace-presence': [
+        'error',
+        { props: 'never', children: 'never' },
+      ],
       'react-hooks/rules-of-hooks': 'error',
       'react-hooks/exhaustive-deps': 'error',
 
@@ -93,7 +111,10 @@ const eslintConfig = [
       ],
       'no-param-reassign': [
         'error',
-        { props: true, ignorePropertyModificationsFor: ['acc', 'ctx', 'req', 'res', 'state'] },
+        {
+          props: true,
+          ignorePropertyModificationsFor: ['acc', 'ctx', 'req', 'res', 'state'],
+        },
       ],
       'no-throw-literal': 'error',
       'prefer-promise-reject-errors': 'error',
