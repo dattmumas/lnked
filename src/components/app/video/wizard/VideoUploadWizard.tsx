@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useCallback } from 'react';
 
 // Step constants
 const STEP_UPLOAD = 0;
@@ -30,12 +30,12 @@ export default function VideoUploadWizard({
 }: VideoUploadWizardProps) {
   const videoUpload = useVideoUpload(collectiveId);
 
-  const handleComplete = async () => {
+  const handleComplete = useCallback(async () => {
     const success = await videoUpload.publishVideo();
     if (success && videoUpload.videoAsset?.id) {
       onComplete?.(videoUpload.videoAsset.id);
     }
-  };
+  }, [videoUpload, onComplete]);
 
   const renderCurrentStep = () => {
     switch (videoUpload.currentStep) {

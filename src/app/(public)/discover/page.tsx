@@ -25,8 +25,10 @@ export default async function DiscoverPage({
     // const cookieHeader = (await cookies()).toString(); // Not needed if fetchRecommendations handles cookies internally
     const { cursor } = await searchParams;
     const data = await fetchRecommendations(cursor); // paginate
-    recommendations = data.recommendations;
-    nextCursor = data.nextCursor;
+    ({ recommendations, nextCursor } = {
+      recommendations: data.recommendations,
+      nextCursor: data.nextCursor,
+    });
   } catch (error) {
     if (error instanceof Error) {
       console.error('Error in DiscoverPage:', error.message);

@@ -128,7 +128,7 @@ export function UploadStep({ videoUpload }: UploadStepProps) {
           <AlertTitle>Upload Complete!</AlertTitle>
           <AlertDescription>
             Your video has been uploaded successfully and is being processed.
-            Click "Continue to Details" to add video information.
+            Click &quot;Continue to Details&quot; to add video information.
           </AlertDescription>
         </Alert>
       );

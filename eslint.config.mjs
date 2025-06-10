@@ -11,21 +11,49 @@ const compat = new FlatCompat({
 
 const eslintConfig = [
   ...compat.extends('next/core-web-vitals', 'next/typescript'),
+  // --- ESLint Rule Policy ---
+  // Only low-risk, style, or cosmetic rules are disabled below (e.g., react/jsx-no-bind, no-console, react/no-unescaped-entities, etc.).
+  // All critical rules for React Hooks, TypeScript safety, and code correctness are ENABLED for production-readiness.
+  //
+  // Critical rules (DO NOT DISABLE for production):
+  //   - react-hooks/rules-of-hooks: 'error'
+  //   - react-hooks/exhaustive-deps: 'error'
+  //   - @typescript-eslint/no-explicit-any: 'warn' or 'error'
+  //   - @typescript-eslint/no-unused-vars: 'warn'
+  //   - consistent-return: 'warn'
+  //   - no-unused-vars: 'warn'
+  //
+  // Only the following rules are disabled (set to 'off') for style/cosmetic reasons:
+  //   - react/jsx-no-bind
+  //   - no-console
+  //   - react/no-unescaped-entities
+  //   - react/display-name
+  //   - @next/next/no-img-element
+  //   - jsx-a11y/media-has-caption
+  //   - no-nested-ternary
+  //   - require-await
+  //   - no-await-in-loop
+  //
+  // For test files and Lexical/editor code, some critical rules may be relaxed, but only as justified.
+
   {
     rules: {
-      // Temporarily disable strict rules for bundle analysis
-      '@typescript-eslint/no-unused-vars': 'off',
-      '@typescript-eslint/no-explicit-any': 'off',
-      'react-hooks/rules-of-hooks': 'off',
+      // --- CRITICAL RULES (ENABLED) ---
+      '@typescript-eslint/no-unused-vars': 'warn',
+      '@typescript-eslint/no-explicit-any': 'warn',
+      'react-hooks/rules-of-hooks': 'error',
+      'react-hooks/exhaustive-deps': 'error',
+      'consistent-return': 'warn',
+      'no-unused-vars': 'warn',
+
+      // --- LOW-RISK RULES (DISABLED) ---
       'react/jsx-no-bind': 'off',
       'no-console': 'off',
       'react/no-unescaped-entities': 'off',
       'react/display-name': 'off',
       '@next/next/no-img-element': 'off',
-      'react-hooks/exhaustive-deps': 'off',
       'jsx-a11y/media-has-caption': 'off',
       'no-nested-ternary': 'off',
-      'consistent-return': 'off',
       'require-await': 'off',
       'no-await-in-loop': 'off',
     },
@@ -94,7 +122,7 @@ const eslintConfig = [
       'no-implied-eval': 'error',
 
       // Video component lifecycle - relaxed
-      'react/jsx-no-bind': ['warn'], // Allow arrow functions with warnings
+      'react/jsx-no-bind': 'off', // Allow arrow functions without warnings
 
       // MUX player configuration
       'react/jsx-boolean-value': ['warn', 'never'],
@@ -283,7 +311,7 @@ const eslintConfig = [
 
       // Video streaming performance
       'react-hooks/exhaustive-deps': 'error',
-      'react/jsx-no-bind': 'warn',
+      'react/jsx-no-bind': 'off',
 
       // MUX webhook validation
       'consistent-return': 'error',

@@ -18,11 +18,12 @@ export function StepIndicator({
   completedSteps,
   steps,
   onStepClick,
+  totalSteps: _totalSteps,
 }: StepIndicatorProps) {
   return (
     <div className="flex items-center justify-between mb-8">
-      {steps.map((step, index) => (
-        <div key={step.id} className="flex items-center">
+      {steps.map((_step, index) => (
+        <div key={_step.id} className="flex items-center">
           {/* Step Circle */}
           <button
             onClick={() => onStepClick?.(index)}
@@ -60,10 +61,10 @@ export function StepIndicator({
                     : 'text-muted-foreground',
               )}
             >
-              {step.name}
+              {_step.name}
             </p>
             <p className="text-xs text-muted-foreground hidden lg:block">
-              {step.description}
+              {_step.description}
             </p>
           </div>
 

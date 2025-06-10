@@ -88,7 +88,7 @@ const nextConfig: NextConfig = {
     return config;
   },
   eslint: {
-    // Allow production builds to complete even if ESLint errors remain.
+    // Keep linting enabled but suppress arrow function warnings via eslint.config.mjs
     ignoreDuringBuilds: false,
   },
 };

@@ -160,7 +160,7 @@ function ActivityFeed() {
           ))}
 
           {/* Load More Button */}
-          <LoadMoreButton onClick={() => console.log('Load more activity')} />
+          <LoadMoreButton onClick={() => console.info('Load more activity')} />
         </div>
       )}
     </div>
@@ -222,7 +222,7 @@ function FollowingFeed() {
             <UserConnectionItem key={user.id} user={user} />
           ))}
 
-          <LoadMoreButton onClick={() => console.log('Load more following')} />
+          <LoadMoreButton onClick={() => console.info('Load more following')} />
         </div>
       )}
     </div>

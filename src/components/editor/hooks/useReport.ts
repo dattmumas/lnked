@@ -52,7 +52,7 @@ export default function useReport(): (
 
   return useCallback(
     (content) => {
-      console.log(content);
+      console.info(content);
       const element = getElement();
       if (timer.current !== null) {
         clearTimeout(timer.current);

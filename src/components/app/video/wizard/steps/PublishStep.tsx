@@ -6,8 +6,6 @@ import {
   Upload,
   Loader2,
   AlertCircle,
-  Share,
-  Eye,
   Calendar,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -22,7 +20,12 @@ interface PublishStepProps {
 }
 
 export function PublishStep({ videoUpload, onComplete }: PublishStepProps) {
-  const { formData, videoAsset, isPublishing, publishVideo } = videoUpload;
+  const {
+    formData,
+    videoAsset: _videoAsset,
+    isPublishing,
+    publishVideo,
+  } = videoUpload;
 
   const handlePublish = async () => {
     const success = await publishVideo();
@@ -80,8 +83,8 @@ export function PublishStep({ videoUpload, onComplete }: PublishStepProps) {
         </div>
         <h2 className="text-2xl font-semibold mb-2">Ready to Publish!</h2>
         <p className="text-muted-foreground">
-          Your video "{formData.title}" is ready to be published and made
-          available for viewing.
+          Your video &quot;{formData.title}&quot; is ready to be published and
+          made available for viewing.
         </p>
       </div>
 

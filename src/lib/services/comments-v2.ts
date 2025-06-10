@@ -65,7 +65,7 @@ export class CommentsV2Service {
   ): Promise<CommentWithAuthor[]> {
     const offset = (page - 1) * limit;
     
-    console.log('Calling get_comment_thread with params:', {
+    console.info('Calling get_comment_thread with params:', {
       p_entity_type: entityType,
       p_entity_id: entityId,
       p_limit: limit,
@@ -79,7 +79,7 @@ export class CommentsV2Service {
       p_offset: offset,
     });
 
-    console.log('RPC response:', { data, error });
+    console.info('RPC response:', { data, error });
 
     if (error) {
       console.error('Error fetching comments:', error);

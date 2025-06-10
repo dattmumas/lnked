@@ -28,7 +28,7 @@ export function WizardNavigation({
   currentStep,
   canGoBack,
   canProceed,
-  isFirstStep,
+  isFirstStep: _isFirstStep,
   isLastStep,
   isUploading,
   isPublishing,

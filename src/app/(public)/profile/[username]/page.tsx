@@ -11,14 +11,7 @@ import { ProfileHero } from '@/components/app/profile/hero/ProfileHero';
 import { SocialSidebar } from '@/components/app/profile/social/SocialSidebar';
 import { ContentArea } from '@/components/app/profile/content/ContentArea';
 import type { MicroPost } from '@/components/app/profile/MicrothreadPanel';
-import { Button } from '@/components/ui/button';
-import Link from 'next/link';
-import SubscribeButton from '@/components/app/newsletters/molecules/SubscribeButton';
-import FollowButton from '@/components/FollowButton';
 import type { Database } from '@/lib/database.types';
-import Image from 'next/image';
-import { Badge } from '@/components/ui/badge';
-import { getSubscriptionStatus } from '@/app/actions/subscriptionActions';
 
 type PostRow = Database['public']['Tables']['posts']['Row'];
 
@@ -74,8 +67,8 @@ export default async function ProfilePage({
 
   // Get follower and subscriber counts using optimized queries
   const [
-    { count: followerCount },
-    { count: subscriberCount },
+    { count: _followerCount },
+    { count: _subscriberCount },
     { data: followData },
   ] = await Promise.all([
     // Get follower count using the updated table structure
@@ -103,7 +96,7 @@ export default async function ProfilePage({
       : Promise.resolve({ data: null }),
   ]);
 
-  const isFollowing = Boolean(followData);
+  const _isFollowing = Boolean(followData);
 
   let postsQuery = supabase
     .from('posts')
@@ -164,7 +157,7 @@ export default async function ProfilePage({
     );
   }
 
-  const posts =
+  const _posts =
     postsData?.map((p) => ({
       ...p,
       like_count: p.like_count ?? 0,
@@ -176,7 +169,7 @@ export default async function ProfilePage({
       current_user_has_liked: undefined,
     })) ?? [];
 
-  const pinned = pinnedPost && {
+  const _pinned = pinnedPost && {
     ...pinnedPost,
     like_count: pinnedPost.like_count ?? 0,
     dislike_count: pinnedPost.dislike_count ?? 0,
@@ -187,14 +180,14 @@ export default async function ProfilePage({
     current_user_has_liked: undefined,
   };
 
-  const microPosts: MicroPost[] = [
+  const _microPosts: MicroPost[] = [
     { id: 'u1', content: 'Thanks for checking out my work!' },
     { id: 'u2', content: 'New article coming soon.' },
     { id: 'u3', content: 'Follow me for updates!' },
   ];
 
   type SubscriptionTier = Database['public']['Tables']['prices']['Row'];
-  let tiers: SubscriptionTier[] = [];
+  let _tiers: SubscriptionTier[] = [];
   const defaultPriceId = process.env.NEXT_PUBLIC_STRIPE_DEFAULT_PRICE_ID;
   if (defaultPriceId) {
     const { data: price } = (await supabase
@@ -202,7 +195,7 @@ export default async function ProfilePage({
       .select('id, unit_amount, currency, interval, description')
       .eq('id', defaultPriceId)
       .maybeSingle()) as { data: SubscriptionTier | null };
-    if (price) tiers = [price];
+    if (price) _tiers = [price];
   }
 
   return (

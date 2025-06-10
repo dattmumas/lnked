@@ -38,7 +38,7 @@ function formatDuration(seconds: number | null): string {
   return `${minutes}:${remainingSeconds.toString().padStart(PADDING_LENGTH, '0')}`;
 }
 
-function formatUploadDate(dateString: string | null): string {
+function _formatUploadDate(dateString: string | null): string {
   if (!dateString) return 'Unknown date';
 
   try {

@@ -20,8 +20,13 @@ import {
  * - Follow/Edit button based on permissions
  */
 export function ProfileHero({ className = '' }: ProfileHeroProps) {
-  const { profile, metrics, isOwner, canEdit, permissions } =
-    useProfileContext();
+  const {
+    profile,
+    metrics,
+    isOwner,
+    canEdit,
+    permissions: _permissions,
+  } = useProfileContext();
 
   return (
     <section
@@ -48,7 +53,7 @@ export function ProfileHero({ className = '' }: ProfileHeroProps) {
             editable={canEdit}
             onEdit={() => {
               // TODO: Implement avatar edit functionality
-              console.log('Edit avatar clicked');
+              console.info('Edit avatar clicked');
             }}
           />
         </div>
@@ -81,7 +86,7 @@ export function ProfileHero({ className = '' }: ProfileHeroProps) {
                 editable={canEdit}
                 onEdit={() => {
                   // TODO: Implement social links edit
-                  console.log('Edit social links clicked');
+                  console.info('Edit social links clicked');
                 }}
               />
             </div>
@@ -315,17 +320,17 @@ function CounterPills({
 
   const handleFollowersClick = () => {
     // TODO: Navigate to followers page or show followers modal
-    console.log('Show followers');
+    console.info('Show followers');
   };
 
   const handleFollowingClick = () => {
     // TODO: Navigate to following page or show following modal
-    console.log('Show following');
+    console.info('Show following');
   };
 
   const handlePostsClick = () => {
     // TODO: Scroll to posts section
-    console.log('Scroll to posts');
+    console.info('Scroll to posts');
   };
 
   return (
@@ -361,7 +366,7 @@ function CounterPill({
   count: number;
   onClick?: () => void;
 }) {
-  const formatCount = (count: number) => {
+  const _formatCount = (count: number) => {
     if (count >= 1000000) return `${(count / 1000000).toFixed(1)}M`;
     if (count >= 1000) return `${(count / 1000).toFixed(1)}K`;
     return count.toString();
@@ -388,7 +393,7 @@ function CounterPill({
       "
     >
       <span className="count text-foreground font-semibold">
-        {formatCount(count)}
+        {_formatCount(count)}
       </span>
       <span className="label text-muted-foreground">{label}</span>
     </button>

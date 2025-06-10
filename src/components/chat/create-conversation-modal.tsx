@@ -97,7 +97,7 @@ export function CreateConversationModal({
     e.preventDefault();
     setError(null);
 
-    console.log('Form submitted with data:', {
+    console.info('Form submitted with data:', {
       type,
       title: title.trim(),
       description: description.trim(),
@@ -123,13 +123,13 @@ export function CreateConversationModal({
       participant_ids: selectedParticipants.map((p) => p.id),
     };
 
-    console.log('Creating conversation with data:', conversationData);
+    console.info('Creating conversation with data:', conversationData);
 
     setIsCreating(true);
     try {
       await onCreateConversation(conversationData);
 
-      console.log('Conversation created successfully');
+      console.info('Conversation created successfully');
 
       // Reset form on success
       setTitle('');
