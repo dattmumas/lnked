@@ -1,6 +1,6 @@
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
-export async function getPostById(postId: string) {
+export async function getPostById(postId: string): Promise<unknown> {
   const supabase = await createServerSupabaseClient();
   const { data, error } = await supabase
     .from("posts")
@@ -17,7 +17,7 @@ export async function getPostById(postId: string) {
   return data;
 }
 
-export async function getPostBySlug(slug: string) {
+export async function getPostBySlug(slug: string): Promise<unknown> {
   const supabase = await createServerSupabaseClient();
   const { data, error } = await supabase
     .from("posts")
@@ -34,7 +34,7 @@ export async function getPostBySlug(slug: string) {
   return data;
 }
 
-export async function getPostStats(postId: string) {
+export async function getPostStats(postId: string): Promise<unknown> {
   const supabase = await createServerSupabaseClient();
   const { data, error } = await supabase
     .from("posts")
@@ -45,7 +45,7 @@ export async function getPostStats(postId: string) {
   return data;
 }
 
-export async function getPostStatsBySlug(slug: string) {
+export async function getPostStatsBySlug(slug: string): Promise<unknown> {
   const supabase = await createServerSupabaseClient();
   const { data, error } = await supabase
     .from("posts")

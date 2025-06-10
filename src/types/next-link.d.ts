@@ -1,6 +1,6 @@
  
  
 declare module "next/link" {
-  const content: any;
-  export = content;
+  import type * as NextLink from "next/link";
+  export = NextLink;
 }

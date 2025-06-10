@@ -5,7 +5,7 @@ interface ToggleBookmarkArgs {
   userId: string;
 }
 
-export async function toggleBookmark({ postId, userId }: ToggleBookmarkArgs) {
+export async function toggleBookmark({ postId, userId }: ToggleBookmarkArgs): Promise<{ removed?: boolean; added?: boolean; data?: unknown }> {
   const supabase = await createServerSupabaseClient();
   // Check if bookmark exists
   const { data: existing } = await supabase
@@ -36,7 +36,7 @@ export async function toggleBookmark({ postId, userId }: ToggleBookmarkArgs) {
   }
 }
 
-export async function getBookmarksForUser(userId: string) {
+export async function getBookmarksForUser(userId: string): Promise<unknown[]> {
   const supabase = await createServerSupabaseClient();
   const { data, error } = await supabase
     .from("post_bookmarks")

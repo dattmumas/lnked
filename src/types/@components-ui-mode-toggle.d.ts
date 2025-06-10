@@ -1,7 +1,8 @@
  
  
 declare module "@/components/ui/mode-toggle" {
-  export const ModeToggle: any;
-  const content: any;
+  import type { FC } from "react";
+  export const ModeToggle: FC;
+  const content: FC;
   export = content;
 }

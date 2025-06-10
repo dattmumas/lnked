@@ -16,7 +16,7 @@ export async function togglePostReaction({
   postId,
   userId,
   type,
-}: TogglePostReactionArgs) {
+}: TogglePostReactionArgs): Promise<unknown> {
   const supabase = await createServerSupabaseClient();
   const { data, error } = await supabase
     .from("post_reactions")
@@ -33,7 +33,7 @@ export async function toggleCommentReaction({
   commentId,
   userId,
   reaction_type,
-}: ToggleCommentReactionArgs) {
+}: ToggleCommentReactionArgs): Promise<unknown> {
   const supabase = await createServerSupabaseClient();
   const { data, error } = await supabase
     .from("comment_reactions")
@@ -52,7 +52,7 @@ export async function toggleCommentReaction({
   return data;
 }
 
-export async function getReactionsForPost(postId: string) {
+export async function getReactionsForPost(postId: string): Promise<unknown[]> {
   const supabase = await createServerSupabaseClient();
   const { data, error } = await supabase
     .from("post_reactions")

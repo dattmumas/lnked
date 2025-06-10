@@ -22,7 +22,7 @@ export interface Comment {
   parent_id: string | null;
   thread_depth: number;
   reply_count: number;
-  metadata: Record<string, any>;
+  metadata: Record<string, unknown>;
   created_at: string;
   updated_at: string;
   deleted_at: string | null;
