@@ -38,7 +38,7 @@ function formatDuration(seconds: number | null): string {
   return `${minutes}:${remainingSeconds.toString().padStart(PADDING_LENGTH, '0')}`;
 }
 
-function _formatUploadDate(dateString: string | null): string {
+function formatUploadDate(dateString: string | null): string {
   if (!dateString) return 'Unknown date';
 
   try {
@@ -78,7 +78,7 @@ export default function VideoDetailsServer({ video }: VideoDetailsServerProps) {
             name: video.title || 'Untitled Video',
             description: video.description || '',
             duration: video.duration ? `PT${video.duration}S` : undefined,
-            uploadDate: video.created_at || undefined,
+            uploadDate: formatUploadDate(video.created_at),
             thumbnailUrl: video.mux_playback_id
               ? `https://image.mux.com/${video.mux_playback_id}/thumbnail.jpg`
               : undefined,
