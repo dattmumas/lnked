@@ -41,3 +41,5 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 C0246.MP4
+
+/cursor-memory-bank/
