@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import PostReactionButtons from '@/components/app/posts/molecules/PostReactionButtons';
 import BookmarkButton from '@/components/app/posts/molecules/BookmarkButton';
-import CommentsHybrid from '@/components/app/posts/organisms/CommentsHybrid';
+import { CommentSection } from '@/components/app/comments';
 import { CommentsSkeleton } from '@/components/ui/CommentsSkeleton';
 import PostViewTracker from '@/components/app/posts/molecules/PostViewTracker';
 import { ReadOnlyLexicalViewer } from '@/components/ui/ReadOnlyLexicalViewer';
@@ -426,7 +426,7 @@ export default async function PostBySlugPage({
               <div className="mt-12">
                 <h2 className="text-2xl font-bold mb-8">Comments</h2>
                 <Suspense fallback={<CommentsSkeleton />}>
-                  <CommentsHybrid postId={post.id} />
+                  <CommentSection entityType="post" entityId={post.id} />
                 </Suspense>
               </div>
             </footer>

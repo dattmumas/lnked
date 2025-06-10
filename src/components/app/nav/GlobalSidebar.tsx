@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { useCollectiveMemberships } from '@/hooks/posts/useCollectiveMemberships';
+import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
 import {
   Home,
   Compass,
@@ -53,7 +54,22 @@ interface Collective {
 export default function GlobalSidebar() {
   const [isExpanded, setIsExpanded] = useState(false);
   const [collectivesExpanded, setCollectivesExpanded] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const pathname = usePathname();
+
+  // Defensive authentication check
+  useEffect(() => {
+    const checkAuth = async () => {
+      const supabase = createSupabaseBrowserClient();
+      const {
+        data: { user },
+        error,
+      } = await supabase.auth.getUser();
+      setIsAuthenticated(!!(user && !error));
+    };
+
+    checkAuth();
+  }, []);
 
   // Use existing hook to fetch user's collectives (include non-postable for navigation)
   const { data: collectives = [], isLoading: loading } =
@@ -77,6 +93,16 @@ export default function GlobalSidebar() {
       if (hoverTimeout) clearTimeout(hoverTimeout);
     };
   }, [hoverTimeout]);
+
+  // Don't render until authentication is verified
+  if (isAuthenticated === null) {
+    return null; // Loading state
+  }
+
+  // Don't render if not authenticated
+  if (!isAuthenticated) {
+    return null;
+  }
 
   const isActiveRoute = (href: string) => {
     if (href === '/home') {

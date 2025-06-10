@@ -26,17 +26,21 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const supabase = await createServerSupabaseClient();
+
+  // Get authentication state
   const {
     data: { user },
+    error: authError,
   } = await supabase.auth.getUser();
 
+  // Only proceed with profile fetch if user exists and no auth error
   let profile: {
     username: string | null;
     full_name: string | null;
     avatar_url: string | null;
   } | null = null;
 
-  if (user) {
+  if (user && !authError) {
     const { data: profileData } = await supabase
       .from('users')
       .select('username, full_name, avatar_url')
@@ -44,6 +48,9 @@ export default async function RootLayout({
       .single();
     profile = profileData;
   }
+
+  // Determine if we should show authenticated layout
+  const isAuthenticated = !!(user && !authError);
 
   return (
     <html lang="en" suppressHydrationWarning>
@@ -61,8 +68,12 @@ export default async function RootLayout({
             <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-md border-b border-border/50">
               <ModernNavbar initialUser={user} initialProfile={profile} />
             </header>
-            {user && <GlobalSidebar />}
-            <main className={user ? 'ml-16' : ''}>{children}</main>
+
+            {/* Only render GlobalSidebar after successful authentication */}
+            {isAuthenticated && <GlobalSidebar />}
+
+            {/* Adjust main content margin based on authentication state */}
+            <main className={isAuthenticated ? 'ml-16' : ''}>{children}</main>
           </ThemeProvider>
         </QueryProvider>
       </body>

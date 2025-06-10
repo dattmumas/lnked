@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import VideoDetailsServer from '@/components/app/video/VideoDetailsServer';
 import VideoPlayerClient from '@/components/app/video/VideoPlayerClient';
-import CommentsHybrid from '@/components/app/posts/organisms/CommentsHybrid';
+import { CommentSection } from '@/components/app/comments';
 import { VideoPlayerSkeleton } from '@/components/ui/VideoPlayerSkeleton';
 import { CommentsSkeleton } from '@/components/ui/CommentsSkeleton';
 import { RightSidebar } from '@/components/app/chains/RightSidebar';
@@ -93,9 +93,13 @@ export default async function VideoPlayerPage({
           />
         </Suspense>
 
-        {/* Comments section - parallel Suspense boundary */}
+        {/* Comments section - now using universal comment system */}
         <Suspense fallback={<CommentsSkeleton />}>
-          <CommentsHybrid postId={`video-${video.id}`} />
+          <CommentSection
+            entityType="video"
+            entityId={video.id}
+            className="w-full max-w-4xl mt-8"
+          />
         </Suspense>
       </main>
 

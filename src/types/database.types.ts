@@ -398,39 +398,142 @@ export type Database = {
           },
         ]
       }
-      comment_reactions: {
+      comment_pins: {
         Row: {
           comment_id: string
           created_at: string | null
+          entity_id: string
+          entity_type: Database["public"]["Enums"]["comment_entity_type"]
           id: string
-          type: string
-          user_id: string
+          pin_order: number | null
+          pinned_by: string
         }
         Insert: {
           comment_id: string
           created_at?: string | null
+          entity_id: string
+          entity_type: Database["public"]["Enums"]["comment_entity_type"]
           id?: string
-          type: string
-          user_id: string
+          pin_order?: number | null
+          pinned_by: string
         }
         Update: {
           comment_id?: string
           created_at?: string | null
+          entity_id?: string
+          entity_type?: Database["public"]["Enums"]["comment_entity_type"]
           id?: string
-          type?: string
-          user_id?: string
+          pin_order?: number | null
+          pinned_by?: string
         }
         Relationships: [
           {
-            foreignKeyName: "comment_reactions_comment_id_fkey"
+            foreignKeyName: "comment_pins_v2_comment_id_fkey"
             columns: ["comment_id"]
             isOneToOne: false
             referencedRelation: "comments"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "comment_reactions_user_id_fkey"
+            foreignKeyName: "comment_pins_v2_pinned_by_fkey"
+            columns: ["pinned_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      comment_reactions: {
+        Row: {
+          comment_id: string
+          created_at: string | null
+          id: string
+          reaction_type: Database["public"]["Enums"]["reaction_type"]
+          user_id: string
+        }
+        Insert: {
+          comment_id: string
+          created_at?: string | null
+          id?: string
+          reaction_type: Database["public"]["Enums"]["reaction_type"]
+          user_id: string
+        }
+        Update: {
+          comment_id?: string
+          created_at?: string | null
+          id?: string
+          reaction_type?: Database["public"]["Enums"]["reaction_type"]
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "comment_reactions_v2_comment_id_fkey"
+            columns: ["comment_id"]
+            isOneToOne: false
+            referencedRelation: "comments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comment_reactions_v2_user_id_fkey"
             columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      comment_reports: {
+        Row: {
+          comment_id: string
+          created_at: string | null
+          details: string | null
+          id: string
+          moderator_id: string | null
+          reason: string
+          reporter_id: string
+          resolved_at: string | null
+          status: Database["public"]["Enums"]["report_status"] | null
+        }
+        Insert: {
+          comment_id: string
+          created_at?: string | null
+          details?: string | null
+          id?: string
+          moderator_id?: string | null
+          reason: string
+          reporter_id: string
+          resolved_at?: string | null
+          status?: Database["public"]["Enums"]["report_status"] | null
+        }
+        Update: {
+          comment_id?: string
+          created_at?: string | null
+          details?: string | null
+          id?: string
+          moderator_id?: string | null
+          reason?: string
+          reporter_id?: string
+          resolved_at?: string | null
+          status?: Database["public"]["Enums"]["report_status"] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "comment_reports_v2_comment_id_fkey"
+            columns: ["comment_id"]
+            isOneToOne: false
+            referencedRelation: "comments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comment_reports_v2_moderator_id_fkey"
+            columns: ["moderator_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comment_reports_v2_reporter_id_fkey"
+            columns: ["reporter_id"]
             isOneToOne: false
             referencedRelation: "users"
             referencedColumns: ["id"]
@@ -441,47 +544,55 @@ export type Database = {
         Row: {
           content: string
           created_at: string | null
+          deleted_at: string | null
+          entity_id: string
+          entity_type: Database["public"]["Enums"]["comment_entity_type"]
           id: string
+          metadata: Json | null
           parent_id: string | null
-          post_id: string
+          reply_count: number | null
+          thread_depth: number | null
           updated_at: string | null
           user_id: string
         }
         Insert: {
           content: string
           created_at?: string | null
+          deleted_at?: string | null
+          entity_id: string
+          entity_type: Database["public"]["Enums"]["comment_entity_type"]
           id?: string
+          metadata?: Json | null
           parent_id?: string | null
-          post_id: string
+          reply_count?: number | null
+          thread_depth?: number | null
           updated_at?: string | null
           user_id: string
         }
         Update: {
           content?: string
           created_at?: string | null
+          deleted_at?: string | null
+          entity_id?: string
+          entity_type?: Database["public"]["Enums"]["comment_entity_type"]
           id?: string
+          metadata?: Json | null
           parent_id?: string | null
-          post_id?: string
+          reply_count?: number | null
+          thread_depth?: number | null
           updated_at?: string | null
           user_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "comments_parent_id_fkey"
+            foreignKeyName: "comments_v2_parent_id_fkey"
             columns: ["parent_id"]
             isOneToOne: false
             referencedRelation: "comments"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "comments_post_id_fkey"
-            columns: ["post_id"]
-            isOneToOne: false
-            referencedRelation: "posts"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "comments_user_id_fkey"
+            foreignKeyName: "comments_v2_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "users"
@@ -1843,55 +1954,84 @@ export type Database = {
       video_assets: {
         Row: {
           aspect_ratio: string | null
+          collective_id: string | null
           created_at: string | null
           created_by: string | null
           description: string | null
           duration: number | null
+          encoding_tier: string | null
           id: string
+          is_public: boolean | null
           mp4_support: string | null
           mux_asset_id: string | null
           mux_playback_id: string | null
           mux_upload_id: string | null
+          playback_policy: string | null
+          post_id: string | null
           status: string | null
           title: string | null
           updated_at: string | null
         }
         Insert: {
           aspect_ratio?: string | null
+          collective_id?: string | null
           created_at?: string | null
           created_by?: string | null
           description?: string | null
           duration?: number | null
+          encoding_tier?: string | null
           id?: string
+          is_public?: boolean | null
           mp4_support?: string | null
           mux_asset_id?: string | null
           mux_playback_id?: string | null
           mux_upload_id?: string | null
+          playback_policy?: string | null
+          post_id?: string | null
           status?: string | null
           title?: string | null
           updated_at?: string | null
         }
         Update: {
           aspect_ratio?: string | null
+          collective_id?: string | null
           created_at?: string | null
           created_by?: string | null
           description?: string | null
           duration?: number | null
+          encoding_tier?: string | null
           id?: string
+          is_public?: boolean | null
           mp4_support?: string | null
           mux_asset_id?: string | null
           mux_playback_id?: string | null
           mux_upload_id?: string | null
+          playback_policy?: string | null
+          post_id?: string | null
           status?: string | null
           title?: string | null
           updated_at?: string | null
         }
         Relationships: [
           {
+            foreignKeyName: "video_assets_collective_id_fkey"
+            columns: ["collective_id"]
+            isOneToOne: false
+            referencedRelation: "collectives"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "video_assets_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "video_assets_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "posts"
             referencedColumns: ["id"]
           },
         ]
@@ -1967,6 +2107,19 @@ export type Database = {
       }
     }
     Functions: {
+      add_comment: {
+        Args: {
+          p_entity_type: Database["public"]["Enums"]["comment_entity_type"]
+          p_entity_id: string
+          p_user_id: string
+          p_content: string
+          p_parent_id?: string
+        }
+        Returns: {
+          comment_id: string
+          thread_depth: number
+        }[]
+      }
       binary_quantize: {
         Args: { "": string } | { "": unknown }
         Returns: unknown
@@ -2003,15 +2156,20 @@ export type Database = {
         Args: { p_mux_id: string }
         Returns: {
           aspect_ratio: string | null
+          collective_id: string | null
           created_at: string | null
           created_by: string | null
           description: string | null
           duration: number | null
+          encoding_tier: string | null
           id: string
+          is_public: boolean | null
           mp4_support: string | null
           mux_asset_id: string | null
           mux_playback_id: string | null
           mux_upload_id: string | null
+          playback_policy: string | null
+          post_id: string | null
           status: string | null
           title: string | null
           updated_at: string | null
@@ -2028,6 +2186,30 @@ export type Database = {
       get_collective_stats: {
         Args: { collective_id: string }
         Returns: Json
+      }
+      get_comment_count: {
+        Args: {
+          p_entity_type: Database["public"]["Enums"]["comment_entity_type"]
+          p_entity_id: string
+        }
+        Returns: number
+      }
+      get_comment_replies: {
+        Args: { p_parent_id: string; p_limit?: number; p_offset?: number }
+        Returns: {
+          comment_data: Json
+        }[]
+      }
+      get_comment_thread: {
+        Args: {
+          p_entity_type: Database["public"]["Enums"]["comment_entity_type"]
+          p_entity_id: string
+          p_limit?: number
+          p_offset?: number
+        }
+        Returns: {
+          comment_data: Json
+        }[]
       }
       get_follower_count: {
         Args: { entity_id: string; entity_type: string }
@@ -2203,6 +2385,17 @@ export type Database = {
         Args: { "": unknown[] }
         Returns: number
       }
+      toggle_comment_reaction: {
+        Args: {
+          p_comment_id: string
+          p_user_id: string
+          p_reaction_type: Database["public"]["Enums"]["reaction_type"]
+        }
+        Returns: {
+          action_taken: string
+          reaction_counts: Json
+        }[]
+      }
       vector_avg: {
         Args: { "": number[] }
         Returns: string
@@ -2240,6 +2433,7 @@ export type Database = {
       chain_status: "active" | "deleted" | "shadow_hidden"
       chain_visibility: "public" | "followers" | "private" | "unlisted"
       collective_member_role: "admin" | "editor" | "author" | "owner"
+      comment_entity_type: "video" | "post" | "collective" | "profile"
       interaction_entity_type: "collective" | "post" | "user" | "chain"
       interaction_type:
         | "like"
@@ -2269,6 +2463,8 @@ export type Database = {
       post_type_enum: "text" | "video"
       price_interval: "month" | "year" | "week" | "day"
       price_type: "recurring" | "one_time"
+      reaction_type: "like" | "heart" | "laugh" | "angry" | "sad" | "wow"
+      report_status: "pending" | "reviewed" | "resolved" | "dismissed"
       subscription_status:
         | "trialing"
         | "active"
@@ -2409,6 +2605,7 @@ export const Constants = {
       chain_status: ["active", "deleted", "shadow_hidden"],
       chain_visibility: ["public", "followers", "private", "unlisted"],
       collective_member_role: ["admin", "editor", "author", "owner"],
+      comment_entity_type: ["video", "post", "collective", "profile"],
       interaction_entity_type: ["collective", "post", "user", "chain"],
       interaction_type: [
         "like",
@@ -2440,6 +2637,8 @@ export const Constants = {
       post_type_enum: ["text", "video"],
       price_interval: ["month", "year", "week", "day"],
       price_type: ["recurring", "one_time"],
+      reaction_type: ["like", "heart", "laugh", "angry", "sad", "wow"],
+      report_status: ["pending", "reviewed", "resolved", "dismissed"],
       subscription_status: [
         "trialing",
         "active",
