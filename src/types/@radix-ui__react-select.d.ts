@@ -1,5 +1,5 @@
  
 declare module "@radix-ui/react-select" {
-  const content: any;
-  export = content;
+  import type * as Select from "@radix-ui/react-select";
+  export = Select;
 }
