@@ -11,20 +11,31 @@ import type {
   EntityType,
 } from '@/types/notifications';
 
+// ---------------------------------------------------------------------------
+// Constants
+// ---------------------------------------------------------------------------
+/** Cache lifetime for identical notification requests (milliseconds) */
+const REQUEST_CACHE_TTL_MS = 1_000;
+
+/** Default pagination values for notification queries */
+const DEFAULT_LIMIT = 20;
+const DEFAULT_OFFSET = 0;
+
 export class ClientNotificationService {
   private supabase = createSupabaseBrowserClient();
   private requestCache = new Map<string, Promise<NotificationResponse>>();
-  private cacheTimeout = 1000; // 1 second cache
 
-  private clearCache() {
+  private clearCache(): void {
     this.requestCache.clear();
   }
 
   /**
    * Get notifications for the current user
    */
-  async getNotifications(filters: NotificationFilters = {}): Promise<NotificationResponse> {
-    const { limit = 20, offset = 0, type, read } = filters;
+  async getNotifications(
+    filters: NotificationFilters = {},
+  ): Promise<NotificationResponse> {
+    const { limit = DEFAULT_LIMIT, offset = DEFAULT_OFFSET, type, read } = filters;
 
     // Create cache key based on filters
     const cacheKey = JSON.stringify({ limit, offset, type, read });
@@ -43,13 +54,15 @@ export class ClientNotificationService {
     // Clear cache after timeout
     setTimeout(() => {
       this.requestCache.delete(cacheKey);
-    }, this.cacheTimeout);
+    }, REQUEST_CACHE_TTL_MS);
 
     return requestPromise;
   }
 
-  private async performGetNotifications(filters: NotificationFilters = {}): Promise<NotificationResponse> {
-    const { limit = 20, offset = 0, type, read } = filters;
+  private async performGetNotifications(
+    filters: NotificationFilters = {},
+  ): Promise<NotificationResponse> {
+    const { limit = DEFAULT_LIMIT, offset = DEFAULT_OFFSET, type, read } = filters;
 
     // Check if user is authenticated first
     const { data: { user }, error: authError } = await this.supabase.auth.getUser();
@@ -83,7 +96,7 @@ export class ClientNotificationService {
     }
 
     if (read !== undefined) {
-      if (read) {
+      if (read === true) {
         query = query.not('read_at', 'is', null);
       } else {
         query = query.is('read_at', null);
@@ -127,7 +140,7 @@ export class ClientNotificationService {
       })) as Notification[],
       total_count: count || 0,
       unread_count: unreadCount || 0,
-      has_more: (count || 0) > offset + limit,
+      has_more: (count ?? 0) > offset + limit,
     };
   }
 
@@ -162,11 +175,13 @@ export class ClientNotificationService {
         return { success: false, error: 'User not authenticated' };
       }
 
+      const timestamp = new Date().toISOString();
+
       if (notificationIds && notificationIds.length > 0) {
         // Mark specific notifications as read
         const { error } = await this.supabase
           .from('notifications')
-          .update({ read_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+          .update({ read_at: timestamp, updated_at: timestamp })
           .in('id', notificationIds)
           .eq('recipient_id', user.id)
           .is('read_at', null);

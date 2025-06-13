@@ -232,7 +232,7 @@ export default function SearchBar({ className }: SearchBarProps) {
             transition={{ duration: 0.15, ease: 'easeOut' }}
             className="absolute top-full left-0 right-0 mt-2 z-50"
           >
-            <div className="bg-background/95 backdrop-blur-lg border border-border/60 rounded-xl shadow-xl overflow-hidden">
+            <div className="bg-gray-100 border border-border/60 rounded-xl shadow-xl overflow-hidden">
               {/* Search Results */}
               {query && (
                 <div className="p-3 border-b border-border/30">

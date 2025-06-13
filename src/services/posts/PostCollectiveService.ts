@@ -1,18 +1,22 @@
 import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
-import { 
+import {
   PostCollectiveRow,
-  PostCollectiveInsert,
   PostCollectiveServiceResponse,
   PostCollectiveError,
   PostCollectiveValidationResult,
-  EnhancedPostFormData,
-  canUserPostToCollective
+  canUserPostToCollective,
 } from '@/types/enhanced-database.types';
 import { Database, Json } from '@/lib/database.types';
 import { postCollectiveAuditService } from './PostCollectiveAuditService';
 import { postCollectiveErrorHandler } from './PostCollectiveErrorHandler';
 
 type DBPostCollectiveInsert = Database['public']['Tables']['post_collectives']['Insert'];
+
+// ---------------------------------------------------------------------------
+// Constants & Utilities
+// ---------------------------------------------------------------------------
+/** Recent-error slice size returned by getServiceHealth */
+const RECENT_ERROR_LIMIT = 10;
 
 /**
  * Enhanced service class for managing post-collective associations
@@ -36,134 +40,95 @@ export class PostCollectiveService {
         const errors: PostCollectiveError[] = [];
         const warnings: Array<{ collective_id: string; collective_name: string; message: string }> = [];
 
-        if (!userId) {
-          const error: PostCollectiveError = {
-            type: 'validation',
-            message: 'User ID is required',
+        if (userId === '') {
+          return {
+            valid: false,
+            errors: [{ type: 'validation', message: 'User ID is required' }],
+            warnings,
           };
-          return { valid: false, errors: [error], warnings };
         }
 
         if (collectiveIds.length === 0) {
-          const error: PostCollectiveError = {
-            type: 'validation',
-            message: 'At least one collective must be selected',
+          return {
+            valid: false,
+            errors: [{ type: 'validation', message: 'At least one collective must be selected' }],
+            warnings,
           };
-          return { valid: false, errors: [error], warnings };
         }
 
-        try {
-          // Check user memberships and roles for selected collectives
-          const { data: memberships, error } = await this.supabase
-            .from('collective_members')
-            .select(`
-              collective_id,
-              role,
-              collectives!inner(
-                id,
-                name,
-                slug
-              )
-            `)
-            .eq('member_id', userId)
-            .eq('member_type', 'user')
-            .in('collective_id', collectiveIds);
+        // Fetch membership info
+        const { data: memberships, error } = await this.supabase
+          .from('collective_members')
+          .select(
+            `collective_id, role, collectives!inner(id,name,slug)`
+          )
+          .eq('member_id', userId)
+          .eq('member_type', 'user')
+          .in('collective_id', collectiveIds);
 
-          if (error) {
-            const dbError: PostCollectiveError = {
-              type: 'database',
-              message: `Failed to validate permissions: ${error.message}`,
-            };
-            
-            await postCollectiveAuditService.logOperation(
-              'validateCollectivePermissions',
-              '',
-              collectiveIds,
-              userId,
-              false,
-              dbError
-            );
-            
-            return { valid: false, errors: [dbError], warnings };
-          }
-
-          // Create a map of collective permissions
-          const membershipMap = new Map(
-            memberships?.map(m => [
-              m.collective_id, 
-              {
-                role: m.role as Database['public']['Enums']['collective_member_role'],
-                name: m.collectives.name
-              }
-            ]) || []
-          );
-
-          // Validate each selected collective
-          for (const collectiveId of collectiveIds) {
-            const membership = membershipMap.get(collectiveId);
-            
-            if (!membership) {
-              errors.push({
-                type: 'permission',
-                collective_id: collectiveId,
-                message: 'You are not a member of this collective',
-              });
-              continue;
-            }
-
-            const canPost = canUserPostToCollective(membership.role);
-            if (!canPost) {
-              errors.push({
-                type: 'permission',
-                collective_id: collectiveId,
-                collective_name: membership.name,
-                message: `Insufficient permissions (role: ${membership.role}). Posting requires author, editor, admin, or owner role.`,
-              });
-            }
-          }
-
-          const isValid = errors.length === 0;
-          
-          // Log the validation result
-          await postCollectiveAuditService.logOperation(
-            'validateCollectivePermissions',
-            '',
-            collectiveIds,
-            userId,
-            isValid,
-            errors.length > 0 ? errors[0] : undefined,
-            {
-              collective_count: collectiveIds.length,
-              permission_errors: errors.length,
-              warnings: warnings.length
-            }
-          );
-
-          return {
-            valid: isValid,
-            errors,
-            warnings
+        if (error !== null && error !== undefined) {
+          const dbError: PostCollectiveError = {
+            type: 'database',
+            message: `Failed to validate permissions: ${error.message}`,
           };
-
-        } catch (error) {
-          console.error('Error validating collective permissions:', error);
-          const networkError: PostCollectiveError = {
-            type: 'network',
-            message: 'Network error while validating permissions',
-            details: { error: String(error) }
-          };
-          
           await postCollectiveAuditService.logOperation(
             'validateCollectivePermissions',
             '',
             collectiveIds,
             userId,
             false,
-            networkError
+            dbError,
           );
-          
-          return { valid: false, errors: [networkError], warnings };
+          return { valid: false, errors: [dbError], warnings };
         }
+
+        const membershipMap = new Map(
+          (memberships ?? []).map((m) => [
+            m.collective_id,
+            {
+              role: m.role as Database['public']['Enums']['collective_member_role'],
+              name: m.collectives.name,
+            },
+          ]),
+        );
+
+        for (const collectiveId of collectiveIds) {
+          const membership = membershipMap.get(collectiveId);
+          if (membership === undefined) {
+            errors.push({
+              type: 'permission',
+              collective_id: collectiveId,
+              message: 'You are not a member of this collective',
+            });
+            continue;
+          }
+
+          if (!canUserPostToCollective(membership.role)) {
+            errors.push({
+              type: 'permission',
+              collective_id: collectiveId,
+              collective_name: membership.name,
+              message: `Insufficient permissions (role: ${membership.role})`,
+            });
+          }
+        }
+
+        const isValid = errors.length === 0;
+        await postCollectiveAuditService.logOperation(
+          'validateCollectivePermissions',
+          '',
+          collectiveIds,
+          userId,
+          isValid,
+          errors[0],
+          {
+            collective_count: collectiveIds.length,
+            permission_errors: errors.length,
+            warnings: warnings.length,
+          },
+        );
+
+        return { valid: isValid, errors, warnings };
       },
       collectiveIds.length
     );
@@ -567,7 +532,7 @@ export class PostCollectiveService {
       },
       errors: {
         statistics: errorStats,
-        recent_errors: postCollectiveErrorHandler.getRecentErrors({ limit: 10 }),
+        recent_errors: postCollectiveErrorHandler.getRecentErrors({ limit: RECENT_ERROR_LIMIT }),
         system_health: systemHealth
       }
     };

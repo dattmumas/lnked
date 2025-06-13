@@ -65,12 +65,15 @@ export class CommentsV2Service {
   ): Promise<CommentWithAuthor[]> {
     const offset = (page - 1) * limit;
     
-    console.info('Calling get_comment_thread with params:', {
-      p_entity_type: entityType,
-      p_entity_id: entityId,
-      p_limit: limit,
-      p_offset: offset,
-    });
+    if (process.env.NODE_ENV !== 'production') {
+      // eslint-disable-next-line no-console
+      console.debug('Calling get_comment_thread with params:', {
+        p_entity_type: entityType,
+        p_entity_id: entityId,
+        p_limit: limit,
+        p_offset: offset,
+      });
+    }
 
     const { data, error } = await this.supabase.rpc('get_comment_thread', {
       p_entity_type: entityType,
@@ -79,7 +82,10 @@ export class CommentsV2Service {
       p_offset: offset,
     });
 
-    console.info('RPC response:', { data, error });
+    if (process.env.NODE_ENV !== 'production') {
+      // eslint-disable-next-line no-console
+      console.debug('RPC response:', { data, error });
+    }
 
     if (error) {
       console.error('Error fetching comments:', error);

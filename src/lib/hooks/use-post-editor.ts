@@ -5,10 +5,19 @@ import { usePostEditorStore, PostFormData } from '@/lib/stores/post-editor-store
 import { User } from '@supabase/supabase-js';
 import { Json } from '@/lib/database.types';
 
+// ---------------------------------------------------------------------------
+// Constants
+// ---------------------------------------------------------------------------
+/** Debounce interval (ms) before triggering auto-save */
+const AUTO_SAVE_DEBOUNCE_MS = 500;
+
+/** React-Query cache staleness period (ms) for post data */
+const POST_STALE_TIME_MS = 5 * 60 * 1000; // 5 minutes
+
 // Simple client-side user hook
-const useUser = () => {
+const useUser = (): { user: User | null; loading: boolean } => {
   const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
     const supabase = createSupabaseBrowserClient();
@@ -131,8 +140,10 @@ export const useAutoSavePost = () => {
 };
 
 // Load existing post data query
-export const usePostData = (postId?: string) => {
-  return useQuery({
+export const usePostData = (
+  postId?: string,
+): ReturnType<typeof useQuery<PostFormData | null>> => {
+  return useQuery<PostFormData | null>({
     queryKey: ['post', postId],
     queryFn: async (): Promise<PostFormData | null> => {
       if (!postId) return null;
@@ -167,13 +178,31 @@ export const usePostData = (postId?: string) => {
         published_at: data.published_at || undefined,
       };
     },
-    enabled: Boolean(postId),
-    staleTime: 1000 * 60 * 5, // 5 minutes
+    enabled: postId !== undefined && postId !== null && postId !== '',
+    staleTime: POST_STALE_TIME_MS,
   });
 };
 
+// Returned shape of the `usePostEditor` hook – kept explicit to satisfy
+// `@typescript-eslint/explicit-function-return-type`.
+interface UsePostEditorResult {
+  formData: PostFormData | undefined;
+  originalData: PostFormData | null;
+  isDirty: boolean;
+  isLoading: boolean;
+  autoSaveStatus: 'idle' | 'saving' | 'saved' | 'error';
+  currentPage: 'editor' | 'details';
+  updateFormData: (updates: Partial<PostFormData>) => void;
+  setCurrentPage: (page: 'editor' | 'details') => void;
+  resetForm: () => void;
+  savePost: () => Promise<PostFormData | undefined> | undefined;
+  publishPost: () => Promise<PostFormData | undefined> | undefined;
+  isSaving: boolean;
+  saveError: unknown;
+}
+
 // Main post editor hook that integrates everything
-export const usePostEditor = (postId?: string) => {
+export const usePostEditor = (postId?: string): UsePostEditorResult => {
   const store = usePostEditorStore();
   const autoSave = useAutoSavePost();
   const { data: postData, isLoading: isLoadingPost } = usePostData(postId);
@@ -187,7 +216,7 @@ export const usePostEditor = (postId?: string) => {
   }, [postData, store.originalData, store]);
 
   // Auto-save when dirty with 500ms debounce
-  useEffect(() => {
+  useEffect((): (() => void) | undefined => {
     // Don't auto-save while loading initial data
     if (isLoadingPost) {
       return;
@@ -203,9 +232,9 @@ export const usePostEditor = (postId?: string) => {
           author_id: user.id,
         };
         autoSave.mutate(dataToSave);
-      }, 500);
+      }, AUTO_SAVE_DEBOUNCE_MS);
 
-      return () => {
+      return (): void => {
         clearTimeout(timer);
       };
     }
@@ -214,7 +243,7 @@ export const usePostEditor = (postId?: string) => {
   }, [store.formData, store.isDirty, autoSave, user?.id, isLoadingPost]);
 
   // Manual save function
-  const savePost = useCallback(async () => {
+  const savePost = useCallback(async (): Promise<PostFormData | undefined> => {
     if (store.formData && user?.id) {
       const dataToSave = {
         ...store.formData,
@@ -227,7 +256,7 @@ export const usePostEditor = (postId?: string) => {
   }, [store.formData, autoSave, user?.id]);
 
   // Publish post function
-  const publishPost = useCallback(async () => {
+  const publishPost = useCallback(async (): Promise<PostFormData | undefined> => {
     if (store.formData && user?.id) {
       const dataToSave = {
         ...store.formData,

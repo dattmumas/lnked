@@ -59,6 +59,12 @@ function StickyNodePlaceholder({ isEditable }: { isEditable: boolean }) {
   return <div className="StickyNode__placeholder">What&apos;s up?</div>;
 }
 
+// A stable placeholder renderer to satisfy react/no-unstable-nested-components
+// and avoid redefining a function component on every render.
+function renderStickyPlaceholder(isEditable: boolean) {
+  return <StickyNodePlaceholder isEditable={isEditable} />;
+}
+
 export default function StickyComponent({
   x,
   y,
@@ -267,16 +273,7 @@ export default function StickyComponent({
           )}
           <PlainTextPlugin
             contentEditable={
-              // eslint-disable-next-line react/no-unstable-nested-components
-              <ContentEditable
-                placeholder={(isEditable: boolean) =>
-                  isEditable ? (
-                    <div className="StickyNode__placeholder">
-                      What&apos;s up?
-                    </div>
-                  ) : null
-                }
-              />
+              <ContentEditable placeholder={renderStickyPlaceholder} />
             }
             ErrorBoundary={LexicalErrorBoundary}
           />

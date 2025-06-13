@@ -1,4 +1,5 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { buildWebsearchQuery, escapeLike } from '@/lib/utils/search';
 import PostCard from '@/components/app/posts/molecules/PostCard';
 import CollectiveCard from '@/components/app/dashboard/collectives/CollectiveCard';
 import { Button } from '@/components/ui/button';
@@ -13,7 +14,10 @@ export default async function Page({
 }) {
   const supabase = await createServerSupabaseClient();
   const { q: queryParam } = await searchParams;
-  const q = queryParam?.trim();
+  const rawQ = queryParam?.trim() || '';
+  const q = rawQ;
+  const tsQuery = buildWebsearchQuery(rawQ);
+  const useFTS = tsQuery.length >= 3;
 
   type PostCardData = {
     id: string;
@@ -82,8 +86,7 @@ export default async function Page({
   let collectives: CollectiveResult[] = [];
 
   if (q && q.length > 0) {
-    // Search posts using ilike for title and subtitle
-    const { data: postsData } = await supabase
+    let postQuery = supabase
       .from('posts')
       .select(
         `
@@ -102,8 +105,19 @@ export default async function Page({
       `,
       )
       .eq('is_public', true)
-      .not('published_at', 'is', null)
-      .or(`title.ilike.%${q}%,subtitle.ilike.%${q}%,content.ilike.%${q}%`)
+      .not('published_at', 'is', null);
+
+    if (useFTS) {
+      postQuery = postQuery.textSearch('tsv', tsQuery, { type: 'websearch' });
+    } else {
+      const pattern = `%${escapeLike(q)}%`;
+      postQuery = postQuery.or(
+        'title.ilike.:pat,subtitle.ilike.:pat,content.ilike.:pat',
+        { pat: pattern } as any,
+      );
+    }
+
+    const { data: postsData } = await postQuery
       .order('published_at', { ascending: false })
       .limit(20);
 
@@ -137,21 +151,41 @@ export default async function Page({
           : null,
       })) || [];
 
-    // Search users using ilike for username and full_name
-    const { data: usersData } = await supabase
+    let userQuery = supabase
       .from('users')
-      .select('id, username, full_name, bio, avatar_url')
-      .or(`username.ilike.%${q}%,full_name.ilike.%${q}%,bio.ilike.%${q}%`)
-      .limit(20);
+      .select('id, username, full_name, bio, avatar_url');
+
+    if (useFTS) {
+      userQuery = userQuery.textSearch('tsv', tsQuery, { type: 'websearch' });
+    } else {
+      const pattern = `%${escapeLike(q)}%`;
+      userQuery = userQuery.or(
+        'username.ilike.:pat,full_name.ilike.:pat,bio.ilike.:pat',
+        { pat: pattern } as any,
+      );
+    }
+
+    const { data: usersData } = await userQuery.limit(20);
 
     users = (usersData as UserResult[] | null) || [];
 
-    // Search collectives using ilike for name and description
-    const { data: collectivesData } = await supabase
+    let collectiveQuery = supabase
       .from('collectives')
-      .select('id, name, slug, description, tags')
-      .or(`name.ilike.%${q}%,description.ilike.%${q}%`)
-      .limit(20);
+      .select('id, name, slug, description, tags');
+
+    if (useFTS) {
+      collectiveQuery = collectiveQuery.textSearch('tsv', tsQuery, {
+        type: 'websearch',
+      });
+    } else {
+      const pattern = `%${escapeLike(q)}%`;
+      collectiveQuery = collectiveQuery.or(
+        'name.ilike.:pat,description.ilike.:pat',
+        { pat: pattern } as any,
+      );
+    }
+
+    const { data: collectivesData } = await collectiveQuery.limit(20);
 
     collectives = (collectivesData as CollectiveResult[] | null) || [];
   }
@@ -223,6 +257,7 @@ export default async function Page({
                 className="flex items-center gap-4 p-4 border border-border rounded-lg hover:bg-accent/5 transition-colors"
               >
                 {user.avatar_url && (
+                  // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={user.avatar_url}
                     alt={user.full_name || user.username || 'User'}

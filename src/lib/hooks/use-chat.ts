@@ -15,7 +15,16 @@ import type {
  * Integrates with Supabase real-time functionality
  */
 
-// Temporary flag to disable realtime for testing
+// ---------------------------------------------------------------------------
+// Constants
+// ---------------------------------------------------------------------------
+/** Default number of messages to fetch per page */
+const DEFAULT_MESSAGE_LIMIT = 50;
+
+/** Background refresh interval (ms) for message polling */
+const BACKGROUND_REFRESH_INTERVAL_MS = 30_000;
+
+/** Flag to toggle realtime functionality. Useful for local testing */
 const ENABLE_REALTIME = true;
 
 export function useChat() {
@@ -35,7 +44,7 @@ export function useChat() {
   /**
    * Load user's conversations
    */
-  const loadConversations = useCallback(async () => {
+  const loadConversations = useCallback(async (): Promise<void> => {
     setState(prev => ({ ...prev, isLoading: true, error: null }));
     
     try {
@@ -60,11 +69,18 @@ export function useChat() {
   /**
    * Load messages for a conversation
    */
-  const loadMessages = useCallback(async (conversationId: string, limit = 50, offset = 0) => {
+  const loadMessages = useCallback(
+    async (
+      conversationId: string,
+      limit: number = DEFAULT_MESSAGE_LIMIT,
+      offset: number = 0,
+    ): Promise<MessageWithSender[]> => {
     try {
       const { data, error } = await chatService.getMessages(conversationId, limit, offset);
       
-      if (error) throw error;
+      if (error !== null && error !== undefined) {
+        throw error;
+      }
       
       setState(prev => ({
         ...prev,
@@ -77,7 +93,7 @@ export function useChat() {
         },
       }));
       
-      return data || [];
+      return data ?? [];
     } catch (error) {
       setState(prev => ({
         ...prev,
@@ -90,13 +106,15 @@ export function useChat() {
   /**
    * Send a message
    */
-  const sendMessage = useCallback(async (data: {
-    conversation_id: string;
-    content: string;
-    message_type?: 'text' | 'image' | 'file' | 'system';
-    reply_to_id?: string;
-    metadata?: Json;
-  }) => {
+  const sendMessage = useCallback(async (
+    data: {
+      conversation_id: string;
+      content: string;
+      message_type?: 'text' | 'image' | 'file' | 'system';
+      reply_to_id?: string;
+      metadata?: Json;
+    },
+  ): Promise<MessageWithSender | null> => {
     try {
       // Stop typing indicator
       if (ENABLE_REALTIME) {
@@ -105,7 +123,9 @@ export function useChat() {
       
       const { data: message, error } = await chatService.sendMessage(data);
       
-      if (error) throw error;
+      if (error !== null && error !== undefined) {
+        throw error;
+      }
       
       // Immediately add message to local state (don't wait for realtime)
       if (message) {
@@ -131,7 +151,7 @@ export function useChat() {
         }));
       }
       
-      return message;
+      return message ?? null;
     } catch (error) {
       setState(prev => ({
         ...prev,
@@ -144,22 +164,26 @@ export function useChat() {
   /**
    * Create a new conversation
    */
-  const createConversation = useCallback(async (data: {
-    title?: string;
-    type: 'direct' | 'group' | 'channel';
-    description?: string;
-    is_private?: boolean;
-    participant_ids: string[];
-  }) => {
+  const createConversation = useCallback(async (
+    data: {
+      title?: string;
+      type: 'direct' | 'group' | 'channel';
+      description?: string;
+      is_private?: boolean;
+      participant_ids: string[];
+    },
+  ): Promise<unknown | null> => {
     try {
       const { data: conversation, error } = await chatService.createConversation(data);
       
-      if (error) throw error;
+      if (error !== null && error !== undefined) {
+        throw error;
+      }
       
       // Reload conversations to get the new one with full data
       await loadConversations();
       
-      return conversation;
+      return conversation ?? null;
     } catch (error) {
       setState(prev => ({
         ...prev,
@@ -172,9 +196,9 @@ export function useChat() {
   /**
    * Set active conversation and subscribe to real-time updates
    */
-  const setActiveConversation = useCallback(async (conversationId: string | null) => {
+  const setActiveConversation = useCallback(async (conversationId: string | null): Promise<void> => {
     // Unsubscribe from previous conversation
-    if (state.activeConversation && ENABLE_REALTIME) {
+    if (state.activeConversation !== null && ENABLE_REALTIME) {
       realtimeService.unsubscribeFromConversation(state.activeConversation);
     }
     
@@ -186,10 +210,10 @@ export function useChat() {
 
     setState(prev => ({ ...prev, activeConversation: conversationId }));
 
-    if (!conversationId) return;
+    if (conversationId === null) return;
 
     // Load messages if not already loaded
-    if (!state.messages[conversationId]) {
+    if (state.messages[conversationId] === undefined) {
       await loadMessages(conversationId);
     }
 
@@ -283,7 +307,8 @@ export function useChat() {
       },
     });
     } else {
-      console.info('Realtime disabled - using polling/manual refresh only');
+      // eslint-disable-next-line no-console -- allow warn/error only per lint rules
+      console.warn('Realtime disabled - using polling/manual refresh only');
     }
     
     // Set up auto-refresh as backup (every 30 seconds)
@@ -292,10 +317,14 @@ export function useChat() {
     }
     
     refreshInterval.current = setInterval(async () => {
-      if (conversationId) {
+      if (conversationId !== null) {
         // Silently refresh messages without changing loading state
         try {
-          const { data } = await chatService.getMessages(conversationId, 50, 0);
+          const { data } = await chatService.getMessages(
+            conversationId,
+            DEFAULT_MESSAGE_LIMIT,
+            0,
+          );
           if (data) {
             setState(prev => ({
               ...prev,
@@ -310,14 +339,14 @@ export function useChat() {
           console.warn('Background refresh failed:', error);
         }
       }
-    }, 30000); // Refresh every 30 seconds
+    }, BACKGROUND_REFRESH_INTERVAL_MS); // Refresh every 30 seconds
   }, [state.activeConversation, state.messages, loadMessages]);
 
   /**
    * Start typing indicator
    */
-  const startTyping = useCallback(() => {
-    if (state.activeConversation && ENABLE_REALTIME) {
+  const startTyping = useCallback((): void => {
+    if (state.activeConversation !== null && ENABLE_REALTIME) {
       realtimeService.broadcastTypingStart(state.activeConversation);
     }
   }, [state.activeConversation]);
@@ -325,8 +354,8 @@ export function useChat() {
   /**
    * Stop typing indicator
    */
-  const stopTyping = useCallback(() => {
-    if (state.activeConversation && ENABLE_REALTIME) {
+  const stopTyping = useCallback((): void => {
+    if (state.activeConversation !== null && ENABLE_REALTIME) {
       realtimeService.broadcastTypingStop(state.activeConversation);
     }
   }, [state.activeConversation]);
@@ -334,10 +363,12 @@ export function useChat() {
   /**
    * Add reaction to message
    */
-  const addReaction = useCallback(async (messageId: string, emoji: string) => {
+  const addReaction = useCallback(async (messageId: string, emoji: string): Promise<void> => {
     try {
       const { error } = await chatService.addReaction(messageId, emoji);
-      if (error) throw error;
+      if (error !== null && error !== undefined) {
+        throw error;
+      }
     } catch (error) {
       setState(prev => ({
         ...prev,
@@ -349,10 +380,12 @@ export function useChat() {
   /**
    * Remove reaction from message
    */
-  const removeReaction = useCallback(async (messageId: string, emoji: string) => {
+  const removeReaction = useCallback(async (messageId: string, emoji: string): Promise<void> => {
     try {
       const { error } = await chatService.removeReaction(messageId, emoji);
-      if (error) throw error;
+      if (error !== null && error !== undefined) {
+        throw error;
+      }
     } catch (error) {
       setState(prev => ({
         ...prev,
@@ -364,11 +397,16 @@ export function useChat() {
   /**
    * Search messages
    */
-  const searchMessages = useCallback(async (query: string, conversationId?: string) => {
+  const searchMessages = useCallback(async (
+    query: string,
+    conversationId?: string,
+  ): Promise<MessageWithSender[]> => {
     try {
       const { data, error } = await chatService.searchMessages(query, conversationId);
-      if (error) throw error;
-      return data || [];
+      if (error !== null && error !== undefined) {
+        throw error;
+      }
+      return data ?? [];
     } catch (error) {
       setState(prev => ({
         ...prev,
@@ -381,30 +419,30 @@ export function useChat() {
   /**
    * Clear error
    */
-  const clearError = useCallback(() => {
+  const clearError = useCallback((): void => {
     setState(prev => ({ ...prev, error: null }));
   }, []);
 
   /**
    * Get typing users for active conversation
    */
-  const getTypingUsers = useCallback(() => {
-    if (!state.activeConversation) return [];
+  const getTypingUsers = useCallback((): TypingIndicator[] => {
+    if (state.activeConversation === null) return [];
     return state.typing[state.activeConversation] || [];
   }, [state.activeConversation, state.typing]);
 
   /**
    * Get messages for active conversation
    */
-  const getActiveMessages = useCallback(() => {
-    if (!state.activeConversation) return [];
+  const getActiveMessages = useCallback((): MessageWithSender[] => {
+    if (state.activeConversation === null) return [];
     return state.messages[state.activeConversation] || [];
   }, [state.activeConversation, state.messages]);
 
   /**
    * Get unread count for a conversation
    */
-  const getUnreadCount = useCallback((conversationId: string) => {
+  const getUnreadCount = useCallback((conversationId: string): number => {
     const conversation = state.conversations.find(c => c.id === conversationId);
     return conversation?.unread_count || 0;
   }, [state.conversations]);
@@ -412,13 +450,13 @@ export function useChat() {
   /**
    * Check if user is online
    */
-  const isUserOnline = useCallback((userId: string) => {
+  const isUserOnline = useCallback((userId: string): boolean => {
     return onlineUsers.has(userId);
   }, [onlineUsers]);
 
   // Initialize chat on mount
-  useEffect(() => {
-    if (!initialized.current) {
+  useEffect((): () => void => {
+    if (initialized.current === false) {
       initialized.current = true;
       loadConversations();
     }

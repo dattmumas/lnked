@@ -322,6 +322,19 @@ export default async function PostBySlugPage({
         {/* Main Content */}
         <article className="min-h-screen bg-background">
           <div className="max-w-4xl mx-auto px-6 py-12">
+            {/* Thumbnail Hero */}
+            {post.thumbnail_url && (
+              <div className="relative aspect-video w-full mb-12 overflow-hidden rounded-lg bg-muted">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={post.thumbnail_url}
+                  alt={post.title || 'Post thumbnail'}
+                  className="w-full h-full object-cover transition-transform duration-200 hover:scale-105"
+                  loading="lazy"
+                />
+              </div>
+            )}
+
             {/* Title Section */}
             <header className="mb-12">
               <h1 className="text-5xl font-bold leading-tight mb-6 text-foreground">

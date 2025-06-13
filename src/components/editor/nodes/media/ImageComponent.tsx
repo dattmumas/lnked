@@ -221,6 +221,12 @@ function ImageNodePlaceholder({ isEditable }: { isEditable: boolean }) {
   return <div className="ImageNode__placeholder">Enter a caption...</div>;
 }
 
+// Stable placeholder renderer for image captions to satisfy
+// react/no-unstable-nested-components without disabling the rule.
+function renderImageCaptionPlaceholder(isEditable: boolean) {
+  return <ImageNodePlaceholder isEditable={isEditable} />;
+}
+
 export default function ImageComponent({
   src,
   altText,
@@ -495,15 +501,8 @@ export default function ImageComponent({
               )}
               <RichTextPlugin
                 contentEditable={
-                  // eslint-disable-next-line react/no-unstable-nested-components
                   <ContentEditable
-                    placeholder={(isEditable: boolean) =>
-                      isEditable ? (
-                        <div className="ImageNode__placeholder">
-                          Enter a caption...
-                        </div>
-                      ) : null
-                    }
+                    placeholder={renderImageCaptionPlaceholder}
                   />
                 }
                 ErrorBoundary={LexicalErrorBoundary}

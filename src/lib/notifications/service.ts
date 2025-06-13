@@ -12,6 +12,16 @@ import type {
   EntityType,
 } from '@/types/notifications';
 
+// ---------------------------------------------------------------------------
+// Constants
+// ---------------------------------------------------------------------------
+/** Default pagination values used in notification queries */
+const DEFAULT_LIMIT = 20;
+const DEFAULT_OFFSET = 0;
+
+/** Helper to create an ISO timestamp once per operation */
+const nowIso = (): string => new Date().toISOString();
+
 export class NotificationService {
   private supabase: ReturnType<typeof createSupabaseBrowserClient> | null = null;
 
@@ -21,7 +31,7 @@ export class NotificationService {
     }
   }
 
-  private async getSupabase() {
+  private async getSupabase(): Promise<ReturnType<typeof createServerSupabaseClient> | ReturnType<typeof createSupabaseBrowserClient>> {
     if (this.supabase) {
       return this.supabase;
     }
@@ -31,9 +41,11 @@ export class NotificationService {
   /**
    * Get notifications for the current user
    */
-  async getNotifications(filters: NotificationFilters = {}): Promise<NotificationResponse> {
+  async getNotifications(
+    filters: NotificationFilters = {}
+  ): Promise<NotificationResponse> {
     const supabase = await this.getSupabase();
-    const { limit = 20, offset = 0, type, read } = filters;
+    const { limit = DEFAULT_LIMIT, offset = DEFAULT_OFFSET, type, read } = filters;
 
     let query = supabase
       .from('notifications')
@@ -54,7 +66,7 @@ export class NotificationService {
     }
 
     if (read !== undefined) {
-      if (read) {
+      if (read === true) {
         query = query.not('read_at', 'is', null);
       } else {
         query = query.is('read_at', null);
@@ -91,7 +103,7 @@ export class NotificationService {
       notifications: transformedNotifications,
       total_count: count || 0,
       unread_count: unreadCount || 0,
-      has_more: (count || 0) > offset + limit,
+      has_more: (count ?? 0) > offset + limit,
     };
   }
 
@@ -130,11 +142,12 @@ export class NotificationService {
         return { success: false, error: 'User not authenticated' };
       }
 
-      if (notificationIds && notificationIds.length > 0) {
+      const timestamp = nowIso();
+      if (notificationIds !== undefined && notificationIds.length > 0) {
         // Mark specific notifications as read
         const { error } = await supabase
           .from('notifications')
-          .update({ read_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+          .update({ read_at: timestamp, updated_at: timestamp })
           .in('id', notificationIds)
           .eq('recipient_id', user.id)
           .is('read_at', null);
@@ -146,7 +159,7 @@ export class NotificationService {
         // Mark all notifications as read
         const { error } = await supabase
           .from('notifications')
-          .update({ read_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+          .update({ read_at: timestamp, updated_at: timestamp })
           .eq('recipient_id', user.id)
           .is('read_at', null);
 
@@ -178,6 +191,10 @@ export class NotificationService {
 
       if (authError || !user) {
         return { success: false, error: 'User not authenticated' };
+      }
+
+      if (notificationIds.length === 0) {
+        return { success: false, error: 'No notifications specified' };
       }
 
       const { error } = await supabase
@@ -274,6 +291,7 @@ export class NotificationService {
         return { success: false, error: 'User not authenticated' };
       }
 
+      const updatedAt = nowIso();
       // Update each preference
       for (const update of updates) {
         const { error } = await supabase
@@ -284,7 +302,7 @@ export class NotificationService {
             email_enabled: update.email_enabled ?? true,
             push_enabled: update.push_enabled ?? true,
             in_app_enabled: update.in_app_enabled ?? true,
-            updated_at: new Date().toISOString(),
+            updated_at: updatedAt,
           });
 
         if (error) {
@@ -308,8 +326,12 @@ export class NotificationService {
     userId: string,
     callback: (notification: Notification) => void
   ): (() => void) | null {
-    if (!this.supabase) {
+    if (this.supabase === null) {
       console.error('Cannot subscribe to notifications on server side');
+      return null;
+    }
+
+    if (userId === '') {
       return null;
     }
 

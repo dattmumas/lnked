@@ -187,6 +187,29 @@ function InlineImageNodePlaceholder({ isEditable }: { isEditable: boolean }) {
   return <div className="InlineImageNode__placeholder">Enter a caption...</div>;
 }
 
+// Stable placeholder renderer to satisfy react/no-unstable-nested-components.
+function renderInlineImageCaptionPlaceholder(isEditable: boolean) {
+  return <InlineImageNodePlaceholder isEditable={isEditable} />;
+}
+
+// Factory to create the dialog renderer outside the component scope
+function createUpdateInlineImageDialog(
+  activeEditor: LexicalEditor,
+  nodeKey: NodeKey,
+) {
+  return function UpdateInlineImageDialogRenderer(
+    onClose: () => void,
+  ): JSX.Element {
+    return (
+      <UpdateInlineImageDialog
+        activeEditor={activeEditor}
+        nodeKey={nodeKey}
+        onClose={onClose}
+      />
+    );
+  };
+}
+
 export default function InlineImageComponent({
   src,
   altText,
@@ -217,13 +240,10 @@ export default function InlineImageComponent({
   const isEditable = useLexicalEditable();
 
   const showUpdateDialog = useCallback(() => {
-    showModal('Update Inline Image', (onClose) => (
-      <UpdateInlineImageDialog
-        activeEditor={editor}
-        nodeKey={nodeKey}
-        onClose={onClose}
-      />
-    ));
+    showModal(
+      'Update Inline Image',
+      createUpdateInlineImageDialog(editor, nodeKey),
+    );
   }, [showModal, editor, nodeKey]);
 
   const $onEnter = useCallback(
@@ -354,16 +374,7 @@ export default function InlineImageComponent({
             <button
               className="image-edit-button"
               ref={buttonRef}
-              onClick={() => {
-                // eslint-disable-next-line react/no-unstable-nested-components
-                showModal('Update Inline Image', (onClose) => (
-                  <UpdateInlineImageDialog
-                    activeEditor={editor}
-                    nodeKey={nodeKey}
-                    onClose={onClose}
-                  />
-                ));
-              }}
+              onClick={showUpdateDialog}
             >
               Edit
             </button>
@@ -389,15 +400,8 @@ export default function InlineImageComponent({
               <LinkPlugin />
               <RichTextPlugin
                 contentEditable={
-                  // eslint-disable-next-line react/no-unstable-nested-components
                   <ContentEditable
-                    placeholder={(isEditable: boolean) =>
-                      isEditable ? (
-                        <div className="InlineImageNode__placeholder">
-                          Enter a caption...
-                        </div>
-                      ) : null
-                    }
+                    placeholder={renderInlineImageCaptionPlaceholder}
                   />
                 }
                 ErrorBoundary={LexicalErrorBoundary}

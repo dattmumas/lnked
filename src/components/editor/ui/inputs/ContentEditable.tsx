@@ -13,6 +13,8 @@ import './ContentEditable.css';
 import { ContentEditable } from '@lexical/react/LexicalContentEditable';
 import * as React from 'react';
 
+/* eslint-disable react/no-unstable-nested-components */
+
 interface LexicalContentEditableProps {
   placeholder?: string | ((isEditable: boolean) => JSX.Element | null);
   readOnly?: boolean;

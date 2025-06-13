@@ -4,6 +4,30 @@ import {
   PostCollectiveError
 } from '@/types/enhanced-database.types';
 
+// ---------------------------------------------------------------------------
+// Constants & Utilities
+// ---------------------------------------------------------------------------
+/** Duration (ms) that flags an operation as slow */
+const SLOW_OPERATION_THRESHOLD_MS = 2_000;
+
+/** Maximum number of performance metrics to retain in-memory */
+const PERFORMANCE_METRICS_MAX = 1_000;
+
+/** Maximum local log entries kept in localStorage */
+const MAX_LOCAL_LOGS = 100;
+
+/** Limit for most-popular collectives slice */
+const POPULAR_COLLECTIVES_LIMIT = 10;
+
+/** Threshold for average duration warning (ms) */
+const AVG_DURATION_WARNING_MS = 1_500;
+
+/** Success-rate warning threshold (percentage) */
+const SUCCESS_RATE_WARNING = 95;
+
+/** Helper to generate ISO timestamp */
+const nowIso = (): string => new Date().toISOString();
+
 // Audit log entry types
 export interface PostCollectiveAuditEntry {
   id: string;
@@ -80,7 +104,7 @@ export class PostCollectiveAuditService {
         collective_name: error.collective_name
       } : null,
       metadata: metadata || {},
-      timestamp: new Date().toISOString(),
+      timestamp: nowIso(),
       user_agent: typeof window !== 'undefined' ? window.navigator.userAgent : 'Server',
       session_id: this.generateSessionId()
     };
@@ -139,7 +163,7 @@ export class PostCollectiveAuditService {
       this.cleanupOldMetrics();
       
       // Log performance issues
-      if (duration > 2000) { // Operations taking more than 2 seconds
+      if (duration > SLOW_OPERATION_THRESHOLD_MS) {
         console.warn(`[PostCollectiveAudit] Slow operation detected:`, metric);
       }
       
@@ -182,7 +206,7 @@ export class PostCollectiveAuditService {
         .select('*')
         .eq('collective_id', collectiveId)
         .order('performed_at', { ascending: false })
-        .limit(100); // Limit to recent entries
+        .limit(MAX_LOCAL_LOGS); // Limit to recent entries
 
       if (error) {
         console.error('Error fetching collective audit log:', error);
@@ -219,7 +243,7 @@ export class PostCollectiveAuditService {
     const total = this.performanceMetrics.length;
     const successful = this.performanceMetrics.filter(m => m.success).length;
     const totalDuration = this.performanceMetrics.reduce((sum, m) => sum + m.duration_ms, 0);
-    const slowOperations = this.performanceMetrics.filter(m => m.duration_ms > 2000).length;
+    const slowOperations = this.performanceMetrics.filter(m => m.duration_ms > SLOW_OPERATION_THRESHOLD_MS).length;
 
     const errorsByType: Record<string, number> = {};
     this.performanceMetrics
@@ -300,7 +324,7 @@ export class PostCollectiveAuditService {
             post_count: data.count
           }))
           .sort((a, b) => b.post_count - a.post_count)
-          .slice(0, 10); // Top 10
+          .slice(0, POPULAR_COLLECTIVES_LIMIT); // Top 10
       }
 
       return analytics;
@@ -323,7 +347,7 @@ export class PostCollectiveAuditService {
       operation,
       collective_count: collectiveCount,
       user_id: userId,
-      timestamp: new Date().toISOString(),
+      timestamp: nowIso(),
       success: true
     };
 
@@ -345,7 +369,7 @@ export class PostCollectiveAuditService {
       error_message: error?.message,
       collective_id: error?.collective_id,
       user_id: userId,
-      timestamp: new Date().toISOString(),
+      timestamp: nowIso(),
       success: false
     };
 
@@ -367,7 +391,7 @@ export class PostCollectiveAuditService {
       existingLogs.unshift(logEntry);
       
       // Keep only the most recent 100 entries
-      const trimmedLogs = existingLogs.slice(0, 100);
+      const trimmedLogs = existingLogs.slice(0, MAX_LOCAL_LOGS);
       
       localStorage.setItem('post_collective_logs', JSON.stringify(trimmedLogs));
     } catch (error) {
@@ -413,9 +437,8 @@ export class PostCollectiveAuditService {
    * Clean up old performance metrics to prevent memory leaks
    */
   private cleanupOldMetrics(): void {
-    const maxMetrics = 1000;
-    if (this.performanceMetrics.length > maxMetrics) {
-      this.performanceMetrics = this.performanceMetrics.slice(0, maxMetrics);
+    if (this.performanceMetrics.length > PERFORMANCE_METRICS_MAX) {
+      this.performanceMetrics = this.performanceMetrics.slice(0, PERFORMANCE_METRICS_MAX);
     }
   }
 
@@ -427,7 +450,7 @@ export class PostCollectiveAuditService {
       summary: this.getPerformanceMetrics(),
       detailed_metrics: this.performanceMetrics,
       local_logs: this.getLocalLogs(),
-      export_timestamp: new Date().toISOString()
+      export_timestamp: nowIso()
     }, null, 2);
   }
 
@@ -444,13 +467,13 @@ export class PostCollectiveAuditService {
     const recommendations: string[] = [];
 
     // Check success rate
-    if (metrics.successRate < 95) {
+    if (metrics.successRate < SUCCESS_RATE_WARNING) {
       issues.push(`Low success rate: ${metrics.successRate}%`);
       recommendations.push('Review error logs and fix common failure points');
     }
 
     // Check average performance
-    if (metrics.averageDuration > 1500) {
+    if (metrics.averageDuration > AVG_DURATION_WARNING_MS) {
       issues.push(`Slow average response: ${metrics.averageDuration}ms`);
       recommendations.push('Optimize database queries and consider caching');
     }
