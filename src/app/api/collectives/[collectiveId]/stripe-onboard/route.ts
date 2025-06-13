@@ -1,10 +1,12 @@
- 
 import { NextResponse } from "next/server";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { getStripe } from "@/lib/stripe";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
-export async function POST(req: Request, context: any) {
+export async function POST(
+  req: Request,
+  context: { params: { collectiveId: string } },
+) {
   const {collectiveId} = context.params;
   if (!collectiveId) {
     return NextResponse.json(

@@ -110,7 +110,7 @@ export function LexicalRenderer({ contentJSON }: LexicalRendererProps) {
 
     try {
       switch (node.type) {
-        case 'paragraph':
+        case 'paragraph': {
           const blockTypes = [
             'image',
             'inlineimage',
@@ -134,12 +134,13 @@ export function LexicalRenderer({ contentJSON }: LexicalRendererProps) {
                 blockTypes.includes(c.type),
               )
             : false;
-          const Wrapper = hasBlockChild ? 'div' : 'p';
+          const Wrapper: 'p' | 'div' = hasBlockChild ? 'div' : 'p';
           return (
             <Wrapper className="text-xl leading-relaxed mb-6 text-foreground/90">
               {renderChildren(node.children)}
             </Wrapper>
           );
+        }
         case 'heading': {
           const level =
             (node as { tag?: string; tagName?: string }).tag ||

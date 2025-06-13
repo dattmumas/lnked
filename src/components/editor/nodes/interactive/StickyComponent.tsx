@@ -44,12 +44,19 @@ function positionSticky(
   stickyElem: HTMLElement,
   positioning: Positioning,
 ): void {
-  const {style} = stickyElem;
-  const {rootElementRect} = positioning;
+  const { style } = stickyElem;
+  const { rootElementRect } = positioning;
   const rectLeft = rootElementRect !== null ? rootElementRect.left : 0;
   const rectTop = rootElementRect !== null ? rootElementRect.top : 0;
   style.top = `${rectTop + positioning.y}px`;
   style.left = `${rectLeft + positioning.x}px`;
+}
+
+function StickyNodePlaceholder({ isEditable }: { isEditable: boolean }) {
+  if (!isEditable) {
+    return null;
+  }
+  return <div className="StickyNode__placeholder">What&apos;s up?</div>;
 }
 
 export default function StickyComponent({
@@ -147,7 +154,7 @@ export default function StickyComponent({
   const handlePointerMove = (event: PointerEvent) => {
     const stickyContainer = stickyContainerRef.current;
     const positioning = positioningRef.current;
-    const {rootElementRect} = positioning;
+    const { rootElementRect } = positioning;
     const zoom = calculateZoomLevel(stickyContainer);
     if (
       stickyContainer !== null &&
@@ -260,6 +267,7 @@ export default function StickyComponent({
           )}
           <PlainTextPlugin
             contentEditable={
+              // eslint-disable-next-line react/no-unstable-nested-components
               <ContentEditable
                 placeholder={(isEditable: boolean) =>
                   isEditable ? (

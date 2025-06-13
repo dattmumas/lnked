@@ -22,7 +22,7 @@ const LazyTableActionMenuPlugin = lazy(
 interface LazyPluginProps {
   pluginName: string;
   enabled: boolean;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 function LoadingFallback() {
@@ -32,7 +32,9 @@ function LoadingFallback() {
 function LazyPlugin({ pluginName, enabled, ...props }: LazyPluginProps) {
   if (!enabled) return null;
 
-  const getPluginComponent = (): ComponentType<any> | null => {
+  const getPluginComponent = (): ComponentType<
+    Record<string, unknown>
+  > | null => {
     switch (pluginName) {
       case 'equations':
         return LazyEquationsPlugin;
@@ -70,7 +72,8 @@ function LazyPlugin({ pluginName, enabled, ...props }: LazyPluginProps) {
 
   return (
     <Suspense fallback={<LoadingFallback />}>
-      <PluginComponent {...props} />
+      {/* eslint-disable-next-line react/jsx-props-no-spreading */}
+      <PluginComponent {...(props as Record<string, never>)} />
     </Suspense>
   );
 }

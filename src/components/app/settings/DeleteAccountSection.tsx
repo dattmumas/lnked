@@ -1,16 +1,16 @@
-"use client";
+'use client';
 
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { deleteUserAccount } from "@/app/actions/userActions";
-import { useRouter } from "next/navigation";
+import { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { deleteUserAccount } from '@/app/actions/userActions';
+import { useRouter } from 'next/navigation';
 
 export default function DeleteAccountSection({
   userEmail,
 }: {
   userEmail: string;
 }) {
-  const [confirmEmail, setConfirmEmail] = useState("");
+  const [confirmEmail, setConfirmEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -24,10 +24,10 @@ export default function DeleteAccountSection({
     if (result.success) {
       setSuccess(true);
       setTimeout(() => {
-        router.push("/goodbye");
+        router.push('/goodbye');
       }, 2000);
     } else {
-      setError(result.error || "Failed to delete account.");
+      setError(result.error || 'Failed to delete account.');
     }
   };
 
@@ -41,10 +41,11 @@ export default function DeleteAccountSection({
         and subscriptions will be permanently deleted. If you own any
         collectives, you must transfer or delete them first.
       </p>
-      <label className="block mb-2 font-medium">
+      <label htmlFor="confirm-email" className="block mb-2 font-medium">
         Type your email to confirm:
       </label>
       <input
+        id="confirm-email"
         type="email"
         className="input input-bordered w-full max-w-xs mb-4"
         value={confirmEmail}
@@ -61,7 +62,7 @@ export default function DeleteAccountSection({
           disabled={isLoading || confirmEmail !== userEmail}
           onClick={handleDelete}
         >
-          {isLoading ? "Deleting..." : "Delete My Account"}
+          {isLoading ? 'Deleting...' : 'Delete My Account'}
         </Button>
       )}
     </section>

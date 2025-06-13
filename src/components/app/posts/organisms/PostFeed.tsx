@@ -29,10 +29,33 @@ interface UnifiedPost {
   slug?: string | null;
   created_at: string;
   post_type: 'text' | 'video';
-  metadata?: any;
+  metadata?: Record<string, unknown>;
   author: Author;
   collective?: Collective | null;
 }
+
+type PostQueryRow = {
+  id: string;
+  title: string;
+  content: string | null;
+  meta_description: string | null;
+  thumbnail_url: string | null;
+  slug: string | null;
+  created_at: string;
+  post_type: 'text' | 'video';
+  metadata: Record<string, unknown> | null;
+  author: {
+    id: string;
+    username: string | null;
+    full_name: string | null;
+    avatar_url: string | null;
+  } | null;
+  collective: {
+    id: string;
+    name: string;
+    slug: string;
+  } | null;
+};
 
 interface PostFeedProps {
   posts?: UnifiedPost[];
@@ -46,6 +69,9 @@ interface PostFeedProps {
 interface PostWithInteractions extends UnifiedPost {
   interactions: ReturnType<typeof usePostInteractions>;
 }
+
+// Default empty array to avoid re-creating on each render
+const DEFAULT_POSTS: UnifiedPost[] = [];
 
 function PostCardWithInteractions({
   post,
@@ -76,7 +102,7 @@ function PostCardWithInteractions({
 }
 
 export default function PostFeed({
-  posts = [],
+  posts = DEFAULT_POSTS,
   currentUserId,
   showFollowButtons = false,
   className,
@@ -173,32 +199,31 @@ export function usePostFeed(userId?: string) {
         }
 
         // Transform the data to match our interface
-        const transformedPosts: UnifiedPost[] = (data || []).map(
-          (post: any) => ({
-            id: post.id,
-            title: post.title,
-            content: post.content,
-            meta_description: post.meta_description,
-            thumbnail_url: post.thumbnail_url,
-            slug: post.slug,
-            created_at: post.created_at,
-            post_type: post.post_type || 'text',
-            metadata: post.metadata,
-            author: {
-              id: post.author?.id || '',
-              username: post.author?.username || null,
-              full_name: post.author?.full_name || null,
-              avatar_url: post.author?.avatar_url || null,
-            },
-            collective: post.collective
-              ? {
-                  id: post.collective.id,
-                  name: post.collective.name,
-                  slug: post.collective.slug,
-                }
-              : null,
-          }),
-        );
+        const rows: PostQueryRow[] = (data ?? []) as unknown as PostQueryRow[];
+        const transformedPosts: UnifiedPost[] = rows.map((post) => ({
+          id: post.id,
+          title: post.title,
+          content: post.content,
+          meta_description: post.meta_description,
+          thumbnail_url: post.thumbnail_url,
+          slug: post.slug,
+          created_at: post.created_at,
+          post_type: post.post_type || 'text',
+          metadata: post.metadata ?? undefined,
+          author: {
+            id: post.author?.id || '',
+            username: post.author?.username || null,
+            full_name: post.author?.full_name || null,
+            avatar_url: post.author?.avatar_url || null,
+          },
+          collective: post.collective
+            ? {
+                id: post.collective.id,
+                name: post.collective.name,
+                slug: post.collective.slug,
+              }
+            : null,
+        }));
 
         setPosts(transformedPosts);
       } catch (err) {

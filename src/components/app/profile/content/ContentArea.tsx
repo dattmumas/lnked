@@ -1,8 +1,12 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { useProfileContext, useProfilePosts } from '@/lib/hooks/profile';
-import type { ContentAreaProps } from '@/lib/hooks/profile/types';
+import {
+  useProfileContext,
+  useProfilePosts,
+  useProfileMetrics,
+} from '@/lib/hooks/profile';
+import type { ContentAreaProps, ProfilePost } from '@/lib/hooks/profile/types';
 import type { Database } from '@/lib/database.types';
 import { ProfileVideosSection } from './ProfileVideosSection';
 
@@ -19,47 +23,31 @@ type PostType = Database['public']['Enums']['post_type_enum'];
  * - Content type filtering
  */
 export function ContentArea({ className = '' }: ContentAreaProps) {
-  const { metrics, profile, isOwner } = useProfileContext();
+  const { profile, isOwner } = useProfileContext();
   const [activeType, setActiveType] = useState<PostType>('text');
   const [isSticky, setIsSticky] = useState(false);
-  const contentRef = useRef<HTMLDivElement>(null);
   const tabsRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLElement>(null);
 
-  // Fetch posts with filtering - add safety check for username
+  // Fetch posts data
   const {
     data: postsResponse,
+    isLoading,
+    error,
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
-    isLoading,
-    error,
-  } = useProfilePosts(profile?.username || '', {
-    type: activeType,
-    limit: 12,
-  });
+  } = useProfilePosts(profile?.username || '', { type: activeType });
 
-  // Don't render if we don't have a valid username
-  if (!profile?.username) {
-    return (
-      <div className="content-area-error text-center py-12 space-y-4">
-        <div className="text-6xl">⚠️</div>
-        <div className="content">
-          <h3 className="title text-lg font-medium text-foreground">
-            Error Loading Profile
-          </h3>
-          <p className="description text-muted-foreground mt-2">
-            Profile username is missing. Please try refreshing the page.
-          </p>
-          <button
-            onClick={() => window.location.reload()}
-            className="mt-4 px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm font-medium hover:bg-primary/90 transition-colors"
-          >
-            Refresh Page
-          </button>
-        </div>
-      </div>
-    );
-  }
+  // Get content metrics
+  const metricsQuery = useProfileMetrics(profile?.username || '');
+  const metrics = metricsQuery.data || {
+    followerCount: 0,
+    followingCount: 0,
+    postCounts: { writing: 0, video: 0, total: 0 },
+    totalViews: 0,
+    totalLikes: 0,
+  };
 
   // Determine default tab based on content counts
   React.useEffect(() => {
@@ -87,6 +75,15 @@ export function ContentArea({ className = '' }: ContentAreaProps) {
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  // Early return after hooks
+  if (!profile) {
+    return (
+      <div className="content-area-loading text-center py-12">
+        <p className="text-muted-foreground">Loading content...</p>
+      </div>
+    );
+  }
 
   const posts = postsResponse?.data || [];
 
@@ -241,7 +238,7 @@ function ContentGrid({
   error,
   activeType,
 }: {
-  posts: any[];
+  posts: ProfilePost[];
   loading?: boolean;
   onLoadMore?: () => void;
   hasMore?: boolean;
@@ -352,7 +349,7 @@ function ContentCard({
   post,
   className = '',
 }: {
-  post: any; // Will be properly typed once we have the ProfilePost type working
+  post: ProfilePost;
   className?: string;
 }) {
   const getContentTypeLabel = (type: PostType) => {
@@ -382,7 +379,7 @@ function ContentCard({
   };
 
   return (
-    <article
+    <div
       className={`
       group 
       block 
@@ -398,6 +395,15 @@ function ContentCard({
       ${className}
     `}
       onClick={handleCardClick}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          handleCardClick();
+        }
+      }}
+      role="button"
+      tabIndex={0}
+      aria-label={`View post: ${post.title}`}
     >
       {/* Thumbnail/Preview */}
       <div className="relative aspect-video bg-muted overflow-hidden">
@@ -476,7 +482,7 @@ function ContentCard({
           <div>{getTimeLabel(post.postType, post.readTime)}</div>
         </div>
       </div>
-    </article>
+    </div>
   );
 }
 

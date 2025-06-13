@@ -16,12 +16,20 @@ import type {
   UseFollowStatusReturn,
   UseProfilePostsReturn,
   UseSocialFeedReturn,
+  SocialLinks,
 } from './types';
 import {
   ProfileError,
   NotFoundError,
   PermissionError,
 } from './types';
+
+// Local DB row type aliases for safer casting (avoids "any")
+import type { Database } from '@/lib/database.types';
+
+type DBUser = Database['public']['Tables']['users']['Row'];
+type DBCollective = Database['public']['Tables']['collectives']['Row'];
+type Json = Database['public']['Tables']['users']['Row']['social_links'];
 
 // Query key factories
 export const profileKeys = {
@@ -76,7 +84,7 @@ async function fetchProfile(username: string): Promise<Profile> {
     bio: data.bio,
     avatarUrl: data.avatar_url,
     coverImageUrl: data.cover_image_url,
-    socialLinks: data.social_links as any,
+    socialLinks: data.social_links as SocialLinks | null,
     isProfilePublic: data.is_profile_public ?? true,
     showComments: data.show_comments ?? true,
     showFollowers: data.show_followers ?? true,
@@ -280,15 +288,15 @@ async function fetchProfilePosts(
     likeCount: post.like_count,
     readTime: post.content ? Math.ceil(post.content.length / 1000) : undefined,
     author: {
-      id: (post.author as any).id,
-      username: (post.author as any).username,
-      fullName: (post.author as any).full_name,
-      avatarUrl: (post.author as any).avatar_url,
+      id: ((post.author as unknown) as DBUser).id,
+      username: (((post.author as unknown) as DBUser).username) ?? 'unknown',
+      fullName: ((post.author as unknown) as DBUser).full_name,
+      avatarUrl: ((post.author as unknown) as DBUser).avatar_url,
     },
     collective: post.collective ? {
-      id: (post.collective as any).id,
-      name: (post.collective as any).name,
-      slug: (post.collective as any).slug,
+      id: ((post.collective as unknown) as DBCollective).id,
+      name: ((post.collective as unknown) as DBCollective).name,
+      slug: ((post.collective as unknown) as DBCollective).slug,
     } : null,
   }));
 
@@ -345,11 +353,11 @@ async function fetchSocialFeed(
     }
 
     const connections: UserConnection[] = (data || []).map(follow => ({
-      id: (follow.following as any).id,
-      username: (follow.following as any).username,
-      fullName: (follow.following as any).full_name,
-      avatarUrl: (follow.following as any).avatar_url,
-      bio: (follow.following as any).bio,
+      id: ((follow.following as unknown) as DBUser).id,
+      username: (((follow.following as unknown) as DBUser).username) ?? 'unknown',
+      fullName: ((follow.following as unknown) as DBUser).full_name,
+      avatarUrl: ((follow.following as unknown) as DBUser).avatar_url,
+      bio: ((follow.following as unknown) as DBUser).bio,
       isFollowing: true,
       followedAt: follow.created_at,
     }));
@@ -573,7 +581,7 @@ export function useUpdateProfileMutation() {
           full_name: updates.fullName,
           bio: updates.bio,
           avatar_url: updates.avatarUrl,
-          social_links: updates.socialLinks as any,
+          social_links: updates.socialLinks as Json,
           updated_at: new Date().toISOString(),
         })
         .eq('id', user.id)

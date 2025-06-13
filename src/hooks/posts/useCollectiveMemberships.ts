@@ -8,6 +8,19 @@ import {
 } from '@/types/enhanced-database.types';
 import { Database } from '@/lib/database.types';
 
+// Narrow type for membership query results (select columns from `collective_members` plus joined `collectives`)
+interface MembershipRow {
+  collective_id: string;
+  role: Database['public']['Enums']['collective_member_role'] | null;
+  collectives: {
+    id: string;
+    name: string;
+    slug: string;
+    logo_url: string | null;
+    description: string | null;
+  };
+}
+
 // Hook to get user's collective memberships with posting permissions
 export const useCollectiveMemberships = (includeNonPostable = false) => {
   const { user } = useUser();
@@ -49,7 +62,7 @@ export const useCollectiveMemberships = (includeNonPostable = false) => {
 
       // Transform to CollectiveWithPermission format
       const collectivesWithPermissions: CollectiveWithPermission[] = memberships
-        .map((membership: any) => {
+        .map((membership: MembershipRow) => {
           const collective = membership.collectives;
           const userRole = membership.role as Database['public']['Enums']['collective_member_role'];
           const canPost = canUserPostToCollective(userRole);
@@ -216,7 +229,7 @@ export const useSearchCollectiveMemberships = (searchQuery: string) => {
 
       // Transform and filter for posting permissions
       return memberships
-        .map((membership: any) => {
+        .map((membership: MembershipRow) => {
           const collective = membership.collectives;
           const userRole = membership.role as Database['public']['Enums']['collective_member_role'];
           const canPost = canUserPostToCollective(userRole);

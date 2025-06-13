@@ -8,6 +8,7 @@ import {
 import { useUser } from '@/hooks/useUser';
 import { postCollectiveService } from '@/services/posts/PostCollectiveService';
 import { Json } from '@/lib/database.types';
+import type { CollectiveSharingSettings } from '@/types/enhanced-database.types';
 
 // Enhanced auto-save mutation hook with multi-collective support
 export const useEnhancedAutoSavePost = () => {
@@ -171,7 +172,7 @@ export const useEnhancedPostData = (postId?: string) => {
 
       // Extract enhanced data from metadata if available
       const metadata = (data.metadata as Record<string, unknown>) || {};
-      const collectiveSharingSettings = metadata.collective_sharing_settings as Record<string, any> || {};
+      const collectiveSharingSettings = (metadata.collective_sharing_settings ?? {}) as Record<string, CollectiveSharingSettings>;
       const selectedCollectives = metadata.selected_collectives as string[] || [];
 
       // Transform database data to enhanced form data

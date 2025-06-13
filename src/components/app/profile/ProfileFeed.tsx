@@ -17,7 +17,10 @@ export type PostWithLikes = Database['public']['Tables']['posts']['Row'] & {
   current_user_has_liked?: boolean;
 };
 
-type PostWithSlug = PostWithLikes & { collective_slug?: string | null };
+type PostWithSlug = PostWithLikes & {
+  collective_slug?: string | null;
+  slug?: string | null;
+};
 
 interface ProfileFeedProps {
   posts: PostWithSlug[];
@@ -32,7 +35,7 @@ function PostCard({
   post,
   collectiveSlug,
 }: {
-  post: any;
+  post: PostWithSlug;
   collectiveSlug: string | null;
 }) {
   const [isPending, startTransition] = useTransition();

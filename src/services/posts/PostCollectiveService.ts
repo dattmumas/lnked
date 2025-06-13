@@ -8,9 +8,11 @@ import {
   EnhancedPostFormData,
   canUserPostToCollective
 } from '@/types/enhanced-database.types';
-import { Database } from '@/lib/database.types';
+import { Database, Json } from '@/lib/database.types';
 import { postCollectiveAuditService } from './PostCollectiveAuditService';
 import { postCollectiveErrorHandler } from './PostCollectiveErrorHandler';
+
+type DBPostCollectiveInsert = Database['public']['Tables']['post_collectives']['Insert'];
 
 /**
  * Enhanced service class for managing post-collective associations
@@ -174,7 +176,14 @@ export class PostCollectiveService {
     postId: string,
     userId: string,
     collectiveIds: string[],
-    sharingSettings?: Record<string, any>
+    sharingSettings?: Record<
+      string,
+      {
+        status?: PostCollectiveRow['status'];
+        metadata?: PostCollectiveRow['metadata'];
+        display_order?: number;
+      }
+    >
   ): Promise<PostCollectiveServiceResponse> {
     return postCollectiveErrorHandler.executeWithRetry(
       'createPostCollectiveAssociations',
@@ -210,18 +219,18 @@ export class PostCollectiveService {
 
             try {
               // Prepare post-collective associations
-              const associations: PostCollectiveInsert[] = collectiveIds.map((collectiveId, index) => ({
+              const associations: DBPostCollectiveInsert[] = collectiveIds.map((collectiveId, index) => ({
                 post_id: postId,
                 collective_id: collectiveId,
                 shared_by: userId,
                 status: sharingSettings?.[collectiveId]?.status || 'published',
-                metadata: sharingSettings?.[collectiveId]?.metadata || {},
+                metadata: (sharingSettings?.[collectiveId]?.metadata as Json) || {},
                 display_order: sharingSettings?.[collectiveId]?.display_order || index,
               }));
 
               // Insert associations into post_collectives table
               const { data: createdAssociations, error } = await this.supabase
-                .from('post_collectives' as any)
+                .from('post_collectives')
                 .insert(associations)
                 .select();
 
@@ -319,12 +328,19 @@ export class PostCollectiveService {
     postId: string,
     userId: string,
     newCollectiveIds: string[],
-    sharingSettings?: Record<string, any>
+    sharingSettings?: Record<
+      string,
+      {
+        status?: PostCollectiveRow['status'];
+        metadata?: PostCollectiveRow['metadata'];
+        display_order?: number;
+      }
+    >
   ): Promise<PostCollectiveServiceResponse> {
     try {
       // Get existing associations
       const { data: existingAssociations, error: fetchError } = await this.supabase
-        .from('post_collectives' as any)
+        .from('post_collectives')
         .select('*')
         .eq('post_id', postId);
 
@@ -340,7 +356,7 @@ export class PostCollectiveService {
       }
 
       const existingCollectiveIds = new Set(
-        existingAssociations?.map((assoc: any) => assoc.collective_id) || []
+        existingAssociations?.map((assoc) => assoc.collective_id) || []
       );
 
       // Determine what to add and remove
@@ -366,31 +382,31 @@ export class PostCollectiveService {
 
       // Remove old associations
       if (collectivesToRemove.length > 0) {
-        const { error: deleteError } = await this.supabase
-          .from('post_collectives' as any)
+        const { error } = await this.supabase
+          .from('post_collectives')
           .delete()
           .eq('post_id', postId)
           .in('collective_id', collectivesToRemove);
 
-        if (deleteError) {
-          console.error('Error removing collective associations:', deleteError);
+        if (error) {
+          console.error('Error removing collective associations:', error);
         }
       }
 
       // Add new associations
       if (collectivesToAdd.length > 0) {
-        const newAssociations: PostCollectiveInsert[] = collectivesToAdd.map((collectiveId, index) => ({
+        const newAssociations: DBPostCollectiveInsert[] = collectivesToAdd.map((collectiveId, index) => ({
           post_id: postId,
           collective_id: collectiveId,
           shared_by: userId,
           status: sharingSettings?.[collectiveId]?.status || 'published',
-          metadata: sharingSettings?.[collectiveId]?.metadata || {},
+          metadata: (sharingSettings?.[collectiveId]?.metadata as Json) || {},
           display_order: sharingSettings?.[collectiveId]?.display_order || index,
         }));
 
         const { error: insertError } = await this.supabase
-          .from('post_collectives' as any)
-          .insert(newAssociations);
+          .from('post_collectives')
+          .insert(newAssociations as DBPostCollectiveInsert[]);
 
         if (insertError) {
           console.error('Error adding collective associations:', insertError);
@@ -407,7 +423,7 @@ export class PostCollectiveService {
 
       // Fetch updated associations
       const { data: updatedAssociations } = await this.supabase
-        .from('post_collectives' as any)
+        .from('post_collectives')
         .select('*')
         .eq('post_id', postId);
 
@@ -436,7 +452,7 @@ export class PostCollectiveService {
   async getPostCollectiveAssociations(postId: string): Promise<PostCollectiveRow[]> {
     try {
       const { data: associations, error } = await this.supabase
-        .from('post_collectives' as any)
+        .from('post_collectives')
         .select('*')
         .eq('post_id', postId)
         .order('display_order');
@@ -463,7 +479,7 @@ export class PostCollectiveService {
   ): Promise<PostCollectiveServiceResponse> {
     try {
       const { error } = await this.supabase
-        .from('post_collectives' as any)
+        .from('post_collectives')
         .delete()
         .eq('post_id', postId)
         .in('collective_id', collectiveIds);
@@ -533,8 +549,8 @@ export class PostCollectiveService {
    */
   async getServiceHealth(): Promise<{
     status: 'healthy' | 'warning' | 'critical';
-    metrics: any;
-    errors: any;
+    metrics: Record<string, unknown>;
+    errors: Record<string, unknown>;
   }> {
     const performanceMetrics = postCollectiveAuditService.getPerformanceMetrics();
     const errorStats = postCollectiveErrorHandler.getErrorStatistics();

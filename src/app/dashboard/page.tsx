@@ -1,6 +1,5 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { Button } from '@/components/primitives/Button';
-import Link from 'next/link';
 import { Card } from '@/components/primitives/Card';
 import StatsRow from '@/components/app/dashboard/organisms/StatsRow';
 import {
@@ -15,6 +14,7 @@ import {
 import RecentPostRow from '@/components/app/dashboard/organisms/RecentPostRow';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { redirect } from 'next/navigation';
+import Link from 'next/link';
 
 const MAX_RECENT_PERSONAL_POSTS_DISPLAY = 3;
 
@@ -26,11 +26,32 @@ type PersonalPost = {
   is_public: boolean;
   collective_id: string | null;
 };
+
 type OwnedCollective = {
   id: string;
   name: string;
   slug: string;
   description: string | null;
+};
+
+type DashboardStats = {
+  subscriber_count: number;
+  follower_count: number;
+  total_views: number;
+  total_likes: number;
+  published_this_month: number;
+  total_posts: number;
+  collective_count: number;
+};
+
+type DashboardContent = {
+  profile: {
+    username: string | null;
+    full_name?: string | null;
+    avatar_url?: string | null;
+  } | null;
+  recent_posts: PersonalPost[];
+  owned_collectives: OwnedCollective[];
 };
 
 export const dynamic = 'force-dynamic';
@@ -56,20 +77,23 @@ export default async function DashboardManagementPage() {
 
   try {
     const [dashboardStatsResult, dashboardContentResult] = await Promise.all([
-      // Single RPC call replaces 4 separate queries (subscriptions, follows, views, likes)
-      // Using type assertion since RPC function is not in generated types yet
-      (supabase as any)
+      supabase
         .rpc('get_user_dashboard_stats', { user_id_param: userId })
-        .single(),
+        .single()
+        .then(
+          (res) => res as { data: DashboardStats | null; error: Error | null },
+        ),
 
-      // Single RPC call replaces 3 separate queries (profile, posts, collectives)
-      // Using type assertion since RPC function is not in generated types yet
-      (supabase as any)
+      supabase
         .rpc('get_user_dashboard_content', {
           user_id_param: userId,
           posts_limit: MAX_RECENT_PERSONAL_POSTS_DISPLAY,
         })
-        .single(),
+        .single()
+        .then(
+          (res) =>
+            res as { data: DashboardContent | null; error: Error | null },
+        ),
     ]);
 
     // Handle potential errors from RPC calls

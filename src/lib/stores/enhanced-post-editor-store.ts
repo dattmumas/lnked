@@ -50,7 +50,7 @@ interface EnhancedPostEditorStore {
   // Backward compatibility helpers
   getLegacyCollectiveId: () => string | undefined;
   setLegacyCollectiveId: (_collectiveId: string | undefined) => void;
-  migrateFromLegacyData: (_legacyData: any) => void;
+  migrateFromLegacyData: (_legacyData: EnhancedPostEditorFormData) => void;
 }
 
 // Default form data with multi-collective support
@@ -274,7 +274,7 @@ export const useEnhancedPostEditorStore = create<EnhancedPostEditorStore>((set, 
       isDirty: true,
     })),
 
-  migrateFromLegacyData: (legacyData) =>
+  migrateFromLegacyData: (legacyData: EnhancedPostEditorFormData) =>
     set((state) => {
       // Convert legacy single collective_id to multi-collective format
       const selectedCollectives = legacyData.collective_id ? [legacyData.collective_id] : [];

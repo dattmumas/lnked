@@ -52,6 +52,13 @@ interface ArticleCardProps {
   className?: string;
 }
 
+// Type for Lexical node structure
+interface LexicalNode {
+  type?: string;
+  text?: string;
+  children?: LexicalNode[];
+}
+
 // Utility function to extract text from Lexical JSON or plain text
 const extractTextFromContent = (
   content: string | null,
@@ -63,7 +70,7 @@ const extractTextFromContent = (
     // Try to parse as Lexical JSON
     const lexicalData = JSON.parse(content);
     if (lexicalData.root && lexicalData.root.children) {
-      const extractText = (node: any): string => {
+      const extractText = (node: LexicalNode): string => {
         if (node.type === 'text') {
           return node.text || '';
         }
@@ -130,7 +137,7 @@ export default function ArticleCard({
             <div className="relative aspect-video overflow-hidden rounded-lg bg-muted group">
               <img
                 src={post.thumbnail_url}
-                alt={`Cover image for ${post.title}`}
+                alt={post.title}
                 className="w-full h-full object-cover transition-transform duration-200 group-hover:scale-105"
               />
             </div>

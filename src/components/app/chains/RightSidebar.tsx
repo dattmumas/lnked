@@ -17,6 +17,8 @@ import {
   Send,
 } from 'lucide-react';
 import Link from 'next/link';
+import type { Tables } from '@/lib/database.types';
+import type { Json } from '@/types/json';
 
 // Types
 interface UserProfile {
@@ -51,6 +53,19 @@ interface ChainItem {
   showReplyForm?: boolean;
 }
 
+// Subset of chains table returned by the sidebar query
+type ChainDBRow = {
+  id: string;
+  author_id: string;
+  content: string;
+  created_at: string;
+  users?: {
+    username: string | null;
+    full_name: string | null;
+    avatar_url: string | null;
+  } | null;
+};
+
 function useChainInteractions(userId: string) {
   const [likedChains, setLikedChains] = useState<Set<string>>(new Set());
   const [replyingTo, setReplyingTo] = useState<string | null>(null);
@@ -68,12 +83,12 @@ function useChainInteractions(userId: string) {
           return newSet;
         });
         await supabase
-          .from('chain_reactions' as any)
+          .from('chain_reactions')
           .delete()
           .match({ user_id: userId, chain_id: chainId, reaction: 'like' });
       } else {
         setLikedChains((prev) => new Set(prev).add(chainId));
-        await supabase.from('chain_reactions' as any).upsert({
+        await supabase.from('chain_reactions').upsert({
           user_id: userId,
           chain_id: chainId,
           reaction: 'like',
@@ -96,7 +111,7 @@ function useChainInteractions(userId: string) {
     if (!replyContent.trim() || isPosting) return;
     setIsPosting(true);
     try {
-      await supabase.from('chains' as any).insert({
+      await supabase.from('chains').insert({
         author_id: userId,
         content: replyContent.trim(),
         parent_chain_id: parentChainId,
@@ -145,7 +160,7 @@ function useChains() {
   const fetchChains = useCallback(async () => {
     try {
       const { data, error } = await supabase
-        .from('chains' as any)
+        .from('chains')
         .select(
           `
           id,
@@ -167,14 +182,16 @@ function useChains() {
         setError(error.message);
         return;
       }
-      const transformedChains: ChainItem[] = (data || []).map((chain: any) => {
-        const user = chain.users || {};
+      const transformedChains: ChainItem[] = (
+        (data as ChainDBRow[] | null) ?? []
+      ).map((chain) => {
+        const user = chain.users;
         return {
           id: chain.id,
           user: {
-            name: user.full_name || user.username || 'Anonymous',
-            username: user.username || 'unknown',
-            avatar_url: user.avatar_url || undefined,
+            name: user?.full_name ?? user?.username ?? 'Anonymous',
+            username: user?.username ?? 'unknown',
+            avatar_url: user?.avatar_url ?? undefined,
           },
           content: chain.content,
           timestamp: new Date(chain.created_at).toLocaleString(),
@@ -220,7 +237,7 @@ function ChainPostForm({
     setIsPosting(true);
     try {
       const { data, error } = await supabase
-        .from('chains' as any)
+        .from('chains')
         .insert({
           author_id: user.id,
           content: content.trim(),
@@ -233,6 +250,7 @@ function ChainPostForm({
       setContent('');
       if (onPostSuccess) onPostSuccess();
     } catch (error) {
+      console.error('Error posting chain:', error);
     } finally {
       setIsPosting(false);
     }

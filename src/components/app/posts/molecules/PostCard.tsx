@@ -1,5 +1,6 @@
 import ArticleCard from './ArticleCard';
 import VideoCard from './VideoCard';
+import type { Json } from '@/types/json';
 
 interface Author {
   id: string;
@@ -33,7 +34,7 @@ interface UnifiedPost {
   slug?: string | null;
   created_at: string;
   post_type: 'text' | 'video';
-  metadata?: any; // JSON metadata for video posts
+  metadata?: Record<string, unknown> | null; // JSON metadata for video posts
   author: Author;
   collective?: Collective | null;
 }
@@ -71,7 +72,7 @@ export default function PostCard({
   if (post.post_type === 'video') {
     return (
       <VideoCard
-        post={post}
+        post={post as Parameters<typeof VideoCard>[0]['post']}
         interactions={interactions}
         onToggleLike={onToggleLike}
         onToggleDislike={onToggleDislike}

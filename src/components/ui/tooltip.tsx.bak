@@ -5,21 +5,17 @@ import * as TooltipPrimitive from '@radix-ui/react-tooltip';
 
 import { cn } from '@/lib/utils';
 
-// Type assertion to work around React 19 compatibility
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const TooltipPrimitiveTyped = TooltipPrimitive as any;
+const TooltipProvider = TooltipPrimitive.Provider;
 
-const TooltipProvider = TooltipPrimitiveTyped.Provider;
+const Tooltip = TooltipPrimitive.Root;
 
-const Tooltip = TooltipPrimitiveTyped.Root;
-
-const TooltipTrigger = TooltipPrimitiveTyped.Trigger;
+const TooltipTrigger = TooltipPrimitive.Trigger;
 
 const TooltipContent = React.forwardRef<
-  React.ElementRef<typeof TooltipPrimitiveTyped.Content>,
-  React.ComponentPropsWithoutRef<typeof TooltipPrimitiveTyped.Content>
+  React.ElementRef<typeof TooltipPrimitive.Content>,
+  React.ComponentPropsWithoutRef<typeof TooltipPrimitive.Content>
 >(({ className, sideOffset = 4, ...props }, ref) => (
-  <TooltipPrimitiveTyped.Content
+  <TooltipPrimitive.Content
     ref={ref}
     sideOffset={sideOffset}
     className={cn(
@@ -29,6 +25,6 @@ const TooltipContent = React.forwardRef<
     {...props}
   />
 ));
-TooltipContent.displayName = TooltipPrimitiveTyped.Content.displayName;
+TooltipContent.displayName = TooltipPrimitive.Content.displayName;
 
 export { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider };

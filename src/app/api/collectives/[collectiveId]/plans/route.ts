@@ -13,8 +13,10 @@ interface PlanRequestBody {
   description?: string;
 }
 
- 
-export async function POST(req: Request, context: any) {
+export async function POST(
+  req: Request,
+  context: { params: { collectiveId: string } },
+) {
   const {collectiveId} = context.params;
   if (!collectiveId) {
     return NextResponse.json(

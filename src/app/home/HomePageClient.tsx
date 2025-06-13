@@ -26,10 +26,15 @@ import {
   MoreHorizontal,
   Video,
   Edit,
+  Plus,
+  FileText,
+  X,
 } from 'lucide-react';
-import Link from 'next/link';
+import type { Json } from '@/types/json';
 import { cn } from '@/lib/utils';
 import PostCard from '@/components/app/posts/molecules/PostCard';
+import type { Tables } from '@/lib/database.types';
+import Link from 'next/link';
 
 interface UserProfile {
   id: string;
@@ -44,6 +49,38 @@ interface HomePageClientProps {
   profile: UserProfile | null;
 }
 
+// Narrow types returned by the SELECT clauses below
+type ChainQueryRow = {
+  id: string;
+  content: string;
+  created_at: string;
+  users?: {
+    username: string | null;
+    full_name: string | null;
+    avatar_url: string | null;
+  } | null;
+};
+
+type PostQueryRow = {
+  id: string;
+  title: string;
+  content: string | null;
+  created_at: string;
+  published_at: string | null;
+  post_type: 'text' | 'video';
+  thumbnail_url: string | null;
+  metadata: Record<string, unknown> | null;
+  users?: {
+    username: string | null;
+    full_name: string | null;
+    avatar_url: string | null;
+  } | null;
+  collectives?: {
+    name: string | null;
+    slug: string | null;
+  } | null;
+};
+
 // Database interfaces for real data
 interface DatabaseChain {
   id: string;
@@ -52,7 +89,7 @@ interface DatabaseChain {
   type: 'post' | 'reply' | 'share';
   created_at: string;
   parent_id?: string;
-  metadata?: any;
+  metadata?: Json | null;
   // User data from join
   users?: {
     username: string | null;
@@ -71,7 +108,7 @@ interface DatabasePost {
   published_at?: string;
   type: string;
   thumbnail_url?: string;
-  metadata?: any;
+  metadata?: Json | null;
   // User data from join
   users?: {
     username: string | null;
@@ -361,17 +398,14 @@ function useChainInteractions(userId: string) {
           newSet.delete(chainId);
           return newSet;
         });
-        await supabase
-          .from('chain_reactions' as any)
-          .delete()
-          .match({
-            user_id: userId,
-            chain_id: chainId,
-            reaction: 'like',
-          });
+        await supabase.from('chain_reactions').delete().match({
+          user_id: userId,
+          chain_id: chainId,
+          reaction: 'like',
+        });
       } else {
         setLikedChains((prev) => new Set(prev).add(chainId));
-        await supabase.from('chain_reactions' as any).upsert({
+        await supabase.from('chain_reactions').upsert({
           user_id: userId,
           chain_id: chainId,
           reaction: 'like',
@@ -397,7 +431,7 @@ function useChainInteractions(userId: string) {
 
     setIsPosting(true);
     try {
-      await supabase.from('chains' as any).insert({
+      await supabase.from('chains').insert({
         author_id: userId,
         content: replyContent.trim(),
         parent_chain_id: parentChainId,
@@ -450,7 +484,7 @@ function useChains() {
   const fetchChains = useCallback(async () => {
     try {
       const { data, error } = await supabase
-        .from('chains' as any)
+        .from('chains')
         .select(
           `
           id,
@@ -475,8 +509,14 @@ function useChains() {
         return;
       }
 
-      const transformedChains: ChainItem[] = (data || []).map((chain: any) => {
-        const user = chain.users || {};
+      const transformedChains: ChainItem[] = (
+        (data ?? []) as unknown as ChainQueryRow[]
+      ).map((chain) => {
+        const user = (chain.users ?? {
+          username: null,
+          full_name: null,
+          avatar_url: null,
+        }) as NonNullable<ChainQueryRow['users']>;
         return {
           id: chain.id,
           user: {
@@ -516,7 +556,7 @@ function useChains() {
     const channel = supabase
       .channel('chains')
       .on(
-        'postgres_changes' as any,
+        'postgres_changes',
         {
           event: '*',
           schema: 'public',
@@ -597,7 +637,10 @@ function useFeed() {
         .in('post_id', postIds);
 
       // Get user interactions if user is logged in
-      let userInteractions: { reactions: any[]; bookmarks: any[] } = {
+      let userInteractions: {
+        reactions: Array<{ post_id: string; type: string }>;
+        bookmarks: Array<{ post_id: string }>;
+      } = {
         reactions: [],
         bookmarks: [],
       };
@@ -620,40 +663,61 @@ function useFeed() {
         };
       }
 
-      const transformedFeed: FeedItem[] = (data || []).map((post: any) => {
-        const user = post.users || {};
-        const collective = post.collectives || {};
+      const transformedFeed: FeedItem[] = (
+        (data ?? []) as unknown as PostQueryRow[]
+      ).map((post) => {
+        const user = (post.users ?? {
+          username: null,
+          full_name: null,
+          avatar_url: null,
+        }) as NonNullable<PostQueryRow['users']>;
+        const collective = (post.collectives ?? {
+          name: null,
+          slug: null,
+        }) as NonNullable<PostQueryRow['collectives']>;
 
         // Calculate like and dislike counts
         const postReactions = (reactionCounts || []).filter(
-          (r: any) => r.post_id === post.id,
+          (r) => r?.post_id === post.id,
         );
-        const likeCount = postReactions.filter(
-          (r: any) => r.type === 'like',
-        ).length;
+        const likeCount = postReactions.filter((r) => r.type === 'like').length;
         const dislikeCount = postReactions.filter(
-          (r: any) => r.type === 'dislike',
+          (r) => r.type === 'dislike',
         ).length;
 
         // Check user interactions
-        const userReactionsList = userInteractions.reactions || [];
-        const userBookmarksList = userInteractions.bookmarks || [];
+        const userReactionsList = userInteractions.reactions as {
+          post_id: string;
+          type: string;
+        }[];
+        const userBookmarksList = userInteractions.bookmarks as {
+          post_id: string;
+        }[];
 
         const userLiked = userReactionsList.some(
-          (r: any) => r.post_id === post.id && r.type === 'like',
+          (r) => r.post_id === post.id && r.type === 'like',
         );
         const userDisliked = userReactionsList.some(
-          (r: any) => r.post_id === post.id && r.type === 'dislike',
+          (r) => r.post_id === post.id && r.type === 'dislike',
         );
         const userBookmarked = userBookmarksList.some(
-          (b: any) => b.post_id === post.id,
+          (b) => b.post_id === post.id,
         );
 
         // Determine if this is a video post based on post_type or metadata
+        const meta = (post.metadata ?? {}) as {
+          type?: string;
+          duration?: number;
+        };
         const isVideo =
           post.post_type === 'video' ||
-          post.metadata?.type === 'video' ||
-          post.metadata?.duration;
+          meta.type === 'video' ||
+          meta.duration !== undefined;
+
+        const duration: string | undefined =
+          typeof meta.duration === 'number'
+            ? meta.duration.toString()
+            : undefined;
 
         return {
           id: post.id,
@@ -669,7 +733,7 @@ function useFeed() {
           stats: {
             likes: likeCount,
             dislikes: dislikeCount,
-            comments: 0, // TODO: Add actual comment counts when available
+
             views: undefined, // TODO: Add actual view counts when available
           },
           userInteraction: {
@@ -678,13 +742,14 @@ function useFeed() {
             bookmarked: userBookmarked,
           },
           thumbnail_url: post.thumbnail_url || undefined,
-          duration: post.metadata?.duration || undefined,
-          collective: collective.name
-            ? {
-                name: collective.name,
-                slug: collective.slug,
-              }
-            : undefined,
+          duration,
+          collective:
+            collective.slug !== null
+              ? {
+                  name: collective.name ?? '',
+                  slug: collective.slug,
+                }
+              : undefined,
         };
       });
 
@@ -734,19 +799,18 @@ function extractTextFromLexical(content: string | null): string {
       const parsed = JSON.parse(content);
 
       // Recursively extract text from Lexical nodes
-      function extractText(node: any): string {
-        if (!node) return '';
-
-        // If it's a text node, return the text
-        if (node.text) {
-          return node.text;
+      function extractText(node: unknown): string {
+        const n = node as {
+          type?: string;
+          text?: string;
+          children?: unknown[];
+        };
+        if (n.type === 'text') {
+          return n.text ?? '';
         }
-
-        // If it has children, recursively extract text from them
-        if (node.children && Array.isArray(node.children)) {
-          return node.children.map(extractText).join(' ');
+        if (Array.isArray(n.children)) {
+          return n.children.map(extractText).join('');
         }
-
         return '';
       }
 
@@ -928,7 +992,7 @@ function ChainPostForm({
     setIsPosting(true);
     try {
       const { data, error } = await supabase
-        .from('chains' as any)
+        .from('chains')
         .insert({
           author_id: user.id,
           content: content.trim(),
@@ -1260,8 +1324,8 @@ function FloatingCreateButton() {
   };
 
   return (
-    <div className="fixed bottom-6 right-6 lg:hidden z-50">
-      {/* Overlay to close on outside click */}
+    <div className="fixed bottom-6 right-6 z-50 lg:hidden">
+      {/* Backdrop for expanded state */}
       {isExpanded && (
         <div
           className="fixed inset-0 bg-black/20 backdrop-blur-sm"
@@ -1269,49 +1333,44 @@ function FloatingCreateButton() {
         />
       )}
 
-      {/* Action Buttons (shown when expanded) */}
-      <div
-        className={cn(
-          'absolute bottom-16 right-0 space-y-3 transition-all duration-300 ease-out',
-          isExpanded
-            ? 'opacity-100 translate-y-0 pointer-events-auto'
-            : 'opacity-0 translate-y-4 pointer-events-none',
+      {/* Floating button container */}
+      <div className="relative">
+        {/* Expanded options */}
+        {isExpanded && (
+          <div className="absolute bottom-16 right-0 space-y-3 mb-3">
+            <Link
+              href="/videos/upload"
+              className="flex items-center gap-3 px-4 py-3 bg-background border border-border rounded-full shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 whitespace-nowrap"
+            >
+              <Video className="w-5 h-5 text-blue-500" />
+              <span className="text-sm font-medium">Upload Video</span>
+            </Link>
+            <Link
+              href="/posts/new"
+              className="flex items-center gap-3 px-4 py-3 bg-background border border-border rounded-full shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 whitespace-nowrap"
+            >
+              <FileText className="w-5 h-5 text-green-500" />
+              <span className="text-sm font-medium">Write Post</span>
+            </Link>
+          </div>
         )}
-      >
-        {/* Video Upload Button */}
-        <Link
-          href="/videos/upload"
-          className="flex items-center gap-3 bg-purple-600 hover:bg-purple-700 text-white px-4 py-3 rounded-full shadow-lg transition-all duration-200 hover:scale-105"
-          onClick={() => setIsExpanded(false)}
-        >
-          <Video className="w-5 h-5" />
-          <span className="text-sm font-medium">Upload Video</span>
-        </Link>
 
-        {/* New Post Button */}
-        <Link
-          href="/posts/new"
-          className="flex items-center gap-3 bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-full shadow-lg transition-all duration-200 hover:scale-105"
-          onClick={() => setIsExpanded(false)}
+        {/* Main floating button */}
+        <Button
+          size="lg"
+          className={cn(
+            'rounded-full w-14 h-14 shadow-lg hover:shadow-xl transition-all duration-200',
+            isExpanded && 'rotate-45',
+          )}
+          onClick={toggleExpanded}
         >
-          <Edit className="w-5 h-5" />
-          <span className="text-sm font-medium">New Post</span>
-        </Link>
+          {isExpanded ? (
+            <X className="w-6 h-6" />
+          ) : (
+            <Plus className="w-6 h-6" />
+          )}
+        </Button>
       </div>
-
-      {/* Main FAB Button */}
-      <Button
-        size="lg"
-        onClick={toggleExpanded}
-        className={cn(
-          'relative rounded-full shadow-lg transition-all duration-300 w-14 h-14',
-          isExpanded
-            ? 'bg-gray-600 hover:bg-gray-700 rotate-45'
-            : 'bg-blue-600 hover:bg-blue-700',
-        )}
-      >
-        <PlusCircle className="w-6 h-6" />
-      </Button>
     </div>
   );
 }

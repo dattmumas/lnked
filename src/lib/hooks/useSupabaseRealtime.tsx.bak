@@ -17,7 +17,7 @@ export function useSupabaseRealtime<T = unknown>(
     old?: T;
   }) => void,
   filter?: { column: string; value: string | number },
-): void {
+) {
   useEffect(() => {
     const supabase = createSupabaseBrowserClient();
     let channel: RealtimeChannel = supabase.channel(`realtime:${table}`);
@@ -27,8 +27,7 @@ export function useSupabaseRealtime<T = unknown>(
       channel = supabase.channel(filterStr);
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (channel as any)
+    channel
       .on(
         'postgres_changes',
         {

@@ -2,7 +2,6 @@
 
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
-import { isValidReactionType } from "@/lib/utils/reactionHelpers";
 import { ReactionType } from '@/types/comments-v2';
 import type { TablesInsert } from '@/types/database.types';
 
@@ -98,7 +97,7 @@ export async function toggleCommentReaction(
 
         const { error: insertError } = await supabase
           .from('comment_reactions')
-          .insert(payload as any);
+          .insert(payload);
 
         if (insertError) {
           console.error("Error adding new comment reaction:", insertError);
@@ -116,7 +115,7 @@ export async function toggleCommentReaction(
 
       const { error: insertError } = await supabase
         .from('comment_reactions')
-        .insert(payload2 as any);
+        .insert(payload2);
 
       if (insertError) {
         console.error("Error adding comment reaction:", insertError);

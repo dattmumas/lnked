@@ -61,7 +61,7 @@ export async function PATCH(
 
     console.log('PATCH /api/videos/[id] - Existing video found:', existingVideo);
 
-    const updateData: any = {};
+    const updateData: Record<string, unknown> = {};
     const has = (key: string) => Object.prototype.hasOwnProperty.call(body, key);
 
     // Core metadata fields
@@ -228,12 +228,12 @@ export async function DELETE(
         try {
           await mux.video.uploads.cancel(videoAsset.mux_upload_id);
           console.info('Cancelled MUX upload:', videoAsset.mux_upload_id);
-        } catch (muxError: any) {
-          // It's safe to ignore a 400 error here, which Mux sends if the upload is already complete or cancelled
-          if (muxError?.status !== 400) {
-            throw muxError; // Re-throw if it's not the expected error
+        } catch (muxError: unknown) {
+          const typedError = muxError as { status?: number; error?: { messages?: string[] } };
+          if (typedError?.status !== 400) {
+            throw muxError;
           }
-          console.warn('Mux upload cancellation failed (likely already complete):', muxError.error?.messages);
+          console.warn('Mux upload cancellation failed (likely already complete):', typedError.error?.messages);
         }
     }
 
@@ -258,13 +258,14 @@ export async function DELETE(
         success: true,
         message: 'Video deleted successfully',
       });
-    } catch (muxError: any) {
+    } catch (muxError: unknown) {
+      const typedError = muxError as { message?: string; error?: Record<string, unknown> };
       console.error('MUX deletion error:', muxError);
       // Return a specific error if MUX fails
       return NextResponse.json(
         {
-          error: `Failed to delete MUX asset: ${muxError.message || 'Unknown MUX error'}`,
-          details: muxError.error
+          error: `Failed to delete MUX asset: ${typedError.message || 'Unknown MUX error'}`,
+          details: typedError.error
         },
         { status: 500 }
       );

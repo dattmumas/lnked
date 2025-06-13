@@ -1,4 +1,5 @@
 import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
+import type { Database } from '@/lib/database.types';
 import { 
   PostCollectiveError
 } from '@/types/enhanced-database.types';
@@ -42,6 +43,9 @@ export interface PostCollectiveAnalytics {
     collectives_used: number;
   }>;
 }
+
+// Supabase row helper for post_collectives
+type DBPostCollectiveRow = Database['public']['Tables']['post_collectives']['Row'];
 
 /**
  * Service for auditing and monitoring post-collective operations
@@ -151,7 +155,7 @@ export class PostCollectiveAuditService {
   async getPostAuditLog(postId: string): Promise<PostCollectiveAuditEntry[]> {
     try {
       const { data: auditEntries, error } = await this.supabase
-        .from('post_collective_audit_log' as any)
+        .from('post_collective_audit_log' as unknown as never)
         .select('*')
         .eq('post_id', postId)
         .order('performed_at', { ascending: false });
@@ -174,7 +178,7 @@ export class PostCollectiveAuditService {
   async getCollectiveAuditLog(collectiveId: string): Promise<PostCollectiveAuditEntry[]> {
     try {
       const { data: auditEntries, error } = await this.supabase
-        .from('post_collective_audit_log' as any)
+        .from('post_collective_audit_log' as unknown as never)
         .select('*')
         .eq('collective_id', collectiveId)
         .order('performed_at', { ascending: false })
@@ -242,12 +246,12 @@ export class PostCollectiveAuditService {
       // Note: These queries will work once the post_collectives table exists
       const [multiCollectivePostsResult, collectivePopularityResult] = await Promise.allSettled([
         this.supabase
-          .from('post_collectives' as any)
+          .from('post_collectives')
           .select('post_id')
           .not('post_id', 'is', null),
         
         this.supabase
-          .from('post_collectives' as any)
+          .from('post_collectives')
           .select(`
             collective_id,
             collectives!inner(name)
@@ -264,8 +268,8 @@ export class PostCollectiveAuditService {
 
       // Process multi-collective posts data
       if (multiCollectivePostsResult.status === 'fulfilled' && multiCollectivePostsResult.value.data) {
-        const postCollectiveData = multiCollectivePostsResult.value.data;
-        const uniquePosts = new Set(postCollectiveData.map((pc: any) => pc.post_id));
+        const postCollectiveData = multiCollectivePostsResult.value.data as unknown as DBPostCollectiveRow[];
+        const uniquePosts = new Set(postCollectiveData.map((pc) => pc.post_id));
         analytics.total_multi_collective_posts = uniquePosts.size;
         analytics.avg_collectives_per_post = uniquePosts.size > 0 
           ? Math.round((postCollectiveData.length / uniquePosts.size) * 100) / 100 
@@ -274,10 +278,10 @@ export class PostCollectiveAuditService {
 
       // Process collective popularity data
       if (collectivePopularityResult.status === 'fulfilled' && collectivePopularityResult.value.data) {
-        const collectiveData = collectivePopularityResult.value.data;
+        const collectiveData = collectivePopularityResult.value.data as unknown as (DBPostCollectiveRow & { collectives?: { name?: string } })[];
         const collectiveCounts = new Map<string, { name: string; count: number }>();
 
-        collectiveData.forEach((pc: any) => {
+        collectiveData.forEach((pc) => {
           const existing = collectiveCounts.get(pc.collective_id);
           if (existing) {
             existing.count++;
@@ -352,7 +356,7 @@ export class PostCollectiveAuditService {
   /**
    * Store log entry in local storage for offline access
    */
-  private storeLocalLog(logEntry: any): void {
+  private storeLocalLog(logEntry: unknown): void {
     if (typeof window === 'undefined') return;
 
     try {
@@ -374,7 +378,7 @@ export class PostCollectiveAuditService {
   /**
    * Get local log entries
    */
-  getLocalLogs(): any[] {
+  getLocalLogs(): unknown[] {
     if (typeof window === 'undefined') return [];
 
     try {

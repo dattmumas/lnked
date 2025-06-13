@@ -1,20 +1,16 @@
 'use client';
 
 import * as React from 'react';
-import * as DropdownMenuPrimitive from '@radix-ui/react-dropdown-menu';
+import {
+  Root as DropdownMenu,
+  Trigger as DropdownMenuTrigger,
+  Portal as DropdownMenuPortal,
+  Content as DropdownMenuPrimitiveContent,
+  Item as DropdownMenuPrimitiveItem,
+  Separator as DropdownMenuPrimitiveSeparator,
+} from '@radix-ui/react-dropdown-menu';
 
 import { cn } from '@/lib/utils';
-
-// Type assertion to work around React 19 compatibility
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const DropdownMenuPrimitiveTyped = DropdownMenuPrimitive as any;
-
-const DropdownMenu = DropdownMenuPrimitiveTyped.Root;
-const DropdownMenuTrigger = DropdownMenuPrimitiveTyped.Trigger;
-const DropdownMenuPortal = DropdownMenuPrimitiveTyped.Portal;
-const DropdownMenuPrimitiveContent = DropdownMenuPrimitiveTyped.Content;
-const DropdownMenuPrimitiveItem = DropdownMenuPrimitiveTyped.Item;
-const DropdownMenuPrimitiveSeparator = DropdownMenuPrimitiveTyped.Separator;
 
 const DropdownMenuContent = React.forwardRef<
   React.ElementRef<typeof DropdownMenuPrimitiveContent>,

@@ -2,10 +2,15 @@ import { useEffect, useState } from 'react';
 import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
 import { User } from '@supabase/supabase-js';
 
+interface UseUserResult {
+  user: User | null;
+  loading: boolean;
+}
+
 // Shared client-side user hook for consistent authentication across the app
-export const useUser = () => {
+export const useUser = (): UseUserResult => {
   const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
     const supabase = createSupabaseBrowserClient();

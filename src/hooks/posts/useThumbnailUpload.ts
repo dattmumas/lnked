@@ -48,13 +48,12 @@ export function useThumbnailUpload({
       body: formData,
     });
 
-    const result = await response.json();
+    const result: { success: boolean; thumbnailUrl?: string; error?: string } = await response.json();
 
-    if (result.success) {
+    if (result.success && result.thumbnailUrl) {
       return result.thumbnailUrl;
-    } else {
-      throw new Error(result.error || 'Upload failed');
     }
+    throw new Error(result.error || 'Upload failed');
   };
 
   // Process and upload thumbnail
@@ -113,7 +112,7 @@ export function useThumbnailUpload({
         setIsUploading(false);
       }
     },
-    [postId, onUploadSuccess, onUploadError]
+    [postId, onUploadSuccess, onUploadError, uploadThumbnailFile]
   );
 
   // Drag and drop handlers

@@ -4,7 +4,7 @@ import { useState, useCallback } from 'react';
 import { VideoFormData } from './useVideoFormState';
 
 // Helper function to normalize video asset data from database to expected format
-const normalizeVideoAsset = (asset: any): VideoAsset => {
+const normalizeVideoAsset = (asset: VideoAsset): VideoAsset => {
   return {
     ...asset,
     // Provide sensible defaults for form fields that don't exist in database

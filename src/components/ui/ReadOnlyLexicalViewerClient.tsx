@@ -176,7 +176,21 @@ export function ReadOnlyLexicalViewerClient({
     return validateLexicalJSON(contentJSON);
   }, [contentJSON]);
 
-  // If content is not valid Lexical JSON, show fallback
+  const initialConfig = React.useMemo(
+    () => ({
+      namespace: 'Playground',
+      theme: PlaygroundEditorTheme,
+      nodes: [...PlaygroundNodes],
+      editorState: validatedJSON ?? undefined,
+      editable: false,
+      readOnly: true,
+      onError(error: Error) {
+        console.error('Lexical editor error:', error);
+      },
+    }),
+    [validatedJSON],
+  );
+
   if (!validatedJSON) {
     if (!contentJSON || !contentJSON.trim()) {
       return (
@@ -187,21 +201,6 @@ export function ReadOnlyLexicalViewerClient({
     }
     return <InvalidContentFallback content={contentJSON} />;
   }
-
-  const initialConfig = React.useMemo(
-    () => ({
-      namespace: 'Playground',
-      theme: PlaygroundEditorTheme,
-      nodes: [...PlaygroundNodes],
-      editorState: validatedJSON,
-      editable: false,
-      readOnly: true,
-      onError(error: Error) {
-        console.error('Lexical editor error:', error);
-      },
-    }),
-    [validatedJSON],
-  );
 
   return (
     <div className="lexical-playground">

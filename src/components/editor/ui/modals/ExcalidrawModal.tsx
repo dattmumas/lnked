@@ -79,6 +79,25 @@ export const useCallbackRefState = () => {
   return [refValue, refCallback] as const;
 };
 
+function DiscardModal({
+  onClose,
+  onDiscard,
+}: {
+  onClose: () => void;
+  onDiscard: () => void;
+}) {
+  return (
+    // eslint-disable-next-line react/no-unstable-nested-components
+    <Modal title="Discard" onClose={onClose} closeOnClickOutside={false}>
+      Are you sure you want to discard the changes?
+      <div className="ExcalidrawModal__discardModal">
+        <Button onClick={onDiscard}>Discard</Button>{' '}
+        <Button onClick={onClose}>Cancel</Button>
+      </div>
+    </Modal>
+  );
+}
+
 /**
  * @explorer-desc
  * A component which renders a modal with Excalidraw (a painting app)
@@ -111,7 +130,7 @@ export default function ExcalidrawModal({
     let modalOverlayElement: HTMLElement | null = null;
 
     const clickOutsideHandler = (event: MouseEvent) => {
-      const {target} = event;
+      const { target } = event;
       if (
         excaliDrawModelRef.current !== null &&
         isDOMNode(target) &&
@@ -184,37 +203,6 @@ export default function ExcalidrawModal({
     setDiscardModalOpen(true);
   };
 
-  function ShowDiscardDialog(): JSX.Element {
-    return (
-      <Modal
-        title="Discard"
-        onClose={() => {
-          setDiscardModalOpen(false);
-        }}
-        closeOnClickOutside={false}
-      >
-        Are you sure you want to discard the changes?
-        <div className="ExcalidrawModal__discardModal">
-          <Button
-            onClick={() => {
-              setDiscardModalOpen(false);
-              onClose();
-            }}
-          >
-            Discard
-          </Button>{' '}
-          <Button
-            onClick={() => {
-              setDiscardModalOpen(false);
-            }}
-          >
-            Cancel
-          </Button>
-        </div>
-      </Modal>
-    );
-  }
-
   if (isShown === false) {
     return null;
   }
@@ -236,7 +224,15 @@ export default function ExcalidrawModal({
         tabIndex={-1}
       >
         <div className="ExcalidrawModal__row">
-          {discardModalOpen && <ShowDiscardDialog />}
+          {discardModalOpen && (
+            <DiscardModal
+              onClose={() => setDiscardModalOpen(false)}
+              onDiscard={() => {
+                setDiscardModalOpen(false);
+                onClose();
+              }}
+            />
+          )}
           <Excalidraw
             onChange={onChange}
             excalidrawAPI={excalidrawAPIRefCallback}

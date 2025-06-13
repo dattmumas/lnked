@@ -1,9 +1,9 @@
 import Stripe from 'stripe';
 
-let _stripe: Stripe | null = null;
+let stripeClient: Stripe | null = null;
 
 export function getStripe(): Stripe | null {
-  if (_stripe !== null) return _stripe; // cached
+  if (stripeClient !== null) return stripeClient; // cached
 
   const key = process.env.STRIPE_SECRET_KEY;
   if (!key) {
@@ -11,11 +11,11 @@ export function getStripe(): Stripe | null {
     return null;
   }
 
-  _stripe = new Stripe(key, {
+  stripeClient = new Stripe(key, {
     apiVersion: '2025-05-28.basil',
     typescript: true,
   });
-  return _stripe;
+  return stripeClient;
 }
 
 /**

@@ -7,6 +7,7 @@ import {
   useCollectiveData,
   useCollectiveMembers,
 } from '@/hooks/collectives/useCollectiveData';
+import type { Database } from '@/lib/database.types';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import {
@@ -19,6 +20,16 @@ import {
 interface AuthorCarouselProps {
   collectiveSlug: string;
 }
+
+type CollectiveMember =
+  Database['public']['Tables']['collective_members']['Row'] & {
+    user: {
+      full_name: string | null;
+      avatar_url: string | null;
+      bio: string | null;
+      username: string | null;
+    } | null;
+  };
 
 export function AuthorCarousel({ collectiveSlug }: AuthorCarouselProps) {
   const { data: collective } = useCollectiveData(collectiveSlug);
@@ -108,11 +119,11 @@ export function AuthorCarousel({ collectiveSlug }: AuthorCarouselProps) {
           style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
         >
           <TooltipProvider>
-            {displayMembers.map((member: any) => (
+            {displayMembers.map((member: CollectiveMember) => (
               <Tooltip key={member.id}>
                 <TooltipTrigger asChild>
                   <Link
-                    href={`/profile/${member.user?.username || '#'}`}
+                    href={`/profile/${member.user?.username ?? '#'}`}
                     className="flex-shrink-0 group"
                   >
                     <div className="author-chip text-center">
@@ -121,7 +132,7 @@ export function AuthorCarousel({ collectiveSlug }: AuthorCarouselProps) {
                         {member.user?.avatar_url ? (
                           <Image
                             src={member.user.avatar_url}
-                            alt={member.user.full_name || 'Author'}
+                            alt={member.user.full_name ?? 'Author'}
                             width={48}
                             height={48}
                             className="w-full h-full object-cover"
@@ -129,7 +140,7 @@ export function AuthorCarousel({ collectiveSlug }: AuthorCarouselProps) {
                         ) : (
                           <div className="w-full h-full bg-muted flex items-center justify-center">
                             <span className="text-lg">
-                              {member.user?.full_name?.charAt(0) || '?'}
+                              {member.user?.full_name?.charAt(0) ?? '?'}
                             </span>
                           </div>
                         )}
@@ -137,7 +148,7 @@ export function AuthorCarousel({ collectiveSlug }: AuthorCarouselProps) {
 
                       {/* Name */}
                       <p className="text-xs mt-2 max-w-[4rem] truncate group-hover:text-accent transition-colors">
-                        {member.user?.full_name || 'Unknown'}
+                        {member.user?.full_name ?? 'Unknown'}
                       </p>
                     </div>
                   </Link>

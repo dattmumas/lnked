@@ -93,13 +93,16 @@ export class CommentsV2Service {
       throw new Error(`Failed to fetch comments: ${error.message || error.details || JSON.stringify(error)}`);
     }
 
+    type ThreadRow = { comment_data: CommentWithAuthor & { author?: unknown; user?: unknown } };
+
     return (
-      data?.map((row: any) => {
+      (data as ThreadRow[] | null)?.map((row) => {
         const comment = row.comment_data;
-        if (comment && comment.author) {
-          comment.user = comment.author; // backward compatibility
+        if (comment && (comment as { author?: unknown }).author) {
+          // Preserve legacy field name for consumer components
+          (comment as { user?: unknown }).user = (comment as { author?: unknown }).author;
         }
-        return comment;
+        return comment as CommentWithAuthor;
       }) || []
     );
   }
@@ -121,7 +124,8 @@ export class CommentsV2Service {
       throw new Error(`Failed to fetch replies: ${error.message || JSON.stringify(error)}`);
     }
 
-    return data?.map((row: any) => row.comment_data) || [];
+    type ReplyRow = { comment_data: CommentWithAuthor };
+    return (data as ReplyRow[] | null)?.map((row) => row.comment_data) || [];
   }
 
   async addComment(
@@ -147,7 +151,7 @@ export class CommentsV2Service {
     }
 
     if (!data) return null;
-    const commentId = (data as any)?.[0]?.comment_id;
+    const commentId = (data as Array<{ comment_id: string }> | null)?.[0]?.comment_id;
     if (!commentId) return null;
 
     const { data: newComment, error: fetchError } = await this.supabase
@@ -161,10 +165,15 @@ export class CommentsV2Service {
       return null;
     }
 
-    if (newComment && (newComment as any).author) {
-      (newComment as any).user = (newComment as any).author;
+    if (
+      newComment &&
+      (newComment as { author?: unknown }).author !== undefined
+    ) {
+      (newComment as { user?: unknown }).user = (newComment as {
+        author?: unknown;
+      }).author;
     }
-    return newComment as unknown as CommentWithAuthor;
+    return newComment as CommentWithAuthor | null;
   }
 
   async toggleReaction(

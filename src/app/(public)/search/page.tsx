@@ -15,11 +15,19 @@ export default async function Page({
   const { q: queryParam } = await searchParams;
   const q = queryParam?.trim();
 
-  type PostRow = Database['public']['Tables']['posts']['Row'];
-  type PostResult = PostRow & {
-    collective_slug?: string | null;
-    like_count?: number | null;
-    dislike_count?: number | null;
+  type PostCardData = {
+    id: string;
+    title: string;
+    content: string | null;
+    meta_description: string | null;
+    thumbnail_url: string | null;
+    slug?: string | null;
+    created_at: string;
+    post_type: Database['public']['Enums']['post_type_enum'];
+    metadata: Record<string, unknown> | null;
+    like_count: number;
+    dislike_count: number;
+    collective_slug: string | null;
     current_user_has_liked?: boolean;
     author: {
       id: string;
@@ -27,7 +35,7 @@ export default async function Page({
       full_name: string | null;
       avatar_url: string | null;
     };
-    collective?: {
+    collective: {
       id: string;
       name: string;
       slug: string;
@@ -36,7 +44,7 @@ export default async function Page({
 
   type UserResult = Pick<
     Database['public']['Tables']['users']['Row'],
-    'id' | 'full_name' | 'bio' | 'avatar_url'
+    'id' | 'full_name' | 'bio' | 'avatar_url' | 'username'
   >;
 
   type CollectiveResult = Pick<
@@ -44,7 +52,32 @@ export default async function Page({
     'id' | 'name' | 'slug' | 'description' | 'tags'
   >;
 
-  let posts: PostResult[] = [];
+  type PostQueryRow = {
+    id: string;
+    title: string;
+    content: string | null;
+    meta_description: string | null;
+    thumbnail_url: string | null;
+    slug?: string | null;
+    created_at: string;
+    post_type: Database['public']['Enums']['post_type_enum'];
+    metadata: Record<string, unknown> | null;
+    like_count?: number | null;
+    dislike_count?: number | null;
+    author?: {
+      id: string;
+      username: string | null;
+      full_name: string | null;
+      avatar_url: string | null;
+    } | null;
+    collective?: {
+      id: string;
+      name: string;
+      slug: string;
+    } | null;
+  };
+
+  let posts: PostCardData[] = [];
   let users: UserResult[] = [];
   let collectives: CollectiveResult[] = [];
 
@@ -75,8 +108,16 @@ export default async function Page({
       .limit(20);
 
     posts =
-      (postsData as any[])?.map((p) => ({
-        ...p,
+      (postsData as PostQueryRow[] | null)?.map((p) => ({
+        id: p.id,
+        title: p.title,
+        content: p.content,
+        meta_description: p.meta_description,
+        thumbnail_url: p.thumbnail_url,
+        slug: (p as { slug?: string }).slug ?? null,
+        created_at: p.created_at,
+        post_type: p.post_type,
+        metadata: p.metadata,
         like_count: p.like_count ?? 0,
         dislike_count: p.dislike_count ?? 0,
         collective_slug: p.collective?.slug ?? null,
@@ -103,7 +144,7 @@ export default async function Page({
       .or(`username.ilike.%${q}%,full_name.ilike.%${q}%,bio.ilike.%${q}%`)
       .limit(20);
 
-    users = (usersData as (UserResult & { username?: string })[] | null) || [];
+    users = (usersData as UserResult[] | null) || [];
 
     // Search collectives using ilike for name and description
     const { data: collectivesData } = await supabase
@@ -151,7 +192,7 @@ export default async function Page({
                   content: post.content,
                   meta_description: post.meta_description,
                   thumbnail_url: post.thumbnail_url,
-                  slug: (post as any).slug || null,
+                  slug: post.slug ?? null,
                   created_at: post.created_at,
                   post_type: (post.post_type as 'text' | 'video') || 'text',
                   metadata: post.metadata,
@@ -184,20 +225,18 @@ export default async function Page({
                 {user.avatar_url && (
                   <img
                     src={user.avatar_url}
-                    alt={user.full_name || (user as any).username || 'User'}
+                    alt={user.full_name || user.username || 'User'}
                     className="w-12 h-12 rounded-full object-cover"
                   />
                 )}
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
                     <span className="font-medium">
-                      {user.full_name ||
-                        (user as any).username ||
-                        'Unnamed User'}
+                      {user.full_name || user.username || 'Unnamed User'}
                     </span>
-                    {(user as any).username && (
+                    {user.username && (
                       <span className="text-sm text-muted-foreground">
-                        @{(user as any).username}
+                        @{user.username}
                       </span>
                     )}
                   </div>
@@ -206,16 +245,14 @@ export default async function Page({
                       {user.bio}
                     </p>
                   )}
-                  {(user as any).username && (
+                  {user.username && (
                     <Button
                       variant="outline"
                       size="sm"
                       className="mt-2"
                       asChild
                     >
-                      <a href={`/profile/${(user as any).username}`}>
-                        View Profile
-                      </a>
+                      <a href={`/profile/${user.username}`}>View Profile</a>
                     </Button>
                   )}
                 </div>

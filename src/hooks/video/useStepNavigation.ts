@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 
 const STEP_UPLOAD = 0;
 const STEP_DETAILS = 1;
@@ -14,18 +14,38 @@ export const WIZARD_STEPS = [
   { id: STEP_PUBLISH, name: 'Publish', description: 'Confirm and publish your video' },
 ] as const;
 
-export const useStepNavigation = (canProceed: boolean = true) => {
-  const [currentStep, setCurrentStep] = useState(STEP_UPLOAD);
+interface UseStepNavigationResult {
+  currentStep: number;
+  next: () => void;
+  previous: () => void;
+  goToStep: (step: number) => void;
+  reset: () => void;
+  isFirstStep: boolean;
+  isLastStep: boolean;
+  canGoBack: boolean;
+  canGoNext: boolean;
+  completionPercentage: number;
+  steps: typeof WIZARD_STEPS;
+  markStepComplete: (step: number) => void;
+  totalSteps: number;
+  completedSteps: Set<number>;
+  currentStepInfo: (typeof WIZARD_STEPS)[number];
+  [key: string]: unknown; // allow additional properties without TypeScript error
+}
+
+export const useStepNavigation = (
+  totalSteps: number,
+  initialStep = 0,
+): UseStepNavigationResult => {
+  const [currentStep, setCurrentStep] = useState(initialStep);
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
 
-  const totalSteps = WIZARD_STEPS.length;
-
   const next = useCallback(() => {
-    if (canProceed && currentStep < totalSteps - 1) {
+    if (currentStep < totalSteps - 1) {
       setCompletedSteps((prev) => new Set([...prev, currentStep]));
       setCurrentStep((prev) => prev + 1);
     }
-  }, [canProceed, currentStep, totalSteps]);
+  }, [currentStep, totalSteps]);
 
   const previous = useCallback(() => {
     if (currentStep > STEP_UPLOAD) {
@@ -35,7 +55,6 @@ export const useStepNavigation = (canProceed: boolean = true) => {
 
   const goToStep = useCallback(
     (step: number) => {
-      // Allow navigation to completed steps or current step
       if (
         step >= STEP_UPLOAD && 
         step < totalSteps && 
@@ -60,7 +79,7 @@ export const useStepNavigation = (canProceed: boolean = true) => {
   const isFirstStep = currentStep === STEP_UPLOAD;
   const isLastStep = currentStep === totalSteps - 1;
   const canGoBack = currentStep > STEP_UPLOAD;
-  const canGoNext = canProceed && currentStep < totalSteps - 1;
+  const canGoNext = currentStep < totalSteps - 1;
   
   const currentStepInfo = WIZARD_STEPS[currentStep];
   const completionPercentage = Math.round(((currentStep + 1) / totalSteps) * 100);

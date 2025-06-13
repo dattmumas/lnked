@@ -15,6 +15,12 @@ type CollectiveMember = Database['public']['Tables']['collective_members']['Row'
   } | null;
 };
 
+interface QueryOptions {
+  enabled?: boolean;
+  staleTime?: number;
+  gcTime?: number;
+}
+
 export function useCollectiveData(slug: string) {
   return useQuery({
     queryKey: ['collective', slug],
@@ -39,7 +45,10 @@ export function useCollectiveData(slug: string) {
   });
 }
 
-export function useCollectiveMembers(collectiveId: string, options?: any) {
+export function useCollectiveMembers(
+  collectiveId: string,
+  options: QueryOptions = {},
+) {
   return useQuery({
     queryKey: ['collective-members', collectiveId],
     queryFn: async () => {
@@ -61,14 +70,19 @@ export function useCollectiveMembers(collectiveId: string, options?: any) {
   });
 }
 
-export function useCollectiveStats(collectiveId: string, options?: any) {
+export function useCollectiveStats(
+  collectiveId: string,
+  options: QueryOptions = {},
+) {
   return useQuery({
     queryKey: ['collective-stats', collectiveId],
     queryFn: async () => {
       const supabase = createSupabaseBrowserClient();
       
-      const { data, error } = await (supabase as any)
-        .rpc('get_collective_stats', { collective_id: collectiveId });
+      const { data, error } = await supabase.rpc(
+        'get_collective_stats',
+        { collective_id: collectiveId },
+      );
 
       if (error) throw error;
       

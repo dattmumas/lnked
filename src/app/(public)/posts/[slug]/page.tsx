@@ -261,6 +261,19 @@ export default async function PostBySlugPage({
         : null;
     const initialBookmarked = Boolean(post.user_bookmark?.id);
 
+    // Fetch comment count via RPC for this post
+    const { data: rpcCommentCount, error: commentCountError } =
+      await supabase.rpc('get_comment_count', {
+        p_entity_type: 'post',
+        p_entity_id: slugOrId,
+      });
+
+    if (commentCountError) {
+      console.error('Error fetching comment count:', commentCountError);
+    }
+
+    const initialCommentCount = rpcCommentCount ?? 0;
+
     return (
       <>
         <PostViewTracker postId={post.id} />
@@ -426,7 +439,11 @@ export default async function PostBySlugPage({
               <div className="mt-12">
                 <h2 className="text-2xl font-bold mb-8">Comments</h2>
                 <Suspense fallback={<CommentsSkeleton />}>
-                  <CommentSection entityType="post" entityId={post.id} />
+                  <CommentSection
+                    entityType="post"
+                    entityId={post.id}
+                    initialCommentsCount={initialCommentCount}
+                  />
                 </Suspense>
               </div>
             </footer>

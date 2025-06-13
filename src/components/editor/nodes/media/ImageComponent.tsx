@@ -214,6 +214,13 @@ function BrokenImage(): JSX.Element {
   );
 }
 
+function ImageNodePlaceholder({ isEditable }: { isEditable: boolean }) {
+  if (!isEditable) {
+    return null;
+  }
+  return <div className="ImageNode__placeholder">Enter a caption...</div>;
+}
+
 export default function ImageComponent({
   src,
   altText,
@@ -488,6 +495,7 @@ export default function ImageComponent({
               )}
               <RichTextPlugin
                 contentEditable={
+                  // eslint-disable-next-line react/no-unstable-nested-components
                   <ContentEditable
                     placeholder={(isEditable: boolean) =>
                       isEditable ? (

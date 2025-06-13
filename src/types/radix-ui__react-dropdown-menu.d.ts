@@ -1,5 +1,4 @@
- 
 declare module "@radix-ui/react-dropdown-menu" {
-  const content: any;
+  const content: unknown;
   export = content;
 }

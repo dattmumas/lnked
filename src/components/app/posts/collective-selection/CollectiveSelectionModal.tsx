@@ -96,7 +96,7 @@ export function CollectiveSelectionModal({
         case 'name':
           comparison = a.name.localeCompare(b.name);
           break;
-        case 'role':
+        case 'role': {
           const rolePriority: Record<string, number> = {
             owner: 4,
             admin: 3,
@@ -106,8 +106,12 @@ export function CollectiveSelectionModal({
           comparison =
             (rolePriority[b.user_role] || 0) - (rolePriority[a.user_role] || 0);
           break;
+        }
         case 'members':
           comparison = (b.member_count || 0) - (a.member_count || 0);
+          break;
+        default:
+          comparison = 0;
           break;
       }
 

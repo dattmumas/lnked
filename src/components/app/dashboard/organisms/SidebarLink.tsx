@@ -4,7 +4,20 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import type { ElementType } from 'react';
-import * as Tooltip from '@radix-ui/react-tooltip';
+import * as TooltipPrimitive from '@radix-ui/react-tooltip';
+
+// Type assertion to work around React 19 compatibility
+interface TooltipComponents {
+  Root: React.FC<{ children: React.ReactNode; delayDuration?: number }>;
+  Trigger: React.FC<{ children: React.ReactNode; asChild?: boolean }>;
+  Content: React.FC<{
+    children: React.ReactNode;
+    side?: 'top' | 'right' | 'bottom' | 'left';
+    align?: 'start' | 'center' | 'end';
+    className?: string;
+  }>;
+}
+const Tooltip = TooltipPrimitive as unknown as TooltipComponents;
 
 interface SidebarLinkProps {
   href: string;

@@ -1,5 +1,4 @@
- 
 declare module "@radix-ui/react-tooltip" {
-  const content: any;
+  const content: unknown;
   export = content;
 }

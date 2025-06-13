@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent } from '@/components/ui/card';
 import PostCardHeader from './PostCardHeader';
@@ -32,13 +31,14 @@ interface PostInteractions {
   viewCount?: number;
 }
 
-interface VideoMetadata {
+type VideoMetadata = {
   videoAssetId?: string;
   duration?: number;
   playbackId?: string;
   status?: 'preparing' | 'ready' | 'errored';
   aspectRatio?: string;
-}
+  [key: string]: unknown;
+};
 
 interface VideoPost {
   id: string;
@@ -47,7 +47,7 @@ interface VideoPost {
   thumbnail_url?: string | null;
   slug?: string | null;
   created_at: string;
-  metadata?: VideoMetadata;
+  metadata?: VideoMetadata | null;
   author: Author;
   collective?: Collective | null;
 }
@@ -143,7 +143,9 @@ export default function VideoCard({
               className="w-full rounded-lg bg-black aspect-video"
               onEnded={handleVideoEnded}
               onPause={handleVideoPause}
-            />
+            >
+              <track kind="captions" srcLang="en" label="English captions" />
+            </video>
           ) : (
             <button
               type="button"
@@ -184,7 +186,7 @@ export default function VideoCard({
         </div>
 
         {/* Content */}
-        <Link href={postUrl} className="group block">
+        <a href={postUrl} className="group block">
           <h2 className="text-xl font-semibold mb-3 group-hover:text-accent transition-colors line-clamp-2">
             {post.title}
           </h2>
@@ -211,7 +213,7 @@ export default function VideoCard({
           <div className="text-sm font-medium text-accent hover:underline">
             Watch video →
           </div>
-        </Link>
+        </a>
 
         <PostCardFooter
           postId={post.id}

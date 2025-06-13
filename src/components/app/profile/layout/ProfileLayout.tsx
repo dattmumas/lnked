@@ -183,11 +183,11 @@ export function useResponsiveLayout() {
  * Helps visualize the grid system during development
  */
 export function LayoutDebugger() {
+  const { layoutType } = useResponsiveLayout();
+
   if (process.env.NODE_ENV !== 'development') {
     return null;
   }
-
-  const { layoutType } = useResponsiveLayout();
 
   return (
     <div className="fixed top-4 right-4 z-50 bg-black/80 text-white text-xs px-2 py-1 rounded font-mono">

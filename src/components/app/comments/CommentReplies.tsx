@@ -1,7 +1,11 @@
 'use client';
 
 import React, { useState } from 'react';
-import { CommentThread, ReactionType } from '@/types/comments-v2';
+import {
+  CommentThread,
+  ReactionType,
+  CommentWithUser,
+} from '@/types/comments-v2';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { CommentActions } from './CommentActions';
@@ -88,7 +92,7 @@ export const CommentReplies: React.FC<CommentRepliesProps> = ({
 };
 
 interface ReplyItemProps {
-  reply: any; // CommentWithUser type
+  reply: CommentWithUser;
   onReaction: (commentId: string, reactionType: ReactionType) => void;
 }
 
@@ -101,14 +105,18 @@ const ReplyItem: React.FC<ReplyItemProps> = ({ reply, onReaction }) => {
     onReaction(reply.id, reactionType);
   };
 
+  // Use author if user is not available
+  const userInfo = reply.user || reply.author;
+  const avatarUrl = userInfo?.avatar_url || '';
+  const displayName = userInfo?.full_name || userInfo?.username || 'Anonymous';
+  const initial = displayName[0] || 'U';
+
   return (
     <div className="flex gap-3">
       {/* Avatar */}
       <Avatar className="h-6 w-6 flex-shrink-0">
-        <AvatarImage src={reply.user.avatar_url || ''} />
-        <AvatarFallback className="text-xs">
-          {reply.user.full_name?.[0] || reply.user.username?.[0] || 'U'}
-        </AvatarFallback>
+        <AvatarImage src={avatarUrl} />
+        <AvatarFallback className="text-xs">{initial}</AvatarFallback>
       </Avatar>
 
       {/* Reply Content */}
@@ -116,7 +124,7 @@ const ReplyItem: React.FC<ReplyItemProps> = ({ reply, onReaction }) => {
         {/* Reply Header */}
         <div className="flex items-center gap-2 mb-1">
           <span className="text-xs font-semibold text-foreground">
-            {reply.user.full_name || reply.user.username}
+            {displayName}
           </span>
           <span className="text-xs text-muted-foreground">{formattedTime}</span>
         </div>

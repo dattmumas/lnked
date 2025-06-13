@@ -180,6 +180,13 @@ export function UpdateInlineImageDialog({
   );
 }
 
+function InlineImageNodePlaceholder({ isEditable }: { isEditable: boolean }) {
+  if (!isEditable) {
+    return null;
+  }
+  return <div className="InlineImageNode__placeholder">Enter a caption...</div>;
+}
+
 export default function InlineImageComponent({
   src,
   altText,
@@ -208,6 +215,16 @@ export default function InlineImageComponent({
   const [selection, setSelection] = useState<BaseSelection | null>(null);
   const activeEditorRef = useRef<LexicalEditor | null>(null);
   const isEditable = useLexicalEditable();
+
+  const showUpdateDialog = useCallback(() => {
+    showModal('Update Inline Image', (onClose) => (
+      <UpdateInlineImageDialog
+        activeEditor={editor}
+        nodeKey={nodeKey}
+        onClose={onClose}
+      />
+    ));
+  }, [showModal, editor, nodeKey]);
 
   const $onEnter = useCallback(
     (event: KeyboardEvent) => {
@@ -338,6 +355,7 @@ export default function InlineImageComponent({
               className="image-edit-button"
               ref={buttonRef}
               onClick={() => {
+                // eslint-disable-next-line react/no-unstable-nested-components
                 showModal('Update Inline Image', (onClose) => (
                   <UpdateInlineImageDialog
                     activeEditor={editor}
@@ -371,6 +389,7 @@ export default function InlineImageComponent({
               <LinkPlugin />
               <RichTextPlugin
                 contentEditable={
+                  // eslint-disable-next-line react/no-unstable-nested-components
                   <ContentEditable
                     placeholder={(isEditable: boolean) =>
                       isEditable ? (

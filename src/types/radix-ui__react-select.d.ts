@@ -1,5 +1,4 @@
- 
 declare module "@radix-ui/react-select" {
-  const content: any;
+  const content: unknown;
   export = content;
 }

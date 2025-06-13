@@ -19,6 +19,8 @@ import type {
 } from '@/types/notifications';
 import { cn } from '@/lib/utils';
 
+const EMPTY_NOTIFICATIONS: Notification[] = [];
+
 interface NotificationListProps {
   initialNotifications?: Notification[];
   initialUnreadCount?: number;
@@ -26,13 +28,16 @@ interface NotificationListProps {
 }
 
 export function NotificationList({
-  initialNotifications = [],
-  initialUnreadCount = 0,
+  initialNotifications,
+  initialUnreadCount,
   className,
 }: NotificationListProps) {
-  const [notifications, setNotifications] =
-    useState<Notification[]>(initialNotifications);
-  const [unreadCount, setUnreadCount] = useState(initialUnreadCount);
+  const safeInitialNotifications = initialNotifications ?? EMPTY_NOTIFICATIONS;
+  const safeInitialUnread = initialUnreadCount ?? 0;
+  const [notifications, setNotifications] = useState<Notification[]>(
+    safeInitialNotifications,
+  );
+  const [unreadCount, setUnreadCount] = useState(safeInitialUnread);
   const [isLoading, setIsLoading] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -190,10 +195,10 @@ export function NotificationList({
   };
 
   useEffect(() => {
-    if (initialNotifications.length === 0) {
+    if (safeInitialNotifications.length === 0) {
       fetchNotifications();
     }
-  }, [fetchNotifications, initialNotifications.length]);
+  }, [fetchNotifications, safeInitialNotifications.length]);
 
   const filteredNotifications = notifications;
 

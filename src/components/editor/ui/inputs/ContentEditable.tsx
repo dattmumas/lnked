@@ -18,6 +18,10 @@ interface LexicalContentEditableProps {
   readOnly?: boolean;
 }
 
+function ContentEditablePlaceholder({ placeholder }: { placeholder: string }) {
+  return <div className="ContentEditable__placeholder">{placeholder}</div>;
+}
+
 export default function LexicalContentEditable({
   placeholder,
   readOnly = false,
@@ -25,7 +29,10 @@ export default function LexicalContentEditable({
   const hasPlaceholder = placeholder !== undefined;
   let contentEditableProps: Record<
     string,
-    string | ((isEditable: boolean) => JSX.Element | null)
+    | string
+    | ((isEditable: boolean) => JSX.Element | null)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    | any
   > = {};
   if (hasPlaceholder) {
     if (typeof placeholder === 'function') {
@@ -35,6 +42,7 @@ export default function LexicalContentEditable({
     } else {
       contentEditableProps = {
         'aria-placeholder': placeholder,
+        // eslint-disable-next-line react/no-unstable-nested-components
         placeholder: (isEditable: boolean) =>
           isEditable ? (
             <div className="ContentEditable__placeholder">{placeholder}</div>

@@ -14,6 +14,7 @@ import {useEffect} from 'react';
 
 import {$createSpecialTextNode, SpecialTextNode} from '../../../nodes/text/SpecialTextNode';
 
+// eslint-disable-next-line no-useless-escape
 const BRACKETED_TEXT_REGEX = /\[([^\[\]]+)\]/;
 
 function $findAndTransformText(node: TextNode): null | TextNode {

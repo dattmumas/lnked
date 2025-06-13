@@ -15,6 +15,9 @@ interface Tier {
   description: string | null;
 }
 
+// Default empty array to avoid re-creating on each render
+const DEFAULT_TIERS: Tier[] = [];
+
 interface SubscribeButtonProps {
   targetEntityType: 'user' | 'collective';
   targetEntityId: string;
@@ -27,7 +30,7 @@ export default function SubscribeButton({
   targetEntityType,
   targetEntityId,
   targetName,
-  tiers = [],
+  tiers = DEFAULT_TIERS,
 }: SubscribeButtonProps) {
   const router = useRouter();
   const pathname = usePathname();

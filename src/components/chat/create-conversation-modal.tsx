@@ -186,9 +186,9 @@ export function CreateConversationModal({
 
           {/* Type selector */}
           <div>
-            <label className="text-sm font-medium mb-2 block">
+            <div className="text-sm font-medium mb-2 block">
               Conversation Type
-            </label>
+            </div>
             <div className="grid grid-cols-3 gap-2">
               {[
                 { value: 'direct', label: 'Direct', icon: User },

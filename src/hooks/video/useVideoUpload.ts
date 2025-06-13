@@ -22,7 +22,8 @@ export const useVideoUpload = (collectiveId?: string) => {
   const videoProcessing = useVideoProcessing();
   
   // Initialize step navigation with basic validation
-  const stepNavigation = useStepNavigation(true);
+  const totalSteps = 4; // upload, details, settings, publish
+  const stepNavigation = useStepNavigation(totalSteps);
   
   // Step-specific validation logic
   const canProceedFromCurrentStep = useMemo(() => {

@@ -21,6 +21,7 @@ interface VideoAsset {
   mux_asset_id: string;
   mux_playback_id: string | null;
   created_by: string | null;
+  comment_count: number;
   mp4_support?: string | null; // 'none' | 'capped-1080p' | 'audio-only'
 }
 
@@ -59,6 +60,9 @@ export default async function VideoPlayerPage({
     notFound();
   }
 
+  // Safely cast to VideoAsset (includes comment_count)
+  const videoAsset = video as unknown as VideoAsset;
+
   // Fetch user and profile for RightSidebar
   const supabase = await createServerSupabaseClient();
   const {
@@ -80,15 +84,15 @@ export default async function VideoPlayerPage({
       {/* Main content: video details + player + comments */}
       <main className="ml-16 w-[calc(100%-4rem)] lg:w-[calc(100%-4rem-28rem)] flex flex-col items-center py-8">
         {/* Video metadata - renders immediately (no Suspense) */}
-        <VideoDetailsServer video={video as VideoAsset} />
+        <VideoDetailsServer video={videoAsset} />
 
         {/* Video player - independent Suspense boundary */}
         <Suspense fallback={<VideoPlayerSkeleton />}>
           <VideoPlayerClient
             video={{
-              id: video.id,
-              title: video.title,
-              mux_playback_id: video.mux_playback_id,
+              id: videoAsset.id,
+              title: videoAsset.title,
+              mux_playback_id: videoAsset.mux_playback_id,
             }}
           />
         </Suspense>
@@ -97,7 +101,8 @@ export default async function VideoPlayerPage({
         <Suspense fallback={<CommentsSkeleton />}>
           <CommentSection
             entityType="video"
-            entityId={video.id}
+            entityId={videoAsset.id}
+            initialCommentsCount={videoAsset.comment_count ?? 0}
             className="w-full max-w-4xl mt-8"
           />
         </Suspense>
