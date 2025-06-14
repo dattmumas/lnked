@@ -1,18 +1,15 @@
 import { useEffect, useCallback, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import type { UseMutationResult } from '@tanstack/react-query';
 import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
 import { usePostEditorStore, PostFormData } from '@/lib/stores/post-editor-store';
 import { User } from '@supabase/supabase-js';
 import { Json } from '@/lib/database.types';
+import { AUTO_SAVE_DEBOUNCE_MS, POST_STALE_TIME_MS } from '@/lib/constants/post-editor';
 
-// ---------------------------------------------------------------------------
-// Constants
-// ---------------------------------------------------------------------------
-/** Debounce interval (ms) before triggering auto-save */
-const AUTO_SAVE_DEBOUNCE_MS = 500;
-
-/** React-Query cache staleness period (ms) for post data */
-const POST_STALE_TIME_MS = 5 * 60 * 1000; // 5 minutes
+/** Helper: value exists and is not an empty string */
+const exists = (v: unknown): boolean =>
+  v !== null && v !== undefined && v !== '';
 
 // Simple client-side user hook
 const useUser = (): { user: User | null; loading: boolean } => {
@@ -43,7 +40,11 @@ const useUser = (): { user: User | null; loading: boolean } => {
 };
 
 // Auto-save mutation hook
-export const useAutoSavePost = () => {
+export const useAutoSavePost = (): UseMutationResult<
+  PostFormData,
+  Error,
+  PostFormData & { author_id: string }
+> => {
   const queryClient = useQueryClient();
   const store = usePostEditorStore();
   const { markSaving, markSaved, markError, updateFormData } = store;
@@ -53,22 +54,35 @@ export const useAutoSavePost = () => {
       const supabase = createSupabaseBrowserClient();
 
       // Validate required fields
-      if (!data.author_id) {
+      if (
+        data.author_id === null ||
+        data.author_id === undefined ||
+        data.author_id === ''
+      ) {
         throw new Error('Missing author_id - user not authenticated');
       }
 
-      if (!data.title || data.title.trim() === '') {
+      if (
+        data.title === null ||
+        data.title === undefined ||
+        data.title.trim() === ''
+      ) {
         throw new Error('Title is required for saving');
       }
 
       // Check authentication status
       const { data: { session }, error: authError } = await supabase.auth.getSession();
-      if (authError) {
+      if (authError !== null && authError !== undefined) {
         console.error('Auth error:', authError);
         throw new Error(`Authentication error: ${authError.message}`);
       }
 
-      if (!session?.user) {
+      if (
+        session === null ||
+        session === undefined ||
+        session.user === null ||
+        session.user === undefined
+      ) {
         throw new Error('User not authenticated');
       }
 
@@ -98,7 +112,7 @@ export const useAutoSavePost = () => {
         .select()
         .single();
 
-      if (error) {
+      if (error !== null && error !== undefined) {
         console.error('❌ Auto-save failed:', {
           code: error.code,
           message: error.message,
@@ -108,7 +122,7 @@ export const useAutoSavePost = () => {
         throw new Error(`Database error: ${error.message} (Code: ${error.code})`);
       }
 
-      if (!post) {
+      if (post === null || post === undefined) {
         throw new Error('Post was not returned from database after save');
       }
 
@@ -125,7 +139,14 @@ export const useAutoSavePost = () => {
       markSaved();
       
       // Update the store with the post ID only if it's a new post (current form data has no ID)
-      if (savedPost.id && !store.formData.id) {
+      if (
+        savedPost.id !== null &&
+        savedPost.id !== undefined &&
+        savedPost.id !== '' &&
+        (store.formData.id === null ||
+          store.formData.id === undefined ||
+          store.formData.id === '')
+      ) {
         updateFormData({ id: savedPost.id });
       }
       
@@ -146,7 +167,9 @@ export const usePostData = (
   return useQuery<PostFormData | null>({
     queryKey: ['post', postId],
     queryFn: async (): Promise<PostFormData | null> => {
-      if (!postId) return null;
+      if (postId === null || postId === undefined || postId === '') {
+        return null;
+      }
 
       const supabase = createSupabaseBrowserClient();
       const { data, error } = await supabase
@@ -155,7 +178,7 @@ export const usePostData = (
         .eq('id', postId)
         .single();
 
-      if (error) {
+      if (error !== null && error !== undefined) {
         console.error('Failed to load post:', error);
         throw error;
       }
@@ -178,7 +201,7 @@ export const usePostData = (
         published_at: data.published_at || undefined,
       };
     },
-    enabled: postId !== undefined && postId !== null && postId !== '',
+    enabled: postId !== null && postId !== undefined && postId !== '',
     staleTime: POST_STALE_TIME_MS,
   });
 };
@@ -210,7 +233,11 @@ export const usePostEditor = (postId?: string): UsePostEditorResult => {
 
   // Initialize form data from server when post loads
   useEffect(() => {
-    if (postData && !store.originalData) {
+    if (
+      postData !== null &&
+      postData !== undefined &&
+      (store.originalData === null || store.originalData === undefined)
+    ) {
       store.initializeForm(postData);
     }
   }, [postData, store.originalData, store]);
@@ -219,11 +246,18 @@ export const usePostEditor = (postId?: string): UsePostEditorResult => {
   useEffect((): (() => void) | undefined => {
     // Don't auto-save while loading initial data
     if (isLoadingPost) {
-      return;
+      return undefined;
     }
 
     // Check all conditions for auto-save
-    if (store.isDirty && store.formData && store.formData.title?.trim() && user?.id) {
+    if (
+      store.isDirty &&
+      exists(store.formData) &&
+      exists(store.formData.title) &&
+      (store.formData.title as string).trim() !== '' &&
+      exists(user) &&
+      exists((user as User).id)
+    ) {
       const timer = setTimeout(() => {
         console.warn('🚀 Auto-saving post...');
         // The store.formData already contains the post ID (if it exists)
@@ -240,11 +274,11 @@ export const usePostEditor = (postId?: string): UsePostEditorResult => {
     }
 
     return undefined;
-  }, [store.formData, store.isDirty, autoSave, user?.id, isLoadingPost]);
+  }, [store.formData, store.isDirty, autoSave, user, isLoadingPost]);
 
   // Manual save function
-  const savePost = useCallback(async (): Promise<PostFormData | undefined> => {
-    if (store.formData && user?.id) {
+  const savePost = useCallback((): Promise<PostFormData | undefined> => {
+    if (exists(store.formData) && exists(user) && exists((user as User).id)) {
       const dataToSave = {
         ...store.formData,
         author_id: user.id,
@@ -253,11 +287,11 @@ export const usePostEditor = (postId?: string): UsePostEditorResult => {
     }
 
     return undefined;
-  }, [store.formData, autoSave, user?.id]);
+  }, [store.formData, autoSave, user]);
 
   // Publish post function
-  const publishPost = useCallback(async (): Promise<PostFormData | undefined> => {
-    if (store.formData && user?.id) {
+  const publishPost = useCallback((): Promise<PostFormData | undefined> => {
+    if (exists(store.formData) && exists(user) && exists((user as User).id)) {
       const dataToSave = {
         ...store.formData,
         author_id: user.id,
@@ -276,7 +310,7 @@ export const usePostEditor = (postId?: string): UsePostEditorResult => {
     }
 
     return undefined;
-  }, [store, autoSave, user?.id]);
+  }, [store, autoSave, user]);
 
   return {
     // Form data and state
@@ -302,4 +336,4 @@ export const usePostEditor = (postId?: string): UsePostEditorResult => {
     isSaving: autoSave.isPending,
     saveError: autoSave.error,
   };
-}; 
+};

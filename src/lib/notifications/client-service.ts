@@ -32,7 +32,7 @@ export class ClientNotificationService {
   /**
    * Get notifications for the current user
    */
-  async getNotifications(
+  getNotifications(
     filters: NotificationFilters = {},
   ): Promise<NotificationResponse> {
     const { limit = DEFAULT_LIMIT, offset = DEFAULT_OFFSET, type, read } = filters;
@@ -41,8 +41,9 @@ export class ClientNotificationService {
     const cacheKey = JSON.stringify({ limit, offset, type, read });
     
     // Check if we have a cached request in progress
-    if (this.requestCache.has(cacheKey)) {
-      return this.requestCache.get(cacheKey)!;
+    const cached = this.requestCache.get(cacheKey);
+    if (cached !== undefined) {
+      return cached;
     }
 
     // Create the request promise
@@ -66,7 +67,7 @@ export class ClientNotificationService {
 
     // Check if user is authenticated first
     const { data: { user }, error: authError } = await this.supabase.auth.getUser();
-    if (authError || !user) {
+    if ((authError !== null && authError !== undefined) || user === null) {
       console.error('User not authenticated:', authError);
       return {
         notifications: [],
@@ -105,7 +106,7 @@ export class ClientNotificationService {
 
     const { data: notifications, error, count } = await query;
 
-    if (error) {
+    if (error !== null && error !== undefined) {
       console.error('Failed to fetch notifications:', {
         message: error.message,
         details: error.details,
@@ -122,7 +123,7 @@ export class ClientNotificationService {
       .eq('recipient_id', user.id)
       .is('read_at', null);
 
-    if (unreadError) {
+    if (unreadError !== null && unreadError !== undefined) {
       console.error('Failed to fetch unread count:', {
         message: unreadError.message,
         details: unreadError.details,
@@ -134,12 +135,12 @@ export class ClientNotificationService {
     }
 
     return {
-      notifications: (notifications || []).map(n => ({
+      notifications: (notifications ?? []).map(n => ({
         ...n,
         entity_type: n.entity_type as EntityType | null,
       })) as Notification[],
-      total_count: count || 0,
-      unread_count: unreadCount || 0,
+      total_count: count ?? 0,
+      unread_count: unreadCount ?? 0,
       has_more: (count ?? 0) > offset + limit,
     };
   }
@@ -153,12 +154,12 @@ export class ClientNotificationService {
       .select('*', { count: 'exact', head: true })
       .is('read_at', null);
 
-    if (error) {
+    if (error !== null && error !== undefined) {
       console.error('Failed to fetch unread count:', error);
       return 0;
     }
 
-    return count || 0;
+    return count ?? 0;
   }
 
   /**
@@ -171,13 +172,13 @@ export class ClientNotificationService {
         error: authError,
       } = await this.supabase.auth.getUser();
 
-      if (authError || !user) {
+      if ((authError !== null && authError !== undefined) || user === null) {
         return { success: false, error: 'User not authenticated' };
       }
 
       const timestamp = new Date().toISOString();
 
-      if (notificationIds && notificationIds.length > 0) {
+      if (notificationIds !== undefined && notificationIds.length > 0) {
         // Mark specific notifications as read
         const { error } = await this.supabase
           .from('notifications')
@@ -186,7 +187,7 @@ export class ClientNotificationService {
           .eq('recipient_id', user.id)
           .is('read_at', null);
 
-        if (error) {
+        if (error !== null && error !== undefined) {
           return { success: false, error: error.message };
         }
       } else {
@@ -197,7 +198,7 @@ export class ClientNotificationService {
           .eq('recipient_id', user.id)
           .is('read_at', null);
 
-        if (error) {
+        if (error !== null && error !== undefined) {
           return { success: false, error: error.message };
         }
       }
@@ -223,7 +224,7 @@ export class ClientNotificationService {
         error: authError,
       } = await this.supabase.auth.getUser();
 
-      if (authError || !user) {
+      if ((authError !== null && authError !== undefined) || user === null) {
         return { success: false, error: 'User not authenticated' };
       }
 
@@ -233,7 +234,7 @@ export class ClientNotificationService {
         .in('id', notificationIds)
         .eq('recipient_id', user.id);
 
-      if (error) {
+      if (error !== null && error !== undefined) {
         return { success: false, error: error.message };
       }
 
@@ -257,11 +258,11 @@ export class ClientNotificationService {
       .select('*')
       .order('notification_type');
 
-    if (error) {
+    if (error !== null && error !== undefined) {
       throw new Error(`Failed to fetch preferences: ${error.message}`);
     }
 
-    return (data || []).map(pref => ({
+    return (data ?? []).map(pref => ({
       ...pref,
       email_enabled: pref.email_enabled ?? true,
       push_enabled: pref.push_enabled ?? true,
@@ -281,7 +282,7 @@ export class ClientNotificationService {
         error: authError,
       } = await this.supabase.auth.getUser();
 
-      if (authError || !user) {
+      if ((authError !== null && authError !== undefined) || user === null) {
         return { success: false, error: 'User not authenticated' };
       }
 
@@ -298,7 +299,7 @@ export class ClientNotificationService {
             updated_at: new Date().toISOString(),
           });
 
-        if (error) {
+        if (error !== null && error !== undefined) {
           return { success: false, error: error.message };
         }
       }
@@ -345,7 +346,7 @@ export class ClientNotificationService {
             .eq('id', String(payload.new.id))
             .single();
 
-          if (notification) {
+          if (notification !== null && notification !== undefined) {
             callback({
               ...notification,
               entity_type: notification.entity_type as EntityType | null,
@@ -362,4 +363,4 @@ export class ClientNotificationService {
 }
 
 // Singleton instance for client-side use
-export const clientNotificationService = new ClientNotificationService(); 
+export const clientNotificationService = new ClientNotificationService();

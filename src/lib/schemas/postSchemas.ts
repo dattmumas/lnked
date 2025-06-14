@@ -49,7 +49,14 @@ const baseFields = {
   selected_collectives: z.array(z.string().uuid()).optional().default([]),
 };
 
-const applyPublishRefinement = <T extends z.ZodTypeAny>(schema: T): T =>
+/**
+ * Adds a refinement that requires `published_at` when status === 'scheduled'.
+ *
+ * Explicit return type (`z.ZodEffects<T>`) to satisfy eslint explicit-function-return-type.
+ */
+const applyPublishRefinement = <T extends z.ZodTypeAny>(
+  schema: T,
+): z.ZodEffects<T> =>
   schema.refine(
     (data) =>
       (data as z.infer<T>).status !== 'scheduled' ||

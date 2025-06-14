@@ -12,6 +12,9 @@ import type {
   NotificationActionResult,
   EntityType,
 } from '@/types/notifications';
+import { nowIso, isNonEmptyString, isDefined } from './utils';
+
+/* eslint-disable prefer-destructuring */
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -20,24 +23,18 @@ import type {
 const DEFAULT_LIMIT = 20;
 const DEFAULT_OFFSET = 0;
 
-/** Helper to create an ISO timestamp once per operation */
-const nowIso = (): string => new Date().toISOString();
-
 export class NotificationService {
-  private supabase: ReturnType<typeof createSupabaseBrowserClient> | null = null;
+  private readonly supabase:
+    | ReturnType<typeof createServerSupabaseClient>
+    | ReturnType<typeof createSupabaseBrowserClient>;
 
-  constructor(isServer = false) {
-    if (!isServer && typeof window !== 'undefined') {
-      this.supabase = createSupabaseBrowserClient();
-    }
+  constructor() {
+    this.supabase =
+      typeof window === 'undefined'
+        ? createServerSupabaseClient()   // Node / SSR
+        : createSupabaseBrowserClient(); // Browser
   }
 
- private getSupabase(): ReturnType<typeof createServerSupabaseClient> | ReturnType<typeof createSupabaseBrowserClient> {
-    if (this.supabase !== null) {
-      return this.supabase;
-    }
-    return createServerSupabaseClient();
-  }
 
   /**
    * Get notifications for the current user
@@ -45,7 +42,7 @@ export class NotificationService {
   async getNotifications(
     filters: NotificationFilters = {}
   ): Promise<NotificationResponse> {
-    const supabase = this.getSupabase();
+    const supabase = this.supabase;
     const { limit = DEFAULT_LIMIT, offset = DEFAULT_OFFSET, type, read } = filters;
 
     let query = supabase
@@ -62,7 +59,7 @@ export class NotificationService {
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1);
 
-    if (typeof type === 'string' && type !== '') {
+    if (isNonEmptyString(type)) {
       query = query.eq('type', type);
     }
 
@@ -76,7 +73,7 @@ export class NotificationService {
 
     const { data: notifications, error, count } = await query;
 
-    if (error) {
+    if (isDefined(error)) {
       throw new Error(`Failed to fetch notifications: ${error.message}`);
     }
 
@@ -86,18 +83,18 @@ export class NotificationService {
       .select('*', { count: 'exact', head: true })
       .is('read_at', null);
 
-    if (unreadError) {
+    if (isDefined(unreadError)) {
       console.error('Failed to fetch unread count:', unreadError);
     }
 
     // Transform the data to match our TypeScript interfaces
-    const transformedNotifications: Notification[] = (notifications || []).map(notification => ({
+    const transformedNotifications: Notification[] = (notifications ?? []).map(notification => ({
       ...notification,
       entity_type: notification.entity_type as EntityType | null,
       metadata: notification.metadata as Record<string, unknown>,
-      created_at: notification.created_at || new Date().toISOString(),
-      updated_at: notification.updated_at || new Date().toISOString(),
-      actor: notification.actor || undefined,
+      created_at: notification.created_at ?? new Date().toISOString(),
+      updated_at: notification.updated_at ?? new Date().toISOString(),
+      actor: notification.actor ?? undefined,
     }));
 
     return {
@@ -112,14 +109,14 @@ export class NotificationService {
    * Get unread notification count
    */
   async getUnreadCount(): Promise<number> {
-    const supabase = this.getSupabase();
+    const supabase = this.supabase;
 
     const { count, error } = await supabase
       .from('notifications')
       .select('*', { count: 'exact', head: true })
       .is('read_at', null);
 
-    if (error) {
+    if (isDefined(error)) {
       console.error('Failed to fetch unread count:', error);
       return 0;
     }
@@ -131,7 +128,7 @@ export class NotificationService {
    * Mark notifications as read
    */
   async markAsRead(notificationIds?: string[]): Promise<NotificationActionResult> {
-    const supabase = this.getSupabase();
+    const supabase = this.supabase;
 
     try {
       const {
@@ -139,7 +136,7 @@ export class NotificationService {
         error: authError,
       } = await supabase.auth.getUser();
 
-      if (authError || !user) {
+      if (isDefined(authError) || user === null) {
         return { success: false, error: 'User not authenticated' };
       }
 
@@ -153,7 +150,7 @@ export class NotificationService {
           .eq('recipient_id', user.id)
           .is('read_at', null);
 
-        if (error) {
+        if (isDefined(error)) {
           return { success: false, error: error.message };
         }
       } else {
@@ -164,7 +161,7 @@ export class NotificationService {
           .eq('recipient_id', user.id)
           .is('read_at', null);
 
-        if (error) {
+        if (isDefined(error)) {
           return { success: false, error: error.message };
         }
       }
@@ -182,7 +179,7 @@ export class NotificationService {
    * Delete notifications
    */
   async deleteNotifications(notificationIds: string[]): Promise<NotificationActionResult> {
-    const supabase = this.getSupabase();
+    const supabase = this.supabase;
 
     try {
       const {
@@ -190,7 +187,7 @@ export class NotificationService {
         error: authError,
       } = await supabase.auth.getUser();
 
-      if (authError || !user) {
+      if (isDefined(authError) || user === null) {
         return { success: false, error: 'User not authenticated' };
       }
 
@@ -204,7 +201,7 @@ export class NotificationService {
         .in('id', notificationIds)
         .eq('recipient_id', user.id);
 
-      if (error) {
+      if (isDefined(error)) {
         return { success: false, error: error.message };
       }
 
@@ -221,21 +218,21 @@ export class NotificationService {
    * Create a notification (server-side only)
    */
   async createNotification(params: CreateNotificationParams): Promise<NotificationActionResult> {
-    const supabase = this.getSupabase();
+    const supabase = this.supabase;
 
     try {
       const { data, error } = await supabase.rpc('create_notification', {
         p_recipient_id: params.recipient_id,
-        p_actor_id: params.actor_id || '',
+        p_actor_id: params.actor_id ?? '',
         p_type: params.type,
         p_title: params.title,
         p_message: params.message,
-        p_entity_type: params.entity_type || undefined,
-        p_entity_id: params.entity_id || undefined,
-        p_metadata: (params.metadata as Json) || undefined,
+        p_entity_type: params.entity_type ?? undefined,
+        p_entity_id: params.entity_id ?? undefined,
+        p_metadata: (params.metadata as Json) ?? undefined,
       });
 
-      if (error) {
+      if (isDefined(error)) {
         return { success: false, error: error.message };
       }
 
@@ -252,25 +249,25 @@ export class NotificationService {
    * Get notification preferences
    */
   async getPreferences(): Promise<NotificationPreferences[]> {
-    const supabase = this.getSupabase();
+    const supabase = this.supabase;
 
     const { data, error } = await supabase
       .from('notification_preferences')
       .select('*')
       .order('notification_type');
 
-    if (error) {
+    if (isDefined(error)) {
       throw new Error(`Failed to fetch preferences: ${error.message}`);
     }
 
     // Transform the data to match our TypeScript interfaces
-    return (data || []).map(pref => ({
+    return (data ?? []).map(pref => ({
       ...pref,
       email_enabled: pref.email_enabled ?? true,
       push_enabled: pref.push_enabled ?? true,
       in_app_enabled: pref.in_app_enabled ?? true,
-      created_at: pref.created_at || new Date().toISOString(),
-      updated_at: pref.updated_at || new Date().toISOString(),
+      created_at: pref.created_at ?? new Date().toISOString(),
+      updated_at: pref.updated_at ?? new Date().toISOString(),
     })) as NotificationPreferences[];
   }
 
@@ -280,7 +277,7 @@ export class NotificationService {
   async updatePreferences(
     updates: NotificationPreferencesUpdate[]
   ): Promise<NotificationActionResult> {
-    const supabase = this.getSupabase();
+    const supabase = this.supabase;
 
     try {
       const {
@@ -288,7 +285,7 @@ export class NotificationService {
         error: authError,
       } = await supabase.auth.getUser();
 
-      if (authError || !user) {
+      if (isDefined(authError) || user === null) {
         return { success: false, error: 'User not authenticated' };
       }
 
@@ -306,7 +303,7 @@ export class NotificationService {
             updated_at: updatedAt,
           });
 
-        if (error) {
+        if (isDefined(error)) {
           return { success: false, error: error.message };
         }
       }
@@ -327,12 +324,12 @@ export class NotificationService {
     userId: string,
     callback: (notification: Notification) => void
   ): (() => void) | null {
-    if (this.supabase === null) {
+    if (typeof window === 'undefined') {
       console.error('Cannot subscribe to notifications on server side');
       return null;
     }
 
-    if (typeof userId !== 'string' || userId.trim() === '') {
+    if (!isNonEmptyString(userId)) {
       return null;
     }
 
@@ -362,15 +359,15 @@ export class NotificationService {
             .eq('id', String(payload.new.id))
             .single();
 
-          if (notification) {
+          if (notification !== null) {
             // Transform the data to match our TypeScript interfaces
             const transformedNotification: Notification = {
               ...notification,
               entity_type: notification.entity_type as EntityType | null,
               metadata: notification.metadata as Record<string, unknown>,
-              created_at: notification.created_at || new Date().toISOString(),
-              updated_at: notification.updated_at || new Date().toISOString(),
-              actor: notification.actor || undefined,
+              created_at: notification.created_at ?? new Date().toISOString(),
+              updated_at: notification.updated_at ?? new Date().toISOString(),
+              actor: notification.actor ?? undefined,
             };
             callback(transformedNotification);
           }
@@ -387,12 +384,12 @@ export class NotificationService {
    * Clean up old notifications (server-side only)
    */
   async cleanupOldNotifications(): Promise<NotificationActionResult> {
-    const supabase = this.getSupabase();
+    const supabase = this.supabase;
 
     try {
       const { data, error } = await supabase.rpc('cleanup_old_notifications');
 
-      if (error) {
+      if (isDefined(error)) {
         return { success: false, error: error.message };
       }
 
@@ -407,8 +404,8 @@ export class NotificationService {
 }
 
 // Singleton instances
-export const notificationService = new NotificationService(false);
-export const serverNotificationService = new NotificationService(true);
+export const notificationService = new NotificationService();
+export const serverNotificationService = new NotificationService();
 
 // Helper functions for common notification creation patterns
 export async function createFollowNotification(
@@ -425,7 +422,7 @@ export async function createFollowNotification(
     .eq('id', followerId)
     .single();
 
-  const actorName = follower?.full_name || follower?.username || 'Someone';
+  const actorName = follower?.full_name ?? follower?.username ?? 'Someone';
 
   if (followingType === 'user') {
     return serverNotificationService.createNotification({
@@ -445,9 +442,10 @@ export async function createFollowNotification(
       .eq('id', followingId)
       .single();
 
-    if (collective?.owner_id) {
+    const ownerId = collective?.owner_id;
+    if (isNonEmptyString(ownerId)) {
       return serverNotificationService.createNotification({
-        recipient_id: collective.owner_id,
+        recipient_id: ownerId,
         actor_id: followerId,
         type: 'follow',
         title: 'New collective follower',
@@ -473,13 +471,13 @@ export async function createPostLikeNotification(
     supabase.from('posts').select('author_id, title').eq('id', postId).single(),
   ]);
 
-  if (!user || !post) {
+  if (user === null || post === null) {
     return { success: false, error: 'User or post not found' };
   }
 
-  const actorName = user.full_name || user.username || 'Someone';
+  const actorName = user.full_name ?? user.username ?? 'Someone';
   let message = `${actorName} liked your post`;
-  if (post.title) {
+  if (isNonEmptyString(post.title)) {
     message += `: "${post.title.substring(0, MAX_NOTIFICATION_PREVIEW_LENGTH)}"`;
   }
 
@@ -508,21 +506,25 @@ export async function createCommentNotification(
     supabase.from('posts').select('author_id, title').eq('id', postId).single(),
   ]);
 
-  if (!user || !post) {
+  if (user === null || post === null) {
     return { success: false, error: 'User or post not found' };
   }
 
-  const actorName = user.full_name || user.username || 'Someone';
+  const actorName = user.full_name ?? user.username ?? 'Someone';
 
   // If this is a reply, notify the parent comment author
-  if (parentCommentId) {
+  if (isNonEmptyString(parentCommentId)) {
     const { data: parentComment } = await supabase
       .from('comments')
       .select('user_id')
       .eq('id', parentCommentId)
       .single();
 
-    if (parentComment && parentComment.user_id !== userId) {
+    if (
+      parentComment !== null &&
+      parentComment.user_id !== null &&
+      parentComment.user_id !== userId
+    ) {
       await serverNotificationService.createNotification({
         recipient_id: parentComment.user_id,
         actor_id: userId,
@@ -536,9 +538,9 @@ export async function createCommentNotification(
   }
 
   // Notify the post author (if different from comment author and parent comment author)
-  if (post.author_id !== userId) {
+  if (post.author_id !== null && post.author_id !== userId) {
     let message = `${actorName} commented on your post`;
-    if (post.title) {
+    if (isNonEmptyString(post.title)) {
       message += `: "${post.title.substring(0, MAX_NOTIFICATION_PREVIEW_LENGTH)}"`;
     }
 

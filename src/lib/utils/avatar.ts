@@ -165,13 +165,13 @@ export function getOptimizedAvatarUrl(
   avatarUrl: string | null | undefined,
   options: ImageTransformOptions = {}
 ): string | null {
-  if (avatarUrl === null || avatarUrl === '') return null;
+  if (avatarUrl === null || avatarUrl === undefined || avatarUrl === '') return null;
   
   // Check if it's a Supabase storage URL
   const pathInfo = extractSupabaseImagePath(avatarUrl);
   if (!pathInfo) {
     // Return original URL if not a Supabase storage URL
-    return avatarUrl;
+    return avatarUrl ?? null;
   }
   
   try {
@@ -191,7 +191,7 @@ export function getOptimizedAvatarUrl(
     return data.publicUrl;
   } catch (error) {
     console.warn('Failed to get optimized avatar URL:', error);
-    return avatarUrl;
+    return avatarUrl ?? null;
   }
 }
 

@@ -4,7 +4,7 @@ import { createServerClient } from "@supabase/ssr";
 import type { Database } from "../database.types";
 
 export function createServerSupabaseClient(): SupabaseClient<Database> {
-  const cookieStore = cookies();
+  const cookieStorePromise = cookies();
 
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -17,10 +17,12 @@ export function createServerSupabaseClient(): SupabaseClient<Database> {
     anonKey,
     {
       cookies: {
-        get: (name) => {
+        get: async (name) => {
+          const cookieStore = await cookieStorePromise;
           return cookieStore.get(name)?.value;
         },
-        set: (name, value, options) => {
+        set: async (name, value, options) => {
+          const cookieStore = await cookieStorePromise;
           try {
             cookieStore.set(name, value, options);
           } catch {
@@ -28,7 +30,8 @@ export function createServerSupabaseClient(): SupabaseClient<Database> {
             console.warn('Warning: Cannot set cookies in Server Component context');
           }
         },
-        remove: (name, options) => {
+        remove: async (name, options) => {
+          const cookieStore = await cookieStorePromise;
           try {
             cookieStore.set(name, '', { ...options, maxAge: 0 });
           } catch {

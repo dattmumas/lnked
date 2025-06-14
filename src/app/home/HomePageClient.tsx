@@ -733,7 +733,7 @@ function useFeed() {
           stats: {
             likes: likeCount,
             dislikes: dislikeCount,
-
+            comments: 0, // TODO: replace with real comment count
             views: undefined, // TODO: Add actual view counts when available
           },
           userInteraction: {

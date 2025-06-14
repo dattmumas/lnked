@@ -27,7 +27,7 @@ export function useFollowerData({
   const supabase = createSupabaseBrowserClient();
 
   useEffect(() => {
-    async function fetchFollowerData() {
+    async function fetchFollowerData(): Promise<void> {
       try {
         setLoading(true);
         setError(null);
@@ -45,10 +45,10 @@ export function useFollowerData({
           );
         }
 
-        setFollowerCount(count || 0);
+        setFollowerCount(count ?? 0);
 
         // Check if current user is following (only if authenticated)
-        if (currentUserId) {
+        if (currentUserId !== null && currentUserId !== undefined && currentUserId !== '') {
           const { data: followData, error: followError } = await supabase
             .from('follows')
             .select('*')
@@ -98,8 +98,8 @@ export function useRealtimeFollowerData({
 
   const supabase = createSupabaseBrowserClient();
 
-  useEffect(() => {
-    async function fetchInitialData() {
+    useEffect(() => {
+    async function fetchInitialData(): Promise<void> {
       try {
         setLoading(true);
         setError(null);
@@ -117,10 +117,10 @@ export function useRealtimeFollowerData({
           );
         }
 
-        setFollowerCount(count || 0);
+        setFollowerCount(count ?? 0);
 
         // Check initial follow status
-        if (currentUserId) {
+        if (currentUserId !== null && currentUserId !== undefined && currentUserId !== '') {
           const { data: followData, error: followError } = await supabase
             .from('follows')
             .select('*')
@@ -159,21 +159,36 @@ export function useRealtimeFollowerData({
         },
         (payload) => {
           if (
-            payload.new &&
+            payload.new !== null &&
+            payload.new !== undefined &&
             'following_type' in payload.new &&
             payload.new.following_type === targetType
           ) {
             // New follow
             if (payload.eventType === 'INSERT') {
               setFollowerCount((prev) => prev + 1);
-              if (currentUserId && payload.new.follower_id === currentUserId) {
+              if (
+                currentUserId !== null &&
+                currentUserId !== undefined &&
+                currentUserId !== '' &&
+                payload.new.follower_id === currentUserId
+              ) {
                 setIsFollowing(true);
               }
             }
             // Unfollow
-            else if (payload.eventType === 'DELETE' && payload.old) {
+            else if (
+              payload.eventType === 'DELETE' &&
+              payload.old !== null &&
+              payload.old !== undefined
+            ) {
               setFollowerCount((prev) => Math.max(0, prev - 1));
-              if (currentUserId && payload.old.follower_id === currentUserId) {
+              if (
+                currentUserId !== null &&
+                currentUserId !== undefined &&
+                currentUserId !== '' &&
+                payload.old.follower_id === currentUserId
+              ) {
                 setIsFollowing(false);
               }
             }

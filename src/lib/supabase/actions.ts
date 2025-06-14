@@ -13,7 +13,7 @@ export async function getCurrentUserProfile(): Promise<{
   user: User | null;
   profile: { full_name: string | null; avatar_url: string | null } | null;
 }> {
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
 
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;

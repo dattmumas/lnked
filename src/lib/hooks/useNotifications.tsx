@@ -4,6 +4,9 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { clientNotificationService } from '@/lib/notifications/client-service';
 import type { Notification, NotificationFilters } from '@/types/notifications';
 
+// Debounce duration in milliseconds
+const DEBOUNCE_DELAY_MS = 300;
+
 interface UseNotificationsOptions {
   autoFetch?: boolean;
   realtime?: boolean;
@@ -42,15 +45,24 @@ export function useNotifications(
   const debounceTimer = useRef<NodeJS.Timeout | null>(null);
 
   const fetchNotifications = useCallback(
-    async (fetchFilters?: NotificationFilters, immediate = false) => {
-      if (!userId || isRequestInProgress.current) return;
+    async (
+      fetchFilters?: NotificationFilters,
+      immediate = false,
+    ): Promise<void> => {
+      if (
+        userId === null ||
+        userId === undefined ||
+        userId === '' ||
+        isRequestInProgress.current
+      )
+        return;
 
       // Clear any existing debounce timer
       if (debounceTimer.current) {
         clearTimeout(debounceTimer.current);
       }
 
-      const performFetch = async () => {
+      const performFetch = async (): Promise<void> => {
         isRequestInProgress.current = true;
         setIsLoading(true);
         setError(null);
@@ -79,14 +91,14 @@ export function useNotifications(
         await performFetch();
       } else {
         // Debounce the request by 300ms
-        debounceTimer.current = setTimeout(performFetch, 300);
+        debounceTimer.current = setTimeout(performFetch, DEBOUNCE_DELAY_MS);
       }
     },
     [userId, memoizedFilters],
   );
 
   const markAsRead = useCallback(
-    async (notificationIds?: string[]) => {
+    async (notificationIds?: string[]): Promise<void> => {
       try {
         const result =
           await clientNotificationService.markAsRead(notificationIds);
@@ -102,7 +114,11 @@ export function useNotifications(
           if (notificationIds) {
             setNotifications((prev) => {
               const unreadToMark = prev.filter(
-                (n) => notificationIds.includes(n.id) && !n.read_at,
+                (n) =>
+                  notificationIds.includes(n.id) &&
+                  (n.read_at === null ||
+                    n.read_at === undefined ||
+                    n.read_at === ''),
               ).length;
               setUnreadCount((current) => Math.max(0, current - unreadToMark));
               return prev;
@@ -123,14 +139,18 @@ export function useNotifications(
   );
 
   const deleteNotifications = useCallback(
-    async (notificationIds: string[]) => {
+    async (notificationIds: string[]): Promise<void> => {
       try {
         const result =
           await clientNotificationService.deleteNotifications(notificationIds);
         if (result.success) {
           setNotifications((prev) => {
             const unreadToDelete = prev.filter(
-              (n) => notificationIds.includes(n.id) && !n.read_at,
+              (n) =>
+                notificationIds.includes(n.id) &&
+                (n.read_at === null ||
+                  n.read_at === undefined ||
+                  n.read_at === ''),
             ).length;
 
             setUnreadCount((current) => Math.max(0, current - unreadToDelete));
@@ -146,7 +166,7 @@ export function useNotifications(
     [], // Remove notifications dependency to prevent infinite loops
   );
 
-  const refresh = useCallback(() => {
+  const refresh = useCallback((): Promise<void> => {
     return fetchNotifications();
   }, [fetchNotifications]);
 
@@ -155,7 +175,13 @@ export function useNotifications(
 
   // Initial fetch
   useEffect(() => {
-    if (autoFetch && userId && !initialFetchDone.current) {
+    if (
+      autoFetch &&
+      userId !== null &&
+      userId !== undefined &&
+      userId !== '' &&
+      !initialFetchDone.current
+    ) {
       initialFetchDone.current = true;
       fetchNotifications(undefined, true); // Immediate fetch for initial load
     }
@@ -163,19 +189,31 @@ export function useNotifications(
 
   // Real-time subscription
   useEffect(() => {
-    if (!realtime || !userId) return;
+    if (!realtime || userId === null || userId === undefined || userId === '') {
+      // Return a no‑op cleanup to satisfy `consistent-return`
+      return () => {};
+    }
 
     const unsubscribe = clientNotificationService.subscribeToNotifications(
       userId,
       (newNotification: Notification) => {
         setNotifications((prev) => [newNotification, ...prev]);
-        if (!newNotification.read_at) {
+        if (
+          newNotification.read_at === null ||
+          newNotification.read_at === undefined ||
+          newNotification.read_at === ''
+        ) {
           setUnreadCount((prev) => prev + 1);
         }
       },
     );
 
-    return unsubscribe || undefined;
+    // Always return a cleanup function to satisfy `consistent-return`
+    return () => {
+      if (typeof unsubscribe === 'function') {
+        unsubscribe();
+      }
+    };
   }, [realtime, userId]);
 
   // Cleanup debounce timer on unmount

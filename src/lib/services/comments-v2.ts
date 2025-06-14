@@ -109,7 +109,7 @@ export class CommentsV2Service {
         Object.prototype.hasOwnProperty.call(comment, 'author')
       ) {
         // Preserve legacy field name for consumer components
-        const nc = comment as Record<string, unknown>;
+        const nc = comment as unknown as Record<string, unknown>;
         nc.user = nc.author;
       }
       return comment as CommentWithAuthor;
@@ -188,7 +188,7 @@ export class CommentsV2Service {
       typeof newComment === 'object' &&
       Object.prototype.hasOwnProperty.call(newComment, 'author')
     ) {
-      const nc = newComment as Record<string, unknown>;
+      const nc = newComment as unknown as Record<string, unknown>;
       nc.user = nc.author;
     }
     return newComment as CommentWithAuthor | null;

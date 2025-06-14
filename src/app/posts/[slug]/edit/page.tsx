@@ -41,7 +41,7 @@ export default function EditPostEditorPage() {
 
   const handleContinue = async () => {
     // Save before navigating if there are changes
-    if (isDirty && formData.title.trim()) {
+    if (isDirty && formData?.title?.trim()) {
       await savePost();
     }
     router.push(`/posts/${postId}/edit/details`);
@@ -66,7 +66,7 @@ export default function EditPostEditorPage() {
   );
 
   const handleManualSave = async () => {
-    if (formData.title.trim()) {
+    if (formData?.title?.trim()) {
       await savePost();
     }
   };
@@ -138,7 +138,7 @@ export default function EditPostEditorPage() {
               variant="ghost"
               size="sm"
               onClick={handleManualSave}
-              disabled={!formData.title.trim() || autoSaveStatus === 'saving'}
+              disabled={!formData?.title?.trim() || autoSaveStatus === 'saving'}
               className="flex items-center gap-2"
             >
               <Save className="h-4 w-4" />
@@ -156,7 +156,7 @@ export default function EditPostEditorPage() {
             <input
               type="text"
               placeholder="Post title..."
-              value={formData.title}
+              value={formData?.title?.trim() ?? ''}
               onChange={(e) => updateFormData({ title: e.target.value })}
               className="w-full text-3xl font-bold bg-transparent border-none outline-none placeholder:text-muted-foreground focus:ring-0 p-0"
             />
@@ -180,7 +180,7 @@ export default function EditPostEditorPage() {
           size="lg"
           className="shadow-lg"
           onClick={handleContinue}
-          disabled={!formData.title.trim()}
+          disabled={!formData?.title?.trim()}
         >
           Continue to Settings →
         </Button>

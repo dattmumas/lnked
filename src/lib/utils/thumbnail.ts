@@ -148,13 +148,13 @@ export function getOptimizedThumbnailUrl(
   thumbnailUrl: string | null | undefined,
   options: ThumbnailTransformOptions = {}
 ): string | null {
-  if (thumbnailUrl === null || thumbnailUrl === '') return null;
+  if (thumbnailUrl === null || thumbnailUrl === undefined || thumbnailUrl === '') return null;
   
   // Check if it's a Supabase storage URL
   const pathInfo = extractSupabaseImagePath(thumbnailUrl);
   if (!pathInfo) {
     // Return original URL if not a Supabase storage URL
-    return thumbnailUrl;
+    return thumbnailUrl ?? null;
   }
   
   try {
@@ -174,7 +174,7 @@ export function getOptimizedThumbnailUrl(
     return data.publicUrl;
   } catch (error) {
     console.warn('Failed to get optimized thumbnail URL:', error);
-    return thumbnailUrl;
+    return thumbnailUrl ?? null;
   }
 }
 

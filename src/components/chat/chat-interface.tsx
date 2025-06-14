@@ -42,10 +42,15 @@ export function ChatInterface({ className, userId }: ChatInterfaceProps) {
   }) => {
     try {
       const conversation = await chat.createConversation(data);
-      if (conversation) {
+      if (
+        conversation &&
+        typeof conversation === 'object' &&
+        'id' in conversation &&
+        typeof (conversation as { id: unknown }).id === 'string'
+      ) {
         setShowCreateModal(false);
         // Auto-select the new conversation
-        chat.setActiveConversation(conversation.id);
+        chat.setActiveConversation((conversation as { id: string }).id);
       }
     } catch (error) {
       // Error will be handled by the modal or useChat hook

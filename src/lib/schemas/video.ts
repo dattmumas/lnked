@@ -1,5 +1,9 @@
 import { z } from 'zod';
-import { MAX_TITLE_LENGTH, MAX_DESCRIPTION_LENGTH, VIDEOS_PER_PAGE } from '@/lib/constants/video';
+import {
+  MAX_TITLE_LENGTH,
+  MAX_DESCRIPTION_LENGTH,
+  VIDEOS_PER_PAGE,
+} from '@/lib/constants/video';
 
 // Enhanced video upload metadata schema with new fields
 export const VideoUploadMetadataSchema = z.object({
@@ -84,7 +88,6 @@ export const videoSearchSchema = z.object({
     .number()
     .int()
     .positive()
-    .max(MAX_VIDEO_LIMIT)
     .default(VIDEOS_PER_PAGE),
   sortBy: z.enum(['created_at', 'title', 'duration']).default('created_at'),
   sortOrder: z.enum(['asc', 'desc']).default('desc'),
@@ -97,7 +100,6 @@ export const videoQuerySchema = z.object({
     .coerce
     .number()
     .min(1)
-    .max(MAX_VIDEO_LIMIT)
     .default(VIDEOS_PER_PAGE),
   search: z.string().optional(),
   collective_id: z.string().uuid().optional(),
