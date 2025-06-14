@@ -80,7 +80,12 @@ export const videoSearchSchema = z.object({
   tags: z.array(z.string()).optional(),
   userId: z.string().optional(),
   page: z.number().int().positive().default(1),
-  limit: z.number().int().positive().max(100).default(VIDEOS_PER_PAGE),
+  limit: z
+    .number()
+    .int()
+    .positive()
+    .max(MAX_VIDEO_LIMIT)
+    .default(VIDEOS_PER_PAGE),
   sortBy: z.enum(['created_at', 'title', 'duration']).default('created_at'),
   sortOrder: z.enum(['asc', 'desc']).default('desc'),
 });
@@ -88,11 +93,16 @@ export const videoSearchSchema = z.object({
 // Enhanced video query schema
 export const videoQuerySchema = z.object({
   page: z.coerce.number().positive().default(1),
-  limit: z.coerce.number().min(1).max(100).default(VIDEOS_PER_PAGE),
+  limit: z
+    .coerce
+    .number()
+    .min(1)
+    .max(MAX_VIDEO_LIMIT)
+    .default(VIDEOS_PER_PAGE),
   search: z.string().optional(),
   collective_id: z.string().uuid().optional(),
   is_public: z.boolean().optional(),
-  status: z.enum(['ready', 'preparing', 'errored']).optional(),
+  status: z.enum(['preparing', 'ready', 'errored', 'deleted']).optional(),
   sort: z.enum(['created_at', 'title', 'duration']).default('created_at'),
 });
 
@@ -104,6 +114,7 @@ export type VideoUploadInput = z.infer<typeof videoUploadSchema>;
 export type VideoUpdateInput = z.infer<typeof videoUpdateSchema>;
 export type VideoSearchInput = z.infer<typeof videoSearchSchema>;
 export type VideoQueryInput = z.infer<typeof videoQuerySchema>;
+
 
 // Enhanced validation helper functions
 export function validateCreateUploadUrl(data: unknown): CreateUploadUrl {
@@ -132,4 +143,4 @@ export function validateVideoSearch(data: unknown): VideoSearchInput {
 
 export function validateVideoQuery(data: unknown): VideoQueryInput {
   return videoQuerySchema.parse(data);
-} 
+}

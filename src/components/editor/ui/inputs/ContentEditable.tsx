@@ -44,7 +44,7 @@ export default function LexicalContentEditable({
     } else {
       contentEditableProps = {
         'aria-placeholder': placeholder,
-        // eslint-disable-next-line react/no-unstable-nested-components
+         
         placeholder: (isEditable: boolean) =>
           isEditable ? (
             <div className="ContentEditable__placeholder">{placeholder}</div>

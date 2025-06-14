@@ -307,7 +307,7 @@ export function useChat() {
       },
     });
     } else {
-      // eslint-disable-next-line no-console -- allow warn/error only per lint rules
+       
       console.warn('Realtime disabled - using polling/manual refresh only');
     }
     

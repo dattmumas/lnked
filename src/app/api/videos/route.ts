@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { cookies } from 'next/headers';
+import { createServerClient } from '@supabase/ssr';
+import type { Database } from '@/lib/database.types';
 
 /**
  * GET /api/videos
@@ -7,7 +9,26 @@ import { createServerSupabaseClient } from '@/lib/supabase/server';
  */
 export async function GET(request: NextRequest) {
   try {
-    const supabase = await createServerSupabaseClient();
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    if (!url || !anonKey) {
+      return NextResponse.json(
+        { error: 'Supabase environment variables are missing' },
+        { status: 500 }
+      );
+    }
+    // Use async cookie helpers to avoid capturing stale cookies
+    const supabase = createServerClient<Database>(url, anonKey, {
+      cookies: {
+        get: async (name) => {
+          const store = await cookies();
+          return store.get(name)?.value;
+        },
+        // These GET routes don't mutate cookies; graceful no‑ops keep types happy
+        set: async () => {},
+        remove: async () => {},
+      },
+    });
     const { data: { user }, error: authError } = await supabase.auth.getUser();
 
     if (authError || !user) {

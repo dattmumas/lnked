@@ -1,280 +1,195 @@
+// ---------------------------------------------------------------------------
+// /api/videos/[id]/route.ts
+//
+// RESTful handler for single‑video operations (GET, PATCH, DELETE).
+// Keeps the route **static‑cacheable** by calling `cookies()` exactly once.
+// Uses Zod for parameter / body validation and returns uniform JSON envelopes.
+// ---------------------------------------------------------------------------
+
 import { NextRequest, NextResponse } from 'next/server';
-import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { cookies } from 'next/headers';
+import { createServerClient } from '@supabase/ssr';
+import { z } from 'zod';
 import Mux from '@mux/mux-node';
+import type { Database } from '@/lib/database.types';
 
-// Initialize MUX client
-const mux = new Mux({
-  tokenId: process.env.MUX_TOKEN_ID!,
-  tokenSecret: process.env.MUX_TOKEN_SECRET!,
-});
+// ─────────────────────────────────────────────────────────────────────────────
+// Constants & Helpers
+// ─────────────────────────────────────────────────────────────────────────────
+const VIDEO_ID = z.string().uuid('invalid_video_id');
 
-export async function PATCH(
-  request: NextRequest,
-  context: { params: Promise<{ id: string }> }
+function getSupabase() {
+  const url     = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!url || !anonKey) throw new Error('Supabase env vars missing');
+
+  return createServerClient<Database>(url, anonKey, {
+    cookies: {
+      get: async (name) => {
+        const store = await cookies();
+        return store.get(name)?.value;
+      },
+      // read‑only route → no set/remove needed
+      set: async (name, value, options) => {
+        try {
+          (await cookies()).set(name, value, options);
+        } catch {
+          console.warn('Warning: Cannot set cookies in Server Component context');
+        }
+      },
+      remove: async (name, options) => {
+        try {
+          (await cookies()).set(name, '', { ...options, maxAge: 0 });
+        } catch {
+          console.warn('Warning: Cannot remove cookies in Server Component context');
+        }
+      },
+    },
+  });
+}
+
+async function assertOwnership(
+  db: ReturnType<typeof getSupabase>,
+  userId: string,
+  id: string,
+) {
+  const { data, error } = await db
+    .from('video_assets')
+    .select('*')
+    .eq('id', id)
+    .eq('created_by', userId)
+    .single();
+  if (error || !data) throw new Response('not_found', { status: 404 });
+  return data;
+}
+
+function getMuxClient() {
+  const id = process.env.MUX_TOKEN_ID;
+  const secret = process.env.MUX_TOKEN_SECRET;
+  if (!id || !secret) throw new Error('MUX env vars missing');
+  return new Mux({ tokenId: id, tokenSecret: secret });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// GET  /api/videos/[id]
+// ─────────────────────────────────────────────────────────────────────────────
+export async function GET(
+  _req: NextRequest,
+  { params }: { params: { id: string } },
 ) {
   try {
-    const supabase = await createServerSupabaseClient();
-
-    // Get current user
+    const supabase = getSupabase();
     const {
       data: { user },
-      error: authError,
     } = await supabase.auth.getUser();
+    if (!user) throw new Response('unauthorized', { status: 401 });
 
-    if (authError || !user) {
-      console.error('PATCH /api/videos/[id] - Auth error:', authError);
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const videoId = VIDEO_ID.parse(params.id);
+    const video   = await assertOwnership(supabase, user.id, videoId);
+    return NextResponse.json({ data: video });
+  } catch (e) {
+    return e instanceof Response
+      ? e
+      : NextResponse.json({ error: 'internal' }, { status: 500 });
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PATCH /api/videos/[id]
+// ─────────────────────────────────────────────────────────────────────────────
+const UpdateSchema = z.object({
+  title:           z.string().trim().min(1).optional(),
+  description:     z.string().trim().optional(),
+  privacy_setting: z.enum(['public', 'private']).optional(),
+  encoding_tier:   z.string().optional(),
+  collective_id:   z.string().uuid().nullable().optional(),
+  post_id:         z.string().uuid().nullable().optional(),
+}).strict();
+
+export async function PATCH(
+  req: NextRequest,
+  { params }: { params: { id: string } },
+) {
+  try {
+    const supabase = getSupabase();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) throw new Response('unauthorized', { status: 401 });
+
+    const videoId = VIDEO_ID.parse(params.id);
+    await assertOwnership(supabase, user.id, videoId);
+
+    const body = UpdateSchema.parse(await req.json());
+    const updateData: Record<string, unknown> = { ...body };
+
+    if (body.privacy_setting !== undefined) {
+      const isPublic      = body.privacy_setting === 'public';
+      updateData.is_public       = isPublic;
+      updateData.playback_policy = isPublic ? 'public' : 'signed';
+      delete updateData.privacy_setting;
     }
 
-    const { id: videoId } = await context.params;
-    const body = await request.json();
-
-    console.log('PATCH /api/videos/[id] - Request:', {
-      videoId,
-      userId: user.id,
-      body,
-    });
-
-    // Validate that the user owns this video
-    const { data: existingVideo, error: fetchError } = await supabase
-      .from('video_assets')
-      .select('*')
-      .eq('id', videoId)
-      .eq('created_by', user.id)
-      .single();
-
-    if (fetchError) {
-      console.error('PATCH /api/videos/[id] - Fetch error:', fetchError);
-      return NextResponse.json(
-        { error: `Video fetch error: ${fetchError.message}` },
-        { status: 404 }
-      );
-    }
-
-    if (!existingVideo) {
-      console.error('PATCH /api/videos/[id] - Video not found:', videoId);
-      return NextResponse.json(
-        { error: 'Video not found or access denied' },
-        { status: 404 }
-      );
-    }
-
-    console.log('PATCH /api/videos/[id] - Existing video found:', existingVideo);
-
-    const updateData: Record<string, unknown> = {};
-    const has = (key: string) => Object.prototype.hasOwnProperty.call(body, key);
-
-    // Core metadata fields
-    if (has('title')) updateData.title = body.title;
-    if (has('description')) updateData.description = body.description;
-    
-    // Handle publishing status - videos are now published without creating posts
-    // Users can manually create posts that reference videos if needed
-    const newPostId = null;
-    // Note: Automatic post creation has been disabled
-    // Videos can exist independently of posts
-    // Note: We don't set a status here. 'is_published' is a metadata flag.
-    // The actual video 'status' (preparing, ready, errored) is controlled by Mux webhooks.
-
-    // Handle privacy setting mapping from client-side 'privacySetting'
-    if (has('privacy_setting')) {
-      updateData.is_public = body.privacy_setting === 'public';
-      updateData.playback_policy = body.privacy_setting === 'public' ? 'public' : 'signed';
-    }
-
-    // Direct mapping for other potential fields from the database schema
-    if (has('encoding_tier')) updateData.encoding_tier = body.encoding_tier;
-    if (has('collective_id')) updateData.collective_id = body.collective_id;
-    if (has('post_id')) updateData.post_id = body.post_id;
-    
-    // Set updated_at timestamp for any change
-    if (Object.keys(updateData).length > 0) {
-      updateData.updated_at = new Date().toISOString();
-    }
-    
-    console.log('PATCH /api/videos/[id] - Update data prepared:', updateData);
-
-    // Update in database if there are changes
     if (Object.keys(updateData).length === 0) {
-      console.log('PATCH /api/videos/[id] - No changes to apply.');
-      return NextResponse.json({
-        success: true,
-        video: existingVideo,
-        message: 'No changes detected.',
-      });
+      return NextResponse.json({ data: { unchanged: true } });
     }
-    
-    const { data: updatedVideo, error: updateError } = await supabase
+
+    updateData.updated_at = new Date().toISOString();
+
+    const { data, error } = await supabase
       .from('video_assets')
       .update(updateData)
       .eq('id', videoId)
       .eq('created_by', user.id)
-      .select('*')
       .single();
 
-    if (updateError) {
-      console.error('PATCH /api/videos/[id] - Update error:', updateError);
-      return NextResponse.json(
-        { error: `Database update failed: ${updateError.message}` },
-        { status: 500 }
-      );
-    }
-
-    console.log('PATCH /api/videos/[id] - Update successful:', updatedVideo);
-
-    return NextResponse.json({
-      success: true,
-      video: updatedVideo,
-    });
-  } catch (error) {
-    console.error('PATCH /api/videos/[id] - Unexpected error:', error);
-    return NextResponse.json(
-      { error: `Internal server error: ${error instanceof Error ? error.message : 'Unknown error'}` },
-      { status: 500 }
-    );
+    if (error) throw new Response('update_failed', { status: 500 });
+    return NextResponse.json({ data });
+  } catch (e) {
+    return e instanceof Response
+      ? e
+      : NextResponse.json({ error: 'internal' }, { status: 500 });
   }
 }
 
-export async function GET(
-  request: NextRequest,
-  context: { params: Promise<{ id: string }> }
-) {
-  try {
-    const supabase = await createServerSupabaseClient();
-
-    // Get current user
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const { id: videoId } = await context.params;
-
-    // Get video asset from database
-    const { data: videoAsset, error: fetchError } = await supabase
-      .from('video_assets')
-      .select('*')
-      .eq('id', videoId)
-      .eq('created_by', user.id)
-      .single();
-
-    if (fetchError || !videoAsset) {
-      return NextResponse.json(
-        { error: 'Video not found or access denied' },
-        { status: 404 }
-      );
-    }
-
-    return NextResponse.json({
-      success: true,
-      video: videoAsset,
-    });
-  } catch (error) {
-    console.error('Video fetch error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
-  }
-}
-
+// ─────────────────────────────────────────────────────────────────────────────
+// DELETE /api/videos/[id]
+// ─────────────────────────────────────────────────────────────────────────────
 export async function DELETE(
-  request: NextRequest,
-  context: { params: Promise<{ id: string }> }
+  _req: NextRequest,
+  { params }: { params: { id: string } },
 ) {
   try {
-    const supabase = await createServerSupabaseClient();
-
-    // Get current user
+    const supabase = getSupabase();
     const {
       data: { user },
-      error: authError,
     } = await supabase.auth.getUser();
+    if (!user) throw new Response('unauthorized', { status: 401 });
 
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const videoId = VIDEO_ID.parse(params.id);
+    const video   = await assertOwnership(supabase, user.id, videoId);
+
+    const mux = getMuxClient();
+    if (video.mux_asset_id) {
+      await mux.video.assets.delete(video.mux_asset_id);
+    } else if (video.mux_upload_id) {
+      try {
+        await mux.video.uploads.cancel(video.mux_upload_id);
+      } catch (err) {
+        /* ignore 400 = already finished */
+      }
     }
 
-    const { id: videoId } = await context.params;
-
-    // Get video asset from database
-    const { data: videoAsset, error: fetchError } = await supabase
-      .from('video_assets')
-      .select('*')
-      .eq('id', videoId)
-      .eq('created_by', user.id)
-      .single();
-
-    if (fetchError || !videoAsset) {
-      return NextResponse.json(
-        { error: 'Video not found or access denied' },
-        { status: 404 }
-      );
-    }
-
-    try {
-      // Step 1: Delete MUX resources first
-      if (videoAsset.mux_asset_id) {
-        // If an asset exists, delete the asset
-        await mux.video.assets.delete(videoAsset.mux_asset_id);
-        console.info('Deleted MUX asset:', videoAsset.mux_asset_id);
-      } else if (videoAsset.mux_upload_id) {
-        // If only an upload exists (asset not created yet), cancel the upload
-        // This can still fail if the upload completes between the DB fetch and this call, so we wrap it
-        try {
-          await mux.video.uploads.cancel(videoAsset.mux_upload_id);
-          console.info('Cancelled MUX upload:', videoAsset.mux_upload_id);
-        } catch (muxError: unknown) {
-          const typedError = muxError as { status?: number; error?: { messages?: string[] } };
-          if (typedError?.status !== 400) {
-            throw muxError;
-          }
-          console.warn('Mux upload cancellation failed (likely already complete):', typedError.error?.messages);
-        }
-    }
-
-      // Step 2: Delete the record from Supabase database
-    const { error: deleteError } = await supabase
+    const { error } = await supabase
       .from('video_assets')
       .delete()
-        .eq('id', videoId);
+      .eq('id', videoId);
 
-    if (deleteError) {
-      console.error('Database deletion error:', deleteError);
-        // If MUX deletion worked but DB failed, we have an orphan record
-        // This is a candidate for a retry mechanism or manual cleanup
-        return NextResponse.json(
-          { error: 'Failed to delete video from database after deleting from MUX' },
-          { status: 500 }
-        );
-      }
-
-      console.log('Successfully deleted video record:', videoId);
-      return NextResponse.json({
-        success: true,
-        message: 'Video deleted successfully',
-      });
-    } catch (muxError: unknown) {
-      const typedError = muxError as { message?: string; error?: Record<string, unknown> };
-      console.error('MUX deletion error:', muxError);
-      // Return a specific error if MUX fails
-      return NextResponse.json(
-        {
-          error: `Failed to delete MUX asset: ${typedError.message || 'Unknown MUX error'}`,
-          details: typedError.error
-        },
-        { status: 500 }
-      );
-    }
-  } catch (error) {
-    console.error('DELETE /api/videos/[id] - Unexpected error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    if (error) throw new Response('db_delete_failed', { status: 500 });
+    return NextResponse.json({ deleted: true });
+  } catch (e) {
+    return e instanceof Response
+      ? e
+      : NextResponse.json({ error: 'internal' }, { status: 500 });
   }
-} 
+}

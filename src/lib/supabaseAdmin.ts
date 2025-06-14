@@ -4,10 +4,12 @@ import type { Database } from './database.types';
 let cachedClient: SupabaseClient<Database> | null = null;
 
 function initClient(): SupabaseClient<Database> {
-  if (cachedClient) return cachedClient;
+  if (cachedClient !== null) {
+    return cachedClient;
+  }
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !key) {
+  if (url === undefined || url === '' || key === undefined || key === '') {
     throw new Error('Supabase admin environment variables are missing');
   }
   cachedClient = createClient<Database>(url, key, {

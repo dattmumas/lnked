@@ -4,8 +4,34 @@
 
 import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
 
+// ---------------------------------------------------------------------------
+// Avatar utility constants
+// ---------------------------------------------------------------------------
+const BYTE_SHIFT_EXPONENT = 10; // 2^10 = 1024
+const BYTES_PER_KB = 1 << BYTE_SHIFT_EXPONENT; // 1024 bytes
+const BYTES_PER_MB = BYTES_PER_KB * BYTES_PER_KB; // 1024 x 1024
+const MAX_AVATAR_SIZE_MB = 10;
+const RANDOM_ID_RADIX = 36;
+const RANDOM_ID_START = 2;
+const RANDOM_ID_LENGTH = 6; // substring length (8 - 2)
+const MAX_INITIALS = 2;
+
+const QUALITY = {
+  SMALL: 75,
+  MEDIUM: 80,
+  LARGE: 85,
+  XL: 90,
+  ORIGINAL: 85,
+} as const;
+
+const PATH_OFFSET_AFTER_BUCKET = 1; // skip bucket name
+const PATH_OFFSET_AFTER_PUBLIC = 2;
+
+/**
+ * Validates an image file for avatar upload
+ */
 export const AVATAR_CONFIG = {
-  maxSize: 10 * 1024 * 1024, // 10MB
+  maxSize: MAX_AVATAR_SIZE_MB * BYTES_PER_MB, // 10 MB
   allowedTypes: ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'] as const,
   bucket: 'avatars',
   cacheControl: '3600', // 1 hour cache
@@ -48,7 +74,9 @@ export function validateAvatarFile(file: File): { isValid: boolean; error?: stri
 export function generateAvatarFilename(userId: string, mimeType: string): string {
   const extension = mimeType.split('/')[1]?.replace('jpeg', 'jpg') || 'png';
   const timestamp = Date.now();
-  const randomSuffix = Math.random().toString(36).substring(2, 8);
+  const randomSuffix = Math.random()
+    .toString(RANDOM_ID_RADIX)
+    .slice(RANDOM_ID_START, RANDOM_ID_START + RANDOM_ID_LENGTH);
   const fileName = `avatar-${timestamp}-${randomSuffix}.${extension}`;
   return `user-${userId}/${fileName}`;
 }
@@ -62,7 +90,7 @@ export function extractFilePathFromUrl(url: string, bucketName: string = AVATAR_
     const bucketIndex = urlParts.findIndex(part => part === bucketName);
     
     if (bucketIndex !== -1 && bucketIndex < urlParts.length - 1) {
-      return urlParts.slice(bucketIndex + 1).join('/');
+      return urlParts.slice(bucketIndex + PATH_OFFSET_AFTER_BUCKET).join('/');
     }
     
     return null;
@@ -82,13 +110,13 @@ export function isSupabaseStorageUrl(url: string): boolean {
  * Generates user initials from name for avatar fallback
  */
 export function generateUserInitials(fullName?: string | null, username?: string | null): string {
-  const name = fullName || username;
-  if (!name) return 'U';
+  const name = fullName ?? username;
+  if (name === undefined || name === null || name.trim() === '') return 'U';
   
   return name
     .split(' ')
     .map((word) => word.charAt(0).toUpperCase())
-    .slice(0, 2)
+    .slice(0, MAX_INITIALS)
     .join('');
 }
 
@@ -120,7 +148,9 @@ export function extractSupabaseImagePath(url: string): { bucket: string; path: s
     }
     
     const bucket = pathParts[publicIndex + 1];
-    const path = pathParts.slice(publicIndex + 2).join('/');
+    const path = pathParts
+      .slice(publicIndex + PATH_OFFSET_AFTER_PUBLIC)
+      .join('/');
     
     return { bucket, path };
   } catch {
@@ -135,7 +165,7 @@ export function getOptimizedAvatarUrl(
   avatarUrl: string | null | undefined,
   options: ImageTransformOptions = {}
 ): string | null {
-  if (!avatarUrl) return null;
+  if (avatarUrl === null || avatarUrl === '') return null;
   
   // Check if it's a Supabase storage URL
   const pathInfo = extractSupabaseImagePath(avatarUrl);
@@ -152,7 +182,7 @@ export function getOptimizedAvatarUrl(
         transform: {
           width: options.width,
           height: options.height,
-          quality: options.quality || 80,
+          quality: options.quality ?? QUALITY.MEDIUM,
           resize: options.resize || 'cover',
           ...(options.format && { format: options.format }),
         },
@@ -168,37 +198,45 @@ export function getOptimizedAvatarUrl(
 /**
  * Get responsive avatar URLs for different display sizes
  */
-export function getResponsiveAvatarUrls(avatarUrl: string | null | undefined) {
-  if (!avatarUrl) return null;
+export function getResponsiveAvatarUrls(
+  avatarUrl: string | null | undefined
+): {
+  small: string | null;
+  medium: string | null;
+  large: string | null;
+  xl: string | null;
+  original: string | null;
+} | null {
+  if (avatarUrl === null || avatarUrl === '') return null;
   
   return {
     // Small avatars (32px) - for comments, mentions
     small: getOptimizedAvatarUrl(avatarUrl, { 
       width: 32, 
       height: 32, 
-      quality: 75 
+      quality: QUALITY.SMALL 
     }),
     // Medium avatars (48px) - for lists, cards
     medium: getOptimizedAvatarUrl(avatarUrl, { 
       width: 48, 
       height: 48, 
-      quality: 80 
+      quality: QUALITY.MEDIUM 
     }),
     // Large avatars (128px) - for profile hero
     large: getOptimizedAvatarUrl(avatarUrl, { 
       width: 128, 
       height: 128, 
-      quality: 85 
+      quality: QUALITY.LARGE 
     }),
     // XL avatars (256px) - for profile modals, settings
     xl: getOptimizedAvatarUrl(avatarUrl, { 
       width: 256, 
       height: 256, 
-      quality: 90 
+      quality: QUALITY.XL 
     }),
     // Original optimized (quality only)
     original: getOptimizedAvatarUrl(avatarUrl, { 
-      quality: 85 
+      quality: QUALITY.ORIGINAL 
     }),
   };
-} 
+}

@@ -1,5 +1,6 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
+import { MAX_NOTIFICATION_PREVIEW_LENGTH } from '@/lib/constants/notification';
 import type { Json } from '@/lib/database.types';
 import type {
   Notification,
@@ -31,11 +32,11 @@ export class NotificationService {
     }
   }
 
-  private async getSupabase(): Promise<ReturnType<typeof createServerSupabaseClient> | ReturnType<typeof createSupabaseBrowserClient>> {
-    if (this.supabase) {
+ private getSupabase(): ReturnType<typeof createServerSupabaseClient> | ReturnType<typeof createSupabaseBrowserClient> {
+    if (this.supabase !== null) {
       return this.supabase;
     }
-    return await createServerSupabaseClient();
+    return createServerSupabaseClient();
   }
 
   /**
@@ -44,7 +45,7 @@ export class NotificationService {
   async getNotifications(
     filters: NotificationFilters = {}
   ): Promise<NotificationResponse> {
-    const supabase = await this.getSupabase();
+    const supabase = this.getSupabase();
     const { limit = DEFAULT_LIMIT, offset = DEFAULT_OFFSET, type, read } = filters;
 
     let query = supabase
@@ -61,7 +62,7 @@ export class NotificationService {
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1);
 
-    if (type) {
+    if (typeof type === 'string' && type !== '') {
       query = query.eq('type', type);
     }
 
@@ -101,8 +102,8 @@ export class NotificationService {
 
     return {
       notifications: transformedNotifications,
-      total_count: count || 0,
-      unread_count: unreadCount || 0,
+      total_count: count ?? 0,
+      unread_count: unreadCount ?? 0,
       has_more: (count ?? 0) > offset + limit,
     };
   }
@@ -111,7 +112,7 @@ export class NotificationService {
    * Get unread notification count
    */
   async getUnreadCount(): Promise<number> {
-    const supabase = await this.getSupabase();
+    const supabase = this.getSupabase();
 
     const { count, error } = await supabase
       .from('notifications')
@@ -123,14 +124,14 @@ export class NotificationService {
       return 0;
     }
 
-    return count || 0;
+    return count ?? 0;
   }
 
   /**
    * Mark notifications as read
    */
   async markAsRead(notificationIds?: string[]): Promise<NotificationActionResult> {
-    const supabase = await this.getSupabase();
+    const supabase = this.getSupabase();
 
     try {
       const {
@@ -143,7 +144,7 @@ export class NotificationService {
       }
 
       const timestamp = nowIso();
-      if (notificationIds !== undefined && notificationIds.length > 0) {
+      if (Array.isArray(notificationIds) && notificationIds.length > 0) {
         // Mark specific notifications as read
         const { error } = await supabase
           .from('notifications')
@@ -181,7 +182,7 @@ export class NotificationService {
    * Delete notifications
    */
   async deleteNotifications(notificationIds: string[]): Promise<NotificationActionResult> {
-    const supabase = await this.getSupabase();
+    const supabase = this.getSupabase();
 
     try {
       const {
@@ -193,7 +194,7 @@ export class NotificationService {
         return { success: false, error: 'User not authenticated' };
       }
 
-      if (notificationIds.length === 0) {
+      if (!Array.isArray(notificationIds) || notificationIds.length === 0) {
         return { success: false, error: 'No notifications specified' };
       }
 
@@ -220,7 +221,7 @@ export class NotificationService {
    * Create a notification (server-side only)
    */
   async createNotification(params: CreateNotificationParams): Promise<NotificationActionResult> {
-    const supabase = await this.getSupabase();
+    const supabase = this.getSupabase();
 
     try {
       const { data, error } = await supabase.rpc('create_notification', {
@@ -251,7 +252,7 @@ export class NotificationService {
    * Get notification preferences
    */
   async getPreferences(): Promise<NotificationPreferences[]> {
-    const supabase = await this.getSupabase();
+    const supabase = this.getSupabase();
 
     const { data, error } = await supabase
       .from('notification_preferences')
@@ -279,7 +280,7 @@ export class NotificationService {
   async updatePreferences(
     updates: NotificationPreferencesUpdate[]
   ): Promise<NotificationActionResult> {
-    const supabase = await this.getSupabase();
+    const supabase = this.getSupabase();
 
     try {
       const {
@@ -331,7 +332,7 @@ export class NotificationService {
       return null;
     }
 
-    if (userId === '') {
+    if (typeof userId !== 'string' || userId.trim() === '') {
       return null;
     }
 
@@ -347,7 +348,7 @@ export class NotificationService {
         },
         async (payload: { new: Record<string, unknown> }) => {
           // Fetch the full notification with actor data
-          const { data: notification } = await this.supabase!
+          const { data: notification } = await this.supabase
             .from('notifications')
             .select(`
               *,
@@ -386,7 +387,7 @@ export class NotificationService {
    * Clean up old notifications (server-side only)
    */
   async cleanupOldNotifications(): Promise<NotificationActionResult> {
-    const supabase = await this.getSupabase();
+    const supabase = this.getSupabase();
 
     try {
       const { data, error } = await supabase.rpc('cleanup_old_notifications');
@@ -479,7 +480,7 @@ export async function createPostLikeNotification(
   const actorName = user.full_name || user.username || 'Someone';
   let message = `${actorName} liked your post`;
   if (post.title) {
-    message += `: "${post.title.substring(0, 50)}"`;
+    message += `: "${post.title.substring(0, MAX_NOTIFICATION_PREVIEW_LENGTH)}"`;
   }
 
   return serverNotificationService.createNotification({
@@ -538,7 +539,7 @@ export async function createCommentNotification(
   if (post.author_id !== userId) {
     let message = `${actorName} commented on your post`;
     if (post.title) {
-      message += `: "${post.title.substring(0, 50)}"`;
+      message += `: "${post.title.substring(0, MAX_NOTIFICATION_PREVIEW_LENGTH)}"`;
     }
 
     return serverNotificationService.createNotification({

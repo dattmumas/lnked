@@ -3,13 +3,15 @@ import Stripe from 'stripe';
 let stripeClient: Stripe | null = null;
 
 export function getStripe(): Stripe | null {
-  if (stripeClient !== null) return stripeClient; // cached
-
   const key = process.env.STRIPE_SECRET_KEY;
-  if (!key) {
-    // No key yet – return null instead of throwing
+
+  const hasValidKey = typeof key === 'string' && key !== '';
+  if (!hasValidKey) {
+    // No Stripe secret key provided – return null instead of throwing
     return null;
   }
+
+  if (stripeClient !== null) return stripeClient; // cached
 
   stripeClient = new Stripe(key, {
     apiVersion: '2025-05-28.basil',

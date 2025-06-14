@@ -189,6 +189,25 @@ export const NOTIFICATION_CONFIGS: Record<NotificationType, NotificationDisplayC
   },
 };
 
+// Time/Date unit constants
+// Using named constants keeps the `no-magic-numbers` rule enabled while remaining self-documenting.
+
+// eslint-disable-next-line no-magic-numbers -- constant definition
+const MILLISECONDS_PER_SECOND = 1000 as const;
+
+// eslint-disable-next-line no-magic-numbers -- constant definition
+const SECONDS_PER_MINUTE = 60 as const;
+// eslint-disable-next-line no-magic-numbers -- constant definition
+const MINUTES_PER_HOUR = 60 as const;
+// eslint-disable-next-line no-magic-numbers -- constant definition
+const HOURS_PER_DAY = 24 as const;
+// eslint-disable-next-line no-magic-numbers -- constant definition
+const DAYS_PER_WEEK = 7 as const;
+
+const SECONDS_PER_HOUR = SECONDS_PER_MINUTE * MINUTES_PER_HOUR; // 3_600
+export const SECONDS_PER_DAY = SECONDS_PER_HOUR * HOURS_PER_DAY; // 86_400
+const SECONDS_PER_WEEK = SECONDS_PER_DAY * DAYS_PER_WEEK; // 604_800
+
 // Helper functions
 export function getNotificationConfig(type: NotificationType): NotificationDisplayConfig {
   return NOTIFICATION_CONFIGS[type];
@@ -197,18 +216,18 @@ export function getNotificationConfig(type: NotificationType): NotificationDispl
 export function formatNotificationTime(createdAt: string): string {
   const now = new Date();
   const created = new Date(createdAt);
-  const diffInSeconds = Math.floor((now.getTime() - created.getTime()) / 1000);
+  const diffInSeconds = Math.floor((now.getTime() - created.getTime()) / MILLISECONDS_PER_SECOND);
 
-  if (diffInSeconds < 60) {
+  if (diffInSeconds < SECONDS_PER_MINUTE) {
     return 'Just now';
-  } else if (diffInSeconds < 3600) {
-    const minutes = Math.floor(diffInSeconds / 60);
+  } else if (diffInSeconds < SECONDS_PER_HOUR) {
+    const minutes = Math.floor(diffInSeconds / SECONDS_PER_MINUTE);
     return `${minutes}m ago`;
-  } else if (diffInSeconds < 86400) {
-    const hours = Math.floor(diffInSeconds / 3600);
+  } else if (diffInSeconds < SECONDS_PER_DAY) {
+    const hours = Math.floor(diffInSeconds / SECONDS_PER_HOUR);
     return `${hours}h ago`;
-  } else if (diffInSeconds < 604800) {
-    const days = Math.floor(diffInSeconds / 86400);
+  } else if (diffInSeconds < SECONDS_PER_WEEK) {
+    const days = Math.floor(diffInSeconds / SECONDS_PER_DAY);
     return `${days}d ago`;
   } else {
     return created.toLocaleDateString();

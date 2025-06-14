@@ -4,8 +4,24 @@
 
 import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
 
+// ---------------------------------------------------------------------------
+// Thumbnail utility constants
+// ---------------------------------------------------------------------------
+const BYTE_SHIFT_EXPONENT = 10; // 2^10 = 1024 bytes
+const BYTES_PER_KB = 1 << BYTE_SHIFT_EXPONENT; // 1024 bytes
+const BYTES_PER_MB = BYTES_PER_KB * BYTES_PER_KB; // 1024 x 1024
+const THUMBNAIL_MAX_SIZE_MB = 15;
+
+const RANDOM_ID_RADIX = 36;
+const RANDOM_ID_START = 2;
+const RANDOM_ID_LENGTH = 6; // substring length (8 - 2)
+
+const DEFAULT_IMAGE_QUALITY = 85;
+
+const PATH_OFFSET_AFTER_PUBLIC = 2; // skip "public" and bucket name
+
 export const THUMBNAIL_CONFIG = {
-  maxSize: 15 * 1024 * 1024, // 15MB (larger than avatars for high-quality post thumbnails)
+  maxSize: THUMBNAIL_MAX_SIZE_MB * BYTES_PER_MB, // 15 MB
   allowedTypes: ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'] as const,
   bucket: 'post-thumbnails',
   cacheControl: '3600', // 1 hour cache
@@ -51,9 +67,14 @@ export function validateThumbnailFile(file: File): { isValid: boolean; error?: s
 export function generateThumbnailFilename(userId: string, postId: string | undefined, mimeType: string): string {
   const extension = mimeType.split('/')[1]?.replace('jpeg', 'jpg') || 'png';
   const timestamp = Date.now();
-  const randomSuffix = Math.random().toString(36).substring(2, 8);
+  const randomSuffix = Math.random()
+    .toString(RANDOM_ID_RADIX)
+    .slice(RANDOM_ID_START, RANDOM_ID_START + RANDOM_ID_LENGTH);
   const fileName = `thumbnail-${timestamp}-${randomSuffix}.${extension}`;
-  const prefix = postId ? `post-${postId}` : `user-${userId}/draft`;
+  const prefix =
+    postId !== undefined && postId !== ''
+      ? `post-${postId}`
+      : `user-${userId}/draft`;
   return `${prefix}/${fileName}`;
 }
 
@@ -98,7 +119,9 @@ export function extractSupabaseImagePath(url: string): { bucket: string; path: s
     }
     
     const bucket = pathParts[publicIndex + 1];
-    const path = pathParts.slice(publicIndex + 2).join('/');
+    const path = pathParts
+      .slice(publicIndex + PATH_OFFSET_AFTER_PUBLIC)
+      .join('/');
     
     return { bucket, path };
   } catch {
@@ -125,7 +148,7 @@ export function getOptimizedThumbnailUrl(
   thumbnailUrl: string | null | undefined,
   options: ThumbnailTransformOptions = {}
 ): string | null {
-  if (!thumbnailUrl) return null;
+  if (thumbnailUrl === null || thumbnailUrl === '') return null;
   
   // Check if it's a Supabase storage URL
   const pathInfo = extractSupabaseImagePath(thumbnailUrl);
@@ -142,7 +165,7 @@ export function getOptimizedThumbnailUrl(
         transform: {
           width: options.width,
           height: options.height,
-          quality: options.quality || 85,
+          quality: options.quality ?? DEFAULT_IMAGE_QUALITY,
           resize: options.resize || 'cover',
           ...(options.format && { format: options.format }),
         },
@@ -158,8 +181,15 @@ export function getOptimizedThumbnailUrl(
 /**
  * Get responsive thumbnail URLs for different display contexts
  */
-export function getResponsiveThumbnailUrls(thumbnailUrl: string | null | undefined) {
-  if (!thumbnailUrl) return null;
+export function getResponsiveThumbnailUrls(
+  thumbnailUrl: string | null | undefined
+): {
+  small: string | null;
+  medium: string | null;
+  large: string | null;
+  original: string | null;
+} | null {
+  if (thumbnailUrl === null || thumbnailUrl === '') return null;
   
   return {
     // Small thumbnails (320px) - for lists, mobile cards
@@ -178,11 +208,11 @@ export function getResponsiveThumbnailUrls(thumbnailUrl: string | null | undefin
     large: getOptimizedThumbnailUrl(thumbnailUrl, { 
       width: 1024, 
       height: 537, 
-      quality: 85 
+      quality: DEFAULT_IMAGE_QUALITY 
     }),
     // Original optimized (quality only)
     original: getOptimizedThumbnailUrl(thumbnailUrl, { 
-      quality: 85 
+      quality: DEFAULT_IMAGE_QUALITY 
     }),
   };
-} 
+}

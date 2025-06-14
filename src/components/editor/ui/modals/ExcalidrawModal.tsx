@@ -87,7 +87,7 @@ function DiscardModal({
   onDiscard: () => void;
 }) {
   return (
-    // eslint-disable-next-line react/no-unstable-nested-components
+     
     <Modal title="Discard" onClose={onClose} closeOnClickOutside={false}>
       Are you sure you want to discard the changes?
       <div className="ExcalidrawModal__discardModal">

@@ -10,6 +10,9 @@ import {
 /** Duration (ms) that flags an operation as slow */
 const SLOW_OPERATION_THRESHOLD_MS = 2_000;
 
+/** Pretty‑print indentation for JSON exports */
+const JSON_INDENT_SPACES = 2;
+
 /** Maximum number of performance metrics to retain in-memory */
 const PERFORMANCE_METRICS_MAX = 1_000;
 
@@ -24,6 +27,22 @@ const AVG_DURATION_WARNING_MS = 1_500;
 
 /** Success-rate warning threshold (percentage) */
 const SUCCESS_RATE_WARNING = 95;
+
+/** Limit for detailed metrics export and slices */
+const DETAILED_METRICS_LIMIT = 100;
+/** Error rate threshold for health checks */
+const ERROR_RATE_THRESHOLD = 0.1;
+
+/** Scale factor for percentage calculations */
+const PERCENT_SCALE = 100;
+
+/** ID constants for session ID generation */
+const ID_RADIX = 36;
+const RANDOM_ID_START = 2;
+const RANDOM_ID_LENGTH = 9;
+
+/** Number of distinct issues before flagging system as critical */
+const CRITICAL_ISSUE_THRESHOLD = 2;
 
 /** Helper to generate ISO timestamp */
 const nowIso = (): string => new Date().toISOString();
@@ -82,7 +101,7 @@ export class PostCollectiveAuditService {
   /**
    * Log a post-collective operation with detailed context
    */
-  async logOperation(
+  logOperation(
     operation: string,
     postId: string,
     collectiveIds: string[],
@@ -90,7 +109,7 @@ export class PostCollectiveAuditService {
     success: boolean,
     error?: PostCollectiveError,
     metadata?: Record<string, unknown>
-  ): Promise<void> {
+  ): void {
     const logEntry = {
       operation,
       post_id: postId,
@@ -115,12 +134,12 @@ export class PostCollectiveAuditService {
 
       // Send to analytics if operation was successful
       if (success) {
-        await this.trackSuccessMetrics(operation, collectiveIds.length, userId);
+        this.trackSuccessMetrics(operation, collectiveIds.length, userId);
       } else {
-        await this.trackErrorMetrics(operation, error, userId);
+        this.trackErrorMetrics(operation, error, userId);
       }
 
-      console.info(`[PostCollectiveAudit] ${operation}:`, logEntry);
+      console.warn(`[PostCollectiveAudit] ${operation}:`, logEntry);
     } catch (loggingError) {
       console.error('Failed to log post-collective operation:', loggingError);
     }
@@ -189,7 +208,9 @@ export class PostCollectiveAuditService {
         return [];
       }
 
-      return (auditEntries as unknown) as PostCollectiveAuditEntry[] || [];
+      return Array.isArray(auditEntries)
+        ? (auditEntries as PostCollectiveAuditEntry[])
+        : [];
     } catch (error) {
       console.error('Error in getPostAuditLog:', error);
       return [];
@@ -213,7 +234,9 @@ export class PostCollectiveAuditService {
         return [];
       }
 
-      return (auditEntries as unknown) as PostCollectiveAuditEntry[] || [];
+      return Array.isArray(auditEntries)
+        ? (auditEntries as PostCollectiveAuditEntry[])
+        : [];
     } catch (error) {
       console.error('Error in getCollectiveAuditLog:', error);
       return [];
@@ -247,15 +270,15 @@ export class PostCollectiveAuditService {
 
     const errorsByType: Record<string, number> = {};
     this.performanceMetrics
-      .filter(m => !m.success && m.error)
+      .filter(m => !m.success && m.error !== undefined && m.error !== '')
       .forEach(m => {
-        const errorType = m.error!.split(':')[0]; // Get error type from message
-        errorsByType[errorType] = (errorsByType[errorType] || 0) + 1;
+        const errorType = (m.error ?? 'unknown').split(':')[0]; // Get error type from message
+        errorsByType[errorType] = (errorsByType[errorType] ?? 0) + 1;
       });
 
     return {
       averageDuration: Math.round(totalDuration / total),
-      successRate: Math.round((successful / total) * 100),
+      successRate: Math.round((successful / total) * PERCENT_SCALE),
       totalOperations: total,
       slowOperations,
       errorsByType
@@ -291,17 +314,23 @@ export class PostCollectiveAuditService {
       };
 
       // Process multi-collective posts data
-      if (multiCollectivePostsResult.status === 'fulfilled' && multiCollectivePostsResult.value.data) {
+      if (
+        multiCollectivePostsResult.status === 'fulfilled' &&
+        Array.isArray(multiCollectivePostsResult.value.data)
+      ) {
         const postCollectiveData = multiCollectivePostsResult.value.data as unknown as DBPostCollectiveRow[];
         const uniquePosts = new Set(postCollectiveData.map((pc) => pc.post_id));
         analytics.total_multi_collective_posts = uniquePosts.size;
         analytics.avg_collectives_per_post = uniquePosts.size > 0 
-          ? Math.round((postCollectiveData.length / uniquePosts.size) * 100) / 100 
+          ? Math.round((postCollectiveData.length / uniquePosts.size) * PERCENT_SCALE) / PERCENT_SCALE
           : 0;
       }
 
       // Process collective popularity data
-      if (collectivePopularityResult.status === 'fulfilled' && collectivePopularityResult.value.data) {
+      if (
+        collectivePopularityResult.status === 'fulfilled' &&
+        Array.isArray(collectivePopularityResult.value.data)
+      ) {
         const collectiveData = collectivePopularityResult.value.data as unknown as (DBPostCollectiveRow & { collectives?: { name?: string } })[];
         const collectiveCounts = new Map<string, { name: string; count: number }>();
 
@@ -311,7 +340,7 @@ export class PostCollectiveAuditService {
             existing.count++;
           } else {
             collectiveCounts.set(pc.collective_id, {
-              name: pc.collectives?.name || 'Unknown',
+              name: pc.collectives?.name ?? 'Unknown',
               count: 1
             });
           }
@@ -337,11 +366,11 @@ export class PostCollectiveAuditService {
   /**
    * Track successful operation metrics
    */
-  private async trackSuccessMetrics(
+  private trackSuccessMetrics(
     operation: string,
     collectiveCount: number,
     userId: string
-  ): Promise<void> {
+  ): void {
     // Store success metrics (could be sent to analytics service)
     const successMetric = {
       operation,
@@ -352,17 +381,17 @@ export class PostCollectiveAuditService {
     };
 
     // In a real application, this might be sent to an analytics service
-    console.info(`[PostCollectiveMetrics] Success:`, successMetric);
+    console.warn(`[PostCollectiveMetrics] Success:`, successMetric);
   }
 
   /**
    * Track error metrics
    */
-  private async trackErrorMetrics(
+  private trackErrorMetrics(
     operation: string,
     error?: PostCollectiveError,
     userId?: string
-  ): Promise<void> {
+  ): void {
     const errorMetric = {
       operation,
       error_type: error?.type,
@@ -385,7 +414,7 @@ export class PostCollectiveAuditService {
 
     try {
       const existingLogs = JSON.parse(
-        localStorage.getItem('post_collective_logs') || '[]'
+        localStorage.getItem('post_collective_logs') ?? '[]'
       );
       
       existingLogs.unshift(logEntry);
@@ -406,7 +435,7 @@ export class PostCollectiveAuditService {
     if (typeof window === 'undefined') return [];
 
     try {
-      return JSON.parse(localStorage.getItem('post_collective_logs') || '[]');
+      return JSON.parse(localStorage.getItem('post_collective_logs') ?? '[]');
     } catch (error) {
       console.warn('Failed to retrieve local logs:', error);
       return [];
@@ -430,7 +459,9 @@ export class PostCollectiveAuditService {
    * Generate a session ID for tracking related operations
    */
   private generateSessionId(): string {
-    return `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    return `session_${Date.now()}_${Math.random()
+      .toString(ID_RADIX)
+      .slice(RANDOM_ID_START, RANDOM_ID_START + RANDOM_ID_LENGTH)}`;
   }
 
   /**
@@ -448,20 +479,20 @@ export class PostCollectiveAuditService {
   exportMetrics(): string {
     return JSON.stringify({
       summary: this.getPerformanceMetrics(),
-      detailed_metrics: this.performanceMetrics,
+      detailed_metrics: this.performanceMetrics.slice(0, DETAILED_METRICS_LIMIT),
       local_logs: this.getLocalLogs(),
       export_timestamp: nowIso()
-    }, null, 2);
+    }, null, JSON_INDENT_SPACES);
   }
 
   /**
    * Monitor system health and alert on issues
    */
-  async checkSystemHealth(): Promise<{
+  checkSystemHealth(): {
     status: 'healthy' | 'warning' | 'critical';
     issues: string[];
     recommendations: string[];
-  }> {
+  } {
     const metrics = this.getPerformanceMetrics();
     const issues: string[] = [];
     const recommendations: string[] = [];
@@ -480,14 +511,14 @@ export class PostCollectiveAuditService {
 
     // Check for high error rates
     const totalErrors = Object.values(metrics.errorsByType).reduce((sum, count) => sum + count, 0);
-    if (totalErrors > metrics.totalOperations * 0.1) {
+    if (totalErrors > metrics.totalOperations * ERROR_RATE_THRESHOLD) {
       issues.push(`High error rate: ${totalErrors} errors in ${metrics.totalOperations} operations`);
       recommendations.push('Investigate most common error types and implement fixes');
     }
 
     let status: 'healthy' | 'warning' | 'critical' = 'healthy';
     if (issues.length > 0) {
-      status = issues.length > 2 ? 'critical' : 'warning';
+      status = issues.length > CRITICAL_ISSUE_THRESHOLD ? 'critical' : 'warning';
     }
 
     return { status, issues, recommendations };

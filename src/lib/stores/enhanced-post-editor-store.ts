@@ -3,7 +3,6 @@ import {
   EnhancedPostFormData,
   CollectiveSharingSettings 
 } from '@/types/enhanced-database.types';
-import { Database } from '@/lib/database.types';
 
 // Enhanced PostFormData interface with multi-collective support
 export interface EnhancedPostEditorFormData extends Omit<EnhancedPostFormData, 'metadata'> {
@@ -107,7 +106,7 @@ export const useEnhancedPostEditorStore = create<EnhancedPostEditorStore>((set, 
       isDirty: true,
     })),
 
-  setCurrentPage: (page) => set({ currentPage: page }),
+  setCurrentPage: (_page) => set({ currentPage: _page }),
 
   markClean: () =>
     set({
@@ -132,10 +131,11 @@ export const useEnhancedPostEditorStore = create<EnhancedPostEditorStore>((set, 
     }),
 
   resetForm: () =>
-    set((state) => ({
-      formData: state.originalData || defaultEnhancedFormData,
-      selectedCollectives: state.originalData?.selected_collectives || [],
-      collectiveSharingSettings: state.originalData?.collective_sharing_settings || {},
+    set((_state) => ({
+      formData: _state.originalData ?? defaultEnhancedFormData,
+      selectedCollectives: _state.originalData?.selected_collectives ?? [],
+      collectiveSharingSettings:
+        _state.originalData?.collective_sharing_settings ?? {},
       isDirty: false,
       autoSaveStatus: 'idle',
     })),
@@ -144,8 +144,8 @@ export const useEnhancedPostEditorStore = create<EnhancedPostEditorStore>((set, 
     set({
       formData: data,
       originalData: data,
-      selectedCollectives: data.selected_collectives || [],
-      collectiveSharingSettings: data.collective_sharing_settings || {},
+      selectedCollectives: data.selected_collectives ?? [],
+      collectiveSharingSettings: data.collective_sharing_settings ?? {},
       isDirty: false,
       autoSaveStatus: 'idle',
     }),
@@ -163,8 +163,9 @@ export const useEnhancedPostEditorStore = create<EnhancedPostEditorStore>((set, 
 
   addCollective: (collectiveId, settings = defaultSharingSettings) =>
     set((state) => {
-      if (state.selectedCollectives.includes(collectiveId)) {
-        return state; // Already selected
+      const alreadySelected = state.selectedCollectives.includes(collectiveId);
+      if (alreadySelected) {
+        return {}; // No changes needed if already selected
       }
 
       const newSelectedCollectives = [...state.selectedCollectives, collectiveId];
@@ -205,8 +206,9 @@ export const useEnhancedPostEditorStore = create<EnhancedPostEditorStore>((set, 
 
   updateCollectiveSharingSettings: (collectiveId, settings) =>
     set((state) => {
-      if (!state.selectedCollectives.includes(collectiveId)) {
-        return state; // Collective not selected
+      const isSelected = state.selectedCollectives.includes(collectiveId);
+      if (!isSelected) {
+        return {}; // No changes required
       }
 
       const newSharingSettings = {
@@ -232,7 +234,8 @@ export const useEnhancedPostEditorStore = create<EnhancedPostEditorStore>((set, 
       // Preserve existing sharing settings for retained collectives
       const newSharingSettings: Record<string, CollectiveSharingSettings> = {};
       collectiveIds.forEach(id => {
-        newSharingSettings[id] = state.collectiveSharingSettings[id] || defaultSharingSettings;
+        newSharingSettings[id] =
+          state.collectiveSharingSettings[id] ?? defaultSharingSettings;
       });
 
       return {
@@ -248,11 +251,11 @@ export const useEnhancedPostEditorStore = create<EnhancedPostEditorStore>((set, 
     }),
 
   clearCollectiveSelections: () =>
-    set((state) => ({
+    set((_state) => ({
       selectedCollectives: [],
       collectiveSharingSettings: {},
       formData: {
-        ...state.formData,
+        ..._state.formData,
         selected_collectives: [],
         collective_sharing_settings: {},
       },
@@ -261,32 +264,40 @@ export const useEnhancedPostEditorStore = create<EnhancedPostEditorStore>((set, 
 
   // Backward compatibility helpers
   getLegacyCollectiveId: () => {
-    const state = get();
-    return state.formData.collective_id;
+    const current = get();
+    return current.formData.collective_id;
   },
 
   setLegacyCollectiveId: (collectiveId) =>
     set((state) => ({
       formData: {
         ...state.formData,
-        collective_id: collectiveId,
+        collective_id:
+          collectiveId !== undefined && collectiveId !== '' ? collectiveId : undefined,
       },
       isDirty: true,
     })),
 
   migrateFromLegacyData: (legacyData: EnhancedPostEditorFormData) =>
-    set((state) => {
+    set(() => {
       // Convert legacy single collective_id to multi-collective format
-      const selectedCollectives = legacyData.collective_id ? [legacyData.collective_id] : [];
-      const collectiveSharingSettings = legacyData.collective_id ? {
-        [legacyData.collective_id]: defaultSharingSettings
-      } : {};
+      const selectedCollectives =
+        legacyData.collective_id !== undefined && legacyData.collective_id !== ''
+          ? [legacyData.collective_id]
+          : [];
+
+      const collectiveSharingSettings =
+        legacyData.collective_id !== undefined && legacyData.collective_id !== ''
+          ? {
+              [legacyData.collective_id]: defaultSharingSettings,
+            }
+          : {};
 
       const enhancedData: EnhancedPostEditorFormData = {
         ...legacyData,
         selected_collectives: selectedCollectives,
         collective_sharing_settings: collectiveSharingSettings,
-        metadata: legacyData.metadata || {},
+        metadata: legacyData.metadata ?? {},
       };
 
       return {
@@ -301,7 +312,17 @@ export const useEnhancedPostEditorStore = create<EnhancedPostEditorStore>((set, 
 }));
 
 // Helper hooks for easier access to specific store slices
-export const useCollectiveSelection = () => {
+export const useCollectiveSelection = (): {
+  selectedCollectives: string[];
+  collectiveSharingSettings: Record<string, CollectiveSharingSettings>;
+  isOpen: boolean;
+  setOpen: (_open: boolean) => void;
+  addCollective: (_id: string, _s?: CollectiveSharingSettings) => void;
+  removeCollective: (_id: string) => void;
+  updateSettings: (_id: string, _s: Partial<CollectiveSharingSettings>) => void;
+  setSelected: (_ids: string[]) => void;
+  clear: () => void;
+} => {
   const store = useEnhancedPostEditorStore();
   return {
     selectedCollectives: store.selectedCollectives,
@@ -316,7 +337,16 @@ export const useCollectiveSelection = () => {
   };
 };
 
-export const usePostFormData = () => {
+export const usePostFormData = (): {
+  formData: EnhancedPostEditorFormData;
+  originalData: EnhancedPostEditorFormData | null;
+  isDirty: boolean;
+  isLoading: boolean;
+  autoSaveStatus: 'idle' | 'saving' | 'saved' | 'error';
+  updateFormData: EnhancedPostEditorStore['updateFormData'];
+  resetForm: () => void;
+  initializeForm: (_data: EnhancedPostEditorFormData) => void;
+} => {
   const store = useEnhancedPostEditorStore();
   return {
     formData: store.formData,
@@ -330,7 +360,15 @@ export const usePostFormData = () => {
   };
 };
 
-export const usePostEditor = () => {
+export const usePostEditor = (): {
+  currentPage: 'editor' | 'details';
+  setCurrentPage: (_p: 'editor' | 'details') => void;
+  markClean: () => void;
+  markSaving: () => void;
+  markSaved: () => void;
+  markError: () => void;
+  setLoading: (_l: boolean) => void;
+} => {
   const store = useEnhancedPostEditorStore();
   return {
     currentPage: store.currentPage,
@@ -341,4 +379,4 @@ export const usePostEditor = () => {
     markError: store.markError,
     setLoading: store.setLoading,
   };
-}; 
+};

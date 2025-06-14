@@ -72,7 +72,7 @@ function LazyPlugin({ pluginName, enabled, ...props }: LazyPluginProps) {
 
   return (
     <Suspense fallback={<LoadingFallback />}>
-      {/* eslint-disable-next-line react/jsx-props-no-spreading */}
+      { }
       <PluginComponent {...(props as Record<string, never>)} />
     </Suspense>
   );

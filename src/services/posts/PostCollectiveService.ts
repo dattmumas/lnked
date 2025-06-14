@@ -29,7 +29,7 @@ export class PostCollectiveService {
    * Validate user permissions for posting to selected collectives
    * Enhanced with audit logging and performance tracking
    */
-  async validateCollectivePermissions(
+  validateCollectivePermissions(
     userId: string,
     collectiveIds: string[]
   ): Promise<PostCollectiveValidationResult> {
@@ -43,7 +43,7 @@ export class PostCollectiveService {
         if (userId === '') {
           return {
             valid: false,
-            errors: [{ type: 'validation', message: 'User ID is required' }],
+            errors: [{ type: 'validation' as const, message: 'User ID is required' }],
             warnings,
           };
         }
@@ -51,7 +51,7 @@ export class PostCollectiveService {
         if (collectiveIds.length === 0) {
           return {
             valid: false,
-            errors: [{ type: 'validation', message: 'At least one collective must be selected' }],
+            errors: [{ type: 'validation' as const, message: 'At least one collective must be selected' }],
             warnings,
           };
         }
@@ -137,7 +137,7 @@ export class PostCollectiveService {
   /**
    * Create post-collective associations with enhanced error handling and retry logic
    */
-  async createPostCollectiveAssociations(
+  createPostCollectiveAssociations(
     postId: string,
     userId: string,
     collectiveIds: string[],
@@ -152,8 +152,8 @@ export class PostCollectiveService {
   ): Promise<PostCollectiveServiceResponse> {
     return postCollectiveErrorHandler.executeWithRetry(
       'createPostCollectiveAssociations',
-      async () => {
-        return postCollectiveAuditService.trackPerformance(
+      () =>
+        postCollectiveAuditService.trackPerformance(
           'createPostCollectiveAssociations',
           userId,
           async () => {
@@ -163,8 +163,8 @@ export class PostCollectiveService {
               const response: PostCollectiveServiceResponse = {
                 success: false,
                 errors: validation.errors.map(err => ({
-                  collective_id: err.collective_id || '',
-                  collective_name: err.collective_name || '',
+                  collective_id: err.collective_id ?? '',
+                  collective_name: err.collective_name ?? '',
                   error: err.message
                 }))
               };
@@ -188,9 +188,9 @@ export class PostCollectiveService {
                 post_id: postId,
                 collective_id: collectiveId,
                 shared_by: userId,
-                status: sharingSettings?.[collectiveId]?.status || 'published',
-                metadata: (sharingSettings?.[collectiveId]?.metadata as Json) || {},
-                display_order: sharingSettings?.[collectiveId]?.display_order || index,
+                status: sharingSettings?.[collectiveId]?.status ?? 'published',
+                metadata: (sharingSettings?.[collectiveId]?.metadata as Json) ?? {},
+                display_order: sharingSettings?.[collectiveId]?.display_order ?? index,
               }));
 
               // Insert associations into post_collectives table
@@ -199,7 +199,7 @@ export class PostCollectiveService {
                 .insert(associations)
                 .select();
 
-              if (error) {
+              if (error !== null && error !== undefined) {
                 console.error('Error creating post-collective associations:', error);
                 
                 const dbError: PostCollectiveError = {
@@ -237,7 +237,7 @@ export class PostCollectiveService {
                 undefined,
                 {
                   associations_created: associations.length,
-                  sharing_settings_provided: Boolean(sharingSettings)
+                  sharing_settings_provided: sharingSettings !== undefined && sharingSettings !== null
                 }
               );
 
@@ -276,13 +276,12 @@ export class PostCollectiveService {
             }
           },
           collectiveIds.length
-        );
-      },
+        ),
       {
         user_id: userId,
         post_id: postId,
-        collective_ids: collectiveIds
-      }
+        collective_ids: collectiveIds,
+      },
     );
   }
 
@@ -309,7 +308,7 @@ export class PostCollectiveService {
         .select('*')
         .eq('post_id', postId);
 
-      if (fetchError) {
+      if (fetchError !== null && fetchError !== undefined) {
         return {
           success: false,
           errors: [{
@@ -321,24 +320,22 @@ export class PostCollectiveService {
       }
 
       const existingCollectiveIds = new Set(
-        existingAssociations?.map((assoc) => assoc.collective_id) || []
+        (existingAssociations ?? []).map(assoc => assoc.collective_id)
       );
 
       // Determine what to add and remove
       const collectivesToAdd = newCollectiveIds.filter(id => !existingCollectiveIds.has(id));
-      const collectivesToRemove = Array.from(existingCollectiveIds).filter(
-        id => !newCollectiveIds.includes(id)
-      );
+      const collectivesToRemove = [...existingCollectiveIds].filter(id => !newCollectiveIds.includes(id));
 
       // Validate permissions for new collectives
-      if (collectivesToAdd.length > 0) {
+      if (collectivesToAdd.length !== 0) {
         const validation = await this.validateCollectivePermissions(userId, collectivesToAdd);
         if (!validation.valid) {
           return {
             success: false,
             errors: validation.errors.map(err => ({
-              collective_id: err.collective_id || '',
-              collective_name: err.collective_name || '',
+              collective_id: err.collective_id ?? '',
+              collective_name: err.collective_name ?? '',
               error: err.message
             }))
           };
@@ -346,34 +343,34 @@ export class PostCollectiveService {
       }
 
       // Remove old associations
-      if (collectivesToRemove.length > 0) {
+      if (collectivesToRemove.length !== 0) {
         const { error } = await this.supabase
           .from('post_collectives')
           .delete()
           .eq('post_id', postId)
           .in('collective_id', collectivesToRemove);
 
-        if (error) {
+        if (error !== null && error !== undefined) {
           console.error('Error removing collective associations:', error);
         }
       }
 
       // Add new associations
-      if (collectivesToAdd.length > 0) {
+      if (collectivesToAdd.length !== 0) {
         const newAssociations: DBPostCollectiveInsert[] = collectivesToAdd.map((collectiveId, index) => ({
           post_id: postId,
           collective_id: collectiveId,
           shared_by: userId,
-          status: sharingSettings?.[collectiveId]?.status || 'published',
-          metadata: (sharingSettings?.[collectiveId]?.metadata as Json) || {},
-          display_order: sharingSettings?.[collectiveId]?.display_order || index,
+          status: sharingSettings?.[collectiveId]?.status ?? 'published',
+          metadata: (sharingSettings?.[collectiveId]?.metadata as Json) ?? {},
+          display_order: sharingSettings?.[collectiveId]?.display_order ?? index,
         }));
 
         const { error: insertError } = await this.supabase
           .from('post_collectives')
           .insert(newAssociations as DBPostCollectiveInsert[]);
 
-        if (insertError) {
+        if (insertError !== null && insertError !== undefined) {
           console.error('Error adding collective associations:', insertError);
           return {
             success: false,
@@ -395,7 +392,7 @@ export class PostCollectiveService {
       return {
         success: true,
         post_id: postId,
-        collective_associations: (updatedAssociations as unknown) as PostCollectiveRow[]
+        collective_associations: ((updatedAssociations ?? []) as unknown) as PostCollectiveRow[]
       };
 
     } catch (error) {
@@ -422,12 +419,12 @@ export class PostCollectiveService {
         .eq('post_id', postId)
         .order('display_order');
 
-      if (error) {
+      if (error !== null && error !== undefined) {
         console.error('Error fetching post-collective associations:', error);
         return [];
       }
 
-      return (associations as unknown) as PostCollectiveRow[] || [];
+      return ((associations ?? []) as unknown) as PostCollectiveRow[];
 
     } catch (error) {
       console.error('Error in getPostCollectiveAssociations:', error);
@@ -449,7 +446,7 @@ export class PostCollectiveService {
         .eq('post_id', postId)
         .in('collective_id', collectiveIds);
 
-      if (error) {
+      if (error !== null && error !== undefined) {
         return {
           success: false,
           errors: [{
@@ -487,7 +484,7 @@ export class PostCollectiveService {
     legacyCollectiveId: string | null,
     userId: string
   ): Promise<PostCollectiveServiceResponse> {
-    if (!legacyCollectiveId) {
+    if (legacyCollectiveId === null || legacyCollectiveId === undefined || legacyCollectiveId === '') {
       return { success: true, post_id: postId };
     }
 

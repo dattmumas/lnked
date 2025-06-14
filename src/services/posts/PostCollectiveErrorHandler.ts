@@ -4,6 +4,45 @@ import {
 } from '@/types/enhanced-database.types';
 import { postCollectiveAuditService } from './PostCollectiveAuditService';
 
+// ---------------------------------------------------------------------------
+// Constants (defined to avoid "magic numbers" in logic and string building)
+// ---------------------------------------------------------------------------
+
+const ID_RADIX = 36;
+const RANDOM_ID_START = 2;
+const RANDOM_ID_LENGTH = 9;
+
+const MAX_NETWORK_RETRIES = 3;
+const MAX_DATABASE_RETRIES = 2;
+const MAX_GENERAL_RETRIES = 1;
+
+const RETRY_LOG_OFFSET = 2;
+
+const BACKOFF_BASE_MS = 1_000;
+const BACKOFF_EXPONENT = 2;
+const BACKOFF_CAP_MS = 10_000;
+
+const DATABASE_INITIAL_DELAY_MS = 2_000;
+const DATABASE_DELAY_INCREMENT_MS = 1_000;
+
+
+const HOURS_PER_DAY = 24;
+const MINUTES_PER_HOUR = 60;
+const SECONDS_PER_MINUTE = 60;
+const MS_PER_SECOND = 1_000;
+
+const ONE_DAY_MS = HOURS_PER_DAY * MINUTES_PER_HOUR * SECONDS_PER_MINUTE * MS_PER_SECOND;
+
+const TOP_COMMON_ERRORS = 10;
+const MAX_ERROR_HISTORY = 500;
+
+const DEFAULT_ERROR_LIMIT = 50;
+
+const NETWORK_RETRY_DELAY_SEC = 5;
+const DATABASE_RETRY_DELAY_SEC = 10;
+
+const ISO_HOUR_LENGTH = 13;
+
 // Error severity levels
 export type ErrorSeverity = 'low' | 'medium' | 'high' | 'critical';
 
@@ -59,7 +98,9 @@ export class PostCollectiveErrorHandler {
   ): EnhancedPostCollectiveError {
     const enhancedError: EnhancedPostCollectiveError = {
       ...error,
-      id: `error_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      id: `error_${Date.now()}_${Math.random()
+        .toString(ID_RADIX)
+        .slice(RANDOM_ID_START, RANDOM_ID_START + RANDOM_ID_LENGTH)}`,
       severity: this.determineSeverity(error),
       timestamp: new Date(),
       context: {
@@ -81,9 +122,9 @@ export class PostCollectiveErrorHandler {
     // Log to audit service
     postCollectiveAuditService.logOperation(
       operation,
-      context.post_id || '',
-      context.collective_ids || [],
-      context.user_id || '',
+      context.post_id ?? '',
+      context.collective_ids ?? [],
+      context.user_id ?? '',
       false,
       error,
       { enhanced_error_id: enhancedError.id }
@@ -97,47 +138,45 @@ export class PostCollectiveErrorHandler {
    */
   getRecoveryStrategy(error: EnhancedPostCollectiveError): ErrorRecoveryStrategy {
     const retryKey = `${error.context.operation}_${error.context.user_id}`;
-    const currentRetries = this.retryAttempts.get(retryKey) || 0;
+    const currentRetries = this.retryAttempts.get(retryKey) ?? 0;
 
     switch (error.type) {
       case 'network':
         return {
-          should_retry: currentRetries < 3,
-          max_retries: 3,
-          retry_delay_ms: Math.min(1000 * Math.pow(2, currentRetries), 10000), // Exponential backoff
-          user_action_required: false
+          should_retry: currentRetries < MAX_NETWORK_RETRIES,
+          max_retries: MAX_NETWORK_RETRIES,
+          retry_delay_ms: Math.min(
+            BACKOFF_BASE_MS * Math.pow(BACKOFF_EXPONENT, currentRetries),
+            BACKOFF_CAP_MS
+          ),
+          user_action_required: false,
         };
 
       case 'database':
         return {
-          should_retry: currentRetries < 2,
-          max_retries: 2,
-          retry_delay_ms: 2000 + (currentRetries * 1000),
-          user_action_required: false
+          should_retry: currentRetries < MAX_DATABASE_RETRIES,
+          max_retries: MAX_DATABASE_RETRIES,
+          retry_delay_ms:
+            DATABASE_INITIAL_DELAY_MS +
+            currentRetries * DATABASE_DELAY_INCREMENT_MS,
+          user_action_required: false,
         };
 
       case 'permission':
-        return {
-          should_retry: false,
-          max_retries: 0,
-          retry_delay_ms: 0,
-          user_action_required: true
-        };
-
       case 'validation':
         return {
           should_retry: false,
           max_retries: 0,
           retry_delay_ms: 0,
-          user_action_required: true
+          user_action_required: true,
         };
 
       default:
         return {
-          should_retry: currentRetries < 1,
-          max_retries: 1,
-          retry_delay_ms: 1000,
-          user_action_required: false
+          should_retry: currentRetries < MAX_GENERAL_RETRIES,
+          max_retries: MAX_GENERAL_RETRIES,
+          retry_delay_ms: BACKOFF_BASE_MS,
+          user_action_required: false,
         };
     }
   }
@@ -154,10 +193,10 @@ export class PostCollectiveErrorHandler {
       collective_ids?: string[];
     } = {}
   ): Promise<T> {
-    const retryKey = `${operation}_${context.user_id}`;
+    const retryKey = `${operation}_${context.user_id ?? 'anonymous'}`;
     let lastError: EnhancedPostCollectiveError | null = null;
 
-    for (let attempt = 0; attempt <= 3; attempt++) {
+    for (let attempt = 0; attempt <= MAX_NETWORK_RETRIES; attempt++) {
       try {
         // Reset retry count on success
         if (attempt > 0) {
@@ -170,7 +209,7 @@ export class PostCollectiveErrorHandler {
           type: this.classifyErrorType(error),
           message: error instanceof Error ? error.message : String(error),
           collective_id: context.collective_ids?.[0],
-          details: { attempt, max_attempts: 3 }
+          details: { attempt, max_attempts: MAX_NETWORK_RETRIES }
         };
 
         lastError = this.processError(postCollectiveError, operation, {
@@ -191,7 +230,9 @@ export class PostCollectiveErrorHandler {
         // Wait before retrying
         await this.delay(strategy.retry_delay_ms);
         
-        console.warn(`[PostCollectiveErrorHandler] Retrying ${operation} (attempt ${attempt + 2})`);
+        console.warn(
+          `[PostCollectiveErrorHandler] Retrying ${operation} (attempt ${attempt + RETRY_LOG_OFFSET})`
+        );
       }
     }
 
@@ -270,7 +311,7 @@ export class PostCollectiveErrorHandler {
     }>;
   } {
     const now = new Date();
-    const last24Hours = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    const last24Hours = new Date(now.getTime() - ONE_DAY_MS);
     const recentErrors = this.errorHistory.filter(e => e.timestamp >= last24Hours);
 
     const errorsByType: Record<string, number> = {};
@@ -284,15 +325,16 @@ export class PostCollectiveErrorHandler {
 
     recentErrors.forEach(error => {
       // Count by type
-      errorsByType[error.type] = (errorsByType[error.type] || 0) + 1;
-      
+      errorsByType[error.type] = (errorsByType[error.type] ?? 0) + 1;
+
       // Count by severity
       errorsBySeverity[error.severity]++;
-      
+
       // Count by message
       const key = error.user_message;
-      if (errorMessages[key]) {
-        errorMessages[key].count++;
+      const existing = errorMessages[key];
+      if (existing !== undefined) {
+        existing.count += 1;
       } else {
         errorMessages[key] = { count: 1, severity: error.severity };
       }
@@ -301,13 +343,13 @@ export class PostCollectiveErrorHandler {
     const mostCommonErrors = Object.entries(errorMessages)
       .map(([message, data]) => ({ message, ...data }))
       .sort((a, b) => b.count - a.count)
-      .slice(0, 10);
+      .slice(0, TOP_COMMON_ERRORS);
 
     // Generate hourly trends
     const hourlyTrends: Record<string, number> = {};
     recentErrors.forEach(error => {
-      const hour = error.timestamp.toISOString().substr(0, 13); // YYYY-MM-DDTHH
-      hourlyTrends[hour] = (hourlyTrends[hour] || 0) + 1;
+      const hour = error.timestamp.toISOString().slice(0, ISO_HOUR_LENGTH); // YYYY-MM-DDTHH
+      hourlyTrends[hour] = (hourlyTrends[hour] ?? 0) + 1;
     });
 
     const errorTrends = Object.entries(hourlyTrends)
@@ -342,19 +384,25 @@ export class PostCollectiveErrorHandler {
   }): EnhancedPostCollectiveError[] {
     let filteredErrors = this.errorHistory;
 
-    if (filter?.user_id) {
-      filteredErrors = filteredErrors.filter(e => e.context.user_id === filter.user_id);
+    if (filter?.user_id !== undefined && filter.user_id !== '') {
+      filteredErrors = filteredErrors.filter(
+        (e) => e.context.user_id === filter.user_id
+      );
     }
 
-    if (filter?.operation) {
-      filteredErrors = filteredErrors.filter(e => e.context.operation === filter.operation);
+    if (filter?.operation !== undefined && filter.operation !== '') {
+      filteredErrors = filteredErrors.filter(
+        (e) => e.context.operation === filter.operation
+      );
     }
 
-    if (filter?.severity) {
-      filteredErrors = filteredErrors.filter(e => e.severity === filter.severity);
+    if (filter?.severity !== undefined) {
+      filteredErrors = filteredErrors.filter(
+        (e) => e.severity === filter.severity
+      );
     }
 
-    return filteredErrors.slice(0, filter?.limit || 50);
+    return filteredErrors.slice(0, filter?.limit ?? DEFAULT_ERROR_LIMIT);
   }
 
   /**
@@ -378,7 +426,10 @@ export class PostCollectiveErrorHandler {
   /**
    * Generate user-friendly error message
    */
-  private generateUserMessage(error: PostCollectiveError, operation: string): string {
+  private generateUserMessage(
+    error: PostCollectiveError,
+    _operation: string
+  ): string {
     const baseMessages = {
       permission: 'You don\'t have permission to perform this action.',
       validation: 'Please check your input and try again.',
@@ -388,7 +439,7 @@ export class PostCollectiveErrorHandler {
 
     let message = baseMessages[error.type] || 'An unexpected error occurred.';
 
-    if (error.collective_name) {
+    if (error.collective_name !== undefined && error.collective_name !== '') {
       message += ` (Collective: ${error.collective_name})`;
     }
 
@@ -398,14 +449,24 @@ export class PostCollectiveErrorHandler {
   /**
    * Generate technical error message for developers
    */
-  private generateTechnicalMessage(error: PostCollectiveError, operation: string): string {
-    return `${operation} failed: ${error.message} (Type: ${error.type}${error.collective_id ? `, Collective: ${error.collective_id}` : ''})`;
+  private generateTechnicalMessage(
+    error: PostCollectiveError,
+    _operation: string
+  ): string {
+    return `${_operation} failed: ${error.message} (Type: ${error.type}${
+      error.collective_id !== undefined && error.collective_id !== ''
+        ? `, Collective: ${error.collective_id}`
+        : ''
+    })`;
   }
 
   /**
    * Generate suggested actions for the user
    */
-  private generateSuggestedActions(error: PostCollectiveError, operation: string): string[] {
+  private generateSuggestedActions(
+    error: PostCollectiveError,
+    _operation: string
+  ): string[] {
     const actions: Record<string, string[]> = {
       permission: [
         'Check if you have the required role in the collective',
@@ -429,7 +490,7 @@ export class PostCollectiveErrorHandler {
       ]
     };
 
-    return actions[error.type] || ['Try again or contact support if the issue persists'];
+    return actions[error.type] ?? ['Try again or contact support if the issue persists'];
   }
 
   /**
@@ -438,9 +499,9 @@ export class PostCollectiveErrorHandler {
   private calculateRetryDelay(error: PostCollectiveError): number | undefined {
     switch (error.type) {
       case 'network':
-        return 5; // 5 seconds
+        return NETWORK_RETRY_DELAY_SEC;
       case 'database':
-        return 10; // 10 seconds
+        return DATABASE_RETRY_DELAY_SEC;
       default:
         return undefined; // No automatic retry
     }
@@ -450,21 +511,21 @@ export class PostCollectiveErrorHandler {
    * Classify error type from exception
    */
   private classifyErrorType(error: unknown): PostCollectiveError['type'] {
-    if (error instanceof Error) {
+    if (error instanceof Error && error.message !== undefined && error.message !== '') {
       const message = error.message.toLowerCase();
-      
+
       if (message.includes('network') || message.includes('fetch')) {
         return 'network';
       }
-      
+
       if (message.includes('permission') || message.includes('unauthorized')) {
         return 'permission';
       }
-      
+
       if (message.includes('validation') || message.includes('invalid')) {
         return 'validation';
       }
-      
+
       if (message.includes('database') || message.includes('query') || message.includes('constraint')) {
         return 'database';
       }
@@ -478,23 +539,24 @@ export class PostCollectiveErrorHandler {
    */
   private getRetryCount(operation: string, userId?: string): number {
     const retryKey = `${operation}_${userId}`;
-    return this.retryAttempts.get(retryKey) || 0;
+    return this.retryAttempts.get(retryKey) ?? 0;
   }
 
   /**
    * Generate a session ID for tracking related operations
    */
   private generateSessionId(): string {
-    return `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    return `session_${Date.now()}_${Math.random()
+      .toString(ID_RADIX)
+      .slice(RANDOM_ID_START, RANDOM_ID_START + RANDOM_ID_LENGTH)}`;
   }
 
   /**
    * Clean up old error history to prevent memory leaks
    */
   private cleanupErrorHistory(): void {
-    const maxErrors = 500;
-    if (this.errorHistory.length > maxErrors) {
-      this.errorHistory = this.errorHistory.slice(0, maxErrors);
+    if (this.errorHistory.length > MAX_ERROR_HISTORY) {
+      this.errorHistory = this.errorHistory.slice(0, MAX_ERROR_HISTORY);
     }
   }
 
@@ -502,7 +564,9 @@ export class PostCollectiveErrorHandler {
    * Simple delay utility for retry logic
    */
   private delay(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise((resolve) => {
+      setTimeout(resolve, ms);
+    });
   }
 }
 

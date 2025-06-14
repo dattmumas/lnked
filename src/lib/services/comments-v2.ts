@@ -9,11 +9,12 @@ import {
   ReactionType,
 } from '@/types/comments-v2';
 import {
-  CommentNotFoundError,
-  CommentPermissionError,
   CommentValidationError,
 } from '@/lib/errors';
 import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
+
+const DEFAULT_PAGE_LIMIT = 20;
+const DEFAULT_REPLY_LIMIT = 10;
 
 export class CommentsV2Service {
   private supabase: SupabaseClient;
@@ -33,25 +34,24 @@ export class CommentsV2Service {
   ) {
     this.supabase = supabase || createSupabaseBrowserClient();
 
-    const defaultValidator = async (entityId: string) => {
-      return Boolean(entityId);
-    };
+    const defaultValidator = (entityId: string): Promise<boolean> =>
+      Promise.resolve(entityId !== '');
 
     this.entityValidators = {
-      post: entityValidators?.post || defaultValidator,
-      video: entityValidators?.video || defaultValidator,
-      collective: entityValidators?.collective || defaultValidator,
-      profile: entityValidators?.profile || defaultValidator,
+      post: entityValidators?.post ?? defaultValidator,
+      video: entityValidators?.video ?? defaultValidator,
+      collective: entityValidators?.collective ?? defaultValidator,
+      profile: entityValidators?.profile ?? defaultValidator,
     };
   }
 
-  private async validateEntity(
+  private validateEntity(
     entityType: CommentEntityType,
     entityId: string,
     userId?: string
   ): Promise<boolean> {
     const validator = this.entityValidators[entityType];
-    if (!validator) {
+    if (validator === undefined) {
       throw new CommentValidationError(`Unsupported entity type: ${entityType}`);
     }
     return validator(entityId, userId);
@@ -61,7 +61,7 @@ export class CommentsV2Service {
     entityType: CommentEntityType,
     entityId: string,
     page = 1,
-    limit = 20
+    limit = DEFAULT_PAGE_LIMIT
   ): Promise<CommentWithAuthor[]> {
     const offset = (page - 1) * limit;
     
@@ -87,7 +87,7 @@ export class CommentsV2Service {
       console.debug('RPC response:', { data, error });
     }
 
-    if (error) {
+    if (error !== null && error !== undefined) {
       console.error('Error fetching comments:', error);
       console.error('Error details:', {
         message: error.message,
@@ -100,23 +100,27 @@ export class CommentsV2Service {
     }
 
     type ThreadRow = { comment_data: CommentWithAuthor & { author?: unknown; user?: unknown } };
-
-    return (
-      (data as ThreadRow[] | null)?.map((row) => {
-        const comment = row.comment_data;
-        if (comment && (comment as { author?: unknown }).author) {
-          // Preserve legacy field name for consumer components
-          (comment as { user?: unknown }).user = (comment as { author?: unknown }).author;
-        }
-        return comment as CommentWithAuthor;
-      }) || []
-    );
+    const rows = (data ?? []) as ThreadRow[];
+    const mappedComments = rows.map((row) => {
+      const comment = row.comment_data;
+      if (
+        comment !== null &&
+        typeof comment === 'object' &&
+        Object.prototype.hasOwnProperty.call(comment, 'author')
+      ) {
+        // Preserve legacy field name for consumer components
+        const nc = comment as Record<string, unknown>;
+        nc.user = nc.author;
+      }
+      return comment as CommentWithAuthor;
+    });
+    return mappedComments;
   }
 
   async getCommentReplies(
     parentId: string,
     page = 1,
-    limit = 10
+    limit = DEFAULT_REPLY_LIMIT
   ): Promise<CommentWithAuthor[]> {
     const offset = (page - 1) * limit;
     const { data, error } = await this.supabase.rpc('get_comment_replies', {
@@ -125,13 +129,14 @@ export class CommentsV2Service {
       p_offset: offset,
     });
 
-    if (error) {
+    if (error !== null && error !== undefined) {
       console.error('Error fetching replies:', error);
       throw new Error(`Failed to fetch replies: ${error.message || JSON.stringify(error)}`);
     }
 
     type ReplyRow = { comment_data: CommentWithAuthor };
-    return (data as ReplyRow[] | null)?.map((row) => row.comment_data) || [];
+    const rows = (data ?? []) as ReplyRow[];
+    return rows.map((row) => row.comment_data);
   }
 
   async addComment(
@@ -149,16 +154,23 @@ export class CommentsV2Service {
       p_parent_id: parentId,
     });
 
-    if (error) {
+    if (error !== null && error !== undefined) {
       console.error('Error adding comment:', error);
       throw new Error(
         `Failed to add comment: ${error.message || error.details || JSON.stringify(error)}`
       );
     }
 
-    if (!data) return null;
-    const commentId = (data as Array<{ comment_id: string }> | null)?.[0]?.comment_id;
-    if (!commentId) return null;
+    if (data === null || data === undefined) return null;
+    const commentIdRows = data as Array<{ comment_id: string }> | null;
+    const commentId =
+      commentIdRows && commentIdRows.length > 0
+        ? commentIdRows[0].comment_id
+        : undefined;
+
+    if (typeof commentId !== 'string' || commentId.trim() === '') {
+      return null;
+    }
 
     const { data: newComment, error: fetchError } = await this.supabase
       .from('comments')
@@ -166,18 +178,18 @@ export class CommentsV2Service {
       .eq('id', commentId)
       .single();
 
-    if (fetchError) {
+    if (fetchError !== null && fetchError !== undefined) {
       console.error('Error fetching new comment:', fetchError);
       return null;
     }
 
     if (
-      newComment &&
-      (newComment as { author?: unknown }).author !== undefined
+      newComment !== null &&
+      typeof newComment === 'object' &&
+      Object.prototype.hasOwnProperty.call(newComment, 'author')
     ) {
-      (newComment as { user?: unknown }).user = (newComment as {
-        author?: unknown;
-      }).author;
+      const nc = newComment as Record<string, unknown>;
+      nc.user = nc.author;
     }
     return newComment as CommentWithAuthor | null;
   }
@@ -193,17 +205,29 @@ export class CommentsV2Service {
       p_reaction_type: reactionType,
     });
 
-    if (error) {
+    if (error !== null && error !== undefined) {
       console.error('Error toggling reaction:', error);
       throw new Error(`Failed to toggle reaction: ${error.message}`);
     }
 
-    return data
-      ? {
-          action_taken: data.action_taken,
-          reaction_counts: data.reaction_counts || [],
-        }
-      : { action_taken: 'error', reaction_counts: [] };
+    if (
+      data !== null &&
+      data !== undefined &&
+      typeof data === 'object' &&
+      'action_taken' in data
+    ) {
+      const {
+        action_taken,
+        reaction_counts,
+      } = data as { action_taken: string; reaction_counts?: Reaction[] | null };
+
+      return {
+        action_taken,
+        reaction_counts: reaction_counts ?? [],
+      };
+    }
+
+    return { action_taken: 'error', reaction_counts: [] };
   }
 
   async getCommentCount(
@@ -215,11 +239,11 @@ export class CommentsV2Service {
       p_entity_id: entityId,
     });
 
-    if (error) {
+    if (error !== null && error !== undefined) {
       console.error('Error getting comment count:', error);
       return 0;
     }
-    return data || 0;
+    return data ?? 0;
   }
 
   async updateComment(
@@ -233,7 +257,7 @@ export class CommentsV2Service {
       .select('*, author:users(*)')
       .single();
 
-    if (error) {
+    if (error !== null && error !== undefined) {
       console.error('Error updating comment:', error);
       throw new Error(`Failed to update comment: ${error.message}`);
     }
@@ -246,11 +270,11 @@ export class CommentsV2Service {
       .update({ deleted_at: new Date().toISOString() })
       .eq('id', commentId);
 
-    if (error) {
+    if (error !== null && error !== undefined) {
       console.error('Error deleting comment:', error);
       throw new Error(`Failed to delete comment: ${error.message}`);
     }
-    return !error;
+    return error === null;
   }
 
   async pinComment(
@@ -258,7 +282,7 @@ export class CommentsV2Service {
     entityType: CommentEntityType,
     entityId: string,
     pinnedBy: string,
-    pinOrder?: number
+    _pinOrder?: number // _pinOrder if unused
   ): Promise<CommentPin | null> {
     const { data, error } = await this.supabase
       .from('comment_pins')
@@ -267,12 +291,12 @@ export class CommentsV2Service {
         entity_type: entityType,
         entity_id: entityId,
         pinned_by: pinnedBy,
-        pin_order: pinOrder,
+        pin_order: _pinOrder,
       })
       .select('*')
       .single();
 
-    if (error) {
+    if (error !== null && error !== undefined) {
       console.error('Error pinning comment:', error);
       throw new Error(`Failed to pin comment: ${error.message}`);
     }
@@ -286,11 +310,11 @@ export class CommentsV2Service {
       .eq('comment_id', commentId)
       .eq('entity_id', entityId);
 
-    if (error) {
+    if (error !== null && error !== undefined) {
       console.error('Error unpinning comment:', error);
       throw new Error(`Failed to unpin comment: ${error.message}`);
     }
-    return !error;
+    return error === null;
   }
 
   private _subscribeToCommentChanges(
@@ -335,8 +359,9 @@ export class CommentsV2Service {
           filter: `entity_id=eq.${entityId}`,
         },
         payload => {
-          if (payload.old?.id) {
-            onDelete(payload.old.id);
+          const oldId = payload.old?.id;
+          if (oldId !== undefined && oldId !== null) {
+            onDelete(oldId);
           }
         }
       )
@@ -359,8 +384,13 @@ export class CommentsV2Service {
         table: 'comment_reactions',
       },
       payload => {
-        if (payload.new && 'id' in payload.new) {
-          onReactionUpdate(payload.new as CommentReaction);
+        const newRow = payload.new as Record<string, unknown> | null;
+        if (
+          newRow !== null &&
+          typeof newRow.id === 'string' &&
+          newRow.id !== ''
+        ) {
+          onReactionUpdate(newRow as unknown as CommentReaction);
         }
       }
     );
