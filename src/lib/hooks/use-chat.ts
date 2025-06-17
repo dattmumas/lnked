@@ -12,7 +12,7 @@ import type {
 } from '@/lib/chat/types';
 import type { Json } from '@/lib/database.types';
 
-/** Helper: “defined & non‑empty” */
+/** Helper: "defined & non‑empty" */
 const isDefined = (v: unknown): boolean => v !== undefined && v !== '';
 
 /**
@@ -124,7 +124,7 @@ export const useChat = (): {
           [conversationId]: offset === 0 ? (data ?? []) : [
             ...(prev.messages[conversationId] ?? []),
             ...(data ?? [])
-          ],
+          ] as MessageWithSender[],
         },
       }));
       return data ?? [];
@@ -160,7 +160,7 @@ export const useChat = (): {
         throw new Error(error.message);
       }
       // Immediately add message to local state (don't wait for realtime)
-      if (isDefined(message)) {
+      if (isDefined(message) && message !== null) {
         setState(prev => ({
           ...prev,
           messages: {

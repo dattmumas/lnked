@@ -64,7 +64,13 @@ export async function getCurrentUserProfile(): Promise<{
       .eq("id", user.id)
       .single();
 
-    return { user, profile: profile ?? undefined };
+    return { 
+      user, 
+      profile: profile ? {
+        full_name: profile.full_name ?? undefined,
+        avatar_url: profile.avatar_url ?? undefined
+      } : undefined 
+    };
   } catch (error) {
     console.error("Error fetching user profile:", error);
     return { user: undefined, profile: undefined };

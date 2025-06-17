@@ -37,7 +37,7 @@ export interface ProfileContextProviderProps {
 export function ProfileContextProvider({
   username,
   children,
-}: ProfileContextProviderProps): JSX.Element {
+}: ProfileContextProviderProps): React.ReactElement {
   const [currentUserId, setCurrentUserId] = useState<string | undefined>(
     undefined,
   );
@@ -153,7 +153,7 @@ export function useProfileContext(): ProfileContextValue {
 
 // --- Skeleton helper components ---------------------------------------------
 
-function FollowerSkeletonItem(): JSX.Element {
+function FollowerSkeletonItem(): React.ReactElement {
   return (
     <div className="flex gap-3">
       <div className="h-10 w-10 bg-muted rounded-full" />
@@ -165,7 +165,7 @@ function FollowerSkeletonItem(): JSX.Element {
   );
 }
 
-function PostSkeletonItem({ index }: { index: number }): JSX.Element {
+function PostSkeletonItem({ index }: { index: number }): React.ReactElement {
   return (
     <div key={index} className="bg-card rounded-lg border overflow-hidden">
       <div className="aspect-video bg-muted" />
@@ -178,7 +178,7 @@ function PostSkeletonItem({ index }: { index: number }): JSX.Element {
 }
 
 // Loading skeleton component
-function ProfileSkeleton(): JSX.Element {
+function ProfileSkeleton(): React.ReactElement {
   return (
     <div className="animate-pulse">
       <div className="grid grid-cols-[1fr_65%_35%_1fr] gap-8 px-8 max-lg:grid-cols-1">
@@ -241,7 +241,7 @@ interface ProfileErrorProps {
   error?: Error;
 }
 
-function ProfileError({ error }: ProfileErrorProps): JSX.Element {
+function ProfileError({ error }: ProfileErrorProps): React.ReactElement {
   const handleGoBack = useCallback((): void => {
     window.history.back();
   }, []);

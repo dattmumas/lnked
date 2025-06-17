@@ -1,8 +1,9 @@
+import { Terminal } from 'lucide-react';
+
 import CollectiveCard from '@/components/app/dashboard/collectives/CollectiveCard';
 import LoadMoreButton from '@/components/app/discover/molecules/LoadMoreButton';
 // import { cookies } from "next/headers"; // No longer needed directly here
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Terminal } from 'lucide-react';
 import {
   fetchRecommendations,
   type Recommendation,
@@ -19,7 +20,7 @@ export default async function DiscoverPage({
   searchParams: Promise<{ cursor?: string }>;
 }) {
   let recommendations: Recommendation[] = [];
-  let nextCursor: string | null = null;
+  let nextCursor: string | undefined = undefined;
 
   try {
     // const cookieHeader = (await cookies()).toString(); // Not needed if fetchRecommendations handles cookies internally
@@ -27,7 +28,7 @@ export default async function DiscoverPage({
     const data = await fetchRecommendations(cursor); // paginate
     ({ recommendations, nextCursor } = {
       recommendations: data.recommendations,
-      nextCursor: data.nextCursor,
+      nextCursor: data.nextCursor ?? undefined,
     });
   } catch (error) {
     if (error instanceof Error) {

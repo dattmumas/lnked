@@ -127,7 +127,7 @@ function AvatarCard({
 
   // Get optimized avatar URL with appropriate size and quality
   const optimizedAvatarUrl = React.useMemo(() => {
-    return getOptimizedAvatarUrl(src, {
+    return getOptimizedAvatarUrl(src || undefined, {
       width: size,
       height: size,
       quality: size >= 128 ? 85 : 80, // Higher quality for larger avatars

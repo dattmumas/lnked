@@ -8,6 +8,7 @@ import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
 
 import type { User } from '@supabase/supabase-js';
 import type { UseMutationResult } from '@tanstack/react-query';
+import type { Json } from '@/lib/database.types';
 
 const PostFormSchema = z.object({
   id: z.string().uuid().optional(),
@@ -19,7 +20,7 @@ const PostFormSchema = z.object({
   seo_title: z.string().optional(),
   meta_description: z.string().optional(),
   thumbnail_url: z.string().url().optional(),
-  post_type: z.enum(['standard', 'link']),
+  post_type: z.enum(['text', 'video']),
   metadata: z.record(z.unknown()).default({}),
   is_public: z.boolean(),
   status: z.enum(['draft', 'active', 'removed']),
@@ -37,7 +38,7 @@ const useUser = (): { user: User | undefined; loading: boolean } => {
     
     // Get initial user
     void supabase.auth.getUser().then(({ data: { user } }) => {
-      setUser(user);
+      setUser(user ?? undefined);
       setLoading(false);
     });
 
@@ -85,7 +86,10 @@ export const useAutoSavePost = (): UseMutationResult<
 
       const { data: post, error } = await supabase
         .from('posts')
-        .upsert(validated)
+        .upsert({
+          ...validated,
+          metadata: validated.metadata as Json
+        })
         .select()
         .single();
 
@@ -136,7 +140,7 @@ export const usePostData = (
     queryKey: ['post', postId],
     queryFn: async (): Promise<PostFormData | null> => {
       if (postId === null || postId === undefined || postId === '') {
-        return undefined;
+        return null;
       }
 
       const supabase = createSupabaseBrowserClient();
@@ -147,7 +151,7 @@ export const usePostData = (
         .single();
 
       if (error !== null && error !== undefined) throw error;
-      if (data === null || data === undefined) return undefined;
+      if (data === null || data === undefined) return null;
 
       // Cast through Zod to normalise defaults
       return PostFormSchema.partial({ author_id: true }).parse({
@@ -170,7 +174,7 @@ export const usePostData = (
 // `@typescript-eslint/explicit-function-return-type`.
 interface UsePostEditorResult {
   formData: PostFormData | undefined;
-  originalData: PostFormData | null;
+  originalData: PostFormData | null | undefined;
   isDirty: boolean;
   isLoading: boolean;
   autoSaveStatus: 'idle' | 'saving' | 'saved' | 'error';

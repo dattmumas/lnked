@@ -383,7 +383,7 @@ function usePostInteractions(userId: string) {
 // Custom hook for chain interactions
 function useChainInteractions(userId: string) {
   const [likedChains, setLikedChains] = useState<Set<string>>(new Set());
-  const [replyingTo, setReplyingTo] = useState<string | null>(null);
+  const [replyingTo, setReplyingTo] = useState<string | undefined>(undefined);
   const [replyContent, setReplyContent] = useState('');
   const [isPosting, setIsPosting] = useState(false);
   const supabase = createSupabaseBrowserClient();
@@ -422,7 +422,7 @@ function useChainInteractions(userId: string) {
   };
 
   const cancelReply = () => {
-    setReplyingTo(null);
+    setReplyingTo(undefined);
     setReplyContent('');
   };
 
@@ -439,7 +439,7 @@ function useChainInteractions(userId: string) {
       });
 
       setReplyContent('');
-      setReplyingTo(null);
+      setReplyingTo(undefined);
     } catch (error) {
       console.error('Error posting reply:', error);
     } finally {
@@ -478,7 +478,7 @@ function useChainInteractions(userId: string) {
 function useChains() {
   const [chains, setChains] = useState<ChainItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | undefined>(undefined);
   const supabase = createSupabaseBrowserClient();
 
   const fetchChains = useCallback(async () => {
@@ -539,7 +539,7 @@ function useChains() {
       });
 
       setChains(transformedChains);
-      setError(null);
+      setError(undefined);
     } catch (err) {
       console.error('Error in fetchChains:', err);
       setError('Failed to load chains');
@@ -581,7 +581,7 @@ function useChains() {
 function useFeed() {
   const [feedItems, setFeedItems] = useState<FeedItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | undefined>(undefined);
   const supabase = createSupabaseBrowserClient();
 
   const fetchFeed = useCallback(async () => {
@@ -754,7 +754,7 @@ function useFeed() {
       });
 
       setFeedItems(transformedFeed);
-      setError(null);
+      setError(undefined);
     } catch (err) {
       console.error('Error in fetchFeed:', err);
       setError('Failed to load feed');

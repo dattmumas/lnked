@@ -27,15 +27,12 @@ type ConversationRow = {
   created_at: string;
 };
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { collectiveId: string } },
-) {
+export async function GET(request: NextRequest, context: { params: Promise<{ collectiveId: string }> }) {
   const { searchParams } = new URL(request.url);
   const beforeIso = searchParams.get('before');
   const limitParam = searchParams.get('limit');
   const limit = Math.min(Math.max(parseInt(limitParam ?? '50', 10) || 50, 1), 100);
-  const { collectiveId } = params;
+  const { collectiveId } = await context.params;
 
   const supabase = createServerSupabaseClient();
   const {
@@ -91,11 +88,8 @@ export async function GET(
   return NextResponse.json(channels as ConversationRow[], { status: HttpStatus.OK });
 }
 
-export async function POST(
-  request: NextRequest,
-  { params }: { params: { collectiveId: string } },
-) {
-  const { collectiveId } = params;
+export async function POST(request: NextRequest, context: { params: Promise<{ collectiveId: string }> }) {
+  const { collectiveId } = await context.params;
 
   const supabase = createServerSupabaseClient();
   const {
@@ -142,7 +136,7 @@ export async function POST(
     );
   }
 
-  // Insert channel conversation
+  // Insert channel conversation (is_private = false so all collective members can see it)
   const { data: conversation, error: convErr } = await supabase
     .from('conversations')
     .insert({
@@ -150,6 +144,7 @@ export async function POST(
       collective_id: collectiveId,
       title: parsed.data.title,
       created_by: user.id,
+      is_private: false,
     })
     .select('id')
     .single();
@@ -161,7 +156,26 @@ export async function POST(
     );
   }
 
-  // Triggers auto‑insert participants; creator gets admin via trigger logic if role matches
+  // Explicitly add creator as participant (role depends on collective membership role)
+  const creatorRole = ['owner', 'admin'].includes(member.role) ? 'admin' : 'member';
+
+  const { error: partErr } = await supabase
+    .from('conversation_participants')
+    .insert({
+      conversation_id: conversation.id,
+      user_id: user.id,
+      role: creatorRole,
+    });
+
+  if (partErr) {
+    // Rollback to avoid orphaned channel without participants
+    await supabase.from('conversations').delete().eq('id', conversation.id);
+    return NextResponse.json(
+      { error: partErr.message },
+      { status: HttpStatus.INTERNAL_SERVER_ERROR },
+    );
+  }
+
   return NextResponse.json({ conversationId: conversation.id }, { status: HttpStatus.CREATED });
 }
 

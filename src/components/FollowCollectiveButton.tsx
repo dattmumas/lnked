@@ -33,7 +33,7 @@ export default function FollowCollectiveButton({
   const [actualCurrentUserId, setActualCurrentUserId] = useState<string | null>(
     initialCurrentUserId || null,
   );
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | undefined>(undefined);
   const supabase = createSupabaseBrowserClient();
 
   useEffect(() => {
@@ -73,7 +73,7 @@ export default function FollowCollectiveButton({
         setIsFollowing(previousIsFollowing);
         setError(result.error || 'Action failed. Please try again.');
       } else {
-        setError(null);
+        setError(undefined);
       }
     });
   };

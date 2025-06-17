@@ -1,10 +1,12 @@
 "use client";
 
-import { useFormState, useFormStatus } from "react-dom";
-import { logRecommendationFeedback } from "./_actions";
-import { Button } from "@/components/ui/button";
 import { ThumbsUp, ThumbsDown } from "lucide-react";
 import { useEffect } from "react";
+import { useFormState, useFormStatus } from "react-dom";
+
+import { Button } from "@/components/ui/button";
+
+import { logRecommendationFeedback } from "./_actions";
 
 interface RecommendationFeedbackButtonsProps {
   collectiveId: string;

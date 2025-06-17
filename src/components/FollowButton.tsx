@@ -30,7 +30,7 @@ export default function FollowButton({
   const [actualCurrentUserId, setActualCurrentUserId] = useState<string | null>(
     initialCurrentUserId || null,
   );
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | undefined>(undefined);
   const supabase = createSupabaseBrowserClient();
 
   // Sync with server state when initialIsFollowing changes
@@ -121,7 +121,7 @@ export default function FollowButton({
 
   const handleFollowToggle = async () => {
     // Clear any existing errors
-    setError(null);
+    setError(undefined);
 
     // Redirect to sign-in if not authenticated
     if (!actualCurrentUserId) {
@@ -150,7 +150,7 @@ export default function FollowButton({
           setIsFollowing(previousIsFollowing);
           setError(result.error || 'Action failed. Please try again.');
         } else {
-          setError(null);
+          setError(undefined);
           // Verify the final state with the server
           if (process.env.NODE_ENV !== 'test') {
             setTimeout(verifyFollowStatus, 500);

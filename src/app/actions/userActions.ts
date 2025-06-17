@@ -1,17 +1,19 @@
 'use server';
 
-import { createServerSupabaseClient } from '@/lib/supabase/server';
-import type { TablesUpdate } from '@/lib/database.types';
-import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
-import { supabaseAdmin } from '@/lib/supabaseAdmin';
+import { z } from 'zod';
+
 import { getStripe } from '@/lib/stripe';
+import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import { 
   AVATAR_CONFIG, 
   generateAvatarFilename, 
   extractFilePathFromUrl, 
   isSupabaseStorageUrl 
 } from '@/lib/utils/avatar';
+
+import type { TablesUpdate } from '@/lib/database.types';
 
 // Schema for validating user profile updates
 // Adjust fields and validation rules as necessary

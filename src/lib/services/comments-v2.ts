@@ -75,6 +75,7 @@ export class CommentsV2Service {
     }
 
     const threadResponse = await this.supabase.rpc<
+      'get_comment_thread',
       { comment_data: CommentWithAuthor & { author?: unknown; user?: unknown } }
     >('get_comment_thread', {
       p_entity_type: entityType,
@@ -130,6 +131,7 @@ export class CommentsV2Service {
   ): Promise<CommentWithAuthor[]> {
     const offset = (page - 1) * limit;
     const repliesResponse = await this.supabase.rpc<
+      'get_comment_replies',
       { comment_data: CommentWithAuthor }
     >('get_comment_replies', {
       p_parent_id: parentId,
@@ -160,6 +162,7 @@ export class CommentsV2Service {
     parentId?: string
   ): Promise<CommentWithAuthor | undefined> {
     const addCommentResponse = await this.supabase.rpc<
+      'add_comment',
       { comment_id: string }
     >('add_comment', {
       p_entity_type: entityType,
@@ -227,6 +230,7 @@ export class CommentsV2Service {
     reactionType: ReactionType
   ): Promise<{ action_taken: string; reaction_counts: Reaction[] }> {
     const toggleResponse = await this.supabase.rpc<
+      'toggle_comment_reaction',
       { action_taken: string; reaction_counts?: Reaction[] | null }
     >('toggle_comment_reaction', {
       p_comment_id: commentId,
@@ -268,7 +272,7 @@ export class CommentsV2Service {
     entityType: CommentEntityType,
     entityId: string
   ): Promise<number> {
-    const countResponse = await this.supabase.rpc<number>('get_comment_count', {
+    const countResponse = await this.supabase.rpc<'get_comment_count', number>('get_comment_count', {
         p_entity_type: entityType,
         p_entity_id: entityId,
       });

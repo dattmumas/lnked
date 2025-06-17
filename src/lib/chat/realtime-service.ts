@@ -299,6 +299,8 @@ export class RealtimeService {
       event: 'typing_start',
       payload: {
         user_id: user.id,
+        username: (user as any).user_metadata?.username ?? null,
+        full_name: (user as any).user_metadata?.full_name ?? null,
         conversation_id: conversationId,
         timestamp: Date.now(),
       },
@@ -404,6 +406,8 @@ export class RealtimeService {
     const existingIndex = currentTyping.findIndex(t => t.user_id === payload.user_id);
     const typingIndicator: TypingIndicator = {
       user_id: payload.user_id,
+      username: (payload as any).username ?? null,
+      full_name: (payload as any).full_name ?? null,
       conversation_id: conversationId,
       timestamp: payload.timestamp ?? Date.now(),
     };

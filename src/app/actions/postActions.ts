@@ -1,14 +1,14 @@
 'use server';
 
-import { createServerSupabaseClient } from '@/lib/supabase/server';
-import type { TablesInsert, TablesUpdate, Enums } from '@/lib/database.types';
+import { revalidatePath } from 'next/cache';
+
 import {
   CreatePostServerSchema,
   UpdatePostServerSchema,
   type CreatePostServerValues,
   type UpdatePostServerValues,
 } from '@/lib/schemas/postSchemas';
-import { revalidatePath } from 'next/cache';
+import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import { 
   THUMBNAIL_CONFIG, 
@@ -16,6 +16,8 @@ import {
   extractThumbnailFilePathFromUrl, 
   isSupabaseStorageUrl 
 } from '@/lib/utils/thumbnail';
+
+import type { TablesInsert, TablesUpdate, Enums } from '@/lib/database.types';
 
 type CreatePostFormValues = CreatePostServerValues;
 
@@ -115,7 +117,7 @@ export async function createPost(
           return { error: 'Error checking collective membership.' };
         }
         
-        isMember = membership != null && ['admin', 'editor', 'author'].includes(membership.role);
+        isMember = membership != undefined && ['admin', 'editor', 'author'].includes(membership.role);
       }
 
       if (!isOwner && !isMember) {
@@ -285,8 +287,8 @@ export async function updatePost(
       const { data: membership, error: memberCheckError } = await supabase
         .from('collective_members')
         .select('role')
-        .eq('collective_id', existingPost.collective_id as string)
-        .eq('user_id', user.id as string)
+        .eq('collective_id', existingPost.collective_id)
+        .eq('user_id', user.id)
         .in('role', ['admin', 'editor'])
         .maybeSingle<MembershipRole>();
       if (memberCheckError)

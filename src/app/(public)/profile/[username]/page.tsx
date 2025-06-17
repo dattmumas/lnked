@@ -1,5 +1,7 @@
-import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { notFound } from 'next/navigation';
+
+import { ContentArea } from '@/components/app/profile/content/ContentArea';
+import { ProfileHero } from '@/components/app/profile/hero/ProfileHero';
 import {
   ProfileLayout,
   ProfileContentGrid,
@@ -7,9 +9,9 @@ import {
   SocialSidebarContainer,
   ContentAreaContainer,
 } from '@/components/app/profile/layout/ProfileLayout';
-import { ProfileHero } from '@/components/app/profile/hero/ProfileHero';
 import { SocialSidebar } from '@/components/app/profile/social/SocialSidebar';
-import { ContentArea } from '@/components/app/profile/content/ContentArea';
+import { createServerSupabaseClient } from '@/lib/supabase/server';
+
 import type { MicroPost } from '@/components/app/profile/MicrothreadPanel';
 import type { Database } from '@/lib/database.types';
 

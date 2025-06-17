@@ -1,8 +1,9 @@
-import { Suspense } from 'react';
-import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
+import { Suspense } from 'react';
+
 import LandingPageContent from '@/components/landing/LandingPageContent';
 import LandingPageInteractive from '@/components/landing/LandingPageInteractive';
+import { createServerSupabaseClient } from '@/lib/supabase/server';
 
 // Enable ISR with 5-minute revalidation for static content
 export const revalidate = 300;
@@ -25,7 +26,7 @@ export default async function LandingPage() {
       <LandingPageContent />
 
       {/* Client-side interactive animations */}
-      <Suspense fallback={null}>
+      <Suspense fallback={<div />}>
         <LandingPageInteractive />
       </Suspense>
     </>

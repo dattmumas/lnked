@@ -1,17 +1,26 @@
 import type { Metadata } from 'next';
 import './globals.css';
 import { ThemeProvider } from 'next-themes';
+import { headers } from 'next/headers';
 import ModernNavbar from '@/components/ModernNavbar';
 import GlobalSidebar from '@/components/app/nav/GlobalSidebar';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { ContrastEnhancer } from '@/components/ContrastEnhancer';
-import { Source_Serif_4 } from 'next/font/google';
+import { Source_Serif_4, Inter } from 'next/font/google';
 import { QueryProvider } from '@/components/providers/query-provider';
+import clsx from 'clsx';
 
 const sourceSerif = Source_Serif_4({
   subsets: ['latin'],
   weight: ['300', '400', '500', '600', '700'],
   variable: '--font-playfair',
+  display: 'swap',
+});
+
+const inter = Inter({
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700'],
+  variable: '--font-inter',
   display: 'swap',
 });
 
@@ -55,7 +64,7 @@ export default async function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body
-        className={`min-h-screen bg-background w-full ${sourceSerif.variable}`}
+        className={`min-h-screen bg-background w-full ${sourceSerif.variable} ${inter.variable}`}
       >
         <QueryProvider>
           <ThemeProvider
@@ -65,15 +74,26 @@ export default async function RootLayout({
             disableTransitionOnChange
           >
             <ContrastEnhancer />
-            <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-md border-b border-border/50">
-              <ModernNavbar initialUser={user} initialProfile={profile} />
-            </header>
+            <div className="flex h-screen flex-col">
+              <header className="shrink-0 sticky top-0 z-50 bg-background/80 backdrop-blur-md border-b border-border/50">
+                <ModernNavbar initialUser={user} initialProfile={profile} />
+              </header>
 
-            {/* Only render GlobalSidebar after successful authentication */}
-            {isAuthenticated && <GlobalSidebar />}
+              {/* Layout body */}
+              <div className="flex flex-1 overflow-hidden">
+                {isAuthenticated && <GlobalSidebar />}
 
-            {/* Adjust main content margin based on authentication state */}
-            <main className={isAuthenticated ? 'ml-16' : ''}>{children}</main>
+                {/* Main content fills remaining space and no vertical scroll */}
+                <main
+                  className={clsx(
+                    'flex-1 overflow-hidden',
+                    isAuthenticated && 'ml-16 md:ml-16',
+                  )}
+                >
+                  {children}
+                </main>
+              </div>
+            </div>
           </ThemeProvider>
         </QueryProvider>
       </body>

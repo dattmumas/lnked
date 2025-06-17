@@ -78,6 +78,8 @@ export type BroadcastMessage = {
 // Chat UI state types
 export type TypingIndicator = {
   user_id: string;
+  username?: string | null;
+  full_name?: string | null;
   conversation_id: string;
   timestamp: number;
 };

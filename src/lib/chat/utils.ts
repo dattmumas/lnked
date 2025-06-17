@@ -14,13 +14,15 @@ const MAX_INITIALS_LENGTH = 2 as const;
 // eslint-disable-next-line no-magic-numbers
 export const MILLISECONDS_PER_SECOND = 1000 as const;
 // eslint-disable-next-line no-magic-numbers
-export const SECONDS_PER_MINUTE = 60 as const;
+export const SECONDS_PER_MINUTE = 60;
 // eslint-disable-next-line no-magic-numbers
-export const SECONDS_PER_HOUR   = 60 * SECONDS_PER_MINUTE as const;
+export const SECONDS_PER_HOUR   = 60 * SECONDS_PER_MINUTE;
 // eslint-disable-next-line no-magic-numbers
-export const SECONDS_PER_DAY    = 24 * SECONDS_PER_HOUR as const;
+export const SECONDS_PER_DAY    = 24 * SECONDS_PER_HOUR;
 // eslint-disable-next-line no-magic-numbers
-export const SECONDS_PER_MONTH  = 30 * SECONDS_PER_DAY as const; // ≈30 days
+export const SECONDS_PER_WEEK   = 7 * SECONDS_PER_DAY;
+// eslint-disable-next-line no-magic-numbers
+export const SECONDS_PER_MONTH  = 30 * SECONDS_PER_DAY; // ≈30 days
 
 /**
  * Get display name for a user with fallback chain

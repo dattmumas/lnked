@@ -94,6 +94,12 @@ export default function GlobalSidebar() {
     };
   }, [hoverTimeout]);
 
+  // Hide sidebar entirely on the dedicated chat interface to provide a cleaner UI
+  // This check must come after all hooks to avoid React hooks errors
+  if (pathname.startsWith('/chat')) {
+    return null;
+  }
+
   // Don't render until authentication is verified
   if (isAuthenticated === null) {
     return null; // Loading state

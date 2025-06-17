@@ -1,6 +1,7 @@
-import { createServerSupabaseClient } from '@/lib/supabase/server';
-import { notFound } from 'next/navigation';
 import Image from 'next/image';
+import { notFound } from 'next/navigation';
+
+import { createServerSupabaseClient } from '@/lib/supabase/server';
 
 export default async function Page({
   params,

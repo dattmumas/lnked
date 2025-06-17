@@ -36,6 +36,7 @@ import ModeToggle from '@/components/app/nav/ModeToggle';
 import SearchBar from '@/components/app/nav/SearchBar';
 import { NotificationDropdown } from '@/components/notifications/NotificationDropdown';
 import { getOptimizedAvatarUrl } from '@/lib/utils/avatar';
+import { useUnreadMessages } from '@/hooks/use-unread-messages';
 
 // Navigation items are now handled by GlobalSidebar
 const publicNavItems: never[] = [];
@@ -65,6 +66,7 @@ export default function ModernNavbar({
     avatar_url: initialProfile?.avatar_url ?? null,
   });
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const { unreadCount } = useUnreadMessages(user?.id);
 
   const supabase = createSupabaseBrowserClient();
 
@@ -195,6 +197,23 @@ export default function ModernNavbar({
                 </Button>
 
                 <NotificationDropdown userId={user.id} />
+
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="relative h-9 w-9 p-0 ml-1"
+                  asChild
+                >
+                  <Link href="/chat">
+                    <MessageCircle className="h-4 w-4" />
+                    {unreadCount > 0 && (
+                      <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-destructive text-destructive-foreground text-xs font-medium flex items-center justify-center">
+                        {unreadCount > 99 ? '99+' : unreadCount}
+                      </span>
+                    )}
+                    <span className="sr-only">Chat</span>
+                  </Link>
+                </Button>
 
                 <DropdownMenu
                   open={isUserMenuOpen}

@@ -10,11 +10,8 @@ const enum HttpStatus {
   INTERNAL_SERVER_ERROR = 500,
 }
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { conversationId: string } },
-) {
-  const { conversationId } = params;
+export async function GET(request: NextRequest, context: { params: Promise<{ conversationId: string }> }) {
+  const { conversationId } = await context.params;
   const { searchParams } = new URL(request.url);
   const beforeIso = searchParams.get('before');
   const limitParam = searchParams.get('limit');
@@ -49,7 +46,10 @@ export async function GET(
   let msgQuery = supabase
     .from('messages')
     .select(
-      `*, sender:users(id, full_name, username, avatar_url), reply_to:messages(*, sender:users(id, full_name, username, avatar_url))`,
+      `*, 
+      sender:users(id, full_name, username, avatar_url), 
+      reply_to:messages(*, sender:users(id, full_name, username, avatar_url)),
+      message_reactions(emoji, user_id)`,
     )
     .eq('conversation_id', conversationId);
 

@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
 import { useRouter, useSearchParams } from 'next/navigation.js';
+
 import AuthForm from '@/components/app/auth/AuthForm';
 import {
   RateLimiter,
@@ -11,6 +11,7 @@ import {
   formatRateLimitMessage,
   getAuthErrorMessage,
 } from '@/lib/auth-utils';
+import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
 
 export default function SignInPage() {
   const router = useRouter();
@@ -25,16 +26,18 @@ export default function SignInPage() {
     }
   }, [purge]);
 
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | undefined>(undefined);
   const [isLoading, setIsLoading] = useState(false);
-  const [rateLimitMessage, setRateLimitMessage] = useState<string | null>(null);
+  const [rateLimitMessage, setRateLimitMessage] = useState<string | undefined>(
+    undefined,
+  );
   const rateLimiterRef = useRef(new RateLimiter(5, 60000)); // 5 attempts per minute
 
   const handleSignIn = useCallback(
     async (formData: Record<string, string>) => {
       setIsLoading(true);
-      setError(null);
-      setRateLimitMessage(null);
+      setError(undefined);
+      setRateLimitMessage(undefined);
 
       // Check rate limiting
       if (!rateLimiterRef.current.canAttempt()) {

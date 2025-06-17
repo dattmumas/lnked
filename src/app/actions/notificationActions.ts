@@ -1,7 +1,9 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+
 import { notificationService } from '@/lib/notifications/service';
+
 import type { NotificationActionResult, NotificationPreferencesUpdate } from '@/types/notifications';
 
 export async function markNotificationsAsRead(

@@ -42,7 +42,7 @@ export function NotificationPreferences({
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | undefined>(undefined);
 
   // Load preferences on mount
   useEffect(() => {
@@ -96,7 +96,7 @@ export function NotificationPreferences({
 
   const handleSave = async () => {
     setIsSaving(true);
-    setError(null);
+    setError(undefined);
 
     try {
       const updates: NotificationPreferencesUpdate[] = Object.entries(

@@ -1,14 +1,16 @@
 'use server';
 
-import { createServerSupabaseClient } from '@/lib/supabase/server';
-import type { Enums, TablesInsert, TablesUpdate } from '@/lib/database.types';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
+
 import {
   CollectiveSettingsServerSchema,
   CollectiveSettingsServerFormValues,
 } from '@/lib/schemas/collectiveSettingsSchema';
 import { getStripe } from '@/lib/stripe';
+import { createServerSupabaseClient } from '@/lib/supabase/server';
+
+import type { Enums, TablesInsert, TablesUpdate } from '@/lib/database.types';
 
 const emailSchema = z.string().email({ message: 'Invalid email address.' });
 
@@ -189,9 +191,9 @@ export async function removeUserFromCollective(
     };
   }
 
-  const typedMemberRecord = memberRecord as MemberRecordWithCollective;
+  const typedMemberRecord = memberRecord;
 
-  if (typedMemberRecord.collective!.owner_id !== currentUser.id) {
+  if (typedMemberRecord.collective.owner_id !== currentUser.id) {
     return {
       success: false,
       error: 'Only the collective owner can remove members.',
@@ -202,7 +204,7 @@ export async function removeUserFromCollective(
   // This logic could be more complex depending on roles. For now, owner cannot remove self if they are the target.
   if (
     typedMemberRecord.user_id === currentUser.id &&
-    typedMemberRecord.collective!.owner_id === currentUser.id
+    typedMemberRecord.collective.owner_id === currentUser.id
   ) {
     return {
       success: false,
@@ -272,9 +274,9 @@ export async function updateMemberRole(
     };
   }
 
-  const typedMemberRecord = memberRecord as MemberRecordWithCollective;
+  const typedMemberRecord = memberRecord;
 
-  if (typedMemberRecord.collective!.owner_id !== currentUser.id) {
+  if (typedMemberRecord.collective.owner_id !== currentUser.id) {
     return {
       success: false,
       error: 'Only the collective owner can change member roles.',

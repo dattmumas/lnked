@@ -13,9 +13,8 @@ export default async function ChatPage() {
   }
 
   return (
-    <div className="flex h-screen w-full">
+    <div className="flex h-full w-full overflow-hidden">
       {/* ChatInterface is a client component */}
-      {/* @ts-expect-error Async Server Component */}
       <ChatInterface userId={user.id} />
     </div>
   );

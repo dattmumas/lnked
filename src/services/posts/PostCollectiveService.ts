@@ -1,4 +1,4 @@
-import { Database } from '@/lib/database.types';
+import { Database, Json } from '@/lib/database.types';
 import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
 import {
   PostCollectiveRow,
@@ -190,9 +190,9 @@ export class PostCollectiveService {
                 collective_id: collectiveId,
                 shared_by: userId,
                 status: sharingSettings?.[collectiveId]?.status ?? 'published',
-                metadata: sharingSettings?.[collectiveId]?.metadata ?? {},
+                metadata: (sharingSettings?.[collectiveId]?.metadata ?? {}) as Json,
                 display_order: sharingSettings?.[collectiveId]?.display_order ?? index,
-              }));
+              } as DBPostCollectiveInsert));
 
               // Insert associations into post_collectives table
               const { data: createdAssociations, error } = await this.supabase
@@ -244,7 +244,7 @@ export class PostCollectiveService {
               return {
                 success: true,
                 post_id: postId,
-                collective_associations: createdAssociations ?? []
+                collective_associations: (createdAssociations ?? []) as PostCollectiveRow[]
               };
 
             } catch (error) {
@@ -362,9 +362,9 @@ export class PostCollectiveService {
           collective_id: collectiveId,
           shared_by: userId,
           status: sharingSettings?.[collectiveId]?.status ?? 'published',
-          metadata: sharingSettings?.[collectiveId]?.metadata ?? {},
+          metadata: (sharingSettings?.[collectiveId]?.metadata ?? {}) as Json,
           display_order: sharingSettings?.[collectiveId]?.display_order ?? index,
-        }));
+        } as DBPostCollectiveInsert));
 
         const { error: insertError } = await this.supabase
           .from('post_collectives')
@@ -393,7 +393,7 @@ export class PostCollectiveService {
       return {
         success: true,
         post_id: postId,
-        collective_associations: updatedAssociations ?? []
+        collective_associations: (updatedAssociations ?? []) as PostCollectiveRow[]
       };
 
     } catch (error) {
@@ -425,7 +425,7 @@ export class PostCollectiveService {
         return [];
       }
 
-      return associations ?? [];
+      return (associations ?? []) as PostCollectiveRow[];
 
     } catch (error) {
       console.error('Error in getPostCollectiveAssociations:', error);
@@ -511,11 +511,11 @@ export class PostCollectiveService {
   /**
    * Get service health status and metrics
    */
-  getServiceHealth(): Promise<{
+  getServiceHealth(): {
     status: 'healthy' | 'warning' | 'critical';
     metrics: Record<string, unknown>;
     errors: Record<string, unknown>;
-  }> {
+  } {
     const performanceMetrics = postCollectiveAuditService.getPerformanceMetrics();
     const errorStats = postCollectiveErrorHandler.getErrorStatistics();
     const systemHealth = postCollectiveAuditService.checkSystemHealth();

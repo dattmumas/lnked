@@ -26,7 +26,9 @@ export default function PostLikeButton({
   const [userHasLiked, setUserHasLiked] = useState(
     initialUserHasLiked || false,
   );
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<string | undefined>(
+    undefined,
+  );
   const [isLoadingInitialState, setIsLoadingInitialState] = useState(true);
 
   useEffect(() => {
@@ -35,7 +37,7 @@ export default function PostLikeButton({
       const {
         data: { user },
       } = await supabase.auth.getUser();
-      setCurrentUserId(user?.id || null);
+      setCurrentUserId(user?.id || undefined);
 
       if (user && initialUserHasLiked === undefined) {
         const { data: like, error } = await supabase

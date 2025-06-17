@@ -1,8 +1,9 @@
+import CollectiveCard from '@/components/app/dashboard/collectives/CollectiveCard';
+import PostCard from '@/components/app/posts/molecules/PostCard';
+import { Button } from '@/components/ui/button';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { buildWebsearchQuery, escapeLike } from '@/lib/utils/search';
-import PostCard from '@/components/app/posts/molecules/PostCard';
-import CollectiveCard from '@/components/app/dashboard/collectives/CollectiveCard';
-import { Button } from '@/components/ui/button';
+
 import type { Database } from '@/lib/database.types';
 
 export const dynamic = 'force-dynamic';
@@ -228,7 +229,7 @@ export default async function Page({
                   thumbnail_url: post.thumbnail_url,
                   slug: post.slug ?? null,
                   created_at: post.created_at,
-                  post_type: (post.post_type as 'text' | 'video') || 'text',
+                  post_type: (post.post_type) || 'text',
                   metadata: post.metadata,
                   author: post.author,
                   collective: post.collective,

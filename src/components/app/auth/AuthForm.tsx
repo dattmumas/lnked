@@ -21,8 +21,8 @@ interface AuthFormProps {
   mode: 'signIn' | 'signUp';
   onSubmit: (_formData: Record<string, string>) => Promise<void>;
   isLoading: boolean;
-  error: string | null;
-  message?: string | null;
+  error: string | undefined;
+  message?: string | undefined;
 }
 
 interface AuthFormFieldsProps {

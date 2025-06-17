@@ -11,4 +11,4 @@ export const MINUTE_MS = 60 * SECOND_MS; // 1 minute
 export const AUTO_SAVE_DEBOUNCE_MS = 500 as const;
 
 /** React-Query cache staleness period for post data (5 minutes) */
-export const POST_STALE_TIME_MS = 5 * MINUTE_MS as const;
+export const POST_STALE_TIME_MS = 5 * MINUTE_MS;

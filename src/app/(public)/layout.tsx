@@ -1,5 +1,6 @@
-import Footer from '@/components/ui/Footer';
 import React from 'react';
+
+import Footer from '@/components/ui/Footer';
 
 export default function PublicLayout({
   children,

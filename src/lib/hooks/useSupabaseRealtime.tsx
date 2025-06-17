@@ -31,7 +31,7 @@ export function useSupabaseRealtime<T = unknown>(
 
     channel
       .on(
-        'postgres_changes',
+        'postgres_changes' as any,
         {
           schema: 'public',
           table,

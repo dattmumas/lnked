@@ -1,8 +1,10 @@
 "use server";
 
-import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
+
+import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { ReactionType } from '@/types/comments-v2';
+
 import type { TablesInsert } from '@/types/database.types';
 
 // Reaction result types simplified to like/dislike only

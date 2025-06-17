@@ -74,9 +74,11 @@ function getMuxClient() {
 // GET  /api/videos/[id]
 // ─────────────────────────────────────────────────────────────────────────────
 export async function GET(
-  _req: NextRequest,
-  { params }: { params: { id: string } },
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
 ) {
+  const { id } = await params;
+
   try {
     const supabase = getSupabase();
     const {
@@ -84,7 +86,7 @@ export async function GET(
     } = await supabase.auth.getUser();
     if (!user) throw new Response('unauthorized', { status: 401 });
 
-    const videoId = VIDEO_ID.parse(params.id);
+    const videoId = VIDEO_ID.parse(id);
     const video   = await assertOwnership(supabase, user.id, videoId);
     return NextResponse.json({ data: video });
   } catch (e) {
@@ -107,9 +109,11 @@ const UpdateSchema = z.object({
 }).strict();
 
 export async function PATCH(
-  req: NextRequest,
-  { params }: { params: { id: string } },
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
 ) {
+  const { id } = await params;
+
   try {
     const supabase = getSupabase();
     const {
@@ -117,10 +121,10 @@ export async function PATCH(
     } = await supabase.auth.getUser();
     if (!user) throw new Response('unauthorized', { status: 401 });
 
-    const videoId = VIDEO_ID.parse(params.id);
+    const videoId = VIDEO_ID.parse(id);
     await assertOwnership(supabase, user.id, videoId);
 
-    const body = UpdateSchema.parse(await req.json());
+    const body = UpdateSchema.parse(await request.json());
     const updateData: Record<string, unknown> = { ...body };
 
     if (body.privacy_setting !== undefined) {
@@ -156,9 +160,11 @@ export async function PATCH(
 // DELETE /api/videos/[id]
 // ─────────────────────────────────────────────────────────────────────────────
 export async function DELETE(
-  _req: NextRequest,
-  { params }: { params: { id: string } },
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
 ) {
+  const { id } = await params;
+
   try {
     const supabase = getSupabase();
     const {
@@ -166,7 +172,7 @@ export async function DELETE(
     } = await supabase.auth.getUser();
     if (!user) throw new Response('unauthorized', { status: 401 });
 
-    const videoId = VIDEO_ID.parse(params.id);
+    const videoId = VIDEO_ID.parse(id);
     const video   = await assertOwnership(supabase, user.id, videoId);
 
     const mux = getMuxClient();

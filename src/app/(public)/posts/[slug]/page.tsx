@@ -1,24 +1,26 @@
-import { createServerSupabaseClient } from '@/lib/supabase/server';
-import type { Database } from '@/lib/database.types';
-import { notFound } from 'next/navigation';
-import Link from 'next/link';
-import { Suspense } from 'react';
-import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import PostReactionButtons from '@/components/app/posts/molecules/PostReactionButtons';
-import BookmarkButton from '@/components/app/posts/molecules/BookmarkButton';
-import { CommentSection } from '@/components/app/comments';
-import { CommentsSkeleton } from '@/components/ui/CommentsSkeleton';
-import PostViewTracker from '@/components/app/posts/molecules/PostViewTracker';
-import { ReadOnlyLexicalViewer } from '@/components/ui/ReadOnlyLexicalViewer';
 import { ChevronLeft, Edit, Share2, MoreHorizontal } from 'lucide-react';
+import Link from 'next/link';
+import { notFound } from 'next/navigation';
+import { Suspense } from 'react';
+
+import { CommentSection } from '@/components/app/comments';
+import BookmarkButton from '@/components/app/posts/molecules/BookmarkButton';
+import PostReactionButtons from '@/components/app/posts/molecules/PostReactionButtons';
+import PostViewTracker from '@/components/app/posts/molecules/PostViewTracker';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Button } from '@/components/ui/button';
+import { CommentsSkeleton } from '@/components/ui/CommentsSkeleton';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { ReadOnlyLexicalViewer } from '@/components/ui/ReadOnlyLexicalViewer';
+import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { calculateReadingTime, formatDate } from '@/lib/utils';
+
+import type { Database } from '@/lib/database.types';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 const formatPostDate = (dateString: string | null): string => {

@@ -9,12 +9,14 @@ interface Channel {
   title: string | null;
   category?: string | null;
   isAnnouncement?: boolean | null;
+  type?: string;
 }
 
 interface ChannelSidebarProps {
-  collectiveId: string;
+  collectiveId?: string | null;
   selectedChannelId?: string;
-  onSelectChannel: (channel: Channel) => void;
+  onSelectChannel: (channel: Channel & { type: string }) => void;
+  search?: string;
   className?: string;
 }
 
@@ -35,8 +37,13 @@ export function ChannelSidebar({
   collectiveId,
   selectedChannelId,
   onSelectChannel,
+  search = '',
   className,
 }: ChannelSidebarProps) {
+  if (!collectiveId) {
+    return null;
+  }
+
   const {
     data: channels = [],
     isLoading,
@@ -47,8 +54,11 @@ export function ChannelSidebar({
   });
 
   const grouped = useMemo(() => {
+    const lower = search.toLowerCase();
     const map = new Map<string, Channel[]>();
-    for (const ch of channels) {
+    for (const ch of search.trim()
+      ? channels.filter((c) => c.title?.toLowerCase().includes(lower))
+      : channels) {
       const key = ch.category ?? '';
       if (!map.has(key)) map.set(key, []);
       map.get(key)?.push(ch);
@@ -90,7 +100,9 @@ export function ChannelSidebar({
             <button
               key={ch.id}
               type="button"
-              onClick={() => onSelectChannel(ch)}
+              onClick={() =>
+                onSelectChannel({ ...ch, type: ch.type || 'channel' })
+              }
               className={clsx(
                 'group flex w-full items-center gap-1 rounded px-2 py-1 text-left hover:bg-accent hover:text-accent-foreground',
                 selectedChannelId === ch.id &&

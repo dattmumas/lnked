@@ -57,7 +57,7 @@ export default function ReactionButtons({
   const [currentState, setCurrentState] = useState<ReactionState>({
     likeCount: initialLikeCount,
     dislikeCount: initialDislikeCount,
-    userReaction: initialUserReaction,
+    userReaction: initialUserReaction || undefined,
   });
 
   const handleReaction = (type: 'like' | 'dislike') => {

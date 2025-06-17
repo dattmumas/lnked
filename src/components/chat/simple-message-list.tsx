@@ -23,15 +23,18 @@ export function SimpleMessageList({
     <div className="space-y-2">
       {messages.map((message, index) => {
         const isOwnMessage = message.sender_id === currentUserId;
+        const prevMessage = index > 0 ? messages[index - 1] : null;
         const showTimestamp =
           index === 0 ||
-          new Date(messages[index - 1].created_at).getMinutes() !==
-            new Date(message.created_at).getMinutes();
+          (prevMessage?.created_at &&
+            message.created_at &&
+            new Date(prevMessage.created_at).getMinutes() !==
+              new Date(message.created_at).getMinutes());
 
         return (
           <div key={message.id}>
             {/* Show timestamp if needed */}
-            {showTimestamp && (
+            {showTimestamp && message.created_at && (
               <div className="text-center my-2">
                 <span className="text-[10px] text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
                   {formatChatTime(message.created_at)}
