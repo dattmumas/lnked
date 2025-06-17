@@ -1,17 +1,22 @@
 'use client';
 
-import React, { useState, useTransition, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { useForm, SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { Loader2 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import React, { useState, useTransition, useEffect , useState as useClientState } from 'react';
+import { useForm, SubmitHandler } from 'react-hook-form';
+
 import {
-  CollectiveSettingsClientSchema,
-  CollectiveSettingsClientFormValues,
-} from '@/lib/schemas/collectiveSettingsSchema';
+  updateCollectiveSettings,
+  getCollectiveStripeStatus,
+  deleteCollective,
+  transferCollectiveOwnership,
+} from '@/app/actions/collectiveActions';
+import {
+  createPriceTier,
+  deactivatePriceTier,
+} from '@/app/actions/subscriptionActions';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import {
   Card,
   CardContent,
@@ -20,6 +25,8 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
   Table,
   TableBody,
@@ -28,19 +35,15 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { Textarea } from '@/components/ui/textarea';
 import {
-  updateCollectiveSettings,
-  getCollectiveStripeStatus,
-  deleteCollective,
-  transferCollectiveOwnership,
-} from '@/app/actions/collectiveActions';
-import { Loader2 } from 'lucide-react';
-import { useState as useClientState } from 'react';
+  CollectiveSettingsClientSchema,
+  CollectiveSettingsClientFormValues,
+} from '@/lib/schemas/collectiveSettingsSchema';
+
+
 import type { Database } from '@/lib/database.types';
-import {
-  createPriceTier,
-  deactivatePriceTier,
-} from '@/app/actions/subscriptionActions';
+
 
 interface SubscriptionTier {
   id: string;

@@ -6,6 +6,11 @@
  *
  */
 
+
+import { $setSelection, createEditor, DecoratorNode } from 'lexical';
+import * as React from 'react';
+import { createPortal } from 'react-dom';
+
 import type {
   EditorConfig,
   LexicalEditor,
@@ -17,10 +22,6 @@ import type {
   Spread,
 } from 'lexical';
 import type { JSX } from 'react';
-
-import { $setSelection, createEditor, DecoratorNode } from 'lexical';
-import * as React from 'react';
-import { createPortal } from 'react-dom';
 
 const StickyComponent = React.lazy(() => import('./StickyComponent'));
 

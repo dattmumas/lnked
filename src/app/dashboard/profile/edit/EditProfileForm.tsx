@@ -1,14 +1,17 @@
 'use client';
 
-import React, { useState, useTransition } from 'react';
-import Image from 'next/image';
-import { useForm, SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { Loader2 } from 'lucide-react';
+import Image from 'next/image';
+import React, { useState, useTransition } from 'react';
+import { useForm, SubmitHandler } from 'react-hook-form';
 import { z } from 'zod';
+
+import {
+  updateUserProfile,
+  type RawUserProfileFormInput,
+} from '@/app/actions/userActions';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import {
   Card,
   CardContent,
@@ -17,11 +20,9 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import {
-  updateUserProfile,
-  type RawUserProfileFormInput,
-} from '@/app/actions/userActions';
-import { Loader2 } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 
 const ClientUserProfileSchema = z.object({
   full_name: z

@@ -6,7 +6,6 @@
  *
  */
 
-import type {LexicalCommand, LexicalEditor, RangeSelection} from 'lexical';
 
 import {useLexicalComposerContext} from '@lexical/react/LexicalComposerContext';
 import {
@@ -20,6 +19,8 @@ import {
 import {useEffect, useRef, useState} from 'react';
 
 import useReport from '../../../hooks/useReport';
+
+import type {LexicalCommand, LexicalEditor, RangeSelection} from 'lexical';
 
 export const SPEECH_TO_TEXT_COMMAND: LexicalCommand<boolean> = createCommand(
   'SPEECH_TO_TEXT_COMMAND',

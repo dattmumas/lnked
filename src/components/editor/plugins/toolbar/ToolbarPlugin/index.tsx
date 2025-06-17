@@ -6,7 +6,6 @@
  *
  */
 
-import type { JSX } from 'react';
 
 import {
   $isCodeNode,
@@ -14,15 +13,6 @@ import {
   CODE_LANGUAGE_MAP,
   getLanguageFriendlyName,
 } from '@lexical/code';
-import {
-  Bold as BoldIcon,
-  Italic as ItalicIcon,
-  Underline as UnderlineIcon,
-  Undo2,
-  Redo2,
-  Code as CodeIcon,
-  Link as LinkIcon,
-} from 'lucide-react';
 import { $isLinkNode, TOGGLE_LINK_COMMAND } from '@lexical/link';
 import { $isListNode, ListNode } from '@lexical/list';
 import { INSERT_EMBED_COMMAND } from '@lexical/react/LexicalAutoEmbedPlugin';
@@ -63,6 +53,15 @@ import {
   SELECTION_CHANGE_COMMAND,
   UNDO_COMMAND,
 } from 'lexical';
+import {
+  Bold as BoldIcon,
+  Italic as ItalicIcon,
+  Underline as UnderlineIcon,
+  Undo2,
+  Redo2,
+  Code as CodeIcon,
+  Link as LinkIcon,
+} from 'lucide-react';
 import { Dispatch, useCallback, useEffect, useState } from 'react';
 
 import {
@@ -76,9 +75,14 @@ import DropDown, { DropDownItem } from '../../../ui/overlays/DropDown';
 import DropdownColorPicker from '../../../ui/overlays/DropdownColorPicker';
 import { getSelectedNode } from '../../../utils/dom/getSelectedNode';
 import { sanitizeUrl } from '../../../utils/media/url';
-import { EmbedConfigs } from '../../layout/AutoEmbedPlugin';
+import { SHORTCUTS } from '../../input/ShortcutsPlugin/shortcuts';
 import { INSERT_COLLAPSIBLE_COMMAND } from '../../interactive/CollapsiblePlugin';
 import { InsertEquationDialog } from '../../interactive/EquationsPlugin';
+import { InsertPollDialog } from '../../interactive/PollPlugin';
+import { EmbedConfigs } from '../../layout/AutoEmbedPlugin';
+import InsertLayoutDialog from '../../layout/LayoutPlugin/InsertLayoutDialog';
+import { INSERT_PAGE_BREAK } from '../../layout/PageBreakPlugin';
+import { InsertTableDialog } from '../../layout/TablePlugin';
 import { INSERT_EXCALIDRAW_COMMAND } from '../../media/ExcalidrawPlugin';
 import {
   INSERT_IMAGE_COMMAND,
@@ -86,11 +90,7 @@ import {
   InsertImagePayload,
 } from '../../media/ImagesPlugin';
 import { InsertInlineImageDialog } from '../../media/InlineImagePlugin';
-import InsertLayoutDialog from '../../layout/LayoutPlugin/InsertLayoutDialog';
-import { INSERT_PAGE_BREAK } from '../../layout/PageBreakPlugin';
-import { InsertPollDialog } from '../../interactive/PollPlugin';
-import { SHORTCUTS } from '../../input/ShortcutsPlugin/shortcuts';
-import { InsertTableDialog } from '../../layout/TablePlugin';
+
 import FontSize from './fontSize';
 import {
   clearFormatting,
@@ -102,6 +102,8 @@ import {
   formatParagraph,
   formatQuote,
 } from './utils';
+
+import type { JSX } from 'react';
 
 function getCodeLanguageOptions(): [string, string][] {
   const options: [string, string][] = [];

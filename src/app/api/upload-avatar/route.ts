@@ -1,5 +1,6 @@
-import { uploadAvatar } from '@/app/actions/userActions';
 import { NextRequest, NextResponse } from 'next/server';
+
+import { uploadAvatar } from '@/app/actions/userActions';
 
 export async function POST(request: NextRequest) {
   try {

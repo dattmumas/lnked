@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { deleteUserAccount } from '@/app/actions/userActions';
 import { useRouter } from 'next/navigation';
+import { useState } from 'react';
+
+import { deleteUserAccount } from '@/app/actions/userActions';
+import { Button } from '@/components/ui/button';
 
 export default function DeleteAccountSection({
   userEmail,

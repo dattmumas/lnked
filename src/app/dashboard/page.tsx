@@ -1,7 +1,3 @@
-import { createServerSupabaseClient } from '@/lib/supabase/server';
-import { Button } from '@/components/primitives/Button';
-import { Card } from '@/components/primitives/Card';
-import StatsRow from '@/components/app/dashboard/organisms/StatsRow';
 import {
   BookOpen,
   Rss,
@@ -11,10 +7,15 @@ import {
   List,
   Video,
 } from 'lucide-react';
-import RecentPostRow from '@/components/app/dashboard/organisms/RecentPostRow';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { redirect } from 'next/navigation';
 import Link from 'next/link';
+import { redirect } from 'next/navigation';
+
+import RecentPostRow from '@/components/app/dashboard/organisms/RecentPostRow';
+import StatsRow from '@/components/app/dashboard/organisms/StatsRow';
+import { Button } from '@/components/primitives/Button';
+import { Card } from '@/components/primitives/Card';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { createServerSupabaseClient } from '@/lib/supabase/server';
 
 const MAX_RECENT_PERSONAL_POSTS_DISPLAY = 3;
 

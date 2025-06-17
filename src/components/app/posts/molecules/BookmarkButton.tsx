@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useTransition } from 'react';
-import { Button } from '@/components/ui/button';
 import { Bookmark, BookmarkCheck } from 'lucide-react';
+import { useState, useTransition } from 'react';
+
+import { Button } from '@/components/ui/button';
 
 interface BookmarkButtonProps {
   postId: string;

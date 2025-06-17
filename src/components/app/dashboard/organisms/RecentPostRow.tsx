@@ -1,9 +1,9 @@
 "use client"; // If any interactivity is planned, otherwise can be server component if props are simple
 
-import Link from "next/link";
 import { Eye, MessageSquare, Heart } from "lucide-react";
-import { formatDate } from "@/lib/utils";
-import { cn } from "@/lib/utils";
+import Link from "next/link";
+
+import { formatDate , cn } from "@/lib/utils";
 
 export interface RecentPostRowProps {
   id: string;

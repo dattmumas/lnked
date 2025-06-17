@@ -8,10 +8,6 @@
  *
  */
 
-import type { ExcalidrawInitialElements } from '../../../ui/modals/ExcalidrawModal';
-import type { AppState, BinaryFiles } from '@excalidraw/excalidraw/types';
-import type { NodeKey } from 'lexical';
-import type { JSX } from 'react';
 
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
 import { useLexicalEditable } from '@lexical/react/useLexicalEditable';
@@ -24,12 +20,18 @@ import {
   isDOMNode,
 } from 'lexical';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import * as React from 'react';
 
 import ExcalidrawModal from '../../../ui/modals/ExcalidrawModal';
 import ImageResizer from '../../../ui/overlays/ImageResizer';
-import { $isExcalidrawNode } from '.';
+
 import ExcalidrawImage from './ExcalidrawImage';
+
+import { $isExcalidrawNode } from '.';
+
+import type { ExcalidrawInitialElements } from '../../../ui/modals/ExcalidrawModal';
+import type { AppState, BinaryFiles } from '@excalidraw/excalidraw/types';
+import type { NodeKey } from 'lexical';
+import type { JSX } from 'react';
 
 export default function ExcalidrawComponent({
   nodeKey,

@@ -8,14 +8,15 @@
 
 'use client';
 
-import type {LexicalEditor} from 'lexical';
-import type {JSX} from 'react';
 
 import {useLexicalComposerContext} from '@lexical/react/LexicalComposerContext';
 import {TextNode} from 'lexical';
 import {useEffect} from 'react';
 
 import {$createEmojiNode, EmojiNode} from '../../../nodes/interactive/EmojiNode';
+
+import type {LexicalEditor} from 'lexical';
+import type {JSX} from 'react';
 
 const emojis: Map<string, [string, string]> = new Map([
   [':)', ['emoji happysmile', '🙂']],

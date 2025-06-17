@@ -1,11 +1,14 @@
 "use client";
 
-import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { InviteMemberClientSchema } from "@/lib/schemas/memberSchemas";
+import { Terminal, Loader2 } from "lucide-react";
+import { useState, useTransition } from "react";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+
 import { inviteMemberToCollective } from "@/app/actions/memberActions";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
   Form,
   FormControl,
@@ -15,6 +18,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -22,10 +26,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Terminal, Loader2 } from "lucide-react";
-import { useState, useTransition } from "react";
-import { z } from "zod";
+import { InviteMemberClientSchema } from "@/lib/schemas/memberSchemas";
 
 interface InviteMemberFormProps {
   collectiveId: string;

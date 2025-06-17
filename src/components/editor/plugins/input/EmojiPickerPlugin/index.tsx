@@ -20,7 +20,6 @@ import {
   $isRangeSelection,
   TextNode,
 } from 'lexical';
-import * as React from 'react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import * as ReactDOM from 'react-dom';
 
@@ -104,7 +103,7 @@ export default function EmojiPickerPlugin() {
 
   const emojiOptions = useMemo(
     () =>
-      emojis != null
+      emojis != undefined
         ? emojis.map(
             ({ emoji, aliases, tags }) =>
               new EmojiOption(aliases[0], emoji, {
@@ -123,9 +122,9 @@ export default function EmojiPickerPlugin() {
   const options: Array<EmojiOption> = useMemo(() => {
     return emojiOptions
       .filter((option: EmojiOption) => {
-        return queryString != null
+        return queryString != undefined
           ? new RegExp(queryString, 'gi').exec(option.title) ||
-            option.keywords != null
+            option.keywords != undefined
             ? option.keywords.some((keyword: string) =>
                 new RegExp(queryString, 'gi').exec(keyword),
               )
@@ -144,7 +143,7 @@ export default function EmojiPickerPlugin() {
       editor.update(() => {
         const selection = $getSelection();
 
-        if (!$isRangeSelection(selection) || selectedOption == null) {
+        if (!$isRangeSelection(selection) || selectedOption == undefined) {
           return;
         }
 
@@ -170,7 +169,7 @@ export default function EmojiPickerPlugin() {
         anchorElementRef,
         { selectedIndex, selectOptionAndCleanUp, setHighlightedIndex },
       ) => {
-        if (anchorElementRef.current == null || options.length === 0) {
+        if (anchorElementRef.current == undefined || options.length === 0) {
           return null;
         }
 

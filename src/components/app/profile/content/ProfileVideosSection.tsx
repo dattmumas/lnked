@@ -1,10 +1,11 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import Link from 'next/link';
 import { Play, Clock, Calendar } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import Link from 'next/link';
+import { useState, useEffect } from 'react';
+
 import VideoThumbnail from '@/components/app/posts/molecules/VideoThumbnail';
+import { Button } from '@/components/ui/button';
 
 interface VideoAsset {
   id: string;

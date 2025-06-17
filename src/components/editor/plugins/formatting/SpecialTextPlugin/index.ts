@@ -5,14 +5,15 @@
  * LICENSE file in the root directory of this source tree.
  *
  */
-import type {LexicalEditor} from 'lexical';
-import type {JSX} from 'react';
 
 import {useLexicalComposerContext} from '@lexical/react/LexicalComposerContext';
 import {TextNode} from 'lexical';
 import {useEffect} from 'react';
 
 import {$createSpecialTextNode, SpecialTextNode} from '../../../nodes/text/SpecialTextNode';
+
+import type {LexicalEditor} from 'lexical';
+import type {JSX} from 'react';
 
 // eslint-disable-next-line no-useless-escape
 const BRACKETED_TEXT_REGEX = /\[([^\[\]]+)\]/;

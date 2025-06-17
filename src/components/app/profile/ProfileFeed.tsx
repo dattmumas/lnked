@@ -1,15 +1,18 @@
 'use client';
-import React, { useState, useMemo, useTransition, useEffect } from 'react';
-import type { Database } from '@/lib/database.types';
-import { truncateText } from '@/components/app/posts/molecules/PostCard';
-import Link from 'next/link';
-import { Button } from '@/components/ui/button';
 import { Heart } from 'lucide-react';
-import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
+import Link from 'next/link';
+import { useState, useMemo, useTransition } from 'react';
+
+import { truncateText } from '@/components/app/posts/molecules/PostCard';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+
+
 import AudioSlider, { AudioPost } from './AudioSlider';
 import ContentFilterTabs from './ContentFilterTabs';
 import MicrothreadPanel, { MicroPost } from './MicrothreadPanel';
-import { Badge } from '@/components/ui/badge';
+
+import type { Database } from '@/lib/database.types';
 
 export type PostWithLikes = Database['public']['Tables']['posts']['Row'] & {
   like_count?: number | null;

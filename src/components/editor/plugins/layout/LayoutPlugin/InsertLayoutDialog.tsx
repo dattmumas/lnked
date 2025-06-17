@@ -6,15 +6,17 @@
  *
  */
 
-import type { JSX } from 'react';
 
 import { LexicalEditor } from 'lexical';
-import * as React from 'react';
 import { useState } from 'react';
 
 import { Button } from '@/components/ui/button';
+
 import DropDown, { DropDownItem } from '../../../ui/overlays/DropDown';
+
 import { INSERT_LAYOUT_COMMAND } from './LayoutPlugin';
+
+import type { JSX } from 'react';
 
 const LAYOUTS = [
   { label: '2 columns (equal width)', value: '1fr 1fr' },

@@ -6,20 +6,6 @@
  *
  */
 
-import type {
-  DOMConversionMap,
-  DOMConversionOutput,
-  DOMExportOutput,
-  EditorConfig,
-  LexicalEditor,
-  LexicalNode,
-  LexicalUpdateJSON,
-  NodeKey,
-  SerializedEditor,
-  SerializedLexicalNode,
-  Spread,
-} from 'lexical';
-import type { JSX } from 'react';
 
 import { HashtagNode } from '@lexical/hashtag';
 import { LinkNode } from '@lexical/link';
@@ -37,6 +23,21 @@ import * as React from 'react';
 import { EmojiNode } from '../interactive/EmojiNode';
 import { KeywordNode } from '../text/KeywordNode';
 
+import type {
+  DOMConversionMap,
+  DOMConversionOutput,
+  DOMExportOutput,
+  EditorConfig,
+  LexicalEditor,
+  LexicalNode,
+  LexicalUpdateJSON,
+  NodeKey,
+  SerializedEditor,
+  SerializedLexicalNode,
+  Spread,
+} from 'lexical';
+import type { JSX } from 'react';
+
 const ImageComponent = React.lazy(() => import('./ImageComponent'));
 
 export interface ImagePayload {
@@ -53,7 +54,7 @@ export interface ImagePayload {
 
 function isGoogleDocCheckboxImg(img: HTMLImageElement): boolean {
   return (
-    img.parentElement != null &&
+    img.parentElement != undefined &&
     img.parentElement.tagName === 'LI' &&
     img.previousSibling === null &&
     img.getAttribute('aria-roledescription') === 'checkbox'

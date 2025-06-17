@@ -1,6 +1,6 @@
 /* eslint-disable no-magic-numbers */
 
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { z } from 'zod';
 
 import { createServerSupabaseClient } from '@/lib/supabase/server';
@@ -105,7 +105,7 @@ export async function POST(request: Request, context: { params: Promise<{ conver
   }
 
   // 4. Process metadata for text messages (link preview)
-  let finalMetadata = metadata || {};
+  const finalMetadata = metadata || {};
   
   // 5. Insert message
   const { data: msg, error: msgErr } = await supabase

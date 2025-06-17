@@ -1,23 +1,28 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Skeleton } from '@/components/ui/skeleton';
 import { Bell, CheckCheck, Trash2 } from 'lucide-react';
-import { NotificationItem } from './NotificationItem';
+import { useState, useEffect, useCallback } from 'react';
+
 import {
   markNotificationsAsRead,
   deleteNotifications,
 } from '@/app/actions/notificationActions';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { cn } from '@/lib/utils';
+
+import { NotificationItem } from './NotificationItem';
+
+
 import type {
   Notification,
   NotificationFilters,
   NotificationType,
 } from '@/types/notifications';
-import { cn } from '@/lib/utils';
+
 
 const EMPTY_NOTIFICATIONS: Notification[] = [];
 

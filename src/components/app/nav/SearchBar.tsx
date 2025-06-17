@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
-import { Search, X, TrendingUp, Clock } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Search, X, TrendingUp, Clock } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useState, useRef, useEffect } from 'react';
+
 import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
 
 interface SearchResult {

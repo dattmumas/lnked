@@ -1,11 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
-import PostCard from '../molecules/PostCard';
-import { usePostInteractions } from '../hooks/usePostInteractions';
 import { Loader2 } from 'lucide-react';
+import { useState, useEffect } from 'react';
+
+import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
 import { cn } from '@/lib/utils';
+
+import { usePostInteractions } from '../hooks/usePostInteractions';
+import PostCard from '../molecules/PostCard';
 
 interface Author {
   id: string;

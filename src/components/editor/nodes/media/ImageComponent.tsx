@@ -44,19 +44,19 @@ import {
   KEY_ESCAPE_COMMAND,
   SELECTION_CHANGE_COMMAND,
 } from 'lexical';
-import * as React from 'react';
-import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
+import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 
 import { createWebsocketProvider } from '../../collaboration';
 import { useSharedHistoryContext } from '../../context/SharedHistoryContext';
 import brokenImage from '../../images/image-broken.svg';
-import EmojisPlugin from '../../plugins/input/EmojisPlugin';
 import KeywordsPlugin from '../../plugins/formatting/KeywordsPlugin';
 import LinkPlugin from '../../plugins/formatting/LinkPlugin';
+import EmojisPlugin from '../../plugins/input/EmojisPlugin';
 import MentionsPlugin from '../../plugins/interactive/MentionsPlugin';
 import ContentEditable from '../../ui/inputs/ContentEditable';
 import ImageResizer from '../../ui/overlays/ImageResizer';
+
 import { $isImageNode } from './ImageNode';
 
 const imageCache = new Map<string, Promise<boolean> | boolean>();
@@ -346,7 +346,7 @@ export default function ImageComponent({
         ) {
           editor.dispatchCommand(
             RIGHT_CLICK_IMAGE_COMMAND,
-            event as MouseEvent,
+            event,
           );
         }
       });

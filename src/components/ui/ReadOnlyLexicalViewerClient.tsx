@@ -1,33 +1,34 @@
 'use client';
-import * as React from 'react';
-import dynamic from 'next/dynamic';
-import { LexicalComposer } from '@lexical/react/LexicalComposer';
-import { RichTextPlugin } from '@lexical/react/LexicalRichTextPlugin';
-import { HistoryPlugin } from '@lexical/react/LexicalHistoryPlugin';
-import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
-import { LexicalErrorBoundary } from '@lexical/react/LexicalErrorBoundary';
-import { HashtagPlugin } from '@lexical/react/LexicalHashtagPlugin';
-import { ListPlugin } from '@lexical/react/LexicalListPlugin';
 import { CheckListPlugin } from '@lexical/react/LexicalCheckListPlugin';
-import { TablePlugin } from '@lexical/react/LexicalTablePlugin';
 import { HorizontalRulePlugin } from '@lexical/react/LexicalHorizontalRulePlugin';
 import { TabIndentationPlugin } from '@lexical/react/LexicalTabIndentationPlugin';
 import { ClickableLinkPlugin } from '@lexical/react/LexicalClickableLinkPlugin';
+import { LexicalComposer } from '@lexical/react/LexicalComposer';
+import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
 import { ContentEditable } from '@lexical/react/LexicalContentEditable';
+import { LexicalErrorBoundary } from '@lexical/react/LexicalErrorBoundary';
+import { HashtagPlugin } from '@lexical/react/LexicalHashtagPlugin';
+import { HistoryPlugin } from '@lexical/react/LexicalHistoryPlugin';
+import { ListPlugin } from '@lexical/react/LexicalListPlugin';
+import { RichTextPlugin } from '@lexical/react/LexicalRichTextPlugin';
+import { TablePlugin } from '@lexical/react/LexicalTablePlugin';
+import dynamic from 'next/dynamic';
+import * as React from 'react';
+
 import PlaygroundNodes from '@/components/editor/nodes/PlaygroundNodes';
-import PlaygroundEditorTheme from '@/components/editor/themes/PlaygroundEditorTheme';
 import AutoLinkPlugin from '@/components/editor/plugins/formatting/AutoLinkPlugin';
-import LinkPlugin from '@/components/editor/plugins/formatting/LinkPlugin';
-import YouTubePlugin from '@/components/editor/plugins/media/YouTubePlugin';
-import TwitterPlugin from '@/components/editor/plugins/media/TwitterPlugin';
-import FigmaPlugin from '@/components/editor/plugins/media/FigmaPlugin';
-import EmojisPlugin from '@/components/editor/plugins/input/EmojisPlugin';
-import TableOfContentsPlugin from '@/components/editor/plugins/layout/TableOfContentsPlugin';
-import CollapsiblePlugin from '@/components/editor/plugins/interactive/CollapsiblePlugin';
-import EmojiPickerPlugin from '@/components/editor/plugins/input/EmojiPickerPlugin';
-import TabFocusPlugin from '@/components/editor/plugins/input/TabFocusPlugin';
 import StickyPlugin from '@/components/editor/plugins/interactive/StickyPlugin';
 import KeywordsPlugin from '@/components/editor/plugins/formatting/KeywordsPlugin';
+import LinkPlugin from '@/components/editor/plugins/formatting/LinkPlugin';
+import EmojiPickerPlugin from '@/components/editor/plugins/input/EmojiPickerPlugin';
+import EmojisPlugin from '@/components/editor/plugins/input/EmojisPlugin';
+import TabFocusPlugin from '@/components/editor/plugins/input/TabFocusPlugin';
+import CollapsiblePlugin from '@/components/editor/plugins/interactive/CollapsiblePlugin';
+import TableOfContentsPlugin from '@/components/editor/plugins/layout/TableOfContentsPlugin';
+import FigmaPlugin from '@/components/editor/plugins/media/FigmaPlugin';
+import TwitterPlugin from '@/components/editor/plugins/media/TwitterPlugin';
+import YouTubePlugin from '@/components/editor/plugins/media/YouTubePlugin';
+import PlaygroundEditorTheme from '@/components/editor/themes/PlaygroundEditorTheme';
 
 // Loading component for dynamic imports
 const PluginLoader = () => (
@@ -312,7 +313,7 @@ export function ReadOnlyLexicalViewerClient({
                 <div className="editor">
                   <ContentEditable
                     className="ContentEditable__root"
-                    readOnly={true}
+                    readOnly
                     spellCheck={false}
                   />
                 </div>

@@ -6,6 +6,10 @@
  *
  */
 
+import {exportToSvg} from '@excalidraw/excalidraw';
+import * as React from 'react';
+import {useEffect, useState} from 'react';
+
 import type {
   ExcalidrawElement,
   NonDeleted,
@@ -13,9 +17,6 @@ import type {
 import type {AppState, BinaryFiles} from '@excalidraw/excalidraw/types';
 import type {JSX} from 'react';
 
-import {exportToSvg} from '@excalidraw/excalidraw';
-import * as React from 'react';
-import {useEffect, useState} from 'react';
 
 type ImageType = 'svg' | 'canvas';
 
@@ -68,7 +69,7 @@ const removeStyleFromSvg_HACK = (svg: SVGElement) => {
   // Generated SVG is getting double-sized by height and width attributes
   // We want to match the real size of the SVG element
   const viewBox = svg.getAttribute('viewBox');
-  if (viewBox != null) {
+  if (viewBox != undefined) {
     const viewBoxDimensions = viewBox.split(' ');
     svg.setAttribute('width', viewBoxDimensions[2]);
     svg.setAttribute('height', viewBoxDimensions[3]);

@@ -34,6 +34,7 @@ import {
   updateFontSize,
   UpdateFontSizeType,
 } from '../../toolbar/ToolbarPlugin/utils';
+
 import {
   isCapitalize,
   isCenterAlign,

@@ -1,9 +1,10 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
+import { z } from "zod";
+
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
-import { z } from "zod";
-import { revalidatePath } from "next/cache";
 
 const CollectiveSchema = z.object({
   name: z

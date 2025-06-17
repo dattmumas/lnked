@@ -12,7 +12,6 @@ import type {
   ExcalidrawImperativeAPI,
   ExcalidrawInitialDataState,
 } from '@excalidraw/excalidraw/types';
-import type { JSX } from 'react';
 
 import './ExcalidrawModal.css';
 
@@ -29,6 +28,7 @@ import {
 import { createPortal } from 'react-dom';
 
 import { Button } from '@/components/ui/button';
+
 import Modal from './Modal';
 
 export type ExcalidrawInitialElements = ExcalidrawInitialDataState['elements'];

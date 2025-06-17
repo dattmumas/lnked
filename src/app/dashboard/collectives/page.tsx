@@ -1,10 +1,11 @@
-import { createServerSupabaseClient } from '@/lib/supabase/server';
-import { Database } from '@/lib/database.types';
-import { redirect } from 'next/navigation';
-import Link from 'next/link';
-import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
+import Link from 'next/link';
+import { redirect } from 'next/navigation';
+
 import DashboardCollectiveCard from '@/components/app/dashboard/collectives/DashboardCollectiveCard';
+import { Button } from '@/components/ui/button';
+import { Database } from '@/lib/database.types';
+import { createServerSupabaseClient } from '@/lib/supabase/server';
 
 // Extend CollectiveRow for owned collectives to include subscriber count
 type OwnedCollectiveWithStats =

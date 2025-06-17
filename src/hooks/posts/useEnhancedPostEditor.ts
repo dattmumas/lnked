@@ -1,13 +1,15 @@
-import { useEffect, useCallback, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
+import { useEffect, useCallback } from 'react';
+
+import { useUser } from '@/hooks/useUser';
+import { Json } from '@/lib/database.types';
 import { 
   useEnhancedPostEditorStore, 
   EnhancedPostEditorFormData 
 } from '@/lib/stores/enhanced-post-editor-store';
-import { useUser } from '@/hooks/useUser';
+import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
 import { postCollectiveService } from '@/services/posts/PostCollectiveService';
-import { Json } from '@/lib/database.types';
+
 import type { CollectiveSharingSettings } from '@/types/enhanced-database.types';
 
 // Enhanced auto-save mutation hook with multi-collective support
@@ -43,7 +45,7 @@ export const useEnhancedAutoSavePost = () => {
       // Prepare post data for database
       const existingMetadata = data.metadata || {};
       const metadataObject = typeof existingMetadata === 'object' && existingMetadata !== null && !Array.isArray(existingMetadata) 
-        ? existingMetadata as Record<string, unknown>
+        ? existingMetadata
         : {};
 
       const postData = {

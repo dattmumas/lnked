@@ -1,28 +1,21 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
 import {
   Search,
   X,
   Users,
   CheckCircle2,
   AlertCircle,
-  Filter,
   SortAsc,
   SortDesc,
 } from 'lucide-react';
-import {
-  useCollectiveMemberships,
-  useSearchCollectiveMemberships,
-} from '@/hooks/posts/useCollectiveMemberships';
-import { CollectiveWithPermission } from '@/types/enhanced-database.types';
-import {
-  CollectiveSelectionCard,
-  CollectiveSelectionCardSkeleton,
-} from './CollectiveSelectionCard';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
+import { useState, useEffect, useMemo } from 'react';
+
+
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   Select,
   SelectContent,
@@ -30,9 +23,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
+import {
+  useCollectiveMemberships,
+  useSearchCollectiveMemberships,
+} from '@/hooks/posts/useCollectiveMemberships';
 import { cn } from '@/lib/utils';
+
+import {
+  CollectiveSelectionCard,
+  CollectiveSelectionCardSkeleton,
+} from './CollectiveSelectionCard';
 
 interface CollectiveSelectionModalProps {
   isOpen: boolean;

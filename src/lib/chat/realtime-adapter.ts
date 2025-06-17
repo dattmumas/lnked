@@ -39,7 +39,7 @@ class SupabaseAdapter implements RealTimeAdapter {
 }
 
 // Placeholder for future Ably adapter
-// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+ 
 const adapters: Record<string, RealTimeAdapter> = {
   supabase: new SupabaseAdapter(),
 };

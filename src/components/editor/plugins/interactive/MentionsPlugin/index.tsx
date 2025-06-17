@@ -6,7 +6,6 @@
  *
  */
 
-import type { JSX } from 'react';
 
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
 import {
@@ -17,10 +16,11 @@ import {
 } from '@lexical/react/LexicalTypeaheadMenuPlugin';
 import { TextNode } from 'lexical';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import * as React from 'react';
 import * as ReactDOM from 'react-dom';
 
 import { $createMentionNode } from '../../../nodes/interactive/MentionNode';
+
+import type { JSX } from 'react';
 
 const PUNCTUATION =
   '\\.,\\+\\*\\?\\$\\@\\|#{}\\(\\)\\^\\-\\[\\]\\\\/!%\'"~=<>_:;';
@@ -510,7 +510,7 @@ function useMentionLookupService(mentionString: string | null) {
   useEffect(() => {
     const cachedResults = mentionsCache.get(mentionString);
 
-    if (mentionString == null) {
+    if (mentionString == undefined) {
       setResults([]);
       return;
     }

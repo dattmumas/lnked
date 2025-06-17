@@ -1,15 +1,17 @@
 "use client";
 
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   UseFormRegister,
   FieldErrors,
   FieldError,
   Path,
 } from "react-hook-form";
-import { postFormFieldsSchema } from "@/lib/schemas/postFormFieldsSchema";
 import { z } from "zod";
+
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { postFormFieldsSchema } from "@/lib/schemas/postFormFieldsSchema";
+
 
 // re-export for backward compatibility
 export { postFormFieldsSchema };
@@ -45,7 +47,7 @@ export default function PostFormFields<
   const getErrorMessage = (
     error: FieldError | undefined
   ): string | undefined => {
-    return error?.message as string | undefined;
+    return error?.message;
   };
 
   return (

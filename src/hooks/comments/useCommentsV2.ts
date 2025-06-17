@@ -1,7 +1,10 @@
 // Universal Comments Hook - React interface for polymorphic comment system
 // Provides complete comment functionality for any entity type
 
+import { RealtimeChannel } from '@supabase/supabase-js';
 import { useState, useEffect, useCallback, useRef } from 'react';
+
+import { useUser } from '@/hooks/useUser';
 import { commentsV2Service } from '@/lib/services/comments-v2';
 import {
   CommentEntityType,
@@ -10,8 +13,6 @@ import {
   UseCommentsReturn,
   ReactionType,
 } from '@/types/comments-v2';
-import { RealtimeChannel } from '@supabase/supabase-js';
-import { useUser } from '@/hooks/useUser';
 
 interface UseCommentsV2Props {
   entityType: CommentEntityType;

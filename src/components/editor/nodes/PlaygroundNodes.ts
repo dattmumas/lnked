@@ -6,7 +6,6 @@
  *
  */
 
-import type {Klass, LexicalNode} from 'lexical';
 
 import {CodeHighlightNode, CodeNode} from '@lexical/code';
 import {HashtagNode} from '@lexical/hashtag';
@@ -22,6 +21,7 @@ import {TableCellNode, TableNode, TableRowNode} from '@lexical/table';
 import {CollapsibleContainerNode} from '../plugins/interactive/CollapsiblePlugin/CollapsibleContainerNode';
 import {CollapsibleContentNode} from '../plugins/interactive/CollapsiblePlugin/CollapsibleContentNode';
 import {CollapsibleTitleNode} from '../plugins/interactive/CollapsiblePlugin/CollapsibleTitleNode';
+
 import {EmojiNode} from './interactive/EmojiNode';
 import {EquationNode} from './interactive/EquationNode';
 import {ExcalidrawNode} from './interactive/ExcalidrawNode';
@@ -30,20 +30,22 @@ import {PollNode} from './interactive/PollNode';
 import {StickyNode} from './interactive/StickyNode';
 
 // Media nodes
+import {LayoutContainerNode} from './layout/LayoutContainerNode';
+import {LayoutItemNode} from './layout/LayoutItemNode';
+import {PageBreakNode} from './layout/PageBreakNode';
 import {FigmaNode} from './media/FigmaNode';
 import {ImageNode} from './media/ImageNode';
 import {InlineImageNode} from './media/InlineImageNode/InlineImageNode';
 import {YouTubeNode} from './media/YouTubeNode';
 
 // Layout nodes
-import {LayoutContainerNode} from './layout/LayoutContainerNode';
-import {LayoutItemNode} from './layout/LayoutItemNode';
-import {PageBreakNode} from './layout/PageBreakNode';
 
 // Text nodes
 import {KeywordNode} from './text/KeywordNode';
 import {SpecialTextNode} from './text/SpecialTextNode';
 import {TweetNode} from './text/TweetNode';
+
+import type {Klass, LexicalNode} from 'lexical';
 
 const PlaygroundNodes: Array<Klass<LexicalNode>> = [
   HeadingNode,

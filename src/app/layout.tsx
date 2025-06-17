@@ -1,13 +1,17 @@
 import type { Metadata } from 'next';
+
 import './globals.css';
 import { ThemeProvider } from 'next-themes';
-import { headers } from 'next/headers';
+
 import ModernNavbar from '@/components/ModernNavbar';
 import GlobalSidebar from '@/components/app/nav/GlobalSidebar';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { ContrastEnhancer } from '@/components/ContrastEnhancer';
+
 import { Source_Serif_4, Inter } from 'next/font/google';
+
 import { QueryProvider } from '@/components/providers/query-provider';
+
 import clsx from 'clsx';
 
 const sourceSerif = Source_Serif_4({

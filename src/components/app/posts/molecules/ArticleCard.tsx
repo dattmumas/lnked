@@ -1,8 +1,10 @@
 import Link from 'next/link';
+
 import { Card, CardContent } from '@/components/ui/card';
-import PostCardHeader from './PostCardHeader';
-import PostCardFooter from './PostCardFooter';
 import { cn } from '@/lib/utils';
+
+import PostCardFooter from './PostCardFooter';
+import PostCardHeader from './PostCardHeader';
 
 interface Author {
   id: string;

@@ -8,7 +8,6 @@
  *
  */
 import type { Position } from '../../../nodes/media/InlineImageNode/InlineImageNode';
-import type { JSX } from 'react';
 
 import '../../../nodes/media/InlineImageNode/InlineImageNode.css';
 
@@ -37,15 +36,7 @@ import {
 import * as React from 'react';
 import { useEffect, useRef, useState } from 'react';
 
-import {
-  $createInlineImageNode,
-  $isInlineImageNode,
-  InlineImageNode,
-  InlineImagePayload,
-} from '../../../nodes/media/InlineImageNode/InlineImageNode';
 import { Button } from '@/components/ui/button';
-import { DialogActions } from '../../../ui/modals/Dialog';
-import FileInput from '../../../ui/inputs/FileInput';
 import {
   Select,
   SelectContent,
@@ -53,7 +44,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+
+import {
+  $createInlineImageNode,
+  $isInlineImageNode,
+  InlineImageNode,
+  InlineImagePayload,
+} from '../../../nodes/media/InlineImageNode/InlineImageNode';
+import FileInput from '../../../ui/inputs/FileInput';
 import TextInput from '../../../ui/inputs/TextInput';
+import { DialogActions } from '../../../ui/modals/Dialog';
+
+import type { JSX } from 'react';
 
 export type InsertInlineImagePayload = Readonly<InlineImagePayload>;
 

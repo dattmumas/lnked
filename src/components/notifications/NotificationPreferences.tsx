@@ -1,9 +1,11 @@
 'use client';
 
+import { Bell, Mail, Smartphone, Monitor, Save, Loader2 } from 'lucide-react';
 import { useState, useEffect } from 'react';
+
+import { updateNotificationPreferences } from '@/app/actions/notificationActions';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Switch } from '@/components/ui/switch';
-import { Label } from '@/components/ui/label';
 import {
   Card,
   CardContent,
@@ -11,17 +13,17 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
-import { Badge } from '@/components/ui/badge';
-import { Bell, Mail, Smartphone, Monitor, Save, Loader2 } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
 import { clientNotificationService } from '@/lib/notifications/client-service';
-import { updateNotificationPreferences } from '@/app/actions/notificationActions';
+import { NOTIFICATION_CONFIGS } from '@/types/notifications';
+
 import type {
   NotificationPreferences,
   NotificationType,
   NotificationPreferencesUpdate,
 } from '@/types/notifications';
-import { NOTIFICATION_CONFIGS } from '@/types/notifications';
 
 interface NotificationPreferencesProps {
   className?: string;

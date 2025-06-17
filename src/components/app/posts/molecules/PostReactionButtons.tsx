@@ -1,13 +1,9 @@
 'use client';
 
-import { useState, useTransition } from 'react';
-import { Button } from '@/components/ui/button';
-import { ThumbsUp, ThumbsDown } from 'lucide-react';
+
 import ReactionButtons from '@/components/ui/ReactionButtons';
-import {
-  toggleReactionState,
-  type ReactionState,
-} from '@/lib/utils/reactionHelpers';
+
+
 
 interface PostReactionButtonsProps {
   id: string;

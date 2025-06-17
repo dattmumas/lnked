@@ -1,6 +1,5 @@
 'use client';
 
-import type { MessageWithSender } from '@/lib/chat/types';
 import { ConversationPanel } from './conversation-panel';
 
 type Channel = {

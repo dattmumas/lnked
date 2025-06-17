@@ -1,11 +1,5 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { cn } from '@/lib/utils';
-import { useCollectiveMemberships } from '@/hooks/posts/useCollectiveMemberships';
-import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
 import {
   Home,
   Compass,
@@ -20,6 +14,14 @@ import {
   FileText,
   LayoutDashboard,
 } from 'lucide-react';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { useState, useEffect } from 'react';
+
+import { useCollectiveMemberships } from '@/hooks/posts/useCollectiveMemberships';
+import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
+import { cn } from '@/lib/utils';
+
 
 // Enhanced main navigation with Videos moved up as per creative design
 const navigationItems = [

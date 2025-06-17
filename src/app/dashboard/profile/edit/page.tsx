@@ -1,6 +1,8 @@
-import { createServerSupabaseClient } from "@/lib/supabase/server";
-import EditProfileForm from "./EditProfileForm"; // Client component for the form
 import { redirect } from "next/navigation";
+
+import { createServerSupabaseClient } from "@/lib/supabase/server";
+
+import EditProfileForm from "./EditProfileForm"; // Client component for the form
 
 export default async function EditProfilePage() {
   const supabase = await createServerSupabaseClient();

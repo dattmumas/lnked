@@ -1,7 +1,8 @@
-import { createServerSupabaseClient } from "@/lib/supabase/server";
-import DashboardShell from "@/components/app/dashboard/organisms/DashboardShell";
 import { Metadata } from "next";
 import { redirect } from "next/navigation";
+
+import DashboardShell from "@/components/app/dashboard/organisms/DashboardShell";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = {
   title: "Dashboard | Lnked",

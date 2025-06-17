@@ -1,40 +1,34 @@
 'use client';
 
 import { User } from '@supabase/supabase-js';
-import { useEffect, useState, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
-import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
-import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Textarea } from '@/components/ui/textarea';
 import {
-  PlusCircle,
   Heart,
-  MessageCircle,
-  Bookmark,
   Share2,
-  Play,
-  TrendingUp,
   Send,
   Smile,
   Image,
   Loader2,
-  ThumbsUp,
-  ThumbsDown,
   Reply,
-  ExternalLink,
   MoreHorizontal,
   Video,
-  Edit,
   Plus,
   FileText,
   X,
 } from 'lucide-react';
-import type { Json } from '@/types/json';
-import { cn } from '@/lib/utils';
-import PostCard from '@/components/app/posts/molecules/PostCard';
-import type { Tables } from '@/lib/database.types';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useEffect, useState, useCallback } from 'react';
+
+import PostCard from '@/components/app/posts/molecules/PostCard';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
+import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
+import { cn } from '@/lib/utils';
+
+import type { Json } from '@/types/json';
+
+
 
 interface UserProfile {
   id: string;
@@ -516,7 +510,7 @@ function useChains() {
           username: null,
           full_name: null,
           avatar_url: null,
-        }) as NonNullable<ChainQueryRow['users']>;
+        });
         return {
           id: chain.id,
           user: {
@@ -670,11 +664,11 @@ function useFeed() {
           username: null,
           full_name: null,
           avatar_url: null,
-        }) as NonNullable<PostQueryRow['users']>;
+        });
         const collective = (post.collectives ?? {
           name: null,
           slug: null,
-        }) as NonNullable<PostQueryRow['collectives']>;
+        });
 
         // Calculate like and dislike counts
         const postReactions = (reactionCounts || []).filter(

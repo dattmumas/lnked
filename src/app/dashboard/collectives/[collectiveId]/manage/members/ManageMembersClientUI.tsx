@@ -1,11 +1,5 @@
 "use client";
 
-import React, { useState } from "react";
-import { useRouter } from "next/navigation";
-import type { MemberWithDetails } from "./page";
-import InviteMemberForm from "./InviteMemberForm";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   UserPlus,
   Edit3,
@@ -13,13 +7,22 @@ import {
   ShieldCheck,
   ShieldAlert,
 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+
 import {
   changeMemberRole,
   removeMemberFromCollective,
   resendCollectiveInvite,
   cancelCollectiveInvite,
 } from "@/app/actions/memberActions";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { COLLECTIVE_MEMBER_ROLES } from "@/lib/schemas/memberSchemas";
+
+import InviteMemberForm from "./InviteMemberForm";
+
+import type { MemberWithDetails } from "./page";
 
 interface PendingInvite {
   id: string;

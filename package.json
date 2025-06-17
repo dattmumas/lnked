@@ -11,7 +11,7 @@
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,css,html,yml,yaml,mdx}\"",
     "precommit": "pnpm lint && pnpm typecheck",
     "test": "jest",
-    "codex:agent": "ts-node codex-agent.ts"
+    "lint:json": "eslint 'src/**/*.{ts,tsx}' -f json -o eslint.json"
   },
   "dependencies": {
     "@excalidraw/excalidraw": "^0.18.0",
@@ -66,6 +66,7 @@
     "next-mcp-server": "^0.2.2",
     "next-themes": "^0.4.6",
     "nprogress": "^0.2.0",
+    "openai": "^5.5.1",
     "prismjs": "^1.30.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",

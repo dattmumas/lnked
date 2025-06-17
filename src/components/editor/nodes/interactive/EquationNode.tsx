@@ -6,6 +6,11 @@
  *
  */
 
+
+import katex from 'katex';
+import { $applyNodeReplacement, DecoratorNode, DOMExportOutput } from 'lexical';
+import * as React from 'react';
+
 import type {
   DOMConversionMap,
   DOMConversionOutput,
@@ -16,10 +21,6 @@ import type {
   Spread,
 } from 'lexical';
 import type { JSX } from 'react';
-
-import katex from 'katex';
-import { $applyNodeReplacement, DecoratorNode, DOMExportOutput } from 'lexical';
-import * as React from 'react';
 
 const EquationComponent = React.lazy(() => import('./EquationComponent'));
 

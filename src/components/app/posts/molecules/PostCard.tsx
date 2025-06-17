@@ -1,6 +1,6 @@
 import ArticleCard from './ArticleCard';
 import VideoCard from './VideoCard';
-import type { Json } from '@/types/json';
+
 
 interface Author {
   id: string;

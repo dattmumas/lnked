@@ -1,20 +1,22 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { Bell, CheckCheck, Settings, ExternalLink } from 'lucide-react';
 import Link from 'next/link';
-import { Button } from '@/components/ui/button';
+import { useState, useEffect } from 'react';
+
 import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Bell, CheckCheck, Settings, ExternalLink } from 'lucide-react';
-import { NotificationItem } from './NotificationItem';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { useNotifications } from '@/lib/hooks/useNotifications';
 import { cn } from '@/lib/utils';
+
+import { NotificationItem } from './NotificationItem';
 
 interface NotificationDropdownProps {
   userId?: string;

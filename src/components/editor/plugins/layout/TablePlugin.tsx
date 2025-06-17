@@ -6,7 +6,6 @@
  *
  */
 
-import type { JSX } from 'react';
 
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
 import {
@@ -19,8 +18,11 @@ import { EditorThemeClasses, Klass, LexicalEditor, LexicalNode } from 'lexical';
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
-import { DialogActions } from '../../ui/modals/Dialog';
+
 import TextInput from '../../ui/inputs/TextInput';
+import { DialogActions } from '../../ui/modals/Dialog';
+
+import type { JSX } from 'react';
 
 export type InsertTableCommandPayload = Readonly<{
   columns: string;

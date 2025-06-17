@@ -6,14 +6,16 @@ import React, { useState } from 'react';
 const MAX_TAGS = 10;
 const TITLE_WARNING_THRESHOLD = 90;
 const DESCRIPTION_WARNING_THRESHOLD = 4500;
-import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+
 import { X, Plus } from 'lucide-react';
-import { cn } from '@/lib/utils';
+
 import { useVideoUpload } from '@/hooks/video/useVideoUpload';
+import { cn } from '@/lib/utils';
 
 interface DetailsStepProps {
   videoUpload: ReturnType<typeof useVideoUpload>;

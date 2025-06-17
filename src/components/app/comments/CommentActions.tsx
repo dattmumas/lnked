@@ -1,20 +1,21 @@
 'use client';
 
-import React from 'react';
-import { CommentWithAuthor, ReactionType } from '@/types/comments-v2';
-import { Button } from '@/components/ui/button';
 import {
   ThumbsUp,
   ThumbsDown,
   MessageCircle,
   MoreHorizontal,
 } from 'lucide-react';
+import React from 'react';
+
+import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { CommentWithAuthor, ReactionType } from '@/types/comments-v2';
 
 interface CommentActionsProps {
   comment: CommentWithAuthor;

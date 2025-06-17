@@ -6,9 +6,9 @@ import { AUTO_SAVE_DEBOUNCE_MS, POST_STALE_TIME_MS } from '@/lib/constants/post-
 import { usePostEditorStore, PostFormData } from '@/lib/stores/post-editor-store';
 import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
 
+import type { Json } from '@/lib/database.types';
 import type { User } from '@supabase/supabase-js';
 import type { UseMutationResult } from '@tanstack/react-query';
-import type { Json } from '@/lib/database.types';
 
 const PostFormSchema = z.object({
   id: z.string().uuid().optional(),

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+
 import RecommendationFeedbackButtons from "@/app/(public)/discover/RecommendationFeedbackButtons";
 
 interface CollectiveCardProps {

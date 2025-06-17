@@ -1,10 +1,12 @@
 'use client';
 
+import * as TooltipPrimitive from '@radix-ui/react-tooltip';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+
 import { cn } from '@/lib/utils';
+
 import type { ElementType } from 'react';
-import * as TooltipPrimitive from '@radix-ui/react-tooltip';
 
 // Type assertion to work around React 19 compatibility
 interface TooltipComponents {
@@ -17,7 +19,7 @@ interface TooltipComponents {
     className?: string;
   }>;
 }
-const Tooltip = TooltipPrimitive as unknown as TooltipComponents;
+const Tooltip = TooltipPrimitive as TooltipComponents;
 
 interface SidebarLinkProps {
   href: string;

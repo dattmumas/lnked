@@ -1,5 +1,6 @@
-import { uploadThumbnail } from '@/app/actions/postActions';
 import { NextRequest, NextResponse } from 'next/server';
+
+import { uploadThumbnail } from '@/app/actions/postActions';
 
 export async function POST(request: NextRequest) {
   try {

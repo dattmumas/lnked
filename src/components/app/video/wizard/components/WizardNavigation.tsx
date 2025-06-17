@@ -1,8 +1,8 @@
 'use client';
 
-import React from 'react';
-import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight, Upload, Loader2, X } from 'lucide-react';
+
+import { Button } from '@/components/ui/button';
 import { WIZARD_STEPS } from '@/hooks/video/useStepNavigation';
 
 // Step constants

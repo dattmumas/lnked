@@ -6,8 +6,6 @@
  *
  */
 
-import type { ElementNode, LexicalEditor } from 'lexical';
-import type { JSX } from 'react';
 
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
 import { useLexicalEditable } from '@lexical/react/useLexicalEditable';
@@ -45,13 +43,15 @@ import {
   isDOMNode,
   SELECTION_CHANGE_COMMAND,
 } from 'lexical';
-import * as React from 'react';
 import { ReactPortal, useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
 import useModal from '../../../hooks/useModal';
 import ColorPicker from '../../../ui/overlays/ColorPicker';
 import DropDown, { DropDownItem } from '../../../ui/overlays/DropDown';
+
+import type { ElementNode, LexicalEditor } from 'lexical';
+import type { JSX } from 'react';
 
 function computeSelectionCount(selection: TableSelection): {
   columns: number;
@@ -174,9 +174,9 @@ function TableActionMenu({
     const rootElement = editor.getRootElement();
 
     if (
-      menuButtonElement != null &&
-      dropDownElement != null &&
-      rootElement != null
+      menuButtonElement != undefined &&
+      dropDownElement != undefined &&
+      rootElement != undefined
     ) {
       const rootEleRect = rootElement.getBoundingClientRect();
       const menuButtonRect = menuButtonElement.getBoundingClientRect();
@@ -206,8 +206,8 @@ function TableActionMenu({
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (
-        dropDownRef.current != null &&
-        contextRef.current != null &&
+        dropDownRef.current != undefined &&
+        contextRef.current != undefined &&
         isDOMNode(event.target) &&
         !dropDownRef.current.contains(event.target) &&
         !contextRef.current.contains(event.target)
@@ -758,7 +758,7 @@ function TableCellActionMenuContainer({
       setTableMenuCellNode(null);
     }
 
-    if (selection == null || menu == null) {
+    if (selection == undefined || menu == undefined) {
       return disable();
     }
 
@@ -776,7 +776,7 @@ function TableCellActionMenuContainer({
         selection.anchor.getNode(),
       );
 
-      if (tableCellNodeFromSelection == null) {
+      if (tableCellNodeFromSelection == undefined) {
         return disable();
       }
 
@@ -785,7 +785,7 @@ function TableCellActionMenuContainer({
       );
 
       if (
-        tableCellParentNodeDOM == null ||
+        tableCellParentNodeDOM == undefined ||
         !tableCellNodeFromSelection.isAttached()
       ) {
         return disable();
@@ -908,7 +908,7 @@ function TableCellActionMenuContainer({
 
   return (
     <div className="table-cell-action-button-container" ref={menuButtonRef}>
-      {tableCellNode != null && (
+      {tableCellNode != undefined && (
         <>
           <button
             type="button"

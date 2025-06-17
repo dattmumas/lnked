@@ -1,7 +1,5 @@
 'use client';
 
-import { useState, useTransition } from 'react';
-import { Button } from '@/components/ui/button';
 import {
   ThumbsUp,
   ThumbsDown,
@@ -10,13 +8,17 @@ import {
   Share2,
   ExternalLink,
 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { useState, useTransition } from 'react';
+
+import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { useRouter } from 'next/navigation';
+
 
 interface PostInteractions {
   isLiked: boolean;

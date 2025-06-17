@@ -8,7 +8,6 @@
 
 'use client';
 
-import type { JSX } from 'react';
 
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
 import { $insertNodeToNearestRoot, mergeRegister } from '@lexical/utils';
@@ -25,6 +24,8 @@ import {
   $createPageBreakNode,
   PageBreakNode,
 } from '../../../nodes/layout/PageBreakNode';
+
+import type { JSX } from 'react';
 
 export const INSERT_PAGE_BREAK: LexicalCommand<undefined> = createCommand();
 

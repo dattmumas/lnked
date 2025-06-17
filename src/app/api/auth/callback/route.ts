@@ -1,6 +1,7 @@
-import { NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { NextResponse } from "next/server";
+
 import type { Database } from "@/lib/database.types";
 import type { CookieOptions } from "@supabase/ssr";
 

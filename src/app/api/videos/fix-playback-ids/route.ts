@@ -1,6 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { createServerSupabaseClient } from '@/lib/supabase/server';
 import Mux from '@mux/mux-node';
+import { NextRequest, NextResponse } from 'next/server';
+
+import { createServerSupabaseClient } from '@/lib/supabase/server';
 
 // Initialize MUX client
 const mux = new Mux({

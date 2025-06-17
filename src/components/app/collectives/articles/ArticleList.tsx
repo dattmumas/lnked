@@ -1,13 +1,12 @@
 'use client';
 
-import React, { useState, useCallback, useMemo } from 'react';
-import Link from 'next/link';
 import { useInfiniteQuery } from '@tanstack/react-query';
-import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
-import { useCollectiveData } from '@/hooks/collectives/useCollectiveData';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { ChevronRight, Filter } from 'lucide-react';
+import Link from 'next/link';
+import React, { useState, useCallback, useMemo } from 'react';
+
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import {
   Select,
   SelectContent,
@@ -15,6 +14,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { useCollectiveData } from '@/hooks/collectives/useCollectiveData';
+import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
 
 interface ArticleListProps {
   collectiveSlug: string;

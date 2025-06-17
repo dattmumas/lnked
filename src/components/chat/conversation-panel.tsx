@@ -1,20 +1,21 @@
 'use client';
 
-import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
+import clsx from 'clsx';
+import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
+import { VariableSizeList as List } from 'react-window';
+
+import { useUser } from '@/hooks/useUser';
 import { selectAdapter } from '@/lib/chat/realtime-adapter';
+import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
+
+import { MessageInput } from './message-input';
+import { MessageRow } from './message-row';
+
 import type {
   MessageWithSender as Message,
   TypingIndicator,
 } from '@/lib/chat/types';
-import clsx from 'clsx';
-import { MessageInput } from './message-input';
-import { useUser } from '@/hooks/useUser';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
-import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
-import { VariableSizeList as List } from 'react-window';
-import { MessageRow } from './message-row';
 
 const realTime = selectAdapter();
 
@@ -479,7 +480,7 @@ export function ConversationPanel({ channelId, className }: Props) {
     const k = 1024;
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`;
   }
 
   // Reset scroll state when channel changes

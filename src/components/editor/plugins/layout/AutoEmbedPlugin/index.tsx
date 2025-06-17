@@ -8,8 +8,6 @@
  *
  */
 
-import type { LexicalEditor } from 'lexical';
-import type { JSX } from 'react';
 
 import {
   AutoEmbedOption,
@@ -20,15 +18,18 @@ import {
 } from '@lexical/react/LexicalAutoEmbedPlugin';
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
 import { useMemo, useState } from 'react';
-import * as React from 'react';
 import * as ReactDOM from 'react-dom';
 
-import useModal from '../../../hooks/useModal';
 import { Button } from '@/components/ui/button';
+
+import useModal from '../../../hooks/useModal';
 import { DialogActions } from '../../../ui/modals/Dialog';
 import { INSERT_FIGMA_COMMAND } from '../../media/FigmaPlugin';
 import { INSERT_TWEET_COMMAND } from '../../media/TwitterPlugin';
 import { INSERT_YOUTUBE_COMMAND } from '../../media/YouTubePlugin';
+
+import type { LexicalEditor } from 'lexical';
+import type { JSX } from 'react';
 
 interface PlaygroundEmbedConfig extends EmbedConfig {
   // Human readable name of the embedded content e.g. Tweet or Google Map.
@@ -68,7 +69,7 @@ export const YoutubeEmbedConfig: PlaygroundEmbedConfig = {
 
     const id = match ? (match?.[2].length === 11 ? match[2] : null) : null;
 
-    if (id != null) {
+    if (id != undefined) {
       return {
         id,
         url,
@@ -105,7 +106,7 @@ export const TwitterEmbedConfig: PlaygroundEmbedConfig = {
         text,
       );
 
-    if (match != null) {
+    if (match != undefined) {
       return {
         id: match[5],
         url: match[1],
@@ -138,7 +139,7 @@ export const FigmaEmbedConfig: PlaygroundEmbedConfig = {
         text,
       );
 
-    if (match != null) {
+    if (match != undefined) {
       return {
         id: match[3],
         url: match[0],
@@ -245,13 +246,13 @@ export function AutoEmbedDialog({
     () =>
       debounce((inputText: string) => {
         const urlMatch = URL_MATCHER.exec(inputText);
-        if (embedConfig != null && inputText != null && urlMatch != null) {
+        if (embedConfig != undefined && inputText != undefined && urlMatch != undefined) {
           Promise.resolve(embedConfig.parseUrl(inputText)).then(
             (parseResult) => {
               setEmbedResult(parseResult);
             },
           );
-        } else if (embedResult != null) {
+        } else if (embedResult != undefined) {
           setEmbedResult(null);
         }
       }, 200),
@@ -259,7 +260,7 @@ export function AutoEmbedDialog({
   );
 
   const onClick = () => {
-    if (embedResult != null) {
+    if (embedResult != undefined) {
       embedConfig.insertNode(editor, embedResult);
       onClose();
     }

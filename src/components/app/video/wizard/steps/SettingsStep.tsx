@@ -1,6 +1,14 @@
 'use client';
 
-import React from 'react';
+import { Globe, Link, Lock, Zap, Settings, HardDrive } from 'lucide-react';
+
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import {
@@ -10,14 +18,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
-import { Globe, Link, Lock, Zap, Settings, HardDrive } from 'lucide-react';
 import { useVideoUpload } from '@/hooks/video/useVideoUpload';
 
 interface SettingsStepProps {

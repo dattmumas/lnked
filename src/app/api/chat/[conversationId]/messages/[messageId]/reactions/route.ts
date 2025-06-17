@@ -1,6 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { NextResponse } from 'next/server';
 import { z } from 'zod';
+
+import { createServerSupabaseClient } from '@/lib/supabase/server';
 
 const enum HttpStatus {
   OK = 200,

@@ -6,6 +6,8 @@
  *
  */
 
+import {$applyNodeReplacement, TextNode} from 'lexical';
+
 import type {
   EditorConfig,
   LexicalNode,
@@ -14,7 +16,6 @@ import type {
   Spread,
 } from 'lexical';
 
-import {$applyNodeReplacement, TextNode} from 'lexical';
 
 export type SerializedEmojiNode = Spread<
   {

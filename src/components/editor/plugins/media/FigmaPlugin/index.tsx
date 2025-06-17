@@ -8,7 +8,6 @@
 
 'use client';
 
-import type { JSX } from 'react';
 
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
 import { $insertNodeToNearestRoot } from '@lexical/utils';
@@ -20,6 +19,8 @@ import {
 import { useEffect } from 'react';
 
 import { $createFigmaNode, FigmaNode } from '../../../nodes/media/FigmaNode';
+
+import type { JSX } from 'react';
 
 export const INSERT_FIGMA_COMMAND: LexicalCommand<string> = createCommand(
   'INSERT_FIGMA_COMMAND',

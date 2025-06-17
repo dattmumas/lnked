@@ -6,7 +6,6 @@
  *
  */
 
-import type {JSX} from 'react';
 
 import {isDOMNode} from 'lexical';
 import * as React from 'react';
@@ -19,6 +18,8 @@ import {
   useState,
 } from 'react';
 import {createPortal} from 'react-dom';
+
+import type {JSX} from 'react';
 
 type DropDownContextType = {
   registerItem: (ref: React.RefObject<HTMLButtonElement>) => void;
@@ -100,9 +101,14 @@ function DropDownItems({
       event.preventDefault();
     }
 
-    if (key === 'Escape' || key === 'Tab') {
+    switch (key) {
+    case 'Escape': 
+    case 'Tab': {
       onClose();
-    } else if (key === 'ArrowUp') {
+    
+    break;
+    }
+    case 'ArrowUp': {
       setHighlightedItem((prev) => {
         if (!prev) {
           return items[0];
@@ -110,13 +116,20 @@ function DropDownItems({
         const index = items.indexOf(prev) - 1;
         return items[index === -1 ? items.length - 1 : index];
       });
-    } else if (key === 'ArrowDown') {
+    
+    break;
+    }
+    case 'ArrowDown': {
       setHighlightedItem((prev) => {
         if (!prev) {
           return items[0];
         }
         return items[items.indexOf(prev) + 1];
       });
+    
+    break;
+    }
+    // No default
     }
   };
 

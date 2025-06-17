@@ -1,19 +1,5 @@
 'use client';
 
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { Button } from '@/components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Switch } from '@/components/ui/switch';
 import {
   ArrowLeft,
   Eye,
@@ -25,11 +11,26 @@ import {
   X,
   Loader2,
 } from 'lucide-react';
-import { useEnhancedPostEditor } from '@/hooks/posts/useEnhancedPostEditor';
+import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
+
 import {
   CollectiveSelectionSummary,
   CollectiveValidationFeedback,
 } from '@/components/app/posts/collective-selection';
+import { Button } from '@/components/ui/button';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
+import { Textarea } from '@/components/ui/textarea';
+import { useEnhancedPostEditor } from '@/hooks/posts/useEnhancedPostEditor';
 import { useThumbnailUpload } from '@/hooks/posts/useThumbnailUpload';
 
 export default function NewPostDetailsPage() {

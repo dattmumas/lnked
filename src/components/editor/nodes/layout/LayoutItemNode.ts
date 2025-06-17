@@ -6,6 +6,10 @@
  *
  */
 
+
+import {addClassNamesToElement} from '@lexical/utils';
+import {ElementNode} from 'lexical';
+
 import type {
   DOMConversionMap,
   DOMConversionOutput,
@@ -13,9 +17,6 @@ import type {
   LexicalNode,
   SerializedElementNode,
 } from 'lexical';
-
-import {addClassNamesToElement} from '@lexical/utils';
-import {ElementNode} from 'lexical';
 
 export type SerializedLayoutItemNode = SerializedElementNode;
 

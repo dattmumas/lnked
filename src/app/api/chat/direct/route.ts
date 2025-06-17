@@ -109,7 +109,7 @@ export async function POST(request: Request) {
         .maybeSingle();
 
       if (directConv) {
-        existingConvId = directConv.id as string;
+        existingConvId = directConv.id;
       }
     }
   }
@@ -132,7 +132,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const convId = newConv.id as string;
+  const convId = newConv.id;
 
   // Insert creator as admin (per RLS they can add themselves)
   const { error: creatorInsertErr } = await supabase

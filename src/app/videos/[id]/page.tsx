@@ -1,12 +1,13 @@
-import { Suspense } from 'react';
 import { notFound } from 'next/navigation';
-import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { Suspense } from 'react';
+
+import { RightSidebar } from '@/components/app/chains/RightSidebar';
+import { CommentSection } from '@/components/app/comments';
 import VideoDetailsServer from '@/components/app/video/VideoDetailsServer';
 import VideoPlayerClient from '@/components/app/video/VideoPlayerClient';
-import { CommentSection } from '@/components/app/comments';
-import { VideoPlayerSkeleton } from '@/components/ui/VideoPlayerSkeleton';
 import { CommentsSkeleton } from '@/components/ui/CommentsSkeleton';
-import { RightSidebar } from '@/components/app/chains/RightSidebar';
+import { VideoPlayerSkeleton } from '@/components/ui/VideoPlayerSkeleton';
+import { createServerSupabaseClient } from '@/lib/supabase/server';
 
 // Type based on database schema
 interface VideoAsset {

@@ -6,7 +6,6 @@
  *
  */
 
-import type { JSX } from 'react';
 
 import {
   createContext,
@@ -18,6 +17,8 @@ import {
 } from 'react';
 
 import FlashMessage from '../ui/overlays/FlashMessage';
+
+import type { JSX } from 'react';
 
 export type ShowFlashMessage = (
   message?: React.ReactNode,

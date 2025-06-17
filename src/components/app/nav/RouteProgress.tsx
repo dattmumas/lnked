@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
 import nprogress from "nprogress";
+import { useEffect, useRef } from "react";
 import "nprogress/nprogress.css";
 
 // Minimal nprogress config: thin bar, no spinner

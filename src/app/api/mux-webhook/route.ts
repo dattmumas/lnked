@@ -1,6 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import crypto from 'node:crypto';
+
+import { NextRequest, NextResponse } from 'next/server';
+
+import { supabaseAdmin } from '@/lib/supabaseAdmin';
 
 // MUX webhook signing secret
 const WEBHOOK_SECRET = process.env.MUX_WEBHOOK_SECRET;

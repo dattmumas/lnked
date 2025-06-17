@@ -1,14 +1,15 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
 import Image from 'next/image';
+import { useEffect, useState } from 'react';
+
+import FollowCollectiveButton from '@/components/FollowCollectiveButton';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import {
   useCollectiveData,
   useCollectiveStats,
 } from '@/hooks/collectives/useCollectiveData';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import FollowCollectiveButton from '@/components/FollowCollectiveButton';
 import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
 
 interface CollectiveHeroProps {

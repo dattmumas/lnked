@@ -8,7 +8,6 @@
  */
 import type { Position } from './InlineImageNode';
 import type { BaseSelection, LexicalEditor, NodeKey } from 'lexical';
-import type { JSX } from 'react';
 
 import './InlineImageNode.css';
 
@@ -32,15 +31,11 @@ import {
   KEY_ESCAPE_COMMAND,
   SELECTION_CHANGE_COMMAND,
 } from 'lexical';
-import * as React from 'react';
-import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
+import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
+import * as React from 'react';
 
-import useModal from '../../../hooks/useModal';
-import LinkPlugin from '../../../plugins/formatting/LinkPlugin';
 import { Button } from '@/components/ui/button';
-import ContentEditable from '../../../ui/inputs/ContentEditable';
-import { DialogActions } from '../../../ui/modals/Dialog';
 import {
   Select,
   SelectContent,
@@ -48,8 +43,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+
+import useModal from '../../../hooks/useModal';
+import LinkPlugin from '../../../plugins/formatting/LinkPlugin';
+import ContentEditable from '../../../ui/inputs/ContentEditable';
 import TextInput from '../../../ui/inputs/TextInput';
+import { DialogActions } from '../../../ui/modals/Dialog';
+
 import { InlineImageNode } from './InlineImageNode';
+
+import type { JSX } from 'react';
 
 const imageCache = new Set();
 

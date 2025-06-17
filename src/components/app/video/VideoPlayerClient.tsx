@@ -1,9 +1,11 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
+
 import MuxVideoPlayer from '@/components/app/video/MuxVideoPlayerClient';
-import type { User } from '@supabase/supabase-js';
 import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
+
+import type { User } from '@supabase/supabase-js';
 
 interface VideoAsset {
   id: string;

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 // import { toggleBookmark } from '@/lib/data/bookmarks';
 // import { getCurrentUser } from '@/lib/auth'; // Implement as needed

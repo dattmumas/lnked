@@ -1,12 +1,15 @@
 'use client';
 
 import React from 'react';
-import { CommentEntityType, ReactionType } from '@/types/comments-v2';
+
+import { Separator } from '@/components/ui/separator';
 import { useCommentsV2 } from '@/hooks/comments/useCommentsV2';
-import { CommentStats } from './CommentStats';
+import { CommentEntityType, ReactionType } from '@/types/comments-v2';
+
 import { CommentForm } from './CommentForm';
 import { CommentList } from './CommentList';
-import { Separator } from '@/components/ui/separator';
+import { CommentStats } from './CommentStats';
+
 
 interface CommentSectionProps {
   entityType: CommentEntityType;

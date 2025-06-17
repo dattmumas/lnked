@@ -1,5 +1,7 @@
-import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
+
+import { createServerSupabaseClient } from '@/lib/supabase/server';
+
 import HomePageClient from './HomePageClient';
 
 export default async function HomePage() {

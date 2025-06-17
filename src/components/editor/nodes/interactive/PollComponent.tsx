@@ -9,7 +9,6 @@
 'use client';
 
 import type { Option, Options, PollNode } from './PollNode';
-import type { JSX } from 'react';
 
 import './PollNode.css';
 
@@ -26,12 +25,15 @@ import {
   COMMAND_PRIORITY_LOW,
   NodeKey,
 } from 'lexical';
-import * as React from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
+
 import joinClasses from '../../utils/text/joinClasses';
+
 import { $isPollNode, createPollOption } from './PollNode';
+
+import type { JSX } from 'react';
 
 function getTotalVotes(options: Options): number {
   return options.reduce((totalVotes, next) => {

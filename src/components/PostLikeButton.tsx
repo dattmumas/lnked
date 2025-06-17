@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useTransition, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
 import { Heart } from 'lucide-react';
+import { useState, useTransition, useEffect } from 'react';
+
 import { togglePostLike } from '@/app/actions/likeActions';
+import { Button } from '@/components/ui/button';
 import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
 // import type { User } from "@supabase/supabase-js"; // User type is not strictly needed here
 

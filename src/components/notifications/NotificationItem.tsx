@@ -1,18 +1,20 @@
 'use client';
 
-import { useState } from 'react';
+import { X, ExternalLink } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useState } from 'react';
+
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { X, ExternalLink } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import type { Notification } from '@/types/notifications';
 import {
   getNotificationConfig,
   formatNotificationTime,
 } from '@/types/notifications';
+
+import type { Notification } from '@/types/notifications';
 
 interface NotificationItemProps {
   notification: Notification;

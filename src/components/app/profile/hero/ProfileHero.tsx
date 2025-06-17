@@ -1,13 +1,14 @@
 'use client';
 
 import React from 'react';
-import { useProfileContext } from '@/lib/hooks/profile';
-import type { ProfileHeroProps } from '@/lib/hooks/profile/types';
-import { useFollowMutation } from '@/lib/hooks/profile';
+
+import { useProfileContext , useFollowMutation } from '@/lib/hooks/profile';
 import {
   getOptimizedAvatarUrl,
   generateUserInitials,
 } from '@/lib/utils/avatar';
+
+import type { ProfileHeroProps } from '@/lib/hooks/profile/types';
 
 /**
  * Profile Hero Component - Main profile display section (65% desktop width)

@@ -1,7 +1,9 @@
 'use client';
 
-import React, { useState } from 'react';
+import { useState } from 'react';
+
 import { useProfileContext } from '@/lib/hooks/profile';
+
 import type {
   SocialSidebarProps,
   SocialFeedType,

@@ -1,12 +1,12 @@
 import { useQuery } from '@tanstack/react-query';
-import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
+
 import { useUser } from '@/hooks/useUser';
+import { Database } from '@/lib/database.types';
+import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
 import { 
   CollectiveWithPermission, 
-  canUserPostToCollective,
-  CollectiveMembershipResponse 
+  canUserPostToCollective 
 } from '@/types/enhanced-database.types';
-import { Database } from '@/lib/database.types';
 
 // Narrow type for membership query results (select columns from `collective_members` plus joined `collectives`)
 interface MembershipRow {
@@ -174,7 +174,7 @@ export const useCollectivePostingPermissions = (collectiveIds: string[]) => {
 
       // Set permissions based on user role
       memberships?.forEach(membership => {
-        const userRole = membership.role as Database['public']['Enums']['collective_member_role'];
+        const userRole = membership.role;
         permissions[membership.collective_id] = canUserPostToCollective(userRole);
       });
 

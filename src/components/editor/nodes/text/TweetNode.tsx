@@ -8,6 +8,14 @@
 
 'use client';
 
+
+import { BlockWithAlignableContents } from '@lexical/react/LexicalBlockWithAlignableContents';
+import {
+  DecoratorBlockNode,
+  SerializedDecoratorBlockNode,
+} from '@lexical/react/LexicalDecoratorBlockNode';
+import { useCallback, useEffect, useRef, useState } from 'react';
+
 import type {
   DOMConversionMap,
   DOMConversionOutput,
@@ -20,14 +28,6 @@ import type {
   Spread,
 } from 'lexical';
 import type { JSX } from 'react';
-
-import { BlockWithAlignableContents } from '@lexical/react/LexicalBlockWithAlignableContents';
-import {
-  DecoratorBlockNode,
-  SerializedDecoratorBlockNode,
-} from '@lexical/react/LexicalDecoratorBlockNode';
-import * as React from 'react';
-import { useCallback, useEffect, useRef, useState } from 'react';
 
 const WIDGET_SCRIPT_URL = 'https://platform.twitter.com/widgets.js';
 
@@ -188,8 +188,8 @@ export class TweetNode extends DecoratorBlockNode {
   }
 
   getTextContent(
-    _includeInert?: boolean | undefined,
-    _includeDirectionless?: false | undefined,
+    _includeInert?: boolean  ,
+    _includeDirectionless?: false  ,
   ): string {
     void _includeInert;
     void _includeDirectionless;

@@ -9,7 +9,6 @@
 'use client';
 
 import type { LexicalEditor, NodeKey } from 'lexical';
-import type { JSX } from 'react';
 
 import './StickyNode.css';
 
@@ -22,14 +21,16 @@ import { LexicalNestedComposer } from '@lexical/react/LexicalNestedComposer';
 import { PlainTextPlugin } from '@lexical/react/LexicalPlainTextPlugin';
 import { calculateZoomLevel } from '@lexical/utils';
 import { $getNodeByKey } from 'lexical';
-import * as React from 'react';
 import { useEffect, useLayoutEffect, useRef } from 'react';
 
 import { createWebsocketProvider } from '../../collaboration';
 import { useSharedHistoryContext } from '../../context/SharedHistoryContext';
 import StickyEditorTheme from '../../themes/StickyEditorTheme';
 import ContentEditable from '../../ui/inputs/ContentEditable';
+
 import { $isStickyNode } from './StickyNode';
+
+import type { JSX } from 'react';
 
 type Positioning = {
   isDragging: boolean;
@@ -220,7 +221,7 @@ export default function StickyComponent({
         onPointerDown={(event) => {
           const stickyContainer = stickyContainerRef.current;
           if (
-            stickyContainer == null ||
+            stickyContainer == undefined ||
             event.button === 2 ||
             event.target !== stickyContainer.firstChild
           ) {

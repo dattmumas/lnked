@@ -6,8 +6,6 @@
  *
  */
 
-import type { SettingName } from '../appSettings';
-import type { JSX } from 'react';
 
 import * as React from 'react';
 import {
@@ -20,6 +18,9 @@ import {
 } from 'react';
 
 import { DEFAULT_SETTINGS, INITIAL_SETTINGS } from '../appSettings';
+
+import type { SettingName } from '../appSettings';
+import type { JSX } from 'react';
 
 type SettingsContextShape = {
   setOption: (name: SettingName, value: boolean) => void;

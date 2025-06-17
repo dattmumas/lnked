@@ -1,11 +1,13 @@
 'use client';
 
+import { usePathname, useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import * as React from 'react';
-import { Button } from '@/components/ui/button';
+
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { usePathname, useRouter } from 'next/navigation';
+import { Button } from '@/components/ui/button';
 import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
+
 import type { User } from '@supabase/supabase-js';
 
 interface Tier {

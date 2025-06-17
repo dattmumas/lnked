@@ -1,6 +1,8 @@
-import { createServerSupabaseClient } from '@/lib/supabase/server';
-import { redirect } from 'next/navigation';
+import { Info, Plus, Share2, Users } from 'lucide-react';
 import Link from 'next/link';
+import { redirect } from 'next/navigation';
+
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -9,8 +11,9 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Info, Plus, Share2, Users } from 'lucide-react';
+import { createServerSupabaseClient } from '@/lib/supabase/server';
+
+
 
 export default async function CollectiveDashboardPage({
   params,

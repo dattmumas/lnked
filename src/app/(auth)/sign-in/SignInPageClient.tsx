@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useRef, useEffect, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation.js';
+import { useState, useRef, useEffect, useCallback } from 'react';
 
 import AuthForm from '@/components/app/auth/AuthForm';
 import {

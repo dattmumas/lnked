@@ -1,10 +1,11 @@
 'use client';
 
+import { Shield, Check, AlertTriangle, Info } from 'lucide-react';
 import { useState, useEffect } from 'react';
+
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Shield, Check, AlertTriangle, Info } from 'lucide-react';
 import { chatSecurity } from '@/lib/chat/security';
 
 interface SecurityStatusProps {

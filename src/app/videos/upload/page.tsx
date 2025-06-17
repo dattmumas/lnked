@@ -1,7 +1,8 @@
-import { redirect } from 'next/navigation';
 import Link from 'next/link';
-import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { redirect } from 'next/navigation';
+
 import VideoUploadPageClient from '@/components/app/video/wizard/VideoUploadPageClient';
+import { createServerSupabaseClient } from '@/lib/supabase/server';
 
 export default async function VideoUploadPage({
   searchParams,

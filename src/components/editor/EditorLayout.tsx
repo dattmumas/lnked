@@ -1,10 +1,12 @@
 'use client';
 
-import React, { useState } from 'react';
-import type { ReactNode } from 'react';
 import { Menu, X } from 'lucide-react';
+import { useState } from 'react';
+
 import { Button } from '@/components/primitives/Button';
 import { cn } from '@/lib/utils';
+
+import type { ReactNode } from 'react';
 
 interface EditorLayoutProps {
   settingsSidebar?: ReactNode;

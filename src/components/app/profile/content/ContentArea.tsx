@@ -1,14 +1,17 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
+
 import {
   useProfileContext,
   useProfilePosts,
   useProfileMetrics,
 } from '@/lib/hooks/profile';
-import type { ContentAreaProps, ProfilePost } from '@/lib/hooks/profile/types';
-import type { Database } from '@/lib/database.types';
+
 import { ProfileVideosSection } from './ProfileVideosSection';
+
+import type { Database } from '@/lib/database.types';
+import type { ContentAreaProps, ProfilePost } from '@/lib/hooks/profile/types';
 
 type PostType = Database['public']['Enums']['post_type_enum'];
 

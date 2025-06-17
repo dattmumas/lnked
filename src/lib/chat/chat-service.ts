@@ -1,7 +1,8 @@
-import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
-import type { Database } from '@/lib/database.types';
+import { createServerSupabaseClient } from '@/lib/supabase/server';
+
 import type { MessageWithSender } from './types';
+import type { Database } from '@/lib/database.types';
 
 type Tables = Database['public']['Tables'];
 type ConversationRow = Tables['conversations']['Row'];

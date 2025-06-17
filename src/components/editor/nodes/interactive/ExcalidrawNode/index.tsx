@@ -6,6 +6,9 @@
  *
  */
 
+import { DecoratorNode } from 'lexical';
+import * as React from 'react';
+
 import type {
   DOMConversionMap,
   DOMConversionOutput,
@@ -19,8 +22,6 @@ import type {
 } from 'lexical';
 import type { JSX } from 'react';
 
-import { DecoratorNode } from 'lexical';
-import * as React from 'react';
 
 type Dimension = number | 'inherit';
 

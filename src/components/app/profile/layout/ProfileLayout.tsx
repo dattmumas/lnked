@@ -1,7 +1,9 @@
 'use client';
 
 import React from 'react';
+
 import { ProfileContextProvider } from '@/lib/hooks/profile';
+
 import type { ProfileLayoutProps } from '@/lib/hooks/profile/types';
 
 /**

@@ -1,10 +1,11 @@
 'use client';
 
-import { memo, CSSProperties, useEffect, useRef } from 'react';
-import type { MessageWithSender as Message } from '@/lib/chat/types';
 import clsx from 'clsx';
+import { memo, CSSProperties, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+
+import type { MessageWithSender as Message } from '@/lib/chat/types';
 
 interface MessageRowProps {
   index: number;
@@ -61,7 +62,7 @@ export const MessageRow = memo<MessageRowProps>(({ index, style, data }) => {
   // Measure the actual height of the row
   useEffect(() => {
     if (rowRef.current && setItemSize) {
-      const height = rowRef.current.getBoundingClientRect().height;
+      const {height} = rowRef.current.getBoundingClientRect();
       setItemSize(index, height);
     }
   }, [index, setItemSize, msg.content, msg.metadata, editingId]);

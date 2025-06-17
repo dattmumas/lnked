@@ -1,10 +1,5 @@
 'use client';
 
-import React, { useState } from 'react';
-import Link from 'next/link';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/primitives/Button';
-import { Card } from '@/components/primitives/Card';
 import {
   MoreHorizontal,
   Eye,
@@ -16,6 +11,14 @@ import {
   ExternalLink,
   Users,
 } from 'lucide-react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useState } from 'react';
+
+import { deletePost } from '@/app/actions/postActions';
+import { Button } from '@/components/primitives/Button';
+import { Card } from '@/components/primitives/Card';
+import { Badge } from '@/components/ui/badge';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -23,8 +26,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { deletePost } from '@/app/actions/postActions';
-import { useRouter } from 'next/navigation';
+
 
 type DashboardPost = {
   id: string;

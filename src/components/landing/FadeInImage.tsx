@@ -1,6 +1,7 @@
 "use client";
-import { useRef, useState, useEffect } from "react";
 import Image, { ImageProps } from "next/image";
+import { useRef, useState, useEffect } from "react";
+
 import { cn } from "@/lib/utils";
 
 interface FadeInImageProps extends ImageProps {

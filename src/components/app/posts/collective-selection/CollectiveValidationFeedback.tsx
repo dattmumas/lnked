@@ -1,18 +1,18 @@
 'use client';
 
-import { useMemo } from 'react';
 import {
   AlertCircle,
   CheckCircle2,
-  Info,
   AlertTriangle,
   Users,
   Shield,
 } from 'lucide-react';
-import { useCollectiveMemberships } from '@/hooks/posts/useCollectiveMemberships';
+import { useMemo } from 'react';
+
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
+import { useCollectiveMemberships } from '@/hooks/posts/useCollectiveMemberships';
 import { cn } from '@/lib/utils';
 
 interface CollectiveValidationFeedbackProps {

@@ -1,8 +1,10 @@
 import { NextResponse } from 'next/server';
+
 import { getStripe } from '@/lib/stripe';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
-import type Stripe from 'stripe';
+
 import type { Database } from '@/lib/database.types';
+import type Stripe from 'stripe';
 
 const relevantEvents = new Set([
   'checkout.session.completed',
@@ -61,7 +63,7 @@ export async function POST(req: Request) {
     try {
       switch (event.type) {
         case 'checkout.session.completed': {
-          const session = event.data.object as Stripe.Checkout.Session;
+          const session = event.data.object;
           if (
             session.mode === 'subscription' &&
             session.customer &&
@@ -201,7 +203,7 @@ export async function POST(req: Request) {
           break;
         }
         case 'account.updated': {
-          const account = event.data.object as Stripe.Account;
+          const account = event.data.object;
           // Find the collective with this stripe_account_id
           const { data: collective, error: fetchError } = await supabaseAdmin
             .from('collectives')

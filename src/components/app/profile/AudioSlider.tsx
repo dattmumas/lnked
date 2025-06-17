@@ -1,5 +1,5 @@
-import React from 'react';
 import Link from 'next/link';
+
 import type { Database } from '@/lib/database.types';
 
 // Basic post type with optional audioUrl

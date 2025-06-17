@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 
 const STEP_UPLOAD = 0;
 const STEP_DETAILS = 1;

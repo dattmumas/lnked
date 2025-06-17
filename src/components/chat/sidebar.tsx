@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import clsx from 'clsx';
+import { useState } from 'react';
+
 import { ChannelSidebar } from './channel-sidebar';
 
 interface SidebarProps {

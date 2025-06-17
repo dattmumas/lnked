@@ -1,6 +1,9 @@
-import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
+
+import { createServerSupabaseClient } from '@/lib/supabase/server';
+
 import EditCollectiveSettingsForm from './EditCollectiveSettingsForm'; // Client component for the form
+
 import type { Database } from '@/lib/database.types';
 
 type MemberWithUser = {
@@ -52,7 +55,7 @@ export default async function CollectiveSettingsPage({
     name: collective.name || '',
     slug: collective.slug || '',
     description: collective.description || '',
-    tags_string: (collective.tags as string[] | null)?.join(', ') || '',
+    tags_string: (collective.tags)?.join(', ') || '',
   };
 
   if ('id' in collective) {

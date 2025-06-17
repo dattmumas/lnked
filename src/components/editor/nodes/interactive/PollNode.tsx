@@ -6,7 +6,6 @@
  *
  */
 
-import type {JSX} from 'react';
 
 import {makeStateWrapper} from '@lexical/utils';
 import {
@@ -20,6 +19,8 @@ import {
   Spread,
 } from 'lexical';
 import * as React from 'react';
+
+import type {JSX} from 'react';
 
 export type Options = ReadonlyArray<Option>;
 

@@ -1,10 +1,12 @@
 'use client';
 
 import React from 'react';
-import { CommentThread, ReactionType } from '@/types/comments-v2';
-import { CommentItem } from './CommentItem';
+
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { CommentThread, ReactionType } from '@/types/comments-v2';
+
+import { CommentItem } from './CommentItem';
 
 interface CommentListProps {
   comments: CommentThread[];

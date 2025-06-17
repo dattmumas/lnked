@@ -15,8 +15,11 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
+
 import { Button } from '@/components/ui/button';
+
 import { SidebarLink } from './SidebarLink';
+
 import type { CollectiveSummary } from './DashboardShell';
 
 interface SidebarNavProps {

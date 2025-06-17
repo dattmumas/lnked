@@ -1,8 +1,12 @@
-import { createServerSupabaseClient } from '@/lib/supabase/server';
-import type { Tables } from '@/lib/database.types';
-import { redirect, notFound } from 'next/navigation';
 import Link from 'next/link';
+import { redirect, notFound } from 'next/navigation';
+
+import { createServerSupabaseClient } from '@/lib/supabase/server';
+
 import ManageMembersClientUI from './ManageMembersClientUI'; // New client component
+
+import type { Tables } from '@/lib/database.types';
+
 
 export type MemberWithDetails = Tables<'collective_members'> & {
   user: Pick<Tables<'users'>, 'id' | 'full_name'> | null; // Removed email

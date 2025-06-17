@@ -1,16 +1,18 @@
 'use client';
 
+import { formatDistanceToNow } from 'date-fns';
+import { ChevronDown } from 'lucide-react';
 import React, { useState } from 'react';
+
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Button } from '@/components/ui/button';
 import {
   CommentThread,
   ReactionType,
   CommentWithUser,
 } from '@/types/comments-v2';
-import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+
 import { CommentActions } from './CommentActions';
-import { formatDistanceToNow } from 'date-fns';
-import { ChevronDown } from 'lucide-react';
 
 interface CommentRepliesProps {
   thread: CommentThread;

@@ -7,11 +7,12 @@ const GB_TO_BYTES = 1024 * 1024 * 1024;
 const MAX_FILE_SIZE_GB = 2;
 const FILE_SIZE_DECIMAL_PLACES = 2;
 import { Upload, AlertCircle, CheckCircle2, Loader2, Film } from 'lucide-react';
+
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { cn } from '@/lib/utils';
 import { useVideoUpload } from '@/hooks/video/useVideoUpload';
+import { cn } from '@/lib/utils';
 
 interface UploadStepProps {
   videoUpload: ReturnType<typeof useVideoUpload>;

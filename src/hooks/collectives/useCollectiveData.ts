@@ -1,5 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
+
 import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
+
 import type { Database } from '@/lib/database.types';
 
 type Collective = Database['public']['Tables']['collectives']['Row'] & {

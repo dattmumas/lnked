@@ -1,6 +1,5 @@
 'use client';
 
-import React from 'react';
 import {
   Search,
   Settings,
@@ -9,6 +8,7 @@ import {
   MoreVertical,
   FileText,
 } from 'lucide-react';
+
 import { Button } from '@/components/primitives/Button';
 import {
   DropdownMenu,

@@ -1,54 +1,58 @@
 'use client';
 
-import { useEffect, useState, useCallback, useRef } from 'react';
-import { LexicalComposer } from '@lexical/react/LexicalComposer';
-import { OnChangePlugin } from '@lexical/react/LexicalOnChangePlugin';
-import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
 import { AutoFocusPlugin } from '@lexical/react/LexicalAutoFocusPlugin';
 import { CheckListPlugin } from '@lexical/react/LexicalCheckListPlugin';
 import { ClearEditorPlugin } from '@lexical/react/LexicalClearEditorPlugin';
 import { ClickableLinkPlugin } from '@lexical/react/LexicalClickableLinkPlugin';
+import { LexicalComposer } from '@lexical/react/LexicalComposer';
+import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
 import { LexicalErrorBoundary } from '@lexical/react/LexicalErrorBoundary';
 import { HashtagPlugin } from '@lexical/react/LexicalHashtagPlugin';
 import { HistoryPlugin } from '@lexical/react/LexicalHistoryPlugin';
 import { HorizontalRulePlugin } from '@lexical/react/LexicalHorizontalRulePlugin';
 import { ListPlugin } from '@lexical/react/LexicalListPlugin';
+import { OnChangePlugin } from '@lexical/react/LexicalOnChangePlugin';
 import { RichTextPlugin } from '@lexical/react/LexicalRichTextPlugin';
 import { TabIndentationPlugin } from '@lexical/react/LexicalTabIndentationPlugin';
 import { TablePlugin } from '@lexical/react/LexicalTablePlugin';
+import { useEffect, useState, useCallback, useRef } from 'react';
 
 // Core imports - always loaded
-import PlaygroundNodes from './nodes/PlaygroundNodes';
-import PlaygroundEditorTheme from './themes/PlaygroundEditorTheme';
-import { ToolbarContext } from './context/ToolbarContext';
+import {
+  PluginConfig,
+  defaultPluginConfig,
+  analyzeContentForPlugins,
+} from './config/PluginConfig';
 import { SharedHistoryContext } from './context/SharedHistoryContext';
+import { ToolbarContext } from './context/ToolbarContext';
 
 // Core plugins - always loaded for basic functionality
+import PlaygroundNodes from './nodes/PlaygroundNodes';
 import AutoLinkPlugin from './plugins/formatting/AutoLinkPlugin';
+import CodeActionMenuPlugin from './plugins/formatting/CodeActionMenuPlugin';
 import CodeHighlightPlugin from './plugins/formatting/CodeHighlightPlugin';
+import KeywordsPlugin from './plugins/formatting/KeywordsPlugin';
 import LinkPlugin from './plugins/formatting/LinkPlugin';
 import MarkdownShortcutPlugin from './plugins/formatting/MarkdownShortcutPlugin';
-import KeywordsPlugin from './plugins/formatting/KeywordsPlugin';
 import SpecialTextPlugin from './plugins/formatting/SpecialTextPlugin';
-import CodeActionMenuPlugin from './plugins/formatting/CodeActionMenuPlugin';
 
 // Essential interactive plugins
-import ComponentPickerPlugin from './plugins/interactive/ComponentPickerPlugin';
-import DraggableBlockPlugin from './plugins/interactive/DraggableBlockPlugin';
-import CollapsiblePlugin from './plugins/interactive/CollapsiblePlugin';
 
 // Essential input plugins
-import EmojisPlugin from './plugins/input/EmojisPlugin';
-import TabFocusPlugin from './plugins/input/TabFocusPlugin';
-import ShortcutsPlugin from './plugins/input/ShortcutsPlugin';
 import DragDropPastePlugin from './plugins/input/DragDropPastePlugin';
+import EmojisPlugin from './plugins/input/EmojisPlugin';
 import { MaxLengthPlugin } from './plugins/input/MaxLengthPlugin';
+import ShortcutsPlugin from './plugins/input/ShortcutsPlugin';
+import TabFocusPlugin from './plugins/input/TabFocusPlugin';
+import CollapsiblePlugin from './plugins/interactive/CollapsiblePlugin';
+import ComponentPickerPlugin from './plugins/interactive/ComponentPickerPlugin';
+import DraggableBlockPlugin from './plugins/interactive/DraggableBlockPlugin';
 
 // Essential layout plugins
+import AutoEmbedPlugin from './plugins/layout/AutoEmbedPlugin';
 import { LayoutPlugin } from './plugins/layout/LayoutPlugin/LayoutPlugin';
 import PageBreakPlugin from './plugins/layout/PageBreakPlugin';
 import TableCellResizer from './plugins/layout/TableCellResizer';
-import AutoEmbedPlugin from './plugins/layout/AutoEmbedPlugin';
 import TableHoverActionsPlugin from './plugins/layout/TableHoverActionsPlugin';
 
 // Essential media plugins
@@ -56,22 +60,18 @@ import ImagesPlugin from './plugins/media/ImagesPlugin';
 import InlineImagePlugin from './plugins/media/InlineImagePlugin';
 
 // Essential toolbar plugins
-import ToolbarPlugin from './plugins/toolbar/ToolbarPlugin';
-import FloatingTextFormatToolbarPlugin from './plugins/toolbar/FloatingTextFormatToolbarPlugin';
-import FloatingLinkEditorPlugin from './plugins/toolbar/FloatingLinkEditorPlugin';
-import ContextMenuPlugin from './plugins/toolbar/ContextMenuPlugin';
 
 // UI components
-import ContentEditable from './ui/inputs/ContentEditable';
-import PlusButtonPlugin from './plugins/PlusButtonPlugin';
 
 // Lazy loading system
 import LazyPlugin from './plugins/PluginLoader';
-import {
-  PluginConfig,
-  defaultPluginConfig,
-  analyzeContentForPlugins,
-} from './config/PluginConfig';
+import PlusButtonPlugin from './plugins/PlusButtonPlugin';
+import ContextMenuPlugin from './plugins/toolbar/ContextMenuPlugin';
+import FloatingLinkEditorPlugin from './plugins/toolbar/FloatingLinkEditorPlugin';
+import FloatingTextFormatToolbarPlugin from './plugins/toolbar/FloatingTextFormatToolbarPlugin';
+import ToolbarPlugin from './plugins/toolbar/ToolbarPlugin';
+import PlaygroundEditorTheme from './themes/PlaygroundEditorTheme';
+import ContentEditable from './ui/inputs/ContentEditable';
 
 interface OptimizedEditorProps {
   initialContent?: string;

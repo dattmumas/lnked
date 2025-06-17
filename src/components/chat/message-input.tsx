@@ -1,9 +1,11 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
-import { selectAdapter } from '@/lib/chat/realtime-adapter';
 import clsx from 'clsx';
+import { useEffect, useState, useRef } from 'react';
+
 import { useUser } from '@/hooks/useUser';
+import { selectAdapter } from '@/lib/chat/realtime-adapter';
+
 import type { MessageWithSender as Message } from '@/lib/chat/types';
 
 const realTime = selectAdapter();
@@ -40,7 +42,7 @@ export function MessageInput({
     if (!textarea) return;
 
     textarea.style.height = 'auto';
-    textarea.style.height = Math.min(textarea.scrollHeight, 120) + 'px';
+    textarea.style.height = `${Math.min(textarea.scrollHeight, 120)}px`;
   }, [text]);
 
   // Clear error after 5 seconds

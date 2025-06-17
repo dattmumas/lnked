@@ -1,12 +1,14 @@
 'use client';
 
-import { useEffect, useCallback, useMemo } from 'react';
-import { useRouter, useParams } from 'next/navigation';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, Save } from 'lucide-react';
-import { usePostEditor } from '@/lib/hooks/use-post-editor';
 import dynamic from 'next/dynamic';
+import { useRouter, useParams } from 'next/navigation';
+import { useEffect, useCallback, useMemo } from 'react';
+
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { usePostEditor } from '@/lib/hooks/use-post-editor';
+
 
 // Dynamic import for the editor to avoid SSR issues
 const PostEditor = dynamic(() => import('@/components/editor/PostEditor'), {

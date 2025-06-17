@@ -6,6 +6,19 @@
  *
  */
 
+
+import {
+  addClassNamesToElement,
+  removeClassNamesFromElement,
+} from '@lexical/utils';
+import {
+  $applyNodeReplacement,
+  createEditor,
+  DecoratorNode,
+  isHTMLElement,
+} from 'lexical';
+import * as React from 'react';
+
 import type {
   DOMConversionMap,
   DOMConversionOutput,
@@ -20,18 +33,6 @@ import type {
   Spread,
 } from 'lexical';
 import type { JSX } from 'react';
-
-import {
-  addClassNamesToElement,
-  removeClassNamesFromElement,
-} from '@lexical/utils';
-import {
-  $applyNodeReplacement,
-  createEditor,
-  DecoratorNode,
-  isHTMLElement,
-} from 'lexical';
-import * as React from 'react';
 
 const InlineImageComponent = React.lazy(() => import('./InlineImageComponent'));
 

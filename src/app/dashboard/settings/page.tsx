@@ -1,16 +1,3 @@
-import { createServerSupabaseClient } from '@/lib/supabase/server';
-import { redirect } from 'next/navigation';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
-import EditUserSettingsForm from '@/components/app/settings/EditUserSettingsForm';
-import DeleteAccountSection from '@/components/app/settings/DeleteAccountSection';
-import { NotificationPreferences } from '@/components/notifications/NotificationPreferences';
 import {
   User,
   Bell,
@@ -21,6 +8,21 @@ import {
   Palette,
   Globe,
 } from 'lucide-react';
+import { redirect } from 'next/navigation';
+
+import DeleteAccountSection from '@/components/app/settings/DeleteAccountSection';
+import EditUserSettingsForm from '@/components/app/settings/EditUserSettingsForm';
+import { NotificationPreferences } from '@/components/notifications/NotificationPreferences';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { createServerSupabaseClient } from '@/lib/supabase/server';
+
 
 export default async function UserSettingsPage() {
   const supabase = await createServerSupabaseClient();

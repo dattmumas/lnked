@@ -1,5 +1,6 @@
-import { cn } from '@/lib/utils';
 import { formatChatTime } from '@/lib/chat/utils';
+import { cn } from '@/lib/utils';
+
 import type { MessageWithSender } from '@/lib/chat/types';
 
 interface SimpleMessageListProps {

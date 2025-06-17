@@ -1,26 +1,5 @@
 'use client';
 
-import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
-import { useEffect, useState, useMemo } from 'react';
-import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
-import type { User } from '@supabase/supabase-js';
-import { useUser } from '@/hooks/useUser';
-import { Button } from './ui/button';
-import {
-  Sheet,
-  SheetContent,
-  SheetTrigger,
-  SheetTitle,
-} from '@/components/ui/sheet';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   Menu,
   PenSquare,
@@ -32,11 +11,35 @@ import {
   MessageCircle,
   Video,
 } from 'lucide-react';
+import Link from 'next/link';
+import { usePathname, useRouter } from 'next/navigation';
+import { useEffect, useState, useMemo } from 'react';
+
 import ModeToggle from '@/components/app/nav/ModeToggle';
 import SearchBar from '@/components/app/nav/SearchBar';
 import { NotificationDropdown } from '@/components/notifications/NotificationDropdown';
-import { getOptimizedAvatarUrl } from '@/lib/utils/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
+  Sheet,
+  SheetContent,
+  SheetTrigger,
+  SheetTitle,
+} from '@/components/ui/sheet';
 import { useUnreadMessages } from '@/hooks/use-unread-messages';
+import { useUser } from '@/hooks/useUser';
+import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
+import { getOptimizedAvatarUrl } from '@/lib/utils/avatar';
+
+import { Button } from './ui/button';
+
+import type { User } from '@supabase/supabase-js';
 
 // Navigation items are now handled by GlobalSidebar
 const publicNavItems: never[] = [];

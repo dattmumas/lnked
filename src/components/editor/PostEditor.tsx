@@ -1,8 +1,8 @@
 'use client';
 
+import dynamic from 'next/dynamic';
 import { memo } from 'react';
 
-import dynamic from 'next/dynamic';
 import './styles/PlaygroundBase.css';
 import './styles/EditorLayout.css';
 import './styles/Toolbar.css';

@@ -1,9 +1,10 @@
 "use client";
 
-import * as React from "react";
 import * as Dialog from "@radix-ui/react-dialog";
-import { Input } from "@/components/ui/input";
+import * as React from "react";
+
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 interface EmbedUrlModalProps {
   open: boolean;

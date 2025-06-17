@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useState } from 'react';
+import { ChevronDown, ChevronRight, Plus } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { ChevronDown, ChevronRight, Plus } from 'lucide-react';
+import { useState } from 'react';
 
 export interface FileExplorerProps {
   personalPosts: { id: string; title: string; status: string }[];

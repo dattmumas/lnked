@@ -1,19 +1,20 @@
 'use client';
 
-import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Upload, X, Loader2 } from 'lucide-react';
 import { useState, useCallback } from 'react';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
+
 import {
   updateUserProfile,
   type RawUserProfileFormInput,
 } from '@/app/actions/userActions';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Upload, X, Loader2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { validateAvatarFile, generateUserInitials } from '@/lib/utils/avatar';
 
 // Use a simplified schema that matches the server action expectations

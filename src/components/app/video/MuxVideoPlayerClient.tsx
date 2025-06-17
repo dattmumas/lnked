@@ -1,6 +1,7 @@
 'use client';
 
 import dynamic from 'next/dynamic';
+
 import type { MuxVideoPlayerSimpleProps } from './MuxVideoPlayerSimple';
 
 // Dynamically import with SSR disabled to prevent hydration mismatch

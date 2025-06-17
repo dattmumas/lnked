@@ -8,12 +8,6 @@
 
 'use client';
 
-import type {
-  ElementNode,
-  LexicalCommand,
-  LexicalNode,
-  NodeKey,
-} from 'lexical';
 
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
 import {
@@ -46,6 +40,13 @@ import {
   $isLayoutItemNode,
   LayoutItemNode,
 } from '../../../nodes/layout/LayoutItemNode';
+
+import type {
+  ElementNode,
+  LexicalCommand,
+  LexicalNode,
+  NodeKey,
+} from 'lexical';
 
 export const INSERT_LAYOUT_COMMAND: LexicalCommand<string> =
   createCommand<string>();

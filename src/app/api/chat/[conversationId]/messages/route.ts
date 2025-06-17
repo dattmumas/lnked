@@ -1,6 +1,7 @@
 /* eslint-disable no-magic-numbers */
 
 import { NextRequest, NextResponse } from 'next/server';
+
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 
 const enum HttpStatus {

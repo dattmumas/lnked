@@ -1,12 +1,14 @@
 'use client';
 
-import { useState, useTransition, useEffect, useCallback } from 'react';
-import { Button } from '@/components/ui/button';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { UserPlus, UserMinus, Loader2 } from 'lucide-react';
-import { followUser, unfollowUser } from '@/app/actions/followActions';
-import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
 import { useRouter, usePathname } from 'next/navigation';
+import { useState, useTransition, useEffect, useCallback } from 'react';
+
+import { followUser, unfollowUser } from '@/app/actions/followActions';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
+import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
+
 
 interface FollowButtonProps {
   targetUserId: string;

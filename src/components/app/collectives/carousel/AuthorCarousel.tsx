@@ -1,21 +1,23 @@
 'use client';
 
-import React from 'react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
-import {
-  useCollectiveData,
-  useCollectiveMembers,
-} from '@/hooks/collectives/useCollectiveData';
-import type { Database } from '@/lib/database.types';
+
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import {
+  useCollectiveData,
+  useCollectiveMembers,
+} from '@/hooks/collectives/useCollectiveData';
+
+import type { Database } from '@/lib/database.types';
+
 
 interface AuthorCarouselProps {
   collectiveSlug: string;

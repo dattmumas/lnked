@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
-import { createServerSupabaseClient } from '@/lib/supabase/server';
+
 import ChatInterface from '@/components/chat/ChatInterface';
+import { createServerSupabaseClient } from '@/lib/supabase/server';
 
 export default async function ChatPage() {
   const supabase = createServerSupabaseClient();

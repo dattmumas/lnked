@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
-import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
 import { User } from '@supabase/supabase-js';
+import { useEffect, useState } from 'react';
+
+import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
 
 interface UseUserResult {
   user: User | null;

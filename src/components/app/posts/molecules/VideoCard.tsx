@@ -1,12 +1,15 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { Card, CardContent } from '@/components/ui/card';
-import PostCardHeader from './PostCardHeader';
-import PostCardFooter from './PostCardFooter';
-import VideoThumbnail from './VideoThumbnail';
-import { cn } from '@/lib/utils';
 import { useState, useRef } from 'react';
+
+import { Card, CardContent } from '@/components/ui/card';
+import { cn } from '@/lib/utils';
+
+import PostCardFooter from './PostCardFooter';
+import PostCardHeader from './PostCardHeader';
+import VideoThumbnail from './VideoThumbnail';
+
 
 interface Author {
   id: string;

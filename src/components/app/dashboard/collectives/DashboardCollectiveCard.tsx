@@ -1,6 +1,10 @@
 'use client';
 
+import { Settings, LogOut, Users2, Edit } from 'lucide-react';
 import Link from 'next/link';
+
+import { removeUserFromCollective } from '@/app/actions/collectiveActions';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -10,11 +14,9 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Settings, LogOut, Users2, Plus, Edit } from 'lucide-react';
+
 import type { Database } from '@/lib/database.types';
-import * as React from 'react';
-import { removeUserFromCollective } from '@/app/actions/collectiveActions';
+
 
 type Collective = Database['public']['Tables']['collectives']['Row'];
 export type CollectiveMemberRole =

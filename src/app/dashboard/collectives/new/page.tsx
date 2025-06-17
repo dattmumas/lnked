@@ -1,5 +1,7 @@
-import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
+
+import { createServerSupabaseClient } from "@/lib/supabase/server";
+
 import NewCollectiveForm from "./NewCollectiveForm";
 
 export default async function NewCollectivePage() {

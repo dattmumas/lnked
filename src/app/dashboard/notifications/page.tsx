@@ -1,10 +1,11 @@
-import { Suspense } from 'react';
-import { createServerSupabaseClient } from '@/lib/supabase/server';
-import { NotificationService } from '@/lib/notifications/service';
-import { NotificationList } from '@/components/notifications/NotificationList';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Bell } from 'lucide-react';
 import { redirect } from 'next/navigation';
+import { Suspense } from 'react';
+
+import { NotificationList } from '@/components/notifications/NotificationList';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { NotificationService } from '@/lib/notifications/service';
+import { createServerSupabaseClient } from '@/lib/supabase/server';
 
 async function NotificationsContent() {
   const supabase = await createServerSupabaseClient();

@@ -8,7 +8,6 @@
  *
  */
 
-import type { JSX } from 'react';
 
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
 import { $wrapNodeInElement, mergeRegister } from '@lexical/utils';
@@ -33,7 +32,8 @@ import {
   LexicalEditor,
 } from 'lexical';
 import { useEffect, useRef, useState } from 'react';
-import * as React from 'react';
+
+import { Button } from '@/components/ui/button';
 
 import landscapeImage from '../../../images/landscape.jpg';
 import yellowFlowerImage from '../../../images/yellow-flower.jpg';
@@ -43,10 +43,11 @@ import {
   ImageNode,
   ImagePayload,
 } from '../../../nodes/media/ImageNode';
-import { Button } from '@/components/ui/button';
-import { DialogActions, DialogButtonsList } from '../../../ui/modals/Dialog';
 import FileInput from '../../../ui/inputs/FileInput';
 import TextInput from '../../../ui/inputs/TextInput';
+import { DialogActions, DialogButtonsList } from '../../../ui/modals/Dialog';
+
+import type { JSX } from 'react';
 
 export type InsertImagePayload = Readonly<ImagePayload>;
 

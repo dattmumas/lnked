@@ -1,5 +1,3 @@
-import React from 'react';
-import { MetricCard } from '@/components/primitives/Card';
 import {
   Users2,
   FileText,
@@ -12,6 +10,9 @@ import {
   Calendar,
   type LucideIcon,
 } from 'lucide-react';
+
+import { MetricCard } from '@/components/primitives/Card';
+
 
 interface StatItem {
   label: string;

@@ -6,7 +6,6 @@
  *
  */
 
-import type { JSX } from 'react';
 
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
 import { useLexicalEditable } from '@lexical/react/useLexicalEditable';
@@ -36,6 +35,8 @@ import { createPortal } from 'react-dom';
 
 import { getThemeSelector } from '../../../utils/text/getThemeSelector';
 import { useDebounce } from '../../formatting/CodeActionMenuPlugin/utils';
+
+import type { JSX } from 'react';
 
 const BUTTON_WIDTH_PX = 20;
 
@@ -94,7 +95,7 @@ function TableHoverActionsContainer({
             if (tableDOMElement) {
               const rowCount = table.getChildrenSize();
               const colCount = (
-                (table as TableNode).getChildAtIndex(0) as TableRowNode
+                (table).getChildAtIndex(0) as TableRowNode
               )?.getChildrenSize();
 
               const rowIndex =

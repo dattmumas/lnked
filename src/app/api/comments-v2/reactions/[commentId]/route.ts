@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+
 import { commentsV2Service } from '@/lib/services/comments-v2';
 import { ReactionType, CommentValidationError, CommentPermissionError, CommentNotFoundError } from '@/types/comments-v2';
 

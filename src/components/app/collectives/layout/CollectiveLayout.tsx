@@ -1,8 +1,7 @@
-import React from 'react';
-import { CollectiveHero } from '../hero/CollectiveHero';
+import { ArticleList } from '../articles/ArticleList';
 import { AuthorCarousel } from '../carousel/AuthorCarousel';
 import { FeaturedMedia } from '../featured/FeaturedMedia';
-import { ArticleList } from '../articles/ArticleList';
+import { CollectiveHero } from '../hero/CollectiveHero';
 
 interface CollectiveLayoutProps {
   collectiveSlug: string;

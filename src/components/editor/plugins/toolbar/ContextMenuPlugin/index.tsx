@@ -6,7 +6,6 @@
  *
  */
 
-import type { JSX } from 'react';
 
 import { $isLinkNode, TOGGLE_LINK_COMMAND } from '@lexical/link';
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
@@ -28,6 +27,8 @@ import {
 import { useCallback, useMemo } from 'react';
 import * as React from 'react';
 import * as ReactDOM from 'react-dom';
+
+import type { JSX } from 'react';
 
 function ContextMenuItem({
   index,

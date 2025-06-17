@@ -1,16 +1,17 @@
 'use client';
 
+import { formatDistanceToNow } from 'date-fns';
 import React, { useState } from 'react';
+
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   CommentThread,
   ReactionType,
-  CommentWithAuthor,
 } from '@/types/comments-v2';
-import { CommentForm } from './CommentForm';
+
 import { CommentActions } from './CommentActions';
+import { CommentForm } from './CommentForm';
 import { CommentReplies } from './CommentReplies';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { formatDistanceToNow } from 'date-fns';
 
 interface CommentItemProps {
   thread: CommentThread;

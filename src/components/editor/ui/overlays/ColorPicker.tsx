@@ -354,24 +354,35 @@ function transformColor<M extends keyof Color, C extends Color[M]>(
   let rgb: Color['rgb'] = hex2rgb(hex);
   let hsv: Color['hsv'] = rgb2hsv(rgb);
 
-  if (format === 'hex') {
+  switch (format) {
+  case 'hex': {
     const value = color as Color['hex'];
 
     hex = toHex(value);
     rgb = hex2rgb(hex);
     hsv = rgb2hsv(rgb);
-  } else if (format === 'rgb') {
+  
+  break;
+  }
+  case 'rgb': {
     const value = color as Color['rgb'];
 
     rgb = value;
     hex = rgb2hex(rgb);
     hsv = rgb2hsv(rgb);
-  } else if (format === 'hsv') {
+  
+  break;
+  }
+  case 'hsv': {
     const value = color as Color['hsv'];
 
     hsv = value;
     rgb = hsv2rgb(hsv);
     hex = rgb2hex(rgb);
+  
+  break;
+  }
+  // No default
   }
 
   return { hex, hsv, rgb };

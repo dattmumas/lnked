@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
-import { createServerSupabaseClient } from '@/lib/supabase/server';
+
 import VideoManagementDashboard from '@/components/app/video/manage/VideoManagementDashboard';
+import { createServerSupabaseClient } from '@/lib/supabase/server';
 
 export default async function VideosPage() {
   const supabase = await createServerSupabaseClient();

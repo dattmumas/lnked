@@ -1,9 +1,9 @@
 'use client';
 
-import React from 'react';
 import { Check } from 'lucide-react';
-import { cn } from '@/lib/utils';
+
 import { WIZARD_STEPS } from '@/hooks/video/useStepNavigation';
+import { cn } from '@/lib/utils';
 
 interface StepIndicatorProps {
   currentStep: number;

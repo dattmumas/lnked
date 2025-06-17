@@ -1,7 +1,8 @@
-import { createServerSupabaseClient } from '@/lib/supabase/server';
-import { Enums } from '@/lib/database.types';
-import { redirect, notFound } from 'next/navigation';
 import Link from 'next/link';
+import { redirect, notFound } from 'next/navigation';
+
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import {
   Table,
   TableBody,
@@ -11,8 +12,8 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
+import { Enums } from '@/lib/database.types';
+import { createServerSupabaseClient } from '@/lib/supabase/server';
 
 const formatDate = (dateString: string | null | undefined): string => {
   if (!dateString) return 'N/A';
@@ -143,7 +144,7 @@ export default async function SubscribersPage({
           </TableHeader>
           <TableBody>
             {subscriptions.map((sub: SubscriptionRow) => {
-              const subscriber = sub.subscriber as Subscriber | null;
+              const {subscriber} = sub;
               return (
                 <TableRow key={sub.id}>
                   <TableCell className="font-medium">

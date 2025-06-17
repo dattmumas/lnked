@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback } from 'react';
+
 import { VideoFormData } from './useVideoFormState';
 
 // Helper function to normalize video asset data from database to expected format

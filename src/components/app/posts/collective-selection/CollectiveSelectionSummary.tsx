@@ -1,20 +1,18 @@
 'use client';
 
-import { useState } from 'react';
 import {
   Plus,
   Users,
-  Settings,
   Crown,
   Shield,
   Edit3,
   PenTool,
   X,
 } from 'lucide-react';
-import { useCollectiveMemberships } from '@/hooks/posts/useCollectiveMemberships';
-import { CollectiveWithPermission } from '@/types/enhanced-database.types';
-import { Button } from '@/components/ui/button';
+import { useState } from 'react';
+
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import {
   Tooltip,
@@ -22,8 +20,11 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { CollectiveSelectionModal } from './CollectiveSelectionModal';
+import { useCollectiveMemberships } from '@/hooks/posts/useCollectiveMemberships';
 import { cn } from '@/lib/utils';
+import { CollectiveWithPermission } from '@/types/enhanced-database.types';
+
+import { CollectiveSelectionModal } from './CollectiveSelectionModal';
 
 interface CollectiveSelectionSummaryProps {
   selectedCollectiveIds: string[];

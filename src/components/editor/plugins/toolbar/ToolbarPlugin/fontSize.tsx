@@ -16,6 +16,7 @@ import {
   MIN_ALLOWED_FONT_SIZE,
 } from '../../../context/ToolbarContext';
 import { SHORTCUTS } from '../../input/ShortcutsPlugin/shortcuts';
+
 import {
   updateFontSize,
   updateFontSizeInSelection,

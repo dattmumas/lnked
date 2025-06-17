@@ -7,7 +7,6 @@
  */
 import type {TableCellNode, TableDOMCell, TableMapType} from '@lexical/table';
 import type {LexicalEditor, NodeKey} from 'lexical';
-import type {JSX} from 'react';
 
 import './index.css';
 
@@ -29,7 +28,6 @@ import {
   isHTMLElement,
   SKIP_SCROLL_INTO_VIEW_TAG,
 } from 'lexical';
-import * as React from 'react';
 import {
   CSSProperties,
   PointerEventHandler,
@@ -41,6 +39,8 @@ import {
   useState,
 } from 'react';
 import {createPortal} from 'react-dom';
+
+import type {JSX} from 'react';
 
 type PointerPosition = {
   x: number;
@@ -148,13 +148,13 @@ function TableCellResizer({editor}: {editor: LexicalEditor}): JSX.Element {
                 throw new Error('TableCellResizer: Table element not found.');
               }
 
-              targetRef.current = target as HTMLElement;
+              targetRef.current = target;
               tableRectRef.current = tableElement.getBoundingClientRect();
               updateActiveCell(cell);
             },
             {editor},
           );
-        } else if (cell == null) {
+        } else if (cell == undefined) {
           resetState();
         }
       }
@@ -437,7 +437,7 @@ function TableCellResizer({editor}: {editor: LexicalEditor}): JSX.Element {
 
   return (
     <div ref={resizerRef}>
-      {activeCell != null && (
+      {activeCell != undefined && (
         <>
           <div
             className="TableCellResizer__resizer TableCellResizer__ui"

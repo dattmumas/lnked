@@ -1,13 +1,13 @@
 'use client';
 
-import React from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { Play, BookOpen, Headphones } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useQuery } from '@tanstack/react-query';
-import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
-import { Play, BookOpen, Headphones } from 'lucide-react';
+
 import { Badge } from '@/components/ui/badge';
 import { useCollectiveData } from '@/hooks/collectives/useCollectiveData';
+import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
 
 interface FeaturedMediaProps {
   collectiveSlug: string;

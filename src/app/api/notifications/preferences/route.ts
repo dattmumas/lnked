@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServerSupabaseClient } from '@/lib/supabase/server';
+
 import { notificationService } from '@/lib/notifications/service';
+import { createServerSupabaseClient } from '@/lib/supabase/server';
+
 import type { NotificationPreferencesUpdate } from '@/types/notifications';
 
 export async function GET() {

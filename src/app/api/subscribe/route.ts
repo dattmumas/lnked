@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
-import { createServerSupabaseClient } from '@/lib/supabase/server';
-import { getStripe } from '@/lib/stripe';
 import Stripe from 'stripe'; // Explicitly import Stripe namespace
+
+import { getStripe } from '@/lib/stripe';
+import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { supabaseAdmin } from '@/lib/supabaseAdmin'; // Updated import path
 
 interface SubscribeRequestBody {

@@ -1,8 +1,8 @@
 'use client';
 
-import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import clsx from 'clsx';
+import { useMemo } from 'react';
 
 interface Channel {
   id: string;

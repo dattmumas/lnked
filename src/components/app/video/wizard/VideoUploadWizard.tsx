@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback } from 'react';
+import { useCallback } from 'react';
 
 // Step constants
 const STEP_UPLOAD = 0;
@@ -9,13 +9,13 @@ const STEP_SETTINGS = 2;
 const STEP_PUBLISH = 3;
 import { Card } from '@/components/ui/card';
 import { useVideoUpload } from '@/hooks/video/useVideoUpload';
+
 import { StepIndicator } from './components/StepIndicator';
 import { WizardNavigation } from './components/WizardNavigation';
-import { UploadStep } from './steps/UploadStep';
 import { DetailsStep } from './steps/DetailsStep';
-import { SettingsStep } from './steps/SettingsStep';
-
 import { PublishStep } from './steps/PublishStep';
+import { SettingsStep } from './steps/SettingsStep';
+import { UploadStep } from './steps/UploadStep';
 
 interface VideoUploadWizardProps {
   collectiveId?: string;

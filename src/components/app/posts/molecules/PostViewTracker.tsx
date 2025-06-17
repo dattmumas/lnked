@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useRef } from 'react';
+
 import { incrementPostViewCount } from '@/app/actions/postActions';
 
 interface PostViewTrackerProps {

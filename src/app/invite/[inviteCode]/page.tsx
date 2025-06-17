@@ -1,7 +1,8 @@
+import Link from 'next/link';
+import { redirect } from 'next/navigation';
+
 import { acceptCollectiveInvite } from '@/app/actions/memberActions';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
-import { redirect } from 'next/navigation';
-import Link from 'next/link';
 
 export default async function InviteAcceptPage({
   params,

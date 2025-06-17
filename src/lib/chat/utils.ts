@@ -13,7 +13,7 @@ const MAX_INITIALS_LENGTH = 2 as const;
 /** Time‑unit helpers */
 // eslint-disable-next-line no-magic-numbers
 export const MILLISECONDS_PER_SECOND = 1000 as const;
-// eslint-disable-next-line no-magic-numbers
+ 
 export const SECONDS_PER_MINUTE = 60;
 // eslint-disable-next-line no-magic-numbers
 export const SECONDS_PER_HOUR   = 60 * SECONDS_PER_MINUTE;

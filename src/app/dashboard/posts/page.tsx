@@ -1,9 +1,11 @@
-import { createServerSupabaseClient } from '@/lib/supabase/server';
-import { redirect } from 'next/navigation';
-import PostListItem from '@/components/app/dashboard/posts/PostListItem';
-import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
 import Link from 'next/link';
+import { redirect } from 'next/navigation';
+
+import PostListItem from '@/components/app/dashboard/posts/PostListItem';
+import { Button } from '@/components/ui/button';
+import { createServerSupabaseClient } from '@/lib/supabase/server';
+
 import type { Database, Enums } from '@/lib/database.types';
 
 // Use a type alias for DashboardPost
@@ -105,7 +107,7 @@ export default async function MyPostsPage() {
           !addedCollectiveIds.has(membership.collective.id)
         ) {
           publishingCollectives.push(
-            membership.collective as PublishingTargetCollective,
+            membership.collective,
           );
           addedCollectiveIds.add(membership.collective.id);
         }

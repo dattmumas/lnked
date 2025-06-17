@@ -8,7 +8,6 @@
 
 'use client';
 
-import type { JSX } from 'react';
 
 import { $createCodeNode } from '@lexical/code';
 import {
@@ -36,23 +35,24 @@ import {
   TextNode,
 } from 'lexical';
 import { useCallback, useMemo, useState } from 'react';
-import * as React from 'react';
 import * as ReactDOM from 'react-dom';
 
 import useModal from '../../../hooks/useModal';
 import catTypingGif from '../../../images/cat-typing.gif';
 import { EmbedConfigs } from '../../layout/AutoEmbedPlugin';
-import { INSERT_COLLAPSIBLE_COMMAND } from '../CollapsiblePlugin';
-import { InsertEquationDialog } from '../EquationsPlugin';
+import InsertLayoutDialog from '../../layout/LayoutPlugin/InsertLayoutDialog';
+import { INSERT_PAGE_BREAK } from '../../layout/PageBreakPlugin';
+import { InsertTableDialog } from '../../layout/TablePlugin';
 import { INSERT_EXCALIDRAW_COMMAND } from '../../media/ExcalidrawPlugin';
 import {
   INSERT_IMAGE_COMMAND,
   InsertImageDialog,
 } from '../../media/ImagesPlugin';
-import InsertLayoutDialog from '../../layout/LayoutPlugin/InsertLayoutDialog';
-import { INSERT_PAGE_BREAK } from '../../layout/PageBreakPlugin';
+import { INSERT_COLLAPSIBLE_COMMAND } from '../CollapsiblePlugin';
+import { InsertEquationDialog } from '../EquationsPlugin';
 import { InsertPollDialog } from '../PollPlugin';
-import { InsertTableDialog } from '../../layout/TablePlugin';
+
+import type { JSX } from 'react';
 
 class ComponentPickerOption extends MenuOption {
   // What shows up in the editor
@@ -122,7 +122,7 @@ function ComponentPickerMenuItem({
 function getDynamicOptions(editor: LexicalEditor, queryString: string) {
   const options: Array<ComponentPickerOption> = [];
 
-  if (queryString == null) {
+  if (queryString == undefined) {
     return options;
   }
 

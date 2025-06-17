@@ -1,11 +1,14 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Sidebar } from './sidebar';
+
+import { useCollectiveMemberships } from '@/hooks/posts/useCollectiveMemberships';
+import { useUser } from '@/hooks/useUser';
+
 import CollectiveSwitcher from './collective-switcher';
 import { ConversationPanel } from './conversation-panel';
-import { useUser } from '@/hooks/useUser';
-import { useCollectiveMemberships } from '@/hooks/posts/useCollectiveMemberships';
+import { Sidebar } from './sidebar';
+
 
 interface ChatInterfaceProps {
   userId: string;

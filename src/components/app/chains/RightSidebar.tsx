@@ -1,11 +1,5 @@
 // This file is extracted from HomePageClient.tsx for reuse on the video page
 'use client';
-import { useState, useEffect, useCallback } from 'react';
-import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
-import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Textarea } from '@/components/ui/textarea';
-import { cn } from '@/lib/utils';
 import {
   Loader2,
   Heart,
@@ -16,9 +10,14 @@ import {
   Image,
   Send,
 } from 'lucide-react';
-import Link from 'next/link';
-import type { Tables } from '@/lib/database.types';
-import type { Json } from '@/types/json';
+import { useState, useEffect, useCallback } from 'react';
+
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
+import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
+import { cn } from '@/lib/utils';
+
 
 // Types
 interface UserProfile {
