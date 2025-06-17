@@ -109,11 +109,18 @@ export function ConversationPanel({ channelId, className }: Props) {
     <div className={clsx('flex flex-col h-full', className)}>
       <ul ref={listRef} className="flex-1 overflow-y-auto px-4 py-2 space-y-2">
         {messages.map((msg) => (
-          <li key={msg.id} className="text-sm">
+          <li
+            key={msg.id}
+            className="group flex items-start gap-2 rounded px-2 py-1 text-sm hover:bg-muted/50"
+          >
             <span className="font-medium mr-2">
               {msg.sender?.username ?? 'Anon'}
             </span>
-            <span>{msg.content}</span>
+            <span className="flex-1 break-words">{msg.content}</span>
+            {/* Meta actions placeholder */}
+            <div className="ml-2 flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+              {/* future reactions / pin icons */}
+            </div>
           </li>
         ))}
       </ul>

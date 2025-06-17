@@ -52,10 +52,18 @@ export function MessageInput({ channelId, className }: Props) {
   return (
     <div
       className={clsx(
-        'flex items-center gap-2 border-t border-border p-2',
+        'composer-container group flex items-center gap-2 border-t border-border p-2',
         className,
       )}
     >
+      {/* Disabled attachment button placeholder */}
+      <button
+        type="button"
+        disabled
+        className="attach-btn opacity-0 pointer-events-none transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 text-muted-foreground"
+      >
+        📎
+      </button>
       <input
         type="text"
         value={text}
