@@ -1,4 +1,5 @@
 import { z } from "zod";
+
 import { MIN_NAME_LENGTH, MAX_NAME_LENGTH, MIN_SLUG_LENGTH, MAX_SLUG_LENGTH, MAX_DESCRIPTION_LENGTH } from "@/lib/constants/collective";
 
 export const CollectiveSettingsClientSchema = z.object({

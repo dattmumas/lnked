@@ -11,7 +11,7 @@ const BYTE_SHIFT_EXPONENT = 10; // 2^10 = 1024
 const BYTES_PER_KB = 1 << BYTE_SHIFT_EXPONENT; // 1024 bytes
 const BYTES_PER_MB = BYTES_PER_KB * BYTES_PER_KB; // 1024 x 1024
 const MAX_AVATAR_SIZE_MB = 10;
-const RANDOM_ID_RADIX = 36;
+// const RANDOM_ID_RADIX = 36; // Removed as per instructions
 const RANDOM_ID_START = 2;
 const RANDOM_ID_LENGTH = 6; // substring length (8 - 2)
 const MAX_INITIALS = 2;
@@ -74,8 +74,9 @@ export function validateAvatarFile(file: File): { isValid: boolean; error?: stri
 export function generateAvatarFilename(userId: string, mimeType: string): string {
   const extension = mimeType.split('/')[1]?.replace('jpeg', 'jpg') || 'png';
   const timestamp = Date.now();
-  const randomSuffix = Math.random()
-    .toString(RANDOM_ID_RADIX)
+  const randomSuffix = crypto
+    .randomUUID()
+    .replace(/-/g, '')
     .slice(RANDOM_ID_START, RANDOM_ID_START + RANDOM_ID_LENGTH);
   const fileName = `avatar-${timestamp}-${randomSuffix}.${extension}`;
   return `user-${userId}/${fileName}`;
@@ -84,7 +85,7 @@ export function generateAvatarFilename(userId: string, mimeType: string): string
 /**
  * Extracts the file path from a Supabase storage URL
  */
-export function extractFilePathFromUrl(url: string, bucketName: string = AVATAR_CONFIG.bucket): string | null {
+export function extractFilePathFromUrl(url: string, bucketName: string = AVATAR_CONFIG.bucket): string | undefined {
   try {
     const urlParts = url.split('/');
     const bucketIndex = urlParts.findIndex(part => part === bucketName);
@@ -93,9 +94,9 @@ export function extractFilePathFromUrl(url: string, bucketName: string = AVATAR_
       return urlParts.slice(bucketIndex + PATH_OFFSET_AFTER_BUCKET).join('/');
     }
     
-    return null;
+    return undefined;
   } catch {
-    return null;
+    return undefined;
   }
 }
 
@@ -135,7 +136,7 @@ export interface ImageTransformOptions {
 /**
  * Extract bucket and file path from Supabase storage URL
  */
-export function extractSupabaseImagePath(url: string): { bucket: string; path: string } | null {
+export function extractSupabaseImagePath(url: string): { bucket: string; path: string } | undefined {
   try {
     // Pattern: https://project.supabase.co/storage/v1/object/public/bucket/path/to/file.ext
     const urlObj = new URL(url);
@@ -144,7 +145,7 @@ export function extractSupabaseImagePath(url: string): { bucket: string; path: s
     // Find the bucket and path after /storage/v1/object/public/
     const publicIndex = pathParts.findIndex(part => part === 'public');
     if (publicIndex === -1 || publicIndex + 1 >= pathParts.length) {
-      return null;
+      return undefined;
     }
     
     const bucket = pathParts[publicIndex + 1];
@@ -154,7 +155,7 @@ export function extractSupabaseImagePath(url: string): { bucket: string; path: s
     
     return { bucket, path };
   } catch {
-    return null;
+    return undefined;
   }
 }
 
@@ -162,16 +163,16 @@ export function extractSupabaseImagePath(url: string): { bucket: string; path: s
  * Get optimized avatar URL using Supabase image transformations
  */
 export function getOptimizedAvatarUrl(
-  avatarUrl: string | null | undefined,
+  avatarUrl: string | undefined,
   options: ImageTransformOptions = {}
-): string | null {
-  if (avatarUrl === null || avatarUrl === undefined || avatarUrl === '') return null;
+): string | undefined {
+  if (avatarUrl === undefined || avatarUrl === '') return undefined;
   
   // Check if it's a Supabase storage URL
   const pathInfo = extractSupabaseImagePath(avatarUrl);
   if (!pathInfo) {
     // Return original URL if not a Supabase storage URL
-    return avatarUrl ?? null;
+    return avatarUrl;
   }
   
   try {
@@ -191,7 +192,7 @@ export function getOptimizedAvatarUrl(
     return data.publicUrl;
   } catch (error) {
     console.warn('Failed to get optimized avatar URL:', error);
-    return avatarUrl ?? null;
+    return avatarUrl;
   }
 }
 
@@ -199,15 +200,15 @@ export function getOptimizedAvatarUrl(
  * Get responsive avatar URLs for different display sizes
  */
 export function getResponsiveAvatarUrls(
-  avatarUrl: string | null | undefined
+  avatarUrl: string | undefined
 ): {
-  small: string | null;
-  medium: string | null;
-  large: string | null;
-  xl: string | null;
-  original: string | null;
-} | null {
-  if (avatarUrl === null || avatarUrl === '') return null;
+  small: string | undefined;
+  medium: string | undefined;
+  large: string | undefined;
+  xl: string | undefined;
+  original: string | undefined;
+} | undefined {
+  if (avatarUrl === undefined || avatarUrl === '') return undefined;
   
   return {
     // Small avatars (32px) - for comments, mentions

@@ -1,5 +1,5 @@
-// Export all types
-export type * from './types';
+// Re-export everything from ./types (both value and type exports)
+export * from './types';
 
 // Export all data hooks
 export {
@@ -20,10 +20,3 @@ export {
   ProfileContext,
   type ProfileContextProviderProps,
 } from './use-profile-context';
-
-// Export error classes for error handling
-export {
-  ProfileError,
-  NotFoundError,
-  PermissionError,
-} from './types'; 

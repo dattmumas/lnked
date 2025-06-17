@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+
 import { Database } from '@/lib/database.types';
 
 // Enhanced PostFormData interface with new schema fields
@@ -23,7 +24,7 @@ export interface PostFormData {
 interface PostEditorStore {
   // Form data
   formData: PostFormData;
-  originalData: PostFormData | null;
+  originalData: PostFormData | undefined;
 
   // UI state
   currentPage: 'editor' | 'details';
@@ -62,7 +63,7 @@ const defaultFormData: PostFormData = {
 export const usePostEditorStore = create<PostEditorStore>((set) => ({
   // Initial state
   formData: defaultFormData,
-  originalData: null,
+  originalData: undefined,
   currentPage: 'editor',
   autoSaveStatus: 'idle',
   isDirty: false,

@@ -1,7 +1,10 @@
+/* eslint-disable unicorn/no-null */
 'use client';
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+
 import { clientNotificationService } from '@/lib/notifications/client-service';
+
 import type { Notification, NotificationFilters } from '@/types/notifications';
 
 // Debounce duration in milliseconds
@@ -91,7 +94,9 @@ export function useNotifications(
         await performFetch();
       } else {
         // Debounce the request by 300ms
-        debounceTimer.current = setTimeout(performFetch, DEBOUNCE_DELAY_MS);
+        debounceTimer.current = setTimeout(() => {
+          void performFetch();
+        }, DEBOUNCE_DELAY_MS);
       }
     },
     [userId, memoizedFilters],
@@ -183,7 +188,7 @@ export function useNotifications(
       !initialFetchDone.current
     ) {
       initialFetchDone.current = true;
-      fetchNotifications(undefined, true); // Immediate fetch for initial load
+      void fetchNotifications(undefined, true); // Immediate fetch for initial load
     }
   }, [autoFetch, userId, fetchNotifications]);
 
@@ -193,7 +198,6 @@ export function useNotifications(
       // Return a no‑op cleanup to satisfy `consistent-return`
       return () => {};
     }
-
     const unsubscribe = clientNotificationService.subscribeToNotifications(
       userId,
       (newNotification: Notification) => {

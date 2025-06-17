@@ -6,13 +6,13 @@
 export interface ReactionState {
   likeCount: number;
   dislikeCount: number;
-  userReaction: 'like' | 'dislike' | null;
+  userReaction: 'like' | 'dislike' | undefined;
 }
 
 export interface ReactionToggleResult {
   newLikeCount: number;
   newDislikeCount: number;
-  newUserReaction: 'like' | 'dislike' | null;
+  newUserReaction: 'like' | 'dislike' | undefined;
 }
 
 /**
@@ -31,13 +31,13 @@ export function toggleReactionState(
   
   let newLikeCount = likeCount;
   let newDislikeCount = dislikeCount;
-  let newUserReaction: 'like' | 'dislike' | null = null;
+  let newUserReaction: 'like' | 'dislike' | undefined;
 
   if (toggleType === 'like') {
     if (userReaction === 'like') {
       // User is removing their like
       newLikeCount -= 1;
-      newUserReaction = null;
+      newUserReaction = undefined;
     } else {
       // User is adding a like
       newLikeCount += 1;
@@ -51,7 +51,7 @@ export function toggleReactionState(
     if (userReaction === 'dislike') {
       // User is removing their dislike
       newDislikeCount -= 1;
-      newUserReaction = null;
+      newUserReaction = undefined;
     } else {
       // User is adding a dislike
       newDislikeCount += 1;

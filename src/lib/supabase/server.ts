@@ -1,7 +1,18 @@
+import { createServerClient } from "@supabase/ssr";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
-import { createServerClient } from "@supabase/ssr";
+
 import type { Database } from "../database.types";
+
+type CookieOptions = Partial<{
+  maxAge: number;
+  path: string;
+  domain: string;
+  secure: boolean;
+  httpOnly: boolean;
+  sameSite: "lax" | "strict" | "none" | boolean;
+  expires: Date;
+}>;
 
 export function createServerSupabaseClient(): SupabaseClient<Database> {
   const cookieStorePromise = cookies();
@@ -21,7 +32,7 @@ export function createServerSupabaseClient(): SupabaseClient<Database> {
           const cookieStore = await cookieStorePromise;
           return cookieStore.get(name)?.value;
         },
-        set: async (name, value, options) => {
+        set: async (name: string, value: string, options?: CookieOptions) => {
           const cookieStore = await cookieStorePromise;
           try {
             cookieStore.set(name, value, options);
@@ -30,7 +41,7 @@ export function createServerSupabaseClient(): SupabaseClient<Database> {
             console.warn('Warning: Cannot set cookies in Server Component context');
           }
         },
-        remove: async (name, options) => {
+        remove: async (name: string, options?: CookieOptions) => {
           const cookieStore = await cookieStorePromise;
           try {
             cookieStore.set(name, '', { ...options, maxAge: 0 });

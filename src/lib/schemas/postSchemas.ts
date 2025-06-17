@@ -51,21 +51,39 @@ const baseFields = {
 
 /**
  * Adds a refinement that requires `published_at` when status === 'scheduled'.
- *
- * Explicit return type (`z.ZodEffects<T>`) to satisfy eslint explicit-function-return-type.
  */
-const applyPublishRefinement = <T extends z.ZodTypeAny>(
+const applyPublishRefinement = <
+  T extends z.ZodTypeAny,
+>(
   schema: T,
-): z.ZodEffects<T> =>
+): z.ZodEffects<T, z.output<T>, z.input<T>> =>
   schema.refine(
-    (data) =>
-      (data as z.infer<T>).status !== 'scheduled' ||
-      ((data as z.infer<T>).published_at ?? '').toString().trim() !== '',
+    (
+      data: unknown,
+    ): data is z.infer<T> & { status?: string; published_at?: unknown } => {
+      const d = data as { status?: string; published_at?: unknown };
+
+      if (d.status !== 'scheduled') {
+        return true;
+      }
+
+      const { published_at } = d;
+
+      // Accept non‑empty ISO strings or valid Date objects
+      if (typeof published_at === 'string') {
+        return published_at.trim() !== '';
+      }
+      if (published_at instanceof Date) {
+        return !Number.isNaN(published_at.getTime());
+      }
+
+      return false;
+    },
     {
       message: 'Publish date is required for scheduled posts.',
       path: ['published_at'],
     },
-  );
+  ) as z.ZodEffects<T, z.output<T>, z.input<T>>;
 
 export const PostFormBaseSchema = applyPublishRefinement(z.object(baseFields));
 

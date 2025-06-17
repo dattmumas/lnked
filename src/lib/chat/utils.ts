@@ -2,6 +2,26 @@
  * Chat utility functions
  */
 
+// ---------------------------------------------------------------------------
+// Shared constants
+// ---------------------------------------------------------------------------
+
+/** Maximum number of characters to show for user initials */
+// eslint-disable-next-line no-magic-numbers
+const MAX_INITIALS_LENGTH = 2 as const;
+
+/** Time‑unit helpers */
+// eslint-disable-next-line no-magic-numbers
+export const MILLISECONDS_PER_SECOND = 1000 as const;
+// eslint-disable-next-line no-magic-numbers
+export const SECONDS_PER_MINUTE = 60 as const;
+// eslint-disable-next-line no-magic-numbers
+export const SECONDS_PER_HOUR   = 60 * SECONDS_PER_MINUTE as const;
+// eslint-disable-next-line no-magic-numbers
+export const SECONDS_PER_DAY    = 24 * SECONDS_PER_HOUR as const;
+// eslint-disable-next-line no-magic-numbers
+export const SECONDS_PER_MONTH  = 30 * SECONDS_PER_DAY as const; // ≈30 days
+
 /**
  * Get display name for a user with fallback chain
  * Priority: full_name -> username -> email-based name -> 'Anonymous'
@@ -14,23 +34,24 @@ export function getDisplayName(user: {
   if (!user) return 'Anonymous';
   
   // Try full name first
-  if (user.full_name && user.full_name.trim()) {
-    return user.full_name;
+  const fullName = typeof user.full_name === 'string' ? user.full_name.trim() : '';
+  if (fullName.length > 0) {
+    return fullName;
   }
-  
+
   // Then username
-  if (user.username && user.username.trim()) {
-    return user.username;
+  const username = typeof user.username === 'string' ? user.username.trim() : '';
+  if (username.length > 0) {
+    return username;
   }
-  
+
   // Extract name from email if available
-  if (user.email) {
+  if (typeof user.email === 'string' && user.email.trim().length > 0) {
     const emailName = user.email.split('@')[0];
-    // Convert email prefix to readable name (e.g., john.doe -> John Doe)
-    // This matches the extract_name_from_email function in our database
+    // Convert email prefix to readable name (e.g., john.doe → John Doe)
     return emailName
       .split(/[._-]/)
-      .map(part => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
       .join(' ');
   }
   
@@ -51,7 +72,7 @@ export function getUserInitials(user: {
     .map((word) => word.charAt(0))
     .join('')
     .toUpperCase()
-    .slice(0, 2);
+    .slice(0, MAX_INITIALS_LENGTH);
 }
 
 /**
@@ -72,11 +93,19 @@ export function formatChatTime(dateString: string): string {
 export function formatRelativeTime(dateString: string): string {
   const date = new Date(dateString);
   const now = new Date();
-  const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+  const diffInSeconds = Math.floor(
+    (now.getTime() - date.getTime()) / MILLISECONDS_PER_SECOND,
+  );
 
-  if (diffInSeconds < 60) return 'now';
-  if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m`;
-  if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h`;
-  if (diffInSeconds < 2592000) return `${Math.floor(diffInSeconds / 86400)}d`;
-  return `${Math.floor(diffInSeconds / 2592000)}mo`;
-} 
+  if (diffInSeconds < SECONDS_PER_MINUTE) return 'now';
+  if (diffInSeconds < SECONDS_PER_HOUR) {
+    return `${Math.floor(diffInSeconds / SECONDS_PER_MINUTE)}m`;
+  }
+  if (diffInSeconds < SECONDS_PER_DAY) {
+    return `${Math.floor(diffInSeconds / SECONDS_PER_HOUR)}h`;
+  }
+  if (diffInSeconds < SECONDS_PER_MONTH) {
+    return `${Math.floor(diffInSeconds / SECONDS_PER_DAY)}d`;
+  }
+  return `${Math.floor(diffInSeconds / SECONDS_PER_MONTH)}mo`;
+}

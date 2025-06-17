@@ -84,6 +84,15 @@ const nextConfig: NextConfig = {
       use: 'ignore-loader',
     });
 
+    // Configure webpack to handle dynamic imports better
+    if (!isServer) {
+      config.output = {
+        ...config.output,
+        // Use a simpler chunk filename pattern to avoid URI encoding issues
+        chunkFilename: 'static/chunks/[name].[contenthash].js',
+      };
+    }
+
     // Let Next.js handle chunk splitting automatically to avoid MIME type conflicts
     return config;
   },

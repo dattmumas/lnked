@@ -1,17 +1,17 @@
 import Stripe from 'stripe';
 
-let stripeClient: Stripe | null = null;
+let stripeClient: Stripe | undefined;
 
-export function getStripe(): Stripe | null {
+export function getStripe(): Stripe | undefined {
   const key = process.env.STRIPE_SECRET_KEY;
 
   const hasValidKey = typeof key === 'string' && key !== '';
   if (!hasValidKey) {
-    // No Stripe secret key provided – return null instead of throwing
-    return null;
+    // No Stripe secret key provided – return undefined instead of throwing
+    return undefined;
   }
 
-  if (stripeClient !== null) return stripeClient; // cached
+  if (stripeClient !== undefined) return stripeClient; // cached
 
   stripeClient = new Stripe(key, {
     apiVersion: '2025-05-28.basil',

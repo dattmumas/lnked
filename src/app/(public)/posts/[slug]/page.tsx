@@ -420,7 +420,17 @@ export default async function PostBySlugPage({
               prose-a:text-primary prose-a:no-underline hover:prose-a:underline
             "
             >
-              <ReadOnlyLexicalViewer contentJSON={post.content ?? ''} />
+              <Suspense
+                fallback={
+                  <div className="animate-pulse">
+                    <div className="h-4 bg-muted rounded w-full mb-4"></div>
+                    <div className="h-4 bg-muted rounded w-3/4 mb-4"></div>
+                    <div className="h-4 bg-muted rounded w-5/6"></div>
+                  </div>
+                }
+              >
+                <ReadOnlyLexicalViewer contentJSON={post.content ?? ''} />
+              </Suspense>
             </div>
 
             {/* Post Footer */}

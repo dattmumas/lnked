@@ -12,7 +12,6 @@ const BYTES_PER_KB = 1 << BYTE_SHIFT_EXPONENT; // 1024 bytes
 const BYTES_PER_MB = BYTES_PER_KB * BYTES_PER_KB; // 1024 x 1024
 const THUMBNAIL_MAX_SIZE_MB = 15;
 
-const RANDOM_ID_RADIX = 36;
 const RANDOM_ID_START = 2;
 const RANDOM_ID_LENGTH = 6; // substring length (8 - 2)
 
@@ -67,8 +66,9 @@ export function validateThumbnailFile(file: File): { isValid: boolean; error?: s
 export function generateThumbnailFilename(userId: string, postId: string | undefined, mimeType: string): string {
   const extension = mimeType.split('/')[1]?.replace('jpeg', 'jpg') || 'png';
   const timestamp = Date.now();
-  const randomSuffix = Math.random()
-    .toString(RANDOM_ID_RADIX)
+  const randomSuffix = crypto
+    .randomUUID()
+    .replace(/-/g, '')
     .slice(RANDOM_ID_START, RANDOM_ID_START + RANDOM_ID_LENGTH);
   const fileName = `thumbnail-${timestamp}-${randomSuffix}.${extension}`;
   const prefix =
@@ -81,7 +81,7 @@ export function generateThumbnailFilename(userId: string, postId: string | undef
 /**
  * Extracts the file path from a Supabase storage URL
  */
-export function extractThumbnailFilePathFromUrl(url: string): string | null {
+export function extractThumbnailFilePathFromUrl(url: string): string | undefined {
   try {
     const urlParts = url.split('/');
     const bucketIndex = urlParts.findIndex(part => part === THUMBNAIL_CONFIG.bucket);
@@ -90,9 +90,9 @@ export function extractThumbnailFilePathFromUrl(url: string): string | null {
       return urlParts.slice(bucketIndex + 1).join('/');
     }
     
-    return null;
+    return undefined;
   } catch {
-    return null;
+    return undefined;
   }
 }
 
@@ -106,7 +106,7 @@ export function isSupabaseStorageUrl(url: string): boolean {
 /**
  * Extract bucket and file path from Supabase storage URL
  */
-export function extractSupabaseImagePath(url: string): { bucket: string; path: string } | null {
+export function extractSupabaseImagePath(url: string): { bucket: string; path: string } | undefined {
   try {
     // Pattern: https://project.supabase.co/storage/v1/object/public/bucket/path/to/file.ext
     const urlObj = new URL(url);
@@ -115,7 +115,7 @@ export function extractSupabaseImagePath(url: string): { bucket: string; path: s
     // Find the bucket and path after /storage/v1/object/public/
     const publicIndex = pathParts.findIndex(part => part === 'public');
     if (publicIndex === -1 || publicIndex + 1 >= pathParts.length) {
-      return null;
+      return undefined;
     }
     
     const bucket = pathParts[publicIndex + 1];
@@ -125,7 +125,7 @@ export function extractSupabaseImagePath(url: string): { bucket: string; path: s
     
     return { bucket, path };
   } catch {
-    return null;
+    return undefined;
   }
 }
 
@@ -145,16 +145,16 @@ export interface ThumbnailTransformOptions {
  * Get optimized thumbnail URL using Supabase image transformations
  */
 export function getOptimizedThumbnailUrl(
-  thumbnailUrl: string | null | undefined,
+  thumbnailUrl: string | undefined,
   options: ThumbnailTransformOptions = {}
-): string | null {
-  if (thumbnailUrl === null || thumbnailUrl === undefined || thumbnailUrl === '') return null;
+): string | undefined {
+  if (thumbnailUrl === undefined || thumbnailUrl === '') return undefined;
   
   // Check if it's a Supabase storage URL
   const pathInfo = extractSupabaseImagePath(thumbnailUrl);
   if (!pathInfo) {
     // Return original URL if not a Supabase storage URL
-    return thumbnailUrl ?? null;
+    return thumbnailUrl;
   }
   
   try {
@@ -174,7 +174,7 @@ export function getOptimizedThumbnailUrl(
     return data.publicUrl;
   } catch (error) {
     console.warn('Failed to get optimized thumbnail URL:', error);
-    return thumbnailUrl ?? null;
+    return thumbnailUrl;
   }
 }
 
@@ -182,14 +182,14 @@ export function getOptimizedThumbnailUrl(
  * Get responsive thumbnail URLs for different display contexts
  */
 export function getResponsiveThumbnailUrls(
-  thumbnailUrl: string | null | undefined
+  thumbnailUrl: string | undefined
 ): {
-  small: string | null;
-  medium: string | null;
-  large: string | null;
-  original: string | null;
-} | null {
-  if (thumbnailUrl === null || thumbnailUrl === '') return null;
+  small: string | undefined;
+  medium: string | undefined;
+  large: string | undefined;
+  original: string | undefined;
+} | undefined {
+  if (thumbnailUrl === undefined || thumbnailUrl === '') return undefined;
   
   return {
     // Small thumbnails (320px) - for lists, mobile cards

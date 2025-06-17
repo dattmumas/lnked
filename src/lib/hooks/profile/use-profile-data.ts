@@ -1,5 +1,31 @@
-import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useInfiniteQuery, useMutation, useQueryClient, type UseMutationResult } from '@tanstack/react-query';
+
+import { HttpStatusCode } from '@/lib/constants/errors';
+import {
+  PAGE_LIMIT_DEFAULT,
+  PROFILE_STALE_MS,
+  PROFILE_GC_MS,
+  METRICS_STALE_MS,
+  METRICS_GC_MS,
+  FOLLOW_STATUS_STALE_MS,
+  FOLLOW_STATUS_GC_MS,
+  POSTS_STALE_MS,
+  POSTS_GC_MS,
+  SOCIAL_FEED_STALE_MS,
+  SOCIAL_FEED_GC_MS,
+  SOCIAL_FEED_REFRESH_MS,
+  SECOND_MS,
+  PROFILE_RETRY_LIMIT,
+  RETRY_LIMIT_SHORT,
+} from '@/lib/constants/profile';
 import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
+
+import {
+  ProfileError,
+  NotFoundError,
+  PermissionError,
+} from './types';
+
 import type {
   Profile,
   ProfileMetrics,
@@ -18,17 +44,15 @@ import type {
   UseSocialFeedReturn,
   SocialLinks,
 } from './types';
-import {
-  ProfileError,
-  NotFoundError,
-  PermissionError,
-} from './types';
-
-// Local DB row type aliases for safer casting (avoids "any")
 import type { Database } from '@/lib/database.types';
 
+// ---------------------------------------------------------------------------
+// Helper functions
+// ---------------------------------------------------------------------------
+/** Explicit existence check (avoids strict‑boolean‑expressions noise) */
+const exists = (v: unknown): boolean => v !== undefined && v !== '';
+
 type DBUser = Database['public']['Tables']['users']['Row'];
-type DBCollective = Database['public']['Tables']['collectives']['Row'];
 type Json = Database['public']['Tables']['users']['Row']['social_links'];
 
 // Query key factories
@@ -65,16 +89,16 @@ async function fetchProfile(username: string): Promise<Profile> {
     .eq('username', username)
     .single();
 
-  if (error) {
+  if (error !== null && error !== undefined) {
     if (error.code === 'PGRST116') {
       throw new NotFoundError('Profile');
     }
-    throw new ProfileError('Failed to fetch profile', error.code);
+    throw new ProfileError('Failed to fetch profile', error.code, HttpStatusCode.InternalServerError);
   }
 
   // Validate that username exists since it's required for Profile interface
-  if (!data.username) {
-    throw new ProfileError('Profile missing username', 'INVALID_PROFILE');
+  if (data.username === null || data.username === undefined || data.username === '') {
+    throw new ProfileError('Profile missing username', 'INVALID_PROFILE', HttpStatusCode.UnprocessableEntity);
   }
 
   return {
@@ -90,7 +114,7 @@ async function fetchProfile(username: string): Promise<Profile> {
     showFollowers: data.show_followers ?? true,
     showSubscriptions: data.show_subscriptions ?? true,
     tags: data.tags,
-    createdAt: data.updated_at || new Date().toISOString(), // Use updated_at as created_at fallback
+    createdAt: data.updated_at ?? new Date().toISOString(), // Use updated_at as created_at fallback
     updatedAt: data.updated_at,
   };
 }
@@ -105,7 +129,7 @@ async function fetchProfileMetrics(username: string): Promise<ProfileMetrics> {
     .eq('username', username)
     .single();
 
-  if (!user) {
+  if (user === null || user === undefined) {
     throw new NotFoundError('Profile');
   }
 
@@ -146,8 +170,8 @@ async function fetchProfileMetrics(username: string): Promise<ProfileMetrics> {
     return acc;
   }, { writing: 0, video: 0, total: 0 });
 
-  const totalViews = posts.reduce((sum, post) => sum + (post.view_count || 0), 0);
-  const totalLikes = posts.reduce((sum, post) => sum + (post.like_count || 0), 0);
+  const totalViews = posts.reduce((sum, post) => sum + (post.view_count ?? 0), 0);
+  const totalLikes = posts.reduce((sum, post) => sum + (post.like_count ?? 0), 0);
 
   return {
     followerCount,
@@ -163,7 +187,7 @@ async function fetchFollowStatus(username: string): Promise<{ isFollowing: boole
   
   // Get current user
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) {
+  if (user === null || user === undefined) {
     return { isFollowing: false };
   }
 
@@ -174,7 +198,7 @@ async function fetchFollowStatus(username: string): Promise<{ isFollowing: boole
     .eq('username', username)
     .single();
 
-  if (!targetUser) {
+  if (targetUser === null || targetUser === undefined) {
     throw new NotFoundError('Profile');
   }
 
@@ -203,11 +227,11 @@ async function fetchProfilePosts(
   const supabase = createSupabaseBrowserClient();
   
   // Add validation for username
-  if (!username || username.trim() === '') {
-    throw new ProfileError('Username is required to fetch posts', 'MISSING_USERNAME');
+  if (!exists(username) || username.trim() === '') {
+    throw new ProfileError('Username is required to fetch posts', 'MISSING_USERNAME', HttpStatusCode.BadRequest);
   }
   
-  const limit = filters.limit || 20;
+  const limit = filters.limit ?? PAGE_LIMIT_DEFAULT;
   const offset = pageParam * limit;
 
   // First get the user ID by username
@@ -217,11 +241,11 @@ async function fetchProfilePosts(
     .eq('username', username)
     .single();
 
-  if (userError || !user) {
+  if ((userError !== null && userError !== undefined) || user === null || user === undefined) {
     if (userError?.code === 'PGRST116') {
       throw new NotFoundError('Profile');
     }
-    throw new ProfileError(`Failed to find user with username: ${username}`, userError?.code || 'USER_LOOKUP_FAILED');
+    throw new ProfileError(`Failed to find user with username: ${username}`, userError?.code || 'USER_LOOKUP_FAILED', HttpStatusCode.InternalServerError);
   }
 
   let query = supabase
@@ -254,25 +278,25 @@ async function fetchProfilePosts(
     `)
     .eq('author_id', user.id)
     .eq('status', 'active')
-    .order(filters.sortBy || 'published_at', { ascending: filters.sortOrder === 'asc' })
+    .order(filters.sortBy ?? 'published_at', { ascending: filters.sortOrder === 'asc' })
     .range(offset, offset + limit - 1);
 
   // Apply filters
-  if (filters.type) {
-    query = query.eq('post_type', filters.type);
+  if (exists(filters.type)) {
+    query = query.eq('post_type', filters.type as NonNullable<typeof filters.type>);
   }
   
-  if (filters.search) {
-    query = query.textSearch('title', filters.search);
+  if (exists(filters.search)) {
+    query = query.textSearch('title', filters.search as string);
   }
 
   const { data, error, count } = await query;
 
-  if (error) {
-    throw new ProfileError(`Failed to fetch posts: ${error.message}`, error.code);
+  if (error !== null && error !== undefined) {
+    throw new ProfileError(`Failed to fetch posts: ${error.message}`, error.code, HttpStatusCode.InternalServerError);
   }
 
-  const posts: ProfilePost[] = (data || []).map(post => ({
+  const posts: ProfilePost[] = (Array.isArray(data) ? data : []).map(post => ({
     id: post.id,
     title: post.title,
     content: post.content,
@@ -286,27 +310,29 @@ async function fetchProfilePosts(
     updatedAt: post.updated_at,
     viewCount: post.view_count,
     likeCount: post.like_count,
-    readTime: post.content ? Math.ceil(post.content.length / 1000) : undefined,
+    readTime: exists(post.content) && typeof post.content === 'string' && post.content.length > 0 ? Math.ceil(post.content.length / SECOND_MS) : undefined,
     author: {
-      id: ((post.author as unknown) as DBUser).id,
-      username: (((post.author as unknown) as DBUser).username) ?? 'unknown',
-      fullName: ((post.author as unknown) as DBUser).full_name,
-      avatarUrl: ((post.author as unknown) as DBUser).avatar_url,
+      id: post.author?.id ?? '',
+      username: post.author?.username ?? 'unknown',
+      fullName: post.author?.full_name ?? '',
+      avatarUrl: post.author?.avatar_url ?? '',
     },
-    collective: post.collective ? {
-      id: ((post.collective as unknown) as DBCollective).id,
-      name: ((post.collective as unknown) as DBCollective).name,
-      slug: ((post.collective as unknown) as DBCollective).slug,
-    } : null,
+    collective: post.collective
+      ? {
+          id: post.collective.id,
+          name: post.collective.name,
+          slug: post.collective.slug,
+        }
+      : undefined,
   }));
 
   return {
     data: posts,
-    total: count || 0,
+    total: count ?? 0,
     limit,
     offset,
-    hasMore: (count || 0) > offset + limit,
-    nextCursor: (count || 0) > offset + limit ? (pageParam + 1).toString() : undefined,
+    hasMore: (count ?? 0) > offset + limit,
+    nextCursor: (count ?? 0) > offset + limit ? (pageParam + 1).toString() : undefined,
   };
 }
 
@@ -316,7 +342,7 @@ async function fetchSocialFeed(
   pageParam: number = 0
 ): Promise<PaginatedResponse<ActivityFeedItem | UserConnection>> {
   const supabase = createSupabaseBrowserClient();
-  const limit = 20;
+  const limit = PAGE_LIMIT_DEFAULT;
   const offset = pageParam * limit;
 
   // Get user ID
@@ -326,7 +352,7 @@ async function fetchSocialFeed(
     .eq('username', username)
     .single();
 
-  if (!user) {
+  if (user === null || user === undefined) {
     throw new NotFoundError('Profile');
   }
 
@@ -348,27 +374,27 @@ async function fetchSocialFeed(
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1);
 
-    if (error) {
-      throw new ProfileError('Failed to fetch following', error.code);
+    if (error !== null && error !== undefined) {
+      throw new ProfileError('Failed to fetch following', error.code, HttpStatusCode.InternalServerError);
     }
 
-    const connections: UserConnection[] = (data || []).map(follow => ({
+    const connections: UserConnection[] = (Array.isArray(data) ? data : []).map(follow => ({
       id: ((follow.following as unknown) as DBUser).id,
-      username: (((follow.following as unknown) as DBUser).username) ?? 'unknown',
-      fullName: ((follow.following as unknown) as DBUser).full_name,
-      avatarUrl: ((follow.following as unknown) as DBUser).avatar_url,
-      bio: ((follow.following as unknown) as DBUser).bio,
+      username: ((follow.following as unknown) as DBUser).username ?? 'unknown',
+      fullName: ((follow.following as unknown) as DBUser).full_name ?? '',
+      avatarUrl: ((follow.following as unknown) as DBUser).avatar_url ?? '',
+      bio: ((follow.following as unknown) as DBUser).bio ?? '',
       isFollowing: true,
-      followedAt: follow.created_at,
+      followedAt: follow.created_at ?? '',
     }));
 
     return {
       data: connections,
-      total: count || 0,
+      total: count ?? 0,
       limit,
       offset,
-      hasMore: (count || 0) > offset + limit,
-      nextCursor: (count || 0) > offset + limit ? (pageParam + 1).toString() : undefined,
+      hasMore: (count ?? 0) > offset + limit,
+      nextCursor: (count ?? 0) > offset + limit ? (pageParam + 1).toString() : undefined,
     };
   }
 
@@ -387,39 +413,55 @@ export function useProfile(username: string): UseProfileReturn {
   const query = useQuery({
     queryKey: profileKeys.profile(username),
     queryFn: () => fetchProfile(username),
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    gcTime: 10 * 60 * 1000, // 10 minutes
+    staleTime: PROFILE_STALE_MS,
+    gcTime: PROFILE_GC_MS,
     retry: (failureCount, error) => {
       // Don't retry on 404s
       if (error instanceof NotFoundError) return false;
-      return failureCount < 3;
+      return failureCount < PROFILE_RETRY_LIMIT;
     },
   });
 
   return {
     data: query.data,
     isLoading: query.isLoading,
-    error: query.error,
-    refetch: query.refetch,
+    error: query.error ?? undefined,
+    refetch: () => {
+      query.refetch().catch((error) => {
+        console.error('Failed to refetch profile:', error);
+      });
+    },
   };
 }
 
 export function useProfileMetrics(username: string): UseProfileMetricsReturn {
-  return useQuery({
+  const query = useQuery({
     queryKey: profileKeys.metrics(username),
     queryFn: () => fetchProfileMetrics(username),
-    staleTime: 2 * 60 * 1000, // 2 minutes
-    gcTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: METRICS_STALE_MS,
+    gcTime: METRICS_GC_MS,
   });
+
+  return {
+    data: query.data,
+    isLoading: query.isLoading,
+    error: query.error ?? undefined,
+  };
 }
 
 export function useFollowStatus(username: string): UseFollowStatusReturn {
-  return useQuery({
+  const query = useQuery({
     queryKey: profileKeys.followStatus(username),
     queryFn: () => fetchFollowStatus(username),
-    staleTime: 30 * 1000, // 30 seconds
-    gcTime: 2 * 60 * 1000, // 2 minutes
+    staleTime: FOLLOW_STATUS_STALE_MS,
+    gcTime: FOLLOW_STATUS_GC_MS,
   });
+
+  return {
+    data: query.data,
+    isLoading: query.isLoading,
+    error: query.error ?? undefined,
+  };
 }
 
 export function useProfilePosts(
@@ -431,29 +473,33 @@ export function useProfilePosts(
     queryFn: ({ pageParam = 0 }) => fetchProfilePosts(username, filters, pageParam),
     initialPageParam: 0,
     getNextPageParam: (lastPage) => {
-      return lastPage.hasMore ? parseInt(lastPage.nextCursor || '0') : undefined;
+      return lastPage.hasMore ? parseInt(lastPage.nextCursor ?? '0') : undefined;
     },
-    staleTime: 2 * 60 * 1000, // 2 minutes
-    gcTime: 5 * 60 * 1000, // 5 minutes
-    enabled: Boolean(username) && username.trim() !== '', // Only run query if username is valid
+    staleTime: POSTS_STALE_MS,
+    gcTime: POSTS_GC_MS,
+    enabled: exists(username),
     retry: (failureCount, error) => {
       // Don't retry on certain errors
       if (error instanceof NotFoundError || error instanceof ProfileError) {
-        if (error.message.includes('MISSING_USERNAME') || error.message.includes('USER_LOOKUP_FAILED')) {
+        if (exists(error.message) && (error.message.includes('MISSING_USERNAME') || error.message.includes('USER_LOOKUP_FAILED'))) {
           return false;
         }
       }
-      return failureCount < 2;
+      return failureCount < RETRY_LIMIT_SHORT;
     },
   });
 
   return {
     data: query.data?.pages?.[0], // For now, return first page
-    fetchNextPage: query.fetchNextPage,
+    fetchNextPage: () => {
+      query.fetchNextPage().catch((error) => {
+        console.error('Failed to fetch next page:', error);
+      });
+    },
     hasNextPage: query.hasNextPage,
     isFetchingNextPage: query.isFetchingNextPage,
     isLoading: query.isLoading,
-    error: query.error,
+    error: query.error ?? undefined,
   };
 }
 
@@ -466,25 +512,34 @@ export function useSocialFeed(
     queryFn: ({ pageParam = 0 }) => fetchSocialFeed(username, feedType, pageParam),
     initialPageParam: 0,
     getNextPageParam: (lastPage) => {
-      return lastPage.hasMore ? parseInt(lastPage.nextCursor || '0') : undefined;
+      return lastPage.hasMore ? parseInt(lastPage.nextCursor ?? '0') : undefined;
     },
-    staleTime: 30 * 1000, // 30 seconds for real-time feel
-    gcTime: 2 * 60 * 1000, // 2 minutes
-    refetchInterval: feedType === 'activity' ? 30 * 1000 : undefined, // Auto-refresh activity feed
+    staleTime: SOCIAL_FEED_STALE_MS,
+    gcTime: SOCIAL_FEED_GC_MS,
+    refetchInterval: feedType === 'activity' ? SOCIAL_FEED_REFRESH_MS : undefined,
   });
 
   return {
     data: query.data?.pages?.[0], // For now, return first page
-    fetchNextPage: query.fetchNextPage,
+    fetchNextPage: () => {
+      query.fetchNextPage().catch((error) => {
+        console.error('Failed to fetch next page:', error);
+      });
+    },
     hasNextPage: query.hasNextPage,
     isFetchingNextPage: query.isFetchingNextPage,
     isLoading: query.isLoading,
-    error: query.error,
+    error: query.error ?? undefined,
   };
 }
 
 // Mutation hooks
-export function useFollowMutation() {
+export function useFollowMutation(): UseMutationResult<
+  { success: boolean },
+  unknown,
+  FollowMutationVariables,
+  unknown
+> {
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -493,7 +548,7 @@ export function useFollowMutation() {
       
       // Get current user
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
+      if (user === null || user === undefined) {
         throw new PermissionError('Must be authenticated to follow users');
       }
 
@@ -504,7 +559,7 @@ export function useFollowMutation() {
         .eq('username', targetUsername)
         .single();
 
-      if (!targetUser) {
+      if (targetUser === null || targetUser === undefined) {
         throw new NotFoundError('User');
       }
 
@@ -517,8 +572,8 @@ export function useFollowMutation() {
             following_type: 'user',
           });
 
-        if (error) {
-          throw new ProfileError('Failed to follow user', error.code);
+        if (error !== null && error !== undefined) {
+          throw new ProfileError('Failed to follow user', error.code, HttpStatusCode.InternalServerError);
         }
       } else {
         const { error } = await supabase
@@ -528,29 +583,38 @@ export function useFollowMutation() {
           .eq('following_id', targetUser.id)
           .eq('following_type', 'user');
 
-        if (error) {
-          throw new ProfileError('Failed to unfollow user', error.code);
+        if (error !== null && error !== undefined) {
+          throw new ProfileError('Failed to unfollow user', error.code, HttpStatusCode.InternalServerError);
         }
       }
 
       return { success: true };
     },
     onSuccess: (data, variables) => {
-      // Update follow status cache
-      queryClient.setQueryData(
-        profileKeys.followStatus(variables.targetUsername),
-        { isFollowing: variables.action === 'follow' }
-      );
-      
-      // Invalidate metrics to refetch counts
+      // Update follow‑status cache when mutation succeeds
+      if (data?.success) {
+        queryClient.setQueryData(
+          profileKeys.followStatus(variables.targetUsername),
+          { isFollowing: variables.action === 'follow' }
+        );
+      }
+
+      // Invalidate metrics so follower counts refresh
       queryClient.invalidateQueries({
         queryKey: profileKeys.metrics(variables.targetUsername),
+      }).catch((error) => {
+        console.error('Failed to invalidate metrics cache:', error);
       });
     },
   });
 }
 
-export function useUpdateProfileMutation() {
+export function useUpdateProfileMutation(): UseMutationResult<
+  Database['public']['Tables']['users']['Row'],
+  unknown,
+  UpdateProfileVariables,
+  unknown
+> {
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -559,7 +623,7 @@ export function useUpdateProfileMutation() {
       
       // Get current user and verify permissions
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
+      if (user === null || user === undefined) {
         throw new PermissionError('Must be authenticated to update profile');
       }
 
@@ -570,7 +634,7 @@ export function useUpdateProfileMutation() {
         .eq('username', username)
         .single();
 
-      if (!profile || profile.id !== user.id) {
+      if (profile === null || profile === undefined || profile.id !== user.id) {
         throw new PermissionError('Can only update your own profile');
       }
 
@@ -588,8 +652,8 @@ export function useUpdateProfileMutation() {
         .select()
         .single();
 
-      if (error) {
-        throw new ProfileError('Failed to update profile', error.code);
+      if (error !== null && error !== undefined) {
+        throw new ProfileError('Failed to update profile', error.code, HttpStatusCode.InternalServerError);
       }
 
       return data;
@@ -598,7 +662,9 @@ export function useUpdateProfileMutation() {
       // Invalidate profile cache to refetch updated data
       queryClient.invalidateQueries({
         queryKey: profileKeys.profile(variables.username),
+      }).catch((error) => {
+        console.error('Failed to invalidate profile cache:', error);
       });
     },
   });
-} 
+}

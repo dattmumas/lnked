@@ -1,5 +1,11 @@
 const resendApiKey = process.env.RESEND_API_KEY;
 
+// Result shape for sendInviteEmail
+export interface SendEmailResult {
+  sent: boolean;
+  error?: string;
+}
+
 export async function sendInviteEmail({
   to,
   inviteLink,
@@ -10,13 +16,13 @@ export async function sendInviteEmail({
   inviteLink: string;
   collectiveName: string;
   role: string;
-}) {
-  if (!resendApiKey) {
+}): Promise<SendEmailResult> {
+  if (resendApiKey === undefined || resendApiKey.trim() === '') {
     console.warn("Resend API key not configured. Skipping email send.");
     return { sent: false, error: "Resend not configured" };
   }
   try {
-    const { Resend } = await import("resend").catch(() => ({ Resend: null }));
+    const { Resend } = await import("resend").catch(() => ({ Resend: undefined }));
     if (!Resend) {
       throw new Error("resend module not available");
     }

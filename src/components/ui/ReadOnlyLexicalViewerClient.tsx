@@ -13,6 +13,7 @@ import { TablePlugin } from '@lexical/react/LexicalTablePlugin';
 import { HorizontalRulePlugin } from '@lexical/react/LexicalHorizontalRulePlugin';
 import { TabIndentationPlugin } from '@lexical/react/LexicalTabIndentationPlugin';
 import { ClickableLinkPlugin } from '@lexical/react/LexicalClickableLinkPlugin';
+import { ContentEditable } from '@lexical/react/LexicalContentEditable';
 import PlaygroundNodes from '@/components/editor/nodes/PlaygroundNodes';
 import PlaygroundEditorTheme from '@/components/editor/themes/PlaygroundEditorTheme';
 import AutoLinkPlugin from '@/components/editor/plugins/formatting/AutoLinkPlugin';
@@ -27,93 +28,181 @@ import EmojiPickerPlugin from '@/components/editor/plugins/input/EmojiPickerPlug
 import TabFocusPlugin from '@/components/editor/plugins/input/TabFocusPlugin';
 import StickyPlugin from '@/components/editor/plugins/interactive/StickyPlugin';
 import KeywordsPlugin from '@/components/editor/plugins/formatting/KeywordsPlugin';
-import ContentEditable from '@/components/editor/ui/inputs/ContentEditable';
+
+// Loading component for dynamic imports
+const PluginLoader = () => (
+  <div className="animate-pulse bg-muted/20 h-4 w-full rounded" />
+);
+
+// Error boundary component
+class ErrorBoundary extends React.Component<
+  { children: React.ReactNode; fallback?: React.ReactNode },
+  { hasError: boolean }
+> {
+  constructor(props: {
+    children: React.ReactNode;
+    fallback?: React.ReactNode;
+  }) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    console.error('ReadOnlyLexicalViewer error:', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        this.props.fallback || (
+          <div className="text-muted-foreground italic text-center py-8">
+            Failed to load content viewer. Please refresh the page.
+          </div>
+        )
+      );
+    }
+
+    return this.props.children;
+  }
+}
 
 // Dynamic imports for client-only plugins
 const PollPlugin = dynamic(
-  () => import('@/components/editor/plugins/interactive/PollPlugin'),
-  { ssr: false },
+  () =>
+    import(
+      /* webpackChunkName: "poll-plugin" */ '@/components/editor/plugins/interactive/PollPlugin'
+    ),
+  { ssr: false, loading: () => <PluginLoader /> },
 );
 const CodeHighlightPlugin = dynamic(
-  () => import('@/components/editor/plugins/formatting/CodeHighlightPlugin'),
-  { ssr: false },
+  () =>
+    import(
+      /* webpackChunkName: "code-highlight-plugin" */ '@/components/editor/plugins/formatting/CodeHighlightPlugin'
+    ),
+  { ssr: false, loading: () => <PluginLoader /> },
 );
 const PageBreakPlugin = dynamic(
-  () => import('@/components/editor/plugins/layout/PageBreakPlugin'),
-  { ssr: false },
+  () =>
+    import(
+      /* webpackChunkName: "page-break-plugin" */ '@/components/editor/plugins/layout/PageBreakPlugin'
+    ),
+  { ssr: false, loading: () => <PluginLoader /> },
 );
 const LayoutPlugin = dynamic(
   () =>
-    import('@/components/editor/plugins/layout/LayoutPlugin/LayoutPlugin').then(
-      (mod) => mod.LayoutPlugin,
-    ),
-  { ssr: false },
+    import(
+      /* webpackChunkName: "layout-plugin" */ '@/components/editor/plugins/layout/LayoutPlugin/LayoutPlugin'
+    ).then((mod) => ({ default: mod.LayoutPlugin })),
+  { ssr: false, loading: () => <PluginLoader /> },
 );
 const AutoEmbedPlugin = dynamic(
-  () => import('@/components/editor/plugins/layout/AutoEmbedPlugin'),
-  { ssr: false },
+  () =>
+    import(
+      /* webpackChunkName: "auto-embed-plugin" */ '@/components/editor/plugins/layout/AutoEmbedPlugin'
+    ),
+  { ssr: false, loading: () => <PluginLoader /> },
 );
 const FloatingLinkEditorPlugin = dynamic(
-  () => import('@/components/editor/plugins/toolbar/FloatingLinkEditorPlugin'),
-  { ssr: false },
+  () =>
+    import(
+      /* webpackChunkName: "floating-link-editor-plugin" */ '@/components/editor/plugins/toolbar/FloatingLinkEditorPlugin'
+    ),
+  { ssr: false, loading: () => <PluginLoader /> },
 );
 const CodeActionMenuPlugin = dynamic(
-  () => import('@/components/editor/plugins/formatting/CodeActionMenuPlugin'),
-  { ssr: false },
+  () =>
+    import(
+      /* webpackChunkName: "code-action-menu-plugin" */ '@/components/editor/plugins/formatting/CodeActionMenuPlugin'
+    ),
+  { ssr: false, loading: () => <PluginLoader /> },
 );
 const TableCellResizer = dynamic(
-  () => import('@/components/editor/plugins/layout/TableCellResizer'),
-  { ssr: false },
+  () =>
+    import(
+      /* webpackChunkName: "table-cell-resizer" */ '@/components/editor/plugins/layout/TableCellResizer'
+    ),
+  { ssr: false, loading: () => <PluginLoader /> },
 );
 const ContextMenuPlugin = dynamic(
-  () => import('@/components/editor/plugins/toolbar/ContextMenuPlugin'),
-  { ssr: false },
+  () =>
+    import(
+      /* webpackChunkName: "context-menu-plugin" */ '@/components/editor/plugins/toolbar/ContextMenuPlugin'
+    ),
+  { ssr: false, loading: () => <PluginLoader /> },
 );
 const SpecialTextPlugin = dynamic(
-  () => import('@/components/editor/plugins/formatting/SpecialTextPlugin'),
-  { ssr: false },
+  () =>
+    import(
+      /* webpackChunkName: "special-text-plugin" */ '@/components/editor/plugins/formatting/SpecialTextPlugin'
+    ),
+  { ssr: false, loading: () => <PluginLoader /> },
 );
 const TableActionMenuPlugin = dynamic(
-  () => import('@/components/editor/plugins/layout/TableActionMenuPlugin'),
-  { ssr: false },
+  () =>
+    import(
+      /* webpackChunkName: "table-action-menu-plugin" */ '@/components/editor/plugins/layout/TableActionMenuPlugin'
+    ),
+  { ssr: false, loading: () => <PluginLoader /> },
 );
 const TableHoverActionsPlugin = dynamic(
-  () => import('@/components/editor/plugins/layout/TableHoverActionsPlugin'),
-  { ssr: false },
+  () =>
+    import(
+      /* webpackChunkName: "table-hover-actions-plugin" */ '@/components/editor/plugins/layout/TableHoverActionsPlugin'
+    ),
+  { ssr: false, loading: () => <PluginLoader /> },
 );
 const MaxLengthPlugin = dynamic(
   () =>
-    import('@/components/editor/plugins/input/MaxLengthPlugin').then(
-      (mod) => mod.MaxLengthPlugin,
-    ),
-  { ssr: false },
+    import(
+      /* webpackChunkName: "max-length-plugin" */ '@/components/editor/plugins/input/MaxLengthPlugin'
+    ).then((mod) => ({ default: mod.MaxLengthPlugin })),
+  { ssr: false, loading: () => <PluginLoader /> },
 );
 const ComponentPickerPlugin = dynamic(
-  () => import('@/components/editor/plugins/interactive/ComponentPickerPlugin'),
-  { ssr: false },
+  () =>
+    import(
+      /* webpackChunkName: "component-picker-plugin" */ '@/components/editor/plugins/interactive/ComponentPickerPlugin'
+    ),
+  { ssr: false, loading: () => <PluginLoader /> },
 );
 const ImagesPlugin = dynamic(
-  () => import('@/components/editor/plugins/media/ImagesPlugin'),
-  { ssr: false },
+  () =>
+    import(
+      /* webpackChunkName: "images-plugin" */ '@/components/editor/plugins/media/ImagesPlugin'
+    ),
+  { ssr: false, loading: () => <PluginLoader /> },
 );
 const SpeechToTextPlugin = dynamic(
-  () => import('@/components/editor/plugins/input/SpeechToTextPlugin'),
-  { ssr: false },
+  () =>
+    import(
+      /* webpackChunkName: "speech-to-text-plugin" */ '@/components/editor/plugins/input/SpeechToTextPlugin'
+    ),
+  { ssr: false, loading: () => <PluginLoader /> },
 );
 const InlineImagePlugin = dynamic(
-  () => import('@/components/editor/plugins/media/InlineImagePlugin'),
-  { ssr: false },
+  () =>
+    import(
+      /* webpackChunkName: "inline-image-plugin" */ '@/components/editor/plugins/media/InlineImagePlugin'
+    ),
+  { ssr: false, loading: () => <PluginLoader /> },
 );
 const DragDropPastePlugin = dynamic(
-  () => import('@/components/editor/plugins/input/DragDropPastePlugin'),
-  { ssr: false },
+  () =>
+    import(
+      /* webpackChunkName: "drag-drop-paste-plugin" */ '@/components/editor/plugins/input/DragDropPastePlugin'
+    ),
+  { ssr: false, loading: () => <PluginLoader /> },
 );
 const FloatingTextFormatToolbarPlugin = dynamic(
   () =>
     import(
-      '@/components/editor/plugins/toolbar/FloatingTextFormatToolbarPlugin'
+      /* webpackChunkName: "floating-text-format-toolbar-plugin" */ '@/components/editor/plugins/toolbar/FloatingTextFormatToolbarPlugin'
     ),
-  { ssr: false },
+  { ssr: false, loading: () => <PluginLoader /> },
 );
 
 interface ReadOnlyLexicalViewerClientProps {
@@ -171,6 +260,12 @@ function LoadInitialJsonPlugin({ json }: { json?: string }) {
 export function ReadOnlyLexicalViewerClient({
   contentJSON,
 }: ReadOnlyLexicalViewerClientProps) {
+  const [mounted, setMounted] = React.useState(false);
+
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
+
   // Validate the JSON content first
   const validatedJSON = React.useMemo(() => {
     return validateLexicalJSON(contentJSON);
@@ -191,6 +286,10 @@ export function ReadOnlyLexicalViewerClient({
     [validatedJSON],
   );
 
+  if (!mounted) {
+    return <PluginLoader />;
+  }
+
   if (!validatedJSON) {
     if (!contentJSON || !contentJSON.trim()) {
       return (
@@ -203,62 +302,72 @@ export function ReadOnlyLexicalViewerClient({
   }
 
   return (
-    <div className="lexical-playground">
-      <LexicalComposer initialConfig={initialConfig}>
-        <HistoryPlugin />
-        <RichTextPlugin
-          contentEditable={
-            <div className="editor-scroller">
-              <div className="editor">
-                <ContentEditable readOnly />
+    <ErrorBoundary fallback={<PluginLoader />}>
+      <div className="lexical-playground">
+        <LexicalComposer initialConfig={initialConfig}>
+          <HistoryPlugin />
+          <RichTextPlugin
+            contentEditable={
+              <div className="editor-scroller">
+                <div className="editor">
+                  <ContentEditable
+                    className="ContentEditable__root"
+                    readOnly={true}
+                    spellCheck={false}
+                  />
+                </div>
               </div>
-            </div>
-          }
-          ErrorBoundary={LexicalErrorBoundary}
-        />
-        <HashtagPlugin />
-        <AutoLinkPlugin />
-        <CodeHighlightPlugin />
-        <ListPlugin />
-        <CheckListPlugin />
-        <TablePlugin hasCellMerge hasCellBackgroundColor hasHorizontalScroll />
-        <LinkPlugin />
-        <ClickableLinkPlugin disabled />
-        <HorizontalRulePlugin />
-        <TabIndentationPlugin />
-        <LayoutPlugin />
-        <AutoEmbedPlugin />
-        <YouTubePlugin />
-        <TwitterPlugin />
-        <FigmaPlugin />
-        <EmojisPlugin />
-        <ComponentPickerPlugin />
-        <TableOfContentsPlugin />
-        <CollapsiblePlugin />
-        <EmojiPickerPlugin />
-        <SpeechToTextPlugin />
-        <TabFocusPlugin />
-        <StickyPlugin />
-        <InlineImagePlugin />
-        <FloatingTextFormatToolbarPlugin setIsLinkEditMode={() => {}} />
-        <DragDropPastePlugin />
-        <KeywordsPlugin />
-        <TableHoverActionsPlugin />
-        <PageBreakPlugin />
-        <FloatingLinkEditorPlugin
-          isLinkEditMode={false}
-          setIsLinkEditMode={() => {}}
-        />
-        <MaxLengthPlugin maxLength={10000} />
-        <ContextMenuPlugin />
-        <SpecialTextPlugin />
-        <CodeActionMenuPlugin />
-        <TableActionMenuPlugin />
-        <PollPlugin />
-        <TableCellResizer />
-        <ImagesPlugin />
-        <LoadInitialJsonPlugin json={contentJSON} />
-      </LexicalComposer>
-    </div>
+            }
+            ErrorBoundary={LexicalErrorBoundary}
+          />
+          <HashtagPlugin />
+          <AutoLinkPlugin />
+          <CodeHighlightPlugin />
+          <ListPlugin />
+          <CheckListPlugin />
+          <TablePlugin
+            hasCellMerge
+            hasCellBackgroundColor
+            hasHorizontalScroll
+          />
+          <LinkPlugin />
+          <ClickableLinkPlugin disabled />
+          <HorizontalRulePlugin />
+          <TabIndentationPlugin />
+          <LayoutPlugin />
+          <AutoEmbedPlugin />
+          <YouTubePlugin />
+          <TwitterPlugin />
+          <FigmaPlugin />
+          <EmojisPlugin />
+          <ComponentPickerPlugin />
+          <TableOfContentsPlugin />
+          <CollapsiblePlugin />
+          <EmojiPickerPlugin />
+          <SpeechToTextPlugin />
+          <TabFocusPlugin />
+          <StickyPlugin />
+          <InlineImagePlugin />
+          <FloatingTextFormatToolbarPlugin setIsLinkEditMode={() => {}} />
+          <DragDropPastePlugin />
+          <KeywordsPlugin />
+          <TableHoverActionsPlugin />
+          <PageBreakPlugin />
+          <FloatingLinkEditorPlugin
+            isLinkEditMode={false}
+            setIsLinkEditMode={() => {}}
+          />
+          <MaxLengthPlugin maxLength={10000} />
+          <ContextMenuPlugin />
+          <SpecialTextPlugin />
+          <CodeActionMenuPlugin />
+          <TableActionMenuPlugin />
+          <PollPlugin />
+          <TableCellResizer />
+          <ImagesPlugin />
+          <LoadInitialJsonPlugin json={contentJSON} />
+        </LexicalComposer>
+      </div>
+    </ErrorBoundary>
   );
 }

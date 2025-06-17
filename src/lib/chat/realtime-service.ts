@@ -1,9 +1,22 @@
 'use client';
 
+
 import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
-import type { RealtimeChannel, RealtimePostgresChangesPayload } from '@supabase/supabase-js';
-import type { MessageWithSender, BroadcastMessage, TypingIndicator } from './types';
+
 import { chatSecurity } from './security';
+
+import type { MessageWithSender, BroadcastMessage, TypingIndicator } from './types';
+import type { RealtimeChannel, RealtimePostgresChangesPayload } from '@supabase/supabase-js';
+
+// ---------------------------------------------------------------------------
+// Constants
+// ---------------------------------------------------------------------------
+
+// eslint-disable-next-line no-magic-numbers
+export const TYPING_STOP_DELAY_MS = 3000 as const;
+
+// eslint-disable-next-line no-magic-numbers
+export const TYPING_EXPIRY_MS = 5000 as const;
 
 /**
  * Real-time service following Supabase's official patterns with enhanced security
@@ -31,19 +44,19 @@ export class RealtimeService {
       onUserJoin?: (_userId: string) => void;
       onUserLeave?: (_userId: string) => void;
     }
-  ) {
+  ): Promise<RealtimeChannel | undefined> {
     const channelName = `conversation:${conversationId}`;
     
     // Security check: Verify user can access this conversation
     const user = await this.getCurrentUser();
     if (!user) {
       console.error('User not authenticated for real-time subscription');
-      return null;
+      return undefined;
     }
 
     const canView = await chatSecurity.canViewConversation(conversationId, user.id);
     if (!canView) {
-      await chatSecurity.logSecurityEvent({
+      chatSecurity.logSecurityEvent({
         action: 'realtime_subscription_denied',
         userId: user.id,
         conversationId,
@@ -51,7 +64,7 @@ export class RealtimeService {
         details: { reason: 'User not authorized to subscribe to this conversation' },
       });
       console.error('User not authorized to subscribe to conversation:', conversationId);
-      return null;
+      return undefined;
     }
     
     // Remove existing channel if it exists
@@ -75,27 +88,29 @@ export class RealtimeService {
           table: 'messages',
           filter: `conversation_id=eq.${conversationId}`,
         },
-        async (payload: RealtimePostgresChangesPayload<Record<string, unknown>>) => {
-          if (payload.new && callbacks.onMessage) {
-            // Fetch full message with sender info
-            const newMessage = payload.new as { id: string };
-            const { data: message } = await this.supabase
-              .from('messages')
-              .select(`
-                *,
-                sender:users!messages_sender_id_fkey(id, full_name, username, avatar_url),
-                reply_to:messages(
+        (payload: RealtimePostgresChangesPayload<Record<string, unknown>>) => {
+          void (async () => {
+            if (payload.new !== undefined && typeof callbacks.onMessage === 'function') {
+              // Fetch full message with sender info
+              const newMessage = payload.new as { id: string };
+              const { data: message } = await this.supabase
+                .from('messages')
+                .select(`
                   *,
-                  sender:users!messages_sender_id_fkey(id, full_name, username, avatar_url)
-                )
-              `)
-              .eq('id', newMessage.id)
-              .single();
+                  sender:users!messages_sender_id_fkey(id, full_name, username, avatar_url),
+                  reply_to:messages(
+                    *,
+                    sender:users!messages_sender_id_fkey(id, full_name, username, avatar_url)
+                  )
+                `)
+                .eq('id', newMessage.id)
+                .single();
 
-            if (message) {
-              callbacks.onMessage(message as unknown as MessageWithSender);
+              if (message !== null && message !== undefined) {
+                callbacks.onMessage(message as unknown as MessageWithSender);
+              }
             }
-          }
+          })().catch(console.error);
         }
       )
       
@@ -108,27 +123,29 @@ export class RealtimeService {
           table: 'messages',
           filter: `conversation_id=eq.${conversationId}`,
         },
-        async (payload: RealtimePostgresChangesPayload<Record<string, unknown>>) => {
-          if (payload.new && callbacks.onMessageUpdate) {
-            // Fetch updated message with sender info
-            const updatedMessage = payload.new as { id: string };
-            const { data: message } = await this.supabase
-              .from('messages')
-              .select(`
-                *,
-                sender:users!messages_sender_id_fkey(id, full_name, username, avatar_url),
-                reply_to:messages(
+        (payload: RealtimePostgresChangesPayload<Record<string, unknown>>) => {
+          void (async () => {
+            if (payload.new !== undefined && typeof callbacks.onMessageUpdate === 'function') {
+              // Fetch updated message with sender info
+              const updatedMessage = payload.new as { id: string };
+              const { data: message } = await this.supabase
+                .from('messages')
+                .select(`
                   *,
-                  sender:users!messages_sender_id_fkey(id, full_name, username, avatar_url)
-                )
-              `)
-              .eq('id', updatedMessage.id)
-              .single();
+                  sender:users!messages_sender_id_fkey(id, full_name, username, avatar_url),
+                  reply_to:messages(
+                    *,
+                    sender:users!messages_sender_id_fkey(id, full_name, username, avatar_url)
+                  )
+                `)
+                .eq('id', updatedMessage.id)
+                .single();
 
-            if (message) {
-              callbacks.onMessageUpdate(message as unknown as MessageWithSender);
+              if (message !== null && message !== undefined) {
+                callbacks.onMessageUpdate(message as unknown as MessageWithSender);
+              }
             }
-          }
+          })().catch(console.error);
         }
       )
       
@@ -142,9 +159,9 @@ export class RealtimeService {
           filter: `conversation_id=eq.${conversationId}`,
         },
         (payload: RealtimePostgresChangesPayload<Record<string, unknown>>) => {
-          if (payload.new && callbacks.onMessageDelete) {
-            const deletedMessage = payload.new as { id: string; deleted_at?: string };
-            if (deletedMessage.deleted_at) {
+          if (payload.new !== undefined && typeof callbacks.onMessageDelete === 'function') {
+            const deletedMessage = payload.new as { id: string; deleted_at?: string | null | undefined };
+            if (typeof deletedMessage.deleted_at === 'string' && deletedMessage.deleted_at.length > 0) {
               callbacks.onMessageDelete(deletedMessage.id);
             }
           }
@@ -156,7 +173,9 @@ export class RealtimeService {
         'broadcast',
         { event: 'typing_start' },
         (payload: BroadcastMessage) => {
-          this.handleTypingStart(conversationId, payload.payload, callbacks.onTyping);
+          if (typeof payload.payload.user_id === 'string' && payload.payload.user_id !== '' && typeof callbacks.onTyping === 'function') {
+            this.handleTypingStart(conversationId, payload.payload, callbacks.onTyping);
+          }
         }
       )
       
@@ -164,7 +183,9 @@ export class RealtimeService {
         'broadcast',
         { event: 'typing_stop' },
         (payload: BroadcastMessage) => {
-          this.handleTypingStop(conversationId, payload.payload, callbacks.onTyping);
+          if (typeof payload.payload.user_id === 'string' && payload.payload.user_id !== '' && typeof callbacks.onTyping === 'function') {
+            this.handleTypingStop(conversationId, payload.payload, callbacks.onTyping);
+          }
         }
       )
       
@@ -173,7 +194,7 @@ export class RealtimeService {
         'broadcast',
         { event: 'user_join' },
         (payload: BroadcastMessage) => {
-          if (payload.payload.user_id && callbacks.onUserJoin) {
+          if (typeof payload.payload.user_id === 'string' && payload.payload.user_id !== '' && typeof callbacks.onUserJoin === 'function') {
             callbacks.onUserJoin(payload.payload.user_id);
           }
         }
@@ -183,7 +204,7 @@ export class RealtimeService {
         'broadcast',
         { event: 'user_leave' },
         (payload: BroadcastMessage) => {
-          if (payload.payload.user_id && callbacks.onUserLeave) {
+          if (typeof payload.payload.user_id === 'string' && payload.payload.user_id !== '' && typeof callbacks.onUserLeave === 'function') {
             callbacks.onUserLeave(payload.payload.user_id);
           }
         }
@@ -191,21 +212,24 @@ export class RealtimeService {
 
     // Subscribe to the channel (keeping original API since receive doesn't exist)
     channel.subscribe((status) => {
-      if (status === 'SUBSCRIBED') {
-      console.info(`Subscribed to conversation ${conversationId}`);
-      
-      // Announce user joining
-      if (callbacks.onUserJoin) {
-        this.broadcastUserJoin(conversationId);
-        }
-      } else if (status === 'CHANNEL_ERROR') {
-        console.error(`Channel error for conversation ${conversationId}`);
-      } else if (status === 'TIMED_OUT') {
-        console.error(`Subscription timeout for conversation ${conversationId}`);
-      } else if (status === 'CLOSED') {
-        console.warn(`Channel closed for conversation ${conversationId}`);
-      } else {
-        console.error(`Failed to subscribe to conversation ${conversationId}:`, status);
+      switch (status as string) {
+        case 'SUBSCRIBED':
+          console.warn(`Subscribed to conversation ${conversationId}`);
+          if (typeof callbacks.onUserJoin === 'function') {
+            void this.broadcastUserJoin(conversationId);
+          }
+          break;
+        case 'CHANNEL_ERROR':
+          console.error(`Channel error for conversation ${conversationId}`);
+          break;
+        case 'TIMED_OUT':
+          console.error(`Subscription timeout for conversation ${conversationId}`);
+          break;
+        case 'CLOSED':
+          console.warn(`Channel closed for conversation ${conversationId}`);
+          break;
+        default:
+          console.error(`Failed to subscribe to conversation ${conversationId}:`, status);
       }
     });
 
@@ -225,17 +249,17 @@ export class RealtimeService {
   /**
    * Unsubscribe from a conversation
    */
-  unsubscribeFromConversation(conversationId: string) {
+  unsubscribeFromConversation(conversationId: string): void {
     const channel = this.channels.get(conversationId);
     if (channel) {
       // Announce user leaving before unsubscribing (only if channel is active)
-      if (channel.state === 'joined') {
-      this.broadcastUserLeave(conversationId);
+      if ((channel.state as string) === 'joined') {
+        void this.broadcastUserLeave(conversationId);
       }
       
       // Only unsubscribe if channel is not already closed
-      if (channel.state !== 'closed') {
-      channel.unsubscribe();
+      if ((channel.state as string) !== 'closed') {
+        void channel.unsubscribe();
       }
       
       this.channels.delete(conversationId);
@@ -254,7 +278,7 @@ export class RealtimeService {
   /**
    * Unsubscribe from all conversations
    */
-  unsubscribeFromAll() {
+  unsubscribeFromAll(): void {
     this.channels.forEach((channel, conversationId) => {
       this.unsubscribeFromConversation(conversationId);
     });
@@ -263,14 +287,14 @@ export class RealtimeService {
   /**
    * Broadcast typing start event following Supabase patterns
    */
-  async broadcastTypingStart(conversationId: string) {
+  async broadcastTypingStart(conversationId: string): Promise<void> {
     const channel = this.channels.get(conversationId);
     if (!channel) return;
 
     const user = await this.getCurrentUser();
     if (!user) return;
 
-    await channel.send({
+    void channel.send({
       type: 'broadcast',
       event: 'typing_start',
       payload: {
@@ -287,22 +311,22 @@ export class RealtimeService {
     this.typingTimeout.set(
       conversationId,
       setTimeout(() => {
-        this.broadcastTypingStop(conversationId);
-      }, 3000)
+        void this.broadcastTypingStop(conversationId);
+      }, TYPING_STOP_DELAY_MS)
     );
   }
 
   /**
    * Broadcast typing stop event
    */
-  async broadcastTypingStop(conversationId: string) {
+  async broadcastTypingStop(conversationId: string): Promise<void> {
     const channel = this.channels.get(conversationId);
     if (!channel) return;
 
     const user = await this.getCurrentUser();
     if (!user) return;
 
-    await channel.send({
+    void channel.send({
       type: 'broadcast',
       event: 'typing_stop',
       payload: {
@@ -323,14 +347,14 @@ export class RealtimeService {
   /**
    * Broadcast user join event
    */
-  private async broadcastUserJoin(conversationId: string) {
+  private async broadcastUserJoin(conversationId: string): Promise<void> {
     const channel = this.channels.get(conversationId);
     if (!channel) return;
 
     const user = await this.getCurrentUser();
     if (!user) return;
 
-    await channel.send({
+    void channel.send({
       type: 'broadcast',
       event: 'user_join',
       payload: {
@@ -344,14 +368,14 @@ export class RealtimeService {
   /**
    * Broadcast user leave event
    */
-  private async broadcastUserLeave(conversationId: string) {
+  private async broadcastUserLeave(conversationId: string): Promise<void> {
     const channel = this.channels.get(conversationId);
     if (!channel) return;
 
     const user = await this.getCurrentUser();
     if (!user) return;
 
-    await channel.send({
+    void channel.send({
       type: 'broadcast',
       event: 'user_leave',
       payload: {
@@ -369,8 +393,10 @@ export class RealtimeService {
     conversationId: string,
     payload: BroadcastMessage['payload'],
     onTyping?: (_typing: TypingIndicator[]) => void
-  ) {
-    if (!payload.user_id || !onTyping) return;
+  ): void {
+    if (typeof payload.user_id !== 'string' || payload.user_id === '' || typeof onTyping !== 'function') {
+      return;
+    }
 
     const currentTyping = this.getTypingUsers(conversationId);
     
@@ -379,7 +405,7 @@ export class RealtimeService {
     const typingIndicator: TypingIndicator = {
       user_id: payload.user_id,
       conversation_id: conversationId,
-      timestamp: payload.timestamp || Date.now(),
+      timestamp: payload.timestamp ?? Date.now(),
     };
 
     if (existingIndex >= 0) {
@@ -400,8 +426,10 @@ export class RealtimeService {
     conversationId: string,
     payload: BroadcastMessage['payload'],
     onTyping?: (_typing: TypingIndicator[]) => void
-  ) {
-    if (!payload.user_id || !onTyping) return;
+  ): void {
+    if (typeof payload.user_id !== 'string' || payload.user_id === '' || typeof onTyping !== 'function') {
+      return;
+    }
 
     const currentTyping = this.getTypingUsers(conversationId);
     const filteredTyping = currentTyping.filter(t => t.user_id !== payload.user_id);
@@ -415,13 +443,17 @@ export class RealtimeService {
    */
   private getTypingUsers(conversationId: string): TypingIndicator[] {
     const stored = localStorage.getItem(`typing:${conversationId}`);
-    if (!stored) return [];
+    if (stored === null) return [];
     
     try {
-      const typing: TypingIndicator[] = JSON.parse(stored);
+      const typing = JSON.parse(stored) as unknown as TypingIndicator[];
       // Filter out stale typing indicators (older than 5 seconds)
       const now = Date.now();
-      return typing.filter(t => now - t.timestamp < 5000);
+      return typing.filter(
+        (t) =>
+          typeof t.timestamp === 'number' &&
+          now - t.timestamp < TYPING_EXPIRY_MS,
+      );
     } catch {
       return [];
     }
@@ -430,16 +462,16 @@ export class RealtimeService {
   /**
    * Set typing users for a conversation
    */
-  private setTypingUsers(conversationId: string, typing: TypingIndicator[]) {
+  private setTypingUsers(conversationId: string, typing: TypingIndicator[]): void {
     localStorage.setItem(`typing:${conversationId}`, JSON.stringify(typing));
   }
 
   /**
    * Get current authenticated user
    */
-  private async getCurrentUser() {
+  private async getCurrentUser(): Promise<{ id: string } | undefined> {
     const { data: { user } } = await this.supabase.auth.getUser();
-    return user;
+    return user ?? undefined;
   }
 
   /**

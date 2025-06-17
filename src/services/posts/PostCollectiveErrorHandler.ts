@@ -1,14 +1,14 @@
-import { 
+import {
   PostCollectiveError,
-  PostCollectiveValidationResult 
+  PostCollectiveValidationResult,
 } from '@/types/enhanced-database.types';
+
 import { postCollectiveAuditService } from './PostCollectiveAuditService';
 
 // ---------------------------------------------------------------------------
 // Constants (defined to avoid "magic numbers" in logic and string building)
 // ---------------------------------------------------------------------------
 
-const ID_RADIX = 36;
 const RANDOM_ID_START = 2;
 const RANDOM_ID_LENGTH = 9;
 
@@ -98,8 +98,9 @@ export class PostCollectiveErrorHandler {
   ): EnhancedPostCollectiveError {
     const enhancedError: EnhancedPostCollectiveError = {
       ...error,
-      id: `error_${Date.now()}_${Math.random()
-        .toString(ID_RADIX)
+      id: `error_${Date.now()}_${crypto
+        .randomUUID()
+        .replace(/-/g, '')
         .slice(RANDOM_ID_START, RANDOM_ID_START + RANDOM_ID_LENGTH)}`,
       severity: this.determineSeverity(error),
       timestamp: new Date(),
@@ -194,7 +195,7 @@ export class PostCollectiveErrorHandler {
     } = {}
   ): Promise<T> {
     const retryKey = `${operation}_${context.user_id ?? 'anonymous'}`;
-    let lastError: EnhancedPostCollectiveError | null = null;
+    let lastError: EnhancedPostCollectiveError | undefined;
 
     for (let attempt = 0; attempt <= MAX_NETWORK_RETRIES; attempt++) {
       try {
@@ -237,8 +238,10 @@ export class PostCollectiveErrorHandler {
     }
 
     // If we get here, all retries failed
-    if (lastError) {
-      throw lastError;
+    if (lastError !== undefined) {
+      throw new Error(lastError.technical_message ?? lastError.message, {
+        cause: lastError,
+      });
     }
 
     throw new Error(`Operation ${operation} failed after retries`);
@@ -546,8 +549,9 @@ export class PostCollectiveErrorHandler {
    * Generate a session ID for tracking related operations
    */
   private generateSessionId(): string {
-    return `session_${Date.now()}_${Math.random()
-      .toString(ID_RADIX)
+    return `session_${Date.now()}_${crypto
+      .randomUUID()
+      .replace(/-/g, '')
       .slice(RANDOM_ID_START, RANDOM_ID_START + RANDOM_ID_LENGTH)}`;
   }
 

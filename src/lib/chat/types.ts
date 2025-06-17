@@ -1,71 +1,24 @@
 // Temporary types for chat functionality
-import type { Json } from '@/lib/database.types';
+import type { Database } from '@/lib/database.types';
 
-export type Conversation = {
-  id: string;
-  title: string | null;
-  type: 'direct' | 'group' | 'channel';
-  description: string | null;
-  is_private: boolean;
-  created_by: string | null;
-  created_at: string;
-  updated_at: string | null;
-  last_message_at: string;
-  archived: boolean;
-};
+// Re-export the exact database types
+export type Conversation = Database['public']['Tables']['conversations']['Row'];
+export type ConversationInsert = Database['public']['Tables']['conversations']['Insert'];
+export type ConversationUpdate = Database['public']['Tables']['conversations']['Update'];
 
-export type ConversationInsert = Omit<Conversation, 'id' | 'created_at' | 'updated_at'>;
-export type ConversationUpdate = Partial<ConversationInsert>;
+export type ConversationParticipant = Database['public']['Tables']['conversation_participants']['Row'];
+export type ConversationParticipantInsert = Database['public']['Tables']['conversation_participants']['Insert'];
+export type ConversationParticipantUpdate = Database['public']['Tables']['conversation_participants']['Update'];
 
-export type ConversationParticipant = {
-  id: string;
-  conversation_id: string;
-  user_id: string;
-  role: 'admin' | 'moderator' | 'member';
-  joined_at: string;
-  last_read_at: string;
-  is_muted: boolean;
-  is_pinned: boolean;
-};
+export type Message = Database['public']['Tables']['messages']['Row'];
+export type MessageInsert = Database['public']['Tables']['messages']['Insert'];
+export type MessageUpdate = Database['public']['Tables']['messages']['Update'];
 
-export type ConversationParticipantInsert = Omit<ConversationParticipant, 'id' | 'joined_at'>;
-export type ConversationParticipantUpdate = Partial<ConversationParticipantInsert>;
+export type MessageReaction = Database['public']['Tables']['message_reactions']['Row'];
+export type MessageReactionInsert = Database['public']['Tables']['message_reactions']['Insert'];
 
-export type Message = {
-  id: string;
-  conversation_id: string;
-  sender_id: string | null;
-  content: string;
-  message_type: 'text' | 'image' | 'file' | 'system';
-  metadata: Json;
-  reply_to_id: string | null;
-  edited_at: string | null;
-  deleted_at: string | null;
-  created_at: string;
-  updated_at: string;
-};
-
-export type MessageInsert = Omit<Message, 'id' | 'created_at' | 'updated_at'>;
-export type MessageUpdate = Partial<MessageInsert>;
-
-export type MessageReaction = {
-  id: string;
-  message_id: string;
-  user_id: string;
-  emoji: string;
-  created_at: string;
-};
-
-export type MessageReactionInsert = Omit<MessageReaction, 'id' | 'created_at'>;
-
-export type MessageReadReceipt = {
-  id: string;
-  message_id: string;
-  user_id: string;
-  read_at: string;
-};
-
-export type MessageReadReceiptInsert = Omit<MessageReadReceipt, 'id'>;
+export type MessageReadReceipt = Database['public']['Tables']['message_read_receipts']['Row'];
+export type MessageReadReceiptInsert = Database['public']['Tables']['message_read_receipts']['Insert'];
 
 // Extended types with joined data
 export type MessageWithSender = Message & {
@@ -88,7 +41,7 @@ export type ConversationWithParticipants = Conversation & {
       username: string | null;
       avatar_url: string | null;
       email?: string | null;
-    };
+    } | null;
   })[];
   last_message?: MessageWithSender | null;
   unread_count?: number;
@@ -129,11 +82,22 @@ export type TypingIndicator = {
   timestamp: number;
 };
 
-export type ChatState = {
+export interface ChatState {
+  /** Conversations the user can see */
   conversations: ConversationWithParticipants[];
-  activeConversation: string | null;
+
+  /** ID of the conversation currently open (undefined → none selected) */
+  activeConversation: string | undefined;
+
+  /** Cached messages keyed by conversation ID */
   messages: Record<string, MessageWithSender[]>;
+
+  /** Typing indicators keyed by conversation ID */
   typing: Record<string, TypingIndicator[]>;
+
+  /** Global loading spinner */
   isLoading: boolean;
-  error: string | null;
-}; 
+
+  /** Last error message shown in UI (undefined → no error) */
+  error: string | undefined;
+}

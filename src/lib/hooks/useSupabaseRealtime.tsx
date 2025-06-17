@@ -1,5 +1,7 @@
 import { useEffect } from 'react';
+
 import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
+
 import type { RealtimeChannel } from '@supabase/supabase-js';
 
 /**
@@ -27,12 +29,10 @@ export function useSupabaseRealtime<T = unknown>(
       channel = supabase.channel(filterStr);
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (channel as any)
+    channel
       .on(
         'postgres_changes',
         {
-          event: '*',
           schema: 'public',
           table,
           ...(filter ? { filter: `${filter.column}=eq.${filter.value}` } : {}),
@@ -51,7 +51,7 @@ export function useSupabaseRealtime<T = unknown>(
       )
       .subscribe();
     return () => {
-      supabase.removeChannel(channel);
+      void supabase.removeChannel(channel);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [table, filter?.column, filter?.value]);

@@ -17,7 +17,7 @@ export async function togglePostReaction({
   userId,
   type,
 }: TogglePostReactionArgs): Promise<unknown> {
-  const supabase = await createServerSupabaseClient();
+  const supabase = createServerSupabaseClient();
   const { data, error } = await supabase
     .from("post_reactions")
     .upsert([{ post_id: postId, user_id: userId, type }], {
@@ -34,7 +34,7 @@ export async function toggleCommentReaction({
   userId,
   reaction_type,
 }: ToggleCommentReactionArgs): Promise<unknown> {
-  const supabase = await createServerSupabaseClient();
+  const supabase = createServerSupabaseClient();
   const { data, error } = await supabase
     .from("comment_reactions")
     .upsert([
@@ -53,7 +53,7 @@ export async function toggleCommentReaction({
 }
 
 export async function getReactionsForPost(postId: string): Promise<unknown[]> {
-  const supabase = await createServerSupabaseClient();
+  const supabase = createServerSupabaseClient();
   const { data, error } = await supabase
     .from("post_reactions")
     .select("user_id, type, created_at")

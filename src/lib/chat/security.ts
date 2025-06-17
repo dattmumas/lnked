@@ -14,8 +14,8 @@ export class ChatSecurity {
    */
   async isParticipant(conversationId: string, userId?: string): Promise<boolean> {
     try {
-      const currentUser = userId || await this.getCurrentUserId();
-      if (!currentUser) return false;
+      const currentUser = userId ?? (await this.getCurrentUserId());
+      if (typeof currentUser !== 'string' || currentUser === '') return false;
 
       const { data, error } = await this.supabase
         .from('conversation_participants')
@@ -35,8 +35,8 @@ export class ChatSecurity {
    */
   async isConversationAdmin(conversationId: string, userId?: string | null): Promise<boolean> {
     try {
-      const currentUser = userId || await this.getCurrentUserId();
-      if (!currentUser) return false;
+      const currentUser = userId ?? (await this.getCurrentUserId());
+      if (typeof currentUser !== 'string' || currentUser === '') return false;
 
       const { data, error } = await this.supabase
         .from('conversation_participants')
@@ -55,28 +55,28 @@ export class ChatSecurity {
   /**
    * Check if user can send messages to a conversation
    */
-  async canSendMessage(conversationId: string, userId?: string): Promise<boolean> {
+  canSendMessage(conversationId: string, userId?: string): Promise<boolean> {
     return this.isParticipant(conversationId, userId);
   }
 
   /**
    * Check if user can view a conversation
    */
-  async canViewConversation(conversationId: string, userId?: string): Promise<boolean> {
+  canViewConversation(conversationId: string, userId?: string): Promise<boolean> {
     return this.isParticipant(conversationId, userId);
   }
 
   /**
    * Check if user can add participants to a conversation
    */
-  async canAddParticipants(conversationId: string, userId?: string): Promise<boolean> {
+  canAddParticipants(conversationId: string, userId?: string): Promise<boolean> {
     return this.isConversationAdmin(conversationId, userId);
   }
 
   /**
    * Check if user can remove participants from a conversation
    */
-  async canRemoveParticipants(conversationId: string, userId?: string): Promise<boolean> {
+  canRemoveParticipants(conversationId: string, userId?: string): Promise<boolean> {
     return this.isConversationAdmin(conversationId, userId);
   }
 
@@ -85,8 +85,8 @@ export class ChatSecurity {
    */
   async canEditMessage(messageId: string, userId?: string): Promise<boolean> {
     try {
-      const currentUser = userId || await this.getCurrentUserId();
-      if (!currentUser) return false;
+      const currentUser = userId ?? (await this.getCurrentUserId());
+      if (typeof currentUser !== 'string' || currentUser === '') return false;
 
       const { data, error } = await this.supabase
         .from('messages')
@@ -106,27 +106,29 @@ export class ChatSecurity {
    */
   async canDeleteMessage(messageId: string, userId?: string): Promise<boolean> {
     try {
-      const currentUser = userId || await this.getCurrentUserId();
-      if (!currentUser) return false;
+      const currentUser = userId ?? (await this.getCurrentUserId());
+      if (typeof currentUser !== 'string' || currentUser === '') return false;
 
-      // User can delete their own messages
-      const { data: message } = await this.supabase
+      // Retrieve the message along with its sender and conversation
+      const {
+        data: message,
+        error,
+      } = await this.supabase
         .from('messages')
         .select('sender_id, conversation_id')
         .eq('id', messageId)
         .single();
 
-      if (!message) return false;
+      // If the query errored, treat as “message not found”
+      if (error) return false;
 
-      // Check if user is the sender
-      if (message.sender_id === currentUser) return true;
+      // User can delete their own messages
+      if (message?.sender_id === currentUser) return true;
 
-      // Check if user is a conversation admin  
-      // `currentUser` is guaranteed to be a string at this point due to the
-      // null check above. Use a non-null assertion to satisfy the type checker.
-      return await this.isConversationAdmin(
-        message.conversation_id as string,
-        currentUser!,
+      // Otherwise, user must be a conversation admin
+      return this.isConversationAdmin(
+        message?.conversation_id as string,
+        currentUser,
       );
     } catch {
       return false;
@@ -146,9 +148,11 @@ export class ChatSecurity {
         .select('id')
         .in('id', participantIds);
 
-      if (error) throw error;
+      if (error) {
+        throw error;
+      }
 
-      const validIds = users?.map(u => u.id) || [];
+      const validIds = (users ?? []).map(u => u.id);
       const invalidIds = participantIds.filter(id => !validIds.includes(id));
 
       return {
@@ -166,29 +170,28 @@ export class ChatSecurity {
   /**
    * Get current authenticated user ID
    */
-  private async getCurrentUserId(): Promise<string | null> {
+  private async getCurrentUserId(): Promise<string | undefined> {
     try {
       const { data: { user } } = await this.supabase.auth.getUser();
-      return user?.id || null;
+      return typeof user?.id === 'string' && user.id.length > 0 ? user.id : undefined;
     } catch {
-      return null;
+      return undefined;
     }
   }
 
   /**
    * Log security events for audit trail
    */
-  async logSecurityEvent(event: {
+  logSecurityEvent(event: {
     action: string;
     userId?: string;
     conversationId?: string;
     messageId?: string;
     details?: Record<string, unknown>;
     success: boolean;
-  }): Promise<void> {
+  }): void {
     try {
-      // In a production environment, you might want to log to a dedicated security log table
-      console.info('Chat Security Event:', {
+      console.warn('Chat Security Event:', {
         ...event,
         timestamp: new Date().toISOString(),
       });
@@ -213,8 +216,8 @@ export class ServerChatSecurity {
    */
   async isParticipant(conversationId: string, userId?: string): Promise<boolean> {
     try {
-      const currentUser = userId || await this.getCurrentUserId();
-      if (!currentUser) return false;
+      const currentUser = userId ?? (await this.getCurrentUserId());
+      if (typeof currentUser !== 'string' || currentUser === '') return false;
 
       const { data, error } = await this.supabase
         .from('conversation_participants')
@@ -232,12 +235,12 @@ export class ServerChatSecurity {
   /**
    * Get current authenticated user ID (server-side)
    */
-  private async getCurrentUserId(): Promise<string | null> {
+  private async getCurrentUserId(): Promise<string | undefined> {
     try {
       const { data: { user } } = await this.supabase.auth.getUser();
-      return user?.id || null;
+      return typeof user?.id === 'string' && user.id.length > 0 ? user.id : undefined;
     } catch {
-      return null;
+      return undefined;
     }
   }
 }
@@ -246,6 +249,8 @@ export class ServerChatSecurity {
 export const chatSecurity = new ChatSecurity();
 
 // Export function to create server security instance
-export const createServerChatSecurity = (supabaseClient: Awaited<ReturnType<typeof createServerSupabaseClient>>) => {
+export const createServerChatSecurity = (
+  supabaseClient: Awaited<ReturnType<typeof createServerSupabaseClient>>,
+): ServerChatSecurity => {
   return new ServerChatSecurity(supabaseClient);
-}; 
+};

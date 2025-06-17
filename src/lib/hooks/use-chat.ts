@@ -1,14 +1,19 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+
 import { chatService } from '@/lib/chat/chat-service';
 import { realtimeService } from '@/lib/chat/realtime-service';
-import type { Json } from '@/lib/database.types';
-import type { 
-  MessageWithSender, 
+
+import type {
+  MessageWithSender,
   TypingIndicator,
-  ChatState, 
+  ChatState,
 } from '@/lib/chat/types';
+import type { Json } from '@/lib/database.types';
+
+/** Helper: “defined & non‑empty” */
+const isDefined = (v: unknown): boolean => v !== undefined && v !== '';
 
 /**
  * React hook for managing chat state
@@ -27,40 +32,72 @@ const BACKGROUND_REFRESH_INTERVAL_MS = 30_000;
 /** Flag to toggle realtime functionality. Useful for local testing */
 const ENABLE_REALTIME = true;
 
-export function useChat() {
+export const useChat = (): {
+  conversations: ChatState['conversations'];
+  activeConversation: ChatState['activeConversation'];
+  messages: MessageWithSender[];
+  isLoading: boolean;
+  error: string | undefined;
+  typingUsers: TypingIndicator[];
+  onlineUsers: Set<string>;
+  loadConversations: () => Promise<void>;
+  loadMessages: (
+    conversationId: string,
+    limit?: number,
+    offset?: number,
+  ) => Promise<MessageWithSender[]>;
+  sendMessage: (
+    data: Parameters<typeof chatService.sendMessage>[0],
+  ) => Promise<MessageWithSender | undefined>;
+  createConversation: (
+    data: Parameters<typeof chatService.createConversation>[0],
+  ) => Promise<unknown>;
+  setActiveConversation: (conversationId: string | undefined) => Promise<void>;
+  startTyping: () => void;
+  stopTyping: () => void;
+  addReaction: (messageId: string, emoji: string) => Promise<void>;
+  removeReaction: (messageId: string, emoji: string) => Promise<void>;
+  searchMessages: (
+    query: string,
+    conversationId?: string,
+  ) => Promise<MessageWithSender[]>;
+  clearError: () => void;
+  getUnreadCount: (conversationId: string) => number;
+  isUserOnline: (userId: string) => boolean;
+  getActiveMessages: () => MessageWithSender[];
+  getTypingUsers: () => TypingIndicator[];
+} => {
   const [state, setState] = useState<ChatState>({
     conversations: [],
-    activeConversation: null,
+    activeConversation: undefined,
     messages: {},
     typing: {},
     isLoading: false,
-    error: null,
+    error: undefined,
   });
 
   const [onlineUsers, setOnlineUsers] = useState<Set<string>>(new Set());
   const initialized = useRef(false);
-  const refreshInterval = useRef<NodeJS.Timeout | null>(null);
+  const refreshInterval = useRef<NodeJS.Timeout | undefined>(undefined);
 
   /**
    * Load user's conversations
    */
   const loadConversations = useCallback(async (): Promise<void> => {
-    setState(prev => ({ ...prev, isLoading: true, error: null }));
-    
+    setState(prev => ({ ...prev, isLoading: true, error: undefined }));
     try {
       const { data, error } = await chatService.getConversations();
-      
-      if (error) throw error;
-      
+      if (error) throw new Error(error.message);
       setState(prev => ({
         ...prev,
-        conversations: data || [],
+        conversations: data ?? [],
         isLoading: false,
       }));
     } catch (error) {
+      const err = error as Error;
       setState(prev => ({
         ...prev,
-        error: error instanceof Error ? error.message : 'Failed to load conversations',
+        error: err.message,
         isLoading: false,
       }));
     }
@@ -77,27 +114,25 @@ export function useChat() {
     ): Promise<MessageWithSender[]> => {
     try {
       const { data, error } = await chatService.getMessages(conversationId, limit, offset);
-      
-      if (error !== null && error !== undefined) {
-        throw error;
+      if (error) {
+        throw new Error(error.message);
       }
-      
       setState(prev => ({
         ...prev,
         messages: {
           ...prev.messages,
-          [conversationId]: offset === 0 ? (data || []) : [
-            ...(prev.messages[conversationId] || []),
-            ...(data || [])
+          [conversationId]: offset === 0 ? (data ?? []) : [
+            ...(prev.messages[conversationId] ?? []),
+            ...(data ?? [])
           ],
         },
       }));
-      
       return data ?? [];
     } catch (error) {
+      const err = error as Error;
       setState(prev => ({
         ...prev,
-        error: error instanceof Error ? error.message : 'Failed to load messages',
+        error: err.message,
       }));
       return [];
     }
@@ -114,32 +149,28 @@ export function useChat() {
       reply_to_id?: string;
       metadata?: Json;
     },
-  ): Promise<MessageWithSender | null> => {
+  ): Promise<MessageWithSender | undefined> => {
     try {
       // Stop typing indicator
       if (ENABLE_REALTIME) {
-      realtimeService.broadcastTypingStop(data.conversation_id);
+        void realtimeService.broadcastTypingStop(data.conversation_id);
       }
-      
       const { data: message, error } = await chatService.sendMessage(data);
-      
-      if (error !== null && error !== undefined) {
-        throw error;
+      if (error) {
+        throw new Error(error.message);
       }
-      
       // Immediately add message to local state (don't wait for realtime)
-      if (message) {
+      if (isDefined(message)) {
         setState(prev => ({
           ...prev,
           messages: {
             ...prev.messages,
             [data.conversation_id]: [
-              ...(prev.messages[data.conversation_id] || []),
+              ...(prev.messages[data.conversation_id] ?? []),
               message,
             ],
           },
         }));
-        
         // Update conversation last message time
         setState(prev => ({
           ...prev,
@@ -150,14 +181,14 @@ export function useChat() {
           ),
         }));
       }
-      
-      return message ?? null;
+      return message ?? undefined;
     } catch (error) {
+      const err = error as Error;
       setState(prev => ({
         ...prev,
-        error: error instanceof Error ? error.message : 'Failed to send message',
+        error: err.message,
       }));
-      return null;
+      return undefined;
     }
   }, []);
 
@@ -172,45 +203,43 @@ export function useChat() {
       is_private?: boolean;
       participant_ids: string[];
     },
-  ): Promise<unknown | null> => {
+  ): Promise<unknown> => {
     try {
       const { data: conversation, error } = await chatService.createConversation(data);
-      
-      if (error !== null && error !== undefined) {
-        throw error;
+      if (error) {
+        throw new Error(error.message);
       }
-      
       // Reload conversations to get the new one with full data
       await loadConversations();
-      
-      return conversation ?? null;
+      return conversation ?? undefined;
     } catch (error) {
+      const err = error as Error;
       setState(prev => ({
         ...prev,
-        error: error instanceof Error ? error.message : 'Failed to create conversation',
+        error: err.message,
       }));
-      return null;
+      return undefined;
     }
   }, [loadConversations]);
 
   /**
    * Set active conversation and subscribe to real-time updates
    */
-  const setActiveConversation = useCallback(async (conversationId: string | null): Promise<void> => {
+  const setActiveConversation = useCallback(async (conversationId: string | undefined): Promise<void> => {
     // Unsubscribe from previous conversation
-    if (state.activeConversation !== null && ENABLE_REALTIME) {
-      realtimeService.unsubscribeFromConversation(state.activeConversation);
+    if (state.activeConversation !== undefined && ENABLE_REALTIME) {
+      void realtimeService.unsubscribeFromConversation(state.activeConversation);
     }
     
     // Clear any existing refresh interval
-    if (refreshInterval.current) {
+    if (refreshInterval.current !== undefined) {
       clearInterval(refreshInterval.current);
-      refreshInterval.current = null;
+      refreshInterval.current = undefined;
     }
 
     setState(prev => ({ ...prev, activeConversation: conversationId }));
 
-    if (conversationId === null) return;
+    if (conversationId === undefined) return;
 
     // Load messages if not already loaded
     if (state.messages[conversationId] === undefined) {
@@ -229,7 +258,7 @@ export function useChat() {
     await realtimeService.subscribeToConversation(conversationId, {
       onMessage: (message: MessageWithSender) => {
           setState(prev => {
-            const existingMessages = prev.messages[conversationId] || [];
+            const existingMessages = prev.messages[conversationId] ?? [];
             // Check if message already exists (prevent duplicates)
             const messageExists = existingMessages.some(msg => msg.id === message.id);
             
@@ -265,7 +294,7 @@ export function useChat() {
           ...prev,
           messages: {
             ...prev.messages,
-            [conversationId]: (prev.messages[conversationId] || []).map(msg =>
+            [conversationId]: (prev.messages[conversationId] ?? []).map(msg =>
               msg.id === message.id ? message : msg
             ),
           },
@@ -277,7 +306,7 @@ export function useChat() {
           ...prev,
           messages: {
             ...prev.messages,
-            [conversationId]: (prev.messages[conversationId] || []).filter(msg =>
+            [conversationId]: (prev.messages[conversationId] ?? []).filter(msg =>
               msg.id !== messageId
             ),
           },
@@ -312,33 +341,39 @@ export function useChat() {
     }
     
     // Set up auto-refresh as backup (every 30 seconds)
-    if (refreshInterval.current) {
+    if (refreshInterval.current !== undefined) {
       clearInterval(refreshInterval.current);
     }
     
-    refreshInterval.current = setInterval(async () => {
-      if (conversationId !== null) {
-        // Silently refresh messages without changing loading state
-        try {
-          const { data } = await chatService.getMessages(
-            conversationId,
-            DEFAULT_MESSAGE_LIMIT,
-            0,
-          );
-          if (data) {
-            setState(prev => ({
-              ...prev,
-              messages: {
-                ...prev.messages,
-                [conversationId]: data,
-              },
-            }));
+    refreshInterval.current = setInterval(() => {
+      void (async () => {
+        if (conversationId !== undefined) {
+          // Silently refresh messages without changing loading state
+          try {
+            const { data, error } = await chatService.getMessages(
+              conversationId,
+              DEFAULT_MESSAGE_LIMIT,
+              0,
+            );
+            if (error) {
+              throw new Error(error.message);
+            }
+            if (isDefined(data)) {
+              setState(prev => ({
+                ...prev,
+                messages: {
+                  ...prev.messages,
+                  [conversationId]: data,
+                },
+              }));
+            }
+          } catch (error) {
+            // Silently ignore refresh errors
+            const err = error as Error;
+            console.warn('Background refresh failed:', err.message);
           }
-        } catch (error) {
-          // Silently ignore refresh errors
-          console.warn('Background refresh failed:', error);
         }
-      }
+      })();
     }, BACKGROUND_REFRESH_INTERVAL_MS); // Refresh every 30 seconds
   }, [state.activeConversation, state.messages, loadMessages]);
 
@@ -346,8 +381,8 @@ export function useChat() {
    * Start typing indicator
    */
   const startTyping = useCallback((): void => {
-    if (state.activeConversation !== null && ENABLE_REALTIME) {
-      realtimeService.broadcastTypingStart(state.activeConversation);
+    if (state.activeConversation !== undefined && ENABLE_REALTIME) {
+      void realtimeService.broadcastTypingStart(state.activeConversation);
     }
   }, [state.activeConversation]);
 
@@ -355,8 +390,8 @@ export function useChat() {
    * Stop typing indicator
    */
   const stopTyping = useCallback((): void => {
-    if (state.activeConversation !== null && ENABLE_REALTIME) {
-      realtimeService.broadcastTypingStop(state.activeConversation);
+    if (state.activeConversation !== undefined && ENABLE_REALTIME) {
+      void realtimeService.broadcastTypingStop(state.activeConversation);
     }
   }, [state.activeConversation]);
 
@@ -366,13 +401,14 @@ export function useChat() {
   const addReaction = useCallback(async (messageId: string, emoji: string): Promise<void> => {
     try {
       const { error } = await chatService.addReaction(messageId, emoji);
-      if (error !== null && error !== undefined) {
-        throw error;
+      if (error) {
+        throw new Error(error.message);
       }
     } catch (error) {
+      const err = error as Error;
       setState(prev => ({
         ...prev,
-        error: error instanceof Error ? error.message : 'Failed to add reaction',
+        error: err.message,
       }));
     }
   }, []);
@@ -383,13 +419,14 @@ export function useChat() {
   const removeReaction = useCallback(async (messageId: string, emoji: string): Promise<void> => {
     try {
       const { error } = await chatService.removeReaction(messageId, emoji);
-      if (error !== null && error !== undefined) {
-        throw error;
+      if (error) {
+        throw new Error(error.message);
       }
     } catch (error) {
+      const err = error as Error;
       setState(prev => ({
         ...prev,
-        error: error instanceof Error ? error.message : 'Failed to remove reaction',
+        error: err.message,
       }));
     }
   }, []);
@@ -403,14 +440,15 @@ export function useChat() {
   ): Promise<MessageWithSender[]> => {
     try {
       const { data, error } = await chatService.searchMessages(query, conversationId);
-      if (error !== null && error !== undefined) {
-        throw error;
+      if (error) {
+        throw new Error(error.message);
       }
       return data ?? [];
     } catch (error) {
+      const err = error as Error;
       setState(prev => ({
         ...prev,
-        error: error instanceof Error ? error.message : 'Failed to search messages',
+        error: err.message,
       }));
       return [];
     }
@@ -420,23 +458,23 @@ export function useChat() {
    * Clear error
    */
   const clearError = useCallback((): void => {
-    setState(prev => ({ ...prev, error: null }));
+    setState(prev => ({ ...prev, error: undefined }));
   }, []);
 
   /**
    * Get typing users for active conversation
    */
   const getTypingUsers = useCallback((): TypingIndicator[] => {
-    if (state.activeConversation === null) return [];
-    return state.typing[state.activeConversation] || [];
+    if (state.activeConversation === undefined) return [];
+    return state.typing[state.activeConversation] ?? [];
   }, [state.activeConversation, state.typing]);
 
   /**
    * Get messages for active conversation
    */
   const getActiveMessages = useCallback((): MessageWithSender[] => {
-    if (state.activeConversation === null) return [];
-    return state.messages[state.activeConversation] || [];
+    if (state.activeConversation === undefined) return [];
+    return state.messages[state.activeConversation] ?? [];
   }, [state.activeConversation, state.messages]);
 
   /**
@@ -444,7 +482,7 @@ export function useChat() {
    */
   const getUnreadCount = useCallback((conversationId: string): number => {
     const conversation = state.conversations.find(c => c.id === conversationId);
-    return conversation?.unread_count || 0;
+    return conversation?.unread_count ?? 0;
   }, [state.conversations]);
 
   /**
@@ -458,13 +496,13 @@ export function useChat() {
   useEffect((): () => void => {
     if (initialized.current === false) {
       initialized.current = true;
-      loadConversations();
+      void loadConversations();
     }
 
     // Cleanup on unmount
     return () => {
       if (ENABLE_REALTIME) {
-      realtimeService.unsubscribeFromAll();
+        void realtimeService.unsubscribeFromAll();
       }
       // Clear refresh interval
       if (refreshInterval.current) {

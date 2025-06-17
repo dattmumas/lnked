@@ -1,7 +1,7 @@
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 export async function getPostById(postId: string): Promise<unknown> {
-  const supabase = await createServerSupabaseClient();
+  const supabase = createServerSupabaseClient();
   const { data, error } = await supabase
     .from("posts")
     .select(
@@ -18,7 +18,7 @@ export async function getPostById(postId: string): Promise<unknown> {
 }
 
 export async function getPostBySlug(slug: string): Promise<unknown> {
-  const supabase = await createServerSupabaseClient();
+  const supabase = createServerSupabaseClient();
   const { data, error } = await supabase
     .from("posts")
     .select(
@@ -35,7 +35,7 @@ export async function getPostBySlug(slug: string): Promise<unknown> {
 }
 
 export async function getPostStats(postId: string): Promise<unknown> {
-  const supabase = await createServerSupabaseClient();
+  const supabase = createServerSupabaseClient();
   const { data, error } = await supabase
     .from("posts")
     .select("like_count, dislike_count, bookmark_count, view_count")
@@ -46,7 +46,7 @@ export async function getPostStats(postId: string): Promise<unknown> {
 }
 
 export async function getPostStatsBySlug(slug: string): Promise<unknown> {
-  const supabase = await createServerSupabaseClient();
+  const supabase = createServerSupabaseClient();
   const { data, error } = await supabase
     .from("posts")
     .select("like_count, dislike_count, bookmark_count, view_count")

@@ -1,4 +1,7 @@
+/* eslint-disable unicorn/no-null */
+
 import { useEffect, useState } from 'react';
+
 import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
 
 interface FollowerData {
@@ -74,7 +77,7 @@ export function useFollowerData({
       }
     }
 
-    fetchFollowerData();
+    void fetchFollowerData();
   }, [targetId, targetType, currentUserId, supabase]);
 
   return {
@@ -144,7 +147,7 @@ export function useRealtimeFollowerData({
       }
     }
 
-    fetchInitialData();
+    void fetchInitialData();
 
     // Set up real-time subscription for follow changes
     const channel = supabase
@@ -198,7 +201,7 @@ export function useRealtimeFollowerData({
       .subscribe();
 
     return () => {
-      supabase.removeChannel(channel);
+      void supabase.removeChannel(channel);
     };
   }, [targetId, targetType, currentUserId, supabase]);
 

@@ -4,20 +4,29 @@ import React, {
   createContext,
   useContext,
   useMemo,
-  PropsWithChildren,
   useEffect,
   useState,
+  useCallback,
 } from 'react';
+
 import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
+
 import {
   useProfile,
   useProfileMetrics,
   useFollowStatus,
 } from './use-profile-data';
+
 import type { ProfileContextValue } from './types';
 
 // Create the context
-const ProfileContext = createContext<ProfileContextValue | null>(null);
+const ProfileContext = createContext<ProfileContextValue | undefined>(
+  undefined,
+);
+
+// Skeleton list lengths – avoids magic numbers
+const SKELETON_FOLLOWER_COUNT = 3;
+const SKELETON_POST_COUNT = 6;
 
 // Profile context provider component
 export interface ProfileContextProviderProps {
@@ -28,35 +37,37 @@ export interface ProfileContextProviderProps {
 export function ProfileContextProvider({
   username,
   children,
-}: ProfileContextProviderProps) {
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+}: ProfileContextProviderProps): JSX.Element {
+  const [currentUserId, setCurrentUserId] = useState<string | undefined>(
+    undefined,
+  );
   const [authLoading, setAuthLoading] = useState(true);
 
   // Get current user authentication status
   useEffect(() => {
-    const getCurrentUser = async () => {
+    const getCurrentUser = async (): Promise<void> => {
       try {
         const supabase = createSupabaseBrowserClient();
         const {
           data: { user },
         } = await supabase.auth.getUser();
-        setCurrentUserId(user?.id || null);
+        setCurrentUserId(user?.id);
       } catch (error) {
         console.error('Error getting current user:', error);
-        setCurrentUserId(null);
+        setCurrentUserId(undefined);
       } finally {
         setAuthLoading(false);
       }
     };
 
-    getCurrentUser();
+    void getCurrentUser();
 
     // Listen for auth changes
     const supabase = createSupabaseBrowserClient();
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
-      setCurrentUserId(session?.user?.id || null);
+      setCurrentUserId(session?.user?.id);
     });
 
     return () => subscription.unsubscribe();
@@ -69,8 +80,8 @@ export function ProfileContextProvider({
 
   // Compute derived values
   const contextValue = useMemo(() => {
-    if (!profileQuery.data || authLoading) {
-      return null;
+    if (profileQuery.data === undefined || authLoading) {
+      return undefined;
     }
 
     const profile = profileQuery.data;
@@ -78,7 +89,7 @@ export function ProfileContextProvider({
     const followStatus = followStatusQuery.data;
 
     // Check if current user is the profile owner
-    const isOwner = currentUserId ? currentUserId === profile.id : false;
+    const isOwner = currentUserId !== undefined && currentUserId === profile.id;
 
     // Compute permissions based on profile settings and user status
     const permissions = {
@@ -90,7 +101,7 @@ export function ProfileContextProvider({
 
     return {
       profile,
-      metrics: metrics || {
+      metrics: metrics ?? {
         followerCount: 0,
         followingCount: 0,
         postCounts: { writing: 0, video: 0, total: 0 },
@@ -99,7 +110,7 @@ export function ProfileContextProvider({
       },
       isOwner,
       canEdit: permissions.canEdit,
-      isFollowing: followStatus?.isFollowing || false,
+      isFollowing: followStatus?.isFollowing ?? false,
       permissions,
     };
   }, [
@@ -116,7 +127,7 @@ export function ProfileContextProvider({
   }
 
   // Show error state if profile fetch failed
-  if (profileQuery.error || !contextValue) {
+  if (profileQuery.error || contextValue === undefined) {
     return <ProfileError error={profileQuery.error} />;
   }
 
@@ -140,8 +151,34 @@ export function useProfileContext(): ProfileContextValue {
   return context;
 }
 
+// --- Skeleton helper components ---------------------------------------------
+
+function FollowerSkeletonItem(): JSX.Element {
+  return (
+    <div className="flex gap-3">
+      <div className="h-10 w-10 bg-muted rounded-full" />
+      <div className="space-y-2 flex-1">
+        <div className="h-4 bg-muted rounded w-24" />
+        <div className="h-3 bg-muted rounded w-full" />
+      </div>
+    </div>
+  );
+}
+
+function PostSkeletonItem({ index }: { index: number }): JSX.Element {
+  return (
+    <div key={index} className="bg-card rounded-lg border overflow-hidden">
+      <div className="aspect-video bg-muted" />
+      <div className="p-4 space-y-2">
+        <div className="h-4 bg-muted rounded w-full" />
+        <div className="h-3 bg-muted rounded w-24" />
+      </div>
+    </div>
+  );
+}
+
 // Loading skeleton component
-function ProfileSkeleton() {
+function ProfileSkeleton(): JSX.Element {
   return (
     <div className="animate-pulse">
       <div className="grid grid-cols-[1fr_65%_35%_1fr] gap-8 px-8 max-lg:grid-cols-1">
@@ -173,14 +210,8 @@ function ProfileSkeleton() {
               <div className="h-8 bg-muted rounded w-24" />
             </div>
             <div className="space-y-3">
-              {Array.from({ length: 3 }).map((_, i) => (
-                <div key={i} className="flex gap-3">
-                  <div className="h-10 w-10 bg-muted rounded-full" />
-                  <div className="space-y-2 flex-1">
-                    <div className="h-4 bg-muted rounded w-24" />
-                    <div className="h-3 bg-muted rounded w-full" />
-                  </div>
-                </div>
+              {Array.from({ length: SKELETON_FOLLOWER_COUNT }, (_, i) => (
+                <FollowerSkeletonItem key={i} />
               ))}
             </div>
           </div>
@@ -195,17 +226,8 @@ function ProfileSkeleton() {
           </div>
 
           <div className="grid grid-cols-3 gap-6 max-lg:grid-cols-2 max-md:grid-cols-1">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <div
-                key={i}
-                className="bg-card rounded-lg border overflow-hidden"
-              >
-                <div className="aspect-video bg-muted" />
-                <div className="p-4 space-y-2">
-                  <div className="h-4 bg-muted rounded w-full" />
-                  <div className="h-3 bg-muted rounded w-24" />
-                </div>
-              </div>
+            {Array.from({ length: SKELETON_POST_COUNT }, (_, i) => (
+              <PostSkeletonItem index={i} key={i} />
             ))}
           </div>
         </div>
@@ -216,10 +238,14 @@ function ProfileSkeleton() {
 
 // Error display component
 interface ProfileErrorProps {
-  error?: Error | null;
+  error?: Error;
 }
 
-function ProfileError({ error }: ProfileErrorProps) {
+function ProfileError({ error }: ProfileErrorProps): JSX.Element {
+  const handleGoBack = useCallback((): void => {
+    window.history.back();
+  }, []);
+
   return (
     <div className="flex items-center justify-center min-h-[50vh]">
       <div className="text-center space-y-4">
@@ -228,11 +254,11 @@ function ProfileError({ error }: ProfileErrorProps) {
           Profile Not Found
         </h2>
         <p className="text-muted-foreground max-w-md">
-          {error?.message ||
+          {error?.message ??
             "The profile you're looking for doesn't exist or has been made private."}
         </p>
         <button
-          onClick={() => window.history.back()}
+          onClick={handleGoBack}
           className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2"
         >
           Go Back

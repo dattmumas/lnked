@@ -1,6 +1,8 @@
+/* eslint-disable unicorn/no-null */
 'use client';
 
 import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
+
 import type {
   Notification,
   NotificationPreferences,
@@ -330,34 +332,36 @@ export class ClientNotificationService {
           table: 'notifications',
           filter: `recipient_id=eq.${userId}`,
         },
-        async (payload: { new: Record<string, unknown> }) => {
-          // Fetch the full notification with actor data
-          const { data: notification } = await this.supabase
-            .from('notifications')
-            .select(`
-              *,
-              actor:users!notifications_actor_id_fkey(
-                id,
-                full_name,
-                username,
-                avatar_url
-              )
-            `)
-            .eq('id', String(payload.new.id))
-            .single();
+        (payload: { new: Record<string, unknown> }) => {
+          void (async () => {
+            // Fetch the full notification with actor data
+            const { data: notification } = await this.supabase
+              .from('notifications')
+              .select(`
+                *,
+                actor:users!notifications_actor_id_fkey(
+                  id,
+                  full_name,
+                  username,
+                  avatar_url
+                )
+              `)
+              .eq('id', String(payload.new.id))
+              .single();
 
-          if (notification !== null && notification !== undefined) {
-            callback({
-              ...notification,
-              entity_type: notification.entity_type as EntityType | null,
-            } as Notification);
-          }
+            if (notification !== null && notification !== undefined) {
+              callback({
+                ...notification,
+                entity_type: notification.entity_type as EntityType | null,
+              } as Notification);
+            }
+          })();
         }
       )
       .subscribe();
 
     return () => {
-      this.supabase.removeChannel(channel);
+      void this.supabase.removeChannel(channel);
     };
   }
 }

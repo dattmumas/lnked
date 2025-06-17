@@ -3,8 +3,8 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 export async function getUserSubscription(
   userId: string,
   collectiveId: string
-) {
-  const supabase = await createServerSupabaseClient();
+): Promise<boolean> {
+  const supabase = createServerSupabaseClient();
   const { data, error } = await supabase
     .from("subscriptions")
     .select("*")

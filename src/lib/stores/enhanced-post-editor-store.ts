@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+
 import { 
   EnhancedPostFormData,
   CollectiveSharingSettings 
@@ -14,7 +15,7 @@ export interface EnhancedPostEditorFormData extends Omit<EnhancedPostFormData, '
 interface EnhancedPostEditorStore {
   // Form data
   formData: EnhancedPostEditorFormData;
-  originalData: EnhancedPostEditorFormData | null;
+  originalData: EnhancedPostEditorFormData | undefined;
 
   // UI state
   currentPage: 'editor' | 'details';
@@ -88,7 +89,7 @@ const defaultSharingSettings: CollectiveSharingSettings = {
 export const useEnhancedPostEditorStore = create<EnhancedPostEditorStore>((set, get) => ({
   // Initial state
   formData: defaultEnhancedFormData,
-  originalData: null,
+  originalData: undefined,
   currentPage: 'editor',
   autoSaveStatus: 'idle',
   isDirty: false,
@@ -339,7 +340,7 @@ export const useCollectiveSelection = (): {
 
 export const usePostFormData = (): {
   formData: EnhancedPostEditorFormData;
-  originalData: EnhancedPostEditorFormData | null;
+  originalData: EnhancedPostEditorFormData | undefined;
   isDirty: boolean;
   isLoading: boolean;
   autoSaveStatus: 'idle' | 'saving' | 'saved' | 'error';

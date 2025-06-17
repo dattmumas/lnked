@@ -1,10 +1,11 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
+
 import type { Database } from './database.types';
 
-let cachedClient: SupabaseClient<Database> | null = null;
+let cachedClient: SupabaseClient<Database> | undefined;
 
 function initClient(): SupabaseClient<Database> {
-  if (cachedClient !== null) {
+  if (cachedClient !== undefined) {
     return cachedClient;
   }
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;

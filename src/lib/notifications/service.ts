@@ -1,6 +1,9 @@
-import { createServerSupabaseClient } from '@/lib/supabase/server';
-import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
 import { MAX_NOTIFICATION_PREVIEW_LENGTH } from '@/lib/constants/notification';
+import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
+import { createServerSupabaseClient } from '@/lib/supabase/server';
+
+import { nowIso, isNonEmptyString, isDefined } from './utils';
+
 import type { Json } from '@/lib/database.types';
 import type {
   Notification,
@@ -12,9 +15,8 @@ import type {
   NotificationActionResult,
   EntityType,
 } from '@/types/notifications';
-import { nowIso, isNonEmptyString, isDefined } from './utils';
 
-/* eslint-disable prefer-destructuring */
+/* eslint-disable prefer-destructuring, unicorn/no-null */
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -24,9 +26,7 @@ const DEFAULT_LIMIT = 20;
 const DEFAULT_OFFSET = 0;
 
 export class NotificationService {
-  private readonly supabase:
-    | ReturnType<typeof createServerSupabaseClient>
-    | ReturnType<typeof createSupabaseBrowserClient>;
+  private readonly supabase: ReturnType<typeof createServerSupabaseClient>;
 
   constructor() {
     this.supabase =
@@ -343,40 +343,42 @@ export class NotificationService {
           table: 'notifications',
           filter: `recipient_id=eq.${userId}`,
         },
-        async (payload: { new: Record<string, unknown> }) => {
-          // Fetch the full notification with actor data
-          const { data: notification } = await this.supabase
-            .from('notifications')
-            .select(`
-              *,
-              actor:users!notifications_actor_id_fkey(
-                id,
-                full_name,
-                username,
-                avatar_url
-              )
-            `)
-            .eq('id', String(payload.new.id))
-            .single();
+        (payload: { new: Record<string, unknown> }) => {
+          void (async () => {
+            // Fetch the full notification with actor data
+            const { data: notification } = await this.supabase
+              .from('notifications')
+              .select(`
+                *,
+                actor:users!notifications_actor_id_fkey(
+                  id,
+                  full_name,
+                  username,
+                  avatar_url
+                )
+              `)
+              .eq('id', String(payload.new.id))
+              .single();
 
-          if (notification !== null) {
-            // Transform the data to match our TypeScript interfaces
-            const transformedNotification: Notification = {
-              ...notification,
-              entity_type: notification.entity_type as EntityType | null,
-              metadata: notification.metadata as Record<string, unknown>,
-              created_at: notification.created_at ?? new Date().toISOString(),
-              updated_at: notification.updated_at ?? new Date().toISOString(),
-              actor: notification.actor ?? undefined,
-            };
-            callback(transformedNotification);
-          }
+            if (notification !== null) {
+              // Transform the data to match our TypeScript interfaces
+              const transformedNotification: Notification = {
+                ...notification,
+                entity_type: notification.entity_type as EntityType | null,
+                metadata: notification.metadata as Record<string, unknown>,
+                created_at: notification.created_at ?? new Date().toISOString(),
+                updated_at: notification.updated_at ?? new Date().toISOString(),
+                actor: notification.actor ?? undefined,
+              };
+              callback(transformedNotification);
+            }
+          })();
         }
       )
       .subscribe();
 
     return () => {
-      this.supabase?.removeChannel(channel);
+      void this.supabase?.removeChannel(channel);
     };
   }
 
@@ -413,7 +415,7 @@ export async function createFollowNotification(
   followingId: string,
   followingType: 'user' | 'collective'
 ): Promise<NotificationActionResult> {
-  const supabase = await createServerSupabaseClient();
+  const supabase = createServerSupabaseClient();
 
   // Get follower name
   const { data: follower } = await supabase
@@ -463,7 +465,7 @@ export async function createPostLikeNotification(
   userId: string,
   postId: string
 ): Promise<NotificationActionResult> {
-  const supabase = await createServerSupabaseClient();
+  const supabase = createServerSupabaseClient();
 
   // Get user and post details
   const [{ data: user }, { data: post }] = await Promise.all([
@@ -498,7 +500,7 @@ export async function createCommentNotification(
   postId: string,
   parentCommentId?: string
 ): Promise<NotificationActionResult> {
-  const supabase = await createServerSupabaseClient();
+  const supabase = createServerSupabaseClient();
 
   // Get user and post details
   const [{ data: user }, { data: post }] = await Promise.all([

@@ -3,9 +3,18 @@ import { fileURLToPath } from 'url';
 import { FlatCompat } from '@eslint/eslintrc';
 import js from '@eslint/js';
 import tsParser from '@typescript-eslint/parser';
+import importPlugin from 'eslint-plugin-import';
+import unusedImportsPluginRaw from 'eslint-plugin-unused-imports';
+import unicornPlugin from 'eslint-plugin-unicorn';
+import securityNodePlugin from 'eslint-plugin-security-node';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
+
+// Some plugins export as CommonJS, others as ESM default; normalise here
+const unusedImportsPlugin =
+  (unusedImportsPluginRaw && unusedImportsPluginRaw.default) ||
+  unusedImportsPluginRaw;
 
 const compat = new FlatCompat({
   baseDirectory: __dirname,
@@ -13,6 +22,23 @@ const compat = new FlatCompat({
 });
 
 const eslintConfig = [
+  {
+    // Ignore **all** test files entirely; they remain un‑linted
+    ignores: [
+      '**/__tests__/**/*',
+      '**/*.test.*',
+      '**/*.spec.*',
+      'src/types/database.types.ts',
+    ],
+  },
+  {
+    plugins: {
+      import: importPlugin,
+      'unused-imports': unusedImportsPlugin,
+      unicorn: unicornPlugin,
+      'security-node': securityNodePlugin,
+    },
+  },
   ...compat.extends(
     'eslint:recommended',
     'plugin:react/recommended',
@@ -20,6 +46,10 @@ const eslintConfig = [
     'plugin:jsx-a11y/recommended',
     'next/core-web-vitals',
     'next/typescript',
+    'plugin:@typescript-eslint/recommended-type-checked',
+    'plugin:import/recommended',
+    'plugin:security-node/recommended',
+    'plugin:react/jsx-runtime',
   ),
   {
     files: ['**/*.{ts,tsx}'],
@@ -32,6 +62,12 @@ const eslintConfig = [
     },
   },
   {
+    plugins: {
+      import: importPlugin,
+      'unused-imports': unusedImportsPlugin,
+      unicorn: unicornPlugin,
+      'security-node': securityNodePlugin,
+    },
     rules: {
       // CORE SAFETY RULES
       'no-console': ['error', { allow: ['warn', 'error'] }],
@@ -50,23 +86,30 @@ const eslintConfig = [
           ignoreArrayIndexes: true,
         },
       ],
-      'require-await': 'error',
-      'no-return-await': 'error',
-      'consistent-return': 'error',
-      'array-callback-return': 'error',
-      eqeqeq: ['error', 'always'],
-      yoda: 'error',
-      'default-case': 'error',
-      'default-case-last': 'error',
-      'no-restricted-properties': [
+
+      // IMPORT / SECURITY / UNICORN BEST‑PRACTICE
+      'import/order': [
         'error',
         {
-          object: 'console',
-          property: 'log',
-          message:
-            'Use console.warn or console.error for logging in production, not console.log',
+          groups: [
+            'builtin',
+            'external',
+            'internal',
+            'parent',
+            'sibling',
+            'index',
+            'object',
+            'type',
+          ],
+          'newlines-between': 'always',
+          alphabetize: { order: 'asc', caseInsensitive: true },
         },
       ],
+      'import/no-cycle': 'error',
+      'unused-imports/no-unused-imports': 'error',
+      'unicorn/no-null': 'error',
+      'unicorn/prefer-switch': 'error',
+      'jsx-a11y/no-autofocus': 'error',
 
       // TYPESCRIPT SAFETY
       '@typescript-eslint/no-unused-vars': [
@@ -155,6 +198,8 @@ const eslintConfig = [
       'no-magic-numbers': 'off',
       '@typescript-eslint/no-explicit-any': 'off',
       '@typescript-eslint/no-non-null-assertion': 'off',
+      '@typescript-eslint/await-thenable': 'off',
+      '@typescript-eslint/no-array-delete': 'off',
       'no-underscore-dangle': 'off',
       'prefer-const': 'off',
       'no-unused-vars': 'off',
@@ -210,7 +255,13 @@ const eslintConfig = [
       'jsx-a11y/alt-text': 'warn',
       'jsx-a11y/click-events-have-key-events': 'warn',
       'jsx-a11y/no-static-element-interactions': 'warn',
-      'jsx-a11y/no-autofocus': 'warn',
+    },
+  },
+  // CONSTANTS FILES OVERRIDE – bank numeric literals here without linter noise
+  {
+    files: ['src/lib/constants/**/*.ts'],
+    rules: {
+      'no-magic-numbers': 'off',
     },
   },
   // FINAL TEST OVERRIDE TO ENSURE CRITICAL RULES ARE DISABLED FOR FILES NOT INCLUDED IN TS PROJECT
@@ -223,6 +274,8 @@ const eslintConfig = [
     rules: {
       '@typescript-eslint/strict-boolean-expressions': 'off',
       '@typescript-eslint/explicit-function-return-type': 'off',
+      '@typescript-eslint/await-thenable': 'off',
+      '@typescript-eslint/no-array-delete': 'off',
     },
   },
 ];

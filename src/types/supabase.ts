@@ -158,7 +158,7 @@ export type Database = {
           parent_chain_id: string | null
           reply_count: number
           status: Database["public"]["Enums"]["chain_status"]
-          tsv: unknown | null
+          tsv: unknown
           updated_at: string
           visibility: Database["public"]["Enums"]["chain_visibility"]
         }
@@ -174,7 +174,7 @@ export type Database = {
           parent_chain_id?: string | null
           reply_count?: number
           status?: Database["public"]["Enums"]["chain_status"]
-          tsv?: unknown | null
+          tsv?: unknown
           updated_at?: string
           visibility?: Database["public"]["Enums"]["chain_visibility"]
         }
@@ -190,7 +190,7 @@ export type Database = {
           parent_chain_id?: string | null
           reply_count?: number
           status?: Database["public"]["Enums"]["chain_status"]
-          tsv?: unknown | null
+          tsv?: unknown
           updated_at?: string
           visibility?: Database["public"]["Enums"]["chain_visibility"]
         }
@@ -336,7 +336,7 @@ export type Database = {
           stripe_account_type: string | null
           stripe_customer_id: string | null
           tags: string[] | null
-          tsv: unknown | null
+          tsv: unknown
           updated_at: string | null
         }
         Insert: {
@@ -357,7 +357,7 @@ export type Database = {
           stripe_account_type?: string | null
           stripe_customer_id?: string | null
           tags?: string[] | null
-          tsv?: unknown | null
+          tsv?: unknown
           updated_at?: string | null
         }
         Update: {
@@ -378,7 +378,7 @@ export type Database = {
           stripe_account_type?: string | null
           stripe_customer_id?: string | null
           tags?: string[] | null
-          tsv?: unknown | null
+          tsv?: unknown
           updated_at?: string | null
         }
         Relationships: [
@@ -1387,7 +1387,7 @@ export type Database = {
           subtitle: string | null
           thumbnail_url: string | null
           title: string
-          tsv: unknown | null
+          tsv: unknown
           updated_at: string | null
           view_count: number | null
         }
@@ -1411,7 +1411,7 @@ export type Database = {
           subtitle?: string | null
           thumbnail_url?: string | null
           title: string
-          tsv?: unknown | null
+          tsv?: unknown
           updated_at?: string | null
           view_count?: number | null
         }
@@ -1435,7 +1435,7 @@ export type Database = {
           subtitle?: string | null
           thumbnail_url?: string | null
           title?: string
-          tsv?: unknown | null
+          tsv?: unknown
           updated_at?: string | null
           view_count?: number | null
         }
@@ -1819,7 +1819,7 @@ export type Database = {
           stripe_customer_id: string | null
           tags: string[] | null
           terms_accepted_at: string | null
-          tsv: unknown | null
+          tsv: unknown
           updated_at: string | null
           username: string | null
         }
@@ -1846,7 +1846,7 @@ export type Database = {
           stripe_customer_id?: string | null
           tags?: string[] | null
           terms_accepted_at?: string | null
-          tsv?: unknown | null
+          tsv?: unknown
           updated_at?: string | null
           username?: string | null
         }
@@ -1873,7 +1873,7 @@ export type Database = {
           stripe_customer_id?: string | null
           tags?: string[] | null
           terms_accepted_at?: string | null
-          tsv?: unknown | null
+          tsv?: unknown
           updated_at?: string | null
           username?: string | null
         }
@@ -2063,7 +2063,7 @@ export type Database = {
           document_id: string | null
           document_type: string | null
           title: string | null
-          tsv_document: unknown | null
+          tsv_document: unknown
         }
         Relationships: []
       }
@@ -2121,7 +2121,7 @@ export type Database = {
         }[]
       }
       binary_quantize: {
-        Args: { "": string } | { "": unknown }
+        Args: { "": unknown }
         Returns: unknown
       }
       cleanup_expired_cache: {
@@ -2358,11 +2358,11 @@ export type Database = {
         Returns: unknown
       }
       l2_norm: {
-        Args: { "": unknown } | { "": unknown }
+        Args: { "": unknown }
         Returns: number
       }
       l2_normalize: {
-        Args: { "": string } | { "": unknown } | { "": unknown }
+        Args: { "": unknown }
         Returns: unknown
       }
       mark_messages_as_read: {
@@ -2401,7 +2401,7 @@ export type Database = {
         Returns: string
       }
       vector_dims: {
-        Args: { "": string } | { "": unknown }
+        Args: { "": unknown }
         Returns: number
       }
       vector_norm: {
@@ -2493,7 +2493,7 @@ export type Tables<
   }
     ? keyof (Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         Database[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
+    : never,
 > = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
   ? (Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
       Database[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
@@ -2519,7 +2519,7 @@ export type TablesInsert<
     schema: keyof Database
   }
     ? keyof Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never,
 > = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
   ? Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
       Insert: infer I
@@ -2542,7 +2542,7 @@ export type TablesUpdate<
     schema: keyof Database
   }
     ? keyof Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never,
 > = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
   ? Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
       Update: infer U
@@ -2565,7 +2565,7 @@ export type Enums<
     schema: keyof Database
   }
     ? keyof Database[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
+    : never,
 > = DefaultSchemaEnumNameOrOptions extends { schema: keyof Database }
   ? Database[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
   : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
@@ -2573,19 +2573,15 @@ export type Enums<
     : never
 
 export type CompositeTypes<
-  PublicCompositeTypeNameOrOptions extends
-    | keyof DefaultSchema["CompositeTypes"]
-    | { schema: keyof Database },
+  PublicCompositeTypeNameOrOptions extends { schema: keyof Database },
   CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
     schema: keyof Database
   }
     ? keyof Database[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
+    : never
 > = PublicCompositeTypeNameOrOptions extends { schema: keyof Database }
   ? Database[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
-  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
-    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
-    : never
+  : never
 
 export const Constants = {
   graphql_public: {

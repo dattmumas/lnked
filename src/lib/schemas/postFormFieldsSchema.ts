@@ -1,4 +1,5 @@
 import { z } from "zod";
+
 import { MAX_TITLE_LENGTH } from "@/lib/constants/post";
 
 export const postFormFieldsSchema = z.object({

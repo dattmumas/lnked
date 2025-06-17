@@ -1,3 +1,4 @@
+import { Database } from '@/lib/database.types';
 import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
 import {
   PostCollectiveRow,
@@ -6,7 +7,7 @@ import {
   PostCollectiveValidationResult,
   canUserPostToCollective,
 } from '@/types/enhanced-database.types';
-import { Database, Json } from '@/lib/database.types';
+
 import { postCollectiveAuditService } from './PostCollectiveAuditService';
 import { postCollectiveErrorHandler } from './PostCollectiveErrorHandler';
 
@@ -71,14 +72,14 @@ export class PostCollectiveService {
             type: 'database',
             message: `Failed to validate permissions: ${error.message}`,
           };
-          await postCollectiveAuditService.logOperation(
-            'validateCollectivePermissions',
-            '',
-            collectiveIds,
-            userId,
-            false,
-            dbError,
-          );
+            postCollectiveAuditService.logOperation(
+              'validateCollectivePermissions',
+              '',
+              collectiveIds,
+              userId,
+              false,
+              dbError,
+            );
           return { valid: false, errors: [dbError], warnings };
         }
 
@@ -86,7 +87,7 @@ export class PostCollectiveService {
           (memberships ?? []).map((m) => [
             m.collective_id,
             {
-              role: m.role as Database['public']['Enums']['collective_member_role'],
+              role: m.role,
               name: m.collectives.name,
             },
           ]),
@@ -114,7 +115,7 @@ export class PostCollectiveService {
         }
 
         const isValid = errors.length === 0;
-        await postCollectiveAuditService.logOperation(
+        postCollectiveAuditService.logOperation(
           'validateCollectivePermissions',
           '',
           collectiveIds,
@@ -169,7 +170,7 @@ export class PostCollectiveService {
                 }))
               };
 
-              await postCollectiveAuditService.logOperation(
+              postCollectiveAuditService.logOperation(
                 'createPostCollectiveAssociations',
                 postId,
                 collectiveIds,
@@ -189,7 +190,7 @@ export class PostCollectiveService {
                 collective_id: collectiveId,
                 shared_by: userId,
                 status: sharingSettings?.[collectiveId]?.status ?? 'published',
-                metadata: (sharingSettings?.[collectiveId]?.metadata as Json) ?? {},
+                metadata: sharingSettings?.[collectiveId]?.metadata ?? {},
                 display_order: sharingSettings?.[collectiveId]?.display_order ?? index,
               }));
 
@@ -206,8 +207,7 @@ export class PostCollectiveService {
                   type: 'database',
                   message: `Database error: ${error.message}`
                 };
-
-                await postCollectiveAuditService.logOperation(
+                postCollectiveAuditService.logOperation(
                   'createPostCollectiveAssociations',
                   postId,
                   collectiveIds,
@@ -228,7 +228,7 @@ export class PostCollectiveService {
               }
 
               // Log successful operation
-              await postCollectiveAuditService.logOperation(
+              postCollectiveAuditService.logOperation(
                 'createPostCollectiveAssociations',
                 postId,
                 collectiveIds,
@@ -244,7 +244,7 @@ export class PostCollectiveService {
               return {
                 success: true,
                 post_id: postId,
-                collective_associations: (createdAssociations as unknown) as PostCollectiveRow[]
+                collective_associations: createdAssociations ?? []
               };
 
             } catch (error) {
@@ -254,8 +254,7 @@ export class PostCollectiveService {
                 type: 'database',
                 message: 'Unexpected error creating collective associations'
               };
-
-              await postCollectiveAuditService.logOperation(
+              postCollectiveAuditService.logOperation(
                 'createPostCollectiveAssociations',
                 postId,
                 collectiveIds,
@@ -348,7 +347,8 @@ export class PostCollectiveService {
           .from('post_collectives')
           .delete()
           .eq('post_id', postId)
-          .in('collective_id', collectivesToRemove);
+          .in('collective_id', collectivesToRemove)
+          .select();
 
         if (error !== null && error !== undefined) {
           console.error('Error removing collective associations:', error);
@@ -362,13 +362,14 @@ export class PostCollectiveService {
           collective_id: collectiveId,
           shared_by: userId,
           status: sharingSettings?.[collectiveId]?.status ?? 'published',
-          metadata: (sharingSettings?.[collectiveId]?.metadata as Json) ?? {},
+          metadata: sharingSettings?.[collectiveId]?.metadata ?? {},
           display_order: sharingSettings?.[collectiveId]?.display_order ?? index,
         }));
 
         const { error: insertError } = await this.supabase
           .from('post_collectives')
-          .insert(newAssociations as DBPostCollectiveInsert[]);
+          .insert(newAssociations)
+          .select();
 
         if (insertError !== null && insertError !== undefined) {
           console.error('Error adding collective associations:', insertError);
@@ -392,7 +393,7 @@ export class PostCollectiveService {
       return {
         success: true,
         post_id: postId,
-        collective_associations: ((updatedAssociations ?? []) as unknown) as PostCollectiveRow[]
+        collective_associations: updatedAssociations ?? []
       };
 
     } catch (error) {
@@ -424,7 +425,7 @@ export class PostCollectiveService {
         return [];
       }
 
-      return ((associations ?? []) as unknown) as PostCollectiveRow[];
+      return associations ?? [];
 
     } catch (error) {
       console.error('Error in getPostCollectiveAssociations:', error);
@@ -444,7 +445,8 @@ export class PostCollectiveService {
         .from('post_collectives')
         .delete()
         .eq('post_id', postId)
-        .in('collective_id', collectiveIds);
+        .in('collective_id', collectiveIds)
+        .select();
 
       if (error !== null && error !== undefined) {
         return {
@@ -509,14 +511,14 @@ export class PostCollectiveService {
   /**
    * Get service health status and metrics
    */
-  async getServiceHealth(): Promise<{
+  getServiceHealth(): Promise<{
     status: 'healthy' | 'warning' | 'critical';
     metrics: Record<string, unknown>;
     errors: Record<string, unknown>;
   }> {
     const performanceMetrics = postCollectiveAuditService.getPerformanceMetrics();
     const errorStats = postCollectiveErrorHandler.getErrorStatistics();
-    const systemHealth = await postCollectiveAuditService.checkSystemHealth();
+    const systemHealth = postCollectiveAuditService.checkSystemHealth();
 
     return {
       status: systemHealth.status,

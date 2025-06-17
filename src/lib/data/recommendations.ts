@@ -1,6 +1,12 @@
-import { cookies } from "next/headers"; // Needs cookies if it uses them directly
+import { cookies } from "next/headers"; 
+
+import { DEFAULT_RECOMMENDATION_LIMIT } from "@/lib/constants/recommendations";
+
+// Needs cookies if it uses them directly
 // If fetchRecommendations needs to be called from client, it would be an API route call,
 // but here it's used by a Server Component, so it can be a server-side function.
+
+
 
 // Assuming Recommendation interface is defined elsewhere or can be imported/defined here
 // For now, let's redefine it or assume it will be imported from a types file.
@@ -20,20 +26,20 @@ export interface Recommendation {
 export async function fetchRecommendations(
   // cookieHeader: string, // If called from server component, can use cookies() directly
   cursor?: string,
-  limit = 10
+  limit: number = DEFAULT_RECOMMENDATION_LIMIT
 ): Promise<{ recommendations: Recommendation[]; nextCursor: string | null }> {
   const cookieStore = await cookies();
   const cookieHeader = cookieStore.toString(); // Construct header if needed by API
 
   const params = new URLSearchParams();
   params.set("limit", limit.toString());
-  if (cursor) params.set("cursor", cursor);
+  if (typeof cursor === "string" && cursor.length > 0) {
+    params.set("cursor", cursor);
+  }
 
   // Ensure NEXT_PUBLIC_SITE_URL is available or provide a default for server-side fetch
   const siteUrl =
-    process.env.NEXT_PUBLIC_SITE_URL ||
-    process.env.VERCEL_URL ||
-    "http://localhost:3000";
+    process.env.NEXT_PUBLIC_SITE_URL ?? process.env.VERCEL_URL ?? "http://localhost:3000";
 
   const res = await fetch(
     `${siteUrl}/api/recommendations?${params.toString()}`,
@@ -54,5 +60,9 @@ export async function fetchRecommendations(
       `Failed to fetch recommendations (from lib). Status: ${res.status}`
     );
   }
-  return res.json();
+  const data = (await res.json()) as {
+    recommendations: Recommendation[];
+    nextCursor: string | null;
+  };
+  return data;
 }

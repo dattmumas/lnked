@@ -3,14 +3,27 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+
 import { createServerSupabaseClient } from '@/lib/supabase/server';
+
 import { createServerChatSecurity } from './security';
-import type { User } from '@supabase/supabase-js';
-import type { SupabaseClient } from '@supabase/supabase-js';
+
+import type { Database } from '@/lib/database.types';
+import type { User, SupabaseClient } from '@supabase/supabase-js';
+
+
+// ---------------------------------------------------------------------------
+// Constants
+// ---------------------------------------------------------------------------
+
+// eslint-disable-next-line no-magic-numbers
+export const DEFAULT_RATE_LIMIT = 60 as const;
+// eslint-disable-next-line no-magic-numbers
+export const DEFAULT_RATE_WINDOW_MS = 60_000 as const;
 
 type AuthResult = {
   user: User;
-  supabase: SupabaseClient;
+  supabase: SupabaseClient<Database>;
 };
 
 type ConversationAccessResult = AuthResult & {
@@ -28,8 +41,8 @@ type AuthHandlerContext = AuthResult & {
 /**
  * Middleware to check if user is authenticated
  */
-export async function requireAuth(_request: NextRequest) {
-  const supabase = await createServerSupabaseClient();
+export async function requireAuth(_request: NextRequest): Promise<NextResponse | AuthResult> {
+  const supabase = createServerSupabaseClient();
   
   const {
     data: { user },
@@ -52,7 +65,7 @@ export async function requireAuth(_request: NextRequest) {
 export async function requireConversationAccess(
   request: NextRequest,
   conversationId: string
-) {
+): Promise<NextResponse | ConversationAccessResult> {
   const authResult = await requireAuth(request);
   
   if (authResult instanceof NextResponse) {
@@ -141,8 +154,8 @@ const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
 export function checkRateLimit(
   userId: string,
   action: string,
-  limit: number = 60,
-  windowMs: number = 60000
+  limit: number = DEFAULT_RATE_LIMIT,
+  windowMs: number = DEFAULT_RATE_WINDOW_MS
 ): boolean {
   const key = `${userId}:${action}`;
   const now = Date.now();
@@ -161,4 +174,4 @@ export function checkRateLimit(
 
   record.count++;
   return true;
-} 
+}

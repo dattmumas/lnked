@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-redundant-type-constituents, @typescript-eslint/no-duplicate-type-constituents */
 export type Json =
   | string
   | number
@@ -1930,6 +1931,7 @@ export type Database = {
         Row: {
           aspect_ratio: string | null
           collective_id: string | null
+          comment_count: number
           created_at: string | null
           created_by: string | null
           description: string | null
@@ -1950,6 +1952,7 @@ export type Database = {
         Insert: {
           aspect_ratio?: string | null
           collective_id?: string | null
+          comment_count?: number
           created_at?: string | null
           created_by?: string | null
           description?: string | null
@@ -1970,6 +1973,7 @@ export type Database = {
         Update: {
           aspect_ratio?: string | null
           collective_id?: string | null
+          comment_count?: number
           created_at?: string | null
           created_by?: string | null
           description?: string | null
@@ -2132,6 +2136,7 @@ export type Database = {
         Returns: {
           aspect_ratio: string | null
           collective_id: string | null
+          comment_count: number
           created_at: string | null
           created_by: string | null
           description: string | null

@@ -1,4 +1,7 @@
-import { RealtimeChannel, SupabaseClient } from '@supabase/supabase-js';
+import { RealtimeChannel, SupabaseClient, PostgrestError } from '@supabase/supabase-js';
+
+import { CommentValidationError } from '@/lib/errors';
+import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
 import {
   Comment,
   CommentEntityType,
@@ -8,10 +11,6 @@ import {
   Reaction,
   ReactionType,
 } from '@/types/comments-v2';
-import {
-  CommentValidationError,
-} from '@/lib/errors';
-import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
 
 const DEFAULT_PAGE_LIMIT = 20;
 const DEFAULT_REPLY_LIMIT = 10;
@@ -75,12 +74,19 @@ export class CommentsV2Service {
       });
     }
 
-    const { data, error } = await this.supabase.rpc('get_comment_thread', {
+    const threadResponse = await this.supabase.rpc<
+      { comment_data: CommentWithAuthor & { author?: unknown; user?: unknown } }
+    >('get_comment_thread', {
       p_entity_type: entityType,
       p_entity_id: entityId,
       p_limit: limit,
       p_offset: offset,
     });
+
+    const { data, error } = threadResponse as {
+      data: Array<{ comment_data: CommentWithAuthor & { author?: unknown; user?: unknown } }> | null;
+      error: PostgrestError | null;
+    };
 
     if (process.env.NODE_ENV !== 'production') {
       // eslint-disable-next-line no-console
@@ -123,11 +129,18 @@ export class CommentsV2Service {
     limit = DEFAULT_REPLY_LIMIT
   ): Promise<CommentWithAuthor[]> {
     const offset = (page - 1) * limit;
-    const { data, error } = await this.supabase.rpc('get_comment_replies', {
+    const repliesResponse = await this.supabase.rpc<
+      { comment_data: CommentWithAuthor }
+    >('get_comment_replies', {
       p_parent_id: parentId,
       p_limit: limit,
       p_offset: offset,
     });
+
+    const { data, error } = repliesResponse as {
+      data: Array<{ comment_data: CommentWithAuthor }> | null;
+      error: PostgrestError | null;
+    };
 
     if (error !== null && error !== undefined) {
       console.error('Error fetching replies:', error);
@@ -145,14 +158,21 @@ export class CommentsV2Service {
     userId: string,
     content: string,
     parentId?: string
-  ): Promise<CommentWithAuthor | null> {
-    const { data, error } = await this.supabase.rpc('add_comment', {
+  ): Promise<CommentWithAuthor | undefined> {
+    const addCommentResponse = await this.supabase.rpc<
+      { comment_id: string }
+    >('add_comment', {
       p_entity_type: entityType,
       p_entity_id: entityId,
       p_user_id: userId,
       p_content: content.trim(),
       p_parent_id: parentId,
     });
+
+    const { data, error } = addCommentResponse as {
+      data: Array<{ comment_id: string }> | null;
+      error: PostgrestError | null;
+    };
 
     if (error !== null && error !== undefined) {
       console.error('Error adding comment:', error);
@@ -161,26 +181,33 @@ export class CommentsV2Service {
       );
     }
 
-    if (data === null || data === undefined) return null;
-    const commentIdRows = data as Array<{ comment_id: string }> | null;
+    if (data === null || data === undefined) return undefined;
+
     const commentId =
-      commentIdRows && commentIdRows.length > 0
-        ? commentIdRows[0].comment_id
+      Array.isArray(data) &&
+      data.length > 0 &&
+      typeof data[0]?.comment_id === 'string'
+        ? data[0].comment_id
         : undefined;
 
     if (typeof commentId !== 'string' || commentId.trim() === '') {
-      return null;
+      return undefined;
     }
 
-    const { data: newComment, error: fetchError } = await this.supabase
+    const newCommentResponse = await this.supabase
       .from('comments')
       .select('*, author:users(*)')
       .eq('id', commentId)
-      .single();
+      .single<CommentWithAuthor>();
+
+    const {
+      data: newComment,
+      error: fetchError,
+    }: { data: CommentWithAuthor | null; error: PostgrestError | null } = newCommentResponse;
 
     if (fetchError !== null && fetchError !== undefined) {
       console.error('Error fetching new comment:', fetchError);
-      return null;
+      return undefined;
     }
 
     if (
@@ -191,7 +218,7 @@ export class CommentsV2Service {
       const nc = newComment as unknown as Record<string, unknown>;
       nc.user = nc.author;
     }
-    return newComment as CommentWithAuthor | null;
+    return newComment as CommentWithAuthor | undefined;
   }
 
   async toggleReaction(
@@ -199,11 +226,18 @@ export class CommentsV2Service {
     userId: string,
     reactionType: ReactionType
   ): Promise<{ action_taken: string; reaction_counts: Reaction[] }> {
-    const { data, error } = await this.supabase.rpc('toggle_comment_reaction', {
+    const toggleResponse = await this.supabase.rpc<
+      { action_taken: string; reaction_counts?: Reaction[] | null }
+    >('toggle_comment_reaction', {
       p_comment_id: commentId,
       p_user_id: userId,
       p_reaction_type: reactionType,
     });
+
+    const { data, error } = toggleResponse as {
+      data: { action_taken: string; reaction_counts?: Reaction[] | null } | null;
+      error: PostgrestError | null;
+    };
 
     if (error !== null && error !== undefined) {
       console.error('Error toggling reaction:', error);
@@ -227,17 +261,22 @@ export class CommentsV2Service {
       };
     }
 
-    return { action_taken: 'error', reaction_counts: [] };
+    return { action_taken: 'error', reaction_counts: [] as Reaction[] };
   }
 
   async getCommentCount(
     entityType: CommentEntityType,
     entityId: string
   ): Promise<number> {
-    const { data, error } = await this.supabase.rpc('get_comment_count', {
-      p_entity_type: entityType,
-      p_entity_id: entityId,
-    });
+    const countResponse = await this.supabase.rpc<number>('get_comment_count', {
+        p_entity_type: entityType,
+        p_entity_id: entityId,
+      });
+
+    const { data, error } = countResponse as {
+      data: number | null;
+      error: PostgrestError | null;
+    };
 
     if (error !== null && error !== undefined) {
       console.error('Error getting comment count:', error);
@@ -249,19 +288,19 @@ export class CommentsV2Service {
   async updateComment(
     commentId: string,
     content: string
-  ): Promise<CommentWithAuthor | null> {
+  ): Promise<CommentWithAuthor | undefined> {
     const { data, error } = await this.supabase
       .from('comments')
       .update({ content, updated_at: new Date().toISOString() })
       .eq('id', commentId)
       .select('*, author:users(*)')
-      .single();
+      .single<CommentWithAuthor>();
 
     if (error !== null && error !== undefined) {
       console.error('Error updating comment:', error);
       throw new Error(`Failed to update comment: ${error.message}`);
     }
-    return data as unknown as CommentWithAuthor;
+    return data ?? undefined;
   }
 
   async deleteComment(commentId: string): Promise<boolean> {
@@ -283,7 +322,7 @@ export class CommentsV2Service {
     entityId: string,
     pinnedBy: string,
     _pinOrder?: number // _pinOrder if unused
-  ): Promise<CommentPin | null> {
+  ): Promise<CommentPin | undefined> {
     const { data, error } = await this.supabase
       .from('comment_pins')
       .insert({
@@ -294,13 +333,13 @@ export class CommentsV2Service {
         pin_order: _pinOrder,
       })
       .select('*')
-      .single();
+      .single<CommentPin>();
 
     if (error !== null && error !== undefined) {
       console.error('Error pinning comment:', error);
       throw new Error(`Failed to pin comment: ${error.message}`);
     }
-    return data;
+    return data ?? undefined;
   }
 
   async unpinComment(commentId: string, entityId: string): Promise<boolean> {
@@ -360,7 +399,7 @@ export class CommentsV2Service {
         },
         payload => {
           const oldId = payload.old?.id;
-          if (oldId !== undefined && oldId !== null) {
+          if (oldId !== undefined) {
             onDelete(oldId);
           }
         }
@@ -384,13 +423,9 @@ export class CommentsV2Service {
         table: 'comment_reactions',
       },
       payload => {
-        const newRow = payload.new as Record<string, unknown> | null;
-        if (
-          newRow !== null &&
-          typeof newRow.id === 'string' &&
-          newRow.id !== ''
-        ) {
-          onReactionUpdate(newRow as unknown as CommentReaction);
+        const newRow = payload.new as CommentReaction | undefined;
+        if (newRow !== undefined && typeof newRow.id === 'string' && newRow.id !== '') {
+          onReactionUpdate(newRow);
         }
       }
     );

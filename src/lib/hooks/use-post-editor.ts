@@ -1,26 +1,42 @@
-import { useEffect, useCallback, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { UseMutationResult } from '@tanstack/react-query';
-import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
-import { usePostEditorStore, PostFormData } from '@/lib/stores/post-editor-store';
-import { User } from '@supabase/supabase-js';
-import { Json } from '@/lib/database.types';
-import { AUTO_SAVE_DEBOUNCE_MS, POST_STALE_TIME_MS } from '@/lib/constants/post-editor';
+import { useEffect, useCallback, useState } from 'react';
+import { z } from 'zod';
 
-/** Helper: value exists and is not an empty string */
-const exists = (v: unknown): boolean =>
-  v !== null && v !== undefined && v !== '';
+import { AUTO_SAVE_DEBOUNCE_MS, POST_STALE_TIME_MS } from '@/lib/constants/post-editor';
+import { usePostEditorStore, PostFormData } from '@/lib/stores/post-editor-store';
+import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
+
+import type { User } from '@supabase/supabase-js';
+import type { UseMutationResult } from '@tanstack/react-query';
+
+const PostFormSchema = z.object({
+  id: z.string().uuid().optional(),
+  title: z.string().trim().min(1, 'Title is required'),
+  content: z.string().default(''),
+  subtitle: z.string().optional(),
+  author: z.string().optional(),
+  author_id: z.string().uuid(),
+  seo_title: z.string().optional(),
+  meta_description: z.string().optional(),
+  thumbnail_url: z.string().url().optional(),
+  post_type: z.enum(['standard', 'link']),
+  metadata: z.record(z.unknown()).default({}),
+  is_public: z.boolean(),
+  status: z.enum(['draft', 'active', 'removed']),
+  collective_id: z.string().uuid().optional(),
+  published_at: z.string().datetime().optional(),
+});
 
 // Simple client-side user hook
-const useUser = (): { user: User | null; loading: boolean } => {
-  const [user, setUser] = useState<User | null>(null);
+const useUser = (): { user: User | undefined; loading: boolean } => {
+  const [user, setUser] = useState<User | undefined>(undefined);
   const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
     const supabase = createSupabaseBrowserClient();
     
     // Get initial user
-    supabase.auth.getUser().then(({ data: { user } }) => {
+    void supabase.auth.getUser().then(({ data: { user } }) => {
       setUser(user);
       setLoading(false);
     });
@@ -28,7 +44,7 @@ const useUser = (): { user: User | null; loading: boolean } => {
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
-        setUser(session?.user ?? null);
+        setUser(session?.user);
         setLoading(false);
       }
     );
@@ -47,28 +63,14 @@ export const useAutoSavePost = (): UseMutationResult<
 > => {
   const queryClient = useQueryClient();
   const store = usePostEditorStore();
-  const { markSaving, markSaved, markError, updateFormData } = store;
+  const { markSaving, markSaved, markError } = store;
 
   return useMutation({
     mutationFn: async (data: PostFormData & { author_id: string }): Promise<PostFormData> => {
       const supabase = createSupabaseBrowserClient();
 
-      // Validate required fields
-      if (
-        data.author_id === null ||
-        data.author_id === undefined ||
-        data.author_id === ''
-      ) {
-        throw new Error('Missing author_id - user not authenticated');
-      }
-
-      if (
-        data.title === null ||
-        data.title === undefined ||
-        data.title.trim() === ''
-      ) {
-        throw new Error('Title is required for saving');
-      }
+      // 🔐 Validate the payload once with Zod
+      const validated = PostFormSchema.parse(data);
 
       // Check authentication status
       const { data: { session }, error: authError } = await supabase.auth.getSession();
@@ -77,38 +79,13 @@ export const useAutoSavePost = (): UseMutationResult<
         throw new Error(`Authentication error: ${authError.message}`);
       }
 
-      if (
-        session === null ||
-        session === undefined ||
-        session.user === null ||
-        session.user === undefined
-      ) {
+      if (session === null || session === undefined || session.user === null || session.user === undefined) {
         throw new Error('User not authenticated');
       }
 
-      // Use the post ID from the data (which comes from the store)
-      // This ensures we update the same post after the first save
-      const postData = {
-        id: data.id, // This will be undefined for new posts, set after first save
-        title: data.title,
-        content: data.content,
-        subtitle: data.subtitle || null,
-        author: data.author || null,
-        author_id: data.author_id,
-        seo_title: data.seo_title || null,
-        meta_description: data.meta_description || null,
-        thumbnail_url: data.thumbnail_url || null,
-        post_type: data.post_type,
-        metadata: (data.metadata || {}) as Json,
-        is_public: data.is_public,
-        status: data.status,
-        collective_id: data.collective_id || null,
-        published_at: data.published_at || null,
-      };
-
       const { data: post, error } = await supabase
         .from('posts')
-        .upsert(postData)
+        .upsert(validated)
         .select()
         .single();
 
@@ -126,10 +103,7 @@ export const useAutoSavePost = (): UseMutationResult<
         throw new Error('Post was not returned from database after save');
       }
 
-      return {
-        ...data,
-        id: post.id,
-      };
+      return { ...validated, id: post.id };
     },
     onMutate: () => {
       markSaving();
@@ -139,15 +113,9 @@ export const useAutoSavePost = (): UseMutationResult<
       markSaved();
       
       // Update the store with the post ID only if it's a new post (current form data has no ID)
-      if (
-        savedPost.id !== null &&
-        savedPost.id !== undefined &&
-        savedPost.id !== '' &&
-        (store.formData.id === null ||
-          store.formData.id === undefined ||
-          store.formData.id === '')
-      ) {
-        updateFormData({ id: savedPost.id });
+      if ((savedPost.id !== null && savedPost.id !== undefined && savedPost.id !== '') && 
+          (store.formData.id === null || store.formData.id === undefined || store.formData.id === '')) {
+        store.updateFormData({ id: savedPost.id });
       }
       
       // Update the query cache
@@ -168,7 +136,7 @@ export const usePostData = (
     queryKey: ['post', postId],
     queryFn: async (): Promise<PostFormData | null> => {
       if (postId === null || postId === undefined || postId === '') {
-        return null;
+        return undefined;
       }
 
       const supabase = createSupabaseBrowserClient();
@@ -178,30 +146,22 @@ export const usePostData = (
         .eq('id', postId)
         .single();
 
-      if (error !== null && error !== undefined) {
-        console.error('Failed to load post:', error);
-        throw error;
-      }
+      if (error !== null && error !== undefined) throw error;
+      if (data === null || data === undefined) return undefined;
 
-      // Transform database data to form data
-      return {
-        id: data.id,
-        title: data.title,
-        content: data.content || '',
-        subtitle: data.subtitle || '',
-        author: data.author || '',
-        seo_title: data.seo_title || '',
-        meta_description: data.meta_description || '',
-        thumbnail_url: data.thumbnail_url || '',
-        post_type: data.post_type,
-        metadata: (data.metadata as Record<string, unknown>) || {},
-        is_public: data.is_public ?? false,
-        status: (data.status as 'draft' | 'active' | 'removed') || 'draft',
-        collective_id: data.collective_id || undefined,
-        published_at: data.published_at || undefined,
-      };
+      // Cast through Zod to normalise defaults
+      return PostFormSchema.partial({ author_id: true }).parse({
+        ...data,
+        subtitle: data.subtitle ?? undefined,
+        author: data.author ?? undefined,
+        seo_title: data.seo_title ?? undefined,
+        meta_description: data.meta_description ?? undefined,
+        thumbnail_url: data.thumbnail_url ?? undefined,
+        collective_id: data.collective_id ?? undefined,
+        published_at: data.published_at ?? undefined,
+      });
     },
-    enabled: postId !== null && postId !== undefined && postId !== '',
+    enabled: Boolean(postId),
     staleTime: POST_STALE_TIME_MS,
   });
 };
@@ -233,11 +193,7 @@ export const usePostEditor = (postId?: string): UsePostEditorResult => {
 
   // Initialize form data from server when post loads
   useEffect(() => {
-    if (
-      postData !== null &&
-      postData !== undefined &&
-      (store.originalData === null || store.originalData === undefined)
-    ) {
+    if ((postData !== null && postData !== undefined) && (store.originalData === null || store.originalData === undefined)) {
       store.initializeForm(postData);
     }
   }, [postData, store.originalData, store]);
@@ -252,11 +208,9 @@ export const usePostEditor = (postId?: string): UsePostEditorResult => {
     // Check all conditions for auto-save
     if (
       store.isDirty &&
-      exists(store.formData) &&
-      exists(store.formData.title) &&
-      (store.formData.title as string).trim() !== '' &&
-      exists(user) &&
-      exists((user as User).id)
+      typeof store.formData?.title === 'string' &&
+      store.formData.title.trim().length > 0 &&
+      typeof user?.id === 'string'
     ) {
       const timer = setTimeout(() => {
         console.warn('🚀 Auto-saving post...');
@@ -269,7 +223,7 @@ export const usePostEditor = (postId?: string): UsePostEditorResult => {
       }, AUTO_SAVE_DEBOUNCE_MS);
 
       return (): void => {
-        clearTimeout(timer);
+        void clearTimeout(timer);
       };
     }
 
@@ -277,8 +231,8 @@ export const usePostEditor = (postId?: string): UsePostEditorResult => {
   }, [store.formData, store.isDirty, autoSave, user, isLoadingPost]);
 
   // Manual save function
-  const savePost = useCallback((): Promise<PostFormData | undefined> => {
-    if (exists(store.formData) && exists(user) && exists((user as User).id)) {
+  const savePost = useCallback((): Promise<PostFormData | undefined> | undefined => {
+    if ((store.formData !== null && store.formData !== undefined) && typeof user?.id === 'string') {
       const dataToSave = {
         ...store.formData,
         author_id: user.id,
@@ -290,8 +244,8 @@ export const usePostEditor = (postId?: string): UsePostEditorResult => {
   }, [store.formData, autoSave, user]);
 
   // Publish post function
-  const publishPost = useCallback((): Promise<PostFormData | undefined> => {
-    if (exists(store.formData) && exists(user) && exists((user as User).id)) {
+  const publishPost = useCallback((): Promise<PostFormData | undefined> | undefined => {
+    if ((store.formData !== null && store.formData !== undefined) && typeof user?.id === 'string') {
       const dataToSave = {
         ...store.formData,
         author_id: user.id,
@@ -301,7 +255,7 @@ export const usePostEditor = (postId?: string): UsePostEditorResult => {
       };
       
       store.updateFormData({
-        status: 'active',
+        status: 'active' as const,
         is_public: true,
         published_at: dataToSave.published_at,
       });

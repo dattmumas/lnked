@@ -1,9 +1,5 @@
+import { HttpStatusCode, HttpError } from '@/lib/constants/errors';
 import { Database } from '@/lib/database.types';
-
-// Base types from database
-type User = Database['public']['Tables']['users']['Row'];
-type Post = Database['public']['Tables']['posts']['Row'];
-type Follow = Database['public']['Tables']['follows']['Row'];
 
 // Enhanced Profile interface with computed properties
 export interface Profile {
@@ -249,20 +245,20 @@ export interface ContentCardProps {
 export interface UseProfileReturn {
   data: Profile | undefined;
   isLoading: boolean;
-  error: Error | null;
+  error: Error | undefined;
   refetch: () => void;
 }
 
 export interface UseProfileMetricsReturn {
   data: ProfileMetrics | undefined;
   isLoading: boolean;
-  error: Error | null;
+  error: Error | undefined;
 }
 
 export interface UseFollowStatusReturn {
   data: { isFollowing: boolean } | undefined;
   isLoading: boolean;
-  error: Error | null;
+  error: Error | undefined;
 }
 
 export interface UseProfilePostsReturn {
@@ -271,7 +267,7 @@ export interface UseProfilePostsReturn {
   hasNextPage: boolean;
   isFetchingNextPage: boolean;
   isLoading: boolean;
-  error: Error | null;
+  error: Error | undefined;
 }
 
 export interface UseSocialFeedReturn {
@@ -280,7 +276,7 @@ export interface UseSocialFeedReturn {
   hasNextPage: boolean;
   isFetchingNextPage: boolean;
   isLoading: boolean;
-  error: Error | null;
+  error: Error | undefined;
 }
 
 // Mutation types
@@ -294,26 +290,29 @@ export interface UpdateProfileVariables {
   updates: Partial<Pick<Profile, 'fullName' | 'bio' | 'avatarUrl' | 'socialLinks'>>;
 }
 
-// Error types
-export class ProfileError extends Error {
+// -----------------------------------------------------------------------------
+// Error helpers
+// -----------------------------------------------------------------------------
+
+export class ProfileError extends HttpError {
   constructor(
     message: string,
     public code: string,
-    public statusCode?: number
+    status: HttpStatusCode
   ) {
-    super(message);
+    super(status, message);
     this.name = 'ProfileError';
   }
 }
 
 export class PermissionError extends ProfileError {
   constructor(message: string = 'Insufficient permissions') {
-    super(message, 'PERMISSION_DENIED', 403);
+    super(message, 'PERMISSION_DENIED', HttpStatusCode.Forbidden);
   }
 }
 
 export class NotFoundError extends ProfileError {
   constructor(resource: string = 'Profile') {
-    super(`${resource} not found`, 'NOT_FOUND', 404);
+    super(`${resource} not found`, 'NOT_FOUND', HttpStatusCode.NotFound);
   }
-} 
+}
