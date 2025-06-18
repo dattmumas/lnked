@@ -507,7 +507,7 @@ const dummyLookupService = {
 function useMentionLookupService(mentionString: string | null) {
   const [results, setResults] = useState<Array<string>>([]);
 
-  useEffect(() => {
+  useEffect((): void => {
     const cachedResults = mentionsCache.get(mentionString);
 
     if (mentionString == undefined) {

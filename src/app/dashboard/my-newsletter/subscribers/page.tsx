@@ -46,7 +46,7 @@ type SubscriptionRow = {
 };
 
 export default async function MyNewsletterSubscribersPage() {
-  const supabase = await createServerSupabaseClient();
+  const supabase = createServerSupabaseClient();
 
   const {
     data: { user: currentUser },

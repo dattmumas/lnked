@@ -17,7 +17,7 @@ export default async function CollectiveSettingsPage({
   params: Promise<{ collectiveId: string }>;
 }) {
   const { collectiveId } = await params;
-  const supabase = await createServerSupabaseClient();
+  const supabase = createServerSupabaseClient();
 
   const {
     data: { user: authUser },

@@ -17,7 +17,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
 import { cn } from '@/lib/utils';
-
+import { formatTimestamp } from '@/utils/home/formatTimestamp';
 
 // Types
 interface UserProfile {
@@ -93,7 +93,7 @@ function useChainInteractions(userId: string) {
           reaction: 'like',
         });
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error toggling chain like:', error);
     }
   };
@@ -118,7 +118,7 @@ function useChainInteractions(userId: string) {
       });
       setReplyContent('');
       setReplyingTo(null);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error posting reply:', error);
     } finally {
       setIsPosting(false);
@@ -193,7 +193,7 @@ function useChains() {
             avatar_url: user?.avatar_url ?? undefined,
           },
           content: chain.content,
-          timestamp: new Date(chain.created_at).toLocaleString(),
+          timestamp: formatTimestamp(chain.created_at),
           type: 'post',
           stats: { likes: 0, replies: 0, shares: 0 },
           userInteraction: { liked: false },
@@ -201,14 +201,14 @@ function useChains() {
       });
       setChains(transformedChains);
       setError(null);
-    } catch (err) {
+    } catch (err: unknown) {
       setError('Failed to load chains');
     } finally {
       setLoading(false);
     }
   }, [supabase]);
 
-  useEffect(() => {
+  useEffect((): void => {
     fetchChains();
     // Real-time subscription could be added here
   }, [fetchChains]);
@@ -230,7 +230,7 @@ function ChainPostForm({
   const supabase = createSupabaseBrowserClient();
   const maxLength = 280;
   const remainingChars = maxLength - content.length;
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!content.trim() || isPosting) return;
     setIsPosting(true);
@@ -248,7 +248,7 @@ function ChainPostForm({
       if (error) return;
       setContent('');
       if (onPostSuccess) onPostSuccess();
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error posting chain:', error);
     } finally {
       setIsPosting(false);
@@ -270,8 +270,13 @@ function ChainPostForm({
     );
   };
   return (
-    <div className="border-t border-gray-200 dark:border-gray-700 p-5">
-      <form onSubmit={handleSubmit} className="space-y-4">
+    <div className="border-t border-gray-200 dark:border-gray-700 p-4">
+      <form
+        onSubmit={(e): void => {
+          void handleSubmit(e);
+        }}
+        className="space-y-3"
+      >
         <div className="flex gap-3">
           <Avatar className="w-9 h-9 flex-shrink-0">
             {profile?.avatar_url ? (
@@ -359,12 +364,12 @@ export function RightSidebar({
   const { chains, loading, error, refetch } = useChains();
   const chainInteractions = useChainInteractions(user.id);
   return (
-    <div className="fixed right-0 top-16 w-112 h-[calc(100vh-4rem)] bg-white dark:bg-gray-900 border-l border-gray-200 dark:border-gray-700 hidden lg:block z-20">
+    <div className="fixed right-0 top-16 w-[28rem] h-[calc(100vh-4rem)] bg-white dark:bg-gray-900 border-l border-gray-200 dark:border-gray-700 hidden lg:block z-20">
       <div className="h-full overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="p-5 border-b border-gray-200 dark:border-gray-700">
+        <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between">
-            <h2 className="font-semibold text-xl">Chains</h2>
+            <h2 className="font-semibold text-lg">Chains</h2>
             <div
               className="w-2 h-2 bg-green-500 rounded-full animate-pulse"
               title="Live activity"
@@ -372,7 +377,7 @@ export function RightSidebar({
           </div>
         </div>
         {/* Chains Feed - Scrollable */}
-        <div className="flex-1 overflow-y-auto p-5">
+        <div className="flex-1 overflow-y-auto px-4 py-3">
           {loading ? (
             <div className="flex items-center justify-center py-8">
               <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
@@ -390,11 +395,11 @@ export function RightSidebar({
               <p className="text-xs mt-1">Be the first to post!</p>
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-3">
               {chains.map((item) => (
                 <div
                   key={item.id}
-                  className="p-4 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+                  className="px-3 py-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
                 >
                   <div className="flex gap-3">
                     <Avatar className="w-9 h-9 flex-shrink-0">
@@ -413,28 +418,29 @@ export function RightSidebar({
                       )}
                     </Avatar>
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="font-medium text-sm">
-                          {item.user.name}
-                        </span>
-                        <span className="text-gray-500 text-xs">
-                          @{item.user.username}
-                        </span>
-                        <span className="text-gray-400 text-xs">•</span>
-                        <span className="text-gray-500 text-xs">
+                      <div className="flex items-start justify-between mb-1">
+                        <div className="flex items-baseline flex-wrap gap-x-1.5 min-w-0 pr-2">
+                          <span className="font-medium text-sm truncate max-w-[150px]">
+                            {item.user.name}
+                          </span>
+                          <span className="text-gray-500 text-xs truncate max-w-[100px]">
+                            @{item.user.username}
+                          </span>
+                        </div>
+                        <span className="text-gray-500 text-xs flex-shrink-0">
                           {item.timestamp}
                         </span>
                       </div>
-                      <p className="text-sm text-gray-900 dark:text-gray-100 line-clamp-4 mb-3 leading-relaxed">
+                      <p className="text-sm text-gray-900 dark:text-gray-100 mb-2.5 leading-relaxed break-words">
                         {item.content}
                       </p>
                       {/* Interactive Buttons */}
-                      <div className="flex items-center gap-6">
+                      <div className="flex items-center gap-5">
                         {/* Like Button */}
                         <button
                           onClick={() => chainInteractions.toggleLike(item.id)}
                           className={cn(
-                            'flex items-center gap-1 text-xs transition-colors',
+                            'flex items-center gap-1.5 text-xs transition-colors',
                             chainInteractions.likedChains.has(item.id)
                               ? 'text-red-500'
                               : 'text-gray-500 hover:text-red-500',
@@ -452,7 +458,7 @@ export function RightSidebar({
                         {/* Reply Button */}
                         <button
                           onClick={() => chainInteractions.startReply(item.id)}
-                          className="flex items-center gap-1 text-xs text-gray-500 hover:text-blue-500 transition-colors"
+                          className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-blue-500 transition-colors"
                         >
                           <Reply className="w-4 h-4" />
                           <span>{item.stats.replies}</span>
@@ -462,13 +468,13 @@ export function RightSidebar({
                           onClick={() =>
                             chainInteractions.shareChain(item.id, item.content)
                           }
-                          className="flex items-center gap-1 text-xs text-gray-500 hover:text-green-500 transition-colors"
+                          className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-green-500 transition-colors"
                         >
                           <Share2 className="w-4 h-4" />
                           <span>{item.stats.shares}</span>
                         </button>
                         {/* More Options */}
-                        <button className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition-colors">
+                        <button className="ml-auto text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition-colors">
                           <MoreHorizontal className="w-4 h-4" />
                         </button>
                       </div>

@@ -7,7 +7,7 @@ import type { NotificationPreferencesUpdate } from '@/types/notifications';
 
 export async function GET() {
   try {
-    const supabase = await createServerSupabaseClient();
+    const supabase = createServerSupabaseClient();
     const {
       data: { user },
       error: authError,
@@ -22,7 +22,7 @@ export async function GET() {
 
     const preferences = await notificationService.getPreferences();
     return NextResponse.json({ preferences });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Error fetching notification preferences:', error);
     return NextResponse.json(
       { error: 'Failed to fetch notification preferences' },
@@ -33,7 +33,7 @@ export async function GET() {
 
 export async function PUT(req: NextRequest) {
   try {
-    const supabase = await createServerSupabaseClient();
+    const supabase = createServerSupabaseClient();
     const {
       data: { user },
       error: authError,
@@ -66,7 +66,7 @@ export async function PUT(req: NextRequest) {
     }
 
     return NextResponse.json({ success: true });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Error updating notification preferences:', error);
     return NextResponse.json(
       { error: 'Failed to update notification preferences' },

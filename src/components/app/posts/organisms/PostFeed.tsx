@@ -159,7 +159,7 @@ export function usePostFeed(userId?: string) {
 
   const supabase = createSupabaseBrowserClient();
 
-  useEffect(() => {
+  useEffect((): void => {
     const fetchPosts = async () => {
       try {
         setLoading(true);
@@ -228,7 +228,7 @@ export function usePostFeed(userId?: string) {
         }));
 
         setPosts(transformedPosts);
-      } catch (err) {
+      } catch (err: unknown) {
         console.error('Error fetching posts:', err);
         setError('Failed to load posts');
       } finally {

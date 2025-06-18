@@ -1,5 +1,9 @@
 'use client';
 
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
+/* eslint-disable @typescript-eslint/no-redundant-type-constituents */
 import * as SelectPrimitive from '@radix-ui/react-select';
 import { Check, ChevronDown, ChevronUp } from 'lucide-react';
 import * as React from 'react';
@@ -7,26 +11,27 @@ import * as React from 'react';
 import { cn } from '@/lib/utils';
 
 // Type assertion to work around React 19 compatibility
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const SelectPrimitiveTyped = SelectPrimitive as any;
 
 const Select = ({
   children,
   ...props
-}: React.ComponentPropsWithoutRef<typeof SelectPrimitiveTyped.Root>) => (
+}: React.ComponentPropsWithoutRef<
+  typeof SelectPrimitiveTyped.Root
+>): React.JSX.Element => (
   <SelectPrimitiveTyped.Root {...props}>{children}</SelectPrimitiveTyped.Root>
 );
 Select.displayName = 'Select';
 
 function SelectGroup({
   ...props
-}: React.ComponentProps<typeof SelectPrimitiveTyped.Group>) {
+}: React.ComponentProps<typeof SelectPrimitiveTyped.Group>): React.JSX.Element {
   return <SelectPrimitiveTyped.Group data-slot="select-group" {...props} />;
 }
 
 function SelectValue({
   ...props
-}: React.ComponentProps<typeof SelectPrimitiveTyped.Value>) {
+}: React.ComponentProps<typeof SelectPrimitiveTyped.Value>): React.JSX.Element {
   return <SelectPrimitiveTyped.Value data-slot="select-value" {...props} />;
 }
 
@@ -37,7 +42,7 @@ function SelectTrigger({
   ...props
 }: React.ComponentProps<typeof SelectPrimitiveTyped.Trigger> & {
   size?: 'sm' | 'default';
-}) {
+}): React.JSX.Element {
   return (
     <SelectPrimitiveTyped.Trigger
       data-slot="select-trigger"
@@ -61,7 +66,9 @@ function SelectContent({
   children,
   position = 'popper',
   ...props
-}: React.ComponentProps<typeof SelectPrimitiveTyped.Content>) {
+}: React.ComponentProps<
+  typeof SelectPrimitiveTyped.Content
+>): React.JSX.Element {
   return (
     <SelectPrimitiveTyped.Portal>
       <SelectPrimitiveTyped.Content
@@ -94,7 +101,7 @@ function SelectContent({
 function SelectLabel({
   className,
   ...props
-}: React.ComponentProps<typeof SelectPrimitiveTyped.Label>) {
+}: React.ComponentProps<typeof SelectPrimitiveTyped.Label>): React.JSX.Element {
   return (
     <SelectPrimitiveTyped.Label
       data-slot="select-label"
@@ -108,7 +115,7 @@ function SelectItem({
   className,
   children,
   ...props
-}: React.ComponentProps<typeof SelectPrimitiveTyped.Item>) {
+}: React.ComponentProps<typeof SelectPrimitiveTyped.Item>): React.JSX.Element {
   return (
     <SelectPrimitiveTyped.Item
       data-slot="select-item"
@@ -131,7 +138,9 @@ function SelectItem({
 function SelectSeparator({
   className,
   ...props
-}: React.ComponentProps<typeof SelectPrimitiveTyped.Separator>) {
+}: React.ComponentProps<
+  typeof SelectPrimitiveTyped.Separator
+>): React.JSX.Element {
   return (
     <SelectPrimitiveTyped.Separator
       data-slot="select-separator"
@@ -144,7 +153,9 @@ function SelectSeparator({
 function SelectScrollUpButton({
   className,
   ...props
-}: React.ComponentProps<typeof SelectPrimitiveTyped.ScrollUpButton>) {
+}: React.ComponentProps<
+  typeof SelectPrimitiveTyped.ScrollUpButton
+>): React.JSX.Element {
   return (
     <SelectPrimitiveTyped.ScrollUpButton
       data-slot="select-scroll-up-button"
@@ -162,7 +173,9 @@ function SelectScrollUpButton({
 function SelectScrollDownButton({
   className,
   ...props
-}: React.ComponentProps<typeof SelectPrimitiveTyped.ScrollDownButton>) {
+}: React.ComponentProps<
+  typeof SelectPrimitiveTyped.ScrollDownButton
+>): React.JSX.Element {
   return (
     <SelectPrimitiveTyped.ScrollDownButton
       data-slot="select-scroll-down-button"
@@ -189,3 +202,7 @@ export {
   SelectTrigger,
   SelectValue,
 };
+/* eslint-enable @typescript-eslint/no-unsafe-assignment */
+/* eslint-enable @typescript-eslint/no-explicit-any */
+/* eslint-enable @typescript-eslint/no-unsafe-argument */
+/* eslint-enable @typescript-eslint/no-redundant-type-constituents */

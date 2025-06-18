@@ -25,7 +25,7 @@ export default function DeleteAccountSection({
     if (result.success) {
       setSuccess(true);
       setTimeout(() => {
-        router.push('/goodbye');
+        void router.push('/goodbye');
       }, 2000);
     } else {
       setError(result.error || 'Failed to delete account.');
@@ -61,7 +61,7 @@ export default function DeleteAccountSection({
         <Button
           variant="destructive"
           disabled={isLoading || confirmEmail !== userEmail}
-          onClick={handleDelete}
+          onClick={() => void handleDelete()}
         >
           {isLoading ? 'Deleting...' : 'Delete My Account'}
         </Button>

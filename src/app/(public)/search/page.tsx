@@ -13,7 +13,7 @@ export default async function Page({
 }: {
   searchParams: Promise<{ q?: string }>;
 }) {
-  const supabase = await createServerSupabaseClient();
+  const supabase = createServerSupabaseClient();
   const { q: queryParam } = await searchParams;
   const rawQ = queryParam?.trim() || '';
   const q = rawQ;

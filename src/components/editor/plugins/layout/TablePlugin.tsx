@@ -92,7 +92,7 @@ export function InsertTableDialog({
   const [columns, setColumns] = useState('5');
   const [isDisabled, setIsDisabled] = useState(true);
 
-  useEffect(() => {
+  useEffect((): void => {
     const row = Number(rows);
     const column = Number(columns);
     if (row && row > 0 && row <= 500 && column && column > 0 && column <= 50) {
@@ -147,14 +147,14 @@ export function TablePlugin({
 }): JSX.Element | null {
   const [editor] = useLexicalComposerContext();
   const cellContext = useContext(CellContext);
-  useEffect(() => {
+  useEffect((): void => {
     if (!editor.hasNodes([TableNode, TableRowNode, TableCellNode])) {
       throw new Error(
         'TablePlugin: TableNode, TableRowNode, or TableCellNode is not registered on editor',
       );
     }
   }, [editor]);
-  useEffect(() => {
+  useEffect((): void => {
     cellContext.set(cellEditorConfig, children);
   }, [cellContext, cellEditorConfig, children]);
   return null;

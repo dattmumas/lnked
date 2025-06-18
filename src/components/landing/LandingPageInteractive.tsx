@@ -3,7 +3,7 @@
 import { useEffect } from 'react';
 
 export default function LandingPageInteractive() {
-  useEffect(() => {
+  useEffect((): void => {
     // Custom Cursor
     const cursor = document.querySelector('.cursor');
     const follower = document.querySelector('.cursor-follower');

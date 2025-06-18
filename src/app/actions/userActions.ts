@@ -79,7 +79,7 @@ interface UpdateUserProfileResult {
 export async function updateUserProfile(
   formData: RawUserProfileFormInput, // Use the raw input type for the function signature
 ): Promise<UpdateUserProfileResult> {
-  const supabase = await createServerSupabaseClient();
+  const supabase = createServerSupabaseClient();
 
   const {
     data: { user },
@@ -170,7 +170,7 @@ export async function updateUserProfile(
 export async function uploadAvatar(
   formData: FormData
 ): Promise<{ success: boolean; avatarUrl?: string; error?: string }> {
-  const supabase = await createServerSupabaseClient();
+  const supabase = createServerSupabaseClient();
 
   const {
     data: { user },
@@ -278,7 +278,7 @@ export async function uploadAvatar(
               console.warn('Could not delete old avatar:', error.message);
             });
         }
-      } catch (error) {
+      } catch (error: unknown) {
         // Log warning but don't fail the operation
         console.warn('Error cleaning up old avatar:', error);
       }
@@ -291,7 +291,7 @@ export async function uploadAvatar(
 
     return { success: true, avatarUrl };
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Error processing avatar upload:', error);
     return {
       success: false,
@@ -304,7 +304,7 @@ export async function deleteUserAccount(): Promise<{
   success: boolean;
   error?: string;
 }> {
-  const supabase = await createServerSupabaseClient();
+  const supabase = createServerSupabaseClient();
   const {
     data: { user },
     error: authError,
@@ -341,7 +341,7 @@ export async function deleteUserAccount(): Promise<{
         subscriptions.map(async (sub) => {
           try {
             await stripe.subscriptions.cancel(sub.id);
-          } catch (err) {
+          } catch (err: unknown) {
             console.error('Error cancelling Stripe subscription:', err);
           }
         })
@@ -356,7 +356,7 @@ export async function deleteUserAccount(): Promise<{
     if (customer?.stripe_customer_id) {
       try {
         await stripe.customers.del(customer.stripe_customer_id);
-      } catch (err) {
+      } catch (err: unknown) {
         console.error('Error deleting Stripe customer:', err);
       }
     }
@@ -369,7 +369,7 @@ export async function deleteUserAccount(): Promise<{
     if (userRow?.stripe_account_id) {
       try {
         await stripe.accounts.del(userRow.stripe_account_id);
-      } catch (err) {
+      } catch (err: unknown) {
         console.error('Error deleting Stripe Connect account:', err);
       }
     }

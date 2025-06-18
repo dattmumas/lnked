@@ -56,7 +56,7 @@ export default function ExcalidrawComponent({
     useLexicalNodeSelection(nodeKey);
   const [isResizing, setIsResizing] = useState<boolean>(false);
 
-  useEffect(() => {
+  useEffect((): void => {
     if (!isEditable) {
       if (isSelected) {
         clearSelection();

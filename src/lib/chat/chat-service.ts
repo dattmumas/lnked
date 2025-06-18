@@ -2,14 +2,18 @@ import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 
 import type { MessageWithSender } from './types';
-import type { Database } from '@/lib/database.types';
+import type { Database, Json } from '@/lib/database.types';
+import type { SupabaseClient } from '@supabase/supabase-js';
+
+export const DEFAULT_PAGE_SIZE = 50;
+
+/** Standard service response wrapper */
+type ServiceResponse<T> = Promise<{ data: T | null; error: Error | null }>;
 
 type Tables = Database['public']['Tables'];
-type ConversationRow = Tables['conversations']['Row'];
-type MessageRow = Tables['messages']['Row'];
 
 class ChatService {
-  private getSupabase() {
+  private getSupabase(): SupabaseClient<Database> {
     // Check if we're on the server or client
     if (typeof window === 'undefined') {
       return createServerSupabaseClient();
@@ -17,11 +21,11 @@ class ChatService {
     return createSupabaseBrowserClient();
   }
 
-  async getConversations() {
+  async getConversations(): ServiceResponse<unknown[]> {
     const supabase = this.getSupabase();
     const { data: { user } } = await supabase.auth.getUser();
     
-    if (!user) {
+    if (user === null) {
       return { data: null, error: new Error('Not authenticated') };
     }
 
@@ -42,7 +46,7 @@ class ChatService {
       .eq('user_id', user.id)
       .order('conversations(last_message_at)', { ascending: false });
 
-    if (error) return { data: null, error };
+    if (error !== null) return { data: null, error };
 
     // Transform the data to match expected format
     const conversations = data?.map(item => ({
@@ -54,12 +58,16 @@ class ChatService {
       participants: [], // TODO: Fetch participants if needed
       last_message: null, // TODO: Fetch last message if needed
       created_by_user: null // TODO: Fetch creator user if needed
-    })) || [];
+    })) ?? [];
 
     return { data: conversations, error: null };
   }
 
-  async getMessages(conversationId: string, limit = 50, offset = 0) {
+  async getMessages(
+    conversationId: string,
+    limit = DEFAULT_PAGE_SIZE,
+    offset = 0
+  ): ServiceResponse<MessageWithSender[]> {
     const supabase = this.getSupabase();
     
     const { data, error } = await supabase
@@ -88,10 +96,11 @@ class ChatService {
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1);
 
-    if (error) return { data: null, error };
+    if (error !== null) return { data: null, error };
 
     // Reverse to show oldest first
-    return { data: (data?.reverse() || []) as MessageWithSender[], error: null };
+    const reversedData = data !== null ? data.reverse() : [];
+    return { data: reversedData as MessageWithSender[], error: null };
   }
 
   async sendMessage(params: {
@@ -99,12 +108,12 @@ class ChatService {
     content: string;
     message_type?: 'text' | 'image' | 'file' | 'system';
     reply_to_id?: string;
-    metadata?: any;
-  }) {
+    metadata?: Json | null;
+  }): ServiceResponse<MessageWithSender> {
     const supabase = this.getSupabase();
     const { data: { user } } = await supabase.auth.getUser();
     
-    if (!user) {
+    if (user === null) {
       return { data: null, error: new Error('Not authenticated') };
     }
 
@@ -146,11 +155,11 @@ class ChatService {
     description?: string;
     is_private?: boolean;
     participant_ids: string[];
-  }) {
+  }): ServiceResponse<Tables['conversations']['Row']> {
     const supabase = this.getSupabase();
     const { data: { user } } = await supabase.auth.getUser();
     
-    if (!user) {
+    if (user === null) {
       return { data: null, error: new Error('Not authenticated') };
     }
 
@@ -161,13 +170,13 @@ class ChatService {
         title: params.title,
         type: params.type,
         description: params.description,
-        is_private: params.is_private || false,
+        is_private: params.is_private ?? false,
         created_by: user.id
       })
       .select()
       .single();
 
-    if (convError || !conversation) {
+    if (convError !== null || conversation === null) {
       return { data: null, error: convError };
     }
 
@@ -175,14 +184,14 @@ class ChatService {
     const participants = [user.id, ...params.participant_ids].map(userId => ({
       conversation_id: conversation.id,
       user_id: userId,
-      role: userId === user.id ? 'admin' : 'member'
+      role: userId === user.id ? 'admin' : 'member' as const
     }));
 
     const { error: participantError } = await supabase
       .from('conversation_participants')
       .insert(participants);
 
-    if (participantError) {
+    if (participantError !== null) {
       // Rollback conversation creation
       await supabase.from('conversations').delete().eq('id', conversation.id);
       return { data: null, error: participantError };
@@ -191,11 +200,11 @@ class ChatService {
     return { data: conversation, error: null };
   }
 
-  async markMessagesAsRead(conversationId: string) {
+  async markMessagesAsRead(conversationId: string): Promise<{ error: Error | null }> {
     const supabase = this.getSupabase();
     const { data: { user } } = await supabase.auth.getUser();
     
-    if (!user) {
+    if (user === null) {
       return { error: new Error('Not authenticated') };
     }
 
@@ -209,11 +218,11 @@ class ChatService {
     return { error };
   }
 
-  async addReaction(messageId: string, emoji: string) {
+  async addReaction(messageId: string, emoji: string): Promise<{ error: Error | null }> {
     const supabase = this.getSupabase();
     const { data: { user } } = await supabase.auth.getUser();
     
-    if (!user) {
+    if (user === null) {
       return { error: new Error('Not authenticated') };
     }
 
@@ -228,11 +237,11 @@ class ChatService {
     return { error };
   }
 
-  async removeReaction(messageId: string, emoji: string) {
+  async removeReaction(messageId: string, emoji: string): Promise<{ error: Error | null }> {
     const supabase = this.getSupabase();
     const { data: { user } } = await supabase.auth.getUser();
     
-    if (!user) {
+    if (user === null) {
       return { error: new Error('Not authenticated') };
     }
 
@@ -246,7 +255,7 @@ class ChatService {
     return { error };
   }
 
-  async searchMessages(query: string, conversationId?: string) {
+  async searchMessages(query: string, conversationId?: string): ServiceResponse<MessageWithSender[]> {
     const supabase = this.getSupabase();
     
     let searchQuery = supabase
@@ -262,9 +271,9 @@ class ChatService {
       `)
       .textSearch('content', query)
       .order('created_at', { ascending: false })
-      .limit(50);
+      .limit(DEFAULT_PAGE_SIZE);
 
-    if (conversationId) {
+    if (conversationId !== null && conversationId !== undefined && conversationId.trim() !== '') {
       searchQuery = searchQuery.eq('conversation_id', conversationId);
     }
 

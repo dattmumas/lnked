@@ -85,11 +85,11 @@ export async function POST(request: Request) {
       if (process.env.NODE_ENV === "development") {
         console.info("Signing out in callback");
       }
-      await supabase.auth.signOut();
+      await void supabase.auth.signOut();
     }
 
     return response;
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("Error in auth callback:", error);
     return NextResponse.json(
       { error: "Internal server error in auth callback" },

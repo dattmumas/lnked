@@ -30,7 +30,7 @@ export default async function ProfilePage({
 }) {
   const { username } = await params;
   const { q } = await searchParams;
-  const supabase = await createServerSupabaseClient();
+  const supabase = createServerSupabaseClient();
 
   // Server-side user verification for basic access control
   const {

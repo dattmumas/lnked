@@ -51,12 +51,12 @@ export default function EditPostDetailsPage() {
   } = useEnhancedPostEditor(postId);
 
   // Set current page for state management
-  useEffect(() => {
+  useEffect((): void => {
     setCurrentPage('details');
   }, [setCurrentPage]);
 
   const handleBackToEditor = () => {
-    router.push(`/posts/${postId}/edit`);
+    void router.push(`/posts/${postId}/edit`);
   };
 
   const handleSaveDraft = async () => {
@@ -66,8 +66,8 @@ export default function EditPostDetailsPage() {
   const handlePublish = async () => {
     try {
       await publishPost();
-      router.push('/dashboard/posts');
-    } catch (error) {
+      void router.push('/dashboard/posts');
+    } catch (error: unknown) {
       console.error('Failed to publish post:', error);
       // Error will be handled by the enhanced error system
     }
@@ -146,14 +146,14 @@ export default function EditPostDetailsPage() {
             </Button>
             <Button
               variant="outline"
-              onClick={handleSaveDraft}
+              onClick={() => void handleSaveDraft()}
               disabled={autoSaveStatus === 'saving'}
             >
               Save Changes
             </Button>
             {formData.status === 'draft' && (
               <Button
-                onClick={handlePublish}
+                onClick={() => void handlePublish()}
                 disabled={!canPublish}
                 className="flex items-center gap-2"
               >
@@ -163,7 +163,7 @@ export default function EditPostDetailsPage() {
             )}
             {formData.status === 'active' && (
               <Button
-                onClick={handlePublish}
+                onClick={() => void handlePublish()}
                 disabled={!canPublish}
                 className="flex items-center gap-2"
               >

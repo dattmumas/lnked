@@ -15,7 +15,7 @@ export async function togglePostLike(
   postId: string,
   collectiveSlug: string | null | undefined
 ): Promise<LikeActionResult> {
-  const supabase = await createServerSupabaseClient();
+  const supabase = createServerSupabaseClient();
 
   const {
     data: { user },

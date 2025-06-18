@@ -26,7 +26,7 @@ interface UsePostInteractionsReturn {
   toggleDislike: () => Promise<void>;
   toggleBookmark: () => Promise<void>;
   isLoading: boolean;
-  error: string | null;
+  error: string | undefined;
 }
 
 export function usePostInteractions({
@@ -46,13 +46,13 @@ export function usePostInteractions({
   });
   
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | undefined>(undefined);
   const [initialized, setInitialized] = useState(false);
   
   const supabase = createSupabaseBrowserClient();
 
   // Initialize user interactions
-  useEffect(() => {
+  useEffect((): void => {
     if (!userId || !postId || initialized) return;
 
     const initializeInteractions = async () => {
@@ -87,7 +87,7 @@ export function usePostInteractions({
           .eq('post_id', postId);
 
         // Process the data
-        const userReaction = userReactions?.[0]?.type || null;
+        const userReaction = userReactions?.[0]?.type;
         const likesCount = reactionCounts?.filter(r => r.type === 'like').length || 0;
         const dislikesCount = reactionCounts?.filter(r => r.type === 'dislike').length || 0;
 
@@ -102,7 +102,7 @@ export function usePostInteractions({
         }));
 
         setInitialized(true);
-      } catch (err) {
+      } catch (err: unknown) {
         console.error('Error initializing post interactions:', err);
         setError('Failed to load post interactions');
       } finally {
@@ -130,7 +130,7 @@ export function usePostInteractions({
 
     try {
       setIsLoading(true);
-      setError(null);
+      setError(undefined);
 
       // Remove existing reactions first
       await supabase
@@ -149,7 +149,7 @@ export function usePostInteractions({
             type: 'like',
           });
       }
-    } catch (err) {
+    } catch (err: unknown) {
       console.error('Error toggling like:', err);
       setError('Failed to update like');
       
@@ -183,7 +183,7 @@ export function usePostInteractions({
 
     try {
       setIsLoading(true);
-      setError(null);
+      setError(undefined);
 
       // Remove existing reactions first
       await supabase
@@ -202,7 +202,7 @@ export function usePostInteractions({
             type: 'dislike',
           });
       }
-    } catch (err) {
+    } catch (err: unknown) {
       console.error('Error toggling dislike:', err);
       setError('Failed to update dislike');
       
@@ -232,7 +232,7 @@ export function usePostInteractions({
 
     try {
       setIsLoading(true);
-      setError(null);
+      setError(undefined);
 
       if (wasBookmarked) {
         // Remove bookmark
@@ -250,7 +250,7 @@ export function usePostInteractions({
             post_id: postId,
           });
       }
-    } catch (err) {
+    } catch (err: unknown) {
       console.error('Error toggling bookmark:', err);
       setError('Failed to update bookmark');
       

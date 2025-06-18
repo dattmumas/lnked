@@ -45,7 +45,7 @@ export const FlashMessageContext = ({
       setProps(message ? { duration, message } : INITIAL_STATE),
     [],
   );
-  useEffect(() => {
+  useEffect((): void => {
     if (props.message) {
       const timeoutId = setTimeout(
         () => setProps(INITIAL_STATE),

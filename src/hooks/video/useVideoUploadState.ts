@@ -2,22 +2,45 @@
 
 import { useState, useCallback } from 'react';
 
+import { PROGRESS_MIN, PROGRESS_MAX } from '@/lib/constants/video';
+
 export type UploadStatus = 'idle' | 'uploading' | 'processing' | 'complete' | 'error';
 
-export const useVideoUploadState = () => {
-  const [progress, setProgress] = useState(0);
+interface VideoUploadState {
+  progress: number;
+  status: UploadStatus;
+  error: string | null;
+  uploadId: string | null;
+  start: () => void;
+  upload: (file: File, uploadUrl: string) => Promise<void>;
+  updateProgress: (newProgress: number) => void;
+  setUploading: () => void;
+  setProcessing: () => void;
+  setComplete: () => void;
+  setError: (errorMessage: string) => void;
+  reset: () => void;
+  setUploadId: (id: string | null) => void;
+  isIdle: boolean;
+  isUploading: boolean;
+  isProcessing: boolean;
+  isComplete: boolean;
+  hasError: boolean;
+}
+
+export const useVideoUploadState = (): VideoUploadState => {
+  const [progress, setProgress] = useState(PROGRESS_MIN);
   const [status, setStatus] = useState<UploadStatus>('idle');
   const [error, setError] = useState<string | null>(null);
   const [uploadId, setUploadId] = useState<string | null>(null);
 
   const start = useCallback(() => {
     setStatus('uploading');
-    setProgress(0);
+    setProgress(PROGRESS_MIN);
     setError(null);
   }, []);
 
   const updateProgress = useCallback((newProgress: number) => {
-    setProgress(Math.min(100, Math.max(0, newProgress)));
+    setProgress(Math.min(PROGRESS_MAX, Math.max(PROGRESS_MIN, newProgress)));
   }, []);
 
   const setUploading = useCallback(() => {
@@ -27,12 +50,12 @@ export const useVideoUploadState = () => {
 
   const setProcessing = useCallback(() => {
     setStatus('processing');
-    setProgress(100);
+    setProgress(PROGRESS_MAX);
   }, []);
 
   const setComplete = useCallback(() => {
     setStatus('complete');
-    setProgress(100);
+    setProgress(PROGRESS_MAX);
     setError(null);
   }, []);
 
@@ -43,7 +66,7 @@ export const useVideoUploadState = () => {
 
   const reset = useCallback(() => {
     setStatus('idle');
-    setProgress(0);
+    setProgress(PROGRESS_MIN);
     setError(null);
     setUploadId(null);
   }, []);
@@ -63,7 +86,7 @@ export const useVideoUploadState = () => {
         // Track upload progress
         xhr.upload.addEventListener('progress', (event) => {
           if (event.lengthComputable) {
-            const percentComplete = (event.loaded / event.total) * 100;
+            const percentComplete = (event.loaded / event.total) * PROGRESS_MAX;
             updateProgress(percentComplete);
           }
         });
@@ -92,7 +115,7 @@ export const useVideoUploadState = () => {
         xhr.setRequestHeader('Content-Type', file.type);
         xhr.send(file);
       });
-    } catch (error) {
+    } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Upload failed';
       setErrorState(errorMessage);
       throw error;

@@ -140,7 +140,7 @@ export function ConversationPanel({ channelId, className }: Props) {
   };
 
   // Initial fetch
-  useEffect(() => {
+  useEffect((): void => {
     if (!channelId) return;
     (async () => {
       try {
@@ -174,7 +174,7 @@ export function ConversationPanel({ channelId, className }: Props) {
 
         // Mark messages as read when conversation is loaded
         await markMessagesAsRead(channelId);
-      } catch (err) {
+      } catch (err: unknown) {
         console.error(err);
       }
     })();
@@ -197,13 +197,13 @@ export function ConversationPanel({ channelId, className }: Props) {
         // Update local state to remove the "New messages" indicator
         setLastReadAt(newLastReadAt);
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Failed to mark messages as read:', error);
     }
   };
 
   // Subscribe to new messages
-  useEffect(() => {
+  useEffect((): void => {
     if (!channelId) return;
 
     const handleNewMessage = (msg: Message) => {
@@ -253,7 +253,7 @@ export function ConversationPanel({ channelId, className }: Props) {
   }, [channelId, scrollToBottom, user?.id]);
 
   // Load older on scroll top
-  useEffect(() => {
+  useEffect((): void => {
     const container = containerRef.current;
     if (!container) return;
 
@@ -289,7 +289,7 @@ export function ConversationPanel({ channelId, className }: Props) {
                 container.scrollTop = heightDiff;
               });
             }
-          } catch (err) {
+          } catch (err: unknown) {
             console.error(err);
           } finally {
             setLoadingOlder(false);
@@ -312,7 +312,7 @@ export function ConversationPanel({ channelId, className }: Props) {
   }, [messages, channelId, unread, loadingOlder]);
 
   // Effect to handle scrolling to last read indicator
-  useEffect(() => {
+  useEffect((): void => {
     if (
       lastReadAt &&
       messages.length > 0 &&
@@ -339,7 +339,7 @@ export function ConversationPanel({ channelId, className }: Props) {
   const [containerHeight, setContainerHeight] = useState(600);
   const [containerWidth, setContainerWidth] = useState(800);
 
-  useEffect(() => {
+  useEffect((): void => {
     const updateSize = () => {
       if (containerRef.current) {
         setContainerHeight(containerRef.current.clientHeight);
@@ -384,7 +384,7 @@ export function ConversationPanel({ channelId, className }: Props) {
       );
 
       setEmojiPickerTarget(null);
-    } catch (err) {
+    } catch (err: unknown) {
       console.error('Failed to add reaction:', err);
     }
   };
@@ -416,7 +416,7 @@ export function ConversationPanel({ channelId, className }: Props) {
           return msg;
         }),
       );
-    } catch (err) {
+    } catch (err: unknown) {
       console.error('Failed to remove reaction:', err);
     }
   };
@@ -451,7 +451,7 @@ export function ConversationPanel({ channelId, className }: Props) {
 
       setEditingId(null);
       setEditText('');
-    } catch (err) {
+    } catch (err: unknown) {
       console.error('Failed to update message:', err);
     }
   };
@@ -469,7 +469,7 @@ export function ConversationPanel({ channelId, className }: Props) {
 
       // Remove the message from the UI entirely
       setMessages((prev) => prev.filter((msg) => msg.id !== messageId));
-    } catch (err) {
+    } catch (err: unknown) {
       console.error('Failed to delete message:', err);
     }
   };
@@ -484,7 +484,7 @@ export function ConversationPanel({ channelId, className }: Props) {
   }
 
   // Reset scroll state when channel changes
-  useEffect(() => {
+  useEffect((): void => {
     setHasScrolledToLastRead(false);
     setLastReadAt(undefined);
   }, [channelId]);
@@ -619,7 +619,7 @@ export function ConversationPanel({ channelId, className }: Props) {
               {quickEmojis.map((emoji) => (
                 <button
                   key={emoji}
-                  onClick={() => handleAddReaction(emojiPickerTarget, emoji)}
+                  onClick={() => void handleAddReaction(emojiPickerTarget, emoji)}
                   className="text-2xl p-2 hover:bg-muted rounded transition-colors"
                 >
                   {emoji}

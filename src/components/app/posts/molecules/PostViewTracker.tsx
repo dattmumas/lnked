@@ -12,7 +12,7 @@ export default function PostViewTracker({ postId }: PostViewTrackerProps) {
   const retryCount = useRef(0);
   const maxRetries = 3;
 
-  useEffect(() => {
+  useEffect((): void => {
     if (!postId || hasTracked.current) return;
 
     const trackingKey = `post_view_tracked_${postId}`;
@@ -21,7 +21,7 @@ export default function PostViewTracker({ postId }: PostViewTrackerProps) {
     try {
       // Use sessionStorage to track if view was counted in this session
       sessionTracked = Boolean(sessionStorage.getItem(trackingKey));
-    } catch (error) {
+    } catch (error: unknown) {
       console.warn('sessionStorage not available for view tracking:', error);
     }
 
@@ -34,7 +34,7 @@ export default function PostViewTracker({ postId }: PostViewTrackerProps) {
             hasTracked.current = true;
             try {
               sessionStorage.setItem(trackingKey, 'true');
-            } catch (error) {
+            } catch (error: unknown) {
               console.warn('Failed to set sessionStorage item:', error);
             }
           } else if (result.error && retryCount.current < maxRetries) {
@@ -53,7 +53,7 @@ export default function PostViewTracker({ postId }: PostViewTrackerProps) {
               result.error,
             );
           }
-        } catch (error) {
+        } catch (error: unknown) {
           console.error('Unexpected error tracking post view:', error);
         }
       };

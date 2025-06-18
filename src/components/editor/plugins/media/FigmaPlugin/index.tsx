@@ -29,7 +29,7 @@ export const INSERT_FIGMA_COMMAND: LexicalCommand<string> = createCommand(
 export default function FigmaPlugin(): JSX.Element | null {
   const [editor] = useLexicalComposerContext();
 
-  useEffect(() => {
+  useEffect((): void => {
     if (!editor.hasNodes([FigmaNode])) {
       throw new Error('FigmaPlugin: FigmaNode not registered on editor');
     }

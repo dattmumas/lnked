@@ -4,6 +4,23 @@ import { useState, useCallback } from 'react';
 
 import { VideoFormData } from './useVideoFormState';
 
+// API Response types
+interface VideoUploadResponse {
+  success: boolean;
+  uploadUrl?: string;
+  video?: VideoAsset;
+  error?: string;
+}
+
+interface VideoUpdateResponse {
+  video?: VideoAsset;
+  error?: string;
+}
+
+interface ErrorResponse {
+  error?: string;
+}
+
 // Helper function to normalize video asset data from database to expected format
 const normalizeVideoAsset = (asset: VideoAsset): VideoAsset => {
   return {
@@ -13,9 +30,9 @@ const normalizeVideoAsset = (asset: VideoAsset): VideoAsset => {
     encoding_tier: 'smart', // Default since encoding_tier column doesn't exist
     thumbnail_url: '', // Default since thumbnail_url column doesn't exist
     tags: [], // Default since tags column doesn't exist
-    collective_id: null, // Default since collective_id column doesn't exist
+    collective_id: undefined, // Default since collective_id column doesn't exist
     is_public: true, // Default since is_public column doesn't exist
-    processed_at: null, // Default since processed_at column doesn't exist
+    processed_at: undefined, // Default since processed_at column doesn't exist
   };
 };
 
@@ -46,8 +63,29 @@ export interface VideoAsset {
   processed_at?: string | null;
 }
 
-export const useVideoProcessing = () => {
-  const [asset, setAsset] = useState<VideoAsset | null>(null);
+interface UseVideoProcessingReturn {
+  // State
+  asset: VideoAsset | undefined;
+  thumbnails: string[];
+  isCreatingUploadUrl: boolean;
+  isPublishing: boolean;
+  
+  // Operations
+  createUploadUrl: (metadata: VideoFormData) => Promise<string>;
+  updateVideoMetadata: (formData: VideoFormData) => Promise<void>;
+  publish: (formData: VideoFormData) => Promise<void>;
+  refreshAssetStatus: () => Promise<void>;
+  generateThumbnails: () => Promise<string[]>;
+  reset: () => void;
+  
+  // Computed properties
+  hasAsset: boolean;
+  isReady: boolean;
+  canPublish: boolean;
+}
+
+export const useVideoProcessing = (): UseVideoProcessingReturn => {
+  const [asset, setAsset] = useState<VideoAsset | undefined>(undefined);
   const [thumbnails, setThumbnails] = useState<string[]>([]);
   const [isCreatingUploadUrl, setIsCreatingUploadUrl] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
@@ -56,12 +94,15 @@ export const useVideoProcessing = () => {
     setIsCreatingUploadUrl(true);
     
     try {
+      const titleValue = metadata.title?.trim() || 'Untitled Video';
+      const descriptionValue = metadata.description?.trim() || '';
+      
       const response = await fetch('/api/videos/upload-url', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          title: metadata.title || 'Untitled Video',
-          description: metadata.description || '',
+          title: titleValue,
+          description: descriptionValue,
           privacy_setting: metadata.privacySetting,
           encoding_tier: metadata.encodingTier,
           tags: metadata.tags,
@@ -71,23 +112,33 @@ export const useVideoProcessing = () => {
       });
 
       if (!response.ok) {
-        const error = await response.json().catch(() => ({}));
-        throw new Error(error.error || `Failed to create upload URL: ${response.status}`);
+        let errorMessage = `Failed to create upload URL: ${response.status}`;
+        try {
+          const errorData = await response.json() as unknown as ErrorResponse;
+          const hasError = errorData.error !== undefined && errorData.error !== null && errorData.error !== '';
+          if (hasError) {
+            errorMessage = errorData.error;
+          }
+        } catch {
+          // Use default error message if JSON parsing fails
+        }
+        throw new Error(errorMessage);
       }
 
-      const result = await response.json();
+      const result = await response.json() as unknown as VideoUploadResponse;
       
-      if (!result.success || !result.uploadUrl) {
+      const hasSuccessAndUrl = result.success === true && typeof result.uploadUrl === 'string' && result.uploadUrl !== '';
+      if (!hasSuccessAndUrl) {
         throw new Error('Invalid API response: missing upload URL');
       }
 
       // Store the video asset for later use
-      if (result.video) {
+      if (result.video !== undefined) {
         setAsset(normalizeVideoAsset(result.video));
       }
 
-      return result.uploadUrl;
-    } catch (error) {
+      return result.uploadUrl as string; // Already validated above
+    } catch (error: unknown) {
       console.error('Failed to create upload URL:', error);
       throw error;
     } finally {
@@ -96,7 +147,8 @@ export const useVideoProcessing = () => {
   }, []);
 
   const updateVideoMetadata = useCallback(async (formData: VideoFormData): Promise<void> => {
-    if (!asset?.id) {
+    const assetId = asset?.id;
+    if (assetId === undefined || assetId === null || assetId === '') {
       throw new Error('No video asset to update');
     }
 
@@ -109,10 +161,10 @@ export const useVideoProcessing = () => {
       thumbnail_url: formData.thumbnailUrl,
     };
 
-    console.warn('Updating video metadata:', { assetId: asset.id, payload: updatePayload });
+    console.warn('Updating video metadata:', { assetId, payload: updatePayload });
 
     try {
-      const response = await fetch(`/api/videos/${asset.id}`, {
+      const response = await fetch(`/api/videos/${assetId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updatePayload),
@@ -121,8 +173,8 @@ export const useVideoProcessing = () => {
       if (!response.ok) {
         let errorDetails = 'Unknown error';
         try {
-          const errorData = await response.json();
-          errorDetails = errorData.error || `HTTP ${response.status}`;
+          const errorData = await response.json() as ErrorResponse;
+          errorDetails = errorData.error ?? `HTTP ${response.status}`;
           console.error('API Error Response:', errorData);
         } catch (parseError) {
           errorDetails = `HTTP ${response.status} - Unable to parse error response`;
@@ -131,27 +183,28 @@ export const useVideoProcessing = () => {
         throw new Error(`Failed to update video metadata: ${errorDetails}`);
       }
 
-      const updatedAsset = await response.json();
+      const updatedAsset = await response.json() as unknown as VideoUpdateResponse;
     // Video metadata updated successfully
       
-      if (updatedAsset.video) {
+      if (updatedAsset.video !== undefined) {
         setAsset(normalizeVideoAsset(updatedAsset.video));
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Failed to update video metadata:', error);
       throw error;
     }
   }, [asset]);
 
   const publish = useCallback(async (formData: VideoFormData): Promise<void> => {
-    if (!asset?.id) {
+    const assetId = asset?.id;
+    if (assetId === undefined || assetId === null || assetId === '') {
       throw new Error('No video asset to publish');
     }
 
     setIsPublishing(true);
 
     try {
-      const response = await fetch(`/api/videos/${asset.id}`, {
+      const response = await fetch(`/api/videos/${assetId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -167,18 +220,24 @@ export const useVideoProcessing = () => {
       });
 
       if (!response.ok) {
-        const error = await response.json().catch(() => ({}));
-        throw new Error(
-          error.error ||
-            `Failed to publish video: ${response.status} ${response.statusText}`,
-        );
+        let errorMessage = `Failed to publish video: ${response.status} ${response.statusText}`;
+        try {
+          const errorData = await response.json() as unknown as ErrorResponse;
+          const hasError = errorData.error !== undefined && errorData.error !== null && errorData.error !== '';
+          if (hasError) {
+            errorMessage = errorData.error;
+          }
+        } catch {
+          // Use default error message if JSON parsing fails
+        }
+        throw new Error(errorMessage);
       }
 
-      const publishedAsset = await response.json();
-      if (publishedAsset.video) {
+      const publishedAsset = await response.json() as unknown as VideoUpdateResponse;
+      if (publishedAsset.video !== undefined) {
         setAsset(normalizeVideoAsset(publishedAsset.video));
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Failed to publish video:', error);
       throw error;
     } finally {
@@ -187,29 +246,31 @@ export const useVideoProcessing = () => {
   }, [asset]);
 
   const refreshAssetStatus = useCallback(async (): Promise<void> => {
-    if (!asset?.id) {
+    const assetId = asset?.id;
+    if (assetId === undefined || assetId === null || assetId === '') {
       return;
     }
 
     try {
-      const response = await fetch(`/api/videos/${asset.id}/refresh`, {
+      const response = await fetch(`/api/videos/${assetId}/refresh`, {
         method: 'POST',
       });
 
       if (response.ok) {
-        const refreshedAsset = await response.json();
-        if (refreshedAsset.video) {
+        const refreshedAsset = await response.json() as unknown as VideoUpdateResponse;
+        if (refreshedAsset.video !== undefined) {
           setAsset(normalizeVideoAsset(refreshedAsset.video));
         }
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Failed to refresh asset status:', error);
       // Don't throw here as this is a background operation
     }
   }, [asset]);
 
   const generateThumbnails = useCallback((): Promise<string[]> => {
-    if (!asset?.mux_asset_id) {
+    const muxAssetId = asset?.mux_asset_id;
+    if (muxAssetId === null || muxAssetId === undefined || muxAssetId === '') {
       return Promise.reject(new Error('No MUX asset ID available for thumbnail generation'));
     }
 
@@ -221,20 +282,23 @@ export const useVideoProcessing = () => {
       
       for (let i = 0; i < THUMBNAIL_COUNT; i++) {
         const time = i * TIME_INTERVAL; // Generate thumbnails at 0s, 10s, 20s
-        const thumbnailUrl = `https://image.mux.com/${asset.mux_asset_id}/thumbnail.jpg?time=${time}`;
+        const thumbnailUrl = `https://image.mux.com/${muxAssetId}/thumbnail.jpg?time=${time}`;
         thumbnailUrls.push(thumbnailUrl);
       }
       
       setThumbnails(thumbnailUrls);
       return Promise.resolve(thumbnailUrls);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Failed to generate thumbnails:', error);
-      return Promise.reject(error);
+      if (error instanceof Error) {
+        return Promise.reject(error);
+      }
+      return Promise.reject(new Error('Failed to generate thumbnails'));
     }
   }, [asset]);
 
   const reset = useCallback(() => {
-    setAsset(null);
+    setAsset(undefined);
     setThumbnails([]);
     setIsCreatingUploadUrl(false);
     setIsPublishing(false);

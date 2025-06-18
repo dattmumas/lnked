@@ -179,7 +179,7 @@ function TableHoverActionsContainer({
     });
   }, []);
 
-  useEffect(() => {
+  useEffect((): void => {
     if (!shouldListenMouseMove) {
       return;
     }
@@ -194,7 +194,7 @@ function TableHoverActionsContainer({
     };
   }, [shouldListenMouseMove, debouncedOnMouseMove]);
 
-  useEffect(() => {
+  useEffect((): void => {
     return mergeRegister(
       editor.registerMutationListener(
         TableNode,

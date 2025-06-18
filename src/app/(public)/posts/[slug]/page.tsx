@@ -193,7 +193,7 @@ async function getPostBySlugOrId(
       },
       error: null,
     };
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Unexpected error in getPostBySlugOrId:', error);
     return {
       data: null,
@@ -208,7 +208,7 @@ export default async function PostBySlugPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug: slugOrId } = await params;
-  const supabase = await createServerSupabaseClient();
+  const supabase = createServerSupabaseClient();
 
   try {
     const {
@@ -476,7 +476,7 @@ export default async function PostBySlugPage({
         </article>
       </>
     );
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Error loading post:', error);
     notFound();
   }

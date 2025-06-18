@@ -24,7 +24,7 @@ export function CollectiveHero({ collectiveSlug }: CollectiveHeroProps) {
   const [currentUser, setCurrentUser] = useState<{ id: string } | null>(null);
   const [isLoadingUser, setIsLoadingUser] = useState(true);
 
-  useEffect(() => {
+  useEffect((): void => {
     const fetchUser = async () => {
       const supabase = createSupabaseBrowserClient();
       const {

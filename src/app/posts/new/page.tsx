@@ -32,7 +32,7 @@ export default function NewPostEditorPage() {
   } = useEnhancedPostEditor();
 
   // Set current page for state management
-  useEffect(() => {
+  useEffect((): void => {
     setCurrentPage('editor');
   }, [setCurrentPage]);
 
@@ -41,7 +41,7 @@ export default function NewPostEditorPage() {
     if (isDirty && formData.title.trim()) {
       await savePost();
     }
-    router.push('/posts/new/details');
+    void router.push('/posts/new/details');
   };
 
   const handleGoBack = () => {
@@ -51,7 +51,7 @@ export default function NewPostEditorPage() {
       );
       if (!confirmed) return;
     }
-    router.push('/dashboard/posts');
+    void router.push('/dashboard/posts');
   };
 
   // Memoize the content change handler to prevent unnecessary re-renders

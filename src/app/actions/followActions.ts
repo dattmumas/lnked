@@ -12,7 +12,7 @@ interface FollowActionResult {
 export async function followUser(
   userIdToFollow: string,
 ): Promise<FollowActionResult> {
-  const supabase = await createServerSupabaseClient();
+  const supabase = createServerSupabaseClient();
 
   const {
     data: { user },
@@ -96,7 +96,7 @@ export async function followUser(
 export async function unfollowUser(
   userIdToUnfollow: string,
 ): Promise<FollowActionResult> {
-  const supabase = await createServerSupabaseClient();
+  const supabase = createServerSupabaseClient();
 
   const {
     data: { user },
@@ -172,7 +172,7 @@ export async function unfollowUser(
 export async function followCollective(
   collectiveId: string,
 ): Promise<FollowActionResult> {
-  const supabase = await createServerSupabaseClient();
+  const supabase = createServerSupabaseClient();
 
   const {
     data: { user },
@@ -226,7 +226,7 @@ export async function followCollective(
 export async function unfollowCollective(
   collectiveId: string,
 ): Promise<FollowActionResult> {
-  const supabase = await createServerSupabaseClient();
+  const supabase = createServerSupabaseClient();
 
   const {
     data: { user },

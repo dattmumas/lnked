@@ -47,7 +47,7 @@ export function NotificationPreferences({
   const [error, setError] = useState<string | undefined>(undefined);
 
   // Load preferences on mount
-  useEffect(() => {
+  useEffect((): void => {
     const loadPreferences = async () => {
       try {
         const prefs = await clientNotificationService.getPreferences();
@@ -69,7 +69,7 @@ export function NotificationPreferences({
         });
 
         setPreferences(prefsMap);
-      } catch (err) {
+      } catch (err: unknown) {
         setError(
           err instanceof Error ? err.message : 'Failed to load preferences',
         );
@@ -78,7 +78,7 @@ export function NotificationPreferences({
       }
     };
 
-    loadPreferences();
+    void loadPreferences();
   }, []);
 
   const handlePreferenceChange = (
@@ -116,7 +116,7 @@ export function NotificationPreferences({
       } else {
         setError(result.error || 'Failed to save preferences');
       }
-    } catch (err) {
+    } catch (err: unknown) {
       setError(
         err instanceof Error ? err.message : 'Failed to save preferences',
       );
@@ -316,7 +316,7 @@ export function NotificationPreferences({
         {/* Save Button */}
         {hasChanges && (
           <div className="flex justify-end pt-4 border-t">
-            <Button onClick={handleSave} disabled={isSaving}>
+            <Button onClick={() => void handleSave()} disabled={isSaving}>
               {isSaving ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />

@@ -47,7 +47,7 @@ export const CommentActions: React.FC<CommentActionsProps> = ({
       <Button
         variant="ghost"
         size="sm"
-        onClick={() => handleReaction('like')}
+        onClick={() => void handleReaction('like')}
         className="h-6 px-2 text-muted-foreground hover:text-foreground hover:bg-muted/50"
       >
         <ThumbsUp className="h-3 w-3 mr-1" />
@@ -58,7 +58,7 @@ export const CommentActions: React.FC<CommentActionsProps> = ({
       <Button
         variant="ghost"
         size="sm"
-        onClick={() => handleReaction('dislike')}
+        onClick={() => void handleReaction('dislike')}
         className="h-6 px-2 text-muted-foreground hover:text-foreground hover:bg-muted/50"
       >
         <ThumbsDown className="h-3 w-3 mr-1" />

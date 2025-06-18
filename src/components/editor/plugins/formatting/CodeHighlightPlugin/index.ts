@@ -18,7 +18,7 @@ import type {JSX} from 'react';
 export default function CodeHighlightPlugin(): JSX.Element | null {
   const [editor] = useLexicalComposerContext();
 
-  useEffect(() => {
+  useEffect((): void => {
     return registerCodeHighlighting(editor);
   }, [editor]);
 

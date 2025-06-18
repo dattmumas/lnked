@@ -689,7 +689,7 @@ export default function ToolbarPlugin({
     }
   }, [activeEditor, editor, updateToolbarState]);
 
-  useEffect(() => {
+  useEffect((): void => {
     return editor.registerCommand(
       SELECTION_CHANGE_COMMAND,
       (_payload, newEditor) => {
@@ -701,13 +701,13 @@ export default function ToolbarPlugin({
     );
   }, [editor, $updateToolbar, setActiveEditor]);
 
-  useEffect(() => {
+  useEffect((): void => {
     activeEditor.getEditorState().read(() => {
       $updateToolbar();
     });
   }, [activeEditor, $updateToolbar]);
 
-  useEffect(() => {
+  useEffect((): void => {
     return mergeRegister(
       editor.registerEditableListener((editable) => {
         setIsEditable(editable);

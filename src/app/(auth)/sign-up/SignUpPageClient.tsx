@@ -120,8 +120,8 @@ export default function SignUpPage() {
           );
         } else if (data.session) {
           setMessage('Sign up successful! Redirecting...');
-          router.push('/dashboard');
-          router.refresh(); // Ensure the layout re-renders with the new auth state
+          void router.push('/dashboard');
+          void router.refresh(); // Ensure the layout re-renders with the new auth state
         } else if (data.user) {
           setMessage(
             'Sign up successful! Please check your email to confirm your account before signing in.',
@@ -131,7 +131,7 @@ export default function SignUpPage() {
             'An unexpected error occurred during sign up. Please try again.',
           );
         }
-      } catch (err) {
+      } catch (err: unknown) {
         console.error('Unexpected error during sign up:', err);
 
         // Handle rate limit errors specifically

@@ -42,7 +42,7 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
   const handleNewComment = async (content: string) => {
     try {
       await addComment(content);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Failed to add comment:', error);
     }
   };
@@ -50,7 +50,7 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
   const handleReply = async (parentId: string, content: string) => {
     try {
       await addComment(content, parentId);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Failed to add reply:', error);
     }
   };
@@ -61,7 +61,7 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
   ) => {
     try {
       await toggleReaction(commentId, reactionType);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Failed to toggle reaction:', error);
     }
   };

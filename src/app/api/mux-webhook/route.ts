@@ -92,7 +92,7 @@ export async function POST(request: NextRequest) {
 
     console.info('✅ [MUX-WEBHOOK] Webhook processing completed successfully');
     return NextResponse.json({ message: 'ok' });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('❌ [MUX-WEBHOOK] Critical error during webhook processing:', error);
     console.error('❌ [MUX-WEBHOOK] Error stack:', (error as Error).stack);
     return NextResponse.json(
@@ -150,7 +150,7 @@ function isValidMuxSignature(rawBody: string, header: string, secret: string): b
     
     console.info(isValid ? '✅ [SIGNATURE] Signature verification passed' : '❌ [SIGNATURE] Signature verification failed');
     return isValid;
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('❌ [SIGNATURE] Error during signature verification:', error);
     return false;
   }
@@ -258,7 +258,7 @@ async function handleAssetReady(data: {
     }
 
     console.info('✅ [ASSET-READY] Handler completed successfully');
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('❌ [ASSET-READY] Unexpected error:', error);
     console.error('❌ [ASSET-READY] Error stack:', (error as Error).stack);
   }
@@ -332,7 +332,7 @@ async function handleUploadAssetCreated(data: {
 
     console.info('✅ [UPLOAD-CREATED] Upload linked to asset successfully!');
     console.info('✅ [UPLOAD-CREATED] Handler completed successfully');
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('❌ [UPLOAD-CREATED] Unexpected error:', error);
     console.error('❌ [UPLOAD-CREATED] Error stack:', (error as Error).stack);
   }
@@ -420,7 +420,7 @@ async function handleAssetErrored(data: {
     }
 
     console.info('✅ [ASSET-ERROR] Handler completed successfully');
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('❌ [ASSET-ERROR] Unexpected error:', error);
     console.error('❌ [ASSET-ERROR] Error stack:', (error as Error).stack);
   }
@@ -478,7 +478,7 @@ async function handleUploadErrored(data: {
 
     console.info('✅ [UPLOAD-ERROR] Upload error recorded successfully');
     console.info('✅ [UPLOAD-ERROR] Handler completed successfully');
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('❌ [UPLOAD-ERROR] Unexpected error:', error);
     console.error('❌ [UPLOAD-ERROR] Error stack:', (error as Error).stack);
   }
@@ -534,7 +534,7 @@ async function handleUploadCancelled(data: {
 
     console.info('✅ [UPLOAD-CANCELLED] Upload cancellation recorded successfully');
     console.info('✅ [UPLOAD-CANCELLED] Handler completed successfully');
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('❌ [UPLOAD-CANCELLED] Unexpected error:', error);
     console.error('❌ [UPLOAD-CANCELLED] Error stack:', (error as Error).stack);
   }

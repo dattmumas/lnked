@@ -88,7 +88,7 @@ export default function ModernNavbar({
     };
   }, [userMetadata.avatar_url]);
 
-  useEffect(() => {
+  useEffect((): void => {
     // If the user object is available from the hook but we don't have profile data, fetch it.
     // This handles client-side sign-ins where initialProfile isn't available.
     if (user && !username && !userMetadata.full_name) {
@@ -114,8 +114,8 @@ export default function ModernNavbar({
   }, [user, username, userMetadata.full_name, supabase]);
 
   const handleSignOut = async () => {
-    await supabase.auth.signOut();
-    router.push('/');
+    await void supabase.auth.signOut();
+    void router.push('/');
     // No need to set user/loading state manually, the useUser hook handles it.
   };
 
@@ -193,7 +193,7 @@ export default function ModernNavbar({
                   variant="ghost"
                   size="sm"
                   className="lg:hidden h-9 w-9 p-0"
-                  onClick={() => router.push('/search')}
+                  onClick={() => void router.push('/search')}
                 >
                   <Search className="h-4 w-4" />
                   <span className="sr-only">Search</span>
@@ -416,7 +416,7 @@ export default function ModernNavbar({
                         <Button
                           variant="ghost"
                           className="w-full justify-start gap-3 h-11 text-destructive hover:text-destructive hover:bg-destructive/10"
-                          onClick={handleSignOut}
+                          onClick={() => void handleSignOut()}
                         >
                           <LogOut className="h-5 w-5" />
                           <span className="font-medium">Sign Out</span>

@@ -32,7 +32,7 @@ export default function PostLikeButton({
   );
   const [isLoadingInitialState, setIsLoadingInitialState] = useState(true);
 
-  useEffect(() => {
+  useEffect((): void => {
     const fetchInitialState = async () => {
       setIsLoadingInitialState(true); // Ensure loading state is true at start of fetch
       const {
@@ -63,7 +63,7 @@ export default function PostLikeButton({
     // Keying on supabase client instance is also good practice if it could change, though unlikely for createSupabaseBrowserClient.
   }, [supabase, postId, initialUserHasLiked]);
 
-  useEffect(() => {
+  useEffect((): void => {
     setLikeCount(initialLikes);
   }, [initialLikes]);
 
@@ -100,7 +100,7 @@ export default function PostLikeButton({
       <Button
         variant="ghost"
         size="lg"
-        onClick={handleLikeToggle}
+        onClick={() => void handleLikeToggle()}
         disabled={isPending || isLoadingInitialState || !currentUserId}
         aria-label={userHasLiked ? 'Unlike post' : 'Like post'}
         className="flex items-center space-x-2 px-3 py-2 rounded-md hover:bg-muted"

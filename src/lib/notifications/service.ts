@@ -16,7 +16,7 @@ import type {
   EntityType,
 } from '@/types/notifications';
 
-/* eslint-disable prefer-destructuring, unicorn/no-null */
+/* eslint-disable prefer-destructuring */
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -167,7 +167,7 @@ export class NotificationService {
       }
 
       return { success: true };
-    } catch (error) {
+    } catch (error: unknown) {
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error',
@@ -206,7 +206,7 @@ export class NotificationService {
       }
 
       return { success: true };
-    } catch (error) {
+    } catch (error: unknown) {
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error',
@@ -237,7 +237,7 @@ export class NotificationService {
       }
 
       return { success: true, data };
-    } catch (error) {
+    } catch (error: unknown) {
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error',
@@ -309,7 +309,7 @@ export class NotificationService {
       }
 
       return { success: true };
-    } catch (error) {
+    } catch (error: unknown) {
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error',
@@ -396,7 +396,7 @@ export class NotificationService {
       }
 
       return { success: true, data: { deleted_count: data } };
-    } catch (error) {
+    } catch (error: unknown) {
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error',

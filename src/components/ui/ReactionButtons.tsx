@@ -92,7 +92,7 @@ export default function ReactionButtons({
           setCurrentState(previousState);
           console.error('Reaction failed:', result.message);
         }
-      } catch (error) {
+      } catch (error: unknown) {
         // Rollback optimistic update on error
         setCurrentState(previousState);
         handleReactionError(error, variant === 'comment' ? 'comment' : 'post');
@@ -167,7 +167,7 @@ export default function ReactionButtons({
         aria-label={
           currentState.userReaction === 'like' ? 'Remove like' : 'Like'
         }
-        onClick={() => handleReaction('like')}
+        onClick={() => void handleReaction('like')}
         disabled={disabled || isPending}
       >
         <ThumbsUp className={config.icon} />
@@ -191,7 +191,7 @@ export default function ReactionButtons({
         aria-label={
           currentState.userReaction === 'dislike' ? 'Remove dislike' : 'Dislike'
         }
-        onClick={() => handleReaction('dislike')}
+        onClick={() => void handleReaction('dislike')}
         disabled={disabled || isPending}
       >
         <ThumbsDown className={config.icon} />

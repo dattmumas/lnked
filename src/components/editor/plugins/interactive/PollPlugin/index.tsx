@@ -64,7 +64,7 @@ export function InsertPollDialog({
 
 export default function PollPlugin(): JSX.Element | null {
   const [editor] = useLexicalComposerContext();
-  useEffect(() => {
+  useEffect((): void => {
     if (!editor.hasNodes([PollNode])) {
       throw new Error('PollPlugin: PollNode not registered on editor');
     }

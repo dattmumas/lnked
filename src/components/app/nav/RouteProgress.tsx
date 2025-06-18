@@ -12,7 +12,7 @@ export default function RouteProgress() {
   const pathname = usePathname();
   const previousPath = useRef<string>(pathname);
 
-  useEffect(() => {
+  useEffect((): void => {
     if (pathname !== previousPath.current) {
       nprogress.start();
       previousPath.current = pathname;

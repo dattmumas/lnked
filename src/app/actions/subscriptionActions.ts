@@ -20,8 +20,8 @@ interface SubscriptionStatusResult {
 export async function getSubscriptionStatus(
   targetEntityType: Enums<"subscription_target_type">,
   targetEntityId: string
-): Promise<SubscriptionStatusResult | null> {
-  const supabase = await createServerSupabaseClient();
+): Promise<SubscriptionStatusResult | undefined> {
+  const supabase = createServerSupabaseClient();
 
   const {
     data: { user },
@@ -40,7 +40,7 @@ export async function getSubscriptionStatus(
 
   if (error) {
     console.error("Error fetching subscription status:", error.message);
-    return null;
+    return undefined;
   }
 
   if (subscription) {
@@ -51,7 +51,7 @@ export async function getSubscriptionStatus(
       cancelAtPeriodEnd: subscription.cancel_at_period_end,
       currentPeriodEnd: subscription.current_period_end
         ? new Date(subscription.current_period_end).toLocaleDateString()
-        : null,
+        : undefined,
     };
   }
   return { isSubscribed: false };
@@ -66,7 +66,7 @@ export async function unsubscribeFromEntity(
   dbSubscriptionId: string, // ID from your public.subscriptions table
   stripeSubscriptionId: string
 ): Promise<UnsubscribeResult> {
-  const supabase = await createServerSupabaseClient();
+  const supabase = createServerSupabaseClient();
   const {
     data: { user },
     error: authError,
@@ -159,7 +159,7 @@ export async function createPriceTier({
   interval: 'month' | 'year';
   tierName?: string;
 }): Promise<TierResult> {
-  const supabase = await createServerSupabaseClient();
+  const supabase = createServerSupabaseClient();
   const {
     data: { user },
     error: authError,
@@ -237,7 +237,7 @@ export async function deactivatePriceTier({
   collectiveId: string;
   priceId: string;
 }): Promise<TierResult> {
-  const supabase = await createServerSupabaseClient();
+  const supabase = createServerSupabaseClient();
   const {
     data: { user },
     error: authError,

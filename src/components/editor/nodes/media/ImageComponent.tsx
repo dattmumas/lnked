@@ -114,7 +114,7 @@ function LazyImage({
   const isSVGImage = isSVG(src);
 
   // Set initial dimensions for SVG images
-  useEffect(() => {
+  useEffect((): void => {
     if (imageRef.current && isSVGImage) {
       const { naturalWidth, naturalHeight } = imageRef.current;
       setDimensions({
@@ -126,7 +126,7 @@ function LazyImage({
 
   const hasError = useSuspenseImage(src);
 
-  useEffect(() => {
+  useEffect((): void => {
     if (hasError) {
       onError();
     }
@@ -354,7 +354,7 @@ export default function ImageComponent({
     [editor],
   );
 
-  useEffect(() => {
+  useEffect((): void => {
     const rootElement = editor.getRootElement();
     const unregister = mergeRegister(
       editor.registerUpdateListener(({ editorState }) => {

@@ -121,7 +121,7 @@ export default function SearchBar({ className }: SearchBarProps) {
       }
 
       setResults(searchResults);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Search error:', error);
       setResults([]);
     } finally {
@@ -129,7 +129,7 @@ export default function SearchBar({ className }: SearchBarProps) {
     }
   };
 
-  useEffect(() => {
+  useEffect((): void => {
     const delayedSearch = setTimeout(() => {
       performSearch(query);
     }, 300);
@@ -138,7 +138,7 @@ export default function SearchBar({ className }: SearchBarProps) {
   }, [query]);
 
   // Close search on outside click
-  useEffect(() => {
+  useEffect((): void => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
         containerRef.current &&
@@ -161,7 +161,7 @@ export default function SearchBar({ className }: SearchBarProps) {
   const handleEnterPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && query.trim()) {
       setIsOpen(false);
-      router.push(`/search?q=${encodeURIComponent(query.trim())}`);
+      void router.push(`/search?q=${encodeURIComponent(query.trim())}`);
     }
   };
 

@@ -30,7 +30,7 @@ export default async function DiscoverPage({
       recommendations: data.recommendations,
       nextCursor: data.nextCursor ?? undefined,
     });
-  } catch (error) {
+  } catch (error: unknown) {
     if (error instanceof Error) {
       console.error('Error in DiscoverPage:', error.message);
     } else {

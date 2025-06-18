@@ -60,7 +60,7 @@ export const MessageRow = memo<MessageRowProps>(({ index, style, data }) => {
   const msg = messages[index];
 
   // Measure the actual height of the row
-  useEffect(() => {
+  useEffect((): void => {
     if (rowRef.current && setItemSize) {
       const {height} = rowRef.current.getBoundingClientRect();
       setItemSize(index, height);
@@ -263,25 +263,25 @@ export const MessageRow = memo<MessageRowProps>(({ index, style, data }) => {
                 <div className="flex gap-3">
                   <div className="flex-1 min-w-0">
                     <h4 className="font-medium text-sm truncate">
-                      {(msg.metadata as any).embed.title}
+                      {(msg.metadata as Record<string, unknown>).embed.title}
                     </h4>
-                    {(msg.metadata as any).embed.description && (
+                    {(msg.metadata as Record<string, unknown>).embed.description && (
                       <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
-                        {(msg.metadata as any).embed.description}
+                        {(msg.metadata as Record<string, unknown>).embed.description}
                       </p>
                     )}
                     <a
-                      href={(msg.metadata as any).embed.url}
+                      href={(msg.metadata as Record<string, unknown>).embed.url}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-xs text-primary hover:underline mt-1 block truncate"
                     >
-                      {(msg.metadata as any).embed.url}
+                      {(msg.metadata as Record<string, unknown>).embed.url}
                     </a>
                   </div>
-                  {(msg.metadata as any).embed.image && (
+                  {(msg.metadata as Record<string, unknown>).embed.image && (
                     <img
-                      src={(msg.metadata as any).embed.image}
+                      src={(msg.metadata as Record<string, unknown>).embed.image}
                       alt=""
                       className="w-20 h-20 object-cover rounded"
                     />
@@ -297,11 +297,11 @@ export const MessageRow = memo<MessageRowProps>(({ index, style, data }) => {
             'url' in msg.metadata && (
               <div className="mt-2">
                 <img
-                  src={(msg.metadata as any).url}
-                  alt={(msg.metadata as any).alt || 'Image'}
+                  src={(msg.metadata as Record<string, unknown>).url}
+                  alt={(msg.metadata as Record<string, unknown>).alt || 'Image'}
                   className="max-w-sm rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
                   onClick={() =>
-                    window.open((msg.metadata as any).url, '_blank')
+                    window.open((msg.metadata as Record<string, unknown>).url, '_blank')
                   }
                 />
               </div>
@@ -327,15 +327,15 @@ export const MessageRow = memo<MessageRowProps>(({ index, style, data }) => {
                   />
                 </svg>
                 <a
-                  href={(msg.metadata as any).url}
-                  download={(msg.metadata as any).filename || 'file'}
+                  href={(msg.metadata as Record<string, unknown>).url}
+                  download={(msg.metadata as Record<string, unknown>).filename || 'file'}
                   className="text-sm hover:underline"
                 >
-                  {(msg.metadata as any).filename || 'Download file'}
+                  {(msg.metadata as Record<string, unknown>).filename || 'Download file'}
                 </a>
-                {(msg.metadata as any).size && (
+                {(msg.metadata as Record<string, unknown>).size && (
                   <span className="text-xs text-muted-foreground">
-                    ({formatFileSize((msg.metadata as any).size)})
+                    ({formatFileSize((msg.metadata as Record<string, unknown>).size)})
                   </span>
                 )}
               </div>

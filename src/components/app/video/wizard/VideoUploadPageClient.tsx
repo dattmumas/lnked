@@ -17,7 +17,7 @@ export default function VideoUploadPageClient({
   const handleComplete = useCallback(
     (videoId: string) => {
       // Redirect to the video page after successful upload
-      router.push(`/videos/${videoId}`);
+      void router.push(`/videos/${videoId}`);
     },
     [router],
   );

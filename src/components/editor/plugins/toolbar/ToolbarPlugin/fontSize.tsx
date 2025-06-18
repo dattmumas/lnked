@@ -85,7 +85,7 @@ export default function FontSize({
     setInputChangeFlag(false);
   };
 
-  React.useEffect(() => {
+  React.useEffect((): void => {
     setInputValue(selectionFontSize);
   }, [selectionFontSize]);
 

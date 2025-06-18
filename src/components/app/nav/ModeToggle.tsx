@@ -9,7 +9,7 @@ export default function ModeToggle() {
   const { setTheme, resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
 
-  useEffect(() => {
+  useEffect((): void => {
     setMounted(true);
   }, []);
 

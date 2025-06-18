@@ -38,11 +38,11 @@ export default function FollowCollectiveButton({
   const [error, setError] = useState<string | undefined>(undefined);
   const supabase = createSupabaseBrowserClient();
 
-  useEffect(() => {
+  useEffect((): void => {
     setIsFollowing(initialIsFollowing);
   }, [initialIsFollowing]);
 
-  useEffect(() => {
+  useEffect((): void => {
     if (!initialCurrentUserId) {
       const fetchUser = async () => {
         const {
@@ -59,7 +59,7 @@ export default function FollowCollectiveButton({
 
   const handleFollowToggle = async () => {
     if (!actualCurrentUserId) {
-      router.push(`/sign-in?redirect=${pathname}`);
+      void router.push(`/sign-in?redirect=${pathname}`);
       return;
     }
 
@@ -102,7 +102,7 @@ export default function FollowCollectiveButton({
         </Alert>
       )}
       <Button
-        onClick={handleFollowToggle}
+        onClick={() => void handleFollowToggle()}
         disabled={isPending || isLoadingCurrentUser}
         variant={isFollowing ? 'outline' : 'default'}
         size="sm"

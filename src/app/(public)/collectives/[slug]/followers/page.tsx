@@ -9,7 +9,7 @@ export default async function Page({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const supabase = await createServerSupabaseClient();
+  const supabase = createServerSupabaseClient();
 
   const { data: collectiveData, error: collectiveError } = await supabase
     .from('collectives')

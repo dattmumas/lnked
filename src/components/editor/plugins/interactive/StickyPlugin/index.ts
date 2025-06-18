@@ -16,7 +16,7 @@ import type {JSX} from 'react';
 
 export default function StickyPlugin(): JSX.Element | null {
   const [editor] = useLexicalComposerContext();
-  useEffect(() => {
+  useEffect((): void => {
     if (!editor.hasNodes([StickyNode])) {
       throw new Error('StickyPlugin: StickyNode not registered on editor');
     }

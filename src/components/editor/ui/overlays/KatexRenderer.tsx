@@ -24,7 +24,7 @@ export default function KatexRenderer({
 }>): JSX.Element {
   const katexElementRef = useRef(null);
 
-  useEffect(() => {
+  useEffect((): void => {
     const katexElement = katexElementRef.current;
 
     if (katexElement !== null) {

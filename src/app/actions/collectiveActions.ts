@@ -39,7 +39,7 @@ export async function inviteUserToCollective(
   inviteeEmail: string,
   role: Enums<'collective_member_role'>,
 ): Promise<CollectiveActionResult> {
-  const supabase = await createServerSupabaseClient();
+  const supabase = createServerSupabaseClient();
 
   const {
     data: { user: currentUser },
@@ -160,7 +160,7 @@ export async function removeUserFromCollective(
   collectiveId: string, // To verify ownership and for revalidation
   membershipId: string, // The ID of the collective_members record
 ): Promise<CollectiveActionResult> {
-  const supabase = await createServerSupabaseClient();
+  const supabase = createServerSupabaseClient();
 
   const {
     data: { user: currentUser },
@@ -241,7 +241,7 @@ export async function updateMemberRole(
   membershipId: string, // The ID of the collective_members record to update
   newRole: Enums<'collective_member_role'>,
 ): Promise<CollectiveActionResult> {
-  const supabase = await createServerSupabaseClient();
+  const supabase = createServerSupabaseClient();
 
   const {
     data: { user: currentUser },
@@ -329,7 +329,7 @@ export async function updateCollectiveSettings(
   collectiveId: string,
   formData: CollectiveSettingsServerFormValues,
 ): Promise<UpdateCollectiveSettingsResult> {
-  const supabase = await createServerSupabaseClient();
+  const supabase = createServerSupabaseClient();
 
   const {
     data: { user: currentUser },
@@ -451,7 +451,7 @@ export async function updateCollectiveSettings(
  * Returns null if not connected, or Stripe account status fields if connected.
  */
 export async function getCollectiveStripeStatus(collectiveId: string) {
-  const supabase = await createServerSupabaseClient();
+  const supabase = createServerSupabaseClient();
   const {
     data: { user },
     error: authError,
@@ -514,7 +514,7 @@ export async function deleteCollective({
 }: {
   collectiveId: string;
 }): Promise<{ success: boolean; error?: string }> {
-  const supabase = await createServerSupabaseClient();
+  const supabase = createServerSupabaseClient();
   const {
     data: { user: currentUser },
     error: authError,
@@ -573,7 +573,7 @@ export async function transferCollectiveOwnership({
   collectiveId: string;
   newOwnerId: string;
 }): Promise<{ success: boolean; error?: string }> {
-  const supabase = await createServerSupabaseClient();
+  const supabase = createServerSupabaseClient();
   const {
     data: { user: currentUser },
     error: authError,

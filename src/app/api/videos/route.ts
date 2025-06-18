@@ -90,7 +90,7 @@ export async function GET(request: NextRequest) {
         limit,
       },
     });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Videos API error:', error);
     return NextResponse.json(
       { error: 'Internal server error' },

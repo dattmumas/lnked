@@ -130,14 +130,14 @@ export function CollectiveSelectionModal({
   ]);
 
   // Sync with external selected IDs when modal opens
-  useEffect(() => {
+  useEffect((): void => {
     if (isOpen) {
       setLocalSelectedIds(selectedCollectiveIds);
     }
   }, [isOpen, selectedCollectiveIds]);
 
   // Clear search when modal closes
-  useEffect(() => {
+  useEffect((): void => {
     if (!isOpen) {
       setSearchQuery('');
     }
@@ -416,7 +416,7 @@ export function CollectiveSelectionModal({
               Cancel
             </Button>
             <Button
-              onClick={handleSave}
+              onClick={() => void handleSave()}
               disabled={!hasChanges}
               className={cn(
                 selectedCount > 0 && 'bg-blue-600 hover:bg-blue-700',

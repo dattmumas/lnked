@@ -11,7 +11,7 @@
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,css,html,yml,yaml,mdx}\"",
     "precommit": "pnpm lint && pnpm typecheck",
     "test": "jest",
-    "lint:json": "eslint 'src/**/*.{ts,tsx}' -f json -o eslint.json"
+    "generate:db-types": "tsx scripts/generate-db-types.ts"
   },
   "dependencies": {
     "@excalidraw/excalidraw": "^0.18.0",

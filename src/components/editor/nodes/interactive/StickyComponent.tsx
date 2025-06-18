@@ -91,7 +91,7 @@ export default function StickyComponent({
   });
   const { isCollabActive } = useCollaborationContext();
 
-  useEffect(() => {
+  useEffect((): void => {
     const position = positioningRef.current;
     position.x = x;
     position.y = y;
@@ -144,7 +144,7 @@ export default function StickyComponent({
     };
   }, [editor]);
 
-  useEffect(() => {
+  useEffect((): void => {
     const stickyContainer = stickyContainerRef.current;
     if (stickyContainer !== null) {
       // Delay adding transition so we don't trigger the
@@ -244,7 +244,7 @@ export default function StickyComponent({
         }}
       >
         <button
-          onClick={handleDelete}
+          onClick={() => void handleDelete()}
           className="delete"
           aria-label="Delete sticky note"
           title="Delete"

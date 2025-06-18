@@ -18,7 +18,7 @@ export async function markNotificationsAsRead(
     }
     
     return result;
-  } catch (error) {
+  } catch (error: unknown) {
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error',
@@ -38,7 +38,7 @@ export async function deleteNotifications(
     }
     
     return result;
-  } catch (error) {
+  } catch (error: unknown) {
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error',
@@ -57,7 +57,7 @@ export async function updateNotificationPreferences(
     }
     
     return result;
-  } catch (error) {
+  } catch (error: unknown) {
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error',

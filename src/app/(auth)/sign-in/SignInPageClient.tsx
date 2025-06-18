@@ -19,10 +19,10 @@ export default function SignInPage() {
   const purge = searchParams.get('purge') === '1';
 
   // Clear stale browser tokens if instructed by middleware
-  useEffect(() => {
+  useEffect((): void => {
     if (purge) {
       const supabase = createSupabaseBrowserClient();
-      supabase.auth.signOut();
+      void void supabase.auth.signOut();
     }
   }, [purge]);
 
@@ -114,7 +114,7 @@ export default function SignInPage() {
         }
 
         // Ensure the session is set before redirecting
-        router.refresh();
+        void router.refresh();
 
         // Add a longer delay to ensure the session is properly registered
         // This gives cookies time to be properly set across all contexts
@@ -122,9 +122,9 @@ export default function SignInPage() {
           if (process.env.NODE_ENV === 'development') {
             console.info('Redirecting to dashboard after successful login');
           }
-          router.push('/dashboard');
+          void router.push('/dashboard');
         }, 1000);
-      } catch (err) {
+      } catch (err: unknown) {
         console.error('Unexpected error during sign in:', err);
 
         // Handle rate limit errors specifically

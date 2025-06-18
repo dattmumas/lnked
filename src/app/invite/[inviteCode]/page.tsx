@@ -9,7 +9,7 @@ export default async function InviteAcceptPage({
 }: {
   params: Promise<{ inviteCode: string }>;
 }) {
-  const supabase = await createServerSupabaseClient();
+  const supabase = createServerSupabaseClient();
   const { inviteCode } = await params;
   const {
     data: { user },

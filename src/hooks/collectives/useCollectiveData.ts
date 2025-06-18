@@ -3,6 +3,13 @@ import { useQuery } from '@tanstack/react-query';
 import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
 
 import type { Database } from '@/lib/database.types';
+import type { UseQueryResult } from '@tanstack/react-query';
+
+// Constants
+/* eslint-disable no-magic-numbers */
+const STALE_TIME_MS = 5 * 60 * 1000; // 5 minutes
+const GC_TIME_MS = 10 * 60 * 1000; // 10 minutes
+/* eslint-enable no-magic-numbers */
 
 type Collective = Database['public']['Tables']['collectives']['Row'] & {
   owner: { full_name: string | null } | null;
@@ -23,7 +30,12 @@ interface QueryOptions {
   gcTime?: number;
 }
 
-export function useCollectiveData(slug: string) {
+interface CollectiveStats {
+  memberCount: number;
+  followerCount: number;
+}
+
+export function useCollectiveData(slug: string): UseQueryResult<Collective, Error> {
   return useQuery({
     queryKey: ['collective', slug],
     queryFn: async () => {
@@ -38,7 +50,10 @@ export function useCollectiveData(slug: string) {
         .eq('slug', slug)
         .single();
 
-      if (error || !data) {
+      const hasError = error !== null && error !== undefined;
+      const hasData = data !== null && data !== undefined;
+      
+      if (hasError || !hasData) {
         throw new Error('Collective not found');
       }
 
@@ -50,7 +65,7 @@ export function useCollectiveData(slug: string) {
 export function useCollectiveMembers(
   collectiveId: string,
   options: QueryOptions = {},
-) {
+): UseQueryResult<CollectiveMember[], Error> {
   return useQuery({
     queryKey: ['collective-members', collectiveId],
     queryFn: async () => {
@@ -65,7 +80,7 @@ export function useCollectiveMembers(
         .eq('collective_id', collectiveId)
         .order('created_at', { ascending: true });
 
-      if (error) throw error;
+      if (error !== null) throw error;
       return data as CollectiveMember[];
     },
     ...options, // Allow overriding with enabled: false
@@ -75,7 +90,7 @@ export function useCollectiveMembers(
 export function useCollectiveStats(
   collectiveId: string,
   options: QueryOptions = {},
-) {
+): UseQueryResult<CollectiveStats, Error> {
   return useQuery({
     queryKey: ['collective-stats', collectiveId],
     queryFn: async () => {
@@ -86,7 +101,7 @@ export function useCollectiveStats(
         { collective_id: collectiveId },
       );
 
-      if (error) throw error;
+      if (error !== null) throw error;
       
       const stats = data as {
         member_count: number;
@@ -94,12 +109,12 @@ export function useCollectiveStats(
       };
 
       return {
-        memberCount: stats.member_count || 0,
-        followerCount: stats.follower_count || 0,
+        memberCount: stats.member_count ?? 0,
+        followerCount: stats.follower_count ?? 0,
       };
     },
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    gcTime: 10 * 60 * 1000, // 10 minutes
+    staleTime: STALE_TIME_MS,
+    gcTime: GC_TIME_MS,
     ...options, // Allow overriding with enabled: false
   });
 }

@@ -1,4 +1,3 @@
-/* eslint-disable unicorn/no-null */
 'use client';
 
 import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
@@ -208,7 +207,7 @@ export class ClientNotificationService {
       // Clear cache after successful operation
       this.clearCache();
       return { success: true };
-    } catch (error) {
+    } catch (error: unknown) {
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error',
@@ -243,7 +242,7 @@ export class ClientNotificationService {
       // Clear cache after successful operation
       this.clearCache();
       return { success: true };
-    } catch (error) {
+    } catch (error: unknown) {
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error',
@@ -307,7 +306,7 @@ export class ClientNotificationService {
       }
 
       return { success: true };
-    } catch (error) {
+    } catch (error: unknown) {
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error',

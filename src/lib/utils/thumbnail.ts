@@ -172,7 +172,7 @@ export function getOptimizedThumbnailUrl(
       });
     
     return data.publicUrl;
-  } catch (error) {
+  } catch (error: unknown) {
     console.warn('Failed to get optimized thumbnail URL:', error);
     return thumbnailUrl;
   }

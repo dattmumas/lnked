@@ -205,7 +205,7 @@ export class PostCollectiveErrorHandler {
         }
 
         return await operationFn();
-      } catch (error) {
+      } catch (error: unknown) {
         const postCollectiveError: PostCollectiveError = {
           type: this.classifyErrorType(error),
           message: error instanceof Error ? error.message : String(error),
@@ -278,7 +278,7 @@ export class PostCollectiveErrorHandler {
         }
 
         allWarnings.push(...result.warnings.map(w => w.message));
-      } catch (error) {
+      } catch (error: unknown) {
         const postCollectiveError: PostCollectiveError = {
           type: 'validation',
           message: `Validation failed for ${operation.name}: ${error instanceof Error ? error.message : String(error)}`

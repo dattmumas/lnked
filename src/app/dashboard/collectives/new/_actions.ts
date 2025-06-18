@@ -36,7 +36,7 @@ interface CreateCollectiveResult {
 export async function createCollective(
   inputData: unknown // Raw input from the form, to be parsed by Zod
 ): Promise<CreateCollectiveResult> {
-  const supabase = await createServerSupabaseClient();
+  const supabase = createServerSupabaseClient();
 
   const {
     data: { user },

@@ -32,19 +32,19 @@ export default function ChatInterface({ userId }: ChatInterfaceProps) {
   const [activeChannel, setActiveChannel] = useState<Channel | null>(null);
 
   // Pick the first collective membership as default once loaded
-  useEffect(() => {
+  useEffect((): void => {
     if (!activeCollectiveId && memberships.length > 0) {
       setActiveCollectiveId(memberships[0].id);
     }
   }, [memberships, activeCollectiveId]);
 
   // reset channel when collective switches
-  useEffect(() => {
+  useEffect((): void => {
     setActiveChannel(null);
   }, [activeCollectiveId]);
 
   // Auto-select first channel for collective if none active
-  useEffect(() => {
+  useEffect((): void => {
     if (!activeCollectiveId || activeChannel) return;
     (async () => {
       try {
@@ -61,7 +61,7 @@ export default function ChatInterface({ userId }: ChatInterfaceProps) {
             type: list[0].type,
           });
         }
-      } catch (err) {
+      } catch (err: unknown) {
         console.error(err);
       }
     })();

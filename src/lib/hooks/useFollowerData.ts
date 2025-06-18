@@ -1,5 +1,3 @@
-/* eslint-disable unicorn/no-null */
-
 import { useEffect, useState } from 'react';
 
 import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
@@ -29,7 +27,7 @@ export function useFollowerData({
 
   const supabase = createSupabaseBrowserClient();
 
-  useEffect(() => {
+  useEffect((): void => {
     async function fetchFollowerData(): Promise<void> {
       try {
         setLoading(true);
@@ -70,7 +68,7 @@ export function useFollowerData({
         } else {
           setIsFollowing(false);
         }
-      } catch (err) {
+      } catch (err: unknown) {
         setError(err instanceof Error ? err.message : 'Unknown error');
       } finally {
         setLoading(false);
@@ -101,7 +99,7 @@ export function useRealtimeFollowerData({
 
   const supabase = createSupabaseBrowserClient();
 
-    useEffect(() => {
+    useEffect((): void => {
     async function fetchInitialData(): Promise<void> {
       try {
         setLoading(true);
@@ -140,7 +138,7 @@ export function useRealtimeFollowerData({
 
           setIsFollowing(Boolean(followData));
         }
-      } catch (err) {
+      } catch (err: unknown) {
         setError(err instanceof Error ? err.message : 'Unknown error');
       } finally {
         setLoading(false);

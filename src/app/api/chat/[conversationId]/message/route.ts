@@ -168,7 +168,7 @@ export async function POST(request: Request, context: { params: Promise<{ conver
               .eq('conversation_id', conversationId);
           }
         }).catch(console.error);
-      } catch (err) {
+      } catch (err: unknown) {
         console.error('Failed to fetch link preview:', err);
       }
     }

@@ -32,7 +32,7 @@ export const INSERT_PAGE_BREAK: LexicalCommand<undefined> = createCommand();
 export default function PageBreakPlugin(): JSX.Element | null {
   const [editor] = useLexicalComposerContext();
 
-  useEffect(() => {
+  useEffect((): void => {
     if (!editor.hasNodes([PageBreakNode])) {
       throw new Error(
         'PageBreakPlugin: PageBreakNode is not registered on editor',

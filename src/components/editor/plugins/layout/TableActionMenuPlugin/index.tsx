@@ -134,7 +134,7 @@ function TableActionMenu({
     () => currentCellBackgroundColor(editor) || '',
   );
 
-  useEffect(() => {
+  useEffect((): void => {
     return editor.registerMutationListener(
       TableCellNode,
       (nodeMutations) => {
@@ -152,7 +152,7 @@ function TableActionMenu({
     );
   }, [editor, tableCellNode]);
 
-  useEffect(() => {
+  useEffect((): void => {
     editor.getEditorState().read(() => {
       const selection = $getSelection();
       // Merge cells
@@ -168,7 +168,7 @@ function TableActionMenu({
     });
   }, [editor]);
 
-  useEffect(() => {
+  useEffect((): void => {
     const menuButtonElement = contextRef.current;
     const dropDownElement = dropDownRef.current;
     const rootElement = editor.getRootElement();
@@ -203,7 +203,7 @@ function TableActionMenu({
     }
   }, [contextRef, dropDownRef, editor]);
 
-  useEffect(() => {
+  useEffect((): void => {
     function handleClickOutside(event: MouseEvent) {
       if (
         dropDownRef.current != undefined &&
@@ -862,7 +862,7 @@ function TableCellActionMenuContainer({
     }
   }, [editor, anchorElem, checkTableCellOverflow]);
 
-  useEffect(() => {
+  useEffect((): void => {
     // We call the $moveMenu callback every time the selection changes,
     // once up front, and once after each pointerUp
     let timeoutId: ReturnType<typeof setTimeout> | undefined = undefined;
@@ -898,7 +898,7 @@ function TableCellActionMenuContainer({
 
   const prevTableCellDOM = useRef(tableCellNode);
 
-  useEffect(() => {
+  useEffect((): void => {
     if (prevTableCellDOM.current !== tableCellNode) {
       setIsMenuOpen(false);
     }

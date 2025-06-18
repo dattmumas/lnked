@@ -50,7 +50,7 @@ export function DropDownItem({
 
   const {registerItem} = dropDownContext;
 
-  useEffect(() => {
+  useEffect((): void => {
     if (ref && ref.current) {
       // `registerItem` expects a readonly `RefObject`, but `useRef` returns a
       // mutable ref. Cast here to satisfy the interface.
@@ -140,7 +140,7 @@ function DropDownItems({
     [registerItem],
   );
 
-  useEffect(() => {
+  useEffect((): void => {
     if (items && !highlightedItem) {
       setHighlightedItem(items[0]);
     }
@@ -187,7 +187,7 @@ export default function DropDown({
     }
   };
 
-  useEffect(() => {
+  useEffect((): void => {
     const button = buttonRef.current;
     const dropDown = dropDownRef.current;
 
@@ -201,7 +201,7 @@ export default function DropDown({
     }
   }, [dropDownRef, buttonRef, showDropDown]);
 
-  useEffect(() => {
+  useEffect((): void => {
     const button = buttonRef.current;
 
     if (button !== null && showDropDown) {
@@ -227,7 +227,7 @@ export default function DropDown({
     }
   }, [dropDownRef, buttonRef, showDropDown, stopCloseOnClickSelf]);
 
-  useEffect(() => {
+  useEffect((): void => {
     const handleButtonPositionUpdate = () => {
       if (showDropDown) {
         const button = buttonRef.current;

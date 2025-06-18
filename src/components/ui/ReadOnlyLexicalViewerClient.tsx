@@ -245,12 +245,12 @@ function InvalidContentFallback({ content }: { content: string }) {
 
 function LoadInitialJsonPlugin({ json }: { json?: string }) {
   const [editor] = useLexicalComposerContext();
-  React.useEffect(() => {
+  React.useEffect((): void => {
     if (!json) return;
     Promise.resolve().then(() => {
       try {
         editor.setEditorState(editor.parseEditorState(json));
-      } catch (err) {
+      } catch (err: unknown) {
         console.error('Could not parse initialContent JSON', err);
       }
     });
@@ -263,7 +263,7 @@ export function ReadOnlyLexicalViewerClient({
 }: ReadOnlyLexicalViewerClientProps) {
   const [mounted, setMounted] = React.useState(false);
 
-  React.useEffect(() => {
+  React.useEffect((): void => {
     setMounted(true);
   }, []);
 

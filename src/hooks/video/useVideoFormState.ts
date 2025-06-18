@@ -25,6 +25,15 @@ export interface ValidationErrors {
   general?: string;
 }
 
+interface UseVideoFormStateReturn {
+  data: VideoFormData;
+  update: (updates: Partial<VideoFormData>) => void;
+  reset: () => void;
+  isValid: boolean;
+  errors: ValidationErrors;
+  validateFormData: () => boolean;
+}
+
 const initialFormData: VideoFormData = {
   title: '',
   description: '',
@@ -59,7 +68,7 @@ const validateFormData = (data: VideoFormData): ValidationErrors => {
   return errors;
 };
 
-export const useVideoFormState = () => {
+export const useVideoFormState = (): UseVideoFormStateReturn => {
   const [formData, setFormData] = useState<VideoFormData>(initialFormData);
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
 

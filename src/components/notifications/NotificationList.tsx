@@ -74,7 +74,7 @@ export function NotificationList({
 
         setUnreadCount(data.unread_count);
         setHasMore(data.has_more);
-      } catch (error) {
+      } catch (error: unknown) {
         console.error('Error fetching notifications:', error);
       } finally {
         setIsLoading(false);
@@ -103,7 +103,7 @@ export function NotificationList({
           setUnreadCount(0);
         }
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error marking notifications as read:', error);
     }
   };
@@ -119,7 +119,7 @@ export function NotificationList({
           setUnreadCount((prev) => Math.max(0, prev - 1));
         }
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error deleting notification:', error);
     }
   };
@@ -144,7 +144,7 @@ export function NotificationList({
         setUnreadCount((prev) => Math.max(0, prev - unreadSelected));
         setSelectedIds(new Set());
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error marking notifications as read:', error);
     }
   };
@@ -163,7 +163,7 @@ export function NotificationList({
         setUnreadCount((prev) => Math.max(0, prev - unreadSelected));
         setSelectedIds(new Set());
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error deleting notifications:', error);
     }
   };
@@ -199,7 +199,7 @@ export function NotificationList({
     }
   };
 
-  useEffect(() => {
+  useEffect((): void => {
     if (safeInitialNotifications.length === 0) {
       fetchNotifications();
     }
@@ -236,7 +236,7 @@ export function NotificationList({
             <Button
               variant="outline"
               size="sm"
-              onClick={handleBulkDelete}
+              onClick={() => void handleBulkDelete()}
               className="gap-1"
             >
               <Trash2 className="h-3 w-3" />
@@ -252,7 +252,7 @@ export function NotificationList({
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => handleMarkAsRead()}
+                onClick={() => void handleMarkAsRead()}
                 className="gap-1"
               >
                 <CheckCheck className="h-3 w-3" />

@@ -2,7 +2,7 @@
 
 import { Terminal } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -17,6 +17,8 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
+// Constants
+const MIN_PASSWORD_LENGTH = 6;
 
 // Types
 interface AuthFormProps {
@@ -31,13 +33,13 @@ interface AuthFormFieldsProps {
   mode: 'signIn' | 'signUp';
   isLoading: boolean;
   email: string;
-  setEmail: (_value: string) => void;
+  onEmailChange: (_value: string) => void;
   password: string;
-  setPassword: (_value: string) => void;
-  fullName?: string; // Add full_name
-  setFullName?: (_value: string) => void;
+  onPasswordChange: (_value: string) => void;
+  fullName?: string;
+  onFullNameChange?: (_value: string) => void;
   username?: string;
-  setUsername?: (_value: string) => void;
+  onUsernameChange?: (_value: string) => void;
 }
 
 interface AuthFormHeaderProps {
@@ -67,95 +69,115 @@ const AuthFormFieldsComponent: React.FC<AuthFormFieldsProps> = ({
   mode,
   isLoading,
   email,
-  setEmail,
+  onEmailChange,
   password,
-  setPassword,
+  onPasswordChange,
   fullName,
-  setFullName,
+  onFullNameChange,
   username,
-  setUsername,
-}) => (
-  <>
-    {/* Full Name field (required for sign-up) */}
-    {mode === 'signUp' && setFullName && (
+  onUsernameChange,
+}) => {
+  const handleEmailChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>): void => {
+      onEmailChange(e.target.value);
+    },
+    [onEmailChange],
+  );
+
+  const handlePasswordChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>): void => {
+      onPasswordChange(e.target.value);
+    },
+    [onPasswordChange],
+  );
+
+  const handleFullNameChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>): void => {
+      onFullNameChange?.(e.target.value);
+    },
+    [onFullNameChange],
+  );
+
+  const handleUsernameChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>): void => {
+      // Convert to lowercase and remove invalid characters
+      const value = e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '');
+      onUsernameChange?.(value);
+    },
+    [onUsernameChange],
+  );
+
+  return (
+    <>
+      {/* Full Name field (required for sign-up) */}
+      {mode === 'signUp' && onFullNameChange && (
+        <div className="space-y-2">
+          <Label htmlFor="fullName">Full Name</Label>
+          <Input
+            id="fullName"
+            type="text"
+            placeholder="John Doe"
+            required
+            value={fullName}
+            onChange={handleFullNameChange}
+            disabled={isLoading}
+            minLength={2}
+            maxLength={100}
+            title="Full name must be 2-100 characters long"
+          />
+        </div>
+      )}
+      {mode === 'signUp' && onUsernameChange && (
+        <div className="space-y-2">
+          <Label htmlFor="username">Username</Label>
+          <Input
+            id="username"
+            type="text"
+            placeholder="username"
+            required
+            value={username}
+            onChange={handleUsernameChange}
+            disabled={isLoading}
+            pattern="^[a-z0-9_]+$"
+            minLength={3}
+            maxLength={20}
+            title="Username must be 3-20 characters long and contain only lowercase letters, numbers, and underscores"
+          />
+          <p className="text-xs text-muted-foreground">
+            3-20 characters, lowercase letters, numbers, and underscores only
+          </p>
+        </div>
+      )}
       <div className="space-y-2">
-        <Label htmlFor="fullName">Full Name</Label>
+        <Label htmlFor="email">Email</Label>
         <Input
-          id="fullName"
-          type="text"
-          placeholder="John Doe"
+          id="email"
+          type="email"
+          placeholder="m@example.com"
           required
-          value={fullName}
-          onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-            setFullName(e.target.value)
-          }
+          value={email}
+          onChange={handleEmailChange}
           disabled={isLoading}
-          minLength={2}
-          maxLength={100}
-          title="Full name must be 2-100 characters long"
+          autoComplete="email"
         />
       </div>
-    )}
-    {mode === 'signUp' && setUsername && (
       <div className="space-y-2">
-        <Label htmlFor="username">Username</Label>
+        <Label htmlFor="password">Password</Label>
         <Input
-          id="username"
-          type="text"
-          placeholder="username"
+          id="password"
+          type="password"
+          placeholder={mode === 'signUp' ? '••••••••' : undefined}
           required
-          value={username}
-          onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-            // Convert to lowercase and remove invalid characters
-            const value = e.target.value
-              .toLowerCase()
-              .replace(/[^a-z0-9_]/g, '');
-            setUsername(value);
-          }}
+          minLength={mode === 'signUp' ? MIN_PASSWORD_LENGTH : undefined}
+          value={password}
+          onChange={handlePasswordChange}
           disabled={isLoading}
-          pattern="^[a-z0-9_]+$"
-          minLength={3}
-          maxLength={20}
-          title="Username must be 3-20 characters long and contain only lowercase letters, numbers, and underscores"
+          autoComplete={mode === 'signUp' ? 'new-password' : 'current-password'}
         />
-        <p className="text-xs text-muted-foreground">
-          3-20 characters, lowercase letters, numbers, and underscores only
-        </p>
       </div>
-    )}
-    <div className="space-y-2">
-      <Label htmlFor="email">Email</Label>
-      <Input
-        id="email"
-        type="email"
-        placeholder="m@example.com"
-        required
-        value={email}
-        onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-          setEmail(e.target.value)
-        }
-        disabled={isLoading}
-        autoComplete="email"
-      />
-    </div>
-    <div className="space-y-2">
-      <Label htmlFor="password">Password</Label>
-      <Input
-        id="password"
-        type="password"
-        placeholder={mode === 'signUp' ? '••••••••' : undefined}
-        required
-        minLength={mode === 'signUp' ? 6 : undefined}
-        value={password}
-        onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-          setPassword(e.target.value)
-        }
-        disabled={isLoading}
-        autoComplete={mode === 'signUp' ? 'new-password' : 'current-password'}
-      />
-    </div>
-  </>
-);
+    </>
+  );
+};
 
 const AuthFormFooterComponent: React.FC<AuthFormFooterProps> = ({
   isLoading,
@@ -164,6 +186,11 @@ const AuthFormFooterComponent: React.FC<AuthFormFooterProps> = ({
   linkHref,
 }) => {
   const router = useRouter();
+
+  const handleLinkClick = useCallback((): void => {
+    router.push(linkHref);
+  }, [router, linkHref]);
+
   return (
     <CardFooter className="flex flex-col items-center space-y-2 text-sm">
       <p className="text-muted-foreground">
@@ -171,7 +198,7 @@ const AuthFormFooterComponent: React.FC<AuthFormFooterProps> = ({
         <Button
           variant="link"
           className="pl-1"
-          onClick={() => router.push(linkHref)}
+          onClick={handleLinkClick}
           disabled={isLoading}
         >
           {linkText}
@@ -188,21 +215,24 @@ export default function AuthForm({
   isLoading,
   error,
   message,
-}: AuthFormProps) {
+}: AuthFormProps): React.JSX.Element {
   const [email, setEmail] = useState<string>('');
   const [password, setPassword] = useState<string>('');
   const [fullName, setFullName] = useState<string>('');
   const [username, setUsername] = useState<string>('');
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    const formData: Record<string, string> = { email, password };
-    if (mode === 'signUp') {
-      formData.fullName = fullName;
-      formData.username = username;
-    }
-    onSubmit(formData);
-  };
+  const handleSubmit = useCallback(
+    async (event: React.FormEvent<HTMLFormElement>): Promise<void> => {
+      event.preventDefault();
+      const formData: Record<string, string> = { email, password };
+      if (mode === 'signUp') {
+        formData.fullName = fullName;
+        formData.username = username;
+      }
+      await onSubmit(formData);
+    },
+    [email, password, fullName, username, mode, onSubmit],
+  );
 
   const content = {
     title: mode === 'signIn' ? 'Sign In' : 'Create an Account',
@@ -221,6 +251,13 @@ export default function AuthForm({
     switchLinkHref: mode === 'signIn' ? '/sign-up' : '/sign-in',
   };
 
+  const handleFormSubmit = useCallback(
+    (event: React.FormEvent<HTMLFormElement>): void => {
+      void handleSubmit(event);
+    },
+    [handleSubmit],
+  );
+
   return (
     <div className="flex items-center justify-center p-4 md:p-6 bg-muted/40 min-h-full">
       <Card className="w-full max-w-sm">
@@ -229,27 +266,27 @@ export default function AuthForm({
           description={content.description}
         />
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleFormSubmit} className="space-y-4">
             <AuthFormFieldsComponent
               mode={mode}
               isLoading={isLoading}
               email={email}
-              setEmail={setEmail}
+              onEmailChange={setEmail}
               password={password}
-              setPassword={setPassword}
+              onPasswordChange={setPassword}
               username={mode === 'signUp' ? username : undefined}
-              setUsername={mode === 'signUp' ? setUsername : undefined}
+              onUsernameChange={mode === 'signUp' ? setUsername : undefined}
               fullName={mode === 'signUp' ? fullName : undefined}
-              setFullName={mode === 'signUp' ? setFullName : undefined}
+              onFullNameChange={mode === 'signUp' ? setFullName : undefined}
             />
-            {error && (
+            {error !== undefined && error !== '' && (
               <Alert variant="destructive" className="mt-4">
                 <Terminal className="h-4 w-4" />
                 <AlertTitle>Authentication Error</AlertTitle>
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
             )}
-            {message && mode === 'signUp' && (
+            {message !== undefined && message !== '' && mode === 'signUp' && (
               <Alert variant="default" className="mt-4 bg-accent/10">
                 <Terminal className="h-4 w-4 text-accent" />
                 <AlertTitle className="text-accent">Success</AlertTitle>

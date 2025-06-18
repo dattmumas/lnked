@@ -46,7 +46,7 @@ export default function PostReactionButtons({
           message: 'Failed to update post reaction',
         };
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error updating post reaction:', error);
       return {
         success: false,

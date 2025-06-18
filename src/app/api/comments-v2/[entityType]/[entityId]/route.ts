@@ -34,7 +34,7 @@ export async function GET(
       pagination: { limit, offset, has_more: comments.length === limit }
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Error in GET /api/comments-v2:', error);
     if (error instanceof CommentValidationError) {
       return NextResponse.json({ error: error.message }, { status: 400 });
@@ -71,7 +71,7 @@ export async function POST(
 
     return NextResponse.json(result, { status: 201 });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Error in POST /api/comments-v2:', error);
     if (error instanceof CommentValidationError) {
       return NextResponse.json({ error: error.message }, { status: 400 });

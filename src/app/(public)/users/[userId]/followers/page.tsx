@@ -9,7 +9,7 @@ export default async function Page({
   params: Promise<{ userId: string }>;
 }) {
   const { userId } = await params;
-  const supabase = await createServerSupabaseClient();
+  const supabase = createServerSupabaseClient();
 
   const { data: profile, error: profileError } = await supabase
     .from('users')

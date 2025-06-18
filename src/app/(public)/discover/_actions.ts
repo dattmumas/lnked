@@ -30,7 +30,7 @@ export async function logRecommendationFeedback(
   prevState: ActionResult | undefined,
   formData: FormData
 ): Promise<ActionResult> {
-  const supabase = await createServerSupabaseClient();
+  const supabase = createServerSupabaseClient();
 
   const {
     data: { user },
@@ -85,7 +85,7 @@ export async function logRecommendationFeedback(
     // revalidatePath('/discover');
 
     return { success: true, message: "Feedback recorded successfully." };
-  } catch (e) {
+  } catch (e: unknown) {
     console.error("Unexpected error recording feedback:", e);
     const errorMessage =
       e instanceof Error ? e.message : "An unexpected error occurred.";

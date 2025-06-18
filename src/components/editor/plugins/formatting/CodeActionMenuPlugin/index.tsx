@@ -99,7 +99,7 @@ function CodeActionMenuContainer({
     1000,
   );
 
-  useEffect(() => {
+  useEffect((): void => {
     if (!shouldListenMouseMove) {
       return;
     }
@@ -113,7 +113,7 @@ function CodeActionMenuContainer({
     };
   }, [shouldListenMouseMove, debouncedOnMouseMove]);
 
-  useEffect(() => {
+  useEffect((): void => {
     return editor.registerMutationListener(
       CodeNode,
       (mutations) => {

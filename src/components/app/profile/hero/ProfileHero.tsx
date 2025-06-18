@@ -474,7 +474,7 @@ function FollowButton() {
         targetUsername: profile.username,
         action: isFollowing ? 'unfollow' : 'follow',
       });
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Follow/unfollow error:', error);
     }
   };

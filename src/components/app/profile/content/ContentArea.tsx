@@ -53,7 +53,7 @@ export function ContentArea({ className = '' }: ContentAreaProps) {
   };
 
   // Determine default tab based on content counts
-  React.useEffect(() => {
+  React.useEffect((): void => {
     const { writing, video } = metrics.postCounts;
 
     // Default to the content type with the most items
@@ -65,7 +65,7 @@ export function ContentArea({ className = '' }: ContentAreaProps) {
   }, [metrics.postCounts]);
 
   // Sticky tab behavior
-  useEffect(() => {
+  useEffect((): void => {
     const handleScroll = () => {
       if (!tabsRef.current) return;
 

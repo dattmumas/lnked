@@ -11,7 +11,7 @@ import type { TablesInsert } from '@/types/database.types';
 export interface ReactionState {
   likeCount: number;
   dislikeCount: number;
-  userReaction: ReactionType | null;
+  userReaction: ReactionType | undefined;
 }
 
 export interface CommentReactionResult {
@@ -19,7 +19,7 @@ export interface CommentReactionResult {
   message?: string;
   likeCount?: number;
   dislikeCount?: number;
-  userReaction?: ReactionType | null;
+  userReaction?: ReactionType | undefined;
 }
 
 export async function toggleCommentReaction(
@@ -27,7 +27,7 @@ export async function toggleCommentReaction(
   type: string,
   postSlug?: string
 ): Promise<CommentReactionResult> {
-  const supabase = await createServerSupabaseClient();
+  const supabase = createServerSupabaseClient();
 
   // Validate reaction type
   const validReactionTypes = ['like', 'dislike'] as const;
@@ -62,7 +62,7 @@ export async function toggleCommentReaction(
       return { success: false, message: "Database error checking reaction status." };
     }
 
-    let userReaction: ReactionType | null = null;
+    let userReaction: ReactionType | undefined = undefined;
 
     if (existing) {
       if (existing.reaction_type === type) {
@@ -77,7 +77,7 @@ export async function toggleCommentReaction(
           console.error("Error removing comment reaction:", deleteError);
           return { success: false, message: "Failed to remove reaction." };
         }
-        userReaction = null;
+        userReaction = undefined;
       } else {
         // Switch reaction type
         const { error: deleteError } = await supabase
@@ -160,7 +160,7 @@ export async function toggleCommentReaction(
       message: actionMessage,
     };
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("Unexpected error in toggleCommentReaction:", error);
     return { 
       success: false, 

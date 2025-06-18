@@ -33,7 +33,7 @@ const useUser = (): { user: User | undefined; loading: boolean } => {
   const [user, setUser] = useState<User | undefined>(undefined);
   const [loading, setLoading] = useState<boolean>(true);
 
-  useEffect(() => {
+  useEffect((): void => {
     const supabase = createSupabaseBrowserClient();
     
     // Get initial user
@@ -135,12 +135,12 @@ export const useAutoSavePost = (): UseMutationResult<
 // Load existing post data query
 export const usePostData = (
   postId?: string,
-): ReturnType<typeof useQuery<PostFormData | null>> => {
-  return useQuery<PostFormData | null>({
+): ReturnType<typeof useQuery<PostFormData | undefined>> => {
+  return useQuery<PostFormData | undefined>({
     queryKey: ['post', postId],
-    queryFn: async (): Promise<PostFormData | null> => {
+    queryFn: async (): Promise<PostFormData | undefined> => {
       if (postId === null || postId === undefined || postId === '') {
-        return null;
+        return undefined;
       }
 
       const supabase = createSupabaseBrowserClient();
@@ -151,7 +151,7 @@ export const usePostData = (
         .single();
 
       if (error !== null && error !== undefined) throw error;
-      if (data === null || data === undefined) return null;
+      if (data === null || data === undefined) return undefined;
 
       // Cast through Zod to normalise defaults
       return PostFormSchema.partial({ author_id: true }).parse({
@@ -174,7 +174,7 @@ export const usePostData = (
 // `@typescript-eslint/explicit-function-return-type`.
 interface UsePostEditorResult {
   formData: PostFormData | undefined;
-  originalData: PostFormData | null | undefined;
+  originalData: PostFormData | undefined;
   isDirty: boolean;
   isLoading: boolean;
   autoSaveStatus: 'idle' | 'saving' | 'saved' | 'error';
@@ -196,7 +196,7 @@ export const usePostEditor = (postId?: string): UsePostEditorResult => {
   const { user } = useUser();
 
   // Initialize form data from server when post loads
-  useEffect(() => {
+  useEffect((): void => {
     if ((postData !== null && postData !== undefined) && (store.originalData === null || store.originalData === undefined)) {
       store.initializeForm(postData);
     }

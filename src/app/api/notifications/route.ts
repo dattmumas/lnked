@@ -7,7 +7,7 @@ import type { NotificationFilters, NotificationType } from '@/types/notification
 
 export async function GET(req: NextRequest) {
   try {
-    const supabase = await createServerSupabaseClient();
+    const supabase = createServerSupabaseClient();
     const {
       data: { user },
       error: authError,
@@ -31,7 +31,7 @@ export async function GET(req: NextRequest) {
 
     const response = await notificationService.getNotifications(filters);
     return NextResponse.json(response);
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Error fetching notifications:', error);
     return NextResponse.json(
       { error: 'Failed to fetch notifications' },
@@ -42,7 +42,7 @@ export async function GET(req: NextRequest) {
 
 export async function PATCH(req: NextRequest) {
   try {
-    const supabase = await createServerSupabaseClient();
+    const supabase = createServerSupabaseClient();
     const {
       data: { user },
       error: authError,
@@ -68,7 +68,7 @@ export async function PATCH(req: NextRequest) {
     }
 
     return NextResponse.json({ success: true });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Error marking notifications as read:', error);
     return NextResponse.json(
       { error: 'Failed to mark notifications as read' },
@@ -79,7 +79,7 @@ export async function PATCH(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   try {
-    const supabase = await createServerSupabaseClient();
+    const supabase = createServerSupabaseClient();
     const {
       data: { user },
       error: authError,
@@ -112,7 +112,7 @@ export async function DELETE(req: NextRequest) {
     }
 
     return NextResponse.json({ success: true });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Error deleting notifications:', error);
     return NextResponse.json(
       { error: 'Failed to delete notifications' },

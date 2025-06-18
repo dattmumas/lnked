@@ -2,6 +2,13 @@ import { useState, useCallback } from 'react';
 
 import { validateThumbnailFile } from '@/lib/utils/thumbnail';
 
+// Constants for progress and timing
+const PROGRESS_INTERVAL_MS = 200;
+const PROGRESS_INCREMENT = 10;
+const PROGRESS_MAX_BEFORE_COMPLETE = 90;
+const PROGRESS_COMPLETE = 100;
+const PROGRESS_RESET_DELAY_MS = 1000;
+
 interface UseThumbnailUploadProps {
   postId?: string;
   onUploadSuccess?: (thumbnailUrl: string) => void;
@@ -10,7 +17,7 @@ interface UseThumbnailUploadProps {
 
 interface UseThumbnailUploadReturn {
   isUploading: boolean;
-  uploadError: string | null;
+  uploadError: string | undefined;
   uploadProgress: number;
   isDragOver: boolean;
   uploadThumbnail: (file: File) => Promise<void>;
@@ -21,26 +28,33 @@ interface UseThumbnailUploadReturn {
   clearError: () => void;
 }
 
+interface UploadResponse {
+  success: boolean;
+  thumbnailUrl?: string;
+  error?: string;
+}
+
 export function useThumbnailUpload({
   postId,
   onUploadSuccess,
   onUploadError,
 }: UseThumbnailUploadProps): UseThumbnailUploadReturn {
   const [isUploading, setIsUploading] = useState(false);
-  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [uploadError, setUploadError] = useState<string | undefined>(undefined);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isDragOver, setIsDragOver] = useState(false);
 
   const clearError = useCallback(() => {
-    setUploadError(null);
+    setUploadError(undefined);
   }, []);
 
   // Upload thumbnail file to API endpoint
-  const uploadThumbnailFile = async (file: File): Promise<string> => {
+  const uploadThumbnailFile = useCallback(async (file: File): Promise<string> => {
     const formData = new FormData();
     formData.append('thumbnail', file);
     
-    if (postId) {
+    const hasPostId = postId !== undefined && postId !== null && postId !== '';
+    if (hasPostId) {
       formData.append('postId', postId);
     }
 
@@ -49,45 +63,54 @@ export function useThumbnailUpload({
       body: formData,
     });
 
-    const result: { success: boolean; thumbnailUrl?: string; error?: string } = await response.json();
+    const result = await response.json() as UploadResponse;
 
-    if (result.success && result.thumbnailUrl) {
+    const hasSuccessAndUrl = result.success === true && 
+                            result.thumbnailUrl !== undefined && 
+                            result.thumbnailUrl !== null && 
+                            result.thumbnailUrl !== '';
+    if (hasSuccessAndUrl && result.thumbnailUrl !== undefined) {
       return result.thumbnailUrl;
     }
-    throw new Error(result.error || 'Upload failed');
-  };
+    
+    const hasError = result.error !== undefined && result.error !== null && result.error !== '';
+    throw new Error(hasError ? result.error : 'Upload failed');
+  }, [postId]);
 
   // Process and upload thumbnail
   const uploadThumbnail = useCallback(
     async (file: File) => {
       setIsUploading(true);
-      setUploadError(null);
+      setUploadError(undefined);
       setUploadProgress(0);
 
       try {
         // Validate file using utility function
         const validation = validateThumbnailFile(file);
         if (!validation.isValid) {
-          throw new Error(validation.error || 'Invalid file');
+          const hasValidationError = validation.error !== undefined && 
+                                    validation.error !== null && 
+                                    validation.error !== '';
+          throw new Error(hasValidationError ? validation.error : 'Invalid file');
         }
 
         // Simulate upload progress (since FormData doesn't provide real progress)
         const progressInterval = setInterval(() => {
           setUploadProgress(prev => {
-            if (prev >= 90) {
+            if (prev >= PROGRESS_MAX_BEFORE_COMPLETE) {
               clearInterval(progressInterval);
-              return 90;
+              return PROGRESS_MAX_BEFORE_COMPLETE;
             }
-            return prev + 10;
+            return prev + PROGRESS_INCREMENT;
           });
-        }, 200);
+        }, PROGRESS_INTERVAL_MS);
 
         // Upload file to server
         const thumbnailUrl = await uploadThumbnailFile(file);
 
         // Complete progress
         clearInterval(progressInterval);
-        setUploadProgress(100);
+        setUploadProgress(PROGRESS_COMPLETE);
 
         // Call success callback
         if (onUploadSuccess) {
@@ -97,9 +120,9 @@ export function useThumbnailUpload({
         // Reset progress after a short delay
         setTimeout(() => {
           setUploadProgress(0);
-        }, 1000);
+        }, PROGRESS_RESET_DELAY_MS);
 
-      } catch (error) {
+      } catch (error: unknown) {
         const errorMessage = error instanceof Error 
           ? error.message 
           : 'Failed to upload thumbnail. Please try again.';
@@ -113,7 +136,7 @@ export function useThumbnailUpload({
         setIsUploading(false);
       }
     },
-    [postId, onUploadSuccess, onUploadError, uploadThumbnailFile]
+    [onUploadSuccess, onUploadError, uploadThumbnailFile]
   );
 
   // Drag and drop handlers
@@ -139,7 +162,7 @@ export function useThumbnailUpload({
       const imageFile = files.find((file) => file.type.startsWith('image/'));
 
       if (imageFile) {
-        uploadThumbnail(imageFile);
+        void uploadThumbnail(imageFile);
       } else {
         const error = 'Please drop an image file (JPEG, PNG, WebP).';
         setUploadError(error);
@@ -156,10 +179,11 @@ export function useThumbnailUpload({
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
       if (file) {
-        uploadThumbnail(file);
+        void uploadThumbnail(file);
       }
       // Reset the input value so the same file can be selected again
-      e.target.value = '';
+      const { target } = e;
+      target.value = '';
     },
     [uploadThumbnail]
   );

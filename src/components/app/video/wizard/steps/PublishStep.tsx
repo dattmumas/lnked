@@ -222,7 +222,7 @@ export function PublishStep({ videoUpload, onComplete }: PublishStepProps) {
         <div className="flex flex-col sm:flex-row gap-3 justify-center">
           <Button
             size="lg"
-            onClick={handlePublish}
+            onClick={() => void handlePublish()}
             disabled={isPublishing}
             className="flex-1 max-w-xs"
           >

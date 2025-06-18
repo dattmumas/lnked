@@ -38,7 +38,7 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const supabase = await createServerSupabaseClient();
+  const supabase = createServerSupabaseClient();
 
   // Get authentication state
   const {
@@ -90,7 +90,7 @@ export default async function RootLayout({
                 {/* Main content fills remaining space and no vertical scroll */}
                 <main
                   className={clsx(
-                    'flex-1 overflow-hidden',
+                    'flex-1 overflow-y-auto overflow-x-hidden',
                     isAuthenticated && 'ml-16 md:ml-16',
                   )}
                 >

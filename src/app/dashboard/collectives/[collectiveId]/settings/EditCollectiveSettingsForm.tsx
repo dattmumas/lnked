@@ -96,7 +96,7 @@ export default function EditCollectiveSettingsForm({
   const watchedName = watch('name');
   const watchedSlug = watch('slug');
 
-  React.useEffect(() => {
+  React.useEffect((): void => {
     if (
       watchedName &&
       (watchedSlug === defaultValues.slug ||
@@ -164,11 +164,11 @@ export default function EditCollectiveSettingsForm({
         reset(data);
         // If slug changed, redirect to the new settings page URL for consistency
         if (result.updatedSlug && result.updatedSlug !== currentSlug) {
-          router.push(
+          void router.push(
             `/dashboard/collectives/${collectiveId}/settings?slug_changed_to=${newSlug}`,
           );
         } else {
-          router.refresh(); // Refresh data on current page if slug didn't change
+          void router.refresh(); // Refresh data on current page if slug didn't change
         }
       }
     });
@@ -182,7 +182,7 @@ export default function EditCollectiveSettingsForm({
   const [stripeLoading, setStripeLoading] = useClientState(false);
   const [stripeError, setStripeError] = useClientState<string | null>(null);
 
-  useEffect(() => {
+  useEffect((): void => {
     setStripeLoading(true);
     getCollectiveStripeStatus(collectiveId)
       .then((status) => setStripeStatus(status))
@@ -228,7 +228,7 @@ export default function EditCollectiveSettingsForm({
     if (result.success) {
       setDeleteSuccess(true);
       setTimeout(() => {
-        router.push('/dashboard/collectives');
+        void router.push('/dashboard/collectives');
       }, 2000);
     } else {
       setDeleteError(result.error || 'Failed to delete collective.');
@@ -251,7 +251,7 @@ export default function EditCollectiveSettingsForm({
     if (result.success) {
       setTransferSuccess(true);
       setTimeout(() => {
-        router.refresh();
+        void router.refresh();
       }, 2000);
     } else {
       setTransferError(result.error || 'Failed to transfer ownership.');
@@ -274,7 +274,7 @@ export default function EditCollectiveSettingsForm({
         tierName: newName || undefined,
       });
       if (result.success) {
-        router.refresh();
+        void router.refresh();
       } else {
         setTierError(result.error || 'Failed to add tier');
       }
@@ -288,7 +288,7 @@ export default function EditCollectiveSettingsForm({
         priceId,
       });
       if (result.success) {
-        router.refresh();
+        void router.refresh();
       } else {
         setTierError(result.error || 'Failed to remove tier');
       }
@@ -490,7 +490,7 @@ export default function EditCollectiveSettingsForm({
                     Stripe is not connected.
                   </p>
                   <Button
-                    onClick={handleConnectStripe}
+                    onClick={() => void handleConnectStripe()}
                     disabled={stripeLoading}
                     type="button"
                   >

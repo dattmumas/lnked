@@ -103,7 +103,7 @@ function TextFormatFloatingToolbar({
     }
   }
 
-  useEffect(() => {
+  useEffect((): void => {
     if (popupCharStylesEditorRef?.current) {
       document.addEventListener('mousemove', mouseMoveListener);
       document.addEventListener('mouseup', mouseUpListener);
@@ -144,7 +144,7 @@ function TextFormatFloatingToolbar({
     }
   }, [editor, anchorElem, isLink]);
 
-  useEffect(() => {
+  useEffect((): void => {
     const scrollerElem = anchorElem.parentElement;
 
     const update = () => {
@@ -166,7 +166,7 @@ function TextFormatFloatingToolbar({
     };
   }, [editor, $updateTextFormatFloatingToolbar, anchorElem]);
 
-  useEffect(() => {
+  useEffect((): void => {
     editor.getEditorState().read(() => {
       $updateTextFormatFloatingToolbar();
     });
@@ -398,14 +398,14 @@ function useFloatingTextFormatToolbar(
     });
   }, [editor]);
 
-  useEffect(() => {
+  useEffect((): void => {
     document.addEventListener('selectionchange', updatePopup);
     return () => {
       document.removeEventListener('selectionchange', updatePopup);
     };
   }, [updatePopup]);
 
-  useEffect(() => {
+  useEffect((): void => {
     return mergeRegister(
       editor.registerUpdateListener(() => {
         updatePopup();

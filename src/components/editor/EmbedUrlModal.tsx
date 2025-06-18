@@ -22,7 +22,7 @@ export function EmbedUrlModal({
   const [url, setUrl] = React.useState("");
   const inputRef = React.useRef<HTMLInputElement>(null);
 
-  React.useEffect(() => {
+  React.useEffect((): void => {
     if (open) {
       setUrl("");
       setTimeout(() => inputRef.current?.focus(), 0);

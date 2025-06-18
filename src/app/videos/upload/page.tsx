@@ -9,7 +9,7 @@ export default async function VideoUploadPage({
 }: {
   searchParams: Promise<{ collective?: string }>;
 }) {
-  const supabase = await createServerSupabaseClient();
+  const supabase = createServerSupabaseClient();
 
   // Check authentication
   const {

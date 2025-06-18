@@ -5,7 +5,7 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 import EditProfileForm from "./EditProfileForm"; // Client component for the form
 
 export default async function EditProfilePage() {
-  const supabase = await createServerSupabaseClient();
+  const supabase = createServerSupabaseClient();
 
   const {
     data: { user: authUser }, // Renamed to authUser to avoid conflict

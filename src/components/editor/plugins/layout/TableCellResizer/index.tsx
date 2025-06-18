@@ -74,7 +74,7 @@ function TableCellResizer({editor}: {editor: LexicalEditor}): JSX.Element {
     tableRectRef.current = null;
   }, []);
 
-  useEffect(() => {
+  useEffect((): void => {
     const tableKeys = new Set<NodeKey>();
     return mergeRegister(
       editor.registerMutationListener(TableNode, (nodeMutations) => {
@@ -101,7 +101,7 @@ function TableCellResizer({editor}: {editor: LexicalEditor}): JSX.Element {
     );
   }, [editor]);
 
-  useEffect(() => {
+  useEffect((): void => {
     if (!hasTable) {
       return;
     }

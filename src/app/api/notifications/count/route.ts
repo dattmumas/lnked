@@ -5,7 +5,7 @@ import { createServerSupabaseClient } from '@/lib/supabase/server';
 
 export async function GET() {
   try {
-    const supabase = await createServerSupabaseClient();
+    const supabase = createServerSupabaseClient();
     const {
       data: { user },
       error: authError,
@@ -20,7 +20,7 @@ export async function GET() {
 
     const count = await notificationService.getUnreadCount();
     return NextResponse.json({ count });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Error fetching notification count:', error);
     return NextResponse.json(
       { error: 'Failed to fetch notification count' },

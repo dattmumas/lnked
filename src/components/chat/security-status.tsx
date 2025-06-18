@@ -24,7 +24,7 @@ export function SecurityStatus({
     isLoading: true,
   });
 
-  useEffect(() => {
+  useEffect((): void => {
     async function checkSecurity() {
       try {
         setSecurityStatus((prev) => ({ ...prev, isLoading: true }));
@@ -49,7 +49,7 @@ export function SecurityStatus({
           canSendMessages,
           isLoading: false,
         });
-      } catch (error) {
+      } catch (error: unknown) {
         console.error('Security check failed:', error);
         setSecurityStatus({
           isAuthenticated: false,

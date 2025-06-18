@@ -58,7 +58,7 @@ type DashboardContent = {
 export const dynamic = 'force-dynamic';
 
 export default async function DashboardManagementPage() {
-  const supabase = await createServerSupabaseClient();
+  const supabase = createServerSupabaseClient();
 
   // Get session to retrieve user reliably
   const {
@@ -136,7 +136,7 @@ export default async function DashboardManagementPage() {
       recent_posts: [],
       owned_collectives: [],
     };
-  } catch (error) {
+  } catch (error: unknown) {
     console.log('Falling back to individual queries:', error);
 
     // FALLBACK: Use individual queries if RPC functions are not available

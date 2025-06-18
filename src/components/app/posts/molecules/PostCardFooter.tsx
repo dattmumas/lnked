@@ -80,7 +80,7 @@ export default function PostCardFooter({
   };
 
   const handleCommentsClick = () => {
-    router.push(`${postUrl}#comments`);
+    void router.push(`${postUrl}#comments`);
   };
 
   const handleShare = async (method: 'copy' | 'native') => {
@@ -96,7 +96,7 @@ export default function PostCardFooter({
           title: postTitle,
           url: fullUrl,
         });
-      } catch (error) {
+      } catch (error: unknown) {
         // User cancelled or error occurred, fallback to copy
         await navigator.clipboard.writeText(fullUrl);
       }
@@ -124,7 +124,7 @@ export default function PostCardFooter({
         <Button
           variant={interactions.isLiked ? 'default' : 'ghost'}
           size="sm"
-          onClick={() => handleReaction('like')}
+          onClick={() => void handleReaction('like')}
           disabled={disabled || isPending}
           className="flex items-center gap-2 rounded-full"
           aria-label={interactions.isLiked ? 'Unlike post' : 'Like post'}
@@ -144,7 +144,7 @@ export default function PostCardFooter({
         <Button
           variant={interactions.isDisliked ? 'destructive' : 'ghost'}
           size="sm"
-          onClick={() => handleReaction('dislike')}
+          onClick={() => void handleReaction('dislike')}
           disabled={disabled || isPending}
           className="flex items-center gap-2 rounded-full"
           aria-label={
@@ -193,7 +193,7 @@ export default function PostCardFooter({
         <Button
           variant="ghost"
           size="sm"
-          onClick={handleBookmark}
+          onClick={() => void handleBookmark()}
           disabled={disabled || isPending}
           className="rounded-full"
           aria-label={
@@ -223,12 +223,12 @@ export default function PostCardFooter({
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             {typeof navigator !== 'undefined' && 'share' in navigator && (
-              <DropdownMenuItem onClick={() => handleShare('native')}>
+              <DropdownMenuItem onClick={() => void handleShare('native')}>
                 <Share2 className="h-4 w-4 mr-2" />
                 Share
               </DropdownMenuItem>
             )}
-            <DropdownMenuItem onClick={() => handleShare('copy')}>
+            <DropdownMenuItem onClick={() => void handleShare('copy')}>
               <ExternalLink className="h-4 w-4 mr-2" />
               Copy link
             </DropdownMenuItem>

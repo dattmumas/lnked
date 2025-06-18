@@ -2,10 +2,13 @@
 
 import { useCallback, useEffect, useMemo } from 'react';
 
-import { useStepNavigation } from './useStepNavigation';
+import { useStepNavigation, WIZARD_STEPS } from './useStepNavigation';
 import { useVideoFormState } from './useVideoFormState';
 import { useVideoProcessing } from './useVideoProcessing';
 import { useVideoUploadState } from './useVideoUploadState';
+
+import type { VideoFormData, ValidationErrors } from './useVideoFormState';
+import type { VideoAsset } from './useVideoProcessing';
 
 // Constants for upload steps
 const UPLOAD_STEP = 0;
@@ -16,7 +19,60 @@ const PUBLISH_STEP = 3;
 // Constants for timeouts
 const AUTO_SAVE_DELAY = 1000;
 
-export const useVideoUpload = (collectiveId?: string) => {
+interface UseVideoUploadReturn {
+  // Form state
+  formData: VideoFormData;
+  updateFormData: (data: Partial<VideoFormData>) => void;
+  resetForm: () => void;
+  isFormValid: boolean;
+  validationErrors: ValidationErrors;
+  
+  // Upload state
+  uploadProgress: number;
+  uploadStatus: string;
+  uploadError: string | null;
+  isUploading: boolean;
+  isProcessing: boolean;
+  isUploadComplete: boolean;
+  hasUploadError: boolean;
+  
+  // Step navigation
+  currentStep: number;
+  currentStepInfo: (typeof WIZARD_STEPS)[number];
+  totalSteps: number;
+  completedSteps: Set<number>;
+  completionPercentage: number;
+  canProceed: boolean;
+  canGoBack: boolean;
+  isFirstStep: boolean;
+  isLastStep: boolean;
+  steps: typeof WIZARD_STEPS;
+  
+  // Video processing
+  videoAsset: VideoAsset | undefined;
+  thumbnails: string[];
+  hasVideoAsset: boolean;
+  isCreatingUploadUrl: boolean;
+  isPublishing: boolean;
+  canPublish: boolean;
+  
+  // Operations
+  uploadVideo: (file: File) => Promise<void>;
+  publishVideo: () => Promise<boolean>;
+  nextStep: () => boolean;
+  previousStep: () => void;
+  goToStep: (step: number) => void;
+  generateThumbnails: () => Promise<boolean>;
+  reset: () => void;
+  
+  // Status helpers for UI
+  isReadyToUpload: boolean;
+  isReadyForDetails: boolean;
+  isReadyForSettings: boolean;
+  isReadyToPublish: boolean;
+}
+
+export const useVideoUpload = (collectiveId?: string): UseVideoUploadReturn => {
   // Sub-hooks for specific concerns
   const formState = useVideoFormState();
   const uploadState = useVideoUploadState();
@@ -45,7 +101,9 @@ export const useVideoUpload = (collectiveId?: string) => {
   // Auto-save form data to localStorage for persistence
   useEffect(() => {
     const timeoutId = setTimeout(() => {
-      if (formState.data.title || formState.data.description) {
+      const titleTrimmed = formState.data.title?.trim() ?? '';
+      const descriptionTrimmed = formState.data.description?.trim() ?? '';
+      if (titleTrimmed || descriptionTrimmed) {
         localStorage.setItem('video-upload-draft', JSON.stringify(formState.data));
       }
     }, AUTO_SAVE_DELAY);
@@ -56,11 +114,11 @@ export const useVideoUpload = (collectiveId?: string) => {
   // Load saved draft on initialization
   useEffect(() => {
     const savedDraft = localStorage.getItem('video-upload-draft');
-    if (savedDraft) {
+    if (savedDraft !== null && savedDraft !== '') {
       try {
-        const draftData = JSON.parse(savedDraft);
+        const draftData = JSON.parse(savedDraft) as Partial<VideoFormData>;
         formState.update(draftData);
-      } catch (error) {
+      } catch (error: unknown) {
         console.error('Failed to load saved draft:', error);
       }
     }
@@ -69,7 +127,11 @@ export const useVideoUpload = (collectiveId?: string) => {
 
   // Set collective ID if provided
   useEffect(() => {
-    if (collectiveId && !formState.data.collectiveId) {
+    const hasCollectiveId = collectiveId !== undefined && collectiveId !== null && collectiveId !== '';
+    const formCollectiveId = formState.data.collectiveId;
+    const noFormCollectiveId = formCollectiveId === undefined || formCollectiveId === null || formCollectiveId === '';
+    const shouldSetCollectiveId = hasCollectiveId && noFormCollectiveId;
+    if (shouldSetCollectiveId) {
       formState.update({ collectiveId });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -91,7 +153,7 @@ export const useVideoUpload = (collectiveId?: string) => {
       stepNavigation.next();
       
       uploadState.setComplete();
-    } catch (error) {
+    } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Upload failed';
       uploadState.setError(errorMessage);
       console.error('Upload failed:', error);
@@ -104,7 +166,7 @@ export const useVideoUpload = (collectiveId?: string) => {
 
   //   try {
   //     await videoProcessing.updateVideoMetadata(formState.data);
-  //   } catch (error) {
+  //   } catch (error: unknown) {
   //     console.error('Failed to update metadata:', error);
   //     // Don't throw here as this is a background operation
   //   }
@@ -120,7 +182,7 @@ export const useVideoUpload = (collectiveId?: string) => {
       
       // Navigate to success (handled by parent component)
       return true;
-    } catch (error) {
+    } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Publishing failed';
       uploadState.setError(errorMessage);
       console.error('Publishing failed:', error);
@@ -130,7 +192,8 @@ export const useVideoUpload = (collectiveId?: string) => {
 
   // Generate thumbnails manually (only when mux_asset_id exists)
   const generateThumbnails = useCallback(async () => {
-    if (!videoProcessing.asset?.mux_asset_id) {
+    const muxAssetId = videoProcessing.asset?.mux_asset_id;
+    if (muxAssetId === null || muxAssetId === undefined || muxAssetId === '') {
       console.warn('Cannot generate thumbnails: Video not yet processed by MUX');
       return false;
     }
@@ -138,14 +201,11 @@ export const useVideoUpload = (collectiveId?: string) => {
     try {
       await videoProcessing.generateThumbnails();
       return true;
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Failed to generate thumbnails:', error);
       return false;
     }
   }, [videoProcessing]);
-
-  // REMOVED: Auto-generation of thumbnails on step 3
-  // Thumbnails should only be generated manually when mux_asset_id is available
 
   // Enhanced navigation with validation
   const nextStep = useCallback(() => {

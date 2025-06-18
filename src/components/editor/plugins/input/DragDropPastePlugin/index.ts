@@ -26,7 +26,7 @@ const ACCEPTABLE_IMAGE_TYPES = [
 
 export default function DragDropPaste(): null {
   const [editor] = useLexicalComposerContext();
-  useEffect(() => {
+  useEffect((): void => {
     return editor.registerCommand(
       DRAG_DROP_PASTE,
       (files) => {

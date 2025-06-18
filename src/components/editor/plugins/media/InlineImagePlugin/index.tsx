@@ -95,7 +95,7 @@ export function InsertInlineImageDialog({
     }
   };
 
-  useEffect(() => {
+  useEffect((): void => {
     hasModifier.current = false;
     const handler = (e: KeyboardEvent) => {
       hasModifier.current = e.altKey;
@@ -161,7 +161,7 @@ export function InsertInlineImageDialog({
         <Button
           data-test-id="image-modal-file-upload-btn"
           disabled={isDisabled}
-          onClick={() => handleOnClick()}
+          onClick={() => void handleOnClick()}
         >
           Confirm
         </Button>
@@ -173,7 +173,7 @@ export function InsertInlineImageDialog({
 export default function InlineImagePlugin(): JSX.Element | null {
   const [editor] = useLexicalComposerContext();
 
-  useEffect(() => {
+  useEffect((): void => {
     if (!editor.hasNodes([InlineImageNode])) {
       throw new Error('ImagesPlugin: ImageNode not registered on editor');
     }

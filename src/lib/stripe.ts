@@ -61,7 +61,7 @@ export function getStripe(): Stripe | undefined {
  *       // ... other parameters
  *     });
  *     return paymentIntent;
- *   } catch (error) {
+ *   } catch (error: unknown) {
  *     console.error('Error creating PaymentIntent:', error);
  *     throw error;
  *   }

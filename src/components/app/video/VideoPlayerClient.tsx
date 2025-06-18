@@ -21,7 +21,7 @@ export default function VideoPlayerClient({ video }: VideoPlayerClientProps) {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const supabase = createSupabaseBrowserClient();
 
-  useEffect(() => {
+  useEffect((): void => {
     const getCurrentUser = async () => {
       const {
         data: { user },

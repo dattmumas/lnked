@@ -59,7 +59,7 @@ export default function RecommendationFeedbackButtons({
     initialState
   );
 
-  useEffect(() => {
+  useEffect((): void => {
     if (state.success && state.message) {
       // Potential future use: trigger a toast notification or more complex UI update
     }

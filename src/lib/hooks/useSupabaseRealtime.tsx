@@ -20,7 +20,7 @@ export function useSupabaseRealtime<T = unknown>(
   }) => void,
   filter?: { column: string; value: string | number },
 ): void {
-  useEffect(() => {
+  useEffect((): void => {
     const supabase = createSupabaseBrowserClient();
     let channel: RealtimeChannel = supabase.channel(`realtime:${table}`);
     let filterStr = table;
@@ -31,7 +31,7 @@ export function useSupabaseRealtime<T = unknown>(
 
     channel
       .on(
-        'postgres_changes' as any,
+        'postgres_changes',
         {
           schema: 'public',
           table,

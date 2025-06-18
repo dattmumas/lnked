@@ -95,7 +95,7 @@ export default function EmojiPickerPlugin() {
   const [queryString, setQueryString] = useState<string | null>(null);
   const [emojis, setEmojis] = useState<Array<Emoji>>([]);
 
-  useEffect(() => {
+  useEffect((): void => {
     import('../../../utils/text/emoji-list').then((file) =>
       setEmojis(file.default),
     );

@@ -6,7 +6,7 @@ import HomePageClient from './HomePageClient';
 
 export default async function HomePage() {
   // Server-side authentication check
-  const supabase = await createServerSupabaseClient();
+  const supabase = createServerSupabaseClient();
   const {
     data: { user },
     error: authError,

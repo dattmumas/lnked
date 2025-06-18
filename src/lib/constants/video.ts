@@ -48,4 +48,8 @@ export const PAD_CHARACTER = '0';
 export const PLAYER_INIT_TIME = 2000; // milliseconds for player initialization
 
 // Video status check intervals
-export const STATUS_CHECK_INTERVAL = 5000; // 5 seconds in milliseconds 
+export const STATUS_CHECK_INTERVAL = 5000; // 5 seconds in milliseconds
+
+// Progress constants
+export const PROGRESS_MIN = 0;
+export const PROGRESS_MAX = 100; 

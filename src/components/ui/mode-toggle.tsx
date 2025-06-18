@@ -2,24 +2,29 @@
 
 import { Sun, Moon } from 'lucide-react';
 import { useTheme } from 'next-themes';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 
 import { Button } from './button';
 
-
-export function ModeToggle() {
+export function ModeToggle(): React.JSX.Element | undefined {
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
-  if (!mounted) return null;
+
   const isDark = theme === 'dark';
+
+  const toggleTheme = useCallback((): void => {
+    setTheme(isDark ? 'light' : 'dark');
+  }, [isDark, setTheme]);
+
+  if (!mounted) return undefined;
 
   return (
     <Button
       variant="ghost"
       size="icon"
       aria-label="Toggle dark mode"
-      onClick={() => setTheme(isDark ? 'light' : 'dark')}
+      onClick={toggleTheme}
       className="focus-visible:ring-2 focus-visible:ring-primary/50"
     >
       {isDark ? (

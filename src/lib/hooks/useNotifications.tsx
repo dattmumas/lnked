@@ -78,7 +78,7 @@ export function useNotifications(
 
           setNotifications(response.notifications);
           setUnreadCount(response.unread_count);
-        } catch (err) {
+        } catch (err: unknown) {
           setError(
             err instanceof Error
               ? err.message
@@ -132,7 +132,7 @@ export function useNotifications(
             setUnreadCount(0);
           }
         }
-      } catch (err) {
+      } catch (err: unknown) {
         setError(
           err instanceof Error
             ? err.message
@@ -162,7 +162,7 @@ export function useNotifications(
             return prev.filter((n) => !notificationIds.includes(n.id));
           });
         }
-      } catch (err) {
+      } catch (err: unknown) {
         setError(
           err instanceof Error ? err.message : 'Failed to delete notifications',
         );
@@ -179,7 +179,7 @@ export function useNotifications(
   const initialFetchDone = useRef(false);
 
   // Initial fetch
-  useEffect(() => {
+  useEffect((): void => {
     if (
       autoFetch &&
       userId !== null &&
@@ -193,7 +193,7 @@ export function useNotifications(
   }, [autoFetch, userId, fetchNotifications]);
 
   // Real-time subscription
-  useEffect(() => {
+  useEffect((): void => {
     if (!realtime || userId === null || userId === undefined || userId === '') {
       // Return a no‑op cleanup to satisfy `consistent-return`
       return () => {};
@@ -221,7 +221,7 @@ export function useNotifications(
   }, [realtime, userId]);
 
   // Cleanup debounce timer on unmount
-  useEffect(() => {
+  useEffect((): void => {
     return () => {
       if (debounceTimer.current) {
         clearTimeout(debounceTimer.current);

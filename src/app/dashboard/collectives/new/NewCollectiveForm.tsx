@@ -70,8 +70,8 @@ export default function NewCollectivePage() {
         setSlug("");
         setDescription("");
         // Redirect to the new collective's page or dashboard
-        router.push(`/dashboard`); // Or `/collectives/${result.data.slug}` once that page exists
-        router.refresh();
+        void router.push(`/dashboard`); // Or `/collectives/${result.data.slug}` once that page exists
+        void router.refresh();
       } else {
         setError("An unexpected error occurred.");
       }
@@ -87,7 +87,7 @@ export default function NewCollectivePage() {
             Start a new newsletter collective. Choose a unique name and slug.
           </CardDescription>
         </CardHeader>
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={() => void handleSubmit()}>
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="name">Collective Name</Label>

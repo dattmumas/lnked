@@ -93,7 +93,7 @@ export const useChat = (): {
         conversations: data ?? [],
         isLoading: false,
       }));
-    } catch (error) {
+    } catch (error: unknown) {
       const err = error as Error;
       setState(prev => ({
         ...prev,
@@ -128,7 +128,7 @@ export const useChat = (): {
         },
       }));
       return data ?? [];
-    } catch (error) {
+    } catch (error: unknown) {
       const err = error as Error;
       setState(prev => ({
         ...prev,
@@ -182,7 +182,7 @@ export const useChat = (): {
         }));
       }
       return message ?? undefined;
-    } catch (error) {
+    } catch (error: unknown) {
       const err = error as Error;
       setState(prev => ({
         ...prev,
@@ -212,7 +212,7 @@ export const useChat = (): {
       // Reload conversations to get the new one with full data
       await loadConversations();
       return conversation ?? undefined;
-    } catch (error) {
+    } catch (error: unknown) {
       const err = error as Error;
       setState(prev => ({
         ...prev,
@@ -249,7 +249,7 @@ export const useChat = (): {
     // Mark messages as read
     try {
       await chatService.markMessagesAsRead(conversationId);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Failed to mark messages as read:', error);
     }
 
@@ -367,7 +367,7 @@ export const useChat = (): {
                 },
               }));
             }
-          } catch (error) {
+          } catch (error: unknown) {
             // Silently ignore refresh errors
             const err = error as Error;
             console.warn('Background refresh failed:', err.message);
@@ -404,7 +404,7 @@ export const useChat = (): {
       if (error) {
         throw new Error(error.message);
       }
-    } catch (error) {
+    } catch (error: unknown) {
       const err = error as Error;
       setState(prev => ({
         ...prev,
@@ -422,7 +422,7 @@ export const useChat = (): {
       if (error) {
         throw new Error(error.message);
       }
-    } catch (error) {
+    } catch (error: unknown) {
       const err = error as Error;
       setState(prev => ({
         ...prev,
@@ -444,7 +444,7 @@ export const useChat = (): {
         throw new Error(error.message);
       }
       return data ?? [];
-    } catch (error) {
+    } catch (error: unknown) {
       const err = error as Error;
       setState(prev => ({
         ...prev,

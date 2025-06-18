@@ -45,7 +45,7 @@ export function NotificationItem({
       setIsDeleting(true);
       try {
         await onDelete(notification.id);
-      } catch (error) {
+      } catch (error: unknown) {
         console.error('Failed to delete notification:', error);
         setIsDeleting(false);
       }
@@ -85,7 +85,7 @@ export function NotificationItem({
 
     // Navigate to the link if available
     if (link) {
-      router.push(link);
+      void router.push(link);
     }
   };
 

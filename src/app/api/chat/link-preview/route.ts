@@ -80,7 +80,7 @@ export async function POST(request: NextRequest) {
       image: absoluteImage,
     });
     
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Link preview error:', error);
     return NextResponse.json({ error: 'Failed to generate preview' }, { status: 500 });
   }

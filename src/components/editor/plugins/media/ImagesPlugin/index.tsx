@@ -154,7 +154,7 @@ export function InsertImageDialog({
   const [mode, setMode] = useState<null | 'url' | 'file'>(null);
   const hasModifier = useRef(false);
 
-  useEffect(() => {
+  useEffect((): void => {
     hasModifier.current = false;
     const handler = (e: KeyboardEvent) => {
       hasModifier.current = e.altKey;
@@ -226,7 +226,7 @@ export default function ImagesPlugin({
 }): JSX.Element | null {
   const [editor] = useLexicalComposerContext();
 
-  useEffect(() => {
+  useEffect((): void => {
     if (!editor.hasNodes([ImageNode])) {
       throw new Error('ImagesPlugin: ImageNode not registered on editor');
     }

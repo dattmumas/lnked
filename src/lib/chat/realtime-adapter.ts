@@ -46,8 +46,8 @@ const adapters: Record<string, RealTimeAdapter> = {
 
 export function selectAdapter(name: 'supabase' | 'ably' = 'supabase'): RealTimeAdapter {
   const adapter = adapters[name];
-  if (!adapter) {
+  if (adapter === undefined) {
     throw new Error(`Real-time adapter '${name}' not available`);
   }
   return adapter;
-} 
+}

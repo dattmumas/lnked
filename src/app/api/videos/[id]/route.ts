@@ -90,7 +90,7 @@ export async function GET(
     const videoId = VIDEO_ID.parse(id);
     const video   = await assertOwnership(supabase, user.id, videoId);
     return NextResponse.json({ data: video });
-  } catch (e) {
+  } catch (e: unknown) {
     return e instanceof Response
       ? e
       : NextResponse.json({ error: 'internal' }, { status: 500 });
@@ -150,7 +150,7 @@ export async function PATCH(
 
     if (error) throw new Response('update_failed', { status: 500 });
     return NextResponse.json({ data });
-  } catch (e) {
+  } catch (e: unknown) {
     return e instanceof Response
       ? e
       : NextResponse.json({ error: 'internal' }, { status: 500 });
@@ -182,7 +182,7 @@ export async function DELETE(
     } else if (video.mux_upload_id) {
       try {
         await mux.video.uploads.cancel(video.mux_upload_id);
-      } catch (err) {
+      } catch (err: unknown) {
         /* ignore 400 = already finished */
       }
     }
@@ -194,7 +194,7 @@ export async function DELETE(
 
     if (error) throw new Response('db_delete_failed', { status: 500 });
     return NextResponse.json({ deleted: true });
-  } catch (e) {
+  } catch (e: unknown) {
     return e instanceof Response
       ? e
       : NextResponse.json({ error: 'internal' }, { status: 500 });

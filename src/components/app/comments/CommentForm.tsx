@@ -57,7 +57,12 @@ export const CommentForm: React.FC<CommentFormProps> = ({
     .slice(0, 2);
 
   return (
-    <form onSubmit={handleSubmit} className={`space-y-3 ${className}`}>
+    <form
+      onSubmit={(e): void => {
+        void handleSubmit(e);
+      }}
+      className={`space-y-3 ${className}`}
+    >
       <div className="flex gap-3">
         <Avatar className="h-8 w-8 flex-shrink-0">
           <AvatarImage src={userAvatarUrl} />

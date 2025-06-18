@@ -154,7 +154,7 @@ export default function VideoCard({
               type="button"
               className="group w-full aspect-video relative focus:outline-none"
               onClick={
-                canPlayInline ? handlePlayClick : () => router.push(postUrl)
+                canPlayInline ? handlePlayClick : () => void router.push(postUrl)
               }
               aria-label="Play video"
             >

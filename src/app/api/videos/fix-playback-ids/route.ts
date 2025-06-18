@@ -15,7 +15,7 @@ const mux = new Mux({
  */
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createServerSupabaseClient();
+    const supabase = createServerSupabaseClient();
 
     // Get current user
     const {
@@ -118,7 +118,7 @@ export async function POST(request: NextRequest) {
       videos_checked: videos?.length || 0,
       results,
     });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Fix playback IDs error:', error);
     return NextResponse.json(
       { error: 'Internal server error' },

@@ -120,13 +120,13 @@ export default function ExcalidrawModal({
     useState<ExcalidrawInitialElements>(initialElements);
   const [files, setFiles] = useState<BinaryFiles>(initialFiles);
 
-  useEffect(() => {
+  useEffect((): void => {
     if (excaliDrawModelRef.current !== null) {
       excaliDrawModelRef.current.focus();
     }
   }, []);
 
-  useEffect(() => {
+  useEffect((): void => {
     let modalOverlayElement: HTMLElement | null = null;
 
     const clickOutsideHandler = (event: MouseEvent) => {

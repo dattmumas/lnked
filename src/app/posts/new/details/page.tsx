@@ -47,12 +47,12 @@ export default function NewPostDetailsPage() {
   } = useEnhancedPostEditor();
 
   // Set current page for state management
-  useEffect(() => {
+  useEffect((): void => {
     setCurrentPage('details');
   }, [setCurrentPage]);
 
   const handleBackToEditor = () => {
-    router.push('/posts/new');
+    void router.push('/posts/new');
   };
 
   const handleSaveDraft = async () => {
@@ -62,8 +62,8 @@ export default function NewPostDetailsPage() {
   const handlePublish = async () => {
     try {
       await publishPost();
-      router.push('/dashboard/posts');
-    } catch (error) {
+      void router.push('/dashboard/posts');
+    } catch (error: unknown) {
       console.error('Failed to publish post:', error);
       // Error will be handled by the enhanced error system
     }
@@ -125,13 +125,13 @@ export default function NewPostDetailsPage() {
             </Button>
             <Button
               variant="outline"
-              onClick={handleSaveDraft}
+              onClick={() => void handleSaveDraft()}
               disabled={autoSaveStatus === 'saving'}
             >
               Save Draft
             </Button>
             <Button
-              onClick={handlePublish}
+              onClick={() => void handlePublish()}
               disabled={!canPublish}
               className="flex items-center gap-2"
             >

@@ -16,7 +16,7 @@ const mux = new Mux({
  */
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createServerSupabaseClient();
+    const supabase = createServerSupabaseClient();
 
     // Get current user
     const {
@@ -141,7 +141,7 @@ export async function POST(request: NextRequest) {
       uploadUrl: directUpload.url,
       video: videoRecord,
     });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Upload URL creation error:', error);
     return NextResponse.json(
       { error: 'Failed to create upload URL' },

@@ -23,7 +23,7 @@ export const INSERT_YOUTUBE_COMMAND: LexicalCommand<string> = createCommand(
 export default function YouTubePlugin(): JSX.Element | null {
   const [editor] = useLexicalComposerContext();
 
-  useEffect(() => {
+  useEffect((): void => {
     if (!editor.hasNodes([YouTubeNode])) {
       throw new Error('YouTubePlugin: YouTubeNode not registered on editor');
     }

@@ -14,6 +14,10 @@ import {
   ReactionType,
 } from '@/types/comments-v2';
 
+// Constants
+const DEFAULT_PAGE_SIZE = 20;
+const REPLIES_PAGE_SIZE = 10;
+
 interface UseCommentsV2Props {
   entityType: CommentEntityType;
   entityId: string;
@@ -25,8 +29,7 @@ interface UseCommentsV2Props {
 export function useCommentsV2({
   entityType,
   entityId,
-  initialSort = 'newest',
-  pageSize = 20,
+  pageSize = DEFAULT_PAGE_SIZE,
   enableRealtime = true,
 }: UseCommentsV2Props): UseCommentsReturn {
   const [comments, setComments] = useState<CommentThread[]>([]);
@@ -34,9 +37,6 @@ export function useCommentsV2({
   const [error, setError] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  
-  // Track loaded replies for each comment
-  const [loadedReplies, setLoadedReplies] = useState<Record<string, boolean>>({});
   
   // Pagination state
   const offsetRef = useRef(0);
@@ -85,7 +85,7 @@ export function useCommentsV2({
 
         setHasMore(apiComments.length === pageSize);
 
-      } catch (err) {
+      } catch (err: unknown) {
         console.error('Error loading comments:', err);
         setError(err instanceof Error ? err.message : 'Failed to load comments');
       } finally {
@@ -109,7 +109,7 @@ export function useCommentsV2({
       const replies = await commentsV2Service.getCommentReplies(
         commentId,
         1,
-        10
+        REPLIES_PAGE_SIZE
       );
 
       setComments(prev =>
@@ -118,16 +118,14 @@ export function useCommentsV2({
             ? {
                 ...thread,
                 replies,
-                hasMoreReplies: replies.length === 10,
+                hasMoreReplies: replies.length === REPLIES_PAGE_SIZE,
                 repliesLoading: false,
               }
             : thread
         )
       );
 
-      setLoadedReplies(prev => ({ ...prev, [commentId]: true }));
-
-    } catch (err) {
+    } catch (err: unknown) {
       console.error('Error loading replies:', err);
       
       // Reset loading state on error
@@ -147,7 +145,8 @@ export function useCommentsV2({
       if (submitting || userLoading) return;
 
       // Ensure user is authenticated
-      if (!user?.id) {
+      const hasUserId = user?.id !== undefined && user?.id !== null && user?.id !== '';
+      if (!hasUserId) {
         const authError = new Error('You must be logged in to comment.');
         setError(authError.message);
         throw authError;
@@ -165,7 +164,8 @@ export function useCommentsV2({
           parentId
         );
 
-        if (!parentId) {
+        const hasParentId = parentId !== undefined && parentId !== null && parentId !== '';
+        if (!hasParentId) {
           await loadComments(true);
         } else {
           await loadReplies(parentId);
@@ -184,7 +184,7 @@ export function useCommentsV2({
           );
         }
 
-      } catch (err) {
+      } catch (err: unknown) {
         console.error('Error adding comment:', err);
         setError(err instanceof Error ? err.message : 'Failed to add comment');
         throw err; // Re-throw so UI can handle
@@ -201,7 +201,8 @@ export function useCommentsV2({
       try {
         if (userLoading) return;
 
-        if (!user?.id) {
+        const hasUserId = user?.id !== undefined && user?.id !== null && user?.id !== '';
+        if (!hasUserId) {
           const authError = new Error('You must be logged in to react to comments.');
           setError(authError.message);
           throw authError;
@@ -237,7 +238,7 @@ export function useCommentsV2({
           })
         );
 
-      } catch (err) {
+      } catch (err: unknown) {
         console.error('Error toggling reaction:', err);
         setError(
           err instanceof Error ? err.message : 'Failed to toggle reaction'
@@ -253,33 +254,36 @@ export function useCommentsV2({
     await loadComments(false);
   }, [loading, hasMore, loadComments]);
 
-  // Real-time subscription
-  useEffect(() => {
-    if (!enableRealtime) return;
+  // Real‑time subscription lifecycle
+  useEffect((): (() => void) => {
+    if (!enableRealtime) {
+      return () => {
+        /* Realtime disabled: nothing to clean up */
+      };
+    }
 
-    // Real-time subscriptions are not implemented in the provided service stub
-    // but this is where you would set them up.
+    // TODO: Implement realtime subscription setup here.
+    // Any channel created should be stored in `subscriptionRef.current`.
+    const currentSubscription = subscriptionRef.current;
 
     return () => {
-      if (subscriptionRef.current) {
-        subscriptionRef.current.unsubscribe();
+      // Capture reference at effect‑creation time to satisfy
+      // react-hooks/exhaustive-deps about stale refs.
+      if (currentSubscription !== null) {
+        void currentSubscription.unsubscribe();
       }
     };
   }, [entityType, entityId, enableRealtime]);
 
   // Initial load
-  useEffect(() => {
-    loadComments(true);
+  useEffect((): (() => void) => {
+    void loadComments(true);
+    
+    return () => {
+      // Empty cleanup
+    };
   }, [loadComments]);
 
-  // Clean up on unmount
-  useEffect(() => {
-    return () => {
-      if (subscriptionRef.current) {
-        subscriptionRef.current.unsubscribe();
-      }
-    };
-  }, []);
 
   return {
     comments,

@@ -48,7 +48,7 @@ const generateSlug = (title: string): string =>
 export async function createPost(
   formData: CreatePostFormValues,
 ): Promise<CreatePostResult> {
-  const supabase = await createServerSupabaseClient();
+  const supabase = createServerSupabaseClient();
 
   const {
     data: { user },
@@ -240,7 +240,7 @@ export async function updatePost(
   postId: string,
   formData: UpdatePostClientValues,
 ): Promise<UpdatePostResult> {
-  const supabase = await createServerSupabaseClient();
+  const supabase = createServerSupabaseClient();
 
   const {
     data: { user },
@@ -423,7 +423,7 @@ interface DeletePostResult {
 }
 
 export async function deletePost(postId: string): Promise<DeletePostResult> {
-  const supabase = await createServerSupabaseClient();
+  const supabase = createServerSupabaseClient();
 
   const {
     data: { user },
@@ -466,7 +466,7 @@ export async function incrementPostViewCount(
     return { success: false, error: 'Post ID is required.' };
   }
   try {
-    const supabase = await createServerSupabaseClient();
+    const supabase = createServerSupabaseClient();
     const { error } = await supabase.rpc('increment_view_count', {
       post_id_to_increment: postId,
     });
@@ -493,7 +493,7 @@ export async function featurePost(
   postId: string,
   feature: boolean,
 ): Promise<FeaturePostResult> {
-  const supabase = await createServerSupabaseClient();
+  const supabase = createServerSupabaseClient();
 
   const {
     data: { user },
@@ -541,7 +541,7 @@ export async function uploadThumbnail(
   formData: FormData,
   postId?: string
 ): Promise<{ success: boolean; thumbnailUrl?: string; error?: string }> {
-  const supabase = await createServerSupabaseClient();
+  const supabase = createServerSupabaseClient();
 
   const {
     data: { user },
@@ -695,7 +695,7 @@ export async function uploadThumbnail(
                 console.warn('Could not delete old thumbnail:', error.message);
               });
           }
-        } catch (error) {
+        } catch (error: unknown) {
           // Log warning but don't fail the operation
           console.warn('Error cleaning up old thumbnail:', error);
         }
@@ -708,7 +708,7 @@ export async function uploadThumbnail(
 
     return { success: true, thumbnailUrl };
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Error processing thumbnail upload:', error);
     return {
       success: false,

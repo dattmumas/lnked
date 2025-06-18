@@ -20,7 +20,7 @@ type Membership = {
 };
 
 export default async function MyCollectivesPage() {
-  const supabase = await createServerSupabaseClient();
+  const supabase = createServerSupabaseClient();
 
   const {
     data: { session },

@@ -8,7 +8,7 @@ import { NotificationService } from '@/lib/notifications/service';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 
 async function NotificationsContent() {
-  const supabase = await createServerSupabaseClient();
+  const supabase = createServerSupabaseClient();
   const {
     data: { user },
     error: authError,

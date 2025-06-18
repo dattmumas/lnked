@@ -195,7 +195,7 @@ export class ChatSecurity {
         ...event,
         timestamp: new Date().toISOString(),
       });
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Failed to log security event:', error);
     }
   }

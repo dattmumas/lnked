@@ -27,13 +27,13 @@ function PortalImpl({
 }) {
   const modalRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
+  useEffect((): void => {
     if (modalRef.current !== null) {
       modalRef.current.focus();
     }
   }, []);
 
-  useEffect(() => {
+  useEffect((): void => {
     let modalOverlayElement: HTMLElement | null = null;
     const handler = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {

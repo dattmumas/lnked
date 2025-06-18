@@ -64,13 +64,13 @@ export default function EquationComponent({
     [editor, equationValue, nodeKey],
   );
 
-  useEffect(() => {
+  useEffect((): void => {
     if (!showEquationEditor && equationValue !== equation) {
       setEquationValue(equation);
     }
   }, [showEquationEditor, equation, equationValue]);
 
-  useEffect(() => {
+  useEffect((): void => {
     if (!isEditable) {
       return;
     }

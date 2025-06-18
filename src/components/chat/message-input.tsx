@@ -37,7 +37,7 @@ export function MessageInput({
   const { user } = useUser();
 
   // Auto-resize textarea
-  useEffect(() => {
+  useEffect((): void => {
     const textarea = textareaRef.current;
     if (!textarea) return;
 
@@ -46,7 +46,7 @@ export function MessageInput({
   }, [text]);
 
   // Clear error after 5 seconds
-  useEffect(() => {
+  useEffect((): void => {
     if (error) {
       const timeout = setTimeout(() => setError(undefined), 5000);
       return () => clearTimeout(timeout);
@@ -54,7 +54,7 @@ export function MessageInput({
   }, [error]);
 
   // Debounce typing stop
-  useEffect(() => {
+  useEffect((): void => {
     if (!channelId) return;
     if (isTyping) {
       Promise.resolve(realTime.broadcastTyping(channelId, true));
@@ -157,7 +157,7 @@ export function MessageInput({
       if (onClearReply) {
         onClearReply();
       }
-    } catch (err) {
+    } catch (err: unknown) {
       console.error('Failed to send message', err);
       setError('Failed to send message. Please try again.');
 
@@ -195,7 +195,7 @@ export function MessageInput({
 
       // Note: In production, you'd upload to storage and use the real URL
       console.log('File upload not implemented yet. Would upload:', file);
-    } catch (err) {
+    } catch (err: unknown) {
       console.error('Failed to upload file:', err);
     } finally {
       setUploading(false);
@@ -316,7 +316,7 @@ export function MessageInput({
 
         <button
           type="button"
-          onClick={() => handleSend('text')}
+          onClick={() => void handleSend('text')}
           className="rounded-md bg-primary px-3 py-2 text-sm text-primary-foreground hover:bg-primary/80 disabled:opacity-50 disabled:cursor-not-allowed transition-colors min-w-[70px]"
           disabled={!text.trim() || uploading || sending}
         >

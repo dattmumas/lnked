@@ -84,7 +84,7 @@ export function Sidebar({
       });
       onSelectChannel({ id: conversationId, title: '', type: 'direct' });
       setSearch('');
-    } catch (err) {
+    } catch (err: unknown) {
       console.error(err);
     }
   };

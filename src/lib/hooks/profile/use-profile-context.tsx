@@ -44,7 +44,7 @@ export function ProfileContextProvider({
   const [authLoading, setAuthLoading] = useState(true);
 
   // Get current user authentication status
-  useEffect(() => {
+  useEffect((): void => {
     const getCurrentUser = async (): Promise<void> => {
       try {
         const supabase = createSupabaseBrowserClient();
@@ -52,7 +52,7 @@ export function ProfileContextProvider({
           data: { user },
         } = await supabase.auth.getUser();
         setCurrentUserId(user?.id);
-      } catch (error) {
+      } catch (error: unknown) {
         console.error('Error getting current user:', error);
         setCurrentUserId(undefined);
       } finally {

@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
         error: result.error 
       }, { status: 400 });
     }
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Thumbnail upload API error:', error);
     return NextResponse.json({
       success: false,

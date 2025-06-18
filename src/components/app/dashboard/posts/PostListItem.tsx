@@ -82,8 +82,8 @@ export default function PostListItem({
       } else {
         await deletePost(post.id);
       }
-      router.refresh();
-    } catch (error) {
+      void router.refresh();
+    } catch (error: unknown) {
       console.error('Failed to delete post:', error);
     } finally {
       setIsDeleting(false);
@@ -216,7 +216,7 @@ export default function PostListItem({
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
-                  onClick={handleDelete}
+                  onClick={() => void handleDelete()}
                   disabled={isDeleting}
                   className="text-destructive focus:text-destructive focus:bg-destructive/10"
                 >
@@ -324,7 +324,7 @@ export default function PostListItem({
                   </DropdownMenuItem>
                   <DropdownMenuSeparator className="border-border-subtle" />
                   <DropdownMenuItem
-                    onClick={handleDelete}
+                    onClick={() => void handleDelete()}
                     disabled={isDeleting}
                     className="text-destructive focus:text-destructive focus:bg-destructive/10"
                   >
@@ -470,7 +470,7 @@ export default function PostListItem({
             </DropdownMenuItem>
             <DropdownMenuSeparator className="border-border-subtle" />
             <DropdownMenuItem
-              onClick={handleDelete}
+              onClick={() => void handleDelete()}
               disabled={isDeleting}
               className="text-destructive focus:text-destructive focus:bg-destructive/10"
             >

@@ -11,7 +11,7 @@ export default async function Page({
   params: Promise<{ username: string }>;
 }) {
   const { username } = await params;
-  const supabase = await createServerSupabaseClient();
+  const supabase = createServerSupabaseClient();
 
   // First try to find user by username, if not found try by ID (for backward compatibility)
   let profile;

@@ -95,7 +95,7 @@ export default function ExcalidrawImage({
 }: Props): JSX.Element {
   const [Svg, setSvg] = useState<SVGElement | null>(null);
 
-  useEffect(() => {
+  useEffect((): void => {
     const setContent = async () => {
       const svg: SVGElement = await exportToSvg({
         appState,

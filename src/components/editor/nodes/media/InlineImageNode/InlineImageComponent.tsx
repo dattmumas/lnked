@@ -174,7 +174,7 @@ export function UpdateInlineImageDialog({
       <DialogActions>
         <Button
           data-test-id="image-modal-file-upload-btn"
-          onClick={() => handleOnConfirm()}
+          onClick={() => void handleOnConfirm()}
         >
           Confirm
         </Button>
@@ -299,7 +299,7 @@ export default function InlineImageComponent({
     [caption, editor, setSelected],
   );
 
-  useEffect(() => {
+  useEffect((): void => {
     let isMounted = true;
     const unregister = mergeRegister(
       editor.registerUpdateListener(({ editorState }) => {

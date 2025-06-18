@@ -14,7 +14,7 @@ export async function POST(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const supabase = await createServerSupabaseClient();
+    const supabase = createServerSupabaseClient();
 
     // Get current user
     const {
@@ -200,7 +200,7 @@ export async function POST(
       video: videoAsset,
       message: responseMessage || 'No updates needed',
     });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Video refresh error:', error);
     return NextResponse.json({
       success: false,

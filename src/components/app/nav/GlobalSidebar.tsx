@@ -60,7 +60,7 @@ export default function GlobalSidebar() {
   const pathname = usePathname();
 
   // Defensive authentication check
-  useEffect(() => {
+  useEffect((): void => {
     const checkAuth = async () => {
       const supabase = createSupabaseBrowserClient();
       const {
@@ -90,7 +90,7 @@ export default function GlobalSidebar() {
     setHoverTimeout(timeout);
   };
 
-  useEffect(() => {
+  useEffect((): void => {
     return () => {
       if (hoverTimeout) clearTimeout(hoverTimeout);
     };

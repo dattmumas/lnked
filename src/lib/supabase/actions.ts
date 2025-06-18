@@ -71,7 +71,7 @@ export async function getCurrentUserProfile(): Promise<{
         avatar_url: profile.avatar_url ?? undefined
       } : undefined 
     };
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("Error fetching user profile:", error);
     return { user: undefined, profile: undefined };
   }

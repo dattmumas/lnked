@@ -145,7 +145,7 @@ export default function VideoManagementDashboard() {
   }, [currentPage, searchQuery, statusFilter, sortBy, sortOrder]);
 
   // Automatic refresh for processing videos
-  useEffect(() => {
+  useEffect((): void => {
     if (activeTab === 'library') {
       // Function to refresh processing videos
       const refreshProcessingVideos = async () => {
@@ -171,7 +171,7 @@ export default function VideoManagementDashboard() {
                 return result.video;
               }
               return null;
-            } catch (error) {
+            } catch (error: unknown) {
               console.error(`Failed to refresh video ${video.id}:`, error);
               return null;
             }
@@ -208,7 +208,7 @@ export default function VideoManagementDashboard() {
   }, [videos, activeTab]);
 
   // Fetch videos when component mounts or filters change
-  useEffect(() => {
+  useEffect((): void => {
     if (activeTab === 'library') {
       fetchVideos();
     }
@@ -413,7 +413,7 @@ export default function VideoManagementDashboard() {
                     <Button
                       size="sm"
                       variant="destructive"
-                      onClick={handleBulkDelete}
+                      onClick={() => void handleBulkDelete()}
                       leftIcon={<Trash2 className="h-4 w-4" />}
                       className="micro-interaction btn-scale"
                     >
@@ -599,7 +599,7 @@ const VideoCard = React.memo(function VideoCard({
       if (response.ok) {
         onRefresh();
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Failed to delete video:', error);
     } finally {
       setIsDeleting(false);
@@ -617,7 +617,7 @@ const VideoCard = React.memo(function VideoCard({
       if (response.ok) {
         onRefresh();
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Failed to refresh video:', error);
     } finally {
       setIsRefreshing(false);
@@ -733,7 +733,7 @@ const VideoCard = React.memo(function VideoCard({
                 size="sm"
                 variant="outline"
                 disabled={isRefreshing}
-                onClick={handleRefresh}
+                onClick={() => void handleRefresh()}
                 className="micro-interaction btn-scale"
               >
                 {isRefreshing ? (
@@ -747,7 +747,7 @@ const VideoCard = React.memo(function VideoCard({
               size="sm"
               variant="destructive"
               disabled={isDeleting}
-              onClick={handleDelete}
+              onClick={() => void handleDelete()}
               className="micro-interaction btn-scale"
             >
               {isDeleting ? (
@@ -784,7 +784,7 @@ const VideoListItem = React.memo(function VideoListItem({
       if (response.ok) {
         onRefresh();
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Failed to delete video:', error);
     } finally {
       setIsDeleting(false);
@@ -802,7 +802,7 @@ const VideoListItem = React.memo(function VideoListItem({
       if (response.ok) {
         onRefresh();
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Failed to refresh video:', error);
     } finally {
       setIsRefreshing(false);
@@ -890,7 +890,7 @@ const VideoListItem = React.memo(function VideoListItem({
                 size="sm"
                 variant="outline"
                 disabled={isRefreshing}
-                onClick={handleRefresh}
+                onClick={() => void handleRefresh()}
                 className="micro-interaction btn-scale"
               >
                 {isRefreshing ? (
@@ -904,7 +904,7 @@ const VideoListItem = React.memo(function VideoListItem({
               size="sm"
               variant="destructive"
               disabled={isDeleting}
-              onClick={handleDelete}
+              onClick={() => void handleDelete()}
               className="micro-interaction btn-scale"
             >
               {isDeleting ? (

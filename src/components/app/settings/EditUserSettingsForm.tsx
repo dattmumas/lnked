@@ -83,7 +83,7 @@ export default function EditUserSettingsForm({
       } else {
         throw new Error(result.error || 'Upload failed');
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Avatar upload error:', error);
       throw error;
     }
@@ -119,7 +119,7 @@ export default function EditUserSettingsForm({
           // Clean up the object URL
           URL.revokeObjectURL(previewUrl);
         }
-      } catch (error) {
+      } catch (error: unknown) {
         setFormError(
           error instanceof Error
             ? error.message

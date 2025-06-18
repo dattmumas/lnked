@@ -52,7 +52,7 @@ export function CopyButton({editor, getCodeDOMNode}: Props) {
       await navigator.clipboard.writeText(content);
       setCopyCompleted(true);
       removeSuccessIcon();
-    } catch (err) {
+    } catch (err: unknown) {
       console.error('Failed to copy: ', err);
     }
   }

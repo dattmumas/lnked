@@ -84,14 +84,14 @@ function LoadInitialJsonPlugin({ json }: { json?: string }) {
   const [editor] = useLexicalComposerContext();
   const hasLoadedInitialContent = useRef(false);
 
-  useEffect(() => {
+  useEffect((): void => {
     if (!json || hasLoadedInitialContent.current) return;
 
     const timer = setTimeout(() => {
       try {
         editor.setEditorState(editor.parseEditorState(json));
         hasLoadedInitialContent.current = true;
-      } catch (err) {
+      } catch (err: unknown) {
         console.error('Could not parse initialContent JSON', err);
       }
     }, 0);
@@ -247,7 +247,7 @@ export default function LexicalOptimizedEditor({
   >(defaultPluginConfig.advanced);
 
   // Analyze initial content to determine which plugins are needed
-  useEffect(() => {
+  useEffect((): void => {
     if (initialContent) {
       const neededPlugins = analyzeContentForPlugins(initialContent);
       setAdvancedPlugins((prev) => ({ ...prev, ...neededPlugins }));
@@ -255,7 +255,7 @@ export default function LexicalOptimizedEditor({
   }, [initialContent]);
 
   // Apply custom plugin configuration if provided
-  useEffect(() => {
+  useEffect((): void => {
     if (pluginConfig?.advanced) {
       setAdvancedPlugins((prev) => ({ ...prev, ...pluginConfig.advanced }));
     }

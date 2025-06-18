@@ -11,7 +11,7 @@ export async function GET(
   context: { params: Promise<{ userId: string }> }
 ) {
   try {
-    const supabase = await createServerSupabaseClient();
+    const supabase = createServerSupabaseClient();
     const { userId } = await context.params;
 
     // Parse query parameters
@@ -75,7 +75,7 @@ export async function GET(
         isOwner,
       },
     });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('User videos API error:', error);
     return NextResponse.json(
       { error: 'Internal server error' },

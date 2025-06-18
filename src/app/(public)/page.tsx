@@ -10,7 +10,7 @@ export const revalidate = 300;
 
 export default async function LandingPage() {
   // Check if user is already logged in for smart redirect
-  const supabase = await createServerSupabaseClient();
+  const supabase = createServerSupabaseClient();
   const {
     data: { session },
   } = await supabase.auth.getSession();

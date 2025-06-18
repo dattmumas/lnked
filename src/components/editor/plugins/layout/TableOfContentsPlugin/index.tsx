@@ -63,7 +63,7 @@ function TableOfContentsList({
     });
   }
 
-  useEffect(() => {
+  useEffect((): void => {
     function scrollCallback() {
       if (
         tableOfContents.length !== 0 &&

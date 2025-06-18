@@ -46,7 +46,7 @@ export function NotificationDropdown({
   });
 
   // Mark all notifications as read when dropdown opens
-  useEffect(() => {
+  useEffect((): void => {
     if (isOpen && notifications.length > 0 && !hasMarkedAsRead) {
       const unreadNotificationIds = notifications
         .filter((n) => !n.read_at)
@@ -65,7 +65,7 @@ export function NotificationDropdown({
   }, [isOpen, notifications, hasMarkedAsRead, markAsRead]);
 
   // Reset the flag when dropdown closes
-  useEffect(() => {
+  useEffect((): void => {
     if (!isOpen) {
       setHasMarkedAsRead(false);
     }
@@ -129,7 +129,7 @@ export function NotificationDropdown({
                 variant="ghost"
                 size="sm"
                 className="text-xs h-auto p-1.5 hover:bg-accent"
-                onClick={handleMarkAllAsRead}
+                onClick={() => void handleMarkAllAsRead()}
               >
                 <CheckCheck className="h-3 w-3 mr-1" />
                 Mark all read

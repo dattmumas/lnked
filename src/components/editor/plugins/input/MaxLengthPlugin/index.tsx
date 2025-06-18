@@ -22,7 +22,7 @@ import { useEffect } from 'react';
 export function MaxLengthPlugin({ maxLength }: { maxLength: number }): null {
   const [editor] = useLexicalComposerContext();
 
-  useEffect(() => {
+  useEffect((): void => {
     let lastRestoredEditorState: EditorState | null = null;
 
     return editor.registerNodeTransform(RootNode, (rootNode: RootNode) => {

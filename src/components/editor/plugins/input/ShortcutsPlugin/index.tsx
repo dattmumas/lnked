@@ -71,7 +71,7 @@ export default function ShortcutsPlugin({
 }): null {
   const { toolbarState } = useToolbarState();
 
-  useEffect(() => {
+  useEffect((): void => {
     const keyboardShortcutsHandler = (event: KeyboardEvent) => {
       // Short-circuit, a least one modifier must be set
       if (isModifierMatch(event, {})) {

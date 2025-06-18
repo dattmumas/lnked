@@ -37,7 +37,7 @@ function registerKeyTimeStampTracker() {
 export default function TabFocusPlugin(): null {
   const [editor] = useLexicalComposerContext();
 
-  useEffect(() => {
+  useEffect((): void => {
     if (!hasRegisteredKeyDownListener) {
       registerKeyTimeStampTracker();
       hasRegisteredKeyDownListener = true;

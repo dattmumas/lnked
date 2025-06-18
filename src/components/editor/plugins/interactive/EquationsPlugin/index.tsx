@@ -63,7 +63,7 @@ export function InsertEquationDialog({
 export default function EquationsPlugin(): JSX.Element | null {
   const [editor] = useLexicalComposerContext();
 
-  useEffect(() => {
+  useEffect((): void => {
     if (!editor.hasNodes([EquationNode])) {
       throw new Error(
         'EquationsPlugins: EquationsNode not registered on editor',

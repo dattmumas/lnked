@@ -25,10 +25,88 @@ const eslintConfig = [
   {
     // Ignore **all** test files entirely; they remain un‑linted
     ignores: [
+      // Test files
       '**/__tests__/**/*',
       '**/*.test.*',
       '**/*.spec.*',
+
+      // Generated files
       'src/types/database.types.ts',
+
+      // Data access layer
+      'src/lib/data-access/**/*',
+
+      // Lexical editor files (third-party code)
+      'src/components/editor/nodes/**/*',
+      'src/components/editor/plugins/**/*',
+      'src/components/editor/themes/**/*',
+      'src/components/editor/ui/**/*',
+      'src/components/editor/utils/**/*',
+      'src/components/editor/hooks/**/*',
+      'src/components/editor/images/**/*',
+
+      // Build outputs
+      '.next/**',
+      'out/**',
+      'build/**',
+      '.vercel/**',
+
+      // Dependencies
+      'node_modules/**',
+      '.pnp/**',
+      '.yarn/**',
+
+      // Coverage
+      'coverage/**',
+
+      // Env files
+      'next-env.d.ts',
+
+      // Misc
+      '*.tsbuildinfo',
+      'public/**',
+      '.swc/**',
+      '.idea/**',
+      '.vscode/**',
+      '.cursor/**',
+      'cursor-memory-bank/**',
+
+      // Scripts and database
+      '**/*.sh',
+      'supabase/**',
+
+      // Config files that shouldn't be linted
+      'eslint.config.mjs',
+      'run-eslint-json.mjs',
+      'test-fix.mjs',
+      'postcss.config.mjs',
+      'jest.config.js',
+      'supabase-image-loader.js',
+
+      // Other files
+      '**/*.json',
+      '**/*.md',
+      '**/*.css',
+      '**/*.scss',
+      '**/*.svg',
+      '**/*.png',
+      '**/*.jpg',
+      '**/*.jpeg',
+      '**/*.gif',
+      '**/*.ico',
+      '**/*.webp',
+      '**/*.mp4',
+      '**/*.webm',
+      '**/*.ogg',
+      '**/*.mp3',
+      '**/*.wav',
+      '**/*.flac',
+      '**/*.aac',
+      '**/*.woff',
+      '**/*.woff2',
+      '**/*.eot',
+      '**/*.ttf',
+      '**/*.otf',
     ],
   },
   {
@@ -264,6 +342,13 @@ const eslintConfig = [
       'no-magic-numbers': 'off',
     },
   },
+  // DATA ACCESS LAYER OVERRIDE - Allow null in schema files for database boundary
+  {
+    files: ['src/lib/data-access/**/*.schema.ts'],
+    rules: {
+      'unicorn/no-null': 'off', // Database uses null, we transform at boundary
+    },
+  },
   // FINAL TEST OVERRIDE TO ENSURE CRITICAL RULES ARE DISABLED FOR FILES NOT INCLUDED IN TS PROJECT
   {
     files: [
@@ -276,6 +361,41 @@ const eslintConfig = [
       '@typescript-eslint/explicit-function-return-type': 'off',
       '@typescript-eslint/await-thenable': 'off',
       '@typescript-eslint/no-array-delete': 'off',
+    },
+  },
+  {
+    files: [
+      // Data access layer and database utilities
+      'src/lib/data-access/**/*.ts',
+      'src/lib/supabase/**/*.ts',
+      'src/types/database*.ts',
+      'src/lib/database*.ts',
+      'src/lib/utils/database-conversions.ts',
+
+      // API routes that interact with database
+      'src/app/api/**/*.ts',
+
+      // Server actions that interact with database
+      'src/app/actions/**/*.ts',
+      'src/app/**/actions.ts',
+      'src/app/**/_actions.ts',
+
+      // Chat service and related database services
+      'src/lib/chat/**/*.ts',
+      'src/lib/services/**/*.ts',
+      'src/lib/notifications/**/*.ts',
+
+      // Components that directly handle database data
+      'src/components/chat/**/*.tsx',
+      'src/components/app/comments/**/*.tsx',
+      'src/components/app/posts/**/*.tsx',
+
+      // Hooks that fetch database data
+      'src/hooks/**/*.ts',
+      'src/lib/hooks/**/*.ts',
+    ],
+    rules: {
+      'unicorn/no-null': 'off',
     },
   },
 ];

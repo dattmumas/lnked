@@ -167,7 +167,7 @@ export class PostCollectiveAuditService {
       const result = await operationFn();
       success = true;
       return result;
-    } catch (err) {
+    } catch (err: unknown) {
       error = err instanceof Error ? err.message : String(err);
       throw err;
     } finally {
@@ -216,7 +216,7 @@ export class PostCollectiveAuditService {
       return Array.isArray(auditEntries)
         ? (auditEntries as PostCollectiveAuditEntry[])
         : [];
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error in getPostAuditLog:', error);
       return [];
     }
@@ -242,7 +242,7 @@ export class PostCollectiveAuditService {
       return Array.isArray(auditEntries)
         ? (auditEntries as PostCollectiveAuditEntry[])
         : [];
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error in getCollectiveAuditLog:', error);
       return [];
     }
@@ -362,7 +362,7 @@ export class PostCollectiveAuditService {
       }
 
       return analytics;
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error generating analytics report:', error);
       return undefined;
     }
@@ -426,7 +426,7 @@ export class PostCollectiveAuditService {
       const trimmed = logs.slice(0, MAX_LOCAL_LOGS);
 
       localStorage.setItem('post_collective_logs', JSON.stringify(trimmed));
-    } catch (error) {
+    } catch (error: unknown) {
       console.warn('Failed to store local log:', error);
     }
   }
@@ -441,7 +441,7 @@ export class PostCollectiveAuditService {
       const raw = localStorage.getItem('post_collective_logs');
       const parsed: unknown = raw !== null && raw !== '' ? JSON.parse(raw) : [];
       return Array.isArray(parsed) ? (parsed as unknown[]) : [];
-    } catch (error) {
+    } catch (error: unknown) {
       console.warn('Failed to retrieve local logs:', error);
       return [];
     }
@@ -455,7 +455,7 @@ export class PostCollectiveAuditService {
     
     try {
       localStorage.removeItem('post_collective_logs');
-    } catch (error) {
+    } catch (error: unknown) {
       console.warn('Failed to clear local logs:', error);
     }
   }

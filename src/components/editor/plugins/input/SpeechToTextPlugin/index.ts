@@ -55,7 +55,7 @@ function SpeechToTextPlugin(): null {
   const recognition = useRef<typeof SpeechRecognition | null>(null);
   const report = useReport();
 
-  useEffect(() => {
+  useEffect((): void => {
     if (isEnabled && recognition.current === null) {
       recognition.current = new SpeechRecognition();
       recognition.current.continuous = true;
@@ -107,7 +107,7 @@ function SpeechToTextPlugin(): null {
       }
     };
   }, [SpeechRecognition, editor, isEnabled, report]);
-  useEffect(() => {
+  useEffect((): void => {
     return editor.registerCommand(
       SPEECH_TO_TEXT_COMMAND,
       (_isEnabled: boolean) => {

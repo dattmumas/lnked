@@ -11,6 +11,7 @@ import {
   type ControllerProps,
   type FieldPath,
   type FieldValues,
+  type FieldError,
 } from 'react-hook-form';
 
 import { Label } from '@/components/ui/label';
@@ -34,7 +35,7 @@ const FormField = <
   TName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>,
 >({
   ...props
-}: ControllerProps<TFieldValues, TName>) => {
+}: ControllerProps<TFieldValues, TName>): React.JSX.Element => {
   const memoizedFieldContext = React.useMemo(
     () => ({ name: props.name }),
     [props.name],
@@ -47,14 +48,27 @@ const FormField = <
   );
 };
 
-const useFormField = () => {
+type UseFormFieldReturn = {
+  id: string;
+  name: FieldPath<FieldValues>;
+  formItemId: string;
+  formDescriptionId: string;
+  formMessageId: string;
+  error?: FieldError;
+  isDirty: boolean;
+  isTouched: boolean;
+  isValidating: boolean;
+  invalid: boolean;
+};
+
+const useFormField = (): UseFormFieldReturn => {
   const fieldContext = React.useContext(FormFieldContext);
   const itemContext = React.useContext(FormItemContext);
   const { getFieldState } = useFormContext();
   const formState = useFormState({ name: fieldContext.name });
   const fieldState = getFieldState(fieldContext.name, formState);
 
-  if (!fieldContext) {
+  if (fieldContext.name === undefined) {
     throw new Error('useFormField should be used within <FormField>');
   }
 
@@ -66,7 +80,11 @@ const useFormField = () => {
     formItemId: `${id}-form-item`,
     formDescriptionId: `${id}-form-item-description`,
     formMessageId: `${id}-form-item-message`,
-    ...fieldState,
+    error: fieldState.error,
+    isDirty: fieldState.isDirty,
+    isTouched: fieldState.isTouched,
+    isValidating: fieldState.isValidating,
+    invalid: fieldState.invalid,
   };
 };
 
@@ -78,7 +96,10 @@ const FormItemContext = React.createContext<FormItemContextValue>(
   {} as FormItemContextValue,
 );
 
-function FormItem({ className, ...props }: React.ComponentProps<'div'>) {
+function FormItem({
+  className,
+  ...props
+}: React.ComponentProps<'div'>): React.JSX.Element {
   const id = React.useId();
 
   const memoizedItemContext = React.useMemo(() => ({ id }), [id]);
@@ -97,7 +118,7 @@ function FormItem({ className, ...props }: React.ComponentProps<'div'>) {
 function FormLabel({
   className,
   ...props
-}: React.ComponentProps<typeof LabelPrimitive.Root>) {
+}: React.ComponentProps<typeof LabelPrimitive.Root>): React.JSX.Element {
   const { error, formItemId } = useFormField();
 
   return (
@@ -111,7 +132,9 @@ function FormLabel({
   );
 }
 
-function FormControl({ ...props }: React.ComponentProps<typeof Slot>) {
+function FormControl({
+  ...props
+}: React.ComponentProps<typeof Slot>): React.JSX.Element {
   const { error, formItemId, formDescriptionId, formMessageId } =
     useFormField();
 
@@ -120,7 +143,7 @@ function FormControl({ ...props }: React.ComponentProps<typeof Slot>) {
       data-slot="form-control"
       id={formItemId}
       aria-describedby={
-        !error
+        error === undefined
           ? `${formDescriptionId}`
           : `${formDescriptionId} ${formMessageId}`
       }
@@ -130,7 +153,10 @@ function FormControl({ ...props }: React.ComponentProps<typeof Slot>) {
   );
 }
 
-function FormDescription({ className, ...props }: React.ComponentProps<'p'>) {
+function FormDescription({
+  className,
+  ...props
+}: React.ComponentProps<'p'>): React.JSX.Element {
   const { formDescriptionId } = useFormField();
 
   return (
@@ -143,12 +169,16 @@ function FormDescription({ className, ...props }: React.ComponentProps<'p'>) {
   );
 }
 
-function FormMessage({ className, ...props }: React.ComponentProps<'p'>) {
+function FormMessage({
+  className,
+  ...props
+}: React.ComponentProps<'p'>): React.JSX.Element | undefined {
   const { error, formMessageId } = useFormField();
-  const body = error ? String(error?.message ?? '') : props.children;
+  const body =
+    error !== undefined ? String(error.message ?? '') : props.children;
 
-  if (!body) {
-    return null;
+  if (body === undefined || body === '') {
+    return undefined;
   }
 
   return (

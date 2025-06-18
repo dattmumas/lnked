@@ -38,7 +38,7 @@ export function ProfileVideosSection({
   const [error, setError] = useState<string | null>(null);
   const [total, setTotal] = useState(0);
 
-  useEffect(() => {
+  useEffect((): void => {
     const fetchVideos = async () => {
       try {
         setIsLoading(true);
@@ -55,7 +55,7 @@ export function ProfileVideosSection({
         const result = await response.json();
         setVideos(result.data.videos || []);
         setTotal(result.data.total || 0);
-      } catch (err) {
+      } catch (err: unknown) {
         setError(err instanceof Error ? err.message : 'Failed to load videos');
       } finally {
         setIsLoading(false);

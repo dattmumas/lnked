@@ -82,14 +82,14 @@ function TweetComponent({
       if (onLoad) {
         onLoad();
       }
-    } catch (error) {
+    } catch (error: unknown) {
       if (onError) {
         onError(String(error));
       }
     }
   }, [onError, onLoad, tweetID]);
 
-  useEffect(() => {
+  useEffect((): void => {
     if (tweetID !== previousTweetIDRef.current) {
       setIsTweetLoading(true);
 

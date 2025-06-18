@@ -36,7 +36,7 @@ function hasMessage(e: unknown): e is { message: string } {
 export async function inviteMemberToCollective(
   formData: InviteMemberServerValues,
 ): Promise<ActionResult> {
-  const supabase = await createServerSupabaseClient();
+  const supabase = createServerSupabaseClient();
 
   const {
     data: { user: currentUser },
@@ -186,7 +186,7 @@ export async function inviteMemberToCollective(
     }
 
     return { success: true };
-  } catch (e) {
+  } catch (e: unknown) {
     console.error('Unexpected error inviting member:', e);
     return { success: false, error: 'An unexpected error occurred.' };
   }
@@ -204,7 +204,7 @@ export async function changeMemberRole({
   memberId: string;
   newRole: string;
 }): Promise<ActionResult> {
-  const supabase = await createServerSupabaseClient();
+  const supabase = createServerSupabaseClient();
   const {
     data: { user: currentUser },
   } = await supabase.auth.getUser();
@@ -259,7 +259,7 @@ export async function removeMemberFromCollective({
   collectiveId: string;
   memberId: string;
 }): Promise<ActionResult> {
-  const supabase = await createServerSupabaseClient();
+  const supabase = createServerSupabaseClient();
   const {
     data: { user: currentUser },
   } = await supabase.auth.getUser();
@@ -314,7 +314,7 @@ export async function resendCollectiveInvite({
   collectiveId: string;
   inviteId: string;
 }): Promise<ActionResult> {
-  const supabase = await createServerSupabaseClient();
+  const supabase = createServerSupabaseClient();
   const {
     data: { user: currentUser },
   } = await supabase.auth.getUser();
@@ -385,7 +385,7 @@ export async function cancelCollectiveInvite({
   collectiveId: string;
   inviteId: string;
 }): Promise<ActionResult> {
-  const supabase = await createServerSupabaseClient();
+  const supabase = createServerSupabaseClient();
   const {
     data: { user: currentUser },
   } = await supabase.auth.getUser();
@@ -427,7 +427,7 @@ export async function acceptCollectiveInvite({
 }: {
   inviteCode: string;
 }): Promise<ActionResult> {
-  const supabase = await createServerSupabaseClient();
+  const supabase = createServerSupabaseClient();
   const {
     data: { user: currentUser },
   } = await supabase.auth.getUser();

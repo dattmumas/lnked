@@ -190,7 +190,7 @@ export function getOptimizedAvatarUrl(
       });
     
     return data.publicUrl;
-  } catch (error) {
+  } catch (error: unknown) {
     console.warn('Failed to get optimized avatar URL:', error);
     return avatarUrl;
   }

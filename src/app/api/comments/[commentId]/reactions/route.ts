@@ -9,7 +9,7 @@ export async function POST(
   { params }: { params: Promise<{ commentId: string }> },
 ) {
   const { commentId } = await params;
-  const supabase = await createServerSupabaseClient();
+  const supabase = createServerSupabaseClient();
 
   const {
     data: { user },

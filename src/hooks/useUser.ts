@@ -1,7 +1,8 @@
-import { User } from '@supabase/supabase-js';
 import { useEffect, useState } from 'react';
 
 import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
+
+import type { User } from '@supabase/supabase-js';
 
 interface UseUserResult {
   user: User | null;
@@ -17,7 +18,7 @@ export const useUser = (): UseUserResult => {
     const supabase = createSupabaseBrowserClient();
     
     // Get initial user
-    supabase.auth.getUser().then(({ data: { user } }) => {
+    void supabase.auth.getUser().then(({ data: { user } }) => {
       setUser(user);
       setLoading(false);
     });
@@ -30,7 +31,9 @@ export const useUser = (): UseUserResult => {
       }
     );
 
-    return () => subscription.unsubscribe();
+    return () => {
+      void subscription.unsubscribe();
+    };
   }, []);
 
   return { user, loading };

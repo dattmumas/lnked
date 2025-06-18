@@ -149,7 +149,7 @@ export default function PollComponent({
   const [selection, setSelection] = useState<BaseSelection | null>(null);
   const ref = useRef(null);
 
-  useEffect(() => {
+  useEffect((): void => {
     return mergeRegister(
       editor.registerUpdateListener(({ editorState }) => {
         setSelection(editorState.read(() => $getSelection()));

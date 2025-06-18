@@ -7,6 +7,9 @@ const STEP_DETAILS = 1;
 const STEP_SETTINGS = 2;
 const STEP_PUBLISH = 3;
 
+// Percentage calculation constant
+const PERCENTAGE_MULTIPLIER = 100;
+
 export const WIZARD_STEPS = [
   { id: STEP_UPLOAD, name: 'Upload', description: 'Select and upload your video file' },
   { id: STEP_DETAILS, name: 'Details', description: 'Add title, description, and tags' },
@@ -82,7 +85,7 @@ export const useStepNavigation = (
   const canGoNext = currentStep < totalSteps - 1;
   
   const currentStepInfo = WIZARD_STEPS[currentStep];
-  const completionPercentage = Math.round(((currentStep + 1) / totalSteps) * 100);
+  const completionPercentage = Math.round(((currentStep + 1) / totalSteps) * PERCENTAGE_MULTIPLIER);
 
   // Check if a specific step is complete
   const isStepComplete = useCallback(

@@ -55,7 +55,7 @@ export default function SubscribeButton({
           },
         ];
 
-  useEffect(() => {
+  useEffect((): void => {
     const fetchUser = async () => {
       const {
         data: { user },
@@ -68,7 +68,7 @@ export default function SubscribeButton({
 
   const handleSubscribe = async (priceId: string) => {
     if (!currentUser) {
-      router.push(`/sign-in?redirect=${pathname}`);
+      void router.push(`/sign-in?redirect=${pathname}`);
       return;
     }
 
@@ -88,13 +88,13 @@ export default function SubscribeButton({
         const session = await response.json();
 
         if (session.url) {
-          router.push(session.url); // Redirect to Stripe Checkout
+          void router.push(session.url); // Redirect to Stripe Checkout
         } else if (session.error) {
           setError(`Subscription failed: ${session.error}`);
         } else {
           setError('Could not initiate subscription. Please try again.');
         }
-      } catch (error) {
+      } catch (error: unknown) {
         console.error('Subscription request error:', error);
         setError('An unexpected error occurred.');
       }
@@ -134,7 +134,7 @@ export default function SubscribeButton({
           {allTiers.map((tier) => (
             <Button
               key={tier.id}
-              onClick={() => handleSubscribe(tier.id)}
+              onClick={() => void handleSubscribe(tier.id)}
               disabled={isPending || isLoadingUser}
             >
               {isPending ? 'Processing...' : formatLabel(tier)}

@@ -64,7 +64,7 @@ export default function ManageMembersClientUI({
 
   const handleInviteSuccess = () => {
     setShowInviteForm(false);
-    router.refresh(); // Re-fetches server components, including member list
+    void router.refresh(); // Re-fetches server components, including member list
   };
 
   const getRoleIcon = (role: string | null | undefined) => {
@@ -88,7 +88,7 @@ export default function ManageMembersClientUI({
     setChangingRoleId(null);
     if (result.success) {
       setActionSuccess("Role updated.");
-      router.refresh();
+      void router.refresh();
     } else {
       setActionError(result.error || "Failed to change role.");
     }
@@ -104,7 +104,7 @@ export default function ManageMembersClientUI({
     setRemovingId(null);
     if (result.success) {
       setActionSuccess("Member removed.");
-      router.refresh();
+      void router.refresh();
     } else {
       setActionError(result.error || "Failed to remove member.");
     }
@@ -119,7 +119,7 @@ export default function ManageMembersClientUI({
     setInviteActionType(null);
     if (result.success) {
       setActionSuccess("Invite resent.");
-      router.refresh();
+      void router.refresh();
     } else {
       setActionError(result.error || "Failed to resend invite.");
     }
@@ -134,7 +134,7 @@ export default function ManageMembersClientUI({
     setInviteActionType(null);
     if (result.success) {
       setActionSuccess("Invite cancelled.");
-      router.refresh();
+      void router.refresh();
     } else {
       setActionError(result.error || "Failed to cancel invite.");
     }
@@ -285,7 +285,7 @@ export default function ManageMembersClientUI({
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => handleResendInvite(invite.id)}
+                      onClick={() => void handleResendInvite(invite.id)}
                       disabled={
                         inviteActionId === invite.id &&
                         inviteActionType === "resend"

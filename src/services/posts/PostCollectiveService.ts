@@ -247,7 +247,7 @@ export class PostCollectiveService {
                 collective_associations: (createdAssociations ?? []) as PostCollectiveRow[]
               };
 
-            } catch (error) {
+            } catch (error: unknown) {
               console.error('Error in createPostCollectiveAssociations:', error);
               
               const unexpectedError: PostCollectiveError = {
@@ -396,7 +396,7 @@ export class PostCollectiveService {
         collective_associations: (updatedAssociations ?? []) as PostCollectiveRow[]
       };
 
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error in updatePostCollectiveAssociations:', error);
       return {
         success: false,
@@ -427,7 +427,7 @@ export class PostCollectiveService {
 
       return (associations ?? []) as PostCollectiveRow[];
 
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error in getPostCollectiveAssociations:', error);
       return [];
     }
@@ -464,7 +464,7 @@ export class PostCollectiveService {
         post_id: postId
       };
 
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error in removePostFromCollectives:', error);
       return {
         success: false,

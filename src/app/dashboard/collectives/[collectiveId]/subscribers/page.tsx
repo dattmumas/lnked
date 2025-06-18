@@ -51,7 +51,7 @@ export default async function SubscribersPage({
   params: Promise<{ collectiveId: string }>;
 }) {
   const { collectiveId } = await params;
-  const supabase = await createServerSupabaseClient();
+  const supabase = createServerSupabaseClient();
 
   const {
     data: { user: currentUser },

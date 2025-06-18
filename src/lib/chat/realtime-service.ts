@@ -6,7 +6,7 @@ import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
 import { chatSecurity } from './security';
 
 import type { MessageWithSender, BroadcastMessage, TypingIndicator } from './types';
-import type { RealtimeChannel, RealtimePostgresChangesPayload } from '@supabase/supabase-js';
+import type { RealtimeChannel, RealtimePostgresChangesPayload, User } from '@supabase/supabase-js';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -299,8 +299,8 @@ export class RealtimeService {
       event: 'typing_start',
       payload: {
         user_id: user.id,
-        username: (user as any).user_metadata?.username ?? null,
-        full_name: (user as any).user_metadata?.full_name ?? null,
+        username: (user.user_metadata as Record<string, unknown>)?.username as string | null ?? null,
+        full_name: (user.user_metadata as Record<string, unknown>)?.full_name as string | null ?? null,
         conversation_id: conversationId,
         timestamp: Date.now(),
       },
@@ -406,8 +406,8 @@ export class RealtimeService {
     const existingIndex = currentTyping.findIndex(t => t.user_id === payload.user_id);
     const typingIndicator: TypingIndicator = {
       user_id: payload.user_id,
-      username: (payload as any).username ?? null,
-      full_name: (payload as any).full_name ?? null,
+      username: (payload as Record<string, unknown>).username as string | null ?? null,
+      full_name: (payload as Record<string, unknown>).full_name as string | null ?? null,
       conversation_id: conversationId,
       timestamp: payload.timestamp ?? Date.now(),
     };
@@ -473,7 +473,7 @@ export class RealtimeService {
   /**
    * Get current authenticated user
    */
-  private async getCurrentUser(): Promise<{ id: string } | undefined> {
+  private async getCurrentUser(): Promise<User | undefined> {
     const { data: { user } } = await this.supabase.auth.getUser();
     return user ?? undefined;
   }

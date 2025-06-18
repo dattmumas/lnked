@@ -27,7 +27,7 @@ export async function POST(
 
     return NextResponse.json(result);
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Error in POST /api/comments-v2/reactions:', error);
     
     if (error instanceof CommentValidationError) {

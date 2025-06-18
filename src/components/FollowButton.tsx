@@ -36,12 +36,12 @@ export default function FollowButton({
   const supabase = createSupabaseBrowserClient();
 
   // Sync with server state when initialIsFollowing changes
-  useEffect(() => {
+  useEffect((): void => {
     setIsFollowing(initialIsFollowing);
   }, [initialIsFollowing]);
 
   // Fetch current user if not provided
-  useEffect(() => {
+  useEffect((): void => {
     if (!initialCurrentUserId) {
       const fetchUser = async () => {
         try {
@@ -56,7 +56,7 @@ export default function FollowButton({
           }
 
           setActualCurrentUserId(user?.id || null);
-        } catch (err) {
+        } catch (err: unknown) {
           console.error('Error in fetchUser:', err);
           setError('Authentication error');
         } finally {
@@ -94,13 +94,13 @@ export default function FollowButton({
         );
         setIsFollowing(serverIsFollowing);
       }
-    } catch (err) {
+    } catch (err: unknown) {
       console.error('Error in verifyFollowStatus:', err);
     }
   }, [actualCurrentUserId, targetUserId, isFollowing, supabase]);
 
   // Verify follow status periodically and on focus
-  useEffect(() => {
+  useEffect((): void => {
     if (!actualCurrentUserId || actualCurrentUserId === targetUserId) {
       return undefined;
     }
@@ -127,7 +127,7 @@ export default function FollowButton({
 
     // Redirect to sign-in if not authenticated
     if (!actualCurrentUserId) {
-      router.push(`/sign-in?redirect=${encodeURIComponent(pathname)}`);
+      void router.push(`/sign-in?redirect=${encodeURIComponent(pathname)}`);
       return;
     }
 
@@ -158,7 +158,7 @@ export default function FollowButton({
             setTimeout(verifyFollowStatus, 500);
           }
         }
-      } catch (err) {
+      } catch (err: unknown) {
         // Revert optimistic update on unexpected error
         setIsFollowing(previousIsFollowing);
         console.error('Error in handleFollowToggle:', err);
@@ -197,7 +197,7 @@ export default function FollowButton({
         </Alert>
       )}
       <Button
-        onClick={handleFollowToggle}
+        onClick={() => void handleFollowToggle()}
         disabled={isPending || isLoadingCurrentUser}
         variant={isFollowing ? 'outline' : 'default'}
         size="sm"
