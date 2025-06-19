@@ -6,7 +6,6 @@
  *
  */
 
-
 import {
   $isCodeNode,
   CODE_LANGUAGE_FRIENDLY_NAME_MAP,
@@ -248,9 +247,7 @@ function BlockFormatDropDown({
       buttonAriaLabel="Formatting options for text style"
     >
       <DropDownItem
-        className={
-          `item wide ${dropDownActiveClass(blockType === 'paragraph')}`
-        }
+        className={`item wide ${dropDownActiveClass(blockType === 'paragraph')}`}
         onClick={handleFormatParagraph}
       >
         <div className="icon-text-container">
@@ -558,9 +555,11 @@ export default function ToolbarPlugin({
         const rootElement = activeEditor.getRootElement();
         updateToolbarState(
           'isImageCaption',
-          Boolean(rootElement?.parentElement?.classList.contains(
-            'image-caption-container',
-          )),
+          Boolean(
+            rootElement?.parentElement?.classList.contains(
+              'image-caption-container',
+            ),
+          ),
         );
       } else {
         updateToolbarState('isImageCaption', false);
@@ -660,9 +659,9 @@ export default function ToolbarPlugin({
       updateToolbarState(
         'elementFormat',
         $isElementNode(matchingParent)
-          ? matchingParent.getFormatType()
+          ? matchingParent.getFormatType() || 'left'
           : $isElementNode(node)
-            ? node.getFormatType()
+            ? node.getFormatType() || 'left'
             : parent?.getFormatType() || 'left',
       );
     }
@@ -689,7 +688,7 @@ export default function ToolbarPlugin({
     }
   }, [activeEditor, editor, updateToolbarState]);
 
-  useEffect((): void => {
+  useEffect(() => {
     return editor.registerCommand(
       SELECTION_CHANGE_COMMAND,
       (_payload, newEditor) => {
@@ -707,7 +706,7 @@ export default function ToolbarPlugin({
     });
   }, [activeEditor, $updateToolbar]);
 
-  useEffect((): void => {
+  useEffect(() => {
     return mergeRegister(
       editor.registerEditableListener((editable) => {
         setIsEditable(editable);
@@ -1025,9 +1024,7 @@ export default function ToolbarPlugin({
             <button
               disabled={!isEditable}
               onClick={handleFormatBold}
-              className={
-                `toolbar-item spaced ${toolbarState.isBold ? 'active' : ''}`
-              }
+              className={`toolbar-item spaced ${toolbarState.isBold ? 'active' : ''}`}
               title={`Bold (${SHORTCUTS.BOLD})`}
               type="button"
               aria-label={`Format text as bold. Shortcut: ${SHORTCUTS.BOLD}`}
@@ -1037,9 +1034,7 @@ export default function ToolbarPlugin({
             <button
               disabled={!isEditable}
               onClick={handleFormatItalic}
-              className={
-                `toolbar-item spaced ${toolbarState.isItalic ? 'active' : ''}`
-              }
+              className={`toolbar-item spaced ${toolbarState.isItalic ? 'active' : ''}`}
               title={`Italic (${SHORTCUTS.ITALIC})`}
               type="button"
               aria-label={`Format text as italics. Shortcut: ${SHORTCUTS.ITALIC}`}
@@ -1049,10 +1044,9 @@ export default function ToolbarPlugin({
             <button
               disabled={!isEditable}
               onClick={handleFormatUnderline}
-              className={
-                `toolbar-item spaced ${ 
-                toolbarState.isUnderline ? 'active' : ''}`
-              }
+              className={`toolbar-item spaced ${
+                toolbarState.isUnderline ? 'active' : ''
+              }`}
               title={`Underline (${SHORTCUTS.UNDERLINE})`}
               type="button"
               aria-label={`Format text to underlined. Shortcut: ${SHORTCUTS.UNDERLINE}`}
@@ -1063,9 +1057,7 @@ export default function ToolbarPlugin({
               <button
                 disabled={!isEditable}
                 onClick={handleFormatCode}
-                className={
-                  `toolbar-item spaced ${toolbarState.isCode ? 'active' : ''}`
-                }
+                className={`toolbar-item spaced ${toolbarState.isCode ? 'active' : ''}`}
                 title={`Insert code block (${SHORTCUTS.INSERT_CODE_BLOCK})`}
                 type="button"
                 aria-label="Insert code block"
@@ -1076,9 +1068,7 @@ export default function ToolbarPlugin({
             <button
               disabled={!isEditable}
               onClick={insertLink}
-              className={
-                `toolbar-item spaced ${toolbarState.isLink ? 'active' : ''}`
-              }
+              className={`toolbar-item spaced ${toolbarState.isLink ? 'active' : ''}`}
               aria-label="Insert link"
               title={`Insert link (${SHORTCUTS.INSERT_LINK})`}
               type="button"
@@ -1112,9 +1102,7 @@ export default function ToolbarPlugin({
             >
               <DropDownItem
                 onClick={handleFormatLowercase}
-                className={
-                  `item wide ${dropDownActiveClass(toolbarState.isLowercase)}`
-                }
+                className={`item wide ${dropDownActiveClass(toolbarState.isLowercase)}`}
                 title="Lowercase"
                 aria-label="Format text to lowercase"
               >
@@ -1126,9 +1114,7 @@ export default function ToolbarPlugin({
               </DropDownItem>
               <DropDownItem
                 onClick={handleFormatUppercase}
-                className={
-                  `item wide ${dropDownActiveClass(toolbarState.isUppercase)}`
-                }
+                className={`item wide ${dropDownActiveClass(toolbarState.isUppercase)}`}
                 title="Uppercase"
                 aria-label="Format text to uppercase"
               >
@@ -1140,9 +1126,7 @@ export default function ToolbarPlugin({
               </DropDownItem>
               <DropDownItem
                 onClick={handleFormatCapitalize}
-                className={
-                  `item wide ${dropDownActiveClass(toolbarState.isCapitalize)}`
-                }
+                className={`item wide ${dropDownActiveClass(toolbarState.isCapitalize)}`}
                 title="Capitalize"
                 aria-label="Format text to capitalize"
               >
@@ -1154,10 +1138,9 @@ export default function ToolbarPlugin({
               </DropDownItem>
               <DropDownItem
                 onClick={handleFormatStrikethrough}
-                className={
-                  `item wide ${ 
-                  dropDownActiveClass(toolbarState.isStrikethrough)}`
-                }
+                className={`item wide ${dropDownActiveClass(
+                  toolbarState.isStrikethrough,
+                )}`}
                 title="Strikethrough"
                 aria-label="Format text with a strikethrough"
               >
@@ -1169,9 +1152,7 @@ export default function ToolbarPlugin({
               </DropDownItem>
               <DropDownItem
                 onClick={handleFormatSubscript}
-                className={
-                  `item wide ${dropDownActiveClass(toolbarState.isSubscript)}`
-                }
+                className={`item wide ${dropDownActiveClass(toolbarState.isSubscript)}`}
                 title="Subscript"
                 aria-label="Format text with a subscript"
               >
@@ -1183,9 +1164,7 @@ export default function ToolbarPlugin({
               </DropDownItem>
               <DropDownItem
                 onClick={handleFormatSuperscript}
-                className={
-                  `item wide ${dropDownActiveClass(toolbarState.isSuperscript)}`
-                }
+                className={`item wide ${dropDownActiveClass(toolbarState.isSuperscript)}`}
                 title="Superscript"
                 aria-label="Format text with a superscript"
               >
@@ -1197,9 +1176,7 @@ export default function ToolbarPlugin({
               </DropDownItem>
               <DropDownItem
                 onClick={handleFormatHighlight}
-                className={
-                  `item wide ${dropDownActiveClass(toolbarState.isHighlight)}`
-                }
+                className={`item wide ${dropDownActiveClass(toolbarState.isHighlight)}`}
                 title="Highlight"
                 aria-label="Format text with a highlight"
               >

@@ -46,7 +46,7 @@ export default function useReport(): (
     }
   }, []);
 
-  useEffect((): void => {
+  useEffect(() => {
     return cleanup;
   }, [cleanup]);
 

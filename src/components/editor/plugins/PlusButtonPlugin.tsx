@@ -10,7 +10,7 @@ export default function PlusButtonPlugin() {
   const [editor] = useLexicalComposerContext();
   const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
 
-  useEffect((): void => {
+  useEffect(() => {
     return editor.registerUpdateListener(({ editorState }) => {
       editorState.read(() => {
         const selection = $getSelection();

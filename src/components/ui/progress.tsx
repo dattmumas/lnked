@@ -1,5 +1,8 @@
 import { cn } from '@/lib/utils';
 
+import type { ReactElement } from 'react';
+
+
 const PERCENT_MAX = 100;
 
 interface ProgressProps {
@@ -7,7 +10,7 @@ interface ProgressProps {
   className?: string;
 }
 
-export function Progress({ value, className }: ProgressProps): JSX.Element {
+export function Progress({ value, className }: ProgressProps): ReactElement {
   return (
     <div className={cn('w-full bg-gray-200 rounded-full h-2', className)}>
       <div

@@ -6,34 +6,37 @@ import * as React from 'react';
 
 import { cn } from '@/lib/utils';
 
+import type { ReactElement } from 'react';
+
+
 function Sheet({
   ...props
-}: React.ComponentProps<typeof SheetPrimitive.Root>): JSX.Element {
+}: React.ComponentProps<typeof SheetPrimitive.Root>): ReactElement {
   return <SheetPrimitive.Root data-slot="sheet" {...props} />;
 }
 
 function SheetTrigger({
   ...props
-}: React.ComponentProps<typeof SheetPrimitive.Trigger>): JSX.Element {
+}: React.ComponentProps<typeof SheetPrimitive.Trigger>): ReactElement {
   return <SheetPrimitive.Trigger data-slot="sheet-trigger" {...props} />;
 }
 
 function SheetClose({
   ...props
-}: React.ComponentProps<typeof SheetPrimitive.Close>): JSX.Element {
+}: React.ComponentProps<typeof SheetPrimitive.Close>): ReactElement {
   return <SheetPrimitive.Close data-slot="sheet-close" {...props} />;
 }
 
 function SheetPortal({
   ...props
-}: React.ComponentProps<typeof SheetPrimitive.Portal>): JSX.Element {
+}: React.ComponentProps<typeof SheetPrimitive.Portal>): ReactElement {
   return <SheetPrimitive.Portal data-slot="sheet-portal" {...props} />;
 }
 
 function SheetOverlay({
   className,
   ...props
-}: React.ComponentProps<typeof SheetPrimitive.Overlay>): JSX.Element {
+}: React.ComponentProps<typeof SheetPrimitive.Overlay>): ReactElement {
   return (
     <SheetPrimitive.Overlay
       data-slot="sheet-overlay"
@@ -53,7 +56,7 @@ function SheetContent({
   ...props
 }: React.ComponentProps<typeof SheetPrimitive.Content> & {
   side?: 'top' | 'right' | 'bottom' | 'left';
-}): JSX.Element {
+}): ReactElement {
   return (
     <SheetPortal>
       <SheetOverlay />
@@ -86,7 +89,7 @@ function SheetContent({
 function SheetHeader({
   className,
   ...props
-}: React.ComponentProps<'div'>): JSX.Element {
+}: React.ComponentProps<'div'>): ReactElement {
   return (
     <div
       data-slot="sheet-header"
@@ -99,7 +102,7 @@ function SheetHeader({
 function SheetFooter({
   className,
   ...props
-}: React.ComponentProps<'div'>): JSX.Element {
+}: React.ComponentProps<'div'>): ReactElement {
   return (
     <div
       data-slot="sheet-footer"
@@ -112,7 +115,7 @@ function SheetFooter({
 function SheetTitle({
   className,
   ...props
-}: React.ComponentProps<typeof SheetPrimitive.Title>): JSX.Element {
+}: React.ComponentProps<typeof SheetPrimitive.Title>): ReactElement {
   return (
     <SheetPrimitive.Title
       data-slot="sheet-title"
@@ -125,7 +128,7 @@ function SheetTitle({
 function SheetDescription({
   className,
   ...props
-}: React.ComponentProps<typeof SheetPrimitive.Description>): JSX.Element {
+}: React.ComponentProps<typeof SheetPrimitive.Description>): ReactElement {
   return (
     <SheetPrimitive.Description
       data-slot="sheet-description"

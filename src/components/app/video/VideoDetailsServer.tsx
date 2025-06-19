@@ -1,4 +1,5 @@
 import { formatDistanceToNow } from 'date-fns';
+import React from 'react';
 
 // Constants
 const SECONDS_PER_HOUR = 3600;
@@ -26,7 +27,8 @@ interface VideoDetailsServerProps {
 }
 
 function formatDuration(seconds: number | null): string {
-  if (!seconds) return 'Unknown duration';
+  if (seconds === null || seconds === undefined || seconds <= 0)
+    return 'Unknown duration';
 
   const hours = Math.floor(seconds / SECONDS_PER_HOUR);
   const minutes = Math.floor((seconds % SECONDS_PER_HOUR) / SECONDS_PER_MINUTE);
@@ -39,7 +41,12 @@ function formatDuration(seconds: number | null): string {
 }
 
 function formatUploadDate(dateString: string | null): string {
-  if (!dateString) return 'Unknown date';
+  if (
+    dateString === null ||
+    dateString === undefined ||
+    dateString.length === 0
+  )
+    return 'Unknown date';
 
   try {
     return formatDistanceToNow(new Date(dateString), { addSuffix: true });
@@ -48,12 +55,18 @@ function formatUploadDate(dateString: string | null): string {
   }
 }
 
-export default function VideoDetailsServer({ video }: VideoDetailsServerProps) {
+export default function VideoDetailsServer({
+  video,
+}: VideoDetailsServerProps): React.ReactElement {
   return (
     <div className="w-full max-w-6xl mb-4">
       {/* Video title */}
       <h1 className="text-2xl font-bold text-foreground mb-2">
-        {video.title || 'Untitled Video'}
+        {video.title !== null &&
+        video.title !== undefined &&
+        video.title.length > 0
+          ? video.title
+          : 'Untitled Video'}
       </h1>
 
       {/* Video metadata */}
@@ -62,11 +75,13 @@ export default function VideoDetailsServer({ video }: VideoDetailsServerProps) {
       </div>
 
       {/* Video description */}
-      {video.description && (
-        <div className="prose prose-sm max-w-none text-muted-foreground">
-          <p className="whitespace-pre-wrap">{video.description}</p>
-        </div>
-      )}
+      {video.description !== null &&
+        video.description !== undefined &&
+        video.description.length > 0 && (
+          <div className="prose prose-sm max-w-none text-muted-foreground">
+            <p className="whitespace-pre-wrap">{video.description}</p>
+          </div>
+        )}
 
       {/* SEO meta information (hidden from users but available for crawlers) */}
       <script
@@ -75,13 +90,31 @@ export default function VideoDetailsServer({ video }: VideoDetailsServerProps) {
           __html: JSON.stringify({
             '@context': 'https://schema.org',
             '@type': 'VideoObject',
-            name: video.title || 'Untitled Video',
-            description: video.description || '',
-            duration: video.duration ? `PT${video.duration}S` : undefined,
+            name:
+              video.title !== null &&
+              video.title !== undefined &&
+              video.title.length > 0
+                ? video.title
+                : 'Untitled Video',
+            description:
+              video.description !== null &&
+              video.description !== undefined &&
+              video.description.length > 0
+                ? video.description
+                : '',
+            duration:
+              video.duration !== null &&
+              video.duration !== undefined &&
+              video.duration > 0
+                ? `PT${video.duration}S`
+                : undefined,
             uploadDate: formatUploadDate(video.created_at),
-            thumbnailUrl: video.mux_playback_id
-              ? `https://image.mux.com/${video.mux_playback_id}/thumbnail.jpg`
-              : undefined,
+            thumbnailUrl:
+              video.mux_playback_id !== null &&
+              video.mux_playback_id !== undefined &&
+              video.mux_playback_id.length > 0
+                ? `https://image.mux.com/${video.mux_playback_id}/thumbnail.jpg`
+                : undefined,
           }),
         }}
       />

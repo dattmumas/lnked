@@ -299,7 +299,7 @@ export default function InlineImageComponent({
     [caption, editor, setSelected],
   );
 
-  useEffect((): void => {
+  useEffect(() => {
     let isMounted = true;
     const unregister = mergeRegister(
       editor.registerUpdateListener(({ editorState }) => {

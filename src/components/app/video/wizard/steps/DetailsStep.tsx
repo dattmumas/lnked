@@ -1,41 +1,73 @@
 'use client';
 
-import React, { useState } from 'react';
+import { X, Plus } from 'lucide-react';
+import React, { useState, useCallback } from 'react';
 
-// Constants
-const MAX_TAGS = 10;
-const TITLE_WARNING_THRESHOLD = 90;
-const DESCRIPTION_WARNING_THRESHOLD = 4500;
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-
-import { X, Plus } from 'lucide-react';
-
 import { useVideoUpload } from '@/hooks/video/useVideoUpload';
 import { cn } from '@/lib/utils';
+
+// Constants
+const MAX_TAGS = 10;
+const TITLE_WARNING_THRESHOLD = 90;
+const DESCRIPTION_WARNING_THRESHOLD = 4500;
 
 interface DetailsStepProps {
   videoUpload: ReturnType<typeof useVideoUpload>;
 }
 
-export function DetailsStep({ videoUpload }: DetailsStepProps) {
+interface TagBadgeProps {
+  tag: string;
+  onRemove: (tag: string) => void;
+}
+
+const TagBadge = React.memo(function TagBadge({
+  tag,
+  onRemove,
+}: TagBadgeProps): React.ReactElement {
+  const handleRemove = useCallback((): void => {
+    onRemove(tag);
+  }, [tag, onRemove]);
+
+  return (
+    <Badge variant="secondary" className="flex items-center gap-1 px-2 py-1">
+      {tag}
+      <button
+        type="button"
+        onClick={handleRemove}
+        className="ml-1 hover:bg-destructive/20 rounded-full p-0.5"
+      >
+        <X className="h-3 w-3" />
+      </button>
+    </Badge>
+  );
+});
+
+export function DetailsStep({
+  videoUpload,
+}: DetailsStepProps): React.ReactElement {
   const [newTag, setNewTag] = useState('');
   const { formData, updateFormData, validationErrors } = videoUpload;
 
-  const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    updateFormData({ title: e.target.value });
-  };
+  const handleTitleChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>): void => {
+      updateFormData({ title: e.target.value });
+    },
+    [updateFormData],
+  );
 
-  const handleDescriptionChange = (
-    e: React.ChangeEvent<HTMLTextAreaElement>,
-  ) => {
-    updateFormData({ description: e.target.value });
-  };
+  const handleDescriptionChange = useCallback(
+    (e: React.ChangeEvent<HTMLTextAreaElement>): void => {
+      updateFormData({ description: e.target.value });
+    },
+    [updateFormData],
+  );
 
-  const addTag = () => {
+  const addTag = useCallback((): void => {
     const tag = newTag.trim().toLowerCase();
     if (
       tag &&
@@ -45,20 +77,47 @@ export function DetailsStep({ videoUpload }: DetailsStepProps) {
       updateFormData({ tags: [...formData.tags, tag] });
       setNewTag('');
     }
-  };
+  }, [newTag, formData.tags, updateFormData]);
 
-  const removeTag = (tagToRemove: string) => {
-    updateFormData({
-      tags: formData.tags.filter((tag) => tag !== tagToRemove),
-    });
-  };
+  const removeTag = useCallback(
+    (tagToRemove: string): void => {
+      updateFormData({
+        tags: formData.tags.filter((tag) => tag !== tagToRemove),
+      });
+    },
+    [formData.tags, updateFormData],
+  );
 
-  const handleTagKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      addTag();
-    }
-  };
+  const handleTagKeyPress = useCallback(
+    (e: React.KeyboardEvent): void => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        addTag();
+      }
+    },
+    [addTag],
+  );
+
+  const handleTagInputChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>): void => {
+      setNewTag(e.target.value);
+    },
+    [],
+  );
+
+  const handleRemoveTag = useCallback(
+    (tag: string): void => {
+      removeTag(tag);
+    },
+    [removeTag],
+  );
+
+  const renderTagBadge = useCallback(
+    (tag: string, index: number): React.ReactElement => (
+      <TagBadge key={index} tag={tag} onRemove={handleRemoveTag} />
+    ),
+    [handleRemoveTag],
+  );
 
   const titleLength = formData.title.length;
   const descriptionLength = formData.description.length;
@@ -85,7 +144,8 @@ export function DetailsStep({ videoUpload }: DetailsStepProps) {
             onChange={handleTitleChange}
             maxLength={100}
             className={cn(
-              validationErrors.title &&
+              validationErrors.title !== null &&
+                validationErrors.title !== undefined &&
                 'border-destructive focus-visible:ring-destructive',
             )}
           />
@@ -93,14 +153,18 @@ export function DetailsStep({ videoUpload }: DetailsStepProps) {
             <p
               className={cn(
                 'text-xs',
-                validationErrors.title
+                validationErrors.title !== null &&
+                  validationErrors.title !== undefined
                   ? 'text-destructive'
                   : titleLength > TITLE_WARNING_THRESHOLD
                     ? 'text-orange-500'
                     : 'text-muted-foreground',
               )}
             >
-              {validationErrors.title || `${titleLength}/100 characters`}
+              {validationErrors.title !== null &&
+              validationErrors.title !== undefined
+                ? validationErrors.title
+                : `${titleLength}/100 characters`}
             </p>
           </div>
         </div>
@@ -118,7 +182,8 @@ export function DetailsStep({ videoUpload }: DetailsStepProps) {
             rows={4}
             maxLength={5000}
             className={cn(
-              validationErrors.description &&
+              validationErrors.description !== null &&
+                validationErrors.description !== undefined &&
                 'border-destructive focus-visible:ring-destructive',
             )}
           />
@@ -126,15 +191,18 @@ export function DetailsStep({ videoUpload }: DetailsStepProps) {
             <p
               className={cn(
                 'text-xs',
-                validationErrors.description
+                validationErrors.description !== null &&
+                  validationErrors.description !== undefined
                   ? 'text-destructive'
                   : descriptionLength > DESCRIPTION_WARNING_THRESHOLD
                     ? 'text-orange-500'
                     : 'text-muted-foreground',
               )}
             >
-              {validationErrors.description ||
-                `${descriptionLength}/5000 characters`}
+              {validationErrors.description !== null &&
+              validationErrors.description !== undefined
+                ? validationErrors.description
+                : `${descriptionLength}/5000 characters`}
             </p>
           </div>
         </div>
@@ -154,7 +222,7 @@ export function DetailsStep({ videoUpload }: DetailsStepProps) {
               id="tags"
               placeholder="Enter a tag and press Enter"
               value={newTag}
-              onChange={(e) => setNewTag(e.target.value)}
+              onChange={handleTagInputChange}
               onKeyPress={handleTagKeyPress}
               disabled={formData.tags.length >= MAX_TAGS}
               className="flex-1"
@@ -163,7 +231,9 @@ export function DetailsStep({ videoUpload }: DetailsStepProps) {
               type="button"
               variant="outline"
               onClick={addTag}
-              disabled={!newTag.trim() || formData.tags.length >= MAX_TAGS}
+              disabled={
+                newTag.trim().length === 0 || formData.tags.length >= MAX_TAGS
+              }
               size="sm"
             >
               <Plus className="h-4 w-4" />
@@ -173,28 +243,16 @@ export function DetailsStep({ videoUpload }: DetailsStepProps) {
           {/* Display Tags */}
           {formData.tags.length > 0 && (
             <div className="flex flex-wrap gap-2 mt-3">
-              {formData.tags.map((tag, index) => (
-                <Badge
-                  key={index}
-                  variant="secondary"
-                  className="flex items-center gap-1 px-2 py-1"
-                >
-                  {tag}
-                  <button
-                    type="button"
-                    onClick={() => removeTag(tag)}
-                    className="ml-1 hover:bg-destructive/20 rounded-full p-0.5"
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                </Badge>
-              ))}
+              {formData.tags.map(renderTagBadge)}
             </div>
           )}
 
-          {validationErrors.tags && (
-            <p className="text-xs text-destructive">{validationErrors.tags}</p>
-          )}
+          {validationErrors.tags !== null &&
+            validationErrors.tags !== undefined && (
+              <p className="text-xs text-destructive">
+                {validationErrors.tags}
+              </p>
+            )}
 
           <p className="text-xs text-muted-foreground">
             {formData.tags.length}/{MAX_TAGS} tags
@@ -215,7 +273,7 @@ export function DetailsStep({ videoUpload }: DetailsStepProps) {
             </li>
             <li>• Add relevant tags that people might search for</li>
             <li>
-              • Include keywords that describe your video's topic or theme
+              • Include keywords that describe your video&apos;s topic or theme
             </li>
           </ul>
         </div>

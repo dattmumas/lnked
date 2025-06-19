@@ -6,7 +6,6 @@
  *
  */
 
-
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
 import { $wrapNodeInElement } from '@lexical/utils';
 import {
@@ -64,7 +63,7 @@ export function InsertPollDialog({
 
 export default function PollPlugin(): JSX.Element | null {
   const [editor] = useLexicalComposerContext();
-  useEffect((): void => {
+  useEffect(() => {
     if (!editor.hasNodes([PollNode])) {
       throw new Error('PollPlugin: PollNode not registered on editor');
     }

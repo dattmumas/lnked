@@ -53,7 +53,7 @@ export const INSERT_COLLAPSIBLE_COMMAND = createCommand<void>(
 export default function CollapsiblePlugin(): null {
   const [editor] = useLexicalComposerContext();
 
-  useEffect((): void => {
+  useEffect(() => {
     if (
       !editor.hasNodes([
         CollapsibleContainerNode,

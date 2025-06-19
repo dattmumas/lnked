@@ -16,10 +16,11 @@ type ConversationWithDetails = Database['public']['Tables']['conversations']['Ro
     created_at: string;
     sender: {
       id: string;
-      username: string | null;
       full_name: string | null;
+      username: string | null;
       avatar_url: string | null;
-    };
+      email?: string | null;
+    } | null;
   } | null;
   participants: Array<{
     user_id: string;
@@ -88,6 +89,25 @@ interface UseChatV2Return {
 
 const MESSAGES_PER_PAGE = 50;
 const ENABLE_REALTIME = true;
+
+// Helper function to normalize sender data
+const normalizeSender = (sender: MessageWithSender['sender']): {
+  id: string;
+  full_name: string | null;
+  username: string | null;
+  avatar_url: string | null;
+  email?: string | null;
+} | null => {
+  if (!sender) return null;
+  
+  return {
+    id: sender.id,
+    full_name: sender.full_name,
+    username: sender.username,
+    avatar_url: sender.avatar_url,
+    email: sender.email,
+  };
+};
 
 export const useChatV2 = (): UseChatV2Return => {
   const [state, setState] = useState<ChatStateV2>({
@@ -227,7 +247,7 @@ export const useChatV2 = (): UseChatV2Return => {
             };
           });
 
-                     // Update last message in conversations
+          // Update last message in conversations
           setState(prev => ({
             ...prev,
             conversations: prev.conversations.map(conv =>
@@ -238,7 +258,7 @@ export const useChatV2 = (): UseChatV2Return => {
                       id: message.id,
                       content: message.content,
                       created_at: message.created_at ?? new Date().toISOString(),
-                      sender: message.sender,
+                      sender: normalizeSender(message.sender),
                     },
                     last_message_at: message.created_at,
                   }
@@ -322,7 +342,7 @@ export const useChatV2 = (): UseChatV2Return => {
                   id: message.id,
                   content: message.content,
                   created_at: message.created_at ?? new Date().toISOString(),
-                  sender: message.sender,
+                  sender: normalizeSender(message.sender),
                 },
                 last_message_at: message.created_at,
               }
@@ -350,14 +370,26 @@ export const useChatV2 = (): UseChatV2Return => {
     description?: string;
     is_private?: boolean;
     participant_ids: string[];
-  }) => {
+  }): Promise<ConversationWithDetails | undefined> => {
     try {
       const conversation = await chatApiClient.createConversation(params);
+      
+      if (conversation === null || conversation === undefined) {
+        return undefined;
+      }
+
+      // Transform the basic conversation to ConversationWithDetails format
+      const conversationWithDetails: ConversationWithDetails = {
+        ...conversation,
+        unread_count: 0,
+        last_message: null,
+        participants: [],
+      };
       
       // Reload conversations to get the new one with full details
       await loadConversations();
       
-      return conversation;
+      return conversationWithDetails;
     } catch (error) {
       setState(prev => ({
         ...prev,

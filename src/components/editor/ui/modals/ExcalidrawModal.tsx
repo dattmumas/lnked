@@ -87,7 +87,6 @@ function DiscardModal({
   onDiscard: () => void;
 }) {
   return (
-     
     <Modal title="Discard" onClose={onClose} closeOnClickOutside={false}>
       Are you sure you want to discard the changes?
       <div className="ExcalidrawModal__discardModal">
@@ -120,13 +119,13 @@ export default function ExcalidrawModal({
     useState<ExcalidrawInitialElements>(initialElements);
   const [files, setFiles] = useState<BinaryFiles>(initialFiles);
 
-  useEffect((): void => {
+  useEffect(() => {
     if (excaliDrawModelRef.current !== null) {
       excaliDrawModelRef.current.focus();
     }
   }, []);
 
-  useEffect((): void => {
+  useEffect(() => {
     let modalOverlayElement: HTMLElement | null = null;
 
     const clickOutsideHandler = (event: MouseEvent) => {

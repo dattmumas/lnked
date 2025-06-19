@@ -8,7 +8,6 @@
 
 'use client';
 
-
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
 import {
   $findMatchingParent,
@@ -58,7 +57,7 @@ export const UPDATE_LAYOUT_COMMAND: LexicalCommand<{
 
 export function LayoutPlugin(): null {
   const [editor] = useLexicalComposerContext();
-  useEffect((): void => {
+  useEffect(() => {
     if (!editor.hasNodes([LayoutContainerNode, LayoutItemNode])) {
       throw new Error(
         'LayoutPlugin: LayoutContainerNode, or LayoutItemNode not registered on editor',

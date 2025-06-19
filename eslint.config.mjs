@@ -32,6 +32,8 @@ const eslintConfig = [
 
       // Generated files
       'src/types/database.types.ts',
+      'src/lib/database.types.ts',
+      'src/lib/database.types.updated.ts',
 
       // Data access layer
       'src/lib/data-access/**/*',

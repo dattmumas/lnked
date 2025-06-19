@@ -6,14 +6,14 @@
  *
  */
 
-import {useLexicalComposerContext} from '@lexical/react/LexicalComposerContext';
+import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
 import {
   $getSelection,
   $isRangeSelection,
   $setSelection,
   FOCUS_COMMAND,
 } from 'lexical';
-import {useEffect} from 'react';
+import { useEffect } from 'react';
 
 const COMMAND_PRIORITY_LOW = 1;
 const TAB_TO_FOCUS_INTERVAL = 100;
@@ -37,7 +37,7 @@ function registerKeyTimeStampTracker() {
 export default function TabFocusPlugin(): null {
   const [editor] = useLexicalComposerContext();
 
-  useEffect((): void => {
+  useEffect(() => {
     if (!hasRegisteredKeyDownListener) {
       registerKeyTimeStampTracker();
       hasRegisteredKeyDownListener = true;

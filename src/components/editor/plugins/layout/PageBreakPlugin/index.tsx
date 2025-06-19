@@ -8,7 +8,6 @@
 
 'use client';
 
-
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
 import { $insertNodeToNearestRoot, mergeRegister } from '@lexical/utils';
 import {
@@ -32,7 +31,7 @@ export const INSERT_PAGE_BREAK: LexicalCommand<undefined> = createCommand();
 export default function PageBreakPlugin(): JSX.Element | null {
   const [editor] = useLexicalComposerContext();
 
-  useEffect((): void => {
+  useEffect(() => {
     if (!editor.hasNodes([PageBreakNode])) {
       throw new Error(
         'PageBreakPlugin: PageBreakNode is not registered on editor',

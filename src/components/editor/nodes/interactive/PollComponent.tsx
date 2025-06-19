@@ -63,7 +63,7 @@ function PollOptionComponent({
   const checkedIndex = votesArray.indexOf(clientID);
   const checked = checkedIndex !== -1;
   const votes = votesArray.length;
-  const {text} = option;
+  const { text } = option;
 
   return (
     <div className="PollNode__optionContainer">
@@ -99,10 +99,10 @@ function PollOptionComponent({
           type="text"
           value={text}
           onChange={(e) => {
-            const {target} = e;
-            const {value} = target;
-            const {selectionStart} = target;
-            const {selectionEnd} = target;
+            const { target } = e;
+            const { value } = target;
+            const { selectionStart } = target;
+            const { selectionEnd } = target;
             withPollNode(
               (node) => {
                 node.setOptionText(option, value);
@@ -149,7 +149,7 @@ export default function PollComponent({
   const [selection, setSelection] = useState<BaseSelection | null>(null);
   const ref = useRef(null);
 
-  useEffect((): void => {
+  useEffect(() => {
     return mergeRegister(
       editor.registerUpdateListener(({ editorState }) => {
         setSelection(editorState.read(() => $getSelection()));

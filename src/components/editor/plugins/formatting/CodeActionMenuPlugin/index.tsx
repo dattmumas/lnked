@@ -99,7 +99,7 @@ function CodeActionMenuContainer({
     1000,
   );
 
-  useEffect((): void => {
+  useEffect(() => {
     if (!shouldListenMouseMove) {
       return;
     }
@@ -113,7 +113,7 @@ function CodeActionMenuContainer({
     };
   }, [shouldListenMouseMove, debouncedOnMouseMove]);
 
-  useEffect((): void => {
+  useEffect(() => {
     return editor.registerMutationListener(
       CodeNode,
       (mutations) => {
@@ -165,7 +165,7 @@ function getMouseInfo(event: MouseEvent): {
   codeDOMNode: HTMLElement | null;
   isOutside: boolean;
 } {
-  const {target} = event;
+  const { target } = event;
 
   if (isHTMLElement(target)) {
     const codeDOMNode = target.closest<HTMLElement>(

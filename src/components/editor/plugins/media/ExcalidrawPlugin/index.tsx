@@ -40,7 +40,7 @@ export default function ExcalidrawPlugin(): JSX.Element | null {
   const [editor] = useLexicalComposerContext();
   const [isModalOpen, setModalOpen] = useState<boolean>(false);
 
-  useEffect((): void => {
+  useEffect(() => {
     if (!editor.hasNodes([ExcalidrawNode])) {
       throw new Error(
         'ExcalidrawPlugin: ExcalidrawNode not registered on editor',

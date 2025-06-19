@@ -23,7 +23,7 @@ export const INSERT_TWEET_COMMAND: LexicalCommand<string> = createCommand(
 export default function TwitterPlugin(): JSX.Element | null {
   const [editor] = useLexicalComposerContext();
 
-  useEffect((): void => {
+  useEffect(() => {
     if (!editor.hasNodes([TweetNode])) {
       throw new Error('TwitterPlugin: TweetNode not registered on editor');
     }

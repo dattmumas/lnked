@@ -35,7 +35,7 @@ function PageBreakComponent({ nodeKey }: { nodeKey: NodeKey }) {
   const [isSelected, setSelected, clearSelection] =
     useLexicalNodeSelection(nodeKey);
 
-  useEffect((): void => {
+  useEffect(() => {
     return mergeRegister(
       editor.registerCommand(
         CLICK_COMMAND,
@@ -57,7 +57,7 @@ function PageBreakComponent({ nodeKey }: { nodeKey: NodeKey }) {
     );
   }, [clearSelection, editor, isSelected, nodeKey, setSelected]);
 
-  useEffect((): void => {
+  useEffect(() => {
     const pbElem = editor.getElementByKey(nodeKey);
     if (pbElem !== null) {
       pbElem.className = isSelected ? 'selected' : '';

@@ -5,10 +5,13 @@ import * as React from 'react';
 
 import { cn } from '@/lib/utils';
 
+import type { ReactElement } from 'react';
+
+
 function Label({
   className,
   ...props
-}: React.ComponentProps<typeof LabelPrimitive.Root>): JSX.Element {
+}: React.ComponentProps<typeof LabelPrimitive.Root>): ReactElement {
   return (
     <LabelPrimitive.Root
       data-slot="label"

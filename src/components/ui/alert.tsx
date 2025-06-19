@@ -3,6 +3,9 @@ import * as React from 'react';
 
 import { cn } from '@/lib/utils';
 
+import type { ReactElement } from 'react';
+
+
 const alertVariants = cva(
   'relative w-full rounded-lg border border-border px-4 py-3 text-sm grid has-[>svg]:grid-cols-[calc(var(--spacing)*4)_1fr] grid-cols-[0_1fr] has-[>svg]:gap-x-3 gap-y-0.5 items-start [&>svg]:size-4 [&>svg]:translate-y-0.5 [&>svg]:text-current',
   {
@@ -24,7 +27,7 @@ function Alert({
   variant,
   ...props
 }: React.ComponentProps<'div'> &
-  VariantProps<typeof alertVariants>): JSX.Element {
+  VariantProps<typeof alertVariants>): ReactElement {
   return (
     <div
       data-slot="alert"
@@ -38,7 +41,7 @@ function Alert({
 function AlertTitle({
   className,
   ...props
-}: React.ComponentProps<'div'>): JSX.Element {
+}: React.ComponentProps<'div'>): ReactElement {
   return (
     <div
       data-slot="alert-title"
@@ -54,7 +57,7 @@ function AlertTitle({
 function AlertDescription({
   className,
   ...props
-}: React.ComponentProps<'div'>): JSX.Element {
+}: React.ComponentProps<'div'>): ReactElement {
   return (
     <div
       data-slot="alert-description"

@@ -3,7 +3,7 @@
 import { useEffect } from 'react';
 
 export function ContrastEnhancer() {
-  useEffect((): void => {
+  useEffect(() => {
     // Create and inject high-priority styles
     const styleId = 'contrast-enhancer-styles';
     let styleElement = document.getElementById(styleId) as HTMLStyleElement;

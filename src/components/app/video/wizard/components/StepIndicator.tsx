@@ -1,6 +1,7 @@
 'use client';
 
 import { Check } from 'lucide-react';
+import React, { useCallback } from 'react';
 
 import { WIZARD_STEPS } from '@/hooks/video/useStepNavigation';
 import { cn } from '@/lib/utils';
@@ -19,14 +20,21 @@ export function StepIndicator({
   steps,
   onStepClick,
   totalSteps: _totalSteps,
-}: StepIndicatorProps) {
+}: StepIndicatorProps): React.ReactElement {
+  const handleStepClick = useCallback(
+    (index: number) => (): void => {
+      onStepClick?.(index);
+    },
+    [onStepClick],
+  );
+
   return (
     <div className="flex items-center justify-between mb-8">
       {steps.map((_step, index) => (
         <div key={_step.id} className="flex items-center">
           {/* Step Circle */}
           <button
-            onClick={() => onStepClick?.(index)}
+            onClick={handleStepClick(index)}
             disabled={!completedSteps.has(index) && index > currentStep}
             className={cn(
               'flex items-center justify-center w-8 h-8 rounded-full border-2 text-sm font-medium transition-all duration-200',

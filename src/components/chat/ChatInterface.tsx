@@ -1,18 +1,20 @@
 'use client';
 
-import { useEffect, useState, useMemo } from 'react';
+import { useCallback, useEffect, useState, useMemo } from 'react';
 
 import { useCollectiveMemberships } from '@/hooks/posts/useCollectiveMemberships';
 import { useFirstChannel } from '@/hooks/useFirstChannel';
+import { useToast } from '@/hooks/useToast';
 import { useUser } from '@/hooks/useUser';
 import { CHAT_HEADER_HEIGHT } from '@/lib/constants/chat';
 import { useChatV2 } from '@/lib/hooks/use-chat-v2';
 
-import { ChatPanel } from './chat-panel';
+import { CenteredSpinner } from '../ui/CenteredSpinner';
+
 import { ChannelIcon } from './ChannelIcon';
+import { ChatPanel } from './chat-panel';
 import { CollectiveChannelsSidebar } from './collective-channels-sidebar';
 import { CollectiveIconsSidebar } from './collective-icons-sidebar';
-import { CenteredSpinner } from '../ui/CenteredSpinner';
 
 interface ChatInterfaceProps {
   userId: string;
@@ -24,8 +26,11 @@ type Channel = {
   type: string;
 };
 
-export default function ChatInterface({ userId }: ChatInterfaceProps) {
+export default function ChatInterface({
+  userId: _userId,
+}: ChatInterfaceProps): React.ReactElement {
   const { user } = useUser();
+  const { toast } = useToast();
   const { data: memberships = [], isLoading: loadingMemberships } =
     useCollectiveMemberships(true);
 
@@ -35,14 +40,29 @@ export default function ChatInterface({ userId }: ChatInterfaceProps) {
   const [activeChannel, setActiveChannel] = useState<Channel | null>(null);
 
   // Use custom hook for first channel fetching
-  const { channel: firstChannel } = useFirstChannel(activeCollectiveId);
+  const { channel: firstChannel, error: firstChannelError } =
+    useFirstChannel(activeCollectiveId);
 
   // Get chat state for typing indicators (destructure for memoization)
   const { typingUsers } = useChatV2();
 
+  // Handle first channel fetch errors with toast notifications
+  useEffect(() => {
+    if (firstChannelError !== null && firstChannelError !== undefined) {
+      toast('Could not load channel list', { type: 'error' });
+    }
+  }, [firstChannelError, toast]);
+
   // Auto-select first channel for collective if none active
   useEffect(() => {
-    if (!activeCollectiveId || activeChannel || !firstChannel) return;
+    if (
+      activeCollectiveId === null ||
+      activeCollectiveId === undefined ||
+      activeChannel !== null ||
+      firstChannel === null ||
+      firstChannel === undefined
+    )
+      return;
 
     setActiveChannel(firstChannel);
   }, [activeCollectiveId, activeChannel, firstChannel]);
@@ -54,13 +74,18 @@ export default function ChatInterface({ userId }: ChatInterfaceProps) {
 
   // Memoize typing indicator text to prevent unnecessary re-renders
   const typingIndicatorText = useMemo(() => {
-    if (!typingUsers || typingUsers.length === 0) return null;
+    if (
+      typingUsers === null ||
+      typingUsers === undefined ||
+      typingUsers.length === 0
+    )
+      return null;
 
     const filteredUsers = typingUsers.filter((u) => u.user_id !== user?.id);
     if (filteredUsers.length === 0) return null;
 
     const userNames = filteredUsers
-      .map((u) => u.username || u.full_name || 'Someone')
+      .map((u) => u.username ?? u.full_name ?? 'Someone')
       .join(', ');
 
     return `${userNames} ${filteredUsers.length === 1 ? 'is' : 'are'} typing...`;
@@ -79,18 +104,25 @@ export default function ChatInterface({ userId }: ChatInterfaceProps) {
   );
 
   // Handler for channel selection with proper typing
-  const handleChannelSelect = (channelData: {
-    id: string;
-    title: string | null;
-    type: string;
-  }): void => {
-    const channel: Channel = {
-      id: channelData.id,
-      title: channelData.title,
-      type: channelData.type,
-    };
-    setActiveChannel(channel);
-  };
+  const handleChannelSelect = useCallback(
+    (channelData: { id: string; title: string | null; type: string }): void => {
+      const channel: Channel = {
+        id: channelData.id,
+        title: channelData.title,
+        type: channelData.type,
+      };
+      setActiveChannel(channel);
+    },
+    [],
+  );
+
+  // Handler for collective selection
+  const handleCollectiveSelect = useCallback(
+    (collectiveId: string | null): void => {
+      setActiveCollectiveId(collectiveId);
+    },
+    [],
+  );
 
   if (loadingMemberships && memberships.length === 0 && !activeChannel) {
     return <CenteredSpinner label="Loading chat interface..." />;
@@ -102,7 +134,7 @@ export default function ChatInterface({ userId }: ChatInterfaceProps) {
       <CollectiveIconsSidebar
         collectives={collectiveList}
         activeCollectiveId={activeCollectiveId}
-        onSelectCollective={setActiveCollectiveId}
+        onSelectCollective={handleCollectiveSelect}
       />
 
       {/* Center-Left: Channels Sidebar */}
@@ -131,14 +163,15 @@ export default function ChatInterface({ userId }: ChatInterfaceProps) {
                   </h2>
 
                   {/* Typing indicator */}
-                  {typingIndicatorText && (
-                    <p
-                      className="text-sm text-muted-foreground mt-1"
-                      aria-live="polite"
-                    >
-                      {typingIndicatorText}
-                    </p>
-                  )}
+                  {typingIndicatorText !== null &&
+                    typingIndicatorText !== undefined && (
+                      <p
+                        className="text-sm text-muted-foreground mt-1"
+                        aria-live="polite"
+                      >
+                        {typingIndicatorText}
+                      </p>
+                    )}
                 </div>
 
                 {/* Channel type badge */}

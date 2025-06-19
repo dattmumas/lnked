@@ -6,7 +6,6 @@
  *
  */
 
-
 import {
   createContext,
   ReactNode,
@@ -45,7 +44,7 @@ export const FlashMessageContext = ({
       setProps(message ? { duration, message } : INITIAL_STATE),
     [],
   );
-  useEffect((): void => {
+  useEffect(() => {
     if (props.message) {
       const timeoutId = setTimeout(
         () => setProps(INITIAL_STATE),

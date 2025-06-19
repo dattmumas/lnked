@@ -135,7 +135,7 @@ export class FollowRepository {
       .eq('following_id', entityId)
       .eq('following_type', entityType);
 
-    if (error || count === undefined) {
+    if (error || count === undefined || count === null) {
       return 0;
     }
 
@@ -157,7 +157,7 @@ export class FollowRepository {
 
     const { count, error } = await query;
 
-    if (error || count === undefined) {
+    if (error || count === undefined || count === null) {
       return 0;
     }
 

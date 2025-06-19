@@ -107,7 +107,7 @@ function FloatingLinkEditor({
 
     const editorElem = editorRef.current;
     const nativeSelection = getDOMSelection(editor._window);
-    const {activeElement} = document;
+    const { activeElement } = document;
 
     if (editorElem === null) {
       return;
@@ -151,7 +151,7 @@ function FloatingLinkEditor({
     return true;
   }, [anchorElem, editor, setIsLinkEditMode, isLinkEditMode, linkUrl]);
 
-  useEffect((): void => {
+  useEffect(() => {
     const scrollerElem = anchorElem.parentElement;
 
     const update = () => {
@@ -175,7 +175,7 @@ function FloatingLinkEditor({
     };
   }, [anchorElem.parentElement, editor, $updateLinkEditor]);
 
-  useEffect((): void => {
+  useEffect(() => {
     return mergeRegister(
       editor.registerUpdateListener(({ editorState }) => {
         editorState.read(() => {
@@ -339,7 +339,7 @@ function useFloatingLinkEditorToolbar(
   const [activeEditor, setActiveEditor] = useState(editor);
   const [isLink, setIsLink] = useState(false);
 
-  useEffect((): void => {
+  useEffect(() => {
     function $updateToolbar() {
       const selection = $getSelection();
       if ($isRangeSelection(selection)) {

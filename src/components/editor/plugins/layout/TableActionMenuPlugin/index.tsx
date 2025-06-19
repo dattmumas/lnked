@@ -6,7 +6,6 @@
  *
  */
 
-
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
 import { useLexicalEditable } from '@lexical/react/useLexicalEditable';
 import {
@@ -134,7 +133,7 @@ function TableActionMenu({
     () => currentCellBackgroundColor(editor) || '',
   );
 
-  useEffect((): void => {
+  useEffect(() => {
     return editor.registerMutationListener(
       TableCellNode,
       (nodeMutations) => {
@@ -150,9 +149,9 @@ function TableActionMenu({
       },
       { skipInitialization: true },
     );
-  }, [editor, tableCellNode]);
+  });
 
-  useEffect((): void => {
+  useEffect(() => {
     editor.getEditorState().read(() => {
       const selection = $getSelection();
       // Merge cells
@@ -166,9 +165,9 @@ function TableActionMenu({
       // Unmerge cell
       setCanUnmergeCell($canUnmerge());
     });
-  }, [editor]);
+  });
 
-  useEffect((): void => {
+  useEffect(() => {
     const menuButtonElement = contextRef.current;
     const dropDownElement = dropDownRef.current;
     const rootElement = editor.getRootElement();
@@ -201,9 +200,9 @@ function TableActionMenu({
       }
       dropDownElement.style.top = `${topPosition}px`;
     }
-  }, [contextRef, dropDownRef, editor]);
+  });
 
-  useEffect((): void => {
+  useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (
         dropDownRef.current != undefined &&
@@ -219,7 +218,7 @@ function TableActionMenu({
     window.addEventListener('click', handleClickOutside);
 
     return () => window.removeEventListener('click', handleClickOutside);
-  }, [setIsMenuOpen, contextRef]);
+  });
 
   const clearTableSelection = useCallback(() => {
     editor.update(() => {
@@ -749,7 +748,7 @@ function TableCellActionMenuContainer({
     const menu = menuButtonRef.current;
     const selection = $getSelection();
     const nativeSelection = getDOMSelection(editor._window);
-    const {activeElement} = document;
+    const { activeElement } = document;
     function disable() {
       if (menu) {
         menu.classList.remove('table-cell-action-button-container--active');
@@ -862,7 +861,7 @@ function TableCellActionMenuContainer({
     }
   }, [editor, anchorElem, checkTableCellOverflow]);
 
-  useEffect((): void => {
+  useEffect(() => {
     // We call the $moveMenu callback every time the selection changes,
     // once up front, and once after each pointerUp
     let timeoutId: ReturnType<typeof setTimeout> | undefined = undefined;
@@ -898,13 +897,13 @@ function TableCellActionMenuContainer({
 
   const prevTableCellDOM = useRef(tableCellNode);
 
-  useEffect((): void => {
+  useEffect(() => {
     if (prevTableCellDOM.current !== tableCellNode) {
       setIsMenuOpen(false);
     }
 
     prevTableCellDOM.current = tableCellNode;
-  }, [prevTableCellDOM, tableCellNode]);
+  });
 
   return (
     <div className="table-cell-action-button-container" ref={menuButtonRef}>

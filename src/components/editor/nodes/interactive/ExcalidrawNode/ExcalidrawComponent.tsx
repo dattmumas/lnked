@@ -8,7 +8,6 @@
  *
  */
 
-
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
 import { useLexicalEditable } from '@lexical/react/useLexicalEditable';
 import { useLexicalNodeSelection } from '@lexical/react/useLexicalNodeSelection';
@@ -56,7 +55,7 @@ export default function ExcalidrawComponent({
     useLexicalNodeSelection(nodeKey);
   const [isResizing, setIsResizing] = useState<boolean>(false);
 
-  useEffect((): void => {
+  useEffect(() => {
     if (!isEditable) {
       if (isSelected) {
         clearSelection();

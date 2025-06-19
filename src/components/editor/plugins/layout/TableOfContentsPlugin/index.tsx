@@ -5,16 +5,16 @@
  * LICENSE file in the root directory of this source tree.
  *
  */
-import type {TableOfContentsEntry} from '@lexical/react/LexicalTableOfContentsPlugin';
-import type {HeadingTagType} from '@lexical/rich-text';
-import type {NodeKey} from 'lexical';
-import type {JSX} from 'react';
+import type { TableOfContentsEntry } from '@lexical/react/LexicalTableOfContentsPlugin';
+import type { HeadingTagType } from '@lexical/rich-text';
+import type { NodeKey } from 'lexical';
+import type { JSX } from 'react';
 
 import './index.css';
 
-import {useLexicalComposerContext} from '@lexical/react/LexicalComposerContext';
-import {TableOfContentsPlugin as LexicalTableOfContentsPlugin} from '@lexical/react/LexicalTableOfContentsPlugin';
-import {useEffect, useRef, useState} from 'react';
+import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
+import { TableOfContentsPlugin as LexicalTableOfContentsPlugin } from '@lexical/react/LexicalTableOfContentsPlugin';
+import { useEffect, useRef, useState } from 'react';
 
 const MARGIN_ABOVE_EDITOR = 624;
 const HEADING_WIDTH = 9;
@@ -56,14 +56,14 @@ function TableOfContentsList({
     editor.getEditorState().read(() => {
       const domElement = editor.getElementByKey(key);
       if (domElement !== null) {
-        domElement.scrollIntoView({behavior: 'smooth', block: 'center'});
+        domElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
         setSelectedKey(key);
         selectedIndex.current = currIndex;
       }
     });
   }
 
-  useEffect((): void => {
+  useEffect(() => {
     function scrollCallback() {
       if (
         tableOfContents.length !== 0 &&
@@ -147,10 +147,9 @@ function TableOfContentsList({
                   className="first-heading"
                   onClick={() => scrollToNode(key, index)}
                   role="button"
-                  tabIndex={0}>
-                  {(`${text}`).length > 20
-                    ? `${text.substring(0, 20)}...`
-                    : text}
+                  tabIndex={0}
+                >
+                  {`${text}`.length > 20 ? `${text.substring(0, 20)}...` : text}
                 </div>
                 <br />
               </div>
@@ -161,18 +160,21 @@ function TableOfContentsList({
                 className={`normal-heading-wrapper ${
                   selectedKey === key ? 'selected-heading-wrapper' : ''
                 }`}
-                key={key}>
+                key={key}
+              >
                 <div
                   onClick={() => scrollToNode(key, index)}
                   role="button"
                   className={indent(tag)}
-                  tabIndex={0}>
+                  tabIndex={0}
+                >
                   <li
                     className={`normal-heading ${
                       selectedKey === key ? 'selected-heading' : ''
                     }
-                    `}>
-                    {(`${text}`).length > 27
+                    `}
+                  >
+                    {`${text}`.length > 27
                       ? `${text.substring(0, 27)}...`
                       : text}
                   </li>

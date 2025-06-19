@@ -114,7 +114,7 @@ function LazyImage({
   const isSVGImage = isSVG(src);
 
   // Set initial dimensions for SVG images
-  useEffect((): void => {
+  useEffect(() => {
     if (imageRef.current && isSVGImage) {
       const { naturalWidth, naturalHeight } = imageRef.current;
       setDimensions({
@@ -126,7 +126,7 @@ function LazyImage({
 
   const hasError = useSuspenseImage(src);
 
-  useEffect((): void => {
+  useEffect(() => {
     if (hasError) {
       onError();
     }
@@ -344,17 +344,14 @@ export default function ImageComponent({
           $isRangeSelection(latestSelection) &&
           latestSelection.getNodes().length === 1
         ) {
-          editor.dispatchCommand(
-            RIGHT_CLICK_IMAGE_COMMAND,
-            event,
-          );
+          editor.dispatchCommand(RIGHT_CLICK_IMAGE_COMMAND, event);
         }
       });
     },
     [editor],
   );
 
-  useEffect((): void => {
+  useEffect(() => {
     const rootElement = editor.getRootElement();
     const unregister = mergeRegister(
       editor.registerUpdateListener(({ editorState }) => {

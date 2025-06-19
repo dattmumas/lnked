@@ -34,7 +34,7 @@ const useUser = (): { user: User | undefined; loading: boolean } => {
   const [user, setUser] = useState<User | undefined>(undefined);
   const [loading, setLoading] = useState<boolean>(true);
 
-  useEffect((): void => {
+  useEffect(() => {
     const supabase = createSupabaseBrowserClient();
     
     // Get initial user
@@ -197,14 +197,14 @@ export const usePostEditor = (postId?: string): UsePostEditorResult => {
   const { user } = useUser();
 
   // Initialize form data from server when post loads
-  useEffect((): void => {
+  useEffect(() => {
     if ((postData !== null && postData !== undefined) && (store.originalData === null || store.originalData === undefined)) {
       store.initializeForm(postData);
     }
   }, [postData, store.originalData, store]);
 
   // Auto-save when dirty with 500ms debounce
-  useEffect((): (() => void) | undefined => {
+  useEffect(() => {
     // Don't auto-save while loading initial data
     if (isLoadingPost) {
       return undefined;
@@ -228,7 +228,7 @@ export const usePostEditor = (postId?: string): UsePostEditorResult => {
       }, AUTO_SAVE_DEBOUNCE_MS);
 
       return (): void => {
-        void clearTimeout(timer);
+        clearTimeout(timer);
       };
     }
 

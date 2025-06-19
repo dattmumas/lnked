@@ -117,7 +117,7 @@ export const useVideoProcessing = (): UseVideoProcessingReturn => {
           const errorData = await response.json() as unknown as ErrorResponse;
           const hasError = errorData.error !== undefined && errorData.error !== null && errorData.error !== '';
           if (hasError) {
-            errorMessage = errorData.error;
+            errorMessage = errorData.error ?? 'Unknown error';
           }
         } catch {
           // Use default error message if JSON parsing fails
@@ -225,7 +225,7 @@ export const useVideoProcessing = (): UseVideoProcessingReturn => {
           const errorData = await response.json() as unknown as ErrorResponse;
           const hasError = errorData.error !== undefined && errorData.error !== null && errorData.error !== '';
           if (hasError) {
-            errorMessage = errorData.error;
+            errorMessage = errorData.error ?? 'Unknown error';
           }
         } catch {
           // Use default error message if JSON parsing fails

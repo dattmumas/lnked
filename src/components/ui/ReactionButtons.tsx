@@ -3,12 +3,15 @@
 import { ThumbsUp, ThumbsDown } from 'lucide-react';
 import { useState, useTransition, useCallback } from 'react';
 
+
 import { Button } from '@/components/ui/button';
 import {
   toggleReactionState,
   type ReactionState,
   handleReactionError,
 } from '@/lib/utils/reactionHelpers';
+
+import type { ReactElement } from 'react';
 
 export interface ReactionButtonsProps {
   /** The ID of the item (post ID or comment ID) */
@@ -53,7 +56,7 @@ export default function ReactionButtons({
   variant = 'default',
   showCounts = true,
   className = '',
-}: ReactionButtonsProps): JSX.Element {
+}: ReactionButtonsProps): ReactElement {
   const [isPending, startTransition] = useTransition();
   const [currentState, setCurrentState] = useState<ReactionState>({
     likeCount: initialLikeCount,

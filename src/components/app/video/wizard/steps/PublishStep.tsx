@@ -7,6 +7,7 @@ import {
   AlertCircle,
   Calendar,
 } from 'lucide-react';
+import { useCallback } from 'react';
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
@@ -19,20 +20,28 @@ interface PublishStepProps {
   onComplete: () => void;
 }
 
-export function PublishStep({ videoUpload, onComplete }: PublishStepProps) {
+export function PublishStep({
+  videoUpload,
+  onComplete,
+}: PublishStepProps): React.ReactElement {
   const {
     formData,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     videoAsset: _videoAsset,
     isPublishing,
     publishVideo,
   } = videoUpload;
 
-  const handlePublish = async () => {
+  const handlePublish = useCallback(async (): Promise<void> => {
     const success = await publishVideo();
     if (success) {
       onComplete();
     }
-  };
+  }, [publishVideo, onComplete]);
+
+  const handlePublishClick = useCallback((): void => {
+    void handlePublish();
+  }, [handlePublish]);
 
   if (isPublishing) {
     return (
@@ -222,7 +231,7 @@ export function PublishStep({ videoUpload, onComplete }: PublishStepProps) {
         <div className="flex flex-col sm:flex-row gap-3 justify-center">
           <Button
             size="lg"
-            onClick={() => void handlePublish()}
+            onClick={handlePublishClick}
             disabled={isPublishing}
             className="flex-1 max-w-xs"
           >

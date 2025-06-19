@@ -179,7 +179,7 @@ export function useNotifications(
   const initialFetchDone = useRef(false);
 
   // Initial fetch
-  useEffect((): void => {
+  useEffect(() => {
     if (
       autoFetch &&
       userId !== null &&
@@ -193,10 +193,10 @@ export function useNotifications(
   }, [autoFetch, userId, fetchNotifications]);
 
   // Real-time subscription
-  useEffect((): void => {
+  useEffect(() => {
     if (!realtime || userId === null || userId === undefined || userId === '') {
-      // Return a no‑op cleanup to satisfy `consistent-return`
-      return () => {};
+      // Return undefined to satisfy `consistent-return`
+      return undefined;
     }
     const unsubscribe = clientNotificationService.subscribeToNotifications(
       userId,
@@ -221,7 +221,7 @@ export function useNotifications(
   }, [realtime, userId]);
 
   // Cleanup debounce timer on unmount
-  useEffect((): void => {
+  useEffect(() => {
     return () => {
       if (debounceTimer.current) {
         clearTimeout(debounceTimer.current);

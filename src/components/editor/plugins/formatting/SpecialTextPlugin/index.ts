@@ -54,7 +54,7 @@ function $textNodeTransform(node: TextNode): void {
 }
 
 function useTextTransformation(editor: LexicalEditor): void {
-  useEffect((): void => {
+  useEffect(() => {
     if (!editor.hasNodes([SpecialTextNode])) {
       throw new Error(
         'SpecialTextPlugin: SpecialTextNode not registered on editor',

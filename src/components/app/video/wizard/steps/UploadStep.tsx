@@ -1,12 +1,15 @@
 'use client';
 
+import { Upload, AlertCircle, CheckCircle2, Loader2, Film } from 'lucide-react';
 import React, { useCallback, useState } from 'react';
 
 // Constants
-const GB_TO_BYTES = 1024 * 1024 * 1024;
+const BYTES_PER_KB = 1024;
+const KB_TO_MB = 1024;
+const MB_TO_GB = 1024;
+const GB_TO_BYTES = BYTES_PER_KB * KB_TO_MB * MB_TO_GB;
 const MAX_FILE_SIZE_GB = 2;
 const FILE_SIZE_DECIMAL_PLACES = 2;
-import { Upload, AlertCircle, CheckCircle2, Loader2, Film } from 'lucide-react';
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -18,9 +21,11 @@ interface UploadStepProps {
   videoUpload: ReturnType<typeof useVideoUpload>;
 }
 
-export function UploadStep({ videoUpload }: UploadStepProps) {
+export function UploadStep({
+  videoUpload,
+}: UploadStepProps): React.ReactElement {
   const [dragActive, setDragActive] = useState(false);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | undefined>(undefined);
 
   const handleDrag = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -32,7 +37,7 @@ export function UploadStep({ videoUpload }: UploadStepProps) {
     }
   }, []);
 
-  const validateFile = (file: File): string | null => {
+  const validateFile = useCallback((file: File): string | undefined => {
     // Check file type
     const validTypes = [
       'video/mp4',
@@ -50,29 +55,30 @@ export function UploadStep({ videoUpload }: UploadStepProps) {
       return `File size must be less than ${MAX_FILE_SIZE_GB}GB`;
     }
 
-    return null;
-  };
+    return undefined;
+  }, []);
 
   const handleFiles = useCallback(
-    (files: FileList | null) => {
+    (files: FileList | null | undefined) => {
       setDragActive(false);
 
-      if (!files || files.length === 0) return;
+      if (files === undefined || files === null || files.length === 0) return;
 
       const file = files[0];
       const error = validateFile(file);
 
-      if (error) {
-        // Could add error state to videoUpload hook
-        alert(error);
+      if (error !== undefined) {
+        // Use console.error instead of alert for better UX
+        console.error('File validation error:', error);
+        // TODO: Add proper error state to videoUpload hook
         return;
       }
 
       setSelectedFile(file);
       // Auto-start upload when file is selected
-      videoUpload.uploadVideo(file);
+      void videoUpload.uploadVideo(file);
     },
-    [videoUpload],
+    [videoUpload, validateFile],
   );
 
   const handleDrop = useCallback(
@@ -91,15 +97,23 @@ export function UploadStep({ videoUpload }: UploadStepProps) {
     [handleFiles],
   );
 
-  const formatFileSize = (bytes: number): string => {
+  const formatFileSize = useCallback((bytes: number): string => {
     if (bytes === 0) return '0 Bytes';
-    const k = 1024;
+    const k = BYTES_PER_KB;
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return `${parseFloat((bytes / Math.pow(k, i)).toFixed(FILE_SIZE_DECIMAL_PLACES))} ${sizes[i]}`;
-  };
+  }, []);
 
-  const getUploadStatusContent = () => {
+  const handleRetryUpload = useCallback((): void => {
+    if (selectedFile !== undefined) {
+      void videoUpload.uploadVideo(selectedFile);
+    }
+  }, [selectedFile, videoUpload]);
+
+  const getUploadStatusContent = useCallback(():
+    | React.ReactElement
+    | undefined => {
     if (videoUpload.hasUploadError) {
       return (
         <Alert variant="destructive" className="mb-4">
@@ -111,9 +125,7 @@ export function UploadStep({ videoUpload }: UploadStepProps) {
               variant="outline"
               size="sm"
               className="mt-2"
-              onClick={() =>
-                selectedFile && videoUpload.uploadVideo(selectedFile)
-              }
+              onClick={handleRetryUpload}
             >
               Try Again
             </Button>
@@ -146,7 +158,7 @@ export function UploadStep({ videoUpload }: UploadStepProps) {
                   ? 'Uploading video...'
                   : 'Processing video...'}
               </p>
-              {selectedFile && (
+              {selectedFile !== undefined && (
                 <p className="text-sm text-muted-foreground">
                   {selectedFile.name} ({formatFileSize(selectedFile.size)})
                 </p>
@@ -161,8 +173,25 @@ export function UploadStep({ videoUpload }: UploadStepProps) {
       );
     }
 
-    return null;
-  };
+    return undefined;
+  }, [videoUpload, selectedFile, formatFileSize, handleRetryUpload]);
+
+  const handleFileInputClick = useCallback((): void => {
+    const element = document.getElementById('video-file-input');
+    if (element) {
+      element.click();
+    }
+  }, []);
+
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent): void => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        handleFileInputClick();
+      }
+    },
+    [handleFileInputClick],
+  );
 
   return (
     <div className="space-y-6">
@@ -183,11 +212,14 @@ export function UploadStep({ videoUpload }: UploadStepProps) {
               ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/20'
               : 'border-border hover:border-blue-300 hover:bg-muted/50',
           )}
+          role="button"
+          tabIndex={0}
           onDragEnter={handleDrag}
           onDragLeave={handleDrag}
           onDragOver={handleDrag}
           onDrop={handleDrop}
-          onClick={() => document.getElementById('video-file-input')?.click()}
+          onClick={handleFileInputClick}
+          onKeyDown={handleKeyDown}
         >
           <Film className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
           <h3 className="text-lg font-semibold mb-2">
@@ -215,7 +247,7 @@ export function UploadStep({ videoUpload }: UploadStepProps) {
       )}
 
       {/* File Information */}
-      {selectedFile && (
+      {selectedFile !== undefined && (
         <div className="bg-muted/30 rounded-lg p-4">
           <h4 className="font-medium mb-2">Selected File:</h4>
           <div className="flex items-center gap-3">

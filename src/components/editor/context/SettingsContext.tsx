@@ -41,30 +41,7 @@ export const SettingsContext = ({
 }: {
   children: ReactNode;
 }): JSX.Element => {
-  const [settings, setSettings] = useState({
-    measureTypographyState: false,
-    isCharLimit: false,
-    isCharLimitUtf8: false,
-    isMaxLength: false,
-    isAutocomplete: false,
-    isShowNestedEditorTreeView: false,
-    showTreeView: true,
-    showTableOfContents: false,
-    shouldUseLexicalContextMenu: false,
-    shouldPreserveNewLinesInMarkdown: false,
-    collapseEmptyDivs: false,
-    emptyEditor: false,
-    tableCellMerge: true,
-    tableCellBackgroundColor: true,
-    showStickyNote: false,
-    isRichText: true,
-    disableBeforeInput: false,
-    isCollab: false,
-    isCharLimitOnly: false,
-    showNestedEditorTreeView: false,
-    enableHighlighting: false,
-    emptyEditorJSON: undefined,
-  });
+  const [settings, setSettings] = useState(INITIAL_SETTINGS);
 
   const setOption = useCallback((setting: SettingName, value: boolean) => {
     setSettings((options) => ({

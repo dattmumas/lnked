@@ -28,7 +28,7 @@ export function useFollowerData({
 
   const supabase = createSupabaseBrowserClient();
 
-  useEffect((): void => {
+  useEffect(() => {
     async function fetchFollowerData(): Promise<void> {
       try {
         setLoading(true);
@@ -100,7 +100,7 @@ export function useRealtimeFollowerData({
 
   const supabase = createSupabaseBrowserClient();
 
-    useEffect((): void => {
+  useEffect(() => {
     async function fetchInitialData(): Promise<void> {
       try {
         setLoading(true);

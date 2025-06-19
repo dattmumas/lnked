@@ -6,7 +6,6 @@
  *
  */
 
-
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
 import { useLexicalEditable } from '@lexical/react/useLexicalEditable';
 import {
@@ -95,7 +94,7 @@ function TableHoverActionsContainer({
             if (tableDOMElement) {
               const rowCount = table.getChildrenSize();
               const colCount = (
-                (table).getChildAtIndex(0) as TableRowNode
+                table.getChildAtIndex(0) as TableRowNode
               )?.getChildrenSize();
 
               const rowIndex =
@@ -125,7 +124,7 @@ function TableHoverActionsContainer({
         } = (tableDOMElement as HTMLTableElement).getBoundingClientRect();
 
         // Adjust for using the scrollable table container
-        const {parentElement} = (tableDOMElement as HTMLTableElement);
+        const { parentElement } = tableDOMElement as HTMLTableElement;
         let tableHasScroll = false;
         if (
           parentElement &&
@@ -179,7 +178,7 @@ function TableHoverActionsContainer({
     });
   }, []);
 
-  useEffect((): void => {
+  useEffect(() => {
     if (!shouldListenMouseMove) {
       return;
     }
@@ -194,7 +193,7 @@ function TableHoverActionsContainer({
     };
   }, [shouldListenMouseMove, debouncedOnMouseMove]);
 
-  useEffect((): void => {
+  useEffect(() => {
     return mergeRegister(
       editor.registerMutationListener(
         TableNode,
@@ -285,7 +284,7 @@ function getMouseInfo(
   tableDOMNode: HTMLElement | null;
   isOutside: boolean;
 } {
-  const {target} = event;
+  const { target } = event;
   const tableCellClass = getThemeSelector(getTheme, 'tableCell');
 
   if (isHTMLElement(target)) {

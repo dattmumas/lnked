@@ -1,6 +1,7 @@
 'use client';
 
 import { ChevronLeft, ChevronRight, Upload, Loader2, X } from 'lucide-react';
+import React from 'react';
 
 import { Button } from '@/components/ui/button';
 import { WIZARD_STEPS } from '@/hooks/video/useStepNavigation';
@@ -36,8 +37,8 @@ export function WizardNavigation({
   onNext,
   onCancel,
   currentStepInfo,
-}: WizardNavigationProps) {
-  const getNextButtonText = () => {
+}: WizardNavigationProps): React.ReactElement {
+  const getNextButtonText = (): string => {
     if (isLastStep) {
       return isPublishing ? 'Publishing...' : 'Publish Video';
     }
@@ -54,7 +55,7 @@ export function WizardNavigation({
     }
   };
 
-  const getNextButtonIcon = () => {
+  const getNextButtonIcon = (): React.ReactElement => {
     if (isLastStep) {
       return isPublishing ? (
         <Loader2 className="h-4 w-4 animate-spin" />
@@ -65,7 +66,7 @@ export function WizardNavigation({
     return <ChevronRight className="h-4 w-4" />;
   };
 
-  const isNextDisabled = () => {
+  const isNextDisabled = (): boolean => {
     if (isUploading || isPublishing) return true;
     if (isLastStep) return !canProceed;
     return !canProceed;

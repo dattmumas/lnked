@@ -227,7 +227,7 @@ export const useEnhancedPostData = (postId?: string): UseQueryResult<EnhancedPos
       const enhancedData: EnhancedPostEditorFormData = {
         id: data.id,
         title: data.title ?? '',
-        content: hasContent ? data.content : '',
+        content: hasContent ? (data.content ?? '') : '',
         subtitle: hasSubtitle && data.subtitle !== null ? data.subtitle : undefined,
         author: hasAuthor && data.author !== null ? data.author : undefined,
         seo_title: hasSeoTitle && data.seo_title !== null ? data.seo_title : undefined,

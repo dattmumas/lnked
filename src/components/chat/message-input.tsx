@@ -487,7 +487,7 @@ export function MessageInput({
           aria-label="Message input"
         />
 
-        {/* File input (hidden) */}
+        {/* File input (hidden) - Disabled until cloud storage is implemented */}
         <input
           ref={fileInputRef}
           type="file"
@@ -495,16 +495,17 @@ export function MessageInput({
           onChange={handleFileSelect}
           accept="image/*,video/*,.pdf,.doc,.docx,.txt,.zip,.rar"
           aria-label="File upload input"
+          disabled
         />
 
-        {/* Attachment button */}
+        {/* Attachment button - Disabled until cloud storage is implemented */}
         <button
           type="button"
           onClick={handleAttachmentClick}
-          className="p-2 text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          title="Add attachment"
-          aria-label="Add attachment"
-          disabled={uploading || sending}
+          className="p-2 text-muted-foreground/50 cursor-not-allowed opacity-50"
+          title="File uploads coming soon"
+          aria-label="File uploads coming soon"
+          disabled
         >
           <AttachmentIcon />
         </button>

@@ -1,6 +1,7 @@
 'use client';
 
 import { Globe, Link, Lock, Zap, Settings, HardDrive } from 'lucide-react';
+import { useCallback, useMemo } from 'react';
 
 import {
   Card,
@@ -24,74 +25,208 @@ interface SettingsStepProps {
   videoUpload: ReturnType<typeof useVideoUpload>;
 }
 
-export function SettingsStep({ videoUpload }: SettingsStepProps) {
+export function SettingsStep({
+  videoUpload,
+}: SettingsStepProps): React.ReactElement {
   const { formData, updateFormData } = videoUpload;
 
-  const handlePrivacyChange = (value: string) => {
-    updateFormData({
-      privacySetting: value as 'public' | 'unlisted' | 'private',
-    });
-  };
+  const handlePrivacyChange = useCallback(
+    (value: string): void => {
+      updateFormData({
+        privacySetting: value as 'public' | 'unlisted' | 'private',
+      });
+    },
+    [updateFormData],
+  );
 
-  const handleQualityChange = (value: string) => {
-    updateFormData({
-      encodingTier: value as 'smart' | 'baseline' | 'high',
-    });
-  };
+  const handleQualityChange = useCallback(
+    (value: string): void => {
+      updateFormData({
+        encodingTier: value as 'smart' | 'baseline' | 'high',
+      });
+    },
+    [updateFormData],
+  );
 
-  const privacyOptions = [
-    {
-      value: 'public',
-      label: 'Public',
-      description: 'Anyone can watch this video',
-      icon: Globe,
-      details:
-        'Your video will be visible to everyone and can be found in search results.',
+  const renderPrivacyOption = useCallback(
+    function renderPrivacyOptionImpl(option: {
+      value: string;
+      label: string;
+      description: string;
+      icon: React.ComponentType<{ className?: string }>;
+      details: string;
+    }) {
+      const IconComponent = option.icon;
+      return (
+        <div key={option.value} className="space-y-2">
+          <div className="flex items-start space-x-3 p-4 rounded-lg border transition-colors hover:bg-muted/30">
+            <RadioGroupItem
+              value={option.value}
+              id={option.value}
+              className="mt-1"
+            />
+            <div className="flex-1">
+              <Label
+                htmlFor={option.value}
+                className="flex items-center gap-2 font-medium cursor-pointer"
+              >
+                <IconComponent className="h-4 w-4" />
+                {option.label}
+              </Label>
+              <p className="text-sm text-muted-foreground mt-1">
+                {option.description}
+              </p>
+              <p className="text-xs text-muted-foreground mt-2">
+                {option.details}
+              </p>
+            </div>
+          </div>
+        </div>
+      );
     },
-    {
-      value: 'unlisted',
-      label: 'Unlisted',
-      description: 'Only people with the link can watch',
-      icon: Link,
-      details:
-        "Your video won't appear in search results, but anyone with the link can watch it.",
-    },
-    {
-      value: 'private',
-      label: 'Private',
-      description: 'Only you can watch this video',
-      icon: Lock,
-      details:
-        'Your video will only be visible to you. Perfect for drafts or personal content.',
-    },
-  ];
+    [],
+  );
 
-  const qualityOptions = [
-    {
-      value: 'smart',
-      label: 'Smart Encoding (Recommended)',
-      description: 'Automatic quality optimization',
-      icon: Zap,
-      details:
-        'Automatically optimizes quality and file size for the best viewing experience.',
+  const renderQualityOption = useCallback(
+    function renderQualityOptionImpl(option: {
+      value: string;
+      label: string;
+      description: string;
+      icon: React.ComponentType<{ className?: string }>;
+    }) {
+      const IconComponent = option.icon;
+      return (
+        <SelectItem key={option.value} value={option.value}>
+          <div className="flex items-center gap-2">
+            <IconComponent className="h-4 w-4" />
+            <div>
+              <div className="font-medium">{option.label}</div>
+              <div className="text-xs text-muted-foreground">
+                {option.description}
+              </div>
+            </div>
+          </div>
+        </SelectItem>
+      );
     },
-    {
-      value: 'baseline',
-      label: 'Standard Quality',
-      description: 'Good quality with smaller file size',
-      icon: Settings,
-      details:
-        'Balanced encoding that works well for most content with reasonable file sizes.',
+    [],
+  );
+
+  const privacyOptions = useMemo(
+    () => [
+      {
+        value: 'public',
+        label: 'Public',
+        description: 'Anyone can watch this video',
+        icon: Globe,
+        details:
+          'Your video will be visible to everyone and can be found in search results.',
+      },
+      {
+        value: 'unlisted',
+        label: 'Unlisted',
+        description: 'Only people with the link can watch',
+        icon: Link,
+        details:
+          "Your video won't appear in search results, but anyone with the link can watch it.",
+      },
+      {
+        value: 'private',
+        label: 'Private',
+        description: 'Only you can watch this video',
+        icon: Lock,
+        details:
+          'Your video will only be visible to you. Perfect for drafts or personal content.',
+      },
+    ],
+    [],
+  );
+
+  const qualityOptions = useMemo(
+    () => [
+      {
+        value: 'smart',
+        label: 'Smart Encoding (Recommended)',
+        description: 'Automatic quality optimization',
+        icon: Zap,
+        details:
+          'Automatically optimizes quality and file size for the best viewing experience.',
+      },
+      {
+        value: 'baseline',
+        label: 'Standard Quality',
+        description: 'Good quality with smaller file size',
+        icon: Settings,
+        details:
+          'Balanced encoding that works well for most content with reasonable file sizes.',
+      },
+      {
+        value: 'high',
+        label: 'High Quality',
+        description: 'Maximum quality with larger file size',
+        icon: HardDrive,
+        details:
+          'Highest quality encoding for professional content. Larger file sizes.',
+      },
+    ],
+    [],
+  );
+
+  const isMatchingQualityOption = useCallback(
+    (option: (typeof qualityOptions)[0], tier: string) => {
+      return option.value === tier;
     },
-    {
-      value: 'high',
-      label: 'High Quality',
-      description: 'Maximum quality with larger file size',
-      icon: HardDrive,
-      details:
-        'Highest quality encoding for professional content. Larger file sizes.',
+    [],
+  );
+
+  const findQualityOption = useCallback(
+    (tier: string) => {
+      for (const option of qualityOptions) {
+        if (isMatchingQualityOption(option, tier)) {
+          return option;
+        }
+      }
+      return undefined;
     },
-  ];
+    [qualityOptions, isMatchingQualityOption],
+  );
+
+  const renderQualityDetails = useCallback(() => {
+    const selectedOption = findQualityOption(formData.encodingTier);
+    const IconComponent = selectedOption?.icon || Zap;
+
+    return (
+      <div className="flex items-start gap-3">
+        <IconComponent className="h-5 w-5 mt-0.5 text-muted-foreground" />
+        <div>
+          <h4 className="font-medium">{selectedOption?.label}</h4>
+          <p className="text-sm text-muted-foreground mt-1">
+            {selectedOption?.details}
+          </p>
+        </div>
+      </div>
+    );
+  }, [formData.encodingTier, findQualityOption]);
+
+  const getSelectedQualityLabel = useCallback(() => {
+    return findQualityOption(formData.encodingTier)?.label;
+  }, [formData.encodingTier, findQualityOption]);
+
+  const privacyOptionsList = useMemo(() => {
+    return privacyOptions.map(renderPrivacyOption);
+  }, [privacyOptions, renderPrivacyOption]);
+
+  const qualityOptionsList = useMemo(() => {
+    return qualityOptions.map(renderQualityOption);
+  }, [qualityOptions, renderQualityOption]);
+
+  const qualityDetailsComponent = useMemo(() => {
+    return renderQualityDetails();
+  }, [renderQualityDetails]);
+
+  const selectedQualityLabel = useMemo(() => {
+    return getSelectedQualityLabel();
+  }, [getSelectedQualityLabel]);
 
   return (
     <div className="space-y-6">
@@ -118,35 +253,7 @@ export function SettingsStep({ videoUpload }: SettingsStepProps) {
               onValueChange={handlePrivacyChange}
               className="space-y-4"
             >
-              {privacyOptions.map((option) => {
-                const IconComponent = option.icon;
-                return (
-                  <div key={option.value} className="space-y-2">
-                    <div className="flex items-start space-x-3 p-4 rounded-lg border transition-colors hover:bg-muted/30">
-                      <RadioGroupItem
-                        value={option.value}
-                        id={option.value}
-                        className="mt-1"
-                      />
-                      <div className="flex-1">
-                        <Label
-                          htmlFor={option.value}
-                          className="flex items-center gap-2 font-medium cursor-pointer"
-                        >
-                          <IconComponent className="h-4 w-4" />
-                          {option.label}
-                        </Label>
-                        <p className="text-sm text-muted-foreground mt-1">
-                          {option.description}
-                        </p>
-                        <p className="text-xs text-muted-foreground mt-2">
-                          {option.details}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
+              {privacyOptionsList}
             </RadioGroup>
           </CardContent>
         </Card>
@@ -174,47 +281,13 @@ export function SettingsStep({ videoUpload }: SettingsStepProps) {
                 <SelectTrigger id="quality-select" className="mt-2">
                   <SelectValue placeholder="Select encoding quality" />
                 </SelectTrigger>
-                <SelectContent>
-                  {qualityOptions.map((option) => {
-                    const IconComponent = option.icon;
-                    return (
-                      <SelectItem key={option.value} value={option.value}>
-                        <div className="flex items-center gap-2">
-                          <IconComponent className="h-4 w-4" />
-                          <div>
-                            <div className="font-medium">{option.label}</div>
-                            <div className="text-xs text-muted-foreground">
-                              {option.description}
-                            </div>
-                          </div>
-                        </div>
-                      </SelectItem>
-                    );
-                  })}
-                </SelectContent>
+                <SelectContent>{qualityOptionsList}</SelectContent>
               </Select>
             </div>
 
             {/* Quality Details */}
             <div className="bg-muted/30 rounded-lg p-4">
-              {(() => {
-                const selectedOption = qualityOptions.find(
-                  (option) => option.value === formData.encodingTier,
-                );
-                const IconComponent = selectedOption?.icon || Zap;
-
-                return (
-                  <div className="flex items-start gap-3">
-                    <IconComponent className="h-5 w-5 mt-0.5 text-muted-foreground" />
-                    <div>
-                      <h4 className="font-medium">{selectedOption?.label}</h4>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        {selectedOption?.details}
-                      </p>
-                    </div>
-                  </div>
-                );
-              })()}
+              {qualityDetailsComponent}
             </div>
           </CardContent>
         </Card>
@@ -234,13 +307,7 @@ export function SettingsStep({ videoUpload }: SettingsStepProps) {
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Quality:</span>
-              <span className="font-medium">
-                {
-                  qualityOptions.find(
-                    (option) => option.value === formData.encodingTier,
-                  )?.label
-                }
-              </span>
+              <span className="font-medium">{selectedQualityLabel}</span>
             </div>
           </div>
         </div>

@@ -9,13 +9,16 @@
 import {WebsocketProvider} from 'y-websocket';
 import {Doc} from 'yjs';
 
-// Define a basic Provider type to match the expected interface
+// Define a complete Provider type to match the expected Lexical interface
 type Provider = {
   connect: () => void;
   disconnect: () => void;
   destroy: () => void;
   awareness: any;
   doc: Doc;
+  // Event handling methods expected by Lexical
+  on: (event: string, handler: (...args: any[]) => void) => void;
+  off: (event: string, handler: (...args: any[]) => void) => void;
 };
 
 const url = new URL(window.location.href);

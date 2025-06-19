@@ -2,13 +2,16 @@ import { Play } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
 
+import type { ReactElement } from 'react';
+
+
 interface VideoPlayerSkeletonProps {
   className?: string;
 }
 
 export function VideoPlayerSkeleton({
   className,
-}: VideoPlayerSkeletonProps): JSX.Element {
+}: VideoPlayerSkeletonProps): ReactElement {
   return (
     <div
       className={cn(

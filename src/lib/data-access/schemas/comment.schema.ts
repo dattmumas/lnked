@@ -1,5 +1,16 @@
 import { z } from 'zod';
 
+// Comment metadata schema - replaces 'any' type for better validation
+export const MetadataSchema = z.object({
+  mentions: z.array(z.string()).optional(),
+  hashtags: z.array(z.string()).optional(),
+  links: z.array(z.string().url()).optional(),
+  edited: z.boolean().optional(),
+  source: z.enum(['web', 'mobile', 'api']).optional(),
+}).catchall(z.unknown());
+
+export type CommentMetadata = z.infer<typeof MetadataSchema>;
+
 // Comment reaction types
 export const CommentReactionTypeEnum = z.enum(['like', 'heart', 'laugh', 'angry', 'sad', 'wow', 'dislike']);
 
@@ -8,14 +19,17 @@ export const CommentSchema = z.object({
   id: z.string(),
   entity_type: z.string(),
   entity_id: z.string(),
-  author_id: z.string(),
+  user_id: z.string(), // Updated to match current database schema
   content: z.string(),
-  created_at: z.string(),
-  updated_at: z.string(),
+  created_at: z.string().nullable().transform(val => val ?? new Date().toISOString()),
+  updated_at: z.string().nullable().transform(val => val ?? new Date().toISOString()),
   deleted_at: z.string().nullable().transform(val => val ?? undefined),
   parent_id: z.string().nullable().transform(val => val ?? undefined),
-  is_pinned: z.boolean().nullable().transform(val => val ?? undefined),
+  // Removed is_pinned since it doesn't exist in current table
   metadata: z.any().nullable().transform(val => val ?? undefined),
+  // Added fields that exist in current database
+  reply_count: z.number().nullable().transform(val => val ?? 0),
+  thread_depth: z.number().nullable().transform(val => val ?? 0),
 });
 
 export type Comment = z.infer<typeof CommentSchema>;
@@ -50,12 +64,11 @@ export type CommentReaction = z.infer<typeof CommentReactionSchema>;
 
 // Insert/Update schemas
 export const CommentInsertSchema = z.object({
-  entity_type: z.string(),
+  entity_type: z.enum(['video', 'post', 'collective', 'profile']),
   entity_id: z.string(),
-  author_id: z.string(),
+  user_id: z.string(), // Updated to match current database schema
   content: z.string(),
   parent_id: z.string().optional().transform(val => val ?? null),
-  is_pinned: z.boolean().optional().transform(val => val ?? null),
   metadata: z.any().optional().transform(val => val ?? null),
 });
 

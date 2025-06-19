@@ -64,7 +64,7 @@ describe('Channels API', () => {
       supabase.auth.getUser.mockResolvedValue({ data: { user: { id: 'u1' } }, error: null });
       const builderMember = new Query({ role: 'member' }, null);
       const channels = [
-        { id: 'c1', title: 'Chan1', created_at: '2023-01-01' },
+        { id: 'c1', title: 'Chan1', type: 'channel', created_at: '2023-01-01' },
       ];
       const builderChan = new Query(channels, null);
       supabase.from.mockReturnValueOnce(builderMember).mockReturnValueOnce(builderChan);

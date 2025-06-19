@@ -8,7 +8,6 @@
 
 'use client';
 
-
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
 import { $insertNodeToNearestRoot } from '@lexical/utils';
 import {
@@ -29,7 +28,7 @@ export const INSERT_FIGMA_COMMAND: LexicalCommand<string> = createCommand(
 export default function FigmaPlugin(): JSX.Element | null {
   const [editor] = useLexicalComposerContext();
 
-  useEffect((): void => {
+  useEffect(() => {
     if (!editor.hasNodes([FigmaNode])) {
       throw new Error('FigmaPlugin: FigmaNode not registered on editor');
     }

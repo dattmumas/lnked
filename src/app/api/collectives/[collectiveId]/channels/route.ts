@@ -26,6 +26,7 @@ type CollectiveMemberRow = {
 type ConversationRow = {
   id: string;
   title: string | null;
+  type: string;
   created_at: string;
 };
 
@@ -68,7 +69,7 @@ export async function GET(request: NextRequest, context: { params: Promise<{ col
   // Build query with keyset pagination
   let chanQuery = supabase
     .from('conversations')
-    .select('id, title, created_at')
+    .select('id, title, type, created_at')
     .eq('collective_id', collectiveId)
     .eq('type', 'channel');
 

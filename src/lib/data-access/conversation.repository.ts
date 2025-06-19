@@ -21,6 +21,24 @@ import {
 
 import type { Database } from '@/lib/database.types';
 
+// Define types for the joined query results
+type ConversationWithParticipantsRaw = {
+  id: string;
+  title: string | null;
+  type: string;
+  description: string | null;
+  is_private: boolean | null;
+  created_by: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+  last_message_at: string | null;
+  archived: boolean | null;
+  collective_id: string | null;
+  conversation_participants: {
+    user_id: string;
+  }[];
+};
+
 /**
  * Conversation Repository
  * 
@@ -85,8 +103,11 @@ export class ConversationRepository {
       return [];
     }
 
+    // Type assertion for the raw data
+    const rawData = data as ConversationWithParticipantsRaw[];
+
     // Parse the conversations (ignoring the joined data)
-    const conversations = data.map((item: any) => {
+    const conversations = rawData.map((item) => {
       const { conversation_participants, ...conversation } = item;
       return conversation;
     });

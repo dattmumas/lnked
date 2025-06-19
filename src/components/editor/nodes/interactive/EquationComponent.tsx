@@ -8,7 +8,6 @@
 
 'use client';
 
-
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
 import { useLexicalEditable } from '@lexical/react/useLexicalEditable';
 import { mergeRegister } from '@lexical/utils';
@@ -64,13 +63,13 @@ export default function EquationComponent({
     [editor, equationValue, nodeKey],
   );
 
-  useEffect((): void => {
+  useEffect(() => {
     if (!showEquationEditor && equationValue !== equation) {
       setEquationValue(equation);
     }
   }, [showEquationEditor, equation, equationValue]);
 
-  useEffect((): void => {
+  useEffect(() => {
     if (!isEditable) {
       return;
     }
@@ -80,7 +79,7 @@ export default function EquationComponent({
           SELECTION_CHANGE_COMMAND,
           (payload) => {
             void payload;
-            const {activeElement} = document;
+            const { activeElement } = document;
             const inputElem = inputRef.current;
             if (inputElem !== activeElement) {
               onHide();
@@ -93,7 +92,7 @@ export default function EquationComponent({
           KEY_ESCAPE_COMMAND,
           (payload) => {
             void payload;
-            const {activeElement} = document;
+            const { activeElement } = document;
             const inputElem = inputRef.current;
             if (inputElem === activeElement) {
               onHide(true);

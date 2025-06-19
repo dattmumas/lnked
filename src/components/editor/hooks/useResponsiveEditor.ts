@@ -17,7 +17,7 @@ export function useResponsiveEditor(): ResponsiveEditorState {
     screenWidth: 1024,
   });
 
-  useEffect((): void => {
+  useEffect(() => {
     const updateScreenSize = () => {
       const width = window.innerWidth;
       setState({

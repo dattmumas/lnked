@@ -11,6 +11,7 @@ const TYPING_TIMEOUT_MS = 3000;
 
 interface UseTypingStatusReturn {
   registerKeystroke: () => void;
+  stopTyping: () => void;
 }
 
 export function useTypingStatus(channelId: string): UseTypingStatusReturn {
@@ -18,44 +19,53 @@ export function useTypingStatus(channelId: string): UseTypingStatusReturn {
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isMountedRef = useRef(true);
 
-  const broadcastTypingStop = useCallback((): void => {
-    if (!isMountedRef.current) return;
+  const sendTypingStop = useCallback((): void => {
+    if (!isMountedRef.current || !isTypingRef.current) return;
     
     isTypingRef.current = false;
     void realTime.broadcastTyping(channelId, false);
   }, [channelId]);
 
-  const broadcastTypingStart = useCallback((): void => {
-    if (!isMountedRef.current) return;
+  const sendTypingStart = useCallback((): void => {
+    if (!isMountedRef.current || isTypingRef.current) return;
     
     isTypingRef.current = true;
     void realTime.broadcastTyping(channelId, true);
   }, [channelId]);
 
+  // Single debounced function to handle typing timeout
   const scheduleTypingStop = useCallback((): void => {
-    // Clear any existing timeout
+    // Clear any existing timeout to avoid double scheduling
     if (timeoutRef.current !== null) {
       clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
     }
 
     // Set new timeout
     timeoutRef.current = setTimeout(() => {
-      broadcastTypingStop();
+      sendTypingStop();
       timeoutRef.current = null;
     }, TYPING_TIMEOUT_MS);
-  }, [broadcastTypingStop]);
+  }, [sendTypingStop]);
 
   const registerKeystroke = useCallback((): void => {
     if (!isMountedRef.current) return;
     
     // Start typing if not already typing
-    if (!isTypingRef.current) {
-      broadcastTypingStart();
-    }
+    sendTypingStart();
 
-    // Always reschedule the stop timeout
+    // Always reschedule the stop timeout (this handles the debouncing)
     scheduleTypingStop();
-  }, [broadcastTypingStart, scheduleTypingStop]);
+  }, [sendTypingStart, scheduleTypingStop]);
+
+  // Manual stop typing function
+  const stopTyping = useCallback((): void => {
+    if (timeoutRef.current !== null) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+    sendTypingStop();
+  }, [sendTypingStop]);
 
   // Cleanup on unmount or channelId change
   useEffect((): (() => void) => {
@@ -80,5 +90,6 @@ export function useTypingStatus(channelId: string): UseTypingStatusReturn {
 
   return {
     registerKeystroke,
+    stopTyping,
   };
 } 

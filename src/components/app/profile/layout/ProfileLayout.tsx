@@ -156,7 +156,7 @@ export function useResponsiveLayout() {
   const [isTablet, setIsTablet] = React.useState(false);
   const [isMobile, setIsMobile] = React.useState(false);
 
-  React.useEffect((): void => {
+  React.useEffect(() => {
     const checkLayout = () => {
       const width = window.innerWidth;
       setIsDesktop(width >= 1024);

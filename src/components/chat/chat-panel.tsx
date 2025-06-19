@@ -19,8 +19,15 @@ interface ChatPanelProps {
   className?: string;
 }
 
+// Constants
+const TYPING_DEBOUNCE_DELAY = 3000; // 3 seconds
+
 // Loading state component
-function LoadingSpinner({ children }: { children: React.ReactNode }) {
+function LoadingSpinner({
+  children,
+}: {
+  children: React.ReactNode;
+}): React.ReactElement {
   return (
     <div className="flex items-center justify-center h-full">
       <div className="flex items-center gap-2">
@@ -40,7 +47,7 @@ function EmptyState({
   variant,
 }: {
   variant: 'no-conversation' | 'no-messages';
-}) {
+}): React.ReactElement {
   if (variant === 'no-conversation') {
     return (
       <div className="flex items-center justify-center h-full">
@@ -87,7 +94,7 @@ function ErrorState({
 }: {
   error: string;
   onRetry: () => void;
-}) {
+}): React.ReactElement {
   return (
     <div className="flex items-center justify-center h-full">
       <div className="text-center">
@@ -104,42 +111,50 @@ function ErrorState({
 }
 
 // Custom hook for typing indicator
-function useTypingIndicator(chat: ReturnType<typeof useChatV2>) {
+function useTypingIndicator(chat: ReturnType<typeof useChatV2>): {
+  isTyping: boolean;
+  startTyping: () => void;
+  stopTyping: () => void;
+} {
   const [isTyping, setIsTyping] = useState(false);
-  const typingTimeoutRef = useRef<NodeJS.Timeout>();
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  const startTyping = useCallback(() => {
+  const startTyping = useCallback((): void => {
+    // Clear any existing timeout first to avoid double scheduling
+    if (typingTimeoutRef.current !== null) {
+      clearTimeout(typingTimeoutRef.current);
+      typingTimeoutRef.current = null;
+    }
+
+    // Start typing if not already typing
     if (!isTyping) {
       setIsTyping(true);
-      chat.startTyping();
+      void chat.startTyping();
     }
 
-    // Clear existing timeout
-    if (typingTimeoutRef.current) {
-      clearTimeout(typingTimeoutRef.current);
-    }
-
-    // Set new timeout
+    // Set debounced stop timeout
     typingTimeoutRef.current = setTimeout(() => {
       setIsTyping(false);
-      chat.stopTyping();
-    }, 3000);
+      void chat.stopTyping();
+      typingTimeoutRef.current = null;
+    }, TYPING_DEBOUNCE_DELAY);
   }, [isTyping, chat]);
 
-  const stopTyping = useCallback(() => {
-    if (typingTimeoutRef.current) {
+  const stopTyping = useCallback((): void => {
+    if (typingTimeoutRef.current !== null) {
       clearTimeout(typingTimeoutRef.current);
+      typingTimeoutRef.current = null;
     }
     if (isTyping) {
       setIsTyping(false);
-      chat.stopTyping();
+      void chat.stopTyping();
     }
   }, [isTyping, chat]);
 
   // Cleanup on unmount
   useEffect(() => {
-    return () => {
-      if (typingTimeoutRef.current) {
+    return (): void => {
+      if (typingTimeoutRef.current !== null) {
         clearTimeout(typingTimeoutRef.current);
       }
     };
@@ -148,10 +163,13 @@ function useTypingIndicator(chat: ReturnType<typeof useChatV2>) {
   return { isTyping, startTyping, stopTyping };
 }
 
-export function ChatPanel({ conversationId, className }: ChatPanelProps) {
+export function ChatPanel({
+  conversationId,
+  className,
+}: ChatPanelProps): React.ReactElement {
   const { user } = useUser();
   const chat = useChatV2();
-  const { isTyping, startTyping, stopTyping } = useTypingIndicator(chat);
+  const { startTyping, stopTyping } = useTypingIndicator(chat);
 
   const [message, setMessage] = useState('');
   const [replyTarget, setReplyTarget] = useState<MessageWithSender | null>(
@@ -162,10 +180,18 @@ export function ChatPanel({ conversationId, className }: ChatPanelProps) {
 
   // Get conversation details and data
   const conversation = chat.activeConversation;
-  const rawMessages = chat.messages || [];
 
   // Efficient message deduplication using Set
   const messages = useMemo(() => {
+    const rawMessages = chat.messages;
+    if (
+      rawMessages === null ||
+      rawMessages === undefined ||
+      rawMessages.length === 0
+    ) {
+      return [];
+    }
+
     const seen = new Set<string>();
     return rawMessages.filter((message) => {
       if (seen.has(message.id)) {
@@ -174,23 +200,22 @@ export function ChatPanel({ conversationId, className }: ChatPanelProps) {
       seen.add(message.id);
       return true;
     });
-  }, [rawMessages]);
+  }, [chat.messages]);
 
   const isLoading = chat.isLoadingMessages;
   const { isLoadingConversations, isSendingMessage, error } = chat;
-  const typingUsers = chat.typingUsers || [];
 
   // Load initial conversation when conversationId changes
   // Using conversationId directly in deps to avoid function dependency issues
   useEffect(() => {
     if (conversationId && conversation?.id !== conversationId) {
-      console.log('Setting active conversation:', conversationId);
-      chat.setActiveConversation(conversationId);
+      void chat.setActiveConversation(conversationId);
     }
-  }, [conversationId, conversation?.id]); // Removed chat.setActiveConversation from deps
+  }, [conversationId, conversation?.id, chat]);
 
-  const handleSendMessage = useCallback(async () => {
-    if (!message.trim() || !conversation) return;
+  const handleSendMessage = useCallback(async (): Promise<void> => {
+    if (!message.trim() || conversation === null || conversation === undefined)
+      return;
 
     const trimmedMessage = message.trim();
     setMessage('');
@@ -219,10 +244,10 @@ export function ChatPanel({ conversationId, className }: ChatPanelProps) {
   }, [message, conversation, replyTarget, chat, stopTyping]);
 
   const handleKeyPress = useCallback(
-    (e: React.KeyboardEvent) => {
+    (e: React.KeyboardEvent): void => {
       if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
-        handleSendMessage();
+        void handleSendMessage();
       } else if (e.key === 'Escape' && replyTarget) {
         setReplyTarget(null);
       }
@@ -231,8 +256,8 @@ export function ChatPanel({ conversationId, className }: ChatPanelProps) {
   );
 
   const handleInputChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      const value = e.target.value;
+    (e: React.ChangeEvent<HTMLInputElement>): void => {
+      const { value } = e.target;
       setMessage(value);
 
       // Clear reply target on manual edit if send failed previously
@@ -249,41 +274,34 @@ export function ChatPanel({ conversationId, className }: ChatPanelProps) {
     [replyTarget, startTyping, stopTyping],
   );
 
-  const handleLoadMore = useCallback(() => {
+  const handleLoadMore = useCallback((): void => {
     if (chat.hasMoreMessages && !chat.isLoadingMessages) {
-      chat.loadMoreMessages();
+      void chat.loadMoreMessages();
     }
   }, [chat]);
 
-  const handleMessageInView = useCallback(
-    (messageId: string) => {
-      // Mark message as read when it comes into view
-      const messageItem = messages.find(
-        (m: MessageWithSender) => m.id === messageId,
-      );
-      if (messageItem && conversation) {
-        console.log('Message in view:', messageId);
-      }
-    },
-    [messages, conversation],
-  );
-
-  const handleReply = useCallback((msg: MessageWithSender) => {
-    setReplyTarget(msg);
-    inputRef.current?.focus();
+  const handleMessageInView = useCallback((messageId: string): void => {
+    // Mark message as read when it comes into view
+    // TODO: Implement message tracking logic when message comes into view
+    // This would typically mark the message as read and update read receipts
+    void messageId; // Acknowledge parameter to avoid unused parameter warning
   }, []);
 
-  const clearReply = useCallback(() => {
+  const clearReply = useCallback((): void => {
     setReplyTarget(null);
     inputRef.current?.focus();
   }, []);
 
-  const handleRetry = useCallback(() => {
+  const handleRetry = useCallback((): void => {
     chat.clearError();
   }, [chat]);
 
+  const handleSendClick = useCallback((): void => {
+    void handleSendMessage();
+  }, [handleSendMessage]);
+
   // Error display
-  if (error) {
+  if (error !== null && error !== undefined) {
     return (
       <div className={className}>
         <ErrorState error={error} onRetry={handleRetry} />
@@ -309,11 +327,11 @@ export function ChatPanel({ conversationId, className }: ChatPanelProps) {
   }
 
   return (
-    <div className={`flex flex-col h-full ${className}`}>
+    <div className={`flex flex-col h-full ${className ?? ''}`}>
       {/* Messages - Only Virtual List */}
       <VirtualMessageList
         messages={messages}
-        currentUserId={user?.id || ''}
+        currentUserId={user?.id ?? ''}
         conversationId={conversationId}
         onLoadMore={handleLoadMore}
         hasMore={chat.hasMoreMessages}
@@ -330,8 +348,8 @@ export function ChatPanel({ conversationId, className }: ChatPanelProps) {
               <p className="text-xs text-muted-foreground">
                 Replying to{' '}
                 <span className="font-medium">
-                  {replyTarget.sender?.username ||
-                    replyTarget.sender?.full_name ||
+                  {replyTarget.sender?.username ??
+                    replyTarget.sender?.full_name ??
                     'Unknown'}
                 </span>
               </p>
@@ -359,7 +377,7 @@ export function ChatPanel({ conversationId, className }: ChatPanelProps) {
               onKeyDown={handleKeyPress}
               placeholder={
                 replyTarget
-                  ? `Reply to ${replyTarget.sender?.username || 'message'}...`
+                  ? `Reply to ${replyTarget.sender?.username ?? 'message'}...`
                   : 'Type a message...'
               }
               className="flex-1"
@@ -367,7 +385,7 @@ export function ChatPanel({ conversationId, className }: ChatPanelProps) {
               aria-label="Message input"
             />
             <Button
-              onClick={handleSendMessage}
+              onClick={handleSendClick}
               disabled={!message.trim() || isSendingMessage}
               size="icon"
               aria-label="Send message"

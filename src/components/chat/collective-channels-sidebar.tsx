@@ -2,7 +2,13 @@
 
 import { useQuery } from '@tanstack/react-query';
 import Image from 'next/image';
-import { type ReactElement } from 'react';
+import { type ReactElement, useState, useMemo, useCallback } from 'react';
+
+import { Input } from '@/components/ui/input';
+import { useDebounce } from '@/hooks/useDebounce';
+
+// Constants
+const SEARCH_DEBOUNCE_MS = 300;
 
 interface Collective {
   id: string;
@@ -50,6 +56,11 @@ export function CollectiveChannelsSidebar({
   onSelectChannel,
   className: _className,
 }: CollectiveChannelsSidebarProps): ReactElement {
+  const [searchTerm, setSearchTerm] = useState('');
+
+  // Debounce search term to avoid excessive filtering on every keystroke
+  const debouncedSearchTerm = useDebounce(searchTerm, SEARCH_DEBOUNCE_MS);
+
   const selectedCollective =
     collectiveId !== null
       ? collectives.find((c) => c.id === collectiveId)
@@ -80,22 +91,60 @@ export function CollectiveChannelsSidebar({
     enabled: collectiveId === null,
   });
 
-  const handleChannelSelect = (channel: Channel): void => {
-    onSelectChannel({
-      id: channel.id,
-      title: channel.title,
-      type: channel.type ?? 'channel',
-    });
-  };
+  // Filter channels based on search term with proper memoization dependencies
+  const filteredChannels = useMemo(() => {
+    if (!debouncedSearchTerm.trim()) return channels;
 
-  const handleDMSelect = (dm: DMConversation): void => {
-    const displayName = dm.user.full_name ?? dm.user.username ?? 'Unknown User';
-    onSelectChannel({
-      id: dm.id,
-      title: displayName,
-      type: 'direct',
+    const searchLower = debouncedSearchTerm.toLowerCase();
+    return channels.filter((channel) => {
+      if (channel.title === null || channel.title === undefined) {
+        return false;
+      }
+      return channel.title.toLowerCase().includes(searchLower);
     });
-  };
+  }, [channels, debouncedSearchTerm]); // Fixed: Added debouncedSearchTerm to dependencies
+
+  // Filter DMs based on search term with proper memoization dependencies
+  const filteredDMs = useMemo(() => {
+    if (!debouncedSearchTerm.trim()) return dms;
+
+    const searchLower = debouncedSearchTerm.toLowerCase();
+    return dms.filter((dm) => {
+      const fullName = dm.user.full_name?.toLowerCase() ?? '';
+      const username = dm.user.username?.toLowerCase() ?? '';
+      return fullName.includes(searchLower) || username.includes(searchLower);
+    });
+  }, [dms, debouncedSearchTerm]); // Fixed: Added debouncedSearchTerm to dependencies
+
+  const handleChannelClick = useCallback(
+    (channelId: string) => (): void => {
+      const channel = channels.find((ch) => ch.id === channelId);
+      if (channel) {
+        onSelectChannel({
+          id: channel.id,
+          title: channel.title,
+          type: channel.type ?? 'channel',
+        });
+      }
+    },
+    [channels, onSelectChannel],
+  );
+
+  const handleDMClick = useCallback(
+    (dmId: string) => (): void => {
+      const dm = dms.find((d) => d.id === dmId);
+      if (dm) {
+        const displayName =
+          dm.user.full_name ?? dm.user.username ?? 'Unknown User';
+        onSelectChannel({
+          id: dm.id,
+          title: displayName,
+          type: 'direct',
+        });
+      }
+    },
+    [dms, onSelectChannel],
+  );
 
   const getAvatarFallback = (user: {
     username: string | null;
@@ -127,13 +176,12 @@ export function CollectiveChannelsSidebar({
     return name.length > 0 ? name[0].toUpperCase() : 'C';
   };
 
-  const handleChannelClick = (channel: Channel) => (): void => {
-    handleChannelSelect(channel);
-  };
-
-  const handleDMClick = (dm: DMConversation) => (): void => {
-    handleDMSelect(dm);
-  };
+  const handleSearchChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>): void => {
+      setSearchTerm(e.target.value);
+    },
+    [],
+  );
 
   return (
     <div className="flex flex-col h-full w-64 bg-muted/20 border-r border-border/40">
@@ -162,7 +210,8 @@ export function CollectiveChannelsSidebar({
                 {selectedCollective.name}
               </h2>
               <p className="text-xs text-muted-foreground">
-                {channels.length} channel{channels.length !== 1 ? 's' : ''}
+                {filteredChannels.length} channel
+                {filteredChannels.length !== 1 ? 's' : ''}
               </p>
             </div>
           </div>
@@ -182,11 +231,27 @@ export function CollectiveChannelsSidebar({
             <div className="flex-1 min-w-0">
               <h2 className="font-bold text-lg">Direct Messages</h2>
               <p className="text-xs text-muted-foreground">
-                {dms.length} conversation{dms.length !== 1 ? 's' : ''}
+                {filteredDMs.length} conversation
+                {filteredDMs.length !== 1 ? 's' : ''}
               </p>
             </div>
           </div>
         )}
+
+        {/* Search Input */}
+        <div className="mt-3">
+          <Input
+            type="text"
+            placeholder={
+              selectedCollective
+                ? 'Search channels...'
+                : 'Search users or conversations...'
+            }
+            value={searchTerm}
+            onChange={handleSearchChange}
+            className="h-8 text-sm"
+          />
+        </div>
       </div>
 
       {/* Content */}
@@ -210,12 +275,12 @@ export function CollectiveChannelsSidebar({
                 </button>
               </div>
 
-              {channels.length > 0 ? (
+              {filteredChannels.length > 0 ? (
                 <div className="space-y-0.5">
-                  {channels.map((channel) => (
+                  {filteredChannels.map((channel) => (
                     <button
                       key={channel.id}
-                      onClick={handleChannelClick(channel)}
+                      onClick={handleChannelClick(channel.id)}
                       className={`w-full flex items-center gap-2 px-2 py-1.5 rounded text-sm transition-colors ${
                         selectedChannelId === channel.id
                           ? 'bg-muted text-foreground font-medium'
@@ -257,7 +322,9 @@ export function CollectiveChannelsSidebar({
                         d="M7 8h10m0 0V6a2 2 0 00-2-2H9a2 2 0 00-2 2v2m10 0v10a2 2 0 01-2 2H9a2 2 0 01-2-2V8m10 0H7"
                       />
                     </svg>
-                    <p className="text-sm">No channels yet</p>
+                    <p className="text-sm">
+                      {searchTerm ? 'No channels found' : 'No channels yet'}
+                    </p>
                   </div>
                 </div>
               )}
@@ -281,12 +348,12 @@ export function CollectiveChannelsSidebar({
               </button>
             </div>
 
-            {dms.length > 0 ? (
+            {filteredDMs.length > 0 ? (
               <div className="space-y-0.5">
-                {dms.map((dm) => (
+                {filteredDMs.map((dm) => (
                   <button
                     key={dm.id}
-                    onClick={handleDMClick(dm)}
+                    onClick={handleDMClick(dm.id)}
                     className={`w-full flex items-center gap-3 px-2 py-2 rounded text-sm transition-colors ${
                       selectedChannelId === dm.id
                         ? 'bg-muted text-foreground'
@@ -337,7 +404,11 @@ export function CollectiveChannelsSidebar({
                       d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
                     />
                   </svg>
-                  <p className="text-sm">No conversations yet</p>
+                  <p className="text-sm">
+                    {searchTerm
+                      ? 'No conversations found'
+                      : 'No conversations yet'}
+                  </p>
                 </div>
               </div>
             )}

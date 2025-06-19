@@ -6,16 +6,32 @@
 import supabase from '@/lib/supabase/browser';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 
+// Cache for participation checks to avoid duplicate queries
+const participationCache = new Map<string, boolean>();
+const CACHE_TTL_MS = 60000; // 1 minute cache
+const cacheTimestamps = new Map<string, number>();
+
 export class ChatSecurity {
   private supabase = supabase;
 
   /**
-   * Check if user is a participant in a conversation
+   * Check if user is a participant in a conversation (with caching)
    */
   async isParticipant(conversationId: string, userId?: string): Promise<boolean> {
     try {
       const currentUser = userId ?? (await this.getCurrentUserId());
       if (typeof currentUser !== 'string' || currentUser === '') return false;
+
+      const cacheKey = `${conversationId}:${currentUser}`;
+      const now = Date.now();
+      
+      // Check cache first
+      if (participationCache.has(cacheKey)) {
+        const timestamp = cacheTimestamps.get(cacheKey) ?? 0;
+        if (now - timestamp < CACHE_TTL_MS) {
+          return participationCache.get(cacheKey) ?? false;
+        }
+      }
 
       const { data, error } = await this.supabase
         .from('conversation_participants')
@@ -24,9 +40,49 @@ export class ChatSecurity {
         .eq('user_id', currentUser)
         .single();
 
-      return !error && Boolean(data);
+      const isParticipant = !error && Boolean(data);
+      
+      // Update cache
+      participationCache.set(cacheKey, isParticipant);
+      cacheTimestamps.set(cacheKey, now);
+
+      return isParticipant;
     } catch {
       return false;
+    }
+  }
+
+  /**
+   * Combined check for both viewing and sending permissions
+   * This eliminates duplicate participation queries
+   */
+  async getConversationPermissions(conversationId: string, userId?: string): Promise<{
+    canView: boolean;
+    canSend: boolean;
+    isAdmin: boolean;
+  }> {
+    try {
+      const currentUser = userId ?? (await this.getCurrentUserId());
+      if (typeof currentUser !== 'string' || currentUser === '') {
+        return { canView: false, canSend: false, isAdmin: false };
+      }
+
+      const { data, error } = await this.supabase
+        .from('conversation_participants')
+        .select('role')
+        .eq('conversation_id', conversationId)
+        .eq('user_id', currentUser)
+        .single();
+
+      if (error !== null || data === null || data === undefined) {
+        return { canView: false, canSend: false, isAdmin: false };
+      }
+
+      const isAdmin = data.role === 'admin';
+      // Participants can both view and send messages
+      return { canView: true, canSend: true, isAdmin };
+    } catch {
+      return { canView: false, canSend: false, isAdmin: false };
     }
   }
 
@@ -34,36 +90,24 @@ export class ChatSecurity {
    * Check if user is an admin of a conversation
    */
   async isConversationAdmin(conversationId: string, userId?: string | null): Promise<boolean> {
-    try {
-      const currentUser = userId ?? (await this.getCurrentUserId());
-      if (typeof currentUser !== 'string' || currentUser === '') return false;
-
-      const { data, error } = await this.supabase
-        .from('conversation_participants')
-        .select('role')
-        .eq('conversation_id', conversationId)
-        .eq('user_id', currentUser)
-        .eq('role', 'admin')
-        .single();
-
-      return !error && Boolean(data);
-    } catch {
-      return false;
-    }
+    const permissions = await this.getConversationPermissions(conversationId, userId ?? undefined);
+    return permissions.isAdmin;
   }
 
   /**
    * Check if user can send messages to a conversation
    */
-  canSendMessage(conversationId: string, userId?: string): Promise<boolean> {
-    return this.isParticipant(conversationId, userId);
+  async canSendMessage(conversationId: string, userId?: string): Promise<boolean> {
+    const permissions = await this.getConversationPermissions(conversationId, userId);
+    return permissions.canSend;
   }
 
   /**
    * Check if user can view a conversation
    */
-  canViewConversation(conversationId: string, userId?: string): Promise<boolean> {
-    return this.isParticipant(conversationId, userId);
+  async canViewConversation(conversationId: string, userId?: string): Promise<boolean> {
+    const permissions = await this.getConversationPermissions(conversationId, userId);
+    return permissions.canView;
   }
 
   /**
@@ -168,6 +212,22 @@ export class ChatSecurity {
   }
 
   /**
+   * Clear cached permissions for a conversation
+   */
+  clearCache(conversationId?: string, userId?: string): void {
+    if (conversationId !== undefined && conversationId !== null && conversationId !== '' && 
+        userId !== undefined && userId !== null && userId !== '') {
+      const cacheKey = `${conversationId}:${userId}`;
+      participationCache.delete(cacheKey);
+      cacheTimestamps.delete(cacheKey);
+    } else {
+      // Clear all cache
+      participationCache.clear();
+      cacheTimestamps.clear();
+    }
+  }
+
+  /**
    * Get current authenticated user ID
    */
   private async getCurrentUserId(): Promise<string | undefined> {
@@ -229,6 +289,38 @@ export class ServerChatSecurity {
       return !error && Boolean(data);
     } catch {
       return false;
+    }
+  }
+
+  /**
+   * Combined permissions check for server-side use
+   */
+  async getConversationPermissions(conversationId: string, userId?: string): Promise<{
+    canView: boolean;
+    canSend: boolean;
+    isAdmin: boolean;
+  }> {
+    try {
+      const currentUser = userId ?? (await this.getCurrentUserId());
+      if (typeof currentUser !== 'string' || currentUser === '') {
+        return { canView: false, canSend: false, isAdmin: false };
+      }
+
+      const { data, error } = await this.supabase
+        .from('conversation_participants')
+        .select('role')
+        .eq('conversation_id', conversationId)
+        .eq('user_id', currentUser)
+        .single();
+
+      if (error !== null || data === null || data === undefined) {
+        return { canView: false, canSend: false, isAdmin: false };
+      }
+
+      const isAdmin = data.role === 'admin';
+      return { canView: true, canSend: true, isAdmin };
+    } catch {
+      return { canView: false, canSend: false, isAdmin: false };
     }
   }
 

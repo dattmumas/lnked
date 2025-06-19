@@ -13,6 +13,9 @@ import {
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
+import { MessageEditForm } from './message-edit-form';
+
+import type { OptimisticMessage } from '@/hooks/useOptimisticMessages';
 import type { MessageWithSender as Message } from '@/lib/chat/types';
 
 // Constants to avoid magic numbers
@@ -26,7 +29,6 @@ const MESSAGE_GROUP_TIME_THRESHOLD_MS =
 const CONTENT_PREVIEW_LENGTH = 50;
 const AVATAR_SIZE = 32;
 const THUMBNAIL_SIZE = 80;
-const EDIT_FORM_ROWS = 3;
 
 // Type definitions for message metadata
 interface EmbedMetadata {
@@ -67,12 +69,11 @@ interface ReactionCount {
 interface MessageRowProps {
   index: number;
   style: CSSProperties;
-  message: Message;
+  message: Message | OptimisticMessage;
   previousMessage?: Message | null;
   lastReadAt: string | null;
   user: User | null;
   editingId: string | null;
-  editText: string;
   reactions: ReactionCount[];
   onStartEdit: (msg: Message) => void;
   onDelete: (messageId: string) => void;
@@ -80,9 +81,9 @@ interface MessageRowProps {
   onAddReaction: (messageId: string, emoji: string) => void;
   onRemoveReaction: (messageId: string, emoji: string) => void;
   onEmojiPicker: (messageId: string) => void;
-  onEditTextChange: (text: string) => void;
   onSaveEdit: (messageId: string, content: string) => void;
   onCancelEdit: () => void;
+  onRetryMessage?: (tempId: string) => void;
   formatFileSize: (bytes: number) => string;
   setItemSize?: (index: number, size: number) => void;
 }
@@ -445,7 +446,6 @@ export const MessageRow = memo<MessageRowProps>(
     lastReadAt,
     user,
     editingId,
-    editText,
     reactions,
     onStartEdit,
     onDelete,
@@ -453,14 +453,13 @@ export const MessageRow = memo<MessageRowProps>(
     onAddReaction,
     onRemoveReaction,
     onEmojiPicker,
-    onEditTextChange,
     onSaveEdit,
     onCancelEdit,
+    onRetryMessage,
     formatFileSize,
     setItemSize,
   }): React.JSX.Element => {
     const rowRef = useRef<HTMLDivElement>(null);
-    const textareaRef = useRef<HTMLTextAreaElement>(null);
 
     // Use ResizeObserver for better performance
     useResizeObserver(rowRef, index, setItemSize);
@@ -468,30 +467,12 @@ export const MessageRow = memo<MessageRowProps>(
     // Memoized grouping logic
     const isNewGroup = useMessageGrouping(message, previousMessage);
 
-    // Auto-focus textarea when editing starts
-    useEffect(() => {
-      if (editingId === message.id && textareaRef.current !== null) {
-        textareaRef.current.focus();
-      }
-    }, [editingId, message.id]);
-
-    // Memoized handlers
-    const handleEditSubmit = useCallback(
-      (e: React.FormEvent): void => {
-        e.preventDefault();
-        onSaveEdit(message.id, editText);
-      },
-      [message.id, editText, onSaveEdit],
-    );
-
-    const handleEditKeyDown = useCallback(
-      (e: React.KeyboardEvent): void => {
-        if (e.key === 'Escape') {
-          onCancelEdit();
-        }
-      },
-      [onCancelEdit],
-    );
+    // Check if this is an optimistic message
+    const optimisticMessage = message as OptimisticMessage;
+    const isOptimistic = optimisticMessage.isOptimistic === true;
+    const sendStatus = optimisticMessage.sendStatus || 'sent';
+    const isFailed = sendStatus === 'failed';
+    const isSending = sendStatus === 'sending';
 
     const handleImageClick = useCallback((url: string): void => {
       window.open(url, '_blank');
@@ -513,12 +494,16 @@ export const MessageRow = memo<MessageRowProps>(
       onEmojiPicker(message.id);
     }, [onEmojiPicker, message.id]);
 
-    const handleEditTextChange = useCallback(
-      (e: React.ChangeEvent<HTMLTextAreaElement>): void => {
-        onEditTextChange(e.target.value);
-      },
-      [onEditTextChange],
-    );
+    const handleRetry = useCallback((): void => {
+      if (
+        optimisticMessage.tempId !== undefined &&
+        optimisticMessage.tempId !== null &&
+        optimisticMessage.tempId !== '' &&
+        onRetryMessage !== undefined
+      ) {
+        onRetryMessage(optimisticMessage.tempId);
+      }
+    }, [optimisticMessage.tempId, onRetryMessage]);
 
     // Memoized computed values
     const isDeleted = Boolean(message.deleted_at);
@@ -620,43 +605,19 @@ export const MessageRow = memo<MessageRowProps>(
                 This message was deleted
               </em>
             ) : isEditing ? (
-              // Edit mode
-              <form onSubmit={handleEditSubmit} className="flex flex-col gap-2">
-                <label
-                  htmlFor={`edit-message-${message.id}`}
-                  className="sr-only"
-                >
-                  Edit message
-                </label>
-                <textarea
-                  ref={textareaRef}
-                  id={`edit-message-${message.id}`}
-                  value={editText}
-                  onChange={handleEditTextChange}
-                  className="w-full p-2 text-sm bg-muted rounded-md focus:outline-none focus:ring-2 focus:ring-primary resize-none"
-                  rows={EDIT_FORM_ROWS}
-                  onKeyDown={handleEditKeyDown}
-                  aria-live="polite"
-                />
-                <div className="flex gap-2">
-                  <button
-                    type="submit"
-                    className="text-sm bg-primary text-primary-foreground px-4 py-1.5 rounded-md hover:bg-primary/90 transition-colors font-medium"
-                    disabled={!editText.trim()}
-                  >
-                    Save
-                  </button>
-                  <button
-                    type="button"
-                    onClick={onCancelEdit}
-                    className="text-sm text-muted-foreground px-4 py-1.5 rounded-md hover:bg-muted transition-colors"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </form>
+              // Edit mode with isolated form component
+              <MessageEditForm
+                messageId={message.id}
+                initialContent={message.content ?? ''}
+                onSave={onSaveEdit}
+                onCancel={onCancelEdit}
+              />
             ) : (
-              <div className="prose prose-sm dark:prose-invert break-words max-w-none">
+              <div
+                className={`prose prose-sm dark:prose-invert break-words max-w-none ${
+                  isFailed ? 'opacity-60' : isSending ? 'opacity-80' : ''
+                }`}
+              >
                 <ReactMarkdown
                   remarkPlugins={[remarkGfm]}
                   components={{
@@ -668,11 +629,30 @@ export const MessageRow = memo<MessageRowProps>(
                 >
                   {message.content ?? ''}
                 </ReactMarkdown>
-                {isEdited && (
-                  <span className="text-xs text-muted-foreground ml-1">
-                    (edited)
-                  </span>
-                )}
+
+                {/* Message status indicators */}
+                <div className="flex items-center gap-2 mt-1">
+                  {isEdited && !isOptimistic && (
+                    <span className="text-xs text-muted-foreground">
+                      (edited)
+                    </span>
+                  )}
+                  {isSending && (
+                    <span className="text-xs text-muted-foreground flex items-center gap-1">
+                      <div className="w-3 h-3 animate-spin rounded-full border border-current border-t-transparent" />
+                      Sending...
+                    </span>
+                  )}
+                  {isFailed && (
+                    <button
+                      onClick={handleRetry}
+                      className="text-xs text-destructive hover:text-destructive/80 flex items-center gap-1 transition-colors"
+                      title="Click to retry sending"
+                    >
+                      ⚠️ Failed to send - Click to retry
+                    </button>
+                  )}
+                </div>
               </div>
             )}
 
@@ -797,7 +777,7 @@ interface LegacyMessageRowProps {
   index: number;
   style: CSSProperties;
   data: {
-    messages: Message[];
+    messages: (Message | OptimisticMessage)[];
     lastReadAt: string | null;
     user: User | null;
     onStartEdit: (msg: Message) => void;
@@ -807,11 +787,12 @@ interface LegacyMessageRowProps {
     onRemoveReaction: (messageId: string, emoji: string) => void;
     onEmojiPicker: (messageId: string) => void;
     editingId: string | null;
-    editText: string;
-    onEditTextChange: (text: string) => void;
     onSaveEdit: (messageId: string, content: string) => void;
     onCancelEdit: () => void;
-    getReactionCounts: (message: Message) => ReactionCount[];
+    onRetryMessage?: (tempId: string) => void;
+    getReactionCounts: (
+      message: Message | OptimisticMessage,
+    ) => ReactionCount[];
     formatFileSize: (bytes: number) => string;
     setItemSize?: (index: number, size: number) => void;
   };
@@ -831,10 +812,9 @@ export const MessageRowLegacy = memo<LegacyMessageRowProps>(
       onRemoveReaction,
       onEmojiPicker,
       editingId,
-      editText,
-      onEditTextChange,
       onSaveEdit,
       onCancelEdit,
+      onRetryMessage,
       getReactionCounts,
       formatFileSize,
       setItemSize,
@@ -864,7 +844,6 @@ export const MessageRowLegacy = memo<LegacyMessageRowProps>(
         lastReadAt={lastReadAt}
         user={user}
         editingId={editingId}
-        editText={editText}
         reactions={reactions}
         onStartEdit={onStartEdit}
         onDelete={onDelete}
@@ -872,9 +851,9 @@ export const MessageRowLegacy = memo<LegacyMessageRowProps>(
         onAddReaction={onAddReaction}
         onRemoveReaction={onRemoveReaction}
         onEmojiPicker={onEmojiPicker}
-        onEditTextChange={onEditTextChange}
         onSaveEdit={onSaveEdit}
         onCancelEdit={onCancelEdit}
+        onRetryMessage={onRetryMessage}
         formatFileSize={formatFileSize}
         setItemSize={setItemSize}
       />

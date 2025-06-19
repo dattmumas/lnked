@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useCallback } from 'react';
+import React, { useCallback } from 'react';
 
 import VideoUploadWizard from './VideoUploadWizard';
 
@@ -11,18 +11,18 @@ interface VideoUploadPageClientProps {
 
 export default function VideoUploadPageClient({
   collectiveId,
-}: VideoUploadPageClientProps) {
+}: VideoUploadPageClientProps): React.ReactElement {
   const router = useRouter();
 
   const handleComplete = useCallback(
-    (videoId: string) => {
+    (videoId: string): void => {
       // Redirect to the video page after successful upload
       void router.push(`/videos/${videoId}`);
     },
     [router],
   );
 
-  const handleCancel = useCallback(() => {
+  const handleCancel = useCallback((): void => {
     // Go back to the previous page or home
     router.back();
   }, [router]);

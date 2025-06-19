@@ -1,6 +1,7 @@
 'use client';
 
 import MuxPlayer from '@mux/mux-player-react';
+import React from 'react';
 
 export interface MuxVideoPlayerSimpleProps {
   playbackId: string;
@@ -16,7 +17,7 @@ export default function MuxVideoPlayerSimple({
   className = '',
   viewerId,
   viewerEmail,
-}: MuxVideoPlayerSimpleProps) {
+}: MuxVideoPlayerSimpleProps): React.ReactElement {
   // Get Mux Data environment key from environment variable
   const muxDataEnvKey = process.env.NEXT_PUBLIC_MUX_DATA_ENV_KEY;
 
@@ -26,8 +27,12 @@ export default function MuxVideoPlayerSimple({
       metadata={{
         video_title: title,
         // Add viewer metadata if provided
-        ...(viewerId && { viewer_user_id: viewerId }),
-        ...(viewerEmail && { viewer_user_email: viewerEmail }),
+        ...(viewerId !== undefined &&
+          viewerId !== null &&
+          viewerId.length > 0 && { viewer_user_id: viewerId }),
+        ...(viewerEmail !== undefined &&
+          viewerEmail !== null &&
+          viewerEmail.length > 0 && { viewer_user_email: viewerEmail }),
       }}
       // Enable Mux Data analytics if environment key is configured
       envKey={muxDataEnvKey}

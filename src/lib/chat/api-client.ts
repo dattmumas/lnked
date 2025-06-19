@@ -1,5 +1,7 @@
 'use client';
 
+import { API_ROUTES } from '@/lib/constants/api-routes';
+
 import type { MessageWithSender } from './types';
 import type { Database } from '@/lib/database.types';
 
@@ -33,7 +35,7 @@ export class ChatApiClient {
    * Fetch user's conversations with unread counts and participants
    */
   async getConversations(): Promise<{ conversations: ConversationWithDetails[] }> {
-    const response = await fetch('/api/chat/conversations', {
+    const response = await fetch(API_ROUTES.CHAT_CONVERSATIONS, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
@@ -64,7 +66,7 @@ export class ChatApiClient {
     }
 
     const response = await fetch(
-      `/api/chat/${conversationId}/messages?${params.toString()}`,
+      `${API_ROUTES.CHAT_CONVERSATION_MESSAGES(conversationId)}?${params.toString()}`,
       {
         method: 'GET',
         headers: {
@@ -91,7 +93,7 @@ export class ChatApiClient {
     reply_to_id?: string;
     metadata?: Record<string, unknown>;
   }): Promise<MessageWithSender> {
-    const response = await fetch(`/api/chat/${params.conversation_id}/message`, {
+    const response = await fetch(API_ROUTES.CHAT_CONVERSATION_MESSAGE(params.conversation_id), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -120,7 +122,7 @@ export class ChatApiClient {
     last_read_at: string;
     unread_count: number;
   }> {
-    const response = await fetch(`/api/chat/${conversationId}/read`, {
+    const response = await fetch(API_ROUTES.CHAT_CONVERSATION_READ(conversationId), {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
@@ -149,7 +151,7 @@ export class ChatApiClient {
     is_private?: boolean;
     participant_ids: string[];
   }): Promise<Database['public']['Tables']['conversations']['Row']> {
-    const response = await fetch('/api/chat/conversations', {
+    const response = await fetch(API_ROUTES.CHAT_CONVERSATIONS, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -177,7 +179,7 @@ export class ChatApiClient {
       params.append('conversationId', conversationId);
     }
 
-    const response = await fetch(`/api/chat/search?${params.toString()}`, {
+    const response = await fetch(`${API_ROUTES.CHAT_SEARCH}?${params.toString()}`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
@@ -196,7 +198,7 @@ export class ChatApiClient {
    * Add a reaction to a message
    */
   async addReaction(messageId: string, emoji: string): Promise<void> {
-    const response = await fetch(`/api/chat/messages/${messageId}/reactions`, {
+    const response = await fetch(API_ROUTES.CHAT_MESSAGE_REACTIONS(messageId), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -214,7 +216,7 @@ export class ChatApiClient {
    * Remove a reaction from a message
    */
   async removeReaction(messageId: string, emoji: string): Promise<void> {
-    const response = await fetch(`/api/chat/messages/${messageId}/reactions`, {
+    const response = await fetch(API_ROUTES.CHAT_MESSAGE_REACTIONS(messageId), {
       method: 'DELETE',
       headers: {
         'Content-Type': 'application/json',

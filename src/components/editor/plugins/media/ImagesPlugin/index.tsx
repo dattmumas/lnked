@@ -8,7 +8,6 @@
  *
  */
 
-
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
 import { $wrapNodeInElement, mergeRegister } from '@lexical/utils';
 import {
@@ -154,7 +153,7 @@ export function InsertImageDialog({
   const [mode, setMode] = useState<null | 'url' | 'file'>(null);
   const hasModifier = useRef(false);
 
-  useEffect((): void => {
+  useEffect(() => {
     hasModifier.current = false;
     const handler = (e: KeyboardEvent) => {
       hasModifier.current = e.altKey;
@@ -226,7 +225,7 @@ export default function ImagesPlugin({
 }): JSX.Element | null {
   const [editor] = useLexicalComposerContext();
 
-  useEffect((): void => {
+  useEffect(() => {
     if (!editor.hasNodes([ImageNode])) {
       throw new Error('ImagesPlugin: ImageNode not registered on editor');
     }
@@ -282,7 +281,7 @@ function $onDragStart(event: DragEvent): boolean {
   if (!node) {
     return false;
   }
-  const {dataTransfer} = event;
+  const { dataTransfer } = event;
   if (!dataTransfer) {
     return false;
   }
@@ -373,11 +372,13 @@ declare global {
 }
 
 function canDropImage(event: DragEvent): boolean {
-  const {target} = event;
-  return Boolean(isHTMLElement(target) &&
-    !target.closest('code, span.editor-image') &&
-    isHTMLElement(target.parentElement) &&
-    target.parentElement.closest('div.ContentEditable__root'));
+  const { target } = event;
+  return Boolean(
+    isHTMLElement(target) &&
+      !target.closest('code, span.editor-image') &&
+      isHTMLElement(target.parentElement) &&
+      target.parentElement.closest('div.ContentEditable__root'),
+  );
 }
 
 function getDragSelection(event: DragEvent): Range | null | undefined {
