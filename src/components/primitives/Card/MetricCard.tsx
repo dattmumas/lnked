@@ -41,7 +41,7 @@ export const MetricCard = React.forwardRef<HTMLDivElement, MetricCardProps>(
     { value, label, trend, icon, loading = false, className, ...props },
     ref,
   ) => {
-    const getTrendColor = (direction: 'up' | 'down' | 'neutral') => {
+    const getTrendColor = (direction: 'up' | 'down' | 'neutral'): string => {
       switch (direction) {
         case 'up':
           return 'text-green-600 dark:text-green-400';
@@ -54,7 +54,7 @@ export const MetricCard = React.forwardRef<HTMLDivElement, MetricCardProps>(
       }
     };
 
-    const getTrendIcon = (direction: 'up' | 'down' | 'neutral') => {
+    const getTrendIcon = (direction: 'up' | 'down' | 'neutral'): string => {
       switch (direction) {
         case 'up':
           return '↗';
@@ -75,7 +75,7 @@ export const MetricCard = React.forwardRef<HTMLDivElement, MetricCardProps>(
           size="md"
           {...props}
         >
-          {icon && (
+          {Boolean(icon) && (
             <div className="flex justify-center mb-3">
               <div className="w-5 h-5 bg-muted rounded" />
             </div>
@@ -94,7 +94,7 @@ export const MetricCard = React.forwardRef<HTMLDivElement, MetricCardProps>(
         interactive
         {...props}
       >
-        {icon && (
+        {Boolean(icon) && (
           <div className="flex justify-center mb-3 text-content-accent">
             {icon}
           </div>
@@ -115,7 +115,7 @@ export const MetricCard = React.forwardRef<HTMLDivElement, MetricCardProps>(
           >
             <span className="text-xs">{getTrendIcon(trend.direction)}</span>
             <span>{trend.value}</span>
-            {trend.label && (
+            {Boolean(trend.label) && (
               <span className="text-content-secondary">({trend.label})</span>
             )}
           </div>

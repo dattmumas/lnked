@@ -10,7 +10,7 @@ import {
   useCollectiveData,
   useCollectiveStats,
 } from '@/hooks/collectives/useCollectiveData';
-import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
+import supabase from '@/lib/supabase/browser';
 
 interface CollectiveHeroProps {
   collectiveSlug: string;
@@ -26,10 +26,10 @@ export function CollectiveHero({ collectiveSlug }: CollectiveHeroProps) {
 
   useEffect((): void => {
     const fetchUser = async () => {
-      const supabase = createSupabaseBrowserClient();
+      const client = supabase;
       const {
         data: { user },
-      } = await supabase.auth.getUser();
+      } = await client.auth.getUser();
       setCurrentUser(user);
       setIsLoadingUser(false);
     };

@@ -11,6 +11,7 @@ import { ContrastEnhancer } from '@/components/ContrastEnhancer';
 import { Source_Serif_4, Inter } from 'next/font/google';
 
 import { QueryProvider } from '@/components/providers/query-provider';
+import { ToastContainer } from '@/components/ui/toast';
 
 import clsx from 'clsx';
 
@@ -98,6 +99,9 @@ export default async function RootLayout({
                 </main>
               </div>
             </div>
+
+            {/* Global toast notifications */}
+            <ToastContainer />
           </ThemeProvider>
         </QueryProvider>
       </body>

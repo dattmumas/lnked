@@ -53,8 +53,9 @@ export default async function Page({
         <p className="text-muted-foreground">No followers yet.</p>
       ) : (
         <ul className="space-y-4">
-          {followers.map((f) =>
-            f.follower ? (
+          {followers
+            .filter((f) => f.follower)
+            .map((f) => (
               <li key={f.follower.id} className="flex items-center gap-3">
                 {f.follower.avatar_url && (
                   <Image
@@ -69,8 +70,7 @@ export default async function Page({
                   {f.follower.full_name ?? 'User'}
                 </span>
               </li>
-            ) : null,
-          )}
+            ))}
         </ul>
       )}
     </div>

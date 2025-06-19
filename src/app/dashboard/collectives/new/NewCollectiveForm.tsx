@@ -1,9 +1,9 @@
-"use client";
+'use client';
 
-import { useRouter } from "next/navigation";
-import { useState, useTransition, FormEvent } from "react";
+import { useRouter } from 'next/navigation';
+import { useState, useTransition, FormEvent } from 'react';
 
-import { Button } from "@/components/ui/button";
+import { Button } from '@/components/ui/button';
 import {
   Card,
   CardContent,
@@ -11,12 +11,12 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+} from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 
-import { createCollective } from "./_actions"; // Server action
+import { createCollective } from './_actions'; // Server action
 
 export interface CreateCollectiveFormState {
   message: string;
@@ -24,22 +24,22 @@ export interface CreateCollectiveFormState {
   issues?: string[];
 }
 
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "";
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || '';
 
 export default function NewCollectivePage() {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
-  const [name, setName] = useState("");
-  const [slug, setSlug] = useState("");
-  const [description, setDescription] = useState("");
+  const [name, setName] = useState('');
+  const [slug, setSlug] = useState('');
+  const [description, setDescription] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const generateSlug = (value: string) => {
     return value
       .toLowerCase()
-      .replace(/\s+/g, "-") // Replace spaces with hyphens
-      .replace(/[^a-z0-9-]/g, "") // Remove invalid characters
+      .replace(/\s+/g, '-') // Replace spaces with hyphens
+      .replace(/[^a-z0-9-]/g, '') // Remove invalid characters
       .substring(0, 50); // Max length for slug
   };
 
@@ -64,16 +64,16 @@ export default function NewCollectivePage() {
       if (result.error) {
         setError(result.error);
       } else if (result.data) {
-        setSuccessMessage("Collective created successfully! Redirecting...");
+        setSuccessMessage('Collective created successfully! Redirecting...');
         // Optionally clear form fields
-        setName("");
-        setSlug("");
-        setDescription("");
+        setName('');
+        setSlug('');
+        setDescription('');
         // Redirect to the new collective's page or dashboard
         void router.push(`/dashboard`); // Or `/collectives/${result.data.slug}` once that page exists
         void router.refresh();
       } else {
-        setError("An unexpected error occurred.");
+        setError('An unexpected error occurred.');
       }
     });
   };
@@ -87,7 +87,7 @@ export default function NewCollectivePage() {
             Start a new newsletter collective. Choose a unique name and slug.
           </CardDescription>
         </CardHeader>
-        <form onSubmit={() => void handleSubmit()}>
+        <form onSubmit={handleSubmit}>
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="name">Collective Name</Label>
@@ -149,7 +149,7 @@ export default function NewCollectivePage() {
               Cancel
             </Button>
             <Button type="submit" disabled={isPending}>
-              {isPending ? "Creating..." : "Create Collective"}
+              {isPending ? 'Creating...' : 'Create Collective'}
             </Button>
           </CardFooter>
         </form>

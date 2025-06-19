@@ -1,5 +1,5 @@
 import { Database, Json } from '@/lib/database.types';
-import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
+import supabase from '@/lib/supabase/browser';
 import {
   PostCollectiveRow,
   PostCollectiveServiceResponse,
@@ -24,7 +24,7 @@ const RECENT_ERROR_LIMIT = 10;
  * Integrates with audit logging and enhanced error handling
  */
 export class PostCollectiveService {
-  private supabase = createSupabaseBrowserClient();
+  private supabase = supabase;
 
   /**
    * Validate user permissions for posting to selected collectives

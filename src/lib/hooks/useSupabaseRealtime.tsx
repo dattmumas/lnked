@@ -20,7 +20,7 @@ export function useSupabaseRealtime<T = unknown>(
   }) => void,
   filter?: { column: string; value: string | number },
 ): void {
-  useEffect((): void => {
+  useEffect(() => {
     const supabase = createSupabaseBrowserClient();
     let channel: RealtimeChannel = supabase.channel(`realtime:${table}`);
     let filterStr = table;

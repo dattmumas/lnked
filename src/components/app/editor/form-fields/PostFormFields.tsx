@@ -1,17 +1,23 @@
-"use client";
+'use client';
 
 import {
-  UseFormRegister,
-  FieldErrors,
-  FieldError,
-  Path,
-} from "react-hook-form";
-import { z } from "zod";
+  useForm,
+  FieldValues,
+  FieldPath,
+  FieldErrors as RHFFieldErrors,
+} from 'react-hook-form';
+import { z } from 'zod';
 
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { postFormFieldsSchema } from "@/lib/schemas/postFormFieldsSchema";
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { postFormFieldsSchema } from '@/lib/schemas/postFormFieldsSchema';
 
+// Define missing types locally
+type UseFormRegister<T extends FieldValues> = ReturnType<
+  typeof useForm<T>
+>['register'];
+type FieldErrors<T extends FieldValues> = RHFFieldErrors<T>;
+type FieldError = { message?: string };
 
 // re-export for backward compatibility
 export { postFormFieldsSchema };
@@ -24,7 +30,7 @@ export type PostFormFieldsValues = z.infer<typeof postFormFieldsSchema>;
 interface PostFormFieldsProps<TFormValues extends PostFormFieldsValues> {
   register: UseFormRegister<TFormValues>;
   errors: FieldErrors<TFormValues>;
-  currentStatus: "draft" | "published" | "scheduled" | undefined;
+  currentStatus: 'draft' | 'published' | 'scheduled' | undefined;
   isSubmitting: boolean;
   titlePlaceholder?: string;
   /**
@@ -40,12 +46,12 @@ export default function PostFormFields<
   errors,
   currentStatus,
   isSubmitting,
-  titlePlaceholder = "Post Title",
+  titlePlaceholder = 'Post Title',
   showTitle = true,
 }: PostFormFieldsProps<TFormValues>) {
   // Helper to safely access error messages
   const getErrorMessage = (
-    error: FieldError | undefined
+    error: FieldError | undefined,
   ): string | undefined => {
     return error?.message;
   };
@@ -62,10 +68,10 @@ export default function PostFormFields<
           </Label>
           <Input
             id="title"
-            {...register("title" as Path<TFormValues>)}
+            {...register('title' as FieldPath<TFormValues>)}
             placeholder={titlePlaceholder}
             disabled={isSubmitting}
-            className={errors.title ? "border-destructive" : ""}
+            className={errors.title ? 'border-destructive' : ''}
           />
           {errors.title && (
             <p className="text-sm text-destructive mt-1">
@@ -81,7 +87,7 @@ export default function PostFormFields<
         </Label>
         <select
           id="status"
-          {...register("status" as Path<TFormValues>)}
+          {...register('status' as FieldPath<TFormValues>)}
           disabled={isSubmitting}
           className="block w-full p-2 border border-input bg-background rounded-md shadow-sm focus:ring-primary focus:border-primary sm:text-sm"
         >
@@ -96,7 +102,7 @@ export default function PostFormFields<
         )}
       </div>
 
-      {currentStatus === "scheduled" && (
+      {currentStatus === 'scheduled' && (
         <div className="space-y-2">
           <Label
             htmlFor="published_at"
@@ -107,9 +113,9 @@ export default function PostFormFields<
           <Input
             id="published_at"
             type="datetime-local"
-            {...register("published_at" as Path<TFormValues>)}
+            {...register('published_at' as FieldPath<TFormValues>)}
             disabled={isSubmitting}
-            className={errors.published_at ? "border-destructive" : ""}
+            className={errors.published_at ? 'border-destructive' : ''}
           />
           {errors.published_at && (
             <p className="text-sm text-destructive mt-1">

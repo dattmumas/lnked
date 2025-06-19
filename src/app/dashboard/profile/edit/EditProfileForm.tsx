@@ -4,7 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Loader2 } from 'lucide-react';
 import Image from 'next/image';
 import React, { useState, useTransition } from 'react';
-import { useForm, SubmitHandler } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 
 import {
@@ -45,6 +45,9 @@ export type UserProfileFormClientValues = z.infer<
 interface EditProfileFormProps {
   defaultValues: UserProfileFormClientValues;
 }
+
+// Define submit handler type locally
+type SubmitHandler<T> = (data: T) => void | Promise<void>;
 
 export default function EditProfileForm({
   defaultValues,

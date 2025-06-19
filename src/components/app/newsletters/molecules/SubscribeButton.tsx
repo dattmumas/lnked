@@ -6,7 +6,7 @@ import * as React from 'react';
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
+import supabase from '@/lib/supabase/browser';
 
 import type { User } from '@supabase/supabase-js';
 
@@ -40,7 +40,7 @@ export default function SubscribeButton({
   const [isLoadingUser, setIsLoadingUser] = useState(true);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const supabase = createSupabaseBrowserClient();
+  const client = supabase;
   const [showOptions, setShowOptions] = useState(false);
 
   const allTiers: Tier[] =
@@ -59,12 +59,12 @@ export default function SubscribeButton({
     const fetchUser = async () => {
       const {
         data: { user },
-      } = await supabase.auth.getUser();
+      } = await client.auth.getUser();
       setCurrentUser(user);
       setIsLoadingUser(false);
     };
     fetchUser();
-  }, [supabase]);
+  }, [client]);
 
   const handleSubscribe = async (priceId: string) => {
     if (!currentUser) {

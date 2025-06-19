@@ -1,5 +1,4 @@
 import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
-import { createServerSupabaseClient } from '@/lib/supabase/server';
 
 import type { MessageWithSender } from './types';
 import type { Database, Json } from '@/lib/database.types';
@@ -13,23 +12,20 @@ type ServiceResponse<T> = Promise<{ data: T | null; error: Error | null }>;
 type Tables = Database['public']['Tables'];
 
 class ChatService {
-  private getSupabase(): SupabaseClient<Database> {
-    // Check if we're on the server or client
-    if (typeof window === 'undefined') {
-      return createServerSupabaseClient();
-    }
-    return createSupabaseBrowserClient();
+  private supabase: SupabaseClient<Database>;
+
+  constructor(supabaseClient: SupabaseClient<Database>) {
+    this.supabase = supabaseClient;
   }
 
   async getConversations(): ServiceResponse<unknown[]> {
-    const supabase = this.getSupabase();
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: { user } } = await this.supabase.auth.getUser();
     
     if (user === null) {
       return { data: null, error: new Error('Not authenticated') };
     }
 
-    const { data, error } = await supabase
+    const { data, error } = await this.supabase
       .from('conversation_participants')
       .select(`
         conversation_id,
@@ -68,9 +64,8 @@ class ChatService {
     limit = DEFAULT_PAGE_SIZE,
     offset = 0
   ): ServiceResponse<MessageWithSender[]> {
-    const supabase = this.getSupabase();
     
-    const { data, error } = await supabase
+    const { data, error } = await this.supabase
       .from('messages')
       .select(`
         *,
@@ -110,14 +105,13 @@ class ChatService {
     reply_to_id?: string;
     metadata?: Json | null;
   }): ServiceResponse<MessageWithSender> {
-    const supabase = this.getSupabase();
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: { user } } = await this.supabase.auth.getUser();
     
     if (user === null) {
       return { data: null, error: new Error('Not authenticated') };
     }
 
-    const { data, error } = await supabase
+    const { data, error } = await this.supabase
       .from('messages')
       .insert({
         ...params,
@@ -156,15 +150,14 @@ class ChatService {
     is_private?: boolean;
     participant_ids: string[];
   }): ServiceResponse<Tables['conversations']['Row']> {
-    const supabase = this.getSupabase();
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: { user } } = await this.supabase.auth.getUser();
     
     if (user === null) {
       return { data: null, error: new Error('Not authenticated') };
     }
 
     // Create conversation
-    const { data: conversation, error: convError } = await supabase
+    const { data: conversation, error: convError } = await this.supabase
       .from('conversations')
       .insert({
         title: params.title,
@@ -187,13 +180,13 @@ class ChatService {
       role: userId === user.id ? 'admin' : 'member' as const
     }));
 
-    const { error: participantError } = await supabase
+    const { error: participantError } = await this.supabase
       .from('conversation_participants')
       .insert(participants);
 
     if (participantError !== null) {
       // Rollback conversation creation
-      await supabase.from('conversations').delete().eq('id', conversation.id);
+      await this.supabase.from('conversations').delete().eq('id', conversation.id);
       return { data: null, error: participantError };
     }
 
@@ -201,15 +194,14 @@ class ChatService {
   }
 
   async markMessagesAsRead(conversationId: string): Promise<{ error: Error | null }> {
-    const supabase = this.getSupabase();
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: { user } } = await this.supabase.auth.getUser();
     
     if (user === null) {
       return { error: new Error('Not authenticated') };
     }
 
     // Update last_read_at timestamp for the user in this conversation
-    const { error } = await supabase
+    const { error } = await this.supabase
       .from('conversation_participants')
       .update({ last_read_at: new Date().toISOString() })
       .eq('conversation_id', conversationId)
@@ -219,14 +211,13 @@ class ChatService {
   }
 
   async addReaction(messageId: string, emoji: string): Promise<{ error: Error | null }> {
-    const supabase = this.getSupabase();
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: { user } } = await this.supabase.auth.getUser();
     
     if (user === null) {
       return { error: new Error('Not authenticated') };
     }
 
-    const { error } = await supabase
+    const { error } = await this.supabase
       .from('message_reactions')
       .insert({
         message_id: messageId,
@@ -238,14 +229,13 @@ class ChatService {
   }
 
   async removeReaction(messageId: string, emoji: string): Promise<{ error: Error | null }> {
-    const supabase = this.getSupabase();
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: { user } } = await this.supabase.auth.getUser();
     
     if (user === null) {
       return { error: new Error('Not authenticated') };
     }
 
-    const { error } = await supabase
+    const { error } = await this.supabase
       .from('message_reactions')
       .delete()
       .eq('message_id', messageId)
@@ -256,9 +246,7 @@ class ChatService {
   }
 
   async searchMessages(query: string, conversationId?: string): ServiceResponse<MessageWithSender[]> {
-    const supabase = this.getSupabase();
-    
-    let searchQuery = supabase
+    let searchQuery = this.supabase
       .from('messages')
       .select(`
         *,
@@ -283,4 +271,4 @@ class ChatService {
   }
 }
 
-export const chatService = new ChatService(); 
+export const chatService = new ChatService(createSupabaseBrowserClient()); 

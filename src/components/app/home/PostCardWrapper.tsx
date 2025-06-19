@@ -5,8 +5,8 @@ import React, { useCallback } from 'react';
 
 import PostCard from '@/components/app/posts/molecules/PostCard';
 
-import type { FeedItem } from '@/types/home/types';
 import type { PostFeedInteractions } from '@/hooks/home/usePostFeedInteractions';
+import type { FeedItem } from '@/types/home/types';
 
 interface Props {
   item: FeedItem;

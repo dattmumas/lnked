@@ -22,7 +22,6 @@ import { useCollectiveMemberships } from '@/hooks/posts/useCollectiveMemberships
 import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
 import { cn } from '@/lib/utils';
 
-
 // Enhanced main navigation with Videos moved up as per creative design
 const navigationItems = [
   { icon: Home, label: 'Home', href: '/home' },
@@ -60,7 +59,7 @@ export default function GlobalSidebar() {
   const pathname = usePathname();
 
   // Defensive authentication check
-  useEffect((): void => {
+  useEffect(() => {
     const checkAuth = async () => {
       const supabase = createSupabaseBrowserClient();
       const {
@@ -70,7 +69,7 @@ export default function GlobalSidebar() {
       setIsAuthenticated(Boolean(user && !error));
     };
 
-    checkAuth();
+    void checkAuth();
   }, []);
 
   // Use existing hook to fetch user's collectives (include non-postable for navigation)
@@ -90,7 +89,7 @@ export default function GlobalSidebar() {
     setHoverTimeout(timeout);
   };
 
-  useEffect((): void => {
+  useEffect(() => {
     return () => {
       if (hoverTimeout) clearTimeout(hoverTimeout);
     };

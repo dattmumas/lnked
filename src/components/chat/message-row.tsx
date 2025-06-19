@@ -1,19 +1,805 @@
 'use client';
 
 import clsx from 'clsx';
-import { memo, CSSProperties, useEffect, useRef } from 'react';
+import Image from 'next/image';
+import {
+  memo,
+  CSSProperties,
+  useEffect,
+  useRef,
+  useCallback,
+  useMemo,
+} from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
 import type { MessageWithSender as Message } from '@/lib/chat/types';
 
+// Constants to avoid magic numbers
+const MESSAGE_GROUP_TIME_THRESHOLD_MINUTES = 5;
+const MESSAGE_GROUP_TIME_THRESHOLD_SECONDS = 60;
+const MILLISECONDS_PER_SECOND = 1000;
+const MESSAGE_GROUP_TIME_THRESHOLD_MS =
+  MESSAGE_GROUP_TIME_THRESHOLD_MINUTES *
+  MESSAGE_GROUP_TIME_THRESHOLD_SECONDS *
+  MILLISECONDS_PER_SECOND;
+const CONTENT_PREVIEW_LENGTH = 50;
+const AVATAR_SIZE = 32;
+const THUMBNAIL_SIZE = 80;
+const EDIT_FORM_ROWS = 3;
+
+// Type definitions for message metadata
+interface EmbedMetadata {
+  embed: {
+    title?: string;
+    description?: string;
+    url?: string;
+    image?: string;
+  };
+}
+
+interface ImageMetadata {
+  url: string;
+  alt?: string;
+}
+
+interface FileMetadata {
+  url: string;
+  filename?: string;
+  size?: number;
+}
+
+// User type for better type safety
+interface User {
+  id: string;
+  username?: string | null;
+  full_name?: string | null;
+  avatar_url?: string | null;
+}
+
+interface ReactionCount {
+  emoji: string;
+  count: number;
+  userIds: string[];
+}
+
+// Optimized props interface for better memo performance
 interface MessageRowProps {
+  index: number;
+  style: CSSProperties;
+  message: Message;
+  previousMessage?: Message | null;
+  lastReadAt: string | null;
+  user: User | null;
+  editingId: string | null;
+  editText: string;
+  reactions: ReactionCount[];
+  onStartEdit: (msg: Message) => void;
+  onDelete: (messageId: string) => void;
+  onReply: (msg: Message) => void;
+  onAddReaction: (messageId: string, emoji: string) => void;
+  onRemoveReaction: (messageId: string, emoji: string) => void;
+  onEmojiPicker: (messageId: string) => void;
+  onEditTextChange: (text: string) => void;
+  onSaveEdit: (messageId: string, content: string) => void;
+  onCancelEdit: () => void;
+  formatFileSize: (bytes: number) => string;
+  setItemSize?: (index: number, size: number) => void;
+}
+
+// Type guards
+function isEmbedMetadata(metadata: unknown): metadata is EmbedMetadata {
+  return (
+    typeof metadata === 'object' &&
+    metadata !== null &&
+    'embed' in metadata &&
+    typeof (metadata as EmbedMetadata).embed === 'object'
+  );
+}
+
+function isImageMetadata(metadata: unknown): metadata is ImageMetadata {
+  return (
+    typeof metadata === 'object' &&
+    metadata !== null &&
+    'url' in metadata &&
+    typeof (metadata as ImageMetadata).url === 'string'
+  );
+}
+
+function isFileMetadata(metadata: unknown): metadata is FileMetadata {
+  return (
+    typeof metadata === 'object' &&
+    metadata !== null &&
+    'url' in metadata &&
+    typeof (metadata as FileMetadata).url === 'string'
+  );
+}
+
+// Extracted FileIcon component
+const FileIcon = memo(
+  (): React.JSX.Element => (
+    <svg
+      className="w-4 h-4 text-muted-foreground"
+      fill="none"
+      stroke="currentColor"
+      viewBox="0 0 24 24"
+      aria-hidden="true"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={2}
+        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+      />
+    </svg>
+  ),
+);
+
+FileIcon.displayName = 'FileIcon';
+
+// Extracted ImageAttachment component
+interface ImageAttachmentProps {
+  metadata: ImageMetadata;
+  onImageClick: (url: string) => void;
+}
+
+const ImageAttachment = memo<ImageAttachmentProps>(
+  ({ metadata, onImageClick }): React.JSX.Element => {
+    const handleImageClick = useCallback((): void => {
+      onImageClick(metadata.url);
+    }, [onImageClick, metadata.url]);
+
+    return (
+      <div className="mt-2">
+        <button
+          type="button"
+          onClick={handleImageClick}
+          className="block max-w-sm rounded-lg cursor-pointer hover:opacity-90 transition-opacity focus:outline-none focus:ring-2 focus:ring-primary"
+          aria-label={`View full image: ${metadata.alt ?? 'Image attachment'}`}
+        >
+          <Image
+            src={metadata.url}
+            alt={metadata.alt ?? 'Image attachment'}
+            width={400}
+            height={300}
+            className="rounded-lg object-cover"
+          />
+        </button>
+      </div>
+    );
+  },
+);
+
+ImageAttachment.displayName = 'ImageAttachment';
+
+// Extracted FileAttachment component
+interface FileAttachmentProps {
+  metadata: FileMetadata;
+  formatFileSize: (bytes: number) => string;
+}
+
+const FileAttachment = memo<FileAttachmentProps>(
+  ({ metadata, formatFileSize }): React.JSX.Element => (
+    <div className="mt-2 inline-flex items-center gap-2 px-3 py-2 bg-muted/50 rounded-md">
+      <FileIcon />
+      <a
+        href={metadata.url}
+        download={metadata.filename ?? 'file'}
+        className="text-sm hover:underline"
+      >
+        {metadata.filename ?? 'Download file'}
+      </a>
+      {typeof metadata.size === 'number' && (
+        <span className="text-xs text-muted-foreground">
+          ({formatFileSize(metadata.size)})
+        </span>
+      )}
+    </div>
+  ),
+);
+
+FileAttachment.displayName = 'FileAttachment';
+
+// Individual Reaction Button component
+interface ReactionButtonProps {
+  reaction: ReactionCount;
+  userId: string | null;
+  messageId: string;
+  onAddReaction: (messageId: string, emoji: string) => void;
+  onRemoveReaction: (messageId: string, emoji: string) => void;
+}
+
+const ReactionButton = memo<ReactionButtonProps>(
+  ({
+    reaction,
+    userId,
+    messageId,
+    onAddReaction,
+    onRemoveReaction,
+  }): React.JSX.Element => {
+    const handleClick = useCallback((): void => {
+      if (typeof userId !== 'string') return;
+
+      const hasReacted = reaction.userIds.includes(userId);
+      if (hasReacted) {
+        onRemoveReaction(messageId, reaction.emoji);
+      } else {
+        onAddReaction(messageId, reaction.emoji);
+      }
+    }, [
+      userId,
+      messageId,
+      reaction.userIds,
+      reaction.emoji,
+      onAddReaction,
+      onRemoveReaction,
+    ]);
+
+    const handleKeyDown = useCallback(
+      (e: React.KeyboardEvent): void => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          handleClick();
+        }
+      },
+      [handleClick],
+    );
+
+    return (
+      <button
+        onClick={handleClick}
+        onKeyDown={handleKeyDown}
+        className="inline-flex items-center gap-1 px-2 py-0.5 text-xs rounded-full bg-muted hover:bg-muted/80 transition-colors focus:outline-none focus:ring-2 focus:ring-primary"
+        aria-label={`${reaction.emoji} reaction, ${reaction.count} ${reaction.count === 1 ? 'person' : 'people'}`}
+        tabIndex={0}
+      >
+        <span>{reaction.emoji}</span>
+        <span className="text-muted-foreground">{reaction.count}</span>
+      </button>
+    );
+  },
+);
+
+ReactionButton.displayName = 'ReactionButton';
+
+// Extracted ReactionBar component
+interface ReactionBarProps {
+  reactions: ReactionCount[];
+  userId: string | null;
+  messageId: string;
+  onAddReaction: (messageId: string, emoji: string) => void;
+  onRemoveReaction: (messageId: string, emoji: string) => void;
+}
+
+const ReactionBar = memo<ReactionBarProps>(
+  ({
+    reactions,
+    userId,
+    messageId,
+    onAddReaction,
+    onRemoveReaction,
+  }): React.JSX.Element | null => {
+    if (reactions.length === 0) return null;
+
+    return (
+      <div
+        className="flex flex-wrap gap-1 mt-1"
+        role="group"
+        aria-label="Message reactions"
+      >
+        {reactions.map((reaction) => (
+          <ReactionButton
+            key={reaction.emoji}
+            reaction={reaction}
+            userId={userId}
+            messageId={messageId}
+            onAddReaction={onAddReaction}
+            onRemoveReaction={onRemoveReaction}
+          />
+        ))}
+      </div>
+    );
+  },
+);
+
+ReactionBar.displayName = 'ReactionBar';
+
+// Extracted components to prevent re-renders
+const MarkdownParagraph = (
+  props: React.HTMLProps<HTMLParagraphElement>,
+): React.JSX.Element => (
+  <p
+    {...props}
+    className="whitespace-pre-wrap break-words text-foreground my-0 text-[15px] leading-relaxed font-normal max-w-full overflow-hidden"
+  >
+    {props.children}
+  </p>
+);
+
+const MarkdownLink = (
+  props: React.HTMLProps<HTMLAnchorElement>,
+): React.JSX.Element => (
+  <a
+    {...props}
+    target="_blank"
+    rel="noopener noreferrer"
+    className="text-primary hover:underline"
+  >
+    {props.children}
+  </a>
+);
+
+const MarkdownCode = (
+  props: React.HTMLProps<HTMLElement>,
+): React.JSX.Element => {
+  const isInline = typeof props.className !== 'string';
+  return isInline ? (
+    <code className="bg-muted px-1 py-0.5 rounded text-sm font-mono">
+      {props.children}
+    </code>
+  ) : (
+    <code {...props}>{props.children}</code>
+  );
+};
+
+const MarkdownPre = (
+  props: React.HTMLProps<HTMLPreElement>,
+): React.JSX.Element => (
+  <pre
+    {...props}
+    className="bg-muted p-3 rounded-md overflow-x-auto my-2 font-mono text-sm"
+  >
+    {props.children}
+  </pre>
+);
+
+// Helper functions moved outside component
+function formatTimestamp(date: string): string {
+  return new Date(date).toLocaleTimeString([], {
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+function truncateContent(content: string, maxLength: number): string {
+  if (content.length <= maxLength) return content;
+  return `${content.substring(0, maxLength)}...`;
+}
+
+function getUserDisplayName(sender: Message['sender']): string {
+  if (sender === null || sender === undefined) return 'Anonymous';
+  return sender.username ?? sender.full_name ?? 'Anonymous';
+}
+
+// Memoized grouping logic
+function useMessageGrouping(
+  message: Message,
+  previousMessage?: Message | null,
+): boolean {
+  return useMemo(() => {
+    const sameSender = Boolean(
+      previousMessage?.sender_id === message.sender_id,
+    );
+    let withinTimeThreshold = false;
+
+    if (
+      typeof previousMessage?.created_at === 'string' &&
+      typeof message.created_at === 'string' &&
+      sameSender
+    ) {
+      const timeDiff = Math.abs(
+        new Date(message.created_at).getTime() -
+          new Date(previousMessage.created_at).getTime(),
+      );
+      withinTimeThreshold = timeDiff < MESSAGE_GROUP_TIME_THRESHOLD_MS;
+    }
+
+    return !sameSender || !withinTimeThreshold;
+  }, [message.sender_id, message.created_at, previousMessage]);
+}
+
+// Optimized height measurement with ResizeObserver
+function useResizeObserver(
+  ref: React.RefObject<HTMLElement | null>,
+  index: number,
+  setItemSize?: (index: number, size: number) => void,
+): void {
+  const observerRef = useRef<ResizeObserver | null>(null);
+  const lastHeightRef = useRef<number>(0);
+
+  useEffect(() => {
+    const element = ref.current;
+    if (element === null || setItemSize === undefined) {
+      return undefined;
+    }
+
+    observerRef.current = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const newHeight = entry.contentRect.height;
+        // Only update if height actually changed
+        if (newHeight !== lastHeightRef.current) {
+          lastHeightRef.current = newHeight;
+          requestAnimationFrame(() => {
+            setItemSize(index, newHeight);
+          });
+        }
+      }
+    });
+
+    observerRef.current.observe(element);
+
+    return (): void => {
+      if (observerRef.current !== null) {
+        observerRef.current.disconnect();
+      }
+    };
+  }, [ref, index, setItemSize]);
+}
+
+export const MessageRow = memo<MessageRowProps>(
+  ({
+    index,
+    style,
+    message,
+    previousMessage,
+    lastReadAt,
+    user,
+    editingId,
+    editText,
+    reactions,
+    onStartEdit,
+    onDelete,
+    onReply,
+    onAddReaction,
+    onRemoveReaction,
+    onEmojiPicker,
+    onEditTextChange,
+    onSaveEdit,
+    onCancelEdit,
+    formatFileSize,
+    setItemSize,
+  }): React.JSX.Element => {
+    const rowRef = useRef<HTMLDivElement>(null);
+    const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+    // Use ResizeObserver for better performance
+    useResizeObserver(rowRef, index, setItemSize);
+
+    // Memoized grouping logic
+    const isNewGroup = useMessageGrouping(message, previousMessage);
+
+    // Auto-focus textarea when editing starts
+    useEffect(() => {
+      if (editingId === message.id && textareaRef.current !== null) {
+        textareaRef.current.focus();
+      }
+    }, [editingId, message.id]);
+
+    // Memoized handlers
+    const handleEditSubmit = useCallback(
+      (e: React.FormEvent): void => {
+        e.preventDefault();
+        onSaveEdit(message.id, editText);
+      },
+      [message.id, editText, onSaveEdit],
+    );
+
+    const handleEditKeyDown = useCallback(
+      (e: React.KeyboardEvent): void => {
+        if (e.key === 'Escape') {
+          onCancelEdit();
+        }
+      },
+      [onCancelEdit],
+    );
+
+    const handleImageClick = useCallback((url: string): void => {
+      window.open(url, '_blank');
+    }, []);
+
+    const handleStartEdit = useCallback((): void => {
+      onStartEdit(message);
+    }, [onStartEdit, message]);
+
+    const handleDelete = useCallback((): void => {
+      onDelete(message.id);
+    }, [onDelete, message.id]);
+
+    const handleReply = useCallback((): void => {
+      onReply(message);
+    }, [onReply, message]);
+
+    const handleEmojiPicker = useCallback((): void => {
+      onEmojiPicker(message.id);
+    }, [onEmojiPicker, message.id]);
+
+    const handleEditTextChange = useCallback(
+      (e: React.ChangeEvent<HTMLTextAreaElement>): void => {
+        onEditTextChange(e.target.value);
+      },
+      [onEditTextChange],
+    );
+
+    // Memoized computed values
+    const isDeleted = Boolean(message.deleted_at);
+    const isEdited = Boolean(message.edited_at);
+    const isEditing = editingId === message.id;
+
+    // Check if this is the first unread message
+    const isFirstUnread = useMemo(() => {
+      return Boolean(
+        typeof lastReadAt === 'string' &&
+          typeof message.created_at === 'string' &&
+          new Date(message.created_at).getTime() >
+            new Date(lastReadAt).getTime() &&
+          (typeof previousMessage?.created_at !== 'string' ||
+            new Date(previousMessage.created_at).getTime() <=
+              new Date(lastReadAt).getTime()),
+      );
+    }, [lastReadAt, message.created_at, previousMessage?.created_at]);
+
+    // Generate unique ID for accessibility
+    const unreadIndicatorId = `unread-indicator-${message.id}`;
+
+    return (
+      <div ref={rowRef} style={style}>
+        {/* Last read indicator */}
+        {isFirstUnread && (
+          <div
+            id={unreadIndicatorId}
+            className="relative flex items-center gap-3 my-6 px-4"
+            role="separator"
+            aria-label="New messages"
+          >
+            <div className="flex-1 h-[1px] bg-gradient-to-r from-transparent via-primary/20 to-primary/20" />
+            <span className="text-xs text-primary font-medium px-3 py-1 bg-primary/10 rounded-full whitespace-nowrap">
+              New messages
+            </span>
+            <div className="flex-1 h-[1px] bg-gradient-to-l from-transparent via-primary/20 to-primary/20" />
+          </div>
+        )}
+
+        <div
+          className={clsx(
+            'flex gap-2 relative group px-4',
+            isNewGroup ? 'mt-3' : '',
+          )}
+        >
+          {/* Avatar column */}
+          {isNewGroup ? (
+            <Image
+              src={message.sender?.avatar_url ?? '/avatar-placeholder.png'}
+              alt={`${getUserDisplayName(message.sender)} avatar`}
+              width={AVATAR_SIZE}
+              height={AVATAR_SIZE}
+              className="mt-1 rounded-full object-cover"
+            />
+          ) : (
+            <span className="w-8" aria-hidden="true" />
+          )}
+
+          {/* Content column */}
+          <div className="flex-1 min-w-0 text-sm word-break-break-word">
+            {isNewGroup && (
+              <div className="flex items-baseline gap-2">
+                <span className="font-medium">
+                  {getUserDisplayName(message.sender)}
+                </span>
+                {typeof message.created_at === 'string' && (
+                  <span className="text-xs text-muted-foreground">
+                    {formatTimestamp(message.created_at)}
+                  </span>
+                )}
+              </div>
+            )}
+
+            {/* Reply preview if this message is replying to another */}
+            {message.reply_to_id !== null &&
+              message.reply_to !== null &&
+              message.reply_to !== undefined && (
+                <div className="mb-1 ml-2 pl-2 border-l-2 border-border/50 text-xs text-muted-foreground">
+                  Replying to{' '}
+                  <span className="font-medium">
+                    @{getUserDisplayName(message.reply_to.sender)}
+                  </span>
+                  : &quot;
+                  {message.reply_to.deleted_at !== null
+                    ? 'This message was deleted'
+                    : typeof message.reply_to.content === 'string'
+                      ? truncateContent(
+                          message.reply_to.content,
+                          CONTENT_PREVIEW_LENGTH,
+                        )
+                      : ''}
+                  &quot;
+                </div>
+              )}
+
+            {isDeleted ? (
+              <em className="italic text-xs text-muted-foreground">
+                This message was deleted
+              </em>
+            ) : isEditing ? (
+              // Edit mode
+              <form onSubmit={handleEditSubmit} className="flex flex-col gap-2">
+                <label
+                  htmlFor={`edit-message-${message.id}`}
+                  className="sr-only"
+                >
+                  Edit message
+                </label>
+                <textarea
+                  ref={textareaRef}
+                  id={`edit-message-${message.id}`}
+                  value={editText}
+                  onChange={handleEditTextChange}
+                  className="w-full p-2 text-sm bg-muted rounded-md focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+                  rows={EDIT_FORM_ROWS}
+                  onKeyDown={handleEditKeyDown}
+                  aria-live="polite"
+                />
+                <div className="flex gap-2">
+                  <button
+                    type="submit"
+                    className="text-sm bg-primary text-primary-foreground px-4 py-1.5 rounded-md hover:bg-primary/90 transition-colors font-medium"
+                    disabled={!editText.trim()}
+                  >
+                    Save
+                  </button>
+                  <button
+                    type="button"
+                    onClick={onCancelEdit}
+                    className="text-sm text-muted-foreground px-4 py-1.5 rounded-md hover:bg-muted transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <div className="prose prose-sm dark:prose-invert break-words max-w-none">
+                <ReactMarkdown
+                  remarkPlugins={[remarkGfm]}
+                  components={{
+                    p: MarkdownParagraph,
+                    a: MarkdownLink,
+                    code: MarkdownCode,
+                    pre: MarkdownPre,
+                  }}
+                >
+                  {message.content ?? ''}
+                </ReactMarkdown>
+                {isEdited && (
+                  <span className="text-xs text-muted-foreground ml-1">
+                    (edited)
+                  </span>
+                )}
+              </div>
+            )}
+
+            {/* Link preview if available */}
+            {message.metadata !== null && isEmbedMetadata(message.metadata) && (
+              <div className="mt-2 rounded-lg p-3 bg-muted/20">
+                <div className="flex gap-3">
+                  <div className="flex-1 min-w-0">
+                    {typeof message.metadata.embed.title === 'string' && (
+                      <h4 className="font-medium text-sm truncate">
+                        {message.metadata.embed.title}
+                      </h4>
+                    )}
+                    {typeof message.metadata.embed.description === 'string' && (
+                      <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
+                        {message.metadata.embed.description}
+                      </p>
+                    )}
+                    {typeof message.metadata.embed.url === 'string' && (
+                      <a
+                        href={message.metadata.embed.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs text-primary hover:underline mt-1 block truncate"
+                      >
+                        {message.metadata.embed.url}
+                      </a>
+                    )}
+                  </div>
+                  {typeof message.metadata.embed.image === 'string' && (
+                    <Image
+                      src={message.metadata.embed.image}
+                      alt="Link preview"
+                      width={THUMBNAIL_SIZE}
+                      height={THUMBNAIL_SIZE}
+                      className="object-cover rounded"
+                    />
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Image attachment */}
+            {message.message_type === 'image' &&
+              message.metadata !== null &&
+              isImageMetadata(message.metadata) && (
+                <ImageAttachment
+                  metadata={message.metadata}
+                  onImageClick={handleImageClick}
+                />
+              )}
+
+            {/* File attachment */}
+            {message.message_type === 'file' &&
+              message.metadata !== null &&
+              isFileMetadata(message.metadata) && (
+                <FileAttachment
+                  metadata={message.metadata}
+                  formatFileSize={formatFileSize}
+                />
+              )}
+
+            {/* Reactions display */}
+            <ReactionBar
+              reactions={reactions}
+              userId={user?.id ?? null}
+              messageId={message.id}
+              onAddReaction={onAddReaction}
+              onRemoveReaction={onRemoveReaction}
+            />
+          </div>
+
+          {/* Action buttons column */}
+          <div className="absolute -top-3 right-4 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 bg-background/95 backdrop-blur-sm rounded-md shadow-sm p-1">
+            <button
+              type="button"
+              onClick={handleEmojiPicker}
+              className="text-xs p-1 hover:bg-muted rounded transition-colors px-2 focus:outline-none focus:ring-2 focus:ring-primary"
+              title="Add reaction"
+            >
+              React
+            </button>
+            <button
+              type="button"
+              onClick={handleReply}
+              className="text-xs italic text-muted-foreground hover:text-foreground transition-colors px-2 focus:outline-none focus:ring-2 focus:ring-primary"
+              title="Reply to this message"
+            >
+              Reply
+            </button>
+            {message.sender_id === user?.id && !isDeleted && (
+              <>
+                <button
+                  type="button"
+                  onClick={handleStartEdit}
+                  className="text-xs text-muted-foreground hover:text-foreground transition-colors px-2 focus:outline-none focus:ring-2 focus:ring-primary"
+                  title="Edit message"
+                >
+                  Edit
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDelete}
+                  className="text-xs text-destructive hover:text-destructive/80 transition-colors px-2 focus:outline-none focus:ring-2 focus:ring-primary"
+                  title="Delete message"
+                >
+                  Delete
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  },
+);
+
+MessageRow.displayName = 'MessageRow';
+
+// Legacy props interface for backward compatibility
+interface LegacyMessageRowProps {
   index: number;
   style: CSSProperties;
   data: {
     messages: Message[];
     lastReadAt: string | null;
-    user: any;
+    user: User | null;
     onStartEdit: (msg: Message) => void;
     onDelete: (messageId: string) => void;
     onReply: (msg: Message) => void;
@@ -25,397 +811,75 @@ interface MessageRowProps {
     onEditTextChange: (text: string) => void;
     onSaveEdit: (messageId: string, content: string) => void;
     onCancelEdit: () => void;
-    getReactionCounts: (message: any) => Array<{
-      emoji: string;
-      count: number;
-      userIds: string[];
-    }>;
+    getReactionCounts: (message: Message) => ReactionCount[];
     formatFileSize: (bytes: number) => string;
     setItemSize?: (index: number, size: number) => void;
   };
 }
 
-export const MessageRow = memo<MessageRowProps>(({ index, style, data }) => {
-  const {
-    messages,
-    lastReadAt,
-    user,
-    onStartEdit,
-    onDelete,
-    onReply,
-    onAddReaction,
-    onRemoveReaction,
-    onEmojiPicker,
-    editingId,
-    editText,
-    onEditTextChange,
-    onSaveEdit,
-    onCancelEdit,
-    getReactionCounts,
-    formatFileSize,
-    setItemSize,
-  } = data;
+// Wrapper component for backward compatibility with virtual list
+export const MessageRowLegacy = memo<LegacyMessageRowProps>(
+  ({ index, style, data }): React.JSX.Element | null => {
+    const {
+      messages,
+      lastReadAt,
+      user,
+      onStartEdit,
+      onDelete,
+      onReply,
+      onAddReaction,
+      onRemoveReaction,
+      onEmojiPicker,
+      editingId,
+      editText,
+      onEditTextChange,
+      onSaveEdit,
+      onCancelEdit,
+      getReactionCounts,
+      formatFileSize,
+      setItemSize,
+    } = data;
 
-  const rowRef = useRef<HTMLDivElement>(null);
-  const msg = messages[index];
+    const message = messages[index];
+    const previousMessage = index > 0 ? messages[index - 1] : null;
 
-  // Measure the actual height of the row
-  useEffect((): void => {
-    if (rowRef.current && setItemSize) {
-      const {height} = rowRef.current.getBoundingClientRect();
-      setItemSize(index, height);
-    }
-  }, [index, setItemSize, msg.content, msg.metadata, editingId]);
+    // Pre-compute reactions to avoid recalculation on every render
+    // Must be called before early return to comply with hooks rules
+    const reactions = useMemo(
+      () =>
+        typeof message === 'object' && message !== null
+          ? getReactionCounts(message)
+          : [],
+      [getReactionCounts, message],
+    );
 
-  if (!msg) return null;
+    if (typeof message !== 'object' || message === null) return null;
 
-  const prev = index > 0 ? messages[index - 1] : null;
-  const sameSender = prev && prev.sender_id === msg.sender_id;
-  let withinFiveMin = false;
-  if (prev && prev.created_at && msg.created_at && sameSender) {
-    withinFiveMin =
-      Math.abs(
-        new Date(msg.created_at).getTime() -
-          new Date(prev.created_at).getTime(),
-      ) <
-      5 * 60 * 1000;
-  }
-  const newGroup = !sameSender || !withinFiveMin;
+    return (
+      <MessageRow
+        index={index}
+        style={style}
+        message={message}
+        previousMessage={previousMessage}
+        lastReadAt={lastReadAt}
+        user={user}
+        editingId={editingId}
+        editText={editText}
+        reactions={reactions}
+        onStartEdit={onStartEdit}
+        onDelete={onDelete}
+        onReply={onReply}
+        onAddReaction={onAddReaction}
+        onRemoveReaction={onRemoveReaction}
+        onEmojiPicker={onEmojiPicker}
+        onEditTextChange={onEditTextChange}
+        onSaveEdit={onSaveEdit}
+        onCancelEdit={onCancelEdit}
+        formatFileSize={formatFileSize}
+        setItemSize={setItemSize}
+      />
+    );
+  },
+);
 
-  const isDeleted = Boolean(msg.deleted_at);
-  const isEdited = Boolean(msg.edited_at);
-
-  // Check if this is the first unread message
-  const isFirstUnread =
-    lastReadAt &&
-    msg.created_at &&
-    new Date(msg.created_at).getTime() > new Date(lastReadAt).getTime() &&
-    (!prev ||
-      !prev.created_at ||
-      new Date(prev.created_at).getTime() <= new Date(lastReadAt).getTime());
-
-  return (
-    <div ref={rowRef} style={style}>
-      {/* Last read indicator */}
-      {isFirstUnread && (
-        <div
-          id="last-read-indicator"
-          className="relative flex items-center gap-3 my-6 px-4"
-        >
-          <div className="flex-1 h-[1px] bg-gradient-to-r from-transparent via-primary/20 to-primary/20" />
-          <span className="text-xs text-primary font-medium px-3 py-1 bg-primary/10 rounded-full whitespace-nowrap">
-            New messages
-          </span>
-          <div className="flex-1 h-[1px] bg-gradient-to-l from-transparent via-primary/20 to-primary/20" />
-        </div>
-      )}
-
-      <div
-        className={clsx(
-          'flex gap-2 relative group px-4',
-          newGroup ? 'mt-3' : '',
-        )}
-      >
-        {/* Avatar column */}
-        {newGroup ? (
-          <img
-            src={msg.sender?.avatar_url ?? '/avatar-placeholder.png'}
-            alt="avatar"
-            className="mt-1 h-8 w-8 rounded-full object-cover"
-          />
-        ) : (
-          <span className="w-8" />
-        )}
-
-        {/* Content column */}
-        <div className="flex-1 min-w-0 text-sm">
-          {newGroup && (
-            <div className="flex items-baseline gap-2">
-              <span className="font-medium">
-                {msg.sender?.username ?? 'Anon'}
-              </span>
-              <span className="text-xs text-muted-foreground">
-                {new Date(msg.created_at ?? '').toLocaleTimeString([], {
-                  hour: '2-digit',
-                  minute: '2-digit',
-                })}
-              </span>
-            </div>
-          )}
-
-          {/* Reply preview if this message is replying to another */}
-          {msg.reply_to_id && msg.reply_to && (
-            <div className="mb-1 ml-2 pl-2 border-l-2 border-border/50 text-xs text-muted-foreground">
-              Replying to{' '}
-              <span className="font-medium">
-                @
-                {msg.reply_to.sender?.username ??
-                  msg.reply_to.sender?.full_name ??
-                  'Unknown'}
-              </span>
-              : "
-              {msg.reply_to.deleted_at
-                ? 'This message was deleted'
-                : msg.reply_to.content?.substring(0, 50) || ''}
-              {!msg.reply_to.deleted_at &&
-              msg.reply_to.content &&
-              msg.reply_to.content.length > 50
-                ? '...'
-                : ''}
-              "
-            </div>
-          )}
-
-          {isDeleted ? (
-            <em className="italic text-xs text-muted-foreground">
-              This message was deleted
-            </em>
-          ) : editingId === msg.id ? (
-            // Edit mode
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                onSaveEdit(msg.id, editText);
-              }}
-              className="flex flex-col gap-2"
-            >
-              <textarea
-                value={editText}
-                onChange={(e) => onEditTextChange(e.target.value)}
-                className="w-full p-2 text-sm bg-muted rounded-md focus:outline-none focus:ring-2 focus:ring-primary resize-none"
-                rows={3}
-                autoFocus
-                onKeyDown={(e) => {
-                  if (e.key === 'Escape') {
-                    onCancelEdit();
-                  }
-                }}
-              />
-              <div className="flex gap-2">
-                <button
-                  type="submit"
-                  className="text-sm bg-primary text-primary-foreground px-4 py-1.5 rounded-md hover:bg-primary/90 transition-colors font-medium"
-                  disabled={!editText.trim()}
-                >
-                  Save
-                </button>
-                <button
-                  type="button"
-                  onClick={onCancelEdit}
-                  className="text-sm text-muted-foreground px-4 py-1.5 rounded-md hover:bg-muted transition-colors"
-                >
-                  Cancel
-                </button>
-              </div>
-            </form>
-          ) : (
-            <div className="prose prose-sm dark:prose-invert break-words max-w-none">
-              <ReactMarkdown
-                remarkPlugins={[remarkGfm]}
-                components={{
-                  p: ({ children }) => (
-                    <p className="whitespace-pre-wrap break-words text-foreground my-0 text-[15px] leading-relaxed font-normal">
-                      {children}
-                    </p>
-                  ),
-                  a: ({ children, href }) => (
-                    <a
-                      href={href}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-primary hover:underline"
-                    >
-                      {children}
-                    </a>
-                  ),
-                  code: ({ children, className }) => {
-                    const isInline = !className;
-                    return isInline ? (
-                      <code className="bg-muted px-1 py-0.5 rounded text-sm font-mono">
-                        {children}
-                      </code>
-                    ) : (
-                      <code className={className}>{children}</code>
-                    );
-                  },
-                  pre: ({ children }) => (
-                    <pre className="bg-muted p-3 rounded-md overflow-x-auto my-2 font-mono text-sm">
-                      {children}
-                    </pre>
-                  ),
-                }}
-              >
-                {msg.content}
-              </ReactMarkdown>
-              {isEdited && (
-                <span className="text-xs text-muted-foreground ml-1">
-                  (edited)
-                </span>
-              )}
-            </div>
-          )}
-
-          {/* Link preview if available */}
-          {msg.metadata &&
-            typeof msg.metadata === 'object' &&
-            'embed' in msg.metadata && (
-              <div className="mt-2 rounded-lg p-3 bg-muted/20">
-                <div className="flex gap-3">
-                  <div className="flex-1 min-w-0">
-                    <h4 className="font-medium text-sm truncate">
-                      {(msg.metadata as Record<string, unknown>).embed.title}
-                    </h4>
-                    {(msg.metadata as Record<string, unknown>).embed.description && (
-                      <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
-                        {(msg.metadata as Record<string, unknown>).embed.description}
-                      </p>
-                    )}
-                    <a
-                      href={(msg.metadata as Record<string, unknown>).embed.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-xs text-primary hover:underline mt-1 block truncate"
-                    >
-                      {(msg.metadata as Record<string, unknown>).embed.url}
-                    </a>
-                  </div>
-                  {(msg.metadata as Record<string, unknown>).embed.image && (
-                    <img
-                      src={(msg.metadata as Record<string, unknown>).embed.image}
-                      alt=""
-                      className="w-20 h-20 object-cover rounded"
-                    />
-                  )}
-                </div>
-              </div>
-            )}
-
-          {/* Image attachment */}
-          {msg.message_type === 'image' &&
-            msg.metadata &&
-            typeof msg.metadata === 'object' &&
-            'url' in msg.metadata && (
-              <div className="mt-2">
-                <img
-                  src={(msg.metadata as Record<string, unknown>).url}
-                  alt={(msg.metadata as Record<string, unknown>).alt || 'Image'}
-                  className="max-w-sm rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
-                  onClick={() =>
-                    window.open((msg.metadata as Record<string, unknown>).url, '_blank')
-                  }
-                />
-              </div>
-            )}
-
-          {/* File attachment */}
-          {msg.message_type === 'file' &&
-            msg.metadata &&
-            typeof msg.metadata === 'object' &&
-            'url' in msg.metadata && (
-              <div className="mt-2 inline-flex items-center gap-2 px-3 py-2 bg-muted/50 rounded-md">
-                <svg
-                  className="w-4 h-4 text-muted-foreground"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                  />
-                </svg>
-                <a
-                  href={(msg.metadata as Record<string, unknown>).url}
-                  download={(msg.metadata as Record<string, unknown>).filename || 'file'}
-                  className="text-sm hover:underline"
-                >
-                  {(msg.metadata as Record<string, unknown>).filename || 'Download file'}
-                </a>
-                {(msg.metadata as Record<string, unknown>).size && (
-                  <span className="text-xs text-muted-foreground">
-                    ({formatFileSize((msg.metadata as Record<string, unknown>).size)})
-                  </span>
-                )}
-              </div>
-            )}
-
-          {/* Reactions display */}
-          {(() => {
-            const reactions = getReactionCounts(msg);
-            if (reactions.length === 0) return null;
-
-            return (
-              <div className="flex flex-wrap gap-1 mt-1">
-                {reactions.map((reaction) => (
-                  <button
-                    key={reaction.emoji}
-                    onClick={() => {
-                      const hasReacted = reaction.userIds.includes(
-                        user?.id || '',
-                      );
-                      if (hasReacted) {
-                        onRemoveReaction(msg.id, reaction.emoji);
-                      } else {
-                        onAddReaction(msg.id, reaction.emoji);
-                      }
-                    }}
-                    className="inline-flex items-center gap-1 px-2 py-0.5 text-xs rounded-full bg-muted hover:bg-muted/80 transition-colors"
-                  >
-                    <span>{reaction.emoji}</span>
-                    <span className="text-muted-foreground">
-                      {reaction.count}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            );
-          })()}
-        </div>
-
-        {/* Action buttons column */}
-        <div className="absolute -top-3 right-4 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 bg-background/95 backdrop-blur-sm rounded-md shadow-sm p-1">
-          <button
-            type="button"
-            onClick={() => onEmojiPicker(msg.id)}
-            className="text-xs p-1 hover:bg-muted rounded transition-colors px-2"
-            title="Add reaction"
-          >
-            React
-          </button>
-          <button
-            type="button"
-            onClick={() => onReply(msg)}
-            className="text-xs italic text-muted-foreground hover:text-foreground transition-colors px-2"
-            title="Reply to this message"
-          >
-            Reply
-          </button>
-          {msg.sender_id === user?.id && !isDeleted && (
-            <>
-              <button
-                type="button"
-                onClick={() => onStartEdit(msg)}
-                className="text-xs text-muted-foreground hover:text-foreground transition-colors px-2"
-                title="Edit message"
-              >
-                Edit
-              </button>
-              <button
-                type="button"
-                onClick={() => onDelete(msg.id)}
-                className="text-xs text-destructive hover:text-destructive/80 transition-colors px-2"
-                title="Delete message"
-              >
-                Delete
-              </button>
-            </>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-});
-
-MessageRow.displayName = 'MessageRow';
+MessageRowLegacy.displayName = 'MessageRowLegacy';

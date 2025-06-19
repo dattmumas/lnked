@@ -12,7 +12,6 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
 
-
 interface FollowCollectiveButtonProps {
   targetCollectiveId: string;
   targetCollectiveName: string;

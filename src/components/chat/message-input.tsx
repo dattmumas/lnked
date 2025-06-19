@@ -1,14 +1,122 @@
 'use client';
 
 import clsx from 'clsx';
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useReducer, useRef, useCallback } from 'react';
 
+import { useToast } from '@/hooks/useToast';
+import { useTypingStatus } from '@/hooks/useTypingStatus';
 import { useUser } from '@/hooks/useUser';
-import { selectAdapter } from '@/lib/chat/realtime-adapter';
+
+import { AttachmentIcon } from './icons/AttachmentIcon';
+import { LoadingSpinner } from './icons/LoadingSpinner';
 
 import type { MessageWithSender as Message } from '@/lib/chat/types';
 
-const realTime = selectAdapter();
+// Constants to replace magic numbers
+const MAX_TEXTAREA_HEIGHT = 120;
+const ERROR_TIMEOUT_MS = 5000;
+const BLOB_CLEANUP_DELAY_MS = 1000;
+const MAX_FILE_SIZE_MB = 25;
+const BYTES_PER_KB = 1024;
+const KB_PER_MB = 1024;
+const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * KB_PER_MB * BYTES_PER_KB;
+// Constants for fallback ID generation
+const FALLBACK_RADIX = 36;
+const FALLBACK_START_INDEX = 2;
+const FALLBACK_LENGTH = 9;
+
+// Generate temporary ID for optimistic updates (client-side only, not security-sensitive)
+const generateTempId = (): string => {
+  if (
+    typeof crypto !== 'undefined' &&
+    crypto.randomUUID !== null &&
+    crypto.randomUUID !== undefined
+  ) {
+    return `temp-${Date.now()}-${crypto.randomUUID()}`;
+  }
+  // Fallback for environments without crypto.randomUUID (temp IDs only)
+  // eslint-disable-next-line security-node/detect-insecure-randomness
+  return `temp-${Date.now()}-${Math.random().toString(FALLBACK_RADIX).substr(FALLBACK_START_INDEX, FALLBACK_LENGTH)}`;
+};
+const CONTENT_PREVIEW_LENGTH = 50;
+
+// Discriminated union for message metadata
+interface FileMetadata {
+  type: 'file';
+  url: string;
+  filename: string;
+  size: number;
+  mimeType: string;
+}
+
+interface ImageMetadata {
+  type: 'image';
+  url: string;
+  filename: string;
+  size: number;
+  mimeType: string;
+  width?: number;
+  height?: number;
+}
+
+interface TextMetadata {
+  type: 'text';
+}
+
+type MessageMetadata = FileMetadata | ImageMetadata | TextMetadata;
+
+// Shared interface to avoid shape drift with useUser
+interface AuthUser {
+  id: string;
+  full_name?: string | null;
+  username?: string | null;
+  avatar_url?: string | null;
+}
+
+// State management with useReducer
+interface MessageInputState {
+  text: string;
+  sending: boolean;
+  uploading: boolean;
+  error: string | null;
+}
+
+type MessageInputAction =
+  | { type: 'SET_TEXT'; payload: string }
+  | { type: 'SET_SENDING'; payload: boolean }
+  | { type: 'SET_UPLOADING'; payload: boolean }
+  | { type: 'SET_ERROR'; payload: string | null }
+  | { type: 'RESET_TEXT' }
+  | { type: 'RESET_ERROR' };
+
+const initialState: MessageInputState = {
+  text: '',
+  sending: false,
+  uploading: false,
+  error: null,
+};
+
+function messageInputReducer(
+  state: MessageInputState,
+  action: MessageInputAction,
+): MessageInputState {
+  switch (action.type) {
+    case 'SET_TEXT':
+      return { ...state, text: action.payload };
+    case 'SET_SENDING':
+      return { ...state, sending: action.payload };
+    case 'SET_UPLOADING':
+      return { ...state, uploading: action.payload };
+    case 'SET_ERROR':
+      return { ...state, error: action.payload };
+    case 'RESET_TEXT':
+      return { ...state, text: '' };
+    case 'RESET_ERROR':
+      return { ...state, error: null };
+    default:
+      return state;
+  }
+}
 
 interface Props {
   channelId: string;
@@ -16,6 +124,8 @@ interface Props {
   onSent?: (msg: Message) => void;
   replyTarget?: Message | null;
   onClearReply?: () => void;
+  onSendError?: (tempId: string) => void;
+  _pendingIds?: Set<string>;
 }
 
 export function MessageInput({
@@ -24,231 +134,334 @@ export function MessageInput({
   onSent,
   replyTarget,
   onClearReply,
-}: Props) {
-  const [text, setText] = useState('');
-  const [isTyping, setIsTyping] = useState(false);
-  const [uploading, setUploading] = useState(false);
-  const [sending, setSending] = useState(false);
-  const [error, setError] = useState<string | undefined>(undefined);
+  onSendError,
+  _pendingIds,
+}: Props): React.JSX.Element {
+  const [state, dispatch] = useReducer(messageInputReducer, initialState);
+  const { text, sending, uploading, error } = state;
   const lastSentRef = useRef<number>(0);
-  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const blobUrlsRef = useRef<Set<string>>(new Set());
+  const isActiveRef = useRef<boolean>(true);
+  const resizeTimeoutRef = useRef<number | null>(null);
   const { user } = useUser();
+  const { registerKeystroke } = useTypingStatus(channelId);
+  const { error: showToastError } = useToast();
 
-  // Auto-resize textarea
+  // Auto-resize textarea with optimized reflow batching
   useEffect((): void => {
     const textarea = textareaRef.current;
-    if (!textarea) return;
+    if (textarea === null) return;
 
-    textarea.style.height = 'auto';
-    textarea.style.height = `${Math.min(textarea.scrollHeight, 120)}px`;
+    // Cancel any pending resize
+    if (resizeTimeoutRef.current !== null) {
+      cancelAnimationFrame(resizeTimeoutRef.current);
+    }
+
+    // Batch resize in next animation frame to prevent multiple reflows
+    resizeTimeoutRef.current = requestAnimationFrame(() => {
+      textarea.style.height = 'auto';
+      textarea.style.height = `${Math.min(textarea.scrollHeight, MAX_TEXTAREA_HEIGHT)}px`;
+      resizeTimeoutRef.current = null;
+    });
   }, [text]);
 
-  // Clear error after 5 seconds
-  useEffect((): void => {
-    if (error) {
-      const timeout = setTimeout(() => setError(undefined), 5000);
-      return () => clearTimeout(timeout);
-    }
-  }, [error]);
-
-  // Debounce typing stop
-  useEffect((): void => {
-    if (!channelId) return;
-    if (isTyping) {
-      Promise.resolve(realTime.broadcastTyping(channelId, true));
+  // Clear error after timeout (now using toast instead)
+  useEffect((): (() => void) | void => {
+    if (error !== null && error !== undefined && error !== '') {
+      showToastError(error);
       const timeout = setTimeout(() => {
-        setIsTyping(false);
-        Promise.resolve(realTime.broadcastTyping(channelId, false)).catch(
-          console.error,
-        );
-      }, 3000);
-      return () => clearTimeout(timeout);
+        dispatch({ type: 'RESET_ERROR' });
+      }, ERROR_TIMEOUT_MS);
+      return () => {
+        clearTimeout(timeout);
+      };
     }
-  }, [isTyping, channelId]);
+    return undefined;
+  }, [error, showToastError]);
 
-  // Clear previous timeout on each keypress
-  const scheduleTypingStop = () => {
-    if (typingTimeoutRef.current) {
-      clearTimeout(typingTimeoutRef.current);
-    }
-    typingTimeoutRef.current = setTimeout(() => {
-      setIsTyping(false);
-      Promise.resolve(realTime.broadcastTyping(channelId, false)).catch(
-        console.error,
-      );
-    }, 3000);
-  };
+  // Cleanup blob URLs on unmount and set inactive flag
+  useEffect((): (() => void) => {
+    const blobUrls = blobUrlsRef.current;
+    return () => {
+      isActiveRef.current = false;
 
-  const updateTyping = () => {
-    if (!isTyping) {
-      setIsTyping(true);
-      Promise.resolve(realTime.broadcastTyping(channelId, true)).catch(
-        console.error,
-      );
-    }
-    scheduleTypingStop();
-  };
+      // Cancel any pending resize operations
+      if (resizeTimeoutRef.current !== null) {
+        cancelAnimationFrame(resizeTimeoutRef.current);
+      }
 
-  const handleSend = async (
-    messageType: string = 'text',
-    content?: string,
-    metadata?: any,
-  ) => {
-    const messageContent = content || text.trim();
-    if (!messageContent && messageType === 'text') return;
-    if (sending) return; // Prevent double sends
+      // Revoke all blob URLs to prevent memory leaks
+      blobUrls.forEach((url) => {
+        URL.revokeObjectURL(url);
+      });
+      blobUrls.clear();
+    };
+  }, []);
 
-    const originalText = text; // Save for restoration on error
-    if (messageType === 'text') {
-      setText('');
-    }
-    setIsTyping(false);
-    setSending(true);
-    setError(undefined);
+  const handleSend = useCallback(
+    async (
+      messageType: 'text' | 'image' | 'file' = 'text',
+      content?: string,
+      metadata?: MessageMetadata,
+    ): Promise<void> => {
+      const messageContent = content ?? text.trim();
+      if (
+        (messageContent === null ||
+          messageContent === undefined ||
+          messageContent === '') &&
+        messageType === 'text'
+      )
+        return;
+      if (sending) return; // Prevent double sends
 
-    try {
-      // Optimistic echo
-      if (user && onSent) {
-        const optimistic: Message = {
-          id: `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-          conversation_id: channelId,
-          sender_id: user.id,
+      const originalText = text; // Save for restoration on error
+      const tempId = generateTempId();
+
+      if (messageType === 'text') {
+        dispatch({ type: 'RESET_TEXT' });
+      }
+      if (!isActiveRef.current) return;
+      dispatch({ type: 'SET_SENDING', payload: true });
+      dispatch({ type: 'RESET_ERROR' });
+
+      try {
+        // Optimistic echo
+        if (user !== null && user !== undefined && onSent !== undefined) {
+          const typedUser = user as AuthUser;
+          const optimistic: Message = {
+            id: tempId,
+            conversation_id: channelId,
+            sender_id: typedUser.id,
+            content: messageContent,
+            message_type: messageType,
+            metadata: (metadata ?? {
+              type: 'text' as const,
+            }) as unknown as Message['metadata'],
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            edited_at: null,
+            deleted_at: null,
+            reply_to_id: replyTarget?.id ?? null,
+            sender: {
+              id: typedUser.id,
+              full_name: typedUser.full_name ?? null,
+              username: typedUser.username ?? null,
+              avatar_url: typedUser.avatar_url ?? null,
+            },
+            reply_to: replyTarget ?? null,
+          } as Message;
+          onSent(optimistic);
+        }
+
+        const body = {
           content: messageContent,
           message_type: messageType,
-          metadata: metadata || {},
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-          edited_at: null,
-          deleted_at: null,
-          reply_to_id: replyTarget?.id ?? null,
-          sender: {
-            id: user.id,
-            full_name: (user as any).full_name ?? null,
-            username: (user as any).username ?? null,
-            avatar_url: (user as any).avatar_url ?? null,
-          },
-          reply_to: replyTarget as any,
-        } as any;
-        onSent(optimistic);
+          metadata: metadata ?? { type: 'text' as const },
+          ...(replyTarget !== null && replyTarget !== undefined
+            ? { reply_to_id: replyTarget.id }
+            : {}),
+        };
+
+        const res = await fetch(`/api/chat/${channelId}/message`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+
+        if (!res.ok) {
+          throw new Error('Failed to send message');
+        }
+
+        lastSentRef.current = Date.now();
+
+        // Clear reply target after sending
+        if (onClearReply !== undefined) {
+          onClearReply();
+        }
+      } catch (err: unknown) {
+        console.error('Failed to send message', err);
+
+        if (!isActiveRef.current) return;
+        dispatch({
+          type: 'SET_ERROR',
+          payload: 'Failed to send message. Please try again.',
+        });
+
+        // Restore the text so user can retry
+        if (messageType === 'text') {
+          dispatch({ type: 'SET_TEXT', payload: originalText });
+        }
+
+        // Remove the optimistic message from the UI
+        if (onSendError !== undefined) {
+          onSendError(tempId);
+        }
+      } finally {
+        if (isActiveRef.current) {
+          dispatch({ type: 'SET_SENDING', payload: false });
+        }
+      }
+    },
+    [
+      text,
+      sending,
+      user,
+      onSent,
+      channelId,
+      replyTarget,
+      onClearReply,
+      onSendError,
+      dispatch,
+    ],
+  );
+
+  const handleFileSelectAsync = useCallback(
+    async (file: File): Promise<void> => {
+      if (!isActiveRef.current) return;
+
+      // File size validation
+      if (file.size > MAX_FILE_SIZE_BYTES) {
+        showToastError(
+          `File size too large. Maximum size is ${MAX_FILE_SIZE_MB}MB.`,
+        );
+        return;
       }
 
-      const body = {
-        content: messageContent,
-        message_type: messageType,
-        metadata: metadata || {},
-        ...(replyTarget ? { reply_to_id: replyTarget.id } : {}),
-      };
+      dispatch({ type: 'SET_UPLOADING', payload: true });
+      try {
+        // For now, we'll just show a placeholder message
+        // In a real implementation, you'd upload to Supabase Storage or similar
+        const isImage = file.type.startsWith('image/');
 
-      const res = await fetch(`/api/chat/${channelId}/message`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
+        // Create a local URL for preview (in real app, upload to storage)
+        const localUrl = URL.createObjectURL(file);
 
-      if (!res.ok) {
-        throw new Error('Failed to send message');
+        // Track blob URL for cleanup
+        blobUrlsRef.current.add(localUrl);
+
+        try {
+          const metadata: MessageMetadata = isImage
+            ? {
+                type: 'image' as const,
+                url: localUrl,
+                filename: file.name,
+                size: file.size,
+                mimeType: file.type,
+              }
+            : {
+                type: 'file' as const,
+                url: localUrl,
+                filename: file.name,
+                size: file.size,
+                mimeType: file.type,
+              };
+
+          await handleSend(isImage ? 'image' : 'file', file.name, metadata);
+
+          // On successful send, we can revoke the URL after a short delay
+          // to allow the message to be rendered
+          setTimeout(() => {
+            URL.revokeObjectURL(localUrl);
+            blobUrlsRef.current.delete(localUrl);
+          }, BLOB_CLEANUP_DELAY_MS);
+        } catch (uploadError: unknown) {
+          // On error, immediately revoke the URL
+          URL.revokeObjectURL(localUrl);
+          blobUrlsRef.current.delete(localUrl);
+          throw uploadError;
+        }
+
+        // Note: In production, you'd upload to storage and use the real URL
+        console.warn('File upload not implemented yet. Would upload:', file);
+      } catch (err: unknown) {
+        console.error('Failed to upload file:', err);
+        if (isActiveRef.current) {
+          showToastError('Failed to upload file. Please try again.');
+        }
+      } finally {
+        if (isActiveRef.current) {
+          dispatch({ type: 'SET_UPLOADING', payload: false });
+          if (fileInputRef.current !== null) {
+            fileInputRef.current.value = '';
+          }
+        }
       }
+    },
+    [handleSend, showToastError, dispatch],
+  );
 
-      lastSentRef.current = Date.now();
+  const handleFileSelect = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>): void => {
+      const file = e.target.files?.[0];
+      if (file === null || file === undefined) return;
+      void handleFileSelectAsync(file);
+    },
+    [handleFileSelectAsync],
+  );
 
-      // Clear reply target after sending
-      if (onClearReply) {
-        onClearReply();
+  const handleTextChange = useCallback(
+    (e: React.ChangeEvent<HTMLTextAreaElement>): void => {
+      dispatch({ type: 'SET_TEXT', payload: e.target.value });
+      registerKeystroke();
+    },
+    [registerKeystroke],
+  );
+
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLTextAreaElement>): void => {
+      if (e.key === 'Enter' && !e.shiftKey && !sending) {
+        e.preventDefault();
+        void handleSend('text');
       }
-    } catch (err: unknown) {
-      console.error('Failed to send message', err);
-      setError('Failed to send message. Please try again.');
+    },
+    [sending, handleSend],
+  );
 
-      // Restore the text so user can retry
-      if (messageType === 'text') {
-        setText(originalText);
-      }
+  const handleAttachmentClick = useCallback((): void => {
+    fileInputRef.current?.click();
+  }, []);
 
-      // TODO: Remove the optimistic message from the UI
-      // This would require tracking the temp ID and a callback to remove it
-    } finally {
-      setSending(false);
+  const handleSendClick = useCallback((): void => {
+    void handleSend('text');
+  }, [handleSend]);
+
+  const handleClearReplyClick = useCallback((): void => {
+    if (onClearReply !== undefined) {
+      onClearReply();
     }
-  };
-
-  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setUploading(true);
-    try {
-      // For now, we'll just show a placeholder message
-      // In a real implementation, you'd upload to Supabase Storage or similar
-      const isImage = file.type.startsWith('image/');
-
-      // Create a local URL for preview (in real app, upload to storage)
-      const localUrl = URL.createObjectURL(file);
-
-      await handleSend(isImage ? 'image' : 'file', file.name, {
-        url: localUrl,
-        filename: file.name,
-        size: file.size,
-        type: file.type,
-      });
-
-      // Note: In production, you'd upload to storage and use the real URL
-      console.log('File upload not implemented yet. Would upload:', file);
-    } catch (err: unknown) {
-      console.error('Failed to upload file:', err);
-    } finally {
-      setUploading(false);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
-    }
-  };
+  }, [onClearReply]);
 
   return (
     <div className="flex flex-col gap-1">
-      {/* Error message */}
-      {error && (
-        <div className="mx-2 px-3 py-2 bg-destructive/10 text-destructive rounded-md text-sm flex items-center gap-2">
-          <svg
-            className="w-4 h-4 shrink-0"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-            />
-          </svg>
-          <span>{error}</span>
-        </div>
-      )}
-
-      {/* Reply preview */}
+      {/* Reply preview with simplified optional chaining */}
       {replyTarget && (
         <div className="mx-2 px-3 py-2 bg-muted/50 rounded-md flex items-center justify-between text-xs">
           <div className="flex-1 min-w-0">
             <span className="text-muted-foreground">Replying to </span>
             <span className="font-medium">
-              @{replyTarget.sender?.username ?? 'Unknown'}
+              @
+              {replyTarget.sender?.username ??
+                replyTarget.sender?.full_name ??
+                'Anonymous'}
             </span>
             <span className="text-muted-foreground">: </span>
             <span className="truncate">
-              "{replyTarget.content?.substring(0, 50)}
-              {replyTarget.content && replyTarget.content.length > 50
+              &quot;
+              {replyTarget.content?.substring(0, CONTENT_PREVIEW_LENGTH) ?? ''}
+              {(replyTarget.content?.length ?? 0) > CONTENT_PREVIEW_LENGTH
                 ? '...'
                 : ''}
-              "
+              &quot;
             </span>
           </div>
           <button
             type="button"
-            onClick={onClearReply}
+            onClick={handleClearReplyClick}
             className="ml-2 p-1 hover:bg-muted rounded transition-colors"
             title="Cancel reply"
+            aria-label="Cancel reply"
           >
             ✕
           </button>
@@ -265,20 +478,13 @@ export function MessageInput({
         <textarea
           ref={textareaRef}
           value={text}
-          onChange={(e) => {
-            setText(e.target.value);
-            updateTyping();
-          }}
+          onChange={handleTextChange}
           placeholder="Type a message..."
           className="flex-1 bg-transparent px-3 py-2 placeholder:text-muted-foreground focus:outline-none resize-none min-h-[40px] max-h-[120px] text-[15px] leading-relaxed font-normal"
           rows={1}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' && !e.shiftKey && !sending) {
-              e.preventDefault();
-              void handleSend('text');
-            }
-          }}
+          onKeyDown={handleKeyDown}
           disabled={sending}
+          aria-label="Message input"
         />
 
         {/* File input (hidden) */}
@@ -288,59 +494,32 @@ export function MessageInput({
           className="hidden"
           onChange={handleFileSelect}
           accept="image/*,video/*,.pdf,.doc,.docx,.txt,.zip,.rar"
+          aria-label="File upload input"
         />
 
         {/* Attachment button */}
         <button
           type="button"
-          onClick={() => fileInputRef.current?.click()}
+          onClick={handleAttachmentClick}
           className="p-2 text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           title="Add attachment"
+          aria-label="Add attachment"
           disabled={uploading || sending}
         >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="20"
-            height="20"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <line x1="12" y1="5" x2="12" y2="19"></line>
-            <line x1="5" y1="12" x2="19" y2="12"></line>
-          </svg>
+          <AttachmentIcon />
         </button>
 
         <button
           type="button"
-          onClick={() => void handleSend('text')}
+          onClick={handleSendClick}
           className="rounded-md bg-primary px-3 py-2 text-sm text-primary-foreground hover:bg-primary/80 disabled:opacity-50 disabled:cursor-not-allowed transition-colors min-w-[70px]"
-          disabled={!text.trim() || uploading || sending}
+          disabled={text.trim() === '' || uploading || sending}
+          aria-busy={sending}
+          aria-label={sending ? 'Sending message' : 'Send message'}
         >
           {sending ? (
             <span className="flex items-center gap-1">
-              <svg
-                className="animate-spin h-3 w-3"
-                viewBox="0 0 24 24"
-                fill="none"
-              >
-                <circle
-                  className="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  strokeWidth="4"
-                ></circle>
-                <path
-                  className="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                ></path>
-              </svg>
+              <LoadingSpinner />
               Sending
             </span>
           ) : uploading ? (

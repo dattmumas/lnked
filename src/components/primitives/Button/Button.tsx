@@ -98,7 +98,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     ref,
   ) => {
     // Disable button when loading
-    const isDisabled = disabled || loading;
+    const isDisabled = Boolean(disabled) || loading;
 
     // When using asChild, we need to ensure proper Slot usage
     if (asChild) {
@@ -146,11 +146,15 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
           </svg>
         )}
 
-        {leftIcon && !loading && <span className="mr-1">{leftIcon}</span>}
+        {Boolean(leftIcon) && !loading && (
+          <span className="mr-1">{leftIcon}</span>
+        )}
 
         {children}
 
-        {rightIcon && !loading && <span className="ml-1">{rightIcon}</span>}
+        {Boolean(rightIcon) && !loading && (
+          <span className="ml-1">{rightIcon}</span>
+        )}
       </button>
     );
   },

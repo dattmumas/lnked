@@ -65,7 +65,7 @@ export function ContentArea({ className = '' }: ContentAreaProps) {
   }, [metrics.postCounts]);
 
   // Sticky tab behavior
-  useEffect((): void => {
+  useEffect(() => {
     const handleScroll = () => {
       if (!tabsRef.current) return;
 
@@ -76,7 +76,10 @@ export function ContentArea({ className = '' }: ContentAreaProps) {
     };
 
     window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
+
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+    };
   }, []);
 
   // Early return after hooks
@@ -121,7 +124,6 @@ export function ContentArea({ className = '' }: ContentAreaProps) {
           counts={metrics.postCounts}
         />
       </div>
-
       {/* Content Grid */}
       <div className="content-grid-container">
         {activeType === 'video' ? (

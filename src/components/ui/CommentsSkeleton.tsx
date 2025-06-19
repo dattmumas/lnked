@@ -1,3 +1,5 @@
+import React from 'react';
+
 import { cn } from '@/lib/utils';
 
 import { Skeleton } from './skeleton';
@@ -7,10 +9,12 @@ interface CommentsSkeletonProps {
   commentCount?: number;
 }
 
+const DEFAULT_COMMENT_COUNT = 3;
+
 export function CommentsSkeleton({
   className,
-  commentCount = 3,
-}: CommentsSkeletonProps) {
+  commentCount = DEFAULT_COMMENT_COUNT,
+}: CommentsSkeletonProps): React.JSX.Element {
   return (
     <div className={cn('space-y-4', className)} aria-label="Loading comments">
       {Array.from({ length: commentCount }).map((_, i) => (

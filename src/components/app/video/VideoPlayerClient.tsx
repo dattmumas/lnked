@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react';
 
 import MuxVideoPlayer from '@/components/app/video/MuxVideoPlayerClient';
-import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
 
 import type { User } from '@supabase/supabase-js';
 
@@ -19,7 +18,7 @@ interface VideoPlayerClientProps {
 
 export default function VideoPlayerClient({ video }: VideoPlayerClientProps) {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const supabase = createSupabaseBrowserClient();
+  const supabase = supabase;
 
   useEffect((): void => {
     const getCurrentUser = async () => {

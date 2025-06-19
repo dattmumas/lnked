@@ -55,11 +55,11 @@ async function getPostBySlugOrId(
 
       if (postError) {
         console.error('Database error fetching post:', postError);
-        return { data: null, error: postError.message };
+        return { data: undefined, error: postError.message };
       }
 
       if (!postData) {
-        return { data: null, error: 'Post not found' };
+        return { data: undefined, error: 'Post not found' };
       }
 
       // Get real like/dislike counts from post_reactions table
@@ -78,8 +78,8 @@ async function getPostBySlugOrId(
         ],
       );
 
-      let reactionData = null;
-      let bookmarkData = null;
+      let reactionData = undefined;
+      let bookmarkData = undefined;
 
       // If we have a user, fetch their specific reaction and bookmark data
       if (userId) {
@@ -109,13 +109,15 @@ async function getPostBySlugOrId(
           ...postData,
           user_reaction: reactionData
             ? { reaction_type: reactionData.type }
-            : null,
-          user_bookmark: bookmarkData ? { id: bookmarkData.post_id } : null,
+            : undefined,
+          user_bookmark: bookmarkData
+            ? { id: bookmarkData.post_id }
+            : undefined,
           // Use real counts from post_reactions table
           real_like_count: likeCount ?? 0,
           real_dislike_count: dislikeCount ?? 0,
         },
-        error: null,
+        error: undefined,
       };
     }
 
@@ -134,11 +136,11 @@ async function getPostBySlugOrId(
 
     if (postError) {
       console.error('Database error fetching post by fallback ID:', postError);
-      return { data: null, error: postError.message };
+      return { data: undefined, error: postError.message };
     }
 
     if (!postData) {
-      return { data: null, error: 'Post not found' };
+      return { data: undefined, error: 'Post not found' };
     }
 
     // Get real like/dislike counts from post_reactions table
@@ -155,8 +157,8 @@ async function getPostBySlugOrId(
         .eq('type', 'dislike'),
     ]);
 
-    let reactionData = null;
-    let bookmarkData = null;
+    let reactionData = undefined;
+    let bookmarkData = undefined;
 
     // If we have a user, fetch their specific reaction and bookmark data
     if (userId) {
@@ -185,18 +187,18 @@ async function getPostBySlugOrId(
         ...postData,
         user_reaction: reactionData
           ? { reaction_type: reactionData.type }
-          : null,
-        user_bookmark: bookmarkData ? { id: bookmarkData.post_id } : null,
+          : undefined,
+        user_bookmark: bookmarkData ? { id: bookmarkData.post_id } : undefined,
         // Use real counts from post_reactions table
         real_like_count: likeCount ?? 0,
         real_dislike_count: dislikeCount ?? 0,
       },
-      error: null,
+      error: undefined,
     };
   } catch (error: unknown) {
     console.error('Unexpected error in getPostBySlugOrId:', error);
     return {
-      data: null,
+      data: undefined,
       error: error instanceof Error ? error.message : 'Unknown error',
     };
   }

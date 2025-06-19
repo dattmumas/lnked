@@ -129,7 +129,7 @@ export default function SearchBar({ className }: SearchBarProps) {
     }
   };
 
-  useEffect((): void => {
+  useEffect(() => {
     const delayedSearch = setTimeout(() => {
       performSearch(query);
     }, 300);
@@ -138,7 +138,7 @@ export default function SearchBar({ className }: SearchBarProps) {
   }, [query]);
 
   // Close search on outside click
-  useEffect((): void => {
+  useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
         containerRef.current &&

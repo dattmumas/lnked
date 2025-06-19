@@ -34,7 +34,7 @@ import {
 } from '@/components/ui/sheet';
 import { useUnreadMessages } from '@/hooks/use-unread-messages';
 import { useUser } from '@/hooks/useUser';
-import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
+import supabase from '@/lib/supabase/browser';
 import { getOptimizedAvatarUrl } from '@/lib/utils/avatar';
 
 import { Button } from './ui/button';
@@ -71,7 +71,7 @@ export default function ModernNavbar({
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const { unreadCount } = useUnreadMessages(user?.id);
 
-  const supabase = createSupabaseBrowserClient();
+  // supabase is now the singleton instance directly
 
   // Memoized optimized avatar URLs
   const optimizedAvatarUrls = useMemo(() => {
@@ -97,15 +97,25 @@ export default function ModernNavbar({
         .select('username, full_name, avatar_url')
         .eq('id', user.id)
         .single()
-        .then(({ data: profile }) => {
-          if (profile) {
-            setUsername(profile.username);
-            setUserMetadata({
-              full_name: profile.full_name,
-              avatar_url: profile.avatar_url,
-            });
-          }
-        });
+        .then(
+          ({
+            data: profile,
+          }: {
+            data: {
+              username: string | null;
+              full_name: string | null;
+              avatar_url: string | null;
+            } | null;
+          }) => {
+            if (profile) {
+              setUsername(profile.username);
+              setUserMetadata({
+                full_name: profile.full_name,
+                avatar_url: profile.avatar_url,
+              });
+            }
+          },
+        );
     } else if (!user) {
       // Clear profile data on sign out
       setUsername(null);

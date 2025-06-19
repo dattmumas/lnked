@@ -14,7 +14,7 @@ export default async function ChatPage() {
   }
 
   return (
-    <div className="flex h-full w-full overflow-hidden">
+    <div className="fixed inset-0 top-16 flex h-[calc(100vh-4rem)] w-full overflow-hidden">
       {/* ChatInterface is a client component */}
       <ChatInterface userId={user.id} />
     </div>

@@ -3,11 +3,11 @@
  * Provides application-level security checks in addition to database RLS policies
  */
 
-import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
+import supabase from '@/lib/supabase/browser';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 
 export class ChatSecurity {
-  private supabase = createSupabaseBrowserClient();
+  private supabase = supabase;
 
   /**
    * Check if user is a participant in a conversation
@@ -119,7 +119,7 @@ export class ChatSecurity {
         .eq('id', messageId)
         .single();
 
-      // If the query errored, treat as “message not found”
+      // If the query errored, treat as "message not found"
       if (error) return false;
 
       // User can delete their own messages

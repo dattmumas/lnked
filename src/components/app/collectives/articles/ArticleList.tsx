@@ -197,7 +197,7 @@ const ArticleRow = React.memo<{
   };
 
   const getReadingTime = (title: string, subtitle: string | null) => {
-    const wordCount = (`${title} ${subtitle || ''}`).split(' ').length;
+    const wordCount = `${title} ${subtitle || ''}`.split(' ').length;
     const readingTime = Math.max(1, Math.ceil(wordCount / 200)); // ~200 words per minute
     return `${readingTime} min read`;
   };

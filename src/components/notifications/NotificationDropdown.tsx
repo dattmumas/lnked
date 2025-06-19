@@ -2,7 +2,7 @@
 
 import { Bell, CheckCheck, Settings, ExternalLink } from 'lucide-react';
 import Link from 'next/link';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -23,10 +23,15 @@ interface NotificationDropdownProps {
   className?: string;
 }
 
+// Constants for magic numbers
+const MARK_AS_READ_DELAY = 500;
+const MAX_RECENT_NOTIFICATIONS = 5;
+const MAX_UNREAD_COUNT_DISPLAY = 99;
+
 export function NotificationDropdown({
   userId,
   className,
-}: NotificationDropdownProps) {
+}: NotificationDropdownProps): React.JSX.Element {
   const [isOpen, setIsOpen] = useState(false);
   const [hasMarkedAsRead, setHasMarkedAsRead] = useState(false);
 
@@ -46,22 +51,23 @@ export function NotificationDropdown({
   });
 
   // Mark all notifications as read when dropdown opens
-  useEffect((): void => {
+  useEffect((): (() => void) | void => {
     if (isOpen && notifications.length > 0 && !hasMarkedAsRead) {
       const unreadNotificationIds = notifications
-        .filter((n) => !n.read_at)
+        .filter((n) => n.read_at === null)
         .map((n) => n.id);
 
       if (unreadNotificationIds.length > 0) {
         setHasMarkedAsRead(true);
         // Use a timeout to prevent immediate re-fetching
         const timeoutId = setTimeout(() => {
-          markAsRead(unreadNotificationIds);
-        }, 500); // Increased timeout to prevent rapid requests
+          void markAsRead(unreadNotificationIds);
+        }, MARK_AS_READ_DELAY);
 
-        return () => clearTimeout(timeoutId);
+        return (): void => clearTimeout(timeoutId);
       }
     }
+    return undefined;
   }, [isOpen, notifications, hasMarkedAsRead, markAsRead]);
 
   // Reset the flag when dropdown closes
@@ -71,24 +77,45 @@ export function NotificationDropdown({
     }
   }, [isOpen]);
 
-  const handleMarkAllAsRead = async () => {
+  const handleMarkAllAsRead = useCallback(async (): Promise<void> => {
     if (unreadCount > 0) {
       await markAsRead();
     }
-  };
+  }, [unreadCount, markAsRead]);
 
-  const handleNotificationAction = async (
-    notificationId: string,
-    action: 'read' | 'delete',
-  ) => {
-    if (action === 'read') {
-      await markAsRead([notificationId]);
-    } else {
-      await deleteNotifications([notificationId]);
-    }
-  };
+  const handleNotificationAction = useCallback(
+    async (
+      notificationId: string,
+      action: 'read' | 'delete',
+    ): Promise<void> => {
+      if (action === 'read') {
+        await markAsRead([notificationId]);
+      } else {
+        await deleteNotifications([notificationId]);
+      }
+    },
+    [markAsRead, deleteNotifications],
+  );
 
-  const recentNotifications = notifications.slice(0, 5);
+  const handleMarkAllClick = useCallback((): void => {
+    void handleMarkAllAsRead();
+  }, [handleMarkAllAsRead]);
+
+  const handleMarkAsReadCallback = useCallback(
+    (id: string): void => {
+      void handleNotificationAction(id, 'read');
+    },
+    [handleNotificationAction],
+  );
+
+  const handleDeleteCallback = useCallback(
+    (id: string): void => {
+      void handleNotificationAction(id, 'delete');
+    },
+    [handleNotificationAction],
+  );
+
+  const recentNotifications = notifications.slice(0, MAX_RECENT_NOTIFICATIONS);
 
   return (
     <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
@@ -104,13 +131,12 @@ export function NotificationDropdown({
               variant="destructive"
               className="absolute -top-1 -right-1 h-4 w-4 p-0 flex items-center justify-center text-[10px] font-medium"
             >
-              {unreadCount > 99 ? '99+' : unreadCount}
+              {unreadCount > MAX_UNREAD_COUNT_DISPLAY ? '99+' : unreadCount}
             </Badge>
           )}
           <span className="sr-only">Notifications</span>
         </Button>
       </DropdownMenuTrigger>
-
       <DropdownMenuContent align="end" className="w-96 shadow-lg p-0">
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b">
@@ -129,7 +155,7 @@ export function NotificationDropdown({
                 variant="ghost"
                 size="sm"
                 className="text-xs h-auto p-1.5 hover:bg-accent"
-                onClick={() => void handleMarkAllAsRead()}
+                onClick={handleMarkAllClick}
               >
                 <CheckCheck className="h-3 w-3 mr-1" />
                 Mark all read
@@ -187,12 +213,8 @@ export function NotificationDropdown({
                     <div className="w-full">
                       <NotificationItem
                         notification={notification}
-                        onMarkAsRead={(id) =>
-                          handleNotificationAction(id, 'read')
-                        }
-                        onDelete={(id) =>
-                          handleNotificationAction(id, 'delete')
-                        }
+                        onMarkAsRead={handleMarkAsReadCallback}
+                        onDelete={handleDeleteCallback}
                         className="border-0 rounded-md hover:bg-accent/50"
                       />
                     </div>

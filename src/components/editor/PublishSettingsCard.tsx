@@ -228,7 +228,7 @@ export function PublishSettingsCard({
           ) : autosaveStatus.includes('failed') ||
             autosaveStatus.includes('error') ? (
             <div className="w-2 h-2 bg-destructive rounded-full" />
-          ) : null}
+          ) : undefined}
           {autosaveStatus}
         </div>
       )}

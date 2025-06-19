@@ -1,9 +1,16 @@
 'use client';
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { useState } from 'react';
+import React, { useState } from 'react';
 
-export function QueryProvider({ children }: { children: React.ReactNode }) {
+const STALE_TIME_SECONDS = 60;
+const MILLISECONDS_PER_SECOND = 1000;
+
+export function QueryProvider({
+  children,
+}: {
+  children: React.ReactNode;
+}): React.JSX.Element {
   const [queryClient] = useState(
     () =>
       new QueryClient({
@@ -11,7 +18,7 @@ export function QueryProvider({ children }: { children: React.ReactNode }) {
           queries: {
             // With SSR, we usually want to set some default staleTime
             // above 0 to avoid refetching immediately on the client
-            staleTime: 60 * 1000, // 1 minute
+            staleTime: STALE_TIME_SECONDS * MILLISECONDS_PER_SECOND, // 1 minute
             retry: 1,
             refetchOnWindowFocus: false,
           },

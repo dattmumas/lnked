@@ -216,3 +216,39 @@ export function getResponsiveThumbnailUrls(
     }),
   };
 }
+
+/**
+ * Gets the public URL for a thumbnail stored in Supabase storage
+ * 
+ * @param path - The storage path to the thumbnail (undefined or empty string if invalid)
+ * @returns The public URL for the thumbnail, or undefined if the path is invalid
+ * 
+ * @example
+ * const url = getThumbnailUrl('avatars/user123.jpg');
+ * // Returns: 'https://your-project.supabase.co/storage/v1/object/public/avatars/user123.jpg'
+ */
+export function getThumbnailUrl(path: string | undefined): string | undefined {
+  if (path === undefined || path === '') {
+    return undefined;
+  }
+  
+  try {
+    const supabase = createSupabaseBrowserClient();
+    const {storage} = supabase;
+    
+    const { data } = storage
+      .from('thumbnails')
+      .getPublicUrl(path);
+    
+    // Validate the URL is properly formed
+    if (!data?.publicUrl) {
+      console.warn(`Failed to generate thumbnail URL for path: ${path}`);
+      return undefined;
+    }
+    
+    return data.publicUrl;
+  } catch (error) {
+    console.error('Error generating thumbnail URL:', error);
+    return undefined;
+  }
+}

@@ -1,9 +1,9 @@
-"use client";
-import * as RadixCollapsible from "@radix-ui/react-collapsible";
-import { ChevronDown } from "lucide-react";
-import * as React from "react";
+'use client';
+import * as RadixCollapsible from '@radix-ui/react-collapsible';
+import { ChevronDown } from 'lucide-react';
+import * as React from 'react';
 
-import { cn } from "@/lib/utils";
+import { cn } from '@/lib/utils';
 
 interface CollapsibleProps
   extends React.ComponentProps<typeof RadixCollapsible.Root> {
@@ -18,7 +18,7 @@ export function Collapsible({
   className,
   defaultOpen = true,
   ...props
-}: CollapsibleProps) {
+}: CollapsibleProps): React.JSX.Element {
   return (
     <RadixCollapsible.Root
       className={className}
@@ -46,13 +46,13 @@ export const CollapsibleTrigger = React.forwardRef<
   <RadixCollapsible.Trigger
     ref={ref}
     className={cn(
-      "flex w-full items-center justify-between rounded-lg border border-border bg-muted px-4 py-2 transition-colors hover:bg-muted/70 group",
-      className
+      'flex w-full items-center justify-between rounded-lg border border-border bg-muted px-4 py-2 transition-colors hover:bg-muted/70 group',
+      className,
     )}
     {...props}
   >
     <span className="flex items-center gap-2">
-      {icon && <span className="text-accent">{icon}</span>}
+      {Boolean(icon) && <span className="text-accent">{icon}</span>}
       <span className="font-serif text-2xl font-semibold text-foreground">
         {title}
       </span>
@@ -60,7 +60,7 @@ export const CollapsibleTrigger = React.forwardRef<
     <ChevronDown className="h-5 w-5 text-muted-foreground transition-transform duration-200 group-data-[state=open]:rotate-180" />
   </RadixCollapsible.Trigger>
 ));
-CollapsibleTrigger.displayName = "CollapsibleTrigger";
+CollapsibleTrigger.displayName = 'CollapsibleTrigger';
 
 export const CollapsibleContent = React.forwardRef<
   HTMLDivElement,
@@ -69,12 +69,12 @@ export const CollapsibleContent = React.forwardRef<
   <RadixCollapsible.Content
     ref={ref}
     className={cn(
-      "w-full pt-4 data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-down",
-      className
+      'w-full pt-4 data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-down',
+      className,
     )}
     {...props}
   >
     {children}
   </RadixCollapsible.Content>
 ));
-CollapsibleContent.displayName = "CollapsibleContent";
+CollapsibleContent.displayName = 'CollapsibleContent';

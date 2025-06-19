@@ -2,7 +2,7 @@
  * Avatar utility functions for Supabase storage operations
  */
 
-import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
+import supabase from '@/lib/supabase/browser';
 
 // ---------------------------------------------------------------------------
 // Avatar utility constants
@@ -176,7 +176,6 @@ export function getOptimizedAvatarUrl(
   }
   
   try {
-    const supabase = createSupabaseBrowserClient();
     const { data } = supabase.storage
       .from(pathInfo.bucket)
       .getPublicUrl(pathInfo.path, {

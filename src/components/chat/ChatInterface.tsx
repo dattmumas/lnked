@@ -1,14 +1,18 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 
 import { useCollectiveMemberships } from '@/hooks/posts/useCollectiveMemberships';
+import { useFirstChannel } from '@/hooks/useFirstChannel';
 import { useUser } from '@/hooks/useUser';
+import { CHAT_HEADER_HEIGHT } from '@/lib/constants/chat';
+import { useChatV2 } from '@/lib/hooks/use-chat-v2';
 
-import CollectiveSwitcher from './collective-switcher';
-import { ConversationPanel } from './conversation-panel';
-import { Sidebar } from './sidebar';
-
+import { ChatPanel } from './chat-panel';
+import { ChannelIcon } from './ChannelIcon';
+import { CollectiveChannelsSidebar } from './collective-channels-sidebar';
+import { CollectiveIconsSidebar } from './collective-icons-sidebar';
+import { CenteredSpinner } from '../ui/CenteredSpinner';
 
 interface ChatInterfaceProps {
   userId: string;
@@ -17,7 +21,6 @@ interface ChatInterfaceProps {
 type Channel = {
   id: string;
   title: string | null;
-  isAnnouncement?: boolean | null;
   type: string;
 };
 
@@ -31,125 +34,155 @@ export default function ChatInterface({ userId }: ChatInterfaceProps) {
   );
   const [activeChannel, setActiveChannel] = useState<Channel | null>(null);
 
-  // Pick the first collective membership as default once loaded
-  useEffect((): void => {
-    if (!activeCollectiveId && memberships.length > 0) {
-      setActiveCollectiveId(memberships[0].id);
-    }
-  }, [memberships, activeCollectiveId]);
+  // Use custom hook for first channel fetching
+  const { channel: firstChannel } = useFirstChannel(activeCollectiveId);
 
-  // reset channel when collective switches
-  useEffect((): void => {
+  // Get chat state for typing indicators (destructure for memoization)
+  const { typingUsers } = useChatV2();
+
+  // Auto-select first channel for collective if none active
+  useEffect(() => {
+    if (!activeCollectiveId || activeChannel || !firstChannel) return;
+
+    setActiveChannel(firstChannel);
+  }, [activeCollectiveId, activeChannel, firstChannel]);
+
+  // Reset channel when collective switches
+  useEffect(() => {
     setActiveChannel(null);
   }, [activeCollectiveId]);
 
-  // Auto-select first channel for collective if none active
-  useEffect((): void => {
-    if (!activeCollectiveId || activeChannel) return;
-    (async () => {
-      try {
-        const res = await fetch(
-          `/api/collectives/${activeCollectiveId}/channels?limit=1`,
-          { next: { revalidate: 30 } },
-        );
-        if (!res.ok) return;
-        const list = await res.json();
-        if (Array.isArray(list) && list.length > 0) {
-          setActiveChannel({
-            id: list[0].id,
-            title: list[0].title,
-            type: list[0].type,
-          });
-        }
-      } catch (err: unknown) {
-        console.error(err);
-      }
-    })();
-  }, [activeCollectiveId, activeChannel]);
+  // Memoize typing indicator text to prevent unnecessary re-renders
+  const typingIndicatorText = useMemo(() => {
+    if (!typingUsers || typingUsers.length === 0) return null;
+
+    const filteredUsers = typingUsers.filter((u) => u.user_id !== user?.id);
+    if (filteredUsers.length === 0) return null;
+
+    const userNames = filteredUsers
+      .map((u) => u.username || u.full_name || 'Someone')
+      .join(', ');
+
+    return `${userNames} ${filteredUsers.length === 1 ? 'is' : 'are'} typing...`;
+  }, [typingUsers, user?.id]);
+
+  // Memoize collective list transformation
+  const collectiveList = useMemo(
+    () =>
+      memberships.map((m) => ({
+        id: m.id,
+        name: m.name,
+        logo_url: m.logo_url,
+        slug: m.slug,
+      })),
+    [memberships],
+  );
+
+  // Handler for channel selection with proper typing
+  const handleChannelSelect = (channelData: {
+    id: string;
+    title: string | null;
+    type: string;
+  }): void => {
+    const channel: Channel = {
+      id: channelData.id,
+      title: channelData.title,
+      type: channelData.type,
+    };
+    setActiveChannel(channel);
+  };
 
   if (loadingMemberships && memberships.length === 0 && !activeChannel) {
-    return (
-      <div className="flex flex-1 items-center justify-center text-muted-foreground">
-        Loading…
-      </div>
-    );
+    return <CenteredSpinner label="Loading chat interface..." />;
   }
-
-  const collectiveList = memberships.map((m) => ({ id: m.id, name: m.name }));
 
   return (
     <div className="flex w-full h-full">
-      <CollectiveSwitcher
+      {/* Left: Collective Icons Sidebar */}
+      <CollectiveIconsSidebar
         collectives={collectiveList}
         activeCollectiveId={activeCollectiveId}
         onSelectCollective={setActiveCollectiveId}
       />
 
-      <Sidebar
+      {/* Center-Left: Channels Sidebar */}
+      <CollectiveChannelsSidebar
         collectiveId={activeCollectiveId}
         collectives={collectiveList}
         selectedChannelId={activeChannel?.id}
-        onSelectChannel={(ch: { id: string; title: string | null }) =>
-          setActiveChannel(ch as Channel)
-        }
-        onSelectCollective={setActiveCollectiveId}
+        onSelectChannel={handleChannelSelect}
       />
 
+      {/* Right: Main Chat Area */}
       <div className="flex flex-1 flex-col overflow-y-hidden bg-background">
         {activeChannel ? (
           <>
-            <div className="h-16 px-4 flex items-center justify-between border-b border-border/40">
-              <h2 className="text-lg font-semibold">
-                {activeChannel.type === 'direct' ? (
-                  <span className="flex items-center gap-2">
-                    <svg
-                      className="w-5 h-5 text-muted-foreground"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
+            {/* Channel Header */}
+            <header
+              className={`${CHAT_HEADER_HEIGHT} px-4 flex items-center justify-between border-b border-border/40 bg-background/95 backdrop-blur-sm`}
+            >
+              <div className="flex items-center gap-3">
+                <div className="flex-1 min-w-0">
+                  <h2 className="text-lg font-semibold">
+                    <span className="flex items-center gap-2">
+                      <ChannelIcon type={activeChannel.type} />
+                      {activeChannel.title}
+                    </span>
+                  </h2>
+
+                  {/* Typing indicator */}
+                  {typingIndicatorText && (
+                    <p
+                      className="text-sm text-muted-foreground mt-1"
+                      aria-live="polite"
                     >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                      />
-                    </svg>
-                    {activeChannel.title}
-                  </span>
-                ) : activeChannel.type === 'group' ? (
-                  <span className="flex items-center gap-2">
-                    <svg
-                      className="w-5 h-5 text-muted-foreground"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
-                      />
-                    </svg>
-                    {activeChannel.title}
-                  </span>
-                ) : (
-                  <span className="flex items-center gap-1">
-                    <span className="text-muted-foreground">#</span>
-                    {activeChannel.title}
-                  </span>
-                )}
-              </h2>
-            </div>
-            <ConversationPanel
-              channelId={activeChannel.id}
+                      {typingIndicatorText}
+                    </p>
+                  )}
+                </div>
+
+                {/* Channel type badge */}
+                <span className="text-xs px-2 py-1 bg-muted rounded-full text-muted-foreground">
+                  {activeChannel.type}
+                </span>
+              </div>
+
+              {/* Optional: Channel actions */}
+              <div className="flex items-center gap-2">
+                {/* Add channel settings, search, etc. here */}
+              </div>
+            </header>
+
+            {/* Chat Panel */}
+            <ChatPanel
+              conversationId={activeChannel.id}
               className="flex-1 overflow-hidden"
             />
           </>
         ) : (
           <div className="flex flex-1 items-center justify-center text-muted-foreground">
-            Select a channel from the sidebar to start chatting
+            <div className="text-center">
+              <svg
+                className="w-12 h-12 mx-auto mb-4 text-muted-foreground/50"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+                />
+              </svg>
+              <p className="text-lg font-medium mb-2">
+                Select a channel to start chatting
+              </p>
+              <p className="text-sm text-muted-foreground">
+                Choose a conversation from the sidebar to begin messaging
+              </p>
+            </div>
           </div>
         )}
       </div>

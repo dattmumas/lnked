@@ -1,5 +1,5 @@
 import { MAX_NOTIFICATION_PREVIEW_LENGTH } from '@/lib/constants/notification';
-import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
+import supabaseBrowser from '@/lib/supabase/browser';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 
 import { nowIso, isNonEmptyString, isDefined } from './utils';
@@ -32,7 +32,7 @@ export class NotificationService {
     this.supabase =
       typeof window === 'undefined'
         ? createServerSupabaseClient()   // Node / SSR
-        : createSupabaseBrowserClient(); // Browser
+        : supabaseBrowser; // Browser
   }
 
 

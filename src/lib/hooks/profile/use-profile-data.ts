@@ -1,4 +1,4 @@
-import { useQuery, useInfiniteQuery, useMutation, useQueryClient, type UseMutationResult } from '@tanstack/react-query';
+import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { HttpStatusCode } from '@/lib/constants/errors';
 import {
@@ -21,12 +21,6 @@ import {
 import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
 
 import {
-  ProfileError,
-  NotFoundError,
-  PermissionError,
-} from './types';
-
-import type {
   Profile,
   ProfileMetrics,
   ProfilePost,
@@ -42,9 +36,16 @@ import type {
   UseFollowStatusReturn,
   UseProfilePostsReturn,
   UseSocialFeedReturn,
+  ProfileError,
+  NotFoundError,
+  PermissionError,
   SocialLinks,
 } from './types';
+
 import type { Database } from '@/lib/database.types';
+import type { UseMutationResult } from '@tanstack/react-query';
+
+
 
 // ---------------------------------------------------------------------------
 // Helper functions

@@ -9,7 +9,6 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
 
-
 interface FollowButtonProps {
   targetUserId: string;
   targetUserName: string;
@@ -36,12 +35,12 @@ export default function FollowButton({
   const supabase = createSupabaseBrowserClient();
 
   // Sync with server state when initialIsFollowing changes
-  useEffect((): void => {
+  useEffect(() => {
     setIsFollowing(initialIsFollowing);
   }, [initialIsFollowing]);
 
   // Fetch current user if not provided
-  useEffect((): void => {
+  useEffect(() => {
     if (!initialCurrentUserId) {
       const fetchUser = async () => {
         try {
@@ -100,7 +99,7 @@ export default function FollowButton({
   }, [actualCurrentUserId, targetUserId, isFollowing, supabase]);
 
   // Verify follow status periodically and on focus
-  useEffect((): void => {
+  useEffect(() => {
     if (!actualCurrentUserId || actualCurrentUserId === targetUserId) {
       return undefined;
     }

@@ -1,8 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
 
+import { Database } from '@/lib/database.types';
 import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
 
-import type { Database } from '@/lib/database.types';
 import type { UseQueryResult } from '@tanstack/react-query';
 
 // Constants

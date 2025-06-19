@@ -6,7 +6,9 @@ interface VideoPlayerSkeletonProps {
   className?: string;
 }
 
-export function VideoPlayerSkeleton({ className }: VideoPlayerSkeletonProps) {
+export function VideoPlayerSkeleton({
+  className,
+}: VideoPlayerSkeletonProps): JSX.Element {
   return (
     <div
       className={cn(

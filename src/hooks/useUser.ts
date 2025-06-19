@@ -18,14 +18,14 @@ export const useUser = (): UseUserResult => {
     const supabase = createSupabaseBrowserClient();
     
     // Get initial user
-    void supabase.auth.getUser().then(({ data: { user } }) => {
+    void supabase.auth.getUser().then(({ data: { user } }: { data: { user: User | null } }) => {
       setUser(user);
       setLoading(false);
     });
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
+      (_event, session) => {
         setUser(session?.user ?? null);
         setLoading(false);
       }

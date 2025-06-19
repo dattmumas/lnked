@@ -6,8 +6,6 @@
  *
  */
 
-
-import { ElementFormatType } from 'lexical';
 import {
   createContext,
   ReactNode,
@@ -19,6 +17,15 @@ import {
 } from 'react';
 
 import type { JSX } from 'react';
+
+// Define element format type for text alignment
+type ElementFormatType =
+  | 'left'
+  | 'center'
+  | 'right'
+  | 'justify'
+  | 'start'
+  | 'end';
 
 export const MIN_ALLOWED_FONT_SIZE = 8;
 export const MAX_ALLOWED_FONT_SIZE = 72;

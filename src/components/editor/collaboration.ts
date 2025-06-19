@@ -6,9 +6,17 @@
  *
  */
 
-import {Provider} from '@lexical/yjs';
 import {WebsocketProvider} from 'y-websocket';
 import {Doc} from 'yjs';
+
+// Define a basic Provider type to match the expected interface
+type Provider = {
+  connect: () => void;
+  disconnect: () => void;
+  destroy: () => void;
+  awareness: any;
+  doc: Doc;
+};
 
 const url = new URL(window.location.href);
 const params = new URLSearchParams(url.search);
@@ -31,7 +39,7 @@ export function createWebsocketProvider(
     doc.load();
   }
 
-  // @ts-expect-error - WebsocketProvider type mismatch with Provider interface
+  // WebsocketProvider implements the Provider interface
   return new WebsocketProvider(
     WEBSOCKET_ENDPOINT,
     `${WEBSOCKET_SLUG}/${WEBSOCKET_ID}/${id}`,
@@ -39,5 +47,5 @@ export function createWebsocketProvider(
     {
       connect: false,
     },
-  );
+  ) as Provider;
 }

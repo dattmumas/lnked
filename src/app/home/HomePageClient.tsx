@@ -1,11 +1,14 @@
-/* eslint-disable unicorn/no-null */
+ 
 'use client';
 
 import React from 'react';
-import { CenterFeed } from '@/components/app/home/CenterFeed';
+
 import { RightSidebar } from '@/components/app/chains/RightSidebar';
-import type { HomePageClientProps } from '@/types/home/types';
+import { CenterFeed } from '@/components/app/home/CenterFeed';
 import { FloatingCreateButton } from '@/components/app/home/FloatingCreateButton';
+
+import type { HomePageClientProps } from '@/types/home/types';
+
 
 export default function HomePageClient({
   user,

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 
-import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
+import supabase from '@/lib/supabase/browser';
 
 interface PostInteractions {
   isLiked: boolean;
@@ -49,7 +49,7 @@ export function usePostInteractions({
   const [error, setError] = useState<string | undefined>(undefined);
   const [initialized, setInitialized] = useState(false);
   
-  const supabase = createSupabaseBrowserClient();
+  const client = supabase;
 
   // Initialize user interactions
   useEffect((): void => {
@@ -60,14 +60,14 @@ export function usePostInteractions({
         setIsLoading(true);
         
         // Fetch user's reactions for this post
-        const { data: userReactions } = await supabase
+        const { data: userReactions } = await client
           .from('post_reactions')
           .select('type')
           .eq('user_id', userId)
           .eq('post_id', postId);
 
         // Fetch user's bookmark status
-        const { data: userBookmark } = await supabase
+        const { data: userBookmark } = await client
           .from('post_bookmarks')
           .select('id')
           .eq('user_id', userId)
@@ -75,13 +75,13 @@ export function usePostInteractions({
           .single();
 
         // Fetch reaction counts
-        const { data: reactionCounts } = await supabase
+        const { data: reactionCounts } = await client
           .from('post_reactions')
           .select('type')
           .eq('post_id', postId);
 
         // Fetch comment count
-        const { data: commentCount } = await supabase
+        const { data: commentCount } = await client
           .from('comments')
           .select('id', { count: 'exact' })
           .eq('post_id', postId);
@@ -111,7 +111,7 @@ export function usePostInteractions({
     };
 
     initializeInteractions();
-  }, [userId, postId, initialized, supabase]);
+  }, [userId, postId, initialized, client]);
 
   const toggleLike = useCallback(async () => {
     if (!userId || isLoading) return;
@@ -133,7 +133,7 @@ export function usePostInteractions({
       setError(undefined);
 
       // Remove existing reactions first
-      await supabase
+      await client
         .from('post_reactions')
         .delete()
         .eq('user_id', userId)
@@ -141,7 +141,7 @@ export function usePostInteractions({
 
       // Add new reaction if not removing a like
       if (!wasLiked) {
-        await supabase
+        await client
           .from('post_reactions')
           .insert({
             user_id: userId,
@@ -164,7 +164,7 @@ export function usePostInteractions({
     } finally {
       setIsLoading(false);
     }
-  }, [userId, postId, interactions.isLiked, interactions.isDisliked, isLoading, supabase]);
+  }, [userId, postId, interactions.isLiked, interactions.isDisliked, isLoading, client]);
 
   const toggleDislike = useCallback(async () => {
     if (!userId || isLoading) return;
@@ -186,7 +186,7 @@ export function usePostInteractions({
       setError(undefined);
 
       // Remove existing reactions first
-      await supabase
+      await client
         .from('post_reactions')
         .delete()
         .eq('user_id', userId)
@@ -194,7 +194,7 @@ export function usePostInteractions({
 
       // Add new reaction if not removing a dislike
       if (!wasDisliked) {
-        await supabase
+        await client
           .from('post_reactions')
           .insert({
             user_id: userId,
@@ -217,7 +217,7 @@ export function usePostInteractions({
     } finally {
       setIsLoading(false);
     }
-  }, [userId, postId, interactions.isLiked, interactions.isDisliked, isLoading, supabase]);
+  }, [userId, postId, interactions.isLiked, interactions.isDisliked, isLoading, client]);
 
   const toggleBookmark = useCallback(async () => {
     if (!userId || isLoading) return;
@@ -236,14 +236,14 @@ export function usePostInteractions({
 
       if (wasBookmarked) {
         // Remove bookmark
-        await supabase
+        await client
           .from('post_bookmarks')
           .delete()
           .eq('user_id', userId)
           .eq('post_id', postId);
       } else {
         // Add bookmark
-        await supabase
+        await client
           .from('post_bookmarks')
           .insert({
             user_id: userId,
@@ -262,7 +262,7 @@ export function usePostInteractions({
     } finally {
       setIsLoading(false);
     }
-  }, [userId, postId, interactions.isBookmarked, isLoading, supabase]);
+  }, [userId, postId, interactions.isBookmarked, isLoading, client]);
 
   return {
     interactions,

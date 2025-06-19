@@ -86,7 +86,7 @@ export function useUnreadMessages(userId: string | undefined): UnreadMessagesRet
             const { count } = await supabase
               .from('messages')
               .select('*', { count: 'exact', head: true })
-              .eq('conversation_id', conv.conversation_id)
+              .eq('conversation_id', conv.conversation_id as string)
               .gt('created_at', conv.last_read_at as string)
               .neq('sender_id', userId);
             

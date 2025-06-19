@@ -1,9 +1,9 @@
-"use client";
+'use client';
 
-import { usePathname } from "next/navigation";
-import nprogress from "nprogress";
-import { useEffect, useRef } from "react";
-import "nprogress/nprogress.css";
+import { usePathname } from 'next/navigation';
+import nprogress from 'nprogress';
+import { useEffect, useRef } from 'react';
+import 'nprogress/nprogress.css';
 
 // Minimal nprogress config: thin bar, no spinner
 nprogress.configure({ showSpinner: false, trickleSpeed: 120 });
@@ -12,7 +12,7 @@ export default function RouteProgress() {
   const pathname = usePathname();
   const previousPath = useRef<string>(pathname);
 
-  useEffect((): void => {
+  useEffect(() => {
     if (pathname !== previousPath.current) {
       nprogress.start();
       previousPath.current = pathname;

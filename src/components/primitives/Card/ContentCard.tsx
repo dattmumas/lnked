@@ -109,9 +109,11 @@ export const ContentCard = React.forwardRef<HTMLDivElement, ContentCardProps>(
 
     const cardContent = (
       <>
-        {badge && <div className="absolute top-4 right-4 z-10">{badge}</div>}
+        {Boolean(badge) && (
+          <div className="absolute top-4 right-4 z-10">{badge}</div>
+        )}
 
-        {media && (
+        {Boolean(media) && (
           <div
             className={cn(
               'overflow-hidden',
@@ -136,7 +138,7 @@ export const ContentCard = React.forwardRef<HTMLDivElement, ContentCardProps>(
             {title}
           </CardTitle>
 
-          {description && (
+          {Boolean(description) && (
             <CardDescription
               className={cn(
                 'line-clamp-3',
@@ -148,7 +150,7 @@ export const ContentCard = React.forwardRef<HTMLDivElement, ContentCardProps>(
           )}
         </CardHeader>
 
-        {content && (
+        {Boolean(content) && (
           <CardContent
             className={cn(
               variant === 'article' && 'text-content-primary leading-relaxed',
@@ -158,7 +160,7 @@ export const ContentCard = React.forwardRef<HTMLDivElement, ContentCardProps>(
           </CardContent>
         )}
 
-        {footer && <CardFooter>{footer}</CardFooter>}
+        {Boolean(footer) && <CardFooter>{footer}</CardFooter>}
       </>
     );
 

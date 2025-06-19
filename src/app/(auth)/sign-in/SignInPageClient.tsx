@@ -17,12 +17,12 @@ export default function SignInPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const purge = searchParams.get('purge') === '1';
+  const supabase = createSupabaseBrowserClient();
 
   // Clear stale browser tokens if instructed by middleware
   useEffect((): void => {
     if (purge) {
-      const supabase = createSupabaseBrowserClient();
-      void void supabase.auth.signOut();
+      void supabase.auth.signOut();
     }
   }, [purge]);
 
@@ -55,8 +55,7 @@ export default function SignInPage() {
         // Record the attempt for rate limiting
         rateLimiterRef.current.recordAttempt();
 
-        // Create a fresh client instance for this request
-        const supabase = createSupabaseBrowserClient();
+        // Use the imported supabase client
 
         // Use retry logic for the authentication request
         const { data, error: signInError } = await retryWithBackoff(

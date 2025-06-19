@@ -1,7 +1,5 @@
 'use client';
 import { CheckListPlugin } from '@lexical/react/LexicalCheckListPlugin';
-import { HorizontalRulePlugin } from '@lexical/react/LexicalHorizontalRulePlugin';
-import { TabIndentationPlugin } from '@lexical/react/LexicalTabIndentationPlugin';
 import { ClickableLinkPlugin } from '@lexical/react/LexicalClickableLinkPlugin';
 import { LexicalComposer } from '@lexical/react/LexicalComposer';
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
@@ -9,21 +7,23 @@ import { ContentEditable } from '@lexical/react/LexicalContentEditable';
 import { LexicalErrorBoundary } from '@lexical/react/LexicalErrorBoundary';
 import { HashtagPlugin } from '@lexical/react/LexicalHashtagPlugin';
 import { HistoryPlugin } from '@lexical/react/LexicalHistoryPlugin';
+import { HorizontalRulePlugin } from '@lexical/react/LexicalHorizontalRulePlugin';
 import { ListPlugin } from '@lexical/react/LexicalListPlugin';
 import { RichTextPlugin } from '@lexical/react/LexicalRichTextPlugin';
+import { TabIndentationPlugin } from '@lexical/react/LexicalTabIndentationPlugin';
 import { TablePlugin } from '@lexical/react/LexicalTablePlugin';
 import dynamic from 'next/dynamic';
 import * as React from 'react';
 
 import PlaygroundNodes from '@/components/editor/nodes/PlaygroundNodes';
 import AutoLinkPlugin from '@/components/editor/plugins/formatting/AutoLinkPlugin';
-import StickyPlugin from '@/components/editor/plugins/interactive/StickyPlugin';
 import KeywordsPlugin from '@/components/editor/plugins/formatting/KeywordsPlugin';
 import LinkPlugin from '@/components/editor/plugins/formatting/LinkPlugin';
 import EmojiPickerPlugin from '@/components/editor/plugins/input/EmojiPickerPlugin';
 import EmojisPlugin from '@/components/editor/plugins/input/EmojisPlugin';
 import TabFocusPlugin from '@/components/editor/plugins/input/TabFocusPlugin';
 import CollapsiblePlugin from '@/components/editor/plugins/interactive/CollapsiblePlugin';
+import StickyPlugin from '@/components/editor/plugins/interactive/StickyPlugin';
 import TableOfContentsPlugin from '@/components/editor/plugins/layout/TableOfContentsPlugin';
 import FigmaPlugin from '@/components/editor/plugins/media/FigmaPlugin';
 import TwitterPlugin from '@/components/editor/plugins/media/TwitterPlugin';
@@ -31,7 +31,7 @@ import YouTubePlugin from '@/components/editor/plugins/media/YouTubePlugin';
 import PlaygroundEditorTheme from '@/components/editor/themes/PlaygroundEditorTheme';
 
 // Loading component for dynamic imports
-const PluginLoader = () => (
+const PluginLoader = (): React.JSX.Element => (
   <div className="animate-pulse bg-muted/20 h-4 w-full rounded" />
 );
 
@@ -48,18 +48,18 @@ class ErrorBoundary extends React.Component<
     this.state = { hasError: false };
   }
 
-  static getDerivedStateFromError() {
+  static getDerivedStateFromError(): { hasError: boolean } {
     return { hasError: true };
   }
 
-  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo): void {
     console.error('ReadOnlyLexicalViewer error:', error, errorInfo);
   }
 
-  render() {
-    if (this.state.hasError) {
+  render(): React.ReactNode {
+    if (this.state.hasError === true) {
       return (
-        this.props.fallback || (
+        this.props.fallback ?? (
           <div className="text-muted-foreground italic text-center py-8">
             Failed to load content viewer. Please refresh the page.
           </div>
@@ -211,26 +211,36 @@ interface ReadOnlyLexicalViewerClientProps {
 }
 
 // Helper function to validate if content is valid Lexical JSON
-function validateLexicalJSON(content: string): string | null {
+function validateLexicalJSON(content: string): string | undefined {
   if (!content || !content.trim()) {
-    return null;
+    return undefined;
   }
 
   try {
-    const parsed = JSON.parse(content);
+    const parsed = JSON.parse(content) as unknown;
     // Check if it has the basic Lexical structure
-    if (parsed && typeof parsed === 'object' && parsed.root) {
+    if (
+      parsed !== undefined &&
+      parsed !== null &&
+      typeof parsed === 'object' &&
+      (parsed as Record<string, unknown>).root !== undefined &&
+      (parsed as Record<string, unknown>).root !== null
+    ) {
       return content;
     }
-    return null;
+    return undefined;
   } catch {
-    // Not valid JSON, return null
-    return null;
+    // Not valid JSON, return undefined
+    return undefined;
   }
 }
 
 // Error fallback component for invalid content
-function InvalidContentFallback({ content }: { content: string }) {
+function InvalidContentFallback({
+  content,
+}: {
+  content: string;
+}): React.JSX.Element {
   return (
     <div className="bg-muted/10 border border-muted rounded-lg p-6 my-4">
       <p className="text-muted-foreground text-sm mb-2">
@@ -243,11 +253,15 @@ function InvalidContentFallback({ content }: { content: string }) {
   );
 }
 
-function LoadInitialJsonPlugin({ json }: { json?: string }) {
+function LoadInitialJsonPlugin({
+  json,
+}: {
+  json?: string;
+}): React.ReactElement | null {
   const [editor] = useLexicalComposerContext();
   React.useEffect((): void => {
-    if (!json) return;
-    Promise.resolve().then(() => {
+    if (json === undefined || json === null || json === '') return;
+    void Promise.resolve().then(() => {
       try {
         editor.setEditorState(editor.parseEditorState(json));
       } catch (err: unknown) {
@@ -255,20 +269,26 @@ function LoadInitialJsonPlugin({ json }: { json?: string }) {
       }
     });
   }, [editor, json]);
+  // eslint-disable-next-line unicorn/no-null -- React components can return null to render nothing
   return null;
 }
 
 export function ReadOnlyLexicalViewerClient({
   contentJSON,
-}: ReadOnlyLexicalViewerClientProps) {
+}: ReadOnlyLexicalViewerClientProps): React.JSX.Element {
   const [mounted, setMounted] = React.useState(false);
 
   React.useEffect((): void => {
     setMounted(true);
   }, []);
 
+  // Callback functions to avoid inline arrow functions
+  const handleSetIsLinkEditMode = React.useCallback((): void => {
+    // No-op for read-only viewer
+  }, []);
+
   // Validate the JSON content first
-  const validatedJSON = React.useMemo(() => {
+  const validatedJSON = React.useMemo((): string | undefined => {
     return validateLexicalJSON(contentJSON);
   }, [contentJSON]);
 
@@ -280,7 +300,7 @@ export function ReadOnlyLexicalViewerClient({
       editorState: validatedJSON ?? undefined,
       editable: false,
       readOnly: true,
-      onError(error: Error) {
+      onError(error: Error): void {
         console.error('Lexical editor error:', error);
       },
     }),
@@ -291,8 +311,12 @@ export function ReadOnlyLexicalViewerClient({
     return <PluginLoader />;
   }
 
-  if (!validatedJSON) {
-    if (!contentJSON || !contentJSON.trim()) {
+  if (validatedJSON === undefined) {
+    if (
+      contentJSON === undefined ||
+      contentJSON === null ||
+      contentJSON.trim() === ''
+    ) {
       return (
         <div className="text-muted-foreground italic text-center py-8">
           No content available.
@@ -349,14 +373,16 @@ export function ReadOnlyLexicalViewerClient({
           <TabFocusPlugin />
           <StickyPlugin />
           <InlineImagePlugin />
-          <FloatingTextFormatToolbarPlugin setIsLinkEditMode={() => {}} />
+          <FloatingTextFormatToolbarPlugin
+            setIsLinkEditMode={handleSetIsLinkEditMode}
+          />
           <DragDropPastePlugin />
           <KeywordsPlugin />
           <TableHoverActionsPlugin />
           <PageBreakPlugin />
           <FloatingLinkEditorPlugin
             isLinkEditMode={false}
-            setIsLinkEditMode={() => {}}
+            setIsLinkEditMode={handleSetIsLinkEditMode}
           />
           <MaxLengthPlugin maxLength={10000} />
           <ContextMenuPlugin />

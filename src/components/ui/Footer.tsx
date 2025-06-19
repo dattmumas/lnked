@@ -1,17 +1,18 @@
-import Link from "next/link";
+import Link from 'next/link';
+import React from 'react';
 
 const socialLinks = [
-  { href: "https://twitter.com/lnked", label: "Twitter" },
-  { href: "https://github.com/lnked", label: "GitHub" },
+  { href: 'https://twitter.com/lnked', label: 'Twitter' },
+  { href: 'https://github.com/lnked', label: 'GitHub' },
   // Add more as needed
 ];
 
 const footerLinks = [
-  { href: "/terms", label: "Terms" },
-  { href: "/privacy", label: "Privacy" },
+  { href: '/terms', label: 'Terms' },
+  { href: '/privacy', label: 'Privacy' },
 ];
 
-export default function Footer() {
+export default function Footer(): React.JSX.Element {
   return (
     <footer
       className="border-t border-border py-8 px-4 md:px-6"

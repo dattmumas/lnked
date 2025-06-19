@@ -16,13 +16,18 @@ import { cn } from '@/lib/utils';
 
 import { NotificationItem } from './NotificationItem';
 
-
 import type {
   Notification,
   NotificationFilters,
   NotificationType,
 } from '@/types/notifications';
 
+// Type for API response
+interface NotificationApiResponse {
+  notifications: Notification[];
+  unread_count: number;
+  has_more: boolean;
+}
 
 const EMPTY_NOTIFICATIONS: Notification[] = [];
 
@@ -36,7 +41,7 @@ export function NotificationList({
   initialNotifications,
   initialUnreadCount,
   className,
-}: NotificationListProps) {
+}: NotificationListProps): React.JSX.Element {
   const safeInitialNotifications = initialNotifications ?? EMPTY_NOTIFICATIONS;
   const safeInitialUnread = initialUnreadCount ?? 0;
   const [notifications, setNotifications] = useState<Notification[]>(
@@ -51,20 +56,35 @@ export function NotificationList({
   >('all');
 
   const fetchNotifications = useCallback(
-    async (filters: NotificationFilters = {}) => {
+    async (filters: NotificationFilters = {}): Promise<void> => {
       setIsLoading(true);
       try {
         const params = new URLSearchParams();
-        if (filters.type) params.append('type', filters.type);
-        if (filters.read !== undefined)
+        if (filters.type !== undefined && filters.type !== null) {
+          params.append('type', filters.type);
+        }
+        if (filters.read !== undefined) {
           params.append('read', filters.read.toString());
-        if (filters.limit) params.append('limit', filters.limit.toString());
-        if (filters.offset) params.append('offset', filters.offset.toString());
+        }
+        if (
+          filters.limit !== undefined &&
+          filters.limit !== null &&
+          filters.limit > 0
+        ) {
+          params.append('limit', filters.limit.toString());
+        }
+        if (
+          filters.offset !== undefined &&
+          filters.offset !== null &&
+          filters.offset > 0
+        ) {
+          params.append('offset', filters.offset.toString());
+        }
 
         const response = await fetch(`/api/notifications?${params}`);
         if (!response.ok) throw new Error('Failed to fetch notifications');
 
-        const data = await response.json();
+        const data = (await response.json()) as NotificationApiResponse;
 
         if (filters.offset === 0) {
           setNotifications(data.notifications);
@@ -83,48 +103,62 @@ export function NotificationList({
     [],
   );
 
-  const handleMarkAsRead = async (notificationId?: string) => {
-    try {
-      const result = await markNotificationsAsRead(
-        notificationId ? [notificationId] : undefined,
-      );
-      if (result.success) {
-        setNotifications((prev) =>
-          prev.map((notification) =>
-            !notificationId || notification.id === notificationId
-              ? { ...notification, read_at: new Date().toISOString() }
-              : notification,
-          ),
+  const handleMarkAsRead = useCallback(
+    async (notificationId?: string): Promise<void> => {
+      try {
+        const result = await markNotificationsAsRead(
+          notificationId !== undefined && notificationId !== null
+            ? [notificationId]
+            : undefined,
         );
+        if (result.success) {
+          setNotifications((prev) =>
+            prev.map((notification) =>
+              notificationId === undefined ||
+              notificationId === null ||
+              notification.id === notificationId
+                ? { ...notification, read_at: new Date().toISOString() }
+                : notification,
+            ),
+          );
 
-        if (notificationId) {
-          setUnreadCount((prev) => Math.max(0, prev - 1));
-        } else {
-          setUnreadCount(0);
+          if (notificationId !== undefined && notificationId !== null) {
+            setUnreadCount((prev) => Math.max(0, prev - 1));
+          } else {
+            setUnreadCount(0);
+          }
         }
+      } catch (error: unknown) {
+        console.error('Error marking notifications as read:', error);
       }
-    } catch (error: unknown) {
-      console.error('Error marking notifications as read:', error);
-    }
-  };
+    },
+    [],
+  );
 
-  const handleDelete = async (notificationId: string) => {
-    try {
-      const result = await deleteNotifications([notificationId]);
-      if (result.success) {
-        const notification = notifications.find((n) => n.id === notificationId);
-        setNotifications((prev) => prev.filter((n) => n.id !== notificationId));
+  const handleDelete = useCallback(
+    async (notificationId: string): Promise<void> => {
+      try {
+        const result = await deleteNotifications([notificationId]);
+        if (result.success) {
+          const notification = notifications.find(
+            (n) => n.id === notificationId,
+          );
+          setNotifications((prev) =>
+            prev.filter((n) => n.id !== notificationId),
+          );
 
-        if (notification && !notification.read_at) {
-          setUnreadCount((prev) => Math.max(0, prev - 1));
+          if (notification !== undefined && notification.read_at === null) {
+            setUnreadCount((prev) => Math.max(0, prev - 1));
+          }
         }
+      } catch (error: unknown) {
+        console.error('Error deleting notification:', error);
       }
-    } catch (error: unknown) {
-      console.error('Error deleting notification:', error);
-    }
-  };
+    },
+    [notifications],
+  );
 
-  const handleBulkMarkAsRead = async () => {
+  const handleBulkMarkAsRead = useCallback(async (): Promise<void> => {
     if (selectedIds.size === 0) return;
 
     try {
@@ -139,7 +173,7 @@ export function NotificationList({
         );
 
         const unreadSelected = notifications.filter(
-          (n) => selectedIds.has(n.id) && !n.read_at,
+          (n) => selectedIds.has(n.id) && n.read_at === null,
         ).length;
         setUnreadCount((prev) => Math.max(0, prev - unreadSelected));
         setSelectedIds(new Set());
@@ -147,16 +181,16 @@ export function NotificationList({
     } catch (error: unknown) {
       console.error('Error marking notifications as read:', error);
     }
-  };
+  }, [selectedIds, notifications]);
 
-  const handleBulkDelete = async () => {
+  const handleBulkDelete = useCallback(async (): Promise<void> => {
     if (selectedIds.size === 0) return;
 
     try {
       const result = await deleteNotifications(Array.from(selectedIds));
       if (result.success) {
         const unreadSelected = notifications.filter(
-          (n) => selectedIds.has(n.id) && !n.read_at,
+          (n) => selectedIds.has(n.id) && n.read_at === null,
         ).length;
 
         setNotifications((prev) => prev.filter((n) => !selectedIds.has(n.id)));
@@ -166,23 +200,26 @@ export function NotificationList({
     } catch (error: unknown) {
       console.error('Error deleting notifications:', error);
     }
-  };
+  }, [selectedIds, notifications]);
 
-  const handleFilterChange = (value: string) => {
-    const filter = value as 'all' | 'unread' | NotificationType;
-    setActiveFilter(filter);
-    const filters: NotificationFilters = { offset: 0, limit: 20 };
+  const handleFilterChange = useCallback(
+    (value: string): void => {
+      const filter = value as 'all' | 'unread' | NotificationType;
+      setActiveFilter(filter);
+      const filters: NotificationFilters = { offset: 0, limit: 20 };
 
-    if (filter === 'unread') {
-      filters.read = false;
-    } else if (filter !== 'all') {
-      filters.type = filter;
-    }
+      if (filter === 'unread') {
+        filters.read = false;
+      } else if (filter !== 'all') {
+        filters.type = filter;
+      }
 
-    fetchNotifications(filters);
-  };
+      void fetchNotifications(filters);
+    },
+    [fetchNotifications],
+  );
 
-  const loadMore = () => {
+  const loadMore = useCallback((): void => {
     if (!isLoading && hasMore) {
       const filters: NotificationFilters = {
         offset: notifications.length,
@@ -195,13 +232,45 @@ export function NotificationList({
         filters.type = activeFilter;
       }
 
-      fetchNotifications(filters);
+      void fetchNotifications(filters);
     }
-  };
+  }, [
+    isLoading,
+    hasMore,
+    notifications.length,
+    activeFilter,
+    fetchNotifications,
+  ]);
+
+  const handleMarkAllAsRead = useCallback((): void => {
+    void handleMarkAsRead();
+  }, [handleMarkAsRead]);
+
+  const handleBulkMarkAsReadClick = useCallback((): void => {
+    void handleBulkMarkAsRead();
+  }, [handleBulkMarkAsRead]);
+
+  const handleBulkDeleteClick = useCallback((): void => {
+    void handleBulkDelete();
+  }, [handleBulkDelete]);
+
+  const handleMarkAsReadWrapper = useCallback(
+    (notificationId?: string): void => {
+      void handleMarkAsRead(notificationId);
+    },
+    [handleMarkAsRead],
+  );
+
+  const handleDeleteWrapper = useCallback(
+    (notificationId: string): void => {
+      void handleDelete(notificationId);
+    },
+    [handleDelete],
+  );
 
   useEffect((): void => {
     if (safeInitialNotifications.length === 0) {
-      fetchNotifications();
+      void fetchNotifications();
     }
   }, [fetchNotifications, safeInitialNotifications.length]);
 
@@ -227,7 +296,7 @@ export function NotificationList({
             <Button
               variant="outline"
               size="sm"
-              onClick={handleBulkMarkAsRead}
+              onClick={handleBulkMarkAsReadClick}
               className="gap-1"
             >
               <CheckCheck className="h-3 w-3" />
@@ -236,7 +305,7 @@ export function NotificationList({
             <Button
               variant="outline"
               size="sm"
-              onClick={() => void handleBulkDelete()}
+              onClick={handleBulkDeleteClick}
               className="gap-1"
             >
               <Trash2 className="h-3 w-3" />
@@ -252,7 +321,7 @@ export function NotificationList({
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => void handleMarkAsRead()}
+                onClick={handleMarkAllAsRead}
                 className="gap-1"
               >
                 <CheckCheck className="h-3 w-3" />
@@ -262,7 +331,6 @@ export function NotificationList({
           </div>
         )}
       </div>
-
       {/* Filters */}
       <Tabs
         value={activeFilter}
@@ -314,11 +382,10 @@ export function NotificationList({
                     <NotificationItem
                       key={notification.id}
                       notification={notification}
-                      onMarkAsRead={handleMarkAsRead}
-                      onDelete={handleDelete}
+                      onMarkAsRead={handleMarkAsReadWrapper}
+                      onDelete={handleDeleteWrapper}
                     />
                   ))}
-
                   {/* Load More */}
                   {hasMore && (
                     <div className="flex justify-center pt-4">

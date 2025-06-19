@@ -1,3 +1,4 @@
+import supabase from '@/lib/supabase/browser';
 import { truncateText } from '../PostCard';
 
 // Mock like actions to avoid importing server-side logic in tests

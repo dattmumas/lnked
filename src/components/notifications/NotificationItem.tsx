@@ -3,7 +3,7 @@
 import { X, ExternalLink } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -23,38 +23,45 @@ interface NotificationItemProps {
   className?: string;
 }
 
+// Constants for magic numbers
+const MAX_INITIALS_LENGTH = 2;
+
 export function NotificationItem({
   notification,
   onMarkAsRead,
   onDelete,
   className,
-}: NotificationItemProps) {
+}: NotificationItemProps): React.JSX.Element {
   const router = useRouter();
   const [isDeleting, setIsDeleting] = useState(false);
   const config = getNotificationConfig(notification.type);
-  const isUnread = !notification.read_at;
+  const isUnread = notification.read_at === null;
 
-  const handleMarkAsRead = () => {
-    if (isUnread && onMarkAsRead) {
+  const handleMarkAsRead = useCallback((): void => {
+    if (isUnread && onMarkAsRead !== undefined) {
       onMarkAsRead(notification.id);
     }
-  };
+  }, [isUnread, onMarkAsRead, notification.id]);
 
-  const handleDelete = async () => {
-    if (onDelete) {
+  const handleDelete = useCallback((): void => {
+    if (onDelete !== undefined) {
       setIsDeleting(true);
       try {
-        await onDelete(notification.id);
+        onDelete(notification.id);
       } catch (error: unknown) {
         console.error('Failed to delete notification:', error);
+      } finally {
         setIsDeleting(false);
       }
     }
-  };
+  }, [onDelete, notification.id]);
 
-  const getNotificationLink = (): string | null => {
-    if (!notification.entity_type || !notification.entity_id) {
-      return null;
+  const getNotificationLink = (): string | undefined => {
+    if (
+      notification.entity_type === undefined ||
+      notification.entity_id === undefined
+    ) {
+      return undefined;
     }
 
     switch (notification.entity_type) {
@@ -64,30 +71,64 @@ export function NotificationItem({
         return `/profile/${notification.entity_id}`;
       case 'collective':
         return `/collectives/${notification.entity_id}`;
-      case 'comment':
+      case 'comment': {
         // For comments, we need to link to the post with the comment highlighted
-        return `/posts/${notification.metadata?.post_id || notification.entity_id}#comment-${notification.entity_id}`;
+        const postId = notification.metadata?.post_id;
+        if (typeof postId === 'string') {
+          return `/posts/${postId}#comment-${notification.entity_id}`;
+        }
+        return `/posts/${notification.entity_id}`;
+      }
       default:
-        return null;
+        return undefined;
     }
   };
 
   const link = getNotificationLink();
 
-  const handleNotificationClick = (e: React.MouseEvent) => {
-    // Don't navigate if clicking on action buttons
-    const target = e.target as HTMLElement;
-    if (target.closest('button') || target.closest('a')) {
-      return;
-    }
+  const handleNotificationClick = useCallback(
+    (e: React.MouseEvent): void => {
+      // Don't navigate if clicking on action buttons
+      const target = e.target as HTMLElement;
+      if (target.closest('button') !== null || target.closest('a') !== null) {
+        return;
+      }
 
-    handleMarkAsRead();
+      handleMarkAsRead();
 
-    // Navigate to the link if available
-    if (link) {
-      void router.push(link);
-    }
-  };
+      // Navigate to the link if available
+      if (link !== undefined) {
+        void router.push(link);
+      }
+    },
+    [handleMarkAsRead, link, router],
+  );
+
+  const handleNotificationKeyDown = useCallback(
+    (e: React.KeyboardEvent): void => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        handleMarkAsRead();
+
+        if (link !== undefined) {
+          void router.push(link);
+        }
+      }
+    },
+    [handleMarkAsRead, link, router],
+  );
+
+  const handleDeleteClick = useCallback(
+    (e: React.MouseEvent): void => {
+      e.stopPropagation();
+      handleDelete();
+    },
+    [handleDelete],
+  );
+
+  const handleStopPropagation = useCallback((e: React.MouseEvent): void => {
+    e.stopPropagation();
+  }, []);
 
   return (
     <div
@@ -100,6 +141,9 @@ export function NotificationItem({
         className,
       )}
       onClick={handleNotificationClick}
+      onKeyDown={handleNotificationKeyDown}
+      role="button"
+      tabIndex={0}
     >
       {/* Notification Icon */}
       <div
@@ -112,27 +156,27 @@ export function NotificationItem({
       </div>
 
       {/* Actor Avatar */}
-      {notification.actor && (
+      {notification.actor !== null && notification.actor !== undefined && (
         <Avatar className="w-8 h-8 flex-shrink-0">
           <AvatarImage
-            src={notification.actor.avatar_url || undefined}
+            src={notification.actor.avatar_url ?? undefined}
             alt={
-              notification.actor.full_name ||
-              notification.actor.username ||
+              notification.actor.full_name ??
+              notification.actor.username ??
               'User'
             }
           />
           <AvatarFallback className="text-xs">
             {(
-              notification.actor.full_name ||
-              notification.actor.username ||
+              notification.actor.full_name ??
+              notification.actor.username ??
               'U'
             )
               .split(' ')
               .map((n) => n[0])
               .join('')
               .toUpperCase()
-              .slice(0, 2)}
+              .slice(0, MAX_INITIALS_LENGTH)}
           </AvatarFallback>
         </Avatar>
       )}
@@ -159,13 +203,13 @@ export function NotificationItem({
 
           {/* Actions */}
           <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-            {link && (
+            {link !== undefined && (
               <Button
                 variant="ghost"
                 size="icon"
                 className="h-6 w-6"
                 asChild
-                onClick={(e) => e.stopPropagation()}
+                onClick={handleStopPropagation}
               >
                 <Link href={link}>
                   <ExternalLink className="h-3 w-3" />
@@ -177,10 +221,7 @@ export function NotificationItem({
               variant="ghost"
               size="icon"
               className="h-6 w-6"
-              onClick={(e) => {
-                e.stopPropagation();
-                handleDelete();
-              }}
+              onClick={handleDeleteClick}
               disabled={isDeleting}
             >
               <X className="h-3 w-3" />

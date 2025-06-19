@@ -1,5 +1,6 @@
+/* eslint-disable @typescript-eslint/strict-boolean-expressions */
 import Image from 'next/image';
-import * as React from 'react';
+import React from 'react';
 
 interface LexicalNode {
   type: string;
@@ -11,102 +12,86 @@ interface LexicalRendererProps {
   contentJSON: string | object;
 }
 
-function ErrorFallback({ content }: { content: string }) {
+function ErrorFallback({ content }: { content: string }): React.JSX.Element {
   return (
-    <div className="bg-muted/10 border border-muted rounded-lg p-6 my-4">
-      <p className="text-muted-foreground text-sm mb-2">
-        Unable to render content properly. Showing as text:
+    <div className="my-4 p-6 border border-destructive/20 bg-destructive/5 rounded-lg">
+      <p className="text-destructive font-medium mb-2">
+        Error rendering content
       </p>
-      <div className="prose prose-sm dark:prose-invert">
-        <p>{content}</p>
-      </div>
+      <details className="text-sm text-muted-foreground">
+        <summary className="cursor-pointer">Show raw content</summary>
+        <pre className="mt-2 p-2 bg-muted/30 rounded text-xs overflow-x-auto">
+          {content}
+        </pre>
+      </details>
     </div>
   );
 }
 
-export function LexicalRenderer({ contentJSON }: LexicalRendererProps) {
-  let contentObj: Record<string, unknown> | null = null;
+export function LexicalRenderer({
+  contentJSON,
+}: LexicalRendererProps): React.JSX.Element {
+  const handleImageError = React.useCallback((src: string) => {
+    return (e: React.SyntheticEvent<HTMLImageElement>): void => {
+      console.error('Image failed to load:', src);
+      const target = e.target as HTMLImageElement;
+      target.style.display = 'none';
+    };
+  }, []);
+
+  const handleInlineImageError = React.useCallback(() => {
+    return (e: React.SyntheticEvent<HTMLImageElement>): void => {
+      const target = e.target as HTMLImageElement;
+      target.style.display = 'none';
+    };
+  }, []);
+
+  let root: { children: LexicalNode[] };
 
   try {
     if (typeof contentJSON === 'string') {
-      if (!contentJSON.trim()) {
-        return (
-          <p className="text-muted-foreground italic">No content available.</p>
-        );
-      }
-      contentObj = JSON.parse(contentJSON);
-    } else if (
-      contentJSON &&
-      typeof contentJSON === 'object' &&
-      !Array.isArray(contentJSON)
-    ) {
-      contentObj = contentJSON as Record<string, unknown>;
+      root = JSON.parse(contentJSON) as { children: LexicalNode[] };
     } else {
-      throw new Error('Invalid content format');
+      root = contentJSON as { children: LexicalNode[] };
+    }
+
+    if (
+      typeof root !== 'object' ||
+      root === null ||
+      !Array.isArray(root.children)
+    ) {
+      throw new Error('Invalid content structure');
     }
   } catch (parseError) {
-    console.warn('Failed to parse content JSON:', parseError);
-    // Return error fallback immediately instead of setting state
-    const htmlString = typeof contentJSON === 'string' ? contentJSON : '';
-    return <ErrorFallback content={htmlString} />;
-  }
-
-  // If parsing failed or root missing, treat as raw HTML or text
-  if (
-    !contentObj ||
-    typeof contentObj.root !== 'object' ||
-    !contentObj.root ||
-    !Array.isArray((contentObj.root as { children?: LexicalNode[] }).children)
-  ) {
-    const htmlString = typeof contentJSON === 'string' ? contentJSON : '';
-
-    // Check if it looks like HTML
-    if (htmlString.includes('<') && htmlString.includes('>')) {
-      return (
-        <div
-          className="prose prose-lg dark:prose-invert max-w-none
-            prose-headings:font-bold prose-headings:tracking-tight
-            prose-h1:text-4xl prose-h1:mb-8 prose-h1:mt-12
-            prose-h2:text-3xl prose-h2:mb-6 prose-h2:mt-10
-            prose-h3:text-2xl prose-h3:mb-4 prose-h3:mt-8
-            prose-p:text-xl prose-p:leading-relaxed prose-p:mb-6 prose-p:text-foreground/90
-            prose-li:text-xl prose-li:leading-relaxed prose-li:marker:text-muted-foreground
-            prose-blockquote:border-l-4 prose-blockquote:border-muted-foreground/30 
-            prose-blockquote:pl-6 prose-blockquote:italic prose-blockquote:text-xl
-            prose-code:text-base prose-code:bg-muted prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded
-            prose-pre:bg-muted prose-pre:text-base
-            prose-img:rounded-lg prose-img:shadow-lg
-            prose-a:text-primary prose-a:no-underline hover:prose-a:underline"
-          dangerouslySetInnerHTML={{ __html: htmlString }}
-        />
-      );
-    } else {
-      // Fallback for plain text or malformed content
-      return <ErrorFallback content={htmlString} />;
-    }
-  }
-
-  const root = contentObj.root as { children: LexicalNode[] };
-
-  if (!root.children || root.children.length === 0) {
-    return <p className="text-muted-foreground italic">This post is empty.</p>;
+    console.error('Error parsing content:', parseError);
+    return (
+      <ErrorFallback
+        content={
+          typeof contentJSON === 'string'
+            ? contentJSON
+            : // eslint-disable-next-line no-magic-numbers
+              JSON.stringify(contentJSON, undefined, 2)
+        }
+      />
+    );
   }
 
   const renderNode = (node: LexicalNode, depth = 0): React.ReactNode => {
     // Prevent infinite recursion
-    if (depth > 20) {
+    const MAX_DEPTH = 20;
+    if (depth > MAX_DEPTH) {
       console.warn('Maximum depth reached in LexicalRenderer');
-      return null;
+      return undefined;
     }
 
-    const renderChildren = (children: unknown) =>
+    const renderChildren = (children: unknown): React.ReactNode =>
       Array.isArray(children)
         ? children.map((child, idx) => (
             <React.Fragment key={`${depth}-${idx}`}>
-              {renderNode(child, depth + 1)}
+              {renderNode(child as LexicalNode, depth + 1)}
             </React.Fragment>
           ))
-        : null;
+        : undefined;
 
     try {
       switch (node.type) {
@@ -201,22 +186,30 @@ export function LexicalRenderer({ contentJSON }: LexicalRendererProps) {
             'text' in node && typeof node.text === 'string' ? node.text : '';
           if ('format' in node && typeof node.format === 'number') {
             const formatFlags = node.format;
-            if (formatFlags & 16)
+            const FORMAT_CODE = 16;
+            const FORMAT_STRIKETHROUGH = 8;
+            const FORMAT_UNDERLINE = 4;
+            const FORMAT_ITALIC = 2;
+            const FORMAT_BOLD = 1;
+
+            if (formatFlags & FORMAT_CODE)
               text = (
                 <code className="bg-muted px-1.5 py-0.5 rounded text-base font-mono">
                   {text}
                 </code>
               );
-            if (formatFlags & 8) text = <s>{text}</s>;
-            if (formatFlags & 4) text = <u>{text}</u>;
-            if (formatFlags & 2) text = <em>{text}</em>;
-            if (formatFlags & 1) text = <strong>{text}</strong>;
+            if (formatFlags & FORMAT_STRIKETHROUGH) text = <s>{text}</s>;
+            if (formatFlags & FORMAT_UNDERLINE) text = <u>{text}</u>;
+            if (formatFlags & FORMAT_ITALIC) text = <em>{text}</em>;
+            if (formatFlags & FORMAT_BOLD) text = <strong>{text}</strong>;
           }
           return text;
         }
         case 'link': {
           const url =
-            'url' in node && typeof node.url === 'string' ? node.url : '#';
+            'url' in node && typeof node.url === 'string' && node.url
+              ? node.url
+              : '#';
           return (
             <a
               href={url}
@@ -230,7 +223,9 @@ export function LexicalRenderer({ contentJSON }: LexicalRendererProps) {
         }
         case 'autolink': {
           const url =
-            'url' in node && typeof node.url === 'string' ? node.url : '#';
+            'url' in node && typeof node.url === 'string' && node.url
+              ? node.url
+              : '#';
           return (
             <a
               href={url}
@@ -245,14 +240,14 @@ export function LexicalRenderer({ contentJSON }: LexicalRendererProps) {
         case 'hashtag':
           return (
             <span className="text-primary font-medium">
-              #{(node as { text?: string }).text || 'hashtag'}
+              #{(node as { text?: string }).text ?? 'hashtag'}
             </span>
           );
         case 'poll': {
           const question: string =
-            (node as { question?: string }).question || 'Untitled Poll';
+            (node as { question?: string }).question ?? 'Untitled Poll';
           const options =
-            (node as { options?: { uid: string; text: string }[] }).options ||
+            (node as { options?: { uid: string; text: string }[] }).options ??
             [];
           return (
             <div className="border border-border rounded-lg p-6 my-8 bg-muted/10">
@@ -263,7 +258,7 @@ export function LexicalRenderer({ contentJSON }: LexicalRendererProps) {
                     key={opt.uid || idx}
                     className="p-3 border border-border rounded bg-background hover:bg-muted/50 transition-colors"
                   >
-                    {opt.text || `Option ${idx + 1}`}
+                    {opt.text ?? `Option ${idx + 1}`}
                   </li>
                 ))}
               </ul>
@@ -272,11 +267,15 @@ export function LexicalRenderer({ contentJSON }: LexicalRendererProps) {
         }
         case 'image': {
           const src =
-            'src' in node && typeof node.src === 'string' ? node.src : '';
+            'src' in node && typeof node.src === 'string' && node.src
+              ? node.src
+              : '';
           const alt =
-            'alt' in node && typeof node.alt === 'string' ? node.alt : 'image';
+            'alt' in node && typeof node.alt === 'string' && node.alt
+              ? node.alt
+              : 'image';
 
-          if (!src) {
+          if (!src || src === '') {
             return (
               <div className="my-8 p-4 border border-border rounded-lg bg-muted/10 text-center">
                 <p className="text-muted-foreground">
@@ -296,21 +295,22 @@ export function LexicalRenderer({ contentJSON }: LexicalRendererProps) {
                 className="rounded-lg shadow-lg w-full h-auto"
                 loading="lazy"
                 unoptimized
-                onError={(e) => {
-                  console.error('Image failed to load:', src);
-                  (e.target as HTMLImageElement).style.display = 'none';
-                }}
+                onError={handleImageError(src)}
               />
             </div>
           );
         }
         case 'inlineimage': {
           const src =
-            'src' in node && typeof node.src === 'string' ? node.src : '';
+            'src' in node && typeof node.src === 'string' && node.src
+              ? node.src
+              : '';
           const alt =
-            'alt' in node && typeof node.alt === 'string' ? node.alt : 'image';
+            'alt' in node && typeof node.alt === 'string' && node.alt
+              ? node.alt
+              : 'image';
 
-          if (!src)
+          if (!src || src === '')
             return <span className="text-muted-foreground">[Image]</span>;
 
           return (
@@ -322,19 +322,21 @@ export function LexicalRenderer({ contentJSON }: LexicalRendererProps) {
               className="rounded inline-block mx-2"
               loading="lazy"
               unoptimized
-              onError={(e) => {
-                (e.target as HTMLImageElement).style.display = 'none';
-              }}
+              onError={handleInlineImageError()}
             />
           );
         }
         case 'gif': {
           const src =
-            'url' in node && typeof node.url === 'string' ? node.url : '';
+            'url' in node && typeof node.url === 'string' && node.url
+              ? node.url
+              : '';
           const alt =
-            'alt' in node && typeof node.alt === 'string' ? node.alt : 'gif';
+            'alt' in node && typeof node.alt === 'string' && node.alt
+              ? node.alt
+              : 'gif';
 
-          if (!src) {
+          if (!src || src === '') {
             return (
               <div className="my-8 p-4 border border-border rounded-lg bg-muted/10 text-center">
                 <p className="text-muted-foreground">
@@ -360,11 +362,19 @@ export function LexicalRenderer({ contentJSON }: LexicalRendererProps) {
         }
         case 'tweet': {
           const tweetUrl =
-            'tweetUrl' in node && typeof node.tweetUrl === 'string'
+            'tweetUrl' in node &&
+            typeof node.tweetUrl === 'string' &&
+            node.tweetUrl
               ? node.tweetUrl
               : '';
           const match = tweetUrl.match(/status\/(\d+)/);
-          if (!match || !tweetUrl) {
+          if (
+            match === null ||
+            match === undefined ||
+            tweetUrl === '' ||
+            tweetUrl === undefined ||
+            tweetUrl === null
+          ) {
             return (
               <div className="my-8 p-6 border border-border rounded-lg bg-muted/10">
                 <p className="text-muted-foreground">Tweet URL not available</p>
@@ -388,14 +398,22 @@ export function LexicalRenderer({ contentJSON }: LexicalRendererProps) {
         }
         case 'youtube': {
           const videoUrl =
-            'videoUrl' in node && typeof node.videoUrl === 'string'
+            'videoUrl' in node &&
+            typeof node.videoUrl === 'string' &&
+            node.videoUrl
               ? node.videoUrl
               : '';
           const match = videoUrl.match(
             /(?:youtube\.com\/(?:.*v=|.*\/)|youtu\.be\/)([A-Za-z0-9_-]{11})/,
           );
-          const videoId = match ? match[1] : null;
-          if (!videoId || !videoUrl) {
+          const videoId = match?.[1];
+          if (
+            videoId === undefined ||
+            videoId === null ||
+            videoUrl === '' ||
+            videoUrl === undefined ||
+            videoUrl === null
+          ) {
             return (
               <div className="my-8 p-6 border border-border rounded-lg bg-muted/10 text-center">
                 <p className="text-muted-foreground">Invalid YouTube URL</p>
@@ -433,8 +451,8 @@ export function LexicalRenderer({ contentJSON }: LexicalRendererProps) {
           );
         }
         case 'sticky': {
-          const color: string = (node as { color?: string }).color || '#fff475';
-          const text = (node as { text?: string }).text || '';
+          const color: string = (node as { color?: string }).color ?? '#fff475';
+          const text = (node as { text?: string }).text ?? '';
           return (
             <div
               className="my-6 p-6 rounded-lg shadow-sm text-lg leading-relaxed"
@@ -442,7 +460,7 @@ export function LexicalRenderer({ contentJSON }: LexicalRendererProps) {
                 background: color,
               }}
             >
-              {text || 'Empty sticky note'}
+              {text && text !== '' ? text : 'Empty sticky note'}
             </div>
           );
         }
@@ -450,7 +468,7 @@ export function LexicalRenderer({ contentJSON }: LexicalRendererProps) {
           return (
             <div
               className="border border-border rounded-lg p-8 my-8 bg-muted/10 text-center"
-              data-excalidraw={(node as { data?: string }).data || ''}
+              data-excalidraw={(node as { data?: string }).data ?? ''}
             >
               <p className="text-muted-foreground text-lg">
                 [Excalidraw drawing]
@@ -494,7 +512,7 @@ export function LexicalRenderer({ contentJSON }: LexicalRendererProps) {
           );
         default:
           console.warn(`Unknown node type: ${node.type}`);
-          return null;
+          return undefined;
       }
     } catch (nodeError) {
       console.error(`Error rendering node of type ${node.type}:`, nodeError);

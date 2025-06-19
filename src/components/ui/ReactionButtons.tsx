@@ -1,7 +1,7 @@
 'use client';
 
 import { ThumbsUp, ThumbsDown } from 'lucide-react';
-import { useState, useTransition } from 'react';
+import { useState, useTransition, useCallback } from 'react';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -53,7 +53,7 @@ export default function ReactionButtons({
   variant = 'default',
   showCounts = true,
   className = '',
-}: ReactionButtonsProps) {
+}: ReactionButtonsProps): JSX.Element {
   const [isPending, startTransition] = useTransition();
   const [currentState, setCurrentState] = useState<ReactionState>({
     likeCount: initialLikeCount,
@@ -61,44 +61,58 @@ export default function ReactionButtons({
     userReaction: initialUserReaction || undefined,
   });
 
-  const handleReaction = (type: 'like' | 'dislike') => {
-    if (disabled || isPending) return;
+  const handleReaction = useCallback(
+    (type: 'like' | 'dislike'): void => {
+      if (disabled || isPending) return;
 
-    // Store previous state for rollback on error
-    const previousState = { ...currentState };
+      // Store previous state for rollback on error
+      const previousState = { ...currentState };
 
-    // Apply optimistic update
-    const newState = toggleReactionState(currentState, type);
-    setCurrentState({
-      likeCount: newState.newLikeCount,
-      dislikeCount: newState.newDislikeCount,
-      userReaction: newState.newUserReaction,
-    });
+      // Apply optimistic update
+      const newState = toggleReactionState(currentState, type);
+      setCurrentState({
+        likeCount: newState.newLikeCount,
+        dislikeCount: newState.newDislikeCount,
+        userReaction: newState.newUserReaction,
+      });
 
-    // Perform server action
-    startTransition(async () => {
-      try {
-        const result = await reactionHandler(id, type);
+      // Perform server action
+      startTransition(async () => {
+        try {
+          const result = await reactionHandler(id, type);
 
-        if (result.success) {
-          // Update with server response
-          setCurrentState({
-            likeCount: result.likeCount ?? newState.newLikeCount,
-            dislikeCount: result.dislikeCount ?? newState.newDislikeCount,
-            userReaction: result.userReaction ?? newState.newUserReaction,
-          });
-        } else {
-          // Rollback optimistic update on failure
+          if (result.success) {
+            // Update with server response
+            setCurrentState({
+              likeCount: result.likeCount ?? newState.newLikeCount,
+              dislikeCount: result.dislikeCount ?? newState.newDislikeCount,
+              userReaction: result.userReaction ?? newState.newUserReaction,
+            });
+          } else {
+            // Rollback optimistic update on failure
+            setCurrentState(previousState);
+            console.error('Reaction failed:', result.message);
+          }
+        } catch (error: unknown) {
+          // Rollback optimistic update on error
           setCurrentState(previousState);
-          console.error('Reaction failed:', result.message);
+          handleReactionError(
+            error,
+            variant === 'comment' ? 'comment' : 'post',
+          );
         }
-      } catch (error: unknown) {
-        // Rollback optimistic update on error
-        setCurrentState(previousState);
-        handleReactionError(error, variant === 'comment' ? 'comment' : 'post');
-      }
-    });
-  };
+      });
+    },
+    [disabled, isPending, currentState, reactionHandler, id, variant],
+  );
+
+  const handleLikeClick = useCallback(() => {
+    handleReaction('like');
+  }, [handleReaction]);
+
+  const handleDislikeClick = useCallback(() => {
+    handleReaction('dislike');
+  }, [handleReaction]);
 
   // Size configurations
   const sizeConfig = {
@@ -128,7 +142,7 @@ export default function ReactionButtons({
   const getButtonStyles = (
     reactionType: 'like' | 'dislike',
     isActive: boolean,
-  ) => {
+  ): string => {
     if (variant === 'comment') {
       // Comment style - more subtle
       const baseStyles = `${config.button} rounded-full transition-all duration-200 hover:bg-accent/50`;
@@ -167,7 +181,7 @@ export default function ReactionButtons({
         aria-label={
           currentState.userReaction === 'like' ? 'Remove like' : 'Like'
         }
-        onClick={() => void handleReaction('like')}
+        onClick={handleLikeClick}
         disabled={disabled || isPending}
       >
         <ThumbsUp className={config.icon} />
@@ -191,7 +205,7 @@ export default function ReactionButtons({
         aria-label={
           currentState.userReaction === 'dislike' ? 'Remove dislike' : 'Dislike'
         }
-        onClick={() => void handleReaction('dislike')}
+        onClick={handleDislikeClick}
         disabled={disabled || isPending}
       >
         <ThumbsDown className={config.icon} />

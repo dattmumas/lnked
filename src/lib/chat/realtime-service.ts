@@ -1,7 +1,7 @@
 'use client';
 
 
-import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
+import supabase from '@/lib/supabase/browser';
 
 import { chatSecurity } from './security';
 
@@ -25,7 +25,7 @@ export const TYPING_EXPIRY_MS = 5000 as const;
  */
 
 export class RealtimeService {
-  private supabase = createSupabaseBrowserClient();
+  private supabase = supabase;
   private channels: Map<string, RealtimeChannel> = new Map();
   private messageHandlers: Map<string, (_message: MessageWithSender) => void> = new Map();
   private typingHandlers: Map<string, (_typing: TypingIndicator[]) => void> = new Map();

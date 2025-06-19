@@ -7,7 +7,7 @@ import Link from 'next/link';
 
 import { Badge } from '@/components/ui/badge';
 import { useCollectiveData } from '@/hooks/collectives/useCollectiveData';
-import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
+import supabase from '@/lib/supabase/browser';
 
 interface FeaturedMediaProps {
   collectiveSlug: string;
@@ -35,10 +35,10 @@ export function FeaturedMedia({
     queryFn: async () => {
       if (!collective?.id) return [];
 
-      const supabase = createSupabaseBrowserClient();
+      const client = supabase;
 
       // Get featured posts for this collective
-      const { data: featuredData } = await supabase
+      const { data: featuredData } = await client
         .from('featured_posts')
         .select('post_id, display_order')
         .eq('owner_id', collective.id)
@@ -48,7 +48,7 @@ export function FeaturedMedia({
 
       if (!featuredData || featuredData.length === 0) {
         // Fallback to recent posts if no featured posts
-        const { data: recentPosts } = await supabase
+        const { data: recentPosts } = await client
           .from('posts')
           .select(
             `
@@ -66,7 +66,7 @@ export function FeaturedMedia({
 
       // Get the actual featured posts
       const postIds = featuredData.map((fp) => fp.post_id);
-      const { data: posts } = await supabase
+      const { data: posts } = await client
         .from('posts')
         .select(
           `

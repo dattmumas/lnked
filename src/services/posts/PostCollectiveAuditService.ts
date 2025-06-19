@@ -1,4 +1,4 @@
-import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
+import supabase from '@/lib/supabase/browser';
 
 import type { Database } from '@/lib/database.types';
 import type { PostCollectiveError } from '@/types/enhanced-database.types';
@@ -100,7 +100,7 @@ type DBPostCollectiveRow = Database['public']['Tables']['post_collectives']['Row
  * Provides logging, metrics collection, and analytics
  */
 export class PostCollectiveAuditService {
-  private supabase = createSupabaseBrowserClient();
+  private supabase = supabase;
   private performanceMetrics: PostCollectivePerformanceMetrics[] = [];
 
   /**

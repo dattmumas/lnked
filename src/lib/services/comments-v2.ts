@@ -1,7 +1,7 @@
 import { RealtimeChannel, SupabaseClient, PostgrestError } from '@supabase/supabase-js';
 
 import { CommentValidationError } from '@/lib/errors';
-import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
+import supabaseBrowser from '@/lib/supabase/browser';
 import {
   Comment,
   CommentEntityType,
@@ -31,7 +31,7 @@ export class CommentsV2Service {
       >
     >
   ) {
-    this.supabase = supabase || createSupabaseBrowserClient();
+    this.supabase = supabase || supabaseBrowser;
 
     const defaultValidator = (entityId: string): Promise<boolean> =>
       Promise.resolve(entityId !== '');

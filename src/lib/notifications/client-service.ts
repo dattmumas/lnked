@@ -136,10 +136,7 @@ export class ClientNotificationService {
     }
 
     return {
-      notifications: (notifications ?? []).map(n => ({
-        ...n,
-        entity_type: n.entity_type as EntityType | null,
-      })) as Notification[],
+      notifications: (notifications ?? []) as Notification[],
       total_count: count ?? 0,
       unread_count: unreadCount ?? 0,
       has_more: (count ?? 0) > offset + limit,
@@ -263,12 +260,7 @@ export class ClientNotificationService {
       throw new Error(`Failed to fetch preferences: ${error.message}`);
     }
 
-    return (data ?? []).map(pref => ({
-      ...pref,
-      email_enabled: pref.email_enabled ?? true,
-      push_enabled: pref.push_enabled ?? true,
-      in_app_enabled: pref.in_app_enabled ?? true,
-    })) as NotificationPreferences[];
+    return (data ?? []) as NotificationPreferences[];
   }
 
   /**
@@ -289,7 +281,7 @@ export class ClientNotificationService {
 
       // Update each preference
       for (const update of updates) {
-        const { error } = await this.supabase
+        const { error: dbError } = await this.supabase
           .from('notification_preferences')
           .upsert({
             user_id: user.id,
@@ -300,16 +292,18 @@ export class ClientNotificationService {
             updated_at: new Date().toISOString(),
           });
 
-        if (error !== null && error !== undefined) {
-          return { success: false, error: error.message };
+        if (dbError !== null && dbError !== undefined) {
+          return { success: false, error: dbError.message };
         }
       }
 
       return { success: true };
-    } catch (error: unknown) {
+    } catch (err: unknown) {
+      const errorMessage =
+        err instanceof Error ? err.message : 'Unknown error';
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: errorMessage,
       };
     }
   }

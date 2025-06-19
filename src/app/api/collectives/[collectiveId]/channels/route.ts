@@ -20,6 +20,7 @@ const BodySchema = z.object({
 
 type CollectiveMemberRow = {
   role: string;
+  member_id: string;
 };
 
 type ConversationRow = {
@@ -157,16 +158,42 @@ export async function POST(request: NextRequest, context: { params: Promise<{ co
     );
   }
 
-  // Explicitly add creator as participant (role depends on collective membership role)
-  const creatorRole = ['owner', 'admin'].includes(member.role) ? 'admin' : 'member';
+  // Get all collective members to add as participants
+  const { data: allMembers, error: membersErr } = await supabase
+    .from('collective_members')
+    .select('member_id, role')
+    .eq('collective_id', collectiveId);
+
+  if (membersErr) {
+    // Rollback to avoid orphaned channel
+    await supabase.from('conversations').delete().eq('id', conversation.id);
+    return NextResponse.json(
+      { error: membersErr.message },
+      { status: HttpStatus.INTERNAL_SERVER_ERROR },
+    );
+  }
+
+  if (!allMembers || allMembers.length === 0) {
+    // Rollback if no members found
+    await supabase.from('conversations').delete().eq('id', conversation.id);
+    return NextResponse.json(
+      { error: 'No collective members found' },
+      { status: HttpStatus.INTERNAL_SERVER_ERROR },
+    );
+  }
+
+  // Add all collective members as channel participants
+  // Map collective roles to conversation participant roles
+  const participants = allMembers.map((collectiveMember) => ({
+    conversation_id: conversation.id,
+    user_id: collectiveMember.member_id,
+    role: ['owner', 'admin'].includes(collectiveMember.role) ? 'admin' : 'member',
+    joined_at: new Date().toISOString(),
+  }));
 
   const { error: partErr } = await supabase
     .from('conversation_participants')
-    .insert({
-      conversation_id: conversation.id,
-      user_id: user.id,
-      role: creatorRole,
-    });
+    .insert(participants);
 
   if (partErr) {
     // Rollback to avoid orphaned channel without participants
@@ -177,7 +204,10 @@ export async function POST(request: NextRequest, context: { params: Promise<{ co
     );
   }
 
-  return NextResponse.json({ conversationId: conversation.id }, { status: HttpStatus.CREATED });
+  return NextResponse.json({ 
+    conversationId: conversation.id,
+    participantsAdded: participants.length 
+  }, { status: HttpStatus.CREATED });
 }
 
 export const runtime = 'nodejs';

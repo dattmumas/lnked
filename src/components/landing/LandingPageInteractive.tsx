@@ -176,7 +176,7 @@ export default function LandingPageInteractive() {
     }
 
     // Store resize cleanup function to call in main cleanup
-    let resizeCleanup: (() => void) | null = null;
+    let resizeCleanup: (() => void) | undefined = undefined;
 
     const canvasElement = document.getElementById(
       'canvas-bg',

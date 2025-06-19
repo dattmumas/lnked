@@ -18,7 +18,8 @@ export default async function CollectiveLayout({
 
   return (
     // <div style={style as React.CSSProperties}>
-    <>{children}</> // Simplest pass-through for now
+    // Simplest pass-through for now
     // </div>
+    <>{children}</>
   );
 }

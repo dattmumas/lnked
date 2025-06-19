@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 
 import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
 
+
 interface FollowerData {
   followerCount: number;
   isFollowing: boolean;

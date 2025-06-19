@@ -3,8 +3,13 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import React, { useState, useTransition, useEffect , useState as useClientState } from 'react';
-import { useForm, SubmitHandler } from 'react-hook-form';
+import React, {
+  useState,
+  useTransition,
+  useEffect,
+  useState as useClientState,
+} from 'react';
+import { useForm } from 'react-hook-form';
 
 import {
   updateCollectiveSettings,
@@ -41,9 +46,7 @@ import {
   CollectiveSettingsClientFormValues,
 } from '@/lib/schemas/collectiveSettingsSchema';
 
-
 import type { Database } from '@/lib/database.types';
-
 
 interface SubscriptionTier {
   id: string;
@@ -61,6 +64,9 @@ interface EditCollectiveSettingsFormProps {
   eligibleMembers: { id: string; full_name: string | null }[];
   tiers: SubscriptionTier[];
 }
+
+// Define submit handler type locally
+type SubmitHandler<T> = (data: T) => void | Promise<void>;
 
 export default function EditCollectiveSettingsForm({
   collectiveId,

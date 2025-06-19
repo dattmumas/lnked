@@ -1,5 +1,7 @@
 'use client';
 
+/* eslint-disable react/jsx-no-bind */
+
 import { Bell, Mail, Smartphone, Monitor, Save, Loader2 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
@@ -37,7 +39,7 @@ interface PreferenceState {
 
 export function NotificationPreferences({
   className,
-}: NotificationPreferencesProps) {
+}: NotificationPreferencesProps): React.JSX.Element {
   const [preferences, setPreferences] = useState<
     Record<NotificationType, PreferenceState>
   >({} as Record<NotificationType, PreferenceState>);
@@ -48,18 +50,18 @@ export function NotificationPreferences({
 
   // Load preferences on mount
   useEffect((): void => {
-    const loadPreferences = async () => {
+    const loadPreferences = async (): Promise<void> => {
       try {
         const prefs = await clientNotificationService.getPreferences();
         const prefsMap: Record<NotificationType, PreferenceState> =
           {} as Record<NotificationType, PreferenceState>;
 
         // Initialize all notification types with defaults
-        Object.keys(NOTIFICATION_CONFIGS).forEach((type) => {
+        Object.keys(NOTIFICATION_CONFIGS).forEach((type): void => {
           const notificationType = type as NotificationType;
-          const existingPref = prefs.find(
-            (p) => p.notification_type === notificationType,
-          );
+          const existingPref = prefs.find(function findMatchingPref(p) {
+            return p.notification_type === notificationType;
+          });
 
           prefsMap[notificationType] = {
             email_enabled: existingPref?.email_enabled ?? true,
@@ -85,36 +87,40 @@ export function NotificationPreferences({
     type: NotificationType,
     channel: keyof PreferenceState,
     enabled: boolean,
-  ) => {
-    setPreferences((prev) => ({
-      ...prev,
-      [type]: {
-        ...prev[type],
-        [channel]: enabled,
-      },
-    }));
+  ): void => {
+    setPreferences(function updatePreferences(prev) {
+      return {
+        ...prev,
+        [type]: {
+          ...prev[type],
+          [channel]: enabled,
+        },
+      };
+    });
     setHasChanges(true);
   };
 
-  const handleSave = async () => {
+  const handleSave = async (): Promise<void> => {
     setIsSaving(true);
     setError(undefined);
 
     try {
       const updates: NotificationPreferencesUpdate[] = Object.entries(
         preferences,
-      ).map(([type, prefs]) => ({
-        notification_type: type as NotificationType,
-        email_enabled: prefs.email_enabled,
-        push_enabled: prefs.push_enabled,
-        in_app_enabled: prefs.in_app_enabled,
-      }));
+      ).map(function createUpdateObject([type, prefs]) {
+        return {
+          notification_type: type as NotificationType,
+          email_enabled: prefs.email_enabled,
+          push_enabled: prefs.push_enabled,
+          in_app_enabled: prefs.in_app_enabled,
+        };
+      });
 
       const result = await updateNotificationPreferences(updates);
       if (result.success) {
         setHasChanges(false);
       } else {
-        setError(result.error || 'Failed to save preferences');
+        setError(result.error ?? 'Failed to save preferences');
       }
     } catch (err: unknown) {
       setError(
@@ -123,6 +129,21 @@ export function NotificationPreferences({
     } finally {
       setIsSaving(false);
     }
+  };
+
+  // Handler creator for toggle functions
+  const createToggleHandler = (
+    type: NotificationType,
+    channel: keyof PreferenceState,
+  ) => {
+    return function handleToggle(checked: boolean): void {
+      handlePreferenceChange(type, channel, checked);
+    };
+  };
+
+  // Non-async wrapper for save handler to avoid Promise return type issues
+  const handleSaveClick = (): void => {
+    void handleSave();
   };
 
   const getNotificationTypeLabel = (type: NotificationType): string => {
@@ -143,7 +164,7 @@ export function NotificationPreferences({
       post_bookmark: 'Post Bookmarks',
       featured_post: 'Featured Posts',
     };
-    return labels[type] || type;
+    return labels[type] ?? type;
   };
 
   const getNotificationTypeDescription = (type: NotificationType): string => {
@@ -164,7 +185,7 @@ export function NotificationPreferences({
       post_bookmark: 'When someone bookmarks your posts',
       featured_post: 'When your post is featured',
     };
-    return descriptions[type] || '';
+    return descriptions[type] ?? '';
   };
 
   if (isLoading) {
@@ -181,22 +202,24 @@ export function NotificationPreferences({
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <div
-                key={i}
-                className="flex items-center justify-between p-4 border rounded-lg animate-pulse"
-              >
-                <div className="space-y-2">
-                  <div className="h-4 bg-muted rounded w-32" />
-                  <div className="h-3 bg-muted rounded w-48" />
+            {Array.from({ length: 5 }).map(function renderSkeletonRow(_, i) {
+              return (
+                <div
+                  key={i}
+                  className="flex items-center justify-between p-4 border rounded-lg animate-pulse"
+                >
+                  <div className="space-y-2">
+                    <div className="h-4 bg-muted rounded w-32" />
+                    <div className="h-3 bg-muted rounded w-48" />
+                  </div>
+                  <div className="flex gap-4">
+                    <div className="h-6 w-12 bg-muted rounded" />
+                    <div className="h-6 w-12 bg-muted rounded" />
+                    <div className="h-6 w-12 bg-muted rounded" />
+                  </div>
                 </div>
-                <div className="flex gap-4">
-                  <div className="h-6 w-12 bg-muted rounded" />
-                  <div className="h-6 w-12 bg-muted rounded" />
-                  <div className="h-6 w-12 bg-muted rounded" />
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </CardContent>
       </Card>
@@ -215,7 +238,7 @@ export function NotificationPreferences({
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        {error && (
+        {Boolean(error) && (
           <div className="p-3 text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-md">
             {error}
           </div>
@@ -242,81 +265,74 @@ export function NotificationPreferences({
 
         {/* Notification Preferences */}
         <div className="space-y-4">
-          {Object.entries(NOTIFICATION_CONFIGS).map(([type, config]) => {
-            const notificationType = type as NotificationType;
-            const prefs = preferences[notificationType];
+          {Object.entries(NOTIFICATION_CONFIGS).map(
+            function renderNotificationRow([type, config]) {
+              const notificationType = type as NotificationType;
+              const prefs = preferences[notificationType];
 
-            if (!prefs) return null;
+              if (prefs === null || prefs === undefined) return undefined;
 
-            return (
-              <div
-                key={type}
-                className="grid grid-cols-4 gap-4 items-center p-4 border rounded-lg hover:bg-accent/50 transition-colors"
-              >
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <span className="text-lg">{config.icon}</span>
-                    <Label className="font-medium">
-                      {getNotificationTypeLabel(notificationType)}
-                    </Label>
-                    {config.priority === 'high' && (
-                      <Badge variant="destructive" className="text-xs">
-                        Important
-                      </Badge>
-                    )}
+              return (
+                <div
+                  key={type}
+                  className="grid grid-cols-4 gap-4 items-center p-4 border rounded-lg hover:bg-accent/50 transition-colors"
+                >
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-lg">{config.icon}</span>
+                      <Label className="font-medium">
+                        {getNotificationTypeLabel(notificationType)}
+                      </Label>
+                      {config.priority === 'high' && (
+                        <Badge variant="destructive" className="text-xs">
+                          Important
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      {getNotificationTypeDescription(notificationType)}
+                    </p>
                   </div>
-                  <p className="text-sm text-muted-foreground">
-                    {getNotificationTypeDescription(notificationType)}
-                  </p>
-                </div>
 
-                <div className="flex justify-center">
-                  <Switch
-                    checked={prefs.in_app_enabled}
-                    onCheckedChange={(checked: boolean) =>
-                      handlePreferenceChange(
+                  <div className="flex justify-center">
+                    <Switch
+                      checked={prefs.in_app_enabled}
+                      onCheckedChange={createToggleHandler(
                         notificationType,
                         'in_app_enabled',
-                        checked,
-                      )
-                    }
-                  />
-                </div>
+                      )}
+                    />
+                  </div>
 
-                <div className="flex justify-center">
-                  <Switch
-                    checked={prefs.email_enabled}
-                    onCheckedChange={(checked: boolean) =>
-                      handlePreferenceChange(
+                  <div className="flex justify-center">
+                    <Switch
+                      checked={prefs.email_enabled}
+                      onCheckedChange={createToggleHandler(
                         notificationType,
                         'email_enabled',
-                        checked,
-                      )
-                    }
-                  />
-                </div>
+                      )}
+                    />
+                  </div>
 
-                <div className="flex justify-center">
-                  <Switch
-                    checked={prefs.push_enabled}
-                    onCheckedChange={(checked: boolean) =>
-                      handlePreferenceChange(
+                  <div className="flex justify-center">
+                    <Switch
+                      checked={prefs.push_enabled}
+                      onCheckedChange={createToggleHandler(
                         notificationType,
                         'push_enabled',
-                        checked,
-                      )
-                    }
-                  />
+                      )}
+                    />
+                  </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            },
+          )}
         </div>
 
         {/* Save Button */}
         {hasChanges && (
           <div className="flex justify-end pt-4 border-t">
-            <Button onClick={() => void handleSave()} disabled={isSaving}>
+            <Button onClick={handleSaveClick} disabled={isSaving}>
               {isSaving ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />

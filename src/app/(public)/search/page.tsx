@@ -213,7 +213,6 @@ export default async function Page({
           </Button>
         </form>
       </div>
-
       {posts.length > 0 && (
         <div>
           <h2 className="text-2xl font-semibold mb-4">Posts</h2>
@@ -247,7 +246,6 @@ export default async function Page({
           </div>
         </div>
       )}
-
       {users.length > 0 && (
         <div>
           <h2 className="text-2xl font-semibold mb-4">Users</h2>
@@ -259,11 +257,11 @@ export default async function Page({
               >
                 {user.avatar_url && (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img
+                  (<img
                     src={user.avatar_url}
                     alt={user.full_name || user.username || 'User'}
                     className="w-12 h-12 rounded-full object-cover"
-                  />
+                  />)
                 )}
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
@@ -297,7 +295,6 @@ export default async function Page({
           </div>
         </div>
       )}
-
       {collectives.length > 0 && (
         <div>
           <h2 className="text-2xl font-semibold mb-4">Collectives</h2>
@@ -308,7 +305,6 @@ export default async function Page({
           </div>
         </div>
       )}
-
       {noResults && <p>No results found.</p>}
     </div>
   );

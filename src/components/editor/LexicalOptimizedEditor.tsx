@@ -37,7 +37,6 @@ import MarkdownShortcutPlugin from './plugins/formatting/MarkdownShortcutPlugin'
 import SpecialTextPlugin from './plugins/formatting/SpecialTextPlugin';
 
 // Essential interactive plugins
-
 // Essential input plugins
 import DragDropPastePlugin from './plugins/input/DragDropPastePlugin';
 import EmojisPlugin from './plugins/input/EmojisPlugin';
@@ -60,9 +59,7 @@ import ImagesPlugin from './plugins/media/ImagesPlugin';
 import InlineImagePlugin from './plugins/media/InlineImagePlugin';
 
 // Essential toolbar plugins
-
 // UI components
-
 // Lazy loading system
 import LazyPlugin from './plugins/PluginLoader';
 import PlusButtonPlugin from './plugins/PlusButtonPlugin';
@@ -84,7 +81,7 @@ function LoadInitialJsonPlugin({ json }: { json?: string }) {
   const [editor] = useLexicalComposerContext();
   const hasLoadedInitialContent = useRef(false);
 
-  useEffect((): void => {
+  useEffect(() => {
     if (!json || hasLoadedInitialContent.current) return;
 
     const timer = setTimeout(() => {
@@ -99,7 +96,7 @@ function LoadInitialJsonPlugin({ json }: { json?: string }) {
     return () => clearTimeout(timer);
   }, [editor]);
 
-  return null;
+  return undefined;
 }
 
 function EditorContent({

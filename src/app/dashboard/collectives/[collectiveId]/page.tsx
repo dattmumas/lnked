@@ -62,7 +62,6 @@ export default async function CollectiveDashboardPage({
           </p>
         )}
       </div>
-
       {/* Post Creation Guidance - New Individual-Centric Approach */}
       <Card>
         <CardHeader>
@@ -122,7 +121,6 @@ export default async function CollectiveDashboardPage({
           )}
         </CardContent>
       </Card>
-
       {/* Management Actions */}
       <Card>
         <CardHeader>
@@ -174,7 +172,6 @@ export default async function CollectiveDashboardPage({
           </div>
         </CardContent>
       </Card>
-
       {/* Role Information */}
       {userRole && (
         <Alert>

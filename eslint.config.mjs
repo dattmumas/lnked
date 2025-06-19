@@ -44,6 +44,15 @@ const eslintConfig = [
       'src/components/editor/utils/**/*',
       'src/components/editor/hooks/**/*',
       'src/components/editor/images/**/*',
+      'src/components/editor/context/**/*',
+      'src/components/editor/config/**/*',
+      'src/components/editor/**/*',
+
+      // Landing page files
+      'src/components/landing/**/*',
+
+      // Scripts directory
+      'src/scripts/**/*',
 
       // Build outputs
       '.next/**',

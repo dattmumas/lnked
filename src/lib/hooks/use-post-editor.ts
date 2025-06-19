@@ -10,6 +10,7 @@ import type { Json } from '@/lib/database.types';
 import type { User } from '@supabase/supabase-js';
 import type { UseMutationResult } from '@tanstack/react-query';
 
+
 const PostFormSchema = z.object({
   id: z.string().uuid().optional(),
   title: z.string().trim().min(1, 'Title is required'),
