@@ -131,7 +131,7 @@ async function updateSubscriptionSelectively(
     const newValue = newData[field];
     const currentValue = currentSub[field];
     if (newValue !== currentValue) {
-      (updates as any)[field] = newValue === null ? undefined : newValue;
+      (updates as Record<string, unknown>)[field] = newValue === null ? undefined : newValue;
     }
   }
   
@@ -508,7 +508,7 @@ export async function POST(req: Request): Promise<NextResponse> {
           
           const { error: updateError, updated } = await updateCollectiveStripeStatus(
             account.id,
-            account as AccountUpdateData
+            account as Record<string, unknown>
           );
           
           if (updateError !== null) {

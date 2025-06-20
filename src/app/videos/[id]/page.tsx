@@ -92,7 +92,7 @@ export default async function VideoPlayerPage({
       {/* Main content: video details + player + comments */}
       <main className="ml-16 w-[calc(100%-4rem)] lg:w-[calc(100%-4rem-28rem)] flex flex-col items-center py-8">
         {/* Video metadata - renders immediately (no Suspense) */}
-        <VideoDetailsServer video={videoAsset as any} />
+        <VideoDetailsServer video={videoAsset as Record<string, unknown>} />
 
         {/* Video player - independent Suspense boundary */}
         <Suspense fallback={<VideoPlayerSkeleton />}>

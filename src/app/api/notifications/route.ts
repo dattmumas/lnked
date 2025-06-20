@@ -125,7 +125,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
 
     // 5. User-scoped service call (ownership implicit via user context)
     const serviceFilters: NotificationFilters = {
-      type: filters.type as any,
+      type: filters.type as typeof filters.type,
       read: filters.read,
       limit: filters.limit,
       offset: filters.offset,

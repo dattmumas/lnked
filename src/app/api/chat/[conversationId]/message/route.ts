@@ -14,10 +14,24 @@ const enum HttpStatus {
   INTERNAL_SERVER_ERROR = 500,
 }
 
+// Type definitions for link preview
+type LinkPreviewData = {
+  title?: string;
+  description?: string;
+  image?: string;
+  url?: string;
+  [key: string]: unknown;
+};
+
+type MessageMetadata = {
+  embed?: LinkPreviewData;
+  [key: string]: unknown;
+};
+
 const BodySchema = z.object({
   content: z.string().trim().min(1, 'Message content is required').max(10000),
   message_type: z.enum(['text', 'image', 'file']).optional().default('text'),
-  metadata: z.record(z.any()).optional(),
+  metadata: z.record(z.unknown()).optional(),
   reply_to_id: z.string().uuid().optional(),
 });
 
@@ -163,8 +177,8 @@ export async function POST(request: Request, context: { params: Promise<{ conver
                 .update({ 
                   metadata: { 
                     ...finalMetadata, 
-                    embed: preview 
-                  } as any 
+                    embed: preview as Record<string, unknown>
+                  } as Record<string, unknown> 
                 })
                 .eq('id', msg.id)
                 .eq('conversation_id', conversationId);
