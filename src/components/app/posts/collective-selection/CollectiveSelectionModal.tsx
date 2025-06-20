@@ -9,8 +9,7 @@ import {
   SortAsc,
   SortDesc,
 } from 'lucide-react';
-import { useState, useEffect, useMemo } from 'react';
-
+import React, { useCallback, useState, useEffect, useMemo } from 'react';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -60,7 +59,7 @@ export function CollectiveSelectionModal({
   description = 'Choose which collectives to share this post with',
   showPermissionFilter = true,
   allowSearch = true,
-}: CollectiveSelectionModalProps) {
+}: CollectiveSelectionModalProps): React.ReactElement | null {
   // Local state
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<SortOption>('role');
@@ -109,7 +108,17 @@ export function CollectiveSelectionModal({
           break;
         }
         case 'members':
-          comparison = (b.member_count || 0) - (a.member_count || 0);
+          comparison =
+            (b.member_count !== undefined &&
+            b.member_count !== null &&
+            b.member_count >= 0
+              ? b.member_count
+              : 0) -
+            (a.member_count !== undefined &&
+            a.member_count !== null &&
+            a.member_count >= 0
+              ? a.member_count
+              : 0);
           break;
         default:
           comparison = 0;
@@ -143,46 +152,88 @@ export function CollectiveSelectionModal({
     }
   }, [isOpen]);
 
-  const handleToggleSelection = (collectiveId: string) => {
-    setLocalSelectedIds((prev) => {
-      const isCurrentlySelected = prev.includes(collectiveId);
+  const handleToggleSelection = useCallback(
+    (collectiveId: string): void => {
+      setLocalSelectedIds((prev) => {
+        const isCurrentlySelected = prev.includes(collectiveId);
 
-      if (isCurrentlySelected) {
-        return prev.filter((id) => id !== collectiveId);
-      } else {
-        // Check max selections limit
-        if (maxSelections && prev.length >= maxSelections) {
-          return prev; // Don't add if limit reached
+        if (isCurrentlySelected) {
+          return prev.filter((id) => id !== collectiveId);
+        } else {
+          // Check max selections limit
+          if (
+            maxSelections !== undefined &&
+            maxSelections !== null &&
+            maxSelections > 0 &&
+            prev.length >= maxSelections
+          ) {
+            return prev; // Don't add if limit reached
+          }
+          return [...prev, collectiveId];
         }
-        return [...prev, collectiveId];
-      }
-    });
-  };
+      });
+    },
+    [maxSelections],
+  );
 
-  const handleSelectAll = () => {
+  const handleSelectAll = useCallback((): void => {
     const postableCollectives = collectivesToShow.filter((c) => c.can_post);
     const collectiveIds = postableCollectives.map((c) => c.id);
 
-    if (maxSelections) {
+    if (
+      maxSelections !== undefined &&
+      maxSelections !== null &&
+      maxSelections > 0
+    ) {
       setLocalSelectedIds(collectiveIds.slice(0, maxSelections));
     } else {
       setLocalSelectedIds(collectiveIds);
     }
-  };
+  }, [collectivesToShow, maxSelections]);
 
-  const handleClearAll = () => {
+  const handleClearAll = useCallback((): void => {
     setLocalSelectedIds([]);
-  };
+  }, []);
 
-  const handleSave = () => {
+  const handleSave = useCallback((): void => {
     onSelectionChange(localSelectedIds);
     onClose();
-  };
+  }, [localSelectedIds, onSelectionChange, onClose]);
 
-  const handleCancel = () => {
+  const handleCancel = useCallback((): void => {
     setLocalSelectedIds(selectedCollectiveIds); // Reset to original
     onClose();
-  };
+  }, [selectedCollectiveIds, onClose]);
+
+  const handleSearchChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>): void => {
+      setSearchQuery(e.target.value);
+    },
+    [],
+  );
+
+  const handleClearSearch = useCallback((): void => {
+    setSearchQuery('');
+  }, []);
+
+  const handlePermissionFilterChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>): void => {
+      setShowOnlyPostable(e.target.checked);
+    },
+    [],
+  );
+
+  const handleSortChange = useCallback((value: SortOption): void => {
+    setSortBy(value);
+  }, []);
+
+  const handleSortDirectionToggle = useCallback((): void => {
+    setSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'));
+  }, []);
+
+  const handleClearSearchFromEmptyState = useCallback((): void => {
+    setSearchQuery('');
+  }, []);
 
   const isLoading = isLoadingAll || isSearching;
   const selectedCount = localSelectedIds.length;
@@ -191,7 +242,11 @@ export function CollectiveSelectionModal({
     JSON.stringify(localSelectedIds.sort()) !==
     JSON.stringify(selectedCollectiveIds.sort());
 
-  const isAtMaxSelections = maxSelections && selectedCount >= maxSelections;
+  const isAtMaxSelections =
+    maxSelections !== undefined &&
+    maxSelections !== null &&
+    maxSelections > 0 &&
+    selectedCount >= maxSelections;
 
   if (!isOpen) return null;
 
@@ -203,14 +258,19 @@ export function CollectiveSelectionModal({
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-xl font-semibold">{title}</h2>
-              {description && (
-                <p className="text-sm text-gray-600 mt-1">{description}</p>
-              )}
+              {description !== undefined &&
+                description !== null &&
+                description.length > 0 && (
+                  <p className="text-sm text-gray-600 mt-1">{description}</p>
+                )}
             </div>
             <div className="flex items-center gap-3">
               <Badge variant="secondary">
                 {selectedCount} selected
-                {maxSelections && ` / ${maxSelections}`}
+                {maxSelections !== undefined &&
+                  maxSelections !== null &&
+                  maxSelections > 0 &&
+                  ` / ${maxSelections}`}
               </Badge>
               <Button variant="ghost" size="sm" onClick={onClose}>
                 <X className="w-4 h-4" />
@@ -229,14 +289,14 @@ export function CollectiveSelectionModal({
                 <Input
                   placeholder="Search collectives..."
                   value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onChange={handleSearchChange}
                   className="pl-10 pr-4"
                 />
-                {searchQuery && (
+                {searchQuery.length > 0 && (
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => setSearchQuery('')}
+                    onClick={handleClearSearch}
                     className="absolute right-1 top-1/2 transform -translate-y-1/2 h-8 w-8 p-0"
                   >
                     <X className="w-4 h-4" />
@@ -255,7 +315,7 @@ export function CollectiveSelectionModal({
                       type="checkbox"
                       id="postable-only"
                       checked={showOnlyPostable}
-                      onChange={(e) => setShowOnlyPostable(e.target.checked)}
+                      onChange={handlePermissionFilterChange}
                       className="rounded"
                     />
                     <label
@@ -269,10 +329,7 @@ export function CollectiveSelectionModal({
 
                 {/* Sort Controls */}
                 <div className="flex items-center gap-2">
-                  <Select
-                    value={sortBy}
-                    onValueChange={(value: SortOption) => setSortBy(value)}
-                  >
+                  <Select value={sortBy} onValueChange={handleSortChange}>
                     <SelectTrigger className="w-32">
                       <SelectValue />
                     </SelectTrigger>
@@ -286,11 +343,7 @@ export function CollectiveSelectionModal({
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() =>
-                      setSortDirection((prev) =>
-                        prev === 'asc' ? 'desc' : 'asc',
-                      )
-                    }
+                    onClick={handleSortDirectionToggle}
                   >
                     {sortDirection === 'asc' ? (
                       <SortAsc className="w-4 h-4" />
@@ -307,10 +360,12 @@ export function CollectiveSelectionModal({
                   variant="outline"
                   size="sm"
                   onClick={handleSelectAll}
-                  disabled={postableCount === 0 || Boolean(isAtMaxSelections)}
+                  disabled={postableCount === 0 || isAtMaxSelections === true}
                 >
                   Select All{' '}
-                  {maxSelections &&
+                  {maxSelections !== undefined &&
+                    maxSelections !== null &&
+                    maxSelections > 0 &&
                     `(${Math.min(postableCount, maxSelections)})`}
                 </Button>
                 <Button
@@ -332,7 +387,7 @@ export function CollectiveSelectionModal({
             <span>
               Showing {collectivesToShow.length} collective
               {collectivesToShow.length !== 1 ? 's' : ''}
-              {searchQuery && ` matching "${searchQuery}"`}
+              {searchQuery.length > 0 && ` matching "${searchQuery}"`}
             </span>
 
             {isAtMaxSelections && (
@@ -360,16 +415,16 @@ export function CollectiveSelectionModal({
               <div className="flex flex-col items-center justify-center py-8 text-gray-500">
                 <Users className="w-8 h-8 mb-2" />
                 <p className="text-center">
-                  {searchQuery
+                  {searchQuery.length > 0
                     ? `No collectives found matching "${searchQuery}"`
                     : showOnlyPostable
                       ? "You don't have posting permissions in any collectives"
                       : 'No collectives found'}
                 </p>
-                {searchQuery && (
+                {searchQuery.length > 0 && (
                   <Button
                     variant="link"
-                    onClick={() => setSearchQuery('')}
+                    onClick={handleClearSearchFromEmptyState}
                     className="mt-2"
                   >
                     Clear search
@@ -386,7 +441,7 @@ export function CollectiveSelectionModal({
                     onToggleSelection={handleToggleSelection}
                     disabled={
                       !collective.can_post ||
-                      (Boolean(isAtMaxSelections) &&
+                      (isAtMaxSelections === true &&
                         !localSelectedIds.includes(collective.id))
                     }
                     showMemberCount
@@ -416,7 +471,7 @@ export function CollectiveSelectionModal({
               Cancel
             </Button>
             <Button
-              onClick={() => void handleSave()}
+              onClick={handleSave}
               disabled={!hasChanges}
               className={cn(
                 selectedCount > 0 && 'bg-blue-600 hover:bg-blue-700',

@@ -9,17 +9,36 @@ import { createServerSupabaseClient } from '@/lib/supabase/server';
 export async function GET(
   request: NextRequest,
   context: { params: Promise<{ userId: string }> }
-) {
+): Promise<NextResponse> {
   try {
     const supabase = createServerSupabaseClient();
     const { userId } = await context.params;
 
     // Parse query parameters
     const { searchParams } = new URL(request.url);
-    const page = parseInt(searchParams.get('page') || '1');
-    const limit = parseInt(searchParams.get('limit') || '20');
-    const sort = searchParams.get('sort') || 'created_at';
-    const order = searchParams.get('order') || 'desc';
+    const pageParam = searchParams.get('page');
+    const limitParam = searchParams.get('limit');
+    const sortParam = searchParams.get('sort');
+    const orderParam = searchParams.get('order');
+    
+    const page = parseInt(
+      pageParam !== null && pageParam !== undefined && pageParam.trim().length > 0 
+        ? pageParam 
+        : '1'
+    );
+    const limit = parseInt(
+      limitParam !== null && limitParam !== undefined && limitParam.trim().length > 0 
+        ? limitParam 
+        : '20'
+    );
+    const sort = 
+      sortParam !== null && sortParam !== undefined && sortParam.trim().length > 0 
+        ? sortParam 
+        : 'created_at';
+    const order = 
+      orderParam !== null && orderParam !== undefined && orderParam.trim().length > 0 
+        ? orderParam 
+        : 'desc';
 
     // Get current user for privacy checks
     const { data: { user: currentUser } } = await supabase.auth.getUser();
@@ -41,7 +60,7 @@ export async function GET(
       .eq('created_by', userId);
 
     // Apply privacy filters - only owners can see all videos
-    if (!isOwner) {
+    if (isOwner !== true) {
       query = query
         .eq('is_public', true)
         .in('status', ['ready', 'preparing']); // Hide errored videos from public
@@ -57,7 +76,7 @@ export async function GET(
 
     const { data: videos, error: fetchError, count } = await query;
 
-    if (fetchError) {
+    if (fetchError !== null) {
       console.error('Error fetching user videos:', fetchError);
       return NextResponse.json(
         { error: 'Failed to fetch videos' },
@@ -68,8 +87,8 @@ export async function GET(
     return NextResponse.json({
       success: true,
       data: {
-        videos: videos || [],
-        total: count || 0,
+        videos: videos !== null && videos !== undefined ? videos : [],
+        total: count !== null && count !== undefined && count >= 0 ? count : 0,
         page,
         limit,
         isOwner,

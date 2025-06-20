@@ -1,9 +1,16 @@
 'use client';
 
+import React, { useCallback } from 'react';
 
 import ReactionButtons from '@/components/ui/ReactionButtons';
 
-
+interface PostReactionResponse {
+  success: boolean;
+  likeCount?: number;
+  dislikeCount?: number;
+  userReaction?: 'like' | 'dislike' | null;
+  message?: string;
+}
 
 interface PostReactionButtonsProps {
   id: string;
@@ -19,41 +26,48 @@ export default function PostReactionButtons({
   initialDislikeCount,
   initialUserReaction,
   disabled = false,
-}: PostReactionButtonsProps) {
+}: PostReactionButtonsProps): React.ReactElement {
   // Create reaction handler for posts using the existing API pattern
-  const handlePostReaction = async (
-    postId: string,
-    type: 'like' | 'dislike',
-  ) => {
-    try {
-      const response = await fetch(`/api/posts/${postId}/reactions`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type }),
-      });
+  const handlePostReaction = useCallback(
+    async (
+      postId: string,
+      type: 'like' | 'dislike',
+    ): Promise<PostReactionResponse> => {
+      try {
+        const response = await fetch(`/api/posts/${postId}/reactions`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ type }),
+        });
 
-      if (response.ok) {
-        const data = await response.json();
-        return {
-          success: true,
-          likeCount: data.likeCount,
-          dislikeCount: data.dislikeCount,
-          userReaction: data.userReaction,
-        };
-      } else {
+        if (response.ok) {
+          const data = (await response.json()) as {
+            likeCount: number;
+            dislikeCount: number;
+            userReaction: 'like' | 'dislike' | null;
+          };
+          return {
+            success: true,
+            likeCount: data.likeCount,
+            dislikeCount: data.dislikeCount,
+            userReaction: data.userReaction,
+          };
+        } else {
+          return {
+            success: false,
+            message: 'Failed to update post reaction',
+          };
+        }
+      } catch (error: unknown) {
+        console.error('Error updating post reaction:', error);
         return {
           success: false,
-          message: 'Failed to update post reaction',
+          message: 'Network error occurred',
         };
       }
-    } catch (error: unknown) {
-      console.error('Error updating post reaction:', error);
-      return {
-        success: false,
-        message: 'Network error occurred',
-      };
-    }
-  };
+    },
+    [],
+  );
 
   return (
     <ReactionButtons

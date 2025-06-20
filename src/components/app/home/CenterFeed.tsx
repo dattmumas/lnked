@@ -1,4 +1,3 @@
- 
 'use client';
 
 import { Loader2, RefreshCw } from 'lucide-react';
@@ -28,7 +27,7 @@ export function CenterFeed({ user }: Props): React.JSX.Element {
     );
   }
 
-  if (error) {
+  if (error !== undefined && error !== null && error.length > 0) {
     return (
       <div className="text-center py-10">
         <p className="text-red-500 text-sm mb-2">Error loading feed</p>

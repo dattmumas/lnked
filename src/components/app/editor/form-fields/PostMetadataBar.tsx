@@ -1,8 +1,9 @@
-import { useFormContext } from "react-hook-form";
+import React from 'react';
+import { useFormContext } from 'react-hook-form';
 
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 interface PostMetadataBarProps {
   onPublish: () => void;
@@ -14,15 +15,15 @@ interface PostMetadataBarProps {
 export function PostMetadataBar({
   onPublish,
   isPublishing,
-  publishButtonText = "Publish",
+  publishButtonText = 'Publish',
   onOpenSeoDrawer,
-}: PostMetadataBarProps) {
+}: PostMetadataBarProps): React.ReactElement {
   const {
     register,
     formState: { errors, isSubmitting },
     watch,
   } = useFormContext();
-  const status = watch("status");
+  const status = watch('status') as string;
 
   return (
     <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between w-full">
@@ -35,11 +36,10 @@ export function PostMetadataBar({
           </Label>
           <Input
             id="title"
-            {...register("title")}
+            {...register('title')}
             placeholder="Title is Required"
             className="text-xl font-semibold px-3 py-2 border border-input rounded-md min-w-0"
             aria-invalid={Boolean(errors.title)}
-            autoFocus
           />
         </div>
         {/* Status dropdown and date */}
@@ -49,7 +49,7 @@ export function PostMetadataBar({
           </Label>
           <select
             id="status"
-            {...register("status")}
+            {...register('status')}
             className="border border-input rounded-md px-2 py-1 text-sm bg-background"
             disabled={isSubmitting || isPublishing}
           >
@@ -57,7 +57,7 @@ export function PostMetadataBar({
             <option value="published">Publish Immediately</option>
             <option value="scheduled">Schedule for Later</option>
           </select>
-          {status === "scheduled" && (
+          {status === 'scheduled' && (
             <>
               <Label htmlFor="published_at" className="sr-only">
                 Publish Date
@@ -65,7 +65,7 @@ export function PostMetadataBar({
               <Input
                 id="published_at"
                 type="datetime-local"
-                {...register("published_at")}
+                {...register('published_at')}
                 disabled={isSubmitting || isPublishing}
                 className="border border-input rounded-md px-2 py-1 text-sm w-52"
               />
@@ -96,7 +96,7 @@ export function PostMetadataBar({
           variant="default"
           size="sm"
         >
-          {isPublishing ? "Publishing..." : publishButtonText}
+          {isPublishing ? 'Publishing...' : publishButtonText}
         </Button>
       </div>
     </div>

@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useState, useRef } from 'react';
+import React, { useCallback, useState, useRef } from 'react';
 
 import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
@@ -10,6 +10,8 @@ import PostCardFooter from './PostCardFooter';
 import PostCardHeader from './PostCardHeader';
 import VideoThumbnail from './VideoThumbnail';
 
+// Constants
+const MAX_DESCRIPTION_LENGTH = 150;
 
 interface Author {
   id: string;
@@ -79,18 +81,23 @@ export default function VideoCard({
   currentUserId,
   showFollowButton = false,
   className,
-}: VideoCardProps) {
+}: VideoCardProps): React.ReactElement {
   const router = useRouter();
-  const postUrl = post.slug ? `/posts/${post.slug}` : `/posts/${post.id}`;
+  const postUrl =
+    post.slug !== undefined && post.slug !== null && post.slug.length > 0
+      ? `/posts/${post.slug}`
+      : `/posts/${post.id}`;
 
   const isProcessing = post.metadata?.status === 'preparing';
   const hasError = post.metadata?.status === 'errored';
 
   // Extract description from content (for video posts, content is usually the description)
   const description =
-    post.content && post.content.length > 0
-      ? post.content.length > 150
-        ? `${post.content.substring(0, 150)}...`
+    post.content !== undefined &&
+    post.content !== null &&
+    post.content.length > 0
+      ? post.content.length > MAX_DESCRIPTION_LENGTH
+        ? `${post.content.substring(0, MAX_DESCRIPTION_LENGTH)}...`
         : post.content
       : undefined;
 
@@ -98,22 +105,31 @@ export default function VideoCard({
   const [isPlaying, setIsPlaying] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
 
-  const handlePlayClick = (e: React.MouseEvent) => {
+  const handlePlayClick = useCallback((e: React.MouseEvent): void => {
     e.stopPropagation();
     setIsPlaying(true);
-  };
+  }, []);
 
-  const handleVideoEnded = () => {
+  const handleVideoEnded = useCallback((): void => {
     setIsPlaying(false);
-  };
+  }, []);
 
-  const handleVideoPause = () => {
+  const handleVideoPause = useCallback((): void => {
     // Only restore thumbnail if paused by user (not by switching tabs, etc.)
     setIsPlaying(false);
-  };
+  }, []);
+
+  const handleNavigateToPost = useCallback((): void => {
+    void router.push(postUrl);
+  }, [router, postUrl]);
 
   // If no playbackId, fallback to detail page navigation
-  const canPlayInline = post.metadata?.playbackId && !isProcessing && !hasError;
+  const canPlayInline =
+    post.metadata?.playbackId !== undefined &&
+    post.metadata?.playbackId !== null &&
+    post.metadata.playbackId.length > 0 &&
+    !isProcessing &&
+    !hasError;
 
   return (
     <Card
@@ -135,11 +151,17 @@ export default function VideoCard({
 
         {/* Video Player or Thumbnail */}
         <div className="mb-4 relative">
-          {isPlaying && canPlayInline ? (
+          {isPlaying && canPlayInline === true ? (
             <video
               ref={videoRef}
               src={`https://stream.mux.com/${post.metadata?.playbackId}.m3u8`}
-              poster={post.thumbnail_url || undefined}
+              poster={
+                post.thumbnail_url !== undefined &&
+                post.thumbnail_url !== null &&
+                post.thumbnail_url.length > 0
+                  ? post.thumbnail_url
+                  : undefined
+              }
               controls
               autoPlay
               playsInline
@@ -154,7 +176,7 @@ export default function VideoCard({
               type="button"
               className="group w-full aspect-video relative focus:outline-none"
               onClick={
-                canPlayInline ? handlePlayClick : () => void router.push(postUrl)
+                canPlayInline === true ? handlePlayClick : handleNavigateToPost
               }
               aria-label="Play video"
             >
@@ -166,7 +188,7 @@ export default function VideoCard({
                 className="w-full"
               />
               {/* Play overlay */}
-              {canPlayInline && !isProcessing && !hasError && (
+              {canPlayInline === true && !isProcessing && !hasError && (
                 <span className="absolute inset-0 flex items-center justify-center pointer-events-none">
                   <svg
                     className="w-16 h-16 text-white opacity-90 group-hover:scale-110 transition-transform"
@@ -194,7 +216,7 @@ export default function VideoCard({
             {post.title}
           </h2>
 
-          {description && (
+          {description !== undefined && (
             <p className="text-sm text-muted-foreground mb-4 line-clamp-2 leading-relaxed">
               {description}
             </p>
@@ -220,7 +242,13 @@ export default function VideoCard({
 
         <PostCardFooter
           postId={post.id}
-          postSlug={post.slug || undefined}
+          postSlug={
+            post.slug !== undefined &&
+            post.slug !== null &&
+            post.slug.length > 0
+              ? post.slug
+              : undefined
+          }
           postTitle={post.title}
           interactions={interactions}
           onToggleLike={onToggleLike}

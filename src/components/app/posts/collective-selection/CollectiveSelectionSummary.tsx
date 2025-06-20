@@ -1,15 +1,8 @@
 'use client';
 
-import {
-  Plus,
-  Users,
-  Crown,
-  Shield,
-  Edit3,
-  PenTool,
-  X,
-} from 'lucide-react';
-import { useState } from 'react';
+import { Plus, Users, Crown, Shield, Edit3, PenTool, X } from 'lucide-react';
+import Image from 'next/image';
+import React, { useCallback, useState } from 'react';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -25,6 +18,11 @@ import { cn } from '@/lib/utils';
 import { CollectiveWithPermission } from '@/types/enhanced-database.types';
 
 import { CollectiveSelectionModal } from './CollectiveSelectionModal';
+
+// Constants
+const DEFAULT_SKELETON_COUNT = 2;
+const AVATAR_SIZE_COMPACT = 24;
+const AVATAR_SIZE_NORMAL = 32;
 
 interface CollectiveSelectionSummaryProps {
   selectedCollectiveIds: string[];
@@ -61,7 +59,7 @@ export function CollectiveSelectionSummary({
   showRoles = true,
   compact = false,
   className,
-}: CollectiveSelectionSummaryProps) {
+}: CollectiveSelectionSummaryProps): React.ReactElement {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   // Fetch collective data for selected IDs
@@ -71,26 +69,36 @@ export function CollectiveSelectionSummary({
     selectedCollectiveIds.includes(collective.id),
   );
 
-  const handleOpenModal = () => {
+  const handleOpenModal = useCallback((): void => {
     if (!disabled) {
       setIsModalOpen(true);
     }
-  };
+  }, [disabled]);
 
-  const handleRemoveCollective = (
-    collectiveId: string,
-    event: React.MouseEvent,
-  ) => {
-    event.stopPropagation();
-    if (!disabled) {
-      onSelectionChange(
-        selectedCollectiveIds.filter((id) => id !== collectiveId),
-      );
-    }
-  };
+  const handleRemoveCollective = useCallback(
+    (collectiveId: string, event: React.MouseEvent): void => {
+      event.stopPropagation();
+      if (!disabled) {
+        onSelectionChange(
+          selectedCollectiveIds.filter((id) => id !== collectiveId),
+        );
+      }
+    },
+    [disabled, onSelectionChange, selectedCollectiveIds],
+  );
+
+  const handleClearAll = useCallback((): void => {
+    onSelectionChange([]);
+  }, [onSelectionChange]);
+
+  const handleCloseModal = useCallback((): void => {
+    setIsModalOpen(false);
+  }, []);
 
   const canAddMore =
-    !maxSelections || selectedCollectiveIds.length < maxSelections;
+    maxSelections === undefined ||
+    maxSelections === null ||
+    selectedCollectiveIds.length < maxSelections;
 
   return (
     <TooltipProvider>
@@ -101,13 +109,17 @@ export function CollectiveSelectionSummary({
             <div className="flex items-center justify-between">
               <label className="text-sm font-medium text-gray-700">
                 Selected Collectives ({selectedCollectives.length}
-                {maxSelections && `/${maxSelections}`})
+                {maxSelections !== undefined &&
+                  maxSelections !== null &&
+                  maxSelections > 0 &&
+                  `/${maxSelections}`}
+                )
               </label>
               {selectedCollectives.length > 0 && !disabled && (
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => onSelectionChange([])}
+                  onClick={handleClearAll}
                   className="text-gray-500 hover:text-gray-700"
                 >
                   Clear all
@@ -126,7 +138,7 @@ export function CollectiveSelectionSummary({
                 <CollectiveCard
                   key={collective.id}
                   collective={collective}
-                  onRemove={(id, event) => handleRemoveCollective(id, event)}
+                  onRemove={handleRemoveCollective}
                   disabled={disabled}
                   showRole={showRoles}
                   compact={compact}
@@ -136,10 +148,10 @@ export function CollectiveSelectionSummary({
           </div>
         ) : (
           /* Empty State */
-          (<div className="text-center py-6">
+          <div className="text-center py-6">
             <Users className="w-8 h-8 text-gray-300 mx-auto mb-2" />
             <p className="text-sm text-gray-500 mb-3">{placeholder}</p>
-          </div>)
+          </div>
         )}
 
         {/* Add/Manage Button */}
@@ -164,7 +176,7 @@ export function CollectiveSelectionSummary({
         {/* Selection Modal */}
         <CollectiveSelectionModal
           isOpen={isModalOpen}
-          onClose={() => setIsModalOpen(false)}
+          onClose={handleCloseModal}
           selectedCollectiveIds={selectedCollectiveIds}
           onSelectionChange={onSelectionChange}
           maxSelections={maxSelections}
@@ -174,7 +186,9 @@ export function CollectiveSelectionSummary({
               : 'Select Collectives'
           }
           description={
-            maxSelections
+            maxSelections !== undefined &&
+            maxSelections !== null &&
+            maxSelections > 0
               ? `Choose up to ${maxSelections} collectives to share this post with`
               : 'Choose which collectives to share this post with'
           }
@@ -199,9 +213,16 @@ function CollectiveCard({
   disabled,
   showRole,
   compact,
-}: CollectiveCardProps) {
+}: CollectiveCardProps): React.ReactElement {
   const RoleIcon = roleIcons[collective.user_role];
   const roleColorClass = roleColors[collective.user_role];
+
+  const handleRemoveClick = useCallback(
+    (e: React.MouseEvent): void => {
+      onRemove(collective.id, e);
+    },
+    [onRemove, collective.id],
+  );
 
   return (
     <Card className="transition-all duration-200 hover:shadow-sm">
@@ -210,10 +231,14 @@ function CollectiveCard({
           <div className="flex items-center gap-2 flex-1 min-w-0">
             {/* Collective Avatar */}
             <div className="flex-shrink-0">
-              {collective.logo_url ? (
-                <img
+              {collective.logo_url !== undefined &&
+              collective.logo_url !== null &&
+              collective.logo_url.length > 0 ? (
+                <Image
                   src={collective.logo_url}
                   alt={`${collective.name} logo`}
+                  width={compact ? AVATAR_SIZE_COMPACT : AVATAR_SIZE_NORMAL}
+                  height={compact ? AVATAR_SIZE_COMPACT : AVATAR_SIZE_NORMAL}
                   className={cn(
                     'rounded-full object-cover',
                     compact ? 'w-6 h-6' : 'w-8 h-8',
@@ -264,11 +289,14 @@ function CollectiveCard({
                 )}
               </div>
 
-              {!compact && collective.description && (
-                <p className="text-xs text-gray-500 truncate mt-1">
-                  {collective.description}
-                </p>
-              )}
+              {!compact &&
+                collective.description !== undefined &&
+                collective.description !== null &&
+                collective.description.length > 0 && (
+                  <p className="text-xs text-gray-500 truncate mt-1">
+                    {collective.description}
+                  </p>
+                )}
             </div>
           </div>
 
@@ -279,7 +307,7 @@ function CollectiveCard({
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={(e) => onRemove(collective.id, e)}
+                  onClick={handleRemoveClick}
                   className="h-8 w-8 p-0 text-gray-400 hover:text-red-500 hover:bg-red-50"
                 >
                   <X className="w-4 h-4" />
@@ -299,18 +327,18 @@ function CollectiveCard({
 // Compact version for smaller spaces
 export function CompactCollectiveSelectionSummary(
   props: CollectiveSelectionSummaryProps,
-) {
+): React.ReactElement {
   return <CollectiveSelectionSummary {...props} compact />;
 }
 
 // Loading skeleton
 export function CollectiveSelectionSummarySkeleton({
   compact = false,
-  count = 2,
+  count = DEFAULT_SKELETON_COUNT,
 }: {
   compact?: boolean;
   count?: number;
-}) {
+}): React.ReactElement {
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">

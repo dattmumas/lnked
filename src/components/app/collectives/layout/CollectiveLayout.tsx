@@ -1,3 +1,5 @@
+import React from 'react';
+
 import { ArticleList } from '../articles/ArticleList';
 import { AuthorCarousel } from '../carousel/AuthorCarousel';
 import { FeaturedMedia } from '../featured/FeaturedMedia';
@@ -7,7 +9,9 @@ interface CollectiveLayoutProps {
   collectiveSlug: string;
 }
 
-export function CollectiveLayout({ collectiveSlug }: CollectiveLayoutProps) {
+export function CollectiveLayout({
+  collectiveSlug,
+}: CollectiveLayoutProps): React.ReactElement {
   return (
     <div className="collective-layout grid grid-cols-1 lg:grid-cols-[2fr_3fr] gap-6 lg:gap-8 container mx-auto px-4 md:px-6 lg:px-8 py-6">
       {/* Left Column - 40% on desktop */}

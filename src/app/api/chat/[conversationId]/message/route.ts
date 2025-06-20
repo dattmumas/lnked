@@ -53,7 +53,7 @@ function extractFirstUrl(text: string): string | null {
   return match ? match[0] : null;
 }
 
-export async function POST(request: Request, context: { params: Promise<{ conversationId: string }> }) {
+export async function POST(request: Request, context: { params: Promise<{ conversationId: string }> }): Promise<NextResponse> {
   const { conversationId } = await context.params;
 
   // 1. Auth
@@ -63,7 +63,7 @@ export async function POST(request: Request, context: { params: Promise<{ conver
     error: authError,
   } = await supabase.auth.getUser();
 
-  if (authError || !user) {
+  if (authError !== null || user === null) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: HttpStatus.UNAUTHORIZED });
   }
 
@@ -93,14 +93,14 @@ export async function POST(request: Request, context: { params: Promise<{ conver
     .eq('user_id', user.id)
     .maybeSingle();
 
-  if (partErr) {
+  if (partErr !== null) {
     return NextResponse.json(
       { error: partErr.message },
       { status: HttpStatus.INTERNAL_SERVER_ERROR },
     );
   }
 
-  if (!participant) {
+  if (participant === null) {
     return NextResponse.json({ error: 'Forbidden' }, { status: HttpStatus.FORBIDDEN });
   }
 
@@ -135,7 +135,7 @@ export async function POST(request: Request, context: { params: Promise<{ conver
     `)
     .single<MessageRow>();
 
-  if (msgErr || !msg) {
+  if (msgErr !== null || msg === null) {
     return NextResponse.json(
       { error: msgErr?.message ?? 'Failed to send message' },
       { status: HttpStatus.INTERNAL_SERVER_ERROR },
@@ -143,31 +143,36 @@ export async function POST(request: Request, context: { params: Promise<{ conver
   }
 
   // 6. Fetch link preview asynchronously after message is created
-  if (message_type === 'text' && msg.id) {
+  if (message_type === 'text' && msg.id !== null && msg.id !== undefined) {
     const url = extractFirstUrl(content);
-    if (url && !finalMetadata.embed) {
+    if (url !== null && url !== undefined && finalMetadata.embed === undefined) {
       try {
         // Fetch link preview in the background (don't block message sending)
-        fetch(`${request.headers.get('origin')}/api/chat/link-preview`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ url }),
-        }).then(async (res) => {
-          if (res.ok) {
-            const preview = await res.json();
-            // Update the message with the preview
-            await supabase
-              .from('messages')
-              .update({ 
-                metadata: { 
-                  ...finalMetadata, 
-                  embed: preview 
-                } 
-              })
-              .eq('id', msg.id)
-              .eq('conversation_id', conversationId);
-          }
-        }).catch(console.error);
+        const origin = request.headers.get('origin');
+        if (origin !== null) {
+          fetch(`${origin}/api/chat/link-preview`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url }),
+          }).then(async (res) => {
+            if (res.ok) {
+              const preview: unknown = await res.json();
+              // Update the message with the preview
+              await supabase
+                .from('messages')
+                .update({ 
+                  metadata: { 
+                    ...finalMetadata, 
+                    embed: preview 
+                  } as any 
+                })
+                .eq('id', msg.id)
+                .eq('conversation_id', conversationId);
+            }
+          }).catch((err: unknown) => {
+            console.error('Failed to fetch link preview:', err);
+          });
+        }
       } catch (err: unknown) {
         console.error('Failed to fetch link preview:', err);
       }

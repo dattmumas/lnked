@@ -6,22 +6,29 @@ import { z } from "zod";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
+// Constants for validation
+const MIN_NAME_LENGTH = 3;
+const MAX_NAME_LENGTH = 100;
+const MIN_SLUG_LENGTH = 3;
+const MAX_SLUG_LENGTH = 50;
+const MAX_DESCRIPTION_LENGTH = 500;
+
 const CollectiveSchema = z.object({
   name: z
     .string()
-    .min(3, "Name must be at least 3 characters long")
-    .max(100, "Name must be 100 characters or less"),
+    .min(MIN_NAME_LENGTH, `Name must be at least ${MIN_NAME_LENGTH} characters long`)
+    .max(MAX_NAME_LENGTH, `Name must be ${MAX_NAME_LENGTH} characters or less`),
   slug: z
     .string()
-    .min(3, "Slug must be at least 3 characters long")
-    .max(50, "Slug must be 50 characters or less")
+    .min(MIN_SLUG_LENGTH, `Slug must be at least ${MIN_SLUG_LENGTH} characters long`)
+    .max(MAX_SLUG_LENGTH, `Slug must be ${MAX_SLUG_LENGTH} characters or less`)
     .regex(
       /^[a-z0-9]+(?:-[a-z0-9]+)*$/,
       "Slug can only contain lowercase letters, numbers, and hyphens"
     ),
   description: z
     .string()
-    .max(500, "Description must be 500 characters or less")
+    .max(MAX_DESCRIPTION_LENGTH, `Description must be ${MAX_DESCRIPTION_LENGTH} characters or less`)
     .optional(),
 });
 
@@ -73,7 +80,7 @@ export async function createCollective(
     console.error("Error checking slug uniqueness:", slugCheckError);
     return { error: "Database error while checking slug uniqueness." };
   }
-  if (existingSlug) {
+  if ((existingSlug?.slug ?? '').trim().length > 0) {
     return {
       error: "This slug is already taken. Please choose another one.",
       fieldErrors: { slug: ["This slug is already taken."] },
@@ -85,7 +92,7 @@ export async function createCollective(
     .insert({
       name,
       slug,
-      description: description || undefined,
+      description: (description ?? '').trim().length > 0 ? description : undefined,
       owner_id: user.id,
     })
     .select("id, slug") // Select some data to return
@@ -107,7 +114,7 @@ export async function createCollective(
     return { error: `Failed to create collective: ${insertError.message}` };
   }
 
-  if (!newCollective) {
+  if (newCollective === null || newCollective === undefined) {
     return { error: "Failed to create collective for an unknown reason." };
   }
 

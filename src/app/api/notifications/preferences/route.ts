@@ -5,7 +5,11 @@ import { createServerSupabaseClient } from '@/lib/supabase/server';
 
 import type { NotificationPreferencesUpdate } from '@/types/notifications';
 
-export async function GET() {
+interface PreferencesRequestBody {
+  preferences?: unknown;
+}
+
+export async function GET(): Promise<NextResponse> {
   try {
     const supabase = createServerSupabaseClient();
     const {
@@ -31,7 +35,7 @@ export async function GET() {
   }
 }
 
-export async function PUT(req: NextRequest) {
+export async function PUT(req: NextRequest): Promise<NextResponse> {
   try {
     const supabase = createServerSupabaseClient();
     const {
@@ -46,19 +50,19 @@ export async function PUT(req: NextRequest) {
       );
     }
 
-    const body = await req.json();
-    const { preferences } = body as { preferences: NotificationPreferencesUpdate[] };
+    const body: PreferencesRequestBody = await req.json() as PreferencesRequestBody;
+    const { preferences } = body;
 
-    if (!preferences || !Array.isArray(preferences)) {
+    if (preferences === null || preferences === undefined || !Array.isArray(preferences)) {
       return NextResponse.json(
         { error: 'preferences array is required' },
         { status: 400 }
       );
     }
 
-    const result = await notificationService.updatePreferences(preferences);
+    const result = await notificationService.updatePreferences(preferences as NotificationPreferencesUpdate[]);
 
-    if (!result.success) {
+    if (result.success === false) {
       return NextResponse.json(
         { error: result.error },
         { status: 400 }

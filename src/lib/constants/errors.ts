@@ -1,6 +1,3 @@
-
-
-
 /**
  * Centralised HTTP status codes and default error messages.
  * Import these constants anywhere you need an HTTP status
@@ -8,6 +5,7 @@
  */
 
 export enum HttpStatusCode {
+  OK = 200,
   BadRequest = 400,
   Unauthorized = 401,
   Forbidden = 403,
@@ -24,6 +22,7 @@ export enum HttpStatusCode {
  * You can customise or extend this map as your API evolves.
  */
 export const HttpErrorMessages: Record<HttpStatusCode, string> = {
+  [HttpStatusCode.OK]: 'OK',
   [HttpStatusCode.BadRequest]: 'Bad Request',
   [HttpStatusCode.Unauthorized]: 'Unauthorized',
   [HttpStatusCode.Forbidden]: 'Forbidden',
@@ -33,6 +32,16 @@ export const HttpErrorMessages: Record<HttpStatusCode, string> = {
   [HttpStatusCode.UnprocessableEntity]: 'Unprocessable Entity',
   [HttpStatusCode.TooManyRequests]: 'Too Many Requests',
   [HttpStatusCode.InternalServerError]: 'Internal Server Error',
+} as const;
+
+// Webhook-specific constants
+export const WEBHOOK_CONSTANTS = {
+  // Timestamp validation (5 minutes in seconds)
+  MAX_TIMESTAMP_AGE_SECONDS: 300,
+  // Event deduplication TTL (24 hours in seconds) 
+  EVENT_DEDUPLICATION_TTL: 86400,
+  // Timestamp conversion
+  MILLISECONDS_PER_SECOND: 1000,
 } as const;
 
 /**

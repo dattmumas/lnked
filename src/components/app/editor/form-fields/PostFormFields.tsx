@@ -1,23 +1,22 @@
 'use client';
 
-import {
-  useForm,
-  FieldValues,
-  FieldPath,
-  FieldErrors as RHFFieldErrors,
-} from 'react-hook-form';
+import React from 'react';
 import { z } from 'zod';
 
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { postFormFieldsSchema } from '@/lib/schemas/postFormFieldsSchema';
 
-// Define missing types locally
-type UseFormRegister<T extends FieldValues> = ReturnType<
-  typeof useForm<T>
->['register'];
-type FieldErrors<T extends FieldValues> = RHFFieldErrors<T>;
+// Define local types to replace missing react-hook-form exports
+type FieldValues = Record<string, unknown>;
 type FieldError = { message?: string };
+type FieldErrors<T extends FieldValues> = Partial<Record<keyof T, FieldError>>;
+
+// Define missing types locally - simplified for compatibility
+type UseFormRegister<T extends FieldValues> = (
+  name: keyof T,
+  options?: Record<string, unknown>,
+) => Record<string, unknown>;
 
 // re-export for backward compatibility
 export { postFormFieldsSchema };
@@ -48,7 +47,7 @@ export default function PostFormFields<
   isSubmitting,
   titlePlaceholder = 'Post Title',
   showTitle = true,
-}: PostFormFieldsProps<TFormValues>) {
+}: PostFormFieldsProps<TFormValues>): React.ReactElement {
   // Helper to safely access error messages
   const getErrorMessage = (
     error: FieldError | undefined,
@@ -68,7 +67,7 @@ export default function PostFormFields<
           </Label>
           <Input
             id="title"
-            {...register('title' as FieldPath<TFormValues>)}
+            {...register('title')}
             placeholder={titlePlaceholder}
             disabled={isSubmitting}
             className={errors.title ? 'border-destructive' : ''}
@@ -87,7 +86,7 @@ export default function PostFormFields<
         </Label>
         <select
           id="status"
-          {...register('status' as FieldPath<TFormValues>)}
+          {...register('status')}
           disabled={isSubmitting}
           className="block w-full p-2 border border-input bg-background rounded-md shadow-sm focus:ring-primary focus:border-primary sm:text-sm"
         >
@@ -113,7 +112,7 @@ export default function PostFormFields<
           <Input
             id="published_at"
             type="datetime-local"
-            {...register('published_at' as FieldPath<TFormValues>)}
+            {...register('published_at')}
             disabled={isSubmitting}
             className={errors.published_at ? 'border-destructive' : ''}
           />

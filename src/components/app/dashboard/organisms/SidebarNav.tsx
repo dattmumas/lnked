@@ -14,7 +14,7 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import Link from 'next/link';
-import { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 
@@ -66,8 +66,12 @@ const settingsNavItems = [
 export function SidebarNav({
   collectives,
   collapsed = false,
-}: SidebarNavProps) {
+}: SidebarNavProps): React.ReactElement {
   const [collectivesExpanded, setCollectivesExpanded] = useState(false);
+
+  const handleToggleCollectives = useCallback((): void => {
+    setCollectivesExpanded(!collectivesExpanded);
+  }, [collectivesExpanded]);
 
   return (
     <div className="flex flex-col h-full">
@@ -105,9 +109,7 @@ export function SidebarNav({
                       variant="ghost"
                       size="sm"
                       className="h-8 w-8 p-0 ml-1"
-                      onClick={() =>
-                        setCollectivesExpanded(!collectivesExpanded)
-                      }
+                      onClick={handleToggleCollectives}
                       aria-expanded={collectivesExpanded}
                       aria-label="Toggle collectives submenu"
                     >

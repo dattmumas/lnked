@@ -3,7 +3,7 @@
 import { ChevronDown, ChevronRight, Plus } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 
 export interface FileExplorerProps {
   personalPosts: { id: string; title: string; status: string }[];
@@ -17,11 +17,24 @@ export interface FileExplorerProps {
 export function FileExplorer({
   personalPosts,
   collectives,
-}: FileExplorerProps) {
+}: FileExplorerProps): React.ReactElement {
   const pathname = usePathname();
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
 
-  const isActive = (postId: string) => pathname.includes(postId);
+  const isActive = useCallback(
+    (postId: string): boolean => pathname.includes(postId),
+    [pathname],
+  );
+
+  const handleToggleExpanded = useCallback(
+    (collectiveId: string, isColExpanded: boolean) => (): void => {
+      setExpanded((prev) => ({
+        ...prev,
+        [collectiveId]: !isColExpanded,
+      }));
+    },
+    [],
+  );
 
   return (
     <nav className="flex flex-col gap-8 py-8 px-4 w-full">
@@ -81,12 +94,7 @@ export function FileExplorer({
                 <button
                   type="button"
                   className="flex items-center w-full text-left px-2 py-1 rounded hover:bg-muted/40 focus:outline-none"
-                  onClick={() =>
-                    setExpanded((prev) => ({
-                      ...prev,
-                      [col.id]: !isColExpanded,
-                    }))
-                  }
+                  onClick={handleToggleExpanded(col.id, isColExpanded)}
                   aria-expanded={isColExpanded}
                   aria-controls={`collective-posts-${col.id}`}
                 >

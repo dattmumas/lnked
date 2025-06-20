@@ -3,6 +3,7 @@
 import * as TooltipPrimitive from '@radix-ui/react-tooltip';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import React from 'react';
 
 import { cn } from '@/lib/utils';
 
@@ -35,7 +36,7 @@ export function SidebarLink({
   label,
   exact = false,
   collapsed = false,
-}: SidebarLinkProps) {
+}: SidebarLinkProps): React.ReactElement {
   const pathname = usePathname();
   const isActive = exact ? pathname === href : pathname.startsWith(href);
 
@@ -48,14 +49,16 @@ export function SidebarLink({
             className={cn(
               'flex items-center justify-center p-component rounded-lg transition-all transition-fast',
               'micro-interaction nav-hover',
-              isActive
+              isActive === true
                 ? 'bg-accent/20 text-accent border border-accent/30'
                 : 'text-content-secondary hover:text-content-primary hover:bg-interaction-hover',
             )}
             aria-label={label}
-            aria-current={isActive ? 'page' : undefined}
+            aria-current={isActive === true ? 'page' : undefined}
           >
-            {Icon && <Icon className="size-5" aria-hidden="true" />}
+            {Icon !== undefined && (
+              <Icon className="size-5" aria-hidden="true" />
+            )}
           </Link>
         </Tooltip.Trigger>
         <Tooltip.Content
@@ -76,24 +79,24 @@ export function SidebarLink({
         'flex items-center gap-component px-component py-component text-sm font-medium rounded-lg',
         'transition-all transition-fast micro-interaction nav-hover',
         'group relative overflow-hidden',
-        isActive
+        isActive === true
           ? 'bg-accent/20 text-accent font-semibold'
           : 'text-content-secondary hover:text-content-primary hover:bg-interaction-hover',
       )}
-      aria-current={isActive ? 'page' : undefined}
+      aria-current={isActive === true ? 'page' : undefined}
     >
-      {Icon && (
+      {Icon !== undefined && (
         <Icon
           className={cn(
             'size-4 shrink-0 transition-transform transition-fast',
             'group-hover:scale-110',
-            isActive ? 'text-accent' : '',
+            isActive === true ? 'text-accent' : '',
           )}
         />
       )}
       <span className="truncate">{label}</span>
 
-      {isActive && (
+      {isActive === true && (
         <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-4 bg-accent rounded-r-full" />
       )}
     </Link>

@@ -1,6 +1,10 @@
+import React from 'react';
+
 import ArticleCard from './ArticleCard';
 import VideoCard from './VideoCard';
 
+// Constants
+const DEFAULT_TEXT_TRUNCATE_LENGTH = 150;
 
 interface Author {
   id: string;
@@ -67,7 +71,7 @@ export default function PostCard({
   currentUserId,
   showFollowButton = false,
   className,
-}: PostCardProps) {
+}: PostCardProps): React.ReactElement {
   // Determine post type and render appropriate card
   if (post.post_type === 'video') {
     return (
@@ -104,7 +108,10 @@ export default function PostCard({
 }
 
 // Export utility function for backward compatibility
-export const truncateText = (text: string | null, maxLength = 150): string => {
-  if (!text) return '';
+export const truncateText = (
+  text: string | null,
+  maxLength = DEFAULT_TEXT_TRUNCATE_LENGTH,
+): string => {
+  if (text === undefined || text === null || text.length === 0) return '';
   return text.length <= maxLength ? text : `${text.substring(0, maxLength)}...`;
 };

@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 
 import { deletePost } from '@/app/actions/postActions';
 import { Button } from '@/components/primitives/Button';
@@ -27,6 +27,12 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 
+// Constants for time calculations
+const MILLISECONDS_TO_SECONDS = 1000;
+const SECONDS_IN_MINUTE = 60;
+const SECONDS_IN_HOUR = 3600;
+const SECONDS_IN_DAY = 86400;
+const SECONDS_IN_MONTH = 2592000;
 
 type DashboardPost = {
   id: string;
@@ -68,80 +74,153 @@ export default function PostListItem({
   showCollective = false,
   compact = false,
   tableMode = false,
-}: PostListItemProps) {
+}: PostListItemProps): React.ReactElement {
   const [isDeleting, setIsDeleting] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const router = useRouter();
 
-  const handleDelete = async () => {
-    if (!window.confirm('Are you sure you want to delete this post?')) return;
+  const handleDelete = useCallback(async (): Promise<void> => {
+    if (!showDeleteConfirm) {
+      setShowDeleteConfirm(true);
+      return;
+    }
 
     setIsDeleting(true);
     try {
-      if (onDelete) {
-        await onDelete(post.id);
+      if (onDelete !== undefined) {
+        onDelete(post.id);
       } else {
         await deletePost(post.id);
       }
-      void router.refresh();
+      router.refresh();
     } catch (error: unknown) {
       console.error('Failed to delete post:', error);
     } finally {
       setIsDeleting(false);
+      setShowDeleteConfirm(false);
     }
-  };
+  }, [showDeleteConfirm, onDelete, post.id, router]);
 
-  const getStatusVariant = (post: DashboardPost) => {
-    if (!post.published_at) return 'secondary'; // draft
-    if (post.published_at && new Date(post.published_at) > new Date())
-      return 'outline'; // scheduled
-    return 'default'; // published
-  };
+  const getStatusVariant = useCallback(
+    (post: DashboardPost): 'secondary' | 'outline' | 'default' => {
+      if (
+        post.published_at === undefined ||
+        post.published_at === null ||
+        post.published_at.length === 0
+      )
+        return 'secondary'; // draft
+      if (
+        post.published_at !== undefined &&
+        post.published_at !== null &&
+        post.published_at.length > 0 &&
+        new Date(post.published_at) > new Date()
+      )
+        return 'outline'; // scheduled
+      return 'default'; // published
+    },
+    [],
+  );
 
-  const getStatusLabel = (post: DashboardPost) => {
-    if (!post.published_at) return 'Draft';
-    if (post.published_at && new Date(post.published_at) > new Date())
+  const getStatusLabel = useCallback((post: DashboardPost): string => {
+    if (
+      post.published_at === undefined ||
+      post.published_at === null ||
+      post.published_at.length === 0
+    )
+      return 'Draft';
+    if (
+      post.published_at !== undefined &&
+      post.published_at !== null &&
+      post.published_at.length > 0 &&
+      new Date(post.published_at) > new Date()
+    )
       return 'Scheduled';
     return 'Published';
-  };
+  }, []);
 
-  const formatDate = (dateString: string | null) => {
-    if (!dateString) return 'Never';
+  const formatDate = useCallback((dateString: string | null): string => {
+    if (
+      dateString === undefined ||
+      dateString === null ||
+      dateString.length === 0
+    )
+      return 'Never';
     try {
       const date = new Date(dateString);
       const now = new Date();
-      const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+      const diffInSeconds = Math.floor(
+        (now.getTime() - date.getTime()) / MILLISECONDS_TO_SECONDS,
+      );
 
-      if (diffInSeconds < 60) return 'Just now';
-      if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
-      if (diffInSeconds < 86400)
-        return `${Math.floor(diffInSeconds / 3600)}h ago`;
-      if (diffInSeconds < 2592000)
-        return `${Math.floor(diffInSeconds / 86400)}d ago`;
+      if (diffInSeconds < SECONDS_IN_MINUTE) return 'Just now';
+      if (diffInSeconds < SECONDS_IN_HOUR)
+        return `${Math.floor(diffInSeconds / SECONDS_IN_MINUTE)}m ago`;
+      if (diffInSeconds < SECONDS_IN_DAY)
+        return `${Math.floor(diffInSeconds / SECONDS_IN_HOUR)}h ago`;
+      if (diffInSeconds < SECONDS_IN_MONTH)
+        return `${Math.floor(diffInSeconds / SECONDS_IN_DAY)}d ago`;
 
       return date.toLocaleDateString();
     } catch {
       return 'Invalid date';
     }
-  };
+  }, []);
 
   // Calculate engagement metrics from existing post data
   const likes =
-    typeof post.likeCount === 'number'
+    typeof post.likeCount === 'number' &&
+    post.likeCount !== undefined &&
+    post.likeCount !== null &&
+    post.likeCount >= 0
       ? post.likeCount
-      : post.likes?.[0]?.count || post.post_reactions?.[0]?.count || 0;
+      : post.likes !== undefined &&
+          post.likes !== null &&
+          post.likes.length > 0 &&
+          post.likes[0] !== undefined &&
+          post.likes[0] !== null &&
+          post.likes[0].count >= 0
+        ? post.likes[0].count
+        : post.post_reactions !== undefined &&
+            post.post_reactions !== null &&
+            post.post_reactions.length > 0 &&
+            post.post_reactions[0] !== undefined &&
+            post.post_reactions[0] !== null &&
+            post.post_reactions[0].count >= 0
+          ? post.post_reactions[0].count
+          : 0;
 
-  const views = post.view_count || 0;
-  const comments = post.comments?.length || 0;
+  const views =
+    post.view_count !== undefined &&
+    post.view_count !== null &&
+    post.view_count >= 0
+      ? post.view_count
+      : 0;
+  const comments =
+    post.comments !== undefined && post.comments !== null
+      ? post.comments.length
+      : 0;
 
   // Helper functions for URL routing
-  const getPostViewUrl = (post: DashboardPost) => {
-    return post.video ? `/videos/${post.video.id}` : `/posts/${post.id}`;
-  };
+  const getPostViewUrl = useCallback((post: DashboardPost): string => {
+    return post.video !== undefined && post.video !== null
+      ? `/videos/${post.video.id}`
+      : `/posts/${post.id}`;
+  }, []);
 
-  const getPostEditUrl = (post: DashboardPost) => {
+  const getPostEditUrl = useCallback((post: DashboardPost): string => {
     // Video posts don't have edit functionality yet, so keep routing to post edit
     return `/posts/${post.id}/edit`;
-  };
+  }, []);
+
+  const handleSelectChange = useCallback((): void => {
+    if (onSelect !== undefined) {
+      onSelect();
+    }
+  }, [onSelect]);
+
+  const handleDeleteClick = useCallback((): void => {
+    void handleDelete();
+  }, [handleDelete]);
 
   // Table mode - render as table rows
   if (tableMode) {
@@ -151,11 +230,11 @@ export default function PostListItem({
       >
         <td className="px-4 py-3">
           <div className="flex items-center gap-2">
-            {onSelect && (
+            {onSelect !== undefined && (
               <input
                 type="checkbox"
                 checked={isSelected}
-                onChange={onSelect}
+                onChange={handleSelectChange}
                 className="h-4 w-4 rounded border-border accent-accent"
               />
             )}
@@ -165,11 +244,13 @@ export default function PostListItem({
                   {post.title}
                 </h3>
               </Link>
-              {post.description && (
-                <p className="text-sm text-muted-foreground line-clamp-1 mt-1">
-                  {post.description}
-                </p>
-              )}
+              {post.description !== undefined &&
+                post.description !== null &&
+                post.description.length > 0 && (
+                  <p className="text-sm text-muted-foreground line-clamp-1 mt-1">
+                    {post.description}
+                  </p>
+                )}
             </div>
           </div>
         </td>
@@ -177,7 +258,13 @@ export default function PostListItem({
           <Badge variant={getStatusVariant(post)}>{getStatusLabel(post)}</Badge>
         </td>
         <td className="px-4 py-3 text-muted-foreground">
-          {formatDate(post.published_at || post.created_at)}
+          {formatDate(
+            post.published_at !== undefined &&
+              post.published_at !== null &&
+              post.published_at.length > 0
+              ? post.published_at
+              : post.created_at,
+          )}
         </td>
         <td className="px-4 py-3 text-muted-foreground">
           {likes > 0 ? likes.toLocaleString() : '—'}
@@ -202,7 +289,9 @@ export default function PostListItem({
                     className="flex items-center gap-2"
                   >
                     <ExternalLink className="h-4 w-4" />
-                    {post.video ? 'View Video' : 'View Post'}
+                    {post.video !== undefined && post.video !== null
+                      ? 'View Video'
+                      : 'View Post'}
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
@@ -216,12 +305,16 @@ export default function PostListItem({
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
-                  onClick={() => void handleDelete()}
+                  onClick={handleDeleteClick}
                   disabled={isDeleting}
                   className="text-destructive focus:text-destructive focus:bg-destructive/10"
                 >
                   <Trash2 className="h-4 w-4 mr-2" />
-                  {isDeleting ? 'Deleting...' : 'Delete Post'}
+                  {showDeleteConfirm
+                    ? 'Confirm Delete'
+                    : isDeleting
+                      ? 'Deleting...'
+                      : 'Delete Post'}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -239,11 +332,11 @@ export default function PostListItem({
         }`}
       >
         {/* Selection checkbox */}
-        {onSelect && (
+        {onSelect !== undefined && (
           <input
             type="checkbox"
             checked={isSelected}
-            onChange={onSelect}
+            onChange={handleSelectChange}
             className="h-4 w-4 rounded border-border-subtle accent-accent micro-interaction"
           />
         )}
@@ -264,15 +357,23 @@ export default function PostListItem({
                 >
                   {getStatusLabel(post)}
                 </Badge>
-                {showCollective && post.collective && (
-                  <span className="text-xs text-content-secondary flex items-center gap-1">
-                    <Users className="h-3 w-3" />
-                    {post.collective.name}
-                  </span>
-                )}
+                {showCollective &&
+                  post.collective !== undefined &&
+                  post.collective !== null && (
+                    <span className="text-xs text-content-secondary flex items-center gap-1">
+                      <Users className="h-3 w-3" />
+                      {post.collective.name}
+                    </span>
+                  )}
                 <span className="text-xs text-content-secondary flex items-center gap-1">
                   <Calendar className="h-3 w-3" />
-                  {formatDate(post.published_at || post.created_at)}
+                  {formatDate(
+                    post.published_at !== undefined &&
+                      post.published_at !== null &&
+                      post.published_at.length > 0
+                      ? post.published_at
+                      : post.created_at,
+                  )}
                 </span>
               </div>
             </div>
@@ -310,7 +411,9 @@ export default function PostListItem({
                       className="flex items-center gap-2"
                     >
                       <ExternalLink className="h-4 w-4" />
-                      {post.video ? 'View Video' : 'View Post'}
+                      {post.video !== undefined && post.video !== null
+                        ? 'View Video'
+                        : 'View Post'}
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
@@ -324,12 +427,16 @@ export default function PostListItem({
                   </DropdownMenuItem>
                   <DropdownMenuSeparator className="border-border-subtle" />
                   <DropdownMenuItem
-                    onClick={() => void handleDelete()}
+                    onClick={handleDeleteClick}
                     disabled={isDeleting}
                     className="text-destructive focus:text-destructive focus:bg-destructive/10"
                   >
                     <Trash2 className="h-4 w-4 mr-2" />
-                    {isDeleting ? 'Deleting...' : 'Delete Post'}
+                    {showDeleteConfirm
+                      ? 'Confirm Delete'
+                      : isDeleting
+                        ? 'Deleting...'
+                        : 'Delete Post'}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -351,11 +458,11 @@ export default function PostListItem({
       <div className="flex items-start justify-between gap-component">
         <div className="flex items-start gap-component flex-1 min-w-0">
           {/* Selection checkbox */}
-          {onSelect && (
+          {onSelect !== undefined && (
             <input
               type="checkbox"
               checked={isSelected}
-              onChange={onSelect}
+              onChange={handleSelectChange}
               className="h-4 w-4 rounded border-border-subtle accent-accent micro-interaction mt-1"
             />
           )}
@@ -382,29 +489,39 @@ export default function PostListItem({
               </div>
 
               {/* Content snippet from post description */}
-              {post.description && (
-                <p className="text-content-secondary text-sm line-clamp-2">
-                  {post.description}
-                </p>
-              )}
+              {post.description !== undefined &&
+                post.description !== null &&
+                post.description.length > 0 && (
+                  <p className="text-content-secondary text-sm line-clamp-2">
+                    {post.description}
+                  </p>
+                )}
 
               {/* Metadata */}
               <div className="flex flex-wrap items-center gap-component text-xs text-content-secondary">
-                {showCollective && post.collective && (
-                  <div className="flex items-center gap-1">
-                    <Users className="h-3 w-3" />
-                    <Link
-                      href={`/collectives/${post.collective.slug}`}
-                      className="hover:text-content-accent transition-colors transition-fast"
-                    >
-                      {post.collective.name}
-                    </Link>
-                  </div>
-                )}
+                {showCollective &&
+                  post.collective !== undefined &&
+                  post.collective !== null && (
+                    <div className="flex items-center gap-1">
+                      <Users className="h-3 w-3" />
+                      <Link
+                        href={`/collectives/${post.collective.slug}`}
+                        className="hover:text-content-accent transition-colors transition-fast"
+                      >
+                        {post.collective.name}
+                      </Link>
+                    </div>
+                  )}
 
                 <div className="flex items-center gap-1">
                   <Calendar className="h-3 w-3" />
-                  {formatDate(post.published_at || post.created_at)}
+                  {formatDate(
+                    post.published_at !== undefined &&
+                      post.published_at !== null &&
+                      post.published_at.length > 0
+                      ? post.published_at
+                      : post.created_at,
+                  )}
                 </div>
               </div>
 
@@ -456,7 +573,9 @@ export default function PostListItem({
                 className="flex items-center gap-2"
               >
                 <ExternalLink className="h-4 w-4" />
-                {post.video ? 'View Video' : 'View Post'}
+                {post.video !== undefined && post.video !== null
+                  ? 'View Video'
+                  : 'View Post'}
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
@@ -470,12 +589,16 @@ export default function PostListItem({
             </DropdownMenuItem>
             <DropdownMenuSeparator className="border-border-subtle" />
             <DropdownMenuItem
-              onClick={() => void handleDelete()}
+              onClick={handleDeleteClick}
               disabled={isDeleting}
               className="text-destructive focus:text-destructive focus:bg-destructive/10"
             >
               <Trash2 className="h-4 w-4 mr-2" />
-              {isDeleting ? 'Deleting...' : 'Delete Post'}
+              {showDeleteConfirm
+                ? 'Confirm Delete'
+                : isDeleting
+                  ? 'Deleting...'
+                  : 'Delete Post'}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

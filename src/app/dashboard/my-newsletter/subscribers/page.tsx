@@ -1,8 +1,9 @@
-import Link from "next/link";
-import { redirect } from "next/navigation";
+import Link from 'next/link';
+import { redirect } from 'next/navigation';
+import React from 'react';
 
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import {
   Table,
   TableBody,
@@ -11,28 +12,28 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table"; // Ensure this path is correct after moving table.tsx
-import { Enums } from "@/lib/database.types";
-import { createServerSupabaseClient } from "@/lib/supabase/server";
+} from '@/components/ui/table'; // Ensure this path is correct after moving table.tsx
+import { Enums } from '@/lib/database.types';
+import { createServerSupabaseClient } from '@/lib/supabase/server';
 
 const formatDate = (dateString: string | null | undefined): string => {
-  if (!dateString) return "N/A";
-  return new Date(dateString).toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
+  if ((dateString ?? '').trim() === '') return 'N/A';
+  return new Date((dateString ?? '').trim() || '').toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
   });
 };
 
 // Helper to map subscription status to badge variant
 const getStatusBadgeVariant = (
   status: string,
-  cancelAtPeriodEnd: boolean
-): "default" | "secondary" | "destructive" | "outline" => {
-  if (status === "active" && !cancelAtPeriodEnd) return "default";
-  if (status === "trialing") return "secondary";
-  if (status === "canceled" || cancelAtPeriodEnd) return "destructive";
-  return "outline";
+  cancelAtPeriodEnd: boolean,
+): 'default' | 'secondary' | 'destructive' | 'outline' => {
+  if (status === 'active' && !cancelAtPeriodEnd) return 'default';
+  if (status === 'trialing') return 'secondary';
+  if (status === 'canceled' || cancelAtPeriodEnd) return 'destructive';
+  return 'outline';
 };
 
 type Subscriber = { id: string; full_name: string | null };
@@ -45,7 +46,7 @@ type SubscriptionRow = {
   subscriber: Subscriber | null;
 };
 
-export default async function MyNewsletterSubscribersPage() {
+export default async function MyNewsletterSubscribersPage(): Promise<React.ReactElement> {
   const supabase = createServerSupabaseClient();
 
   const {
@@ -54,12 +55,12 @@ export default async function MyNewsletterSubscribersPage() {
   } = await supabase.auth.getUser();
 
   if (authError || !currentUser) {
-    redirect("/sign-in");
+    redirect('/sign-in');
   }
 
   // Fetch subscribers to the current user's individual newsletter
   const { data: subscriptions, error: subsError } = await supabase
-    .from("subscriptions")
+    .from('subscriptions')
     .select(
       `
       id,
@@ -68,16 +69,16 @@ export default async function MyNewsletterSubscribersPage() {
       current_period_end,
       cancel_at_period_end,
       subscriber:users!user_id(id, full_name) 
-    `
+    `,
     )
-    .eq("target_entity_type", "user" as Enums<"subscription_target_type">)
-    .eq("target_entity_id", currentUser.id)
-    .order("created", { ascending: false });
+    .eq('target_entity_type', 'user' as Enums<'subscription_target_type'>)
+    .eq('target_entity_id', currentUser.id)
+    .order('created', { ascending: false });
 
   if (subsError) {
     console.error(
-      "Error fetching subscribers for individual newsletter:",
-      subsError.message
+      'Error fetching subscribers for individual newsletter:',
+      subsError.message,
     );
     // Handle error display - perhaps show a message on the page
   }
@@ -112,23 +113,23 @@ export default async function MyNewsletterSubscribersPage() {
           </TableHeader>
           <TableBody>
             {subscriptions.map((sub: SubscriptionRow) => {
-              const {subscriber} = sub;
+              const { subscriber } = sub;
               return (
                 <TableRow key={sub.id}>
                   <TableCell className="font-medium">
-                    {subscriber?.full_name || "N/A"}
+                    {(subscriber?.full_name ?? '').trim() || 'N/A'}
                   </TableCell>
                   <TableCell>
                     <Badge
                       variant={getStatusBadgeVariant(
                         sub.status,
-                        sub.cancel_at_period_end
+                        sub.cancel_at_period_end,
                       )}
                       className="capitalize"
                     >
                       {sub.status}
                     </Badge>
-                    {sub.cancel_at_period_end && sub.status === "active" && (
+                    {sub.cancel_at_period_end && sub.status === 'active' && (
                       <span className="text-xs text-muted-foreground ml-1">
                         (ends {formatDate(sub.current_period_end)})
                       </span>

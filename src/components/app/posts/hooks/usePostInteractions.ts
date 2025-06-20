@@ -53,9 +53,11 @@ export function usePostInteractions({
 
   // Initialize user interactions
   useEffect((): void => {
-    if (!userId || !postId || initialized) return;
+    if (userId === undefined || userId === null || userId.length === 0 || 
+        postId === undefined || postId === null || postId.length === 0 || 
+        initialized) return;
 
-    const initializeInteractions = async () => {
+    const initializeInteractions = async (): Promise<void> => {
       try {
         setIsLoading(true);
         
@@ -88,8 +90,12 @@ export function usePostInteractions({
 
         // Process the data
         const userReaction = userReactions?.[0]?.type;
-        const likesCount = reactionCounts?.filter(r => r.type === 'like').length || 0;
-        const dislikesCount = reactionCounts?.filter(r => r.type === 'dislike').length || 0;
+        const likesCount = reactionCounts?.filter(r => r.type === 'like').length !== undefined && 
+          reactionCounts?.filter(r => r.type === 'like').length !== null ? 
+          reactionCounts.filter(r => r.type === 'like').length : 0;
+        const dislikesCount = reactionCounts?.filter(r => r.type === 'dislike').length !== undefined && 
+          reactionCounts?.filter(r => r.type === 'dislike').length !== null ? 
+          reactionCounts.filter(r => r.type === 'dislike').length : 0;
 
         setInteractions(prev => ({
           ...prev,
@@ -98,7 +104,8 @@ export function usePostInteractions({
           isBookmarked: Boolean(userBookmark),
           likeCount: likesCount,
           dislikeCount: dislikesCount,
-          commentCount: commentCount?.length || 0,
+          commentCount: commentCount?.length !== undefined && commentCount?.length !== null ? 
+            commentCount.length : 0,
         }));
 
         setInitialized(true);
@@ -110,11 +117,11 @@ export function usePostInteractions({
       }
     };
 
-    initializeInteractions();
+    void initializeInteractions();
   }, [userId, postId, initialized, client]);
 
-  const toggleLike = useCallback(async () => {
-    if (!userId || isLoading) return;
+  const toggleLike = useCallback(async (): Promise<void> => {
+    if (userId === undefined || userId === null || userId.length === 0 || isLoading) return;
 
     const wasLiked = interactions.isLiked;
     const wasDisliked = interactions.isDisliked;
@@ -166,8 +173,8 @@ export function usePostInteractions({
     }
   }, [userId, postId, interactions.isLiked, interactions.isDisliked, isLoading, client]);
 
-  const toggleDislike = useCallback(async () => {
-    if (!userId || isLoading) return;
+  const toggleDislike = useCallback(async (): Promise<void> => {
+    if (userId === undefined || userId === null || userId.length === 0 || isLoading) return;
 
     const wasLiked = interactions.isLiked;
     const wasDisliked = interactions.isDisliked;
@@ -219,8 +226,8 @@ export function usePostInteractions({
     }
   }, [userId, postId, interactions.isLiked, interactions.isDisliked, isLoading, client]);
 
-  const toggleBookmark = useCallback(async () => {
-    if (!userId || isLoading) return;
+  const toggleBookmark = useCallback(async (): Promise<void> => {
+    if (userId === undefined || userId === null || userId.length === 0 || isLoading) return;
 
     const wasBookmarked = interactions.isBookmarked;
 

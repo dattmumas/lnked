@@ -82,7 +82,7 @@ export async function unsubscribeFromEntity(
     .eq("user_id", user.id)
     .single();
 
-  if (subFetchError || !subRecord) {
+  if (subFetchError || subRecord === null) {
     console.error(
       "Error fetching subscription for unsubscribe or permission denied:",
       subFetchError?.message
@@ -96,15 +96,15 @@ export async function unsubscribeFromEntity(
   try {
     // Option 1: Cancel at period end (recommended)
     const stripe = getStripe();
-    if (!stripe) throw new Error("Stripe SDK not initialized");
-    const updatedStripeSubscription = await stripe.subscriptions.update(
+    if (stripe === null) throw new Error("Stripe SDK not initialized");
+    const updatedStripeSubscription = await stripe!.subscriptions.update(
       stripeSubscriptionId,
       {
         cancel_at_period_end: true,
       }
     );
     if (process.env.NODE_ENV === "development") {
-      console.info(
+      console.warn(
         "Stripe subscription set to cancel at period end:",
         updatedStripeSubscription.id
       );
@@ -173,7 +173,7 @@ export async function createPriceTier({
     .select('owner_id')
     .eq('id', collectiveId)
     .single();
-  if (collError || !collective) {
+  if (collError || collective === null) {
     return { success: false, error: 'Collective not found.' };
   }
   if (collective.owner_id !== user.id) {
@@ -181,7 +181,7 @@ export async function createPriceTier({
   }
 
   const stripe = getStripe();
-  if (!stripe) return { success: false, error: 'Stripe not configured.' };
+  if (stripe === null || stripe === undefined) return { success: false, error: 'Stripe not configured.' };
 
   const { data: existingProduct } = await supabase
     .from('products')
@@ -190,11 +190,11 @@ export async function createPriceTier({
     .maybeSingle();
 
   let productId: string;
-  if (existingProduct && existingProduct.id) {
+  if (existingProduct !== null && existingProduct.id !== null && existingProduct.id !== undefined && existingProduct.id !== '') {
     productId = existingProduct.id;
   } else {
     const product = await stripe.products.create({
-      name: tierName || 'Subscription',
+      name: (tierName !== null && tierName !== undefined && tierName !== '') ? tierName : 'Subscription',
       metadata: { collectiveId },
     });
     productId = product.id;
@@ -222,7 +222,7 @@ export async function createPriceTier({
     unit_amount: price.unit_amount,
     currency: price.currency,
     interval: price.recurring?.interval as Enums<'price_interval'> | null,
-    description: tierName || null,
+    description: (tierName !== null && tierName !== undefined && tierName !== '') ? tierName : null,
     active: true,
   });
 
@@ -256,7 +256,7 @@ export async function deactivatePriceTier({
   }
 
   const stripe = getStripe();
-  if (!stripe) return { success: false, error: 'Stripe not configured.' };
+  if (stripe === null || stripe === undefined) return { success: false, error: 'Stripe not configured.' };
 
   await stripe.prices.update(priceId, { active: false });
 

@@ -16,11 +16,15 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useState, useEffect } from 'react';
+import React, { useCallback, useState, useEffect } from 'react';
 
 import { useCollectiveMemberships } from '@/hooks/posts/useCollectiveMemberships';
 import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
 import { cn } from '@/lib/utils';
+
+// Constants
+const MOUSE_LEAVE_DELAY = 200;
+const TRANSITION_DELAY_MULTIPLIER = 50;
 
 // Enhanced main navigation with Videos moved up as per creative design
 const navigationItems = [
@@ -52,15 +56,17 @@ interface Collective {
   member_count?: number;
 }
 
-export default function GlobalSidebar() {
+export default function GlobalSidebar(): React.ReactElement | undefined {
   const [isExpanded, setIsExpanded] = useState(false);
   const [collectivesExpanded, setCollectivesExpanded] = useState(false);
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean | undefined>(
+    undefined,
+  );
   const pathname = usePathname();
 
   // Defensive authentication check
   useEffect(() => {
-    const checkAuth = async () => {
+    const checkAuth = async (): Promise<void> => {
       const supabase = createSupabaseBrowserClient();
       const {
         data: { user },
@@ -74,62 +80,77 @@ export default function GlobalSidebar() {
 
   // Use existing hook to fetch user's collectives (include non-postable for navigation)
   const { data: collectives = [], isLoading: loading } =
-    useCollectiveMemberships(true);
+    useCollectiveMemberships(true) as {
+      data: Collective[];
+      isLoading: boolean;
+    };
 
   // Auto-expand when hovering with smooth delay
-  const [hoverTimeout, setHoverTimeout] = useState<NodeJS.Timeout | null>(null);
+  const [hoverTimeout, setHoverTimeout] = useState<NodeJS.Timeout | undefined>(
+    undefined,
+  );
 
-  const handleMouseEnter = () => {
-    if (hoverTimeout) clearTimeout(hoverTimeout);
+  const handleMouseEnter = useCallback((): void => {
+    if (hoverTimeout !== undefined) clearTimeout(hoverTimeout);
     setIsExpanded(true);
-  };
+  }, [hoverTimeout]);
 
-  const handleMouseLeave = () => {
-    const timeout = setTimeout(() => setIsExpanded(false), 200);
+  const handleMouseLeave = useCallback((): void => {
+    const timeout = setTimeout(() => setIsExpanded(false), MOUSE_LEAVE_DELAY);
     setHoverTimeout(timeout);
-  };
+  }, []);
+
+  const handleCollectivesToggle = useCallback((): void => {
+    setCollectivesExpanded(!collectivesExpanded);
+  }, [collectivesExpanded]);
+
+  const isActiveRoute = useCallback(
+    (href: string): boolean => {
+      if (href === '/home') {
+        return pathname === '/home' || pathname === '/';
+      }
+      if (href === '/profile') {
+        return pathname.startsWith('/profile');
+      }
+      if (href === '/dashboard/settings') {
+        return pathname === '/dashboard/settings';
+      }
+      if (href === '/videos') {
+        return pathname === '/videos' || pathname.startsWith('/videos/');
+      }
+      return pathname.startsWith(href);
+    },
+    [pathname],
+  );
+
+  const isCollectiveActive = useCallback(
+    (slug: string): boolean => {
+      return pathname.includes(`/collectives/${slug}`);
+    },
+    [pathname],
+  );
 
   useEffect(() => {
-    return () => {
-      if (hoverTimeout) clearTimeout(hoverTimeout);
+    return (): void => {
+      if (hoverTimeout !== undefined) clearTimeout(hoverTimeout);
     };
   }, [hoverTimeout]);
 
   // Hide sidebar entirely on the dedicated chat interface to provide a cleaner UI
   // This check must come after all hooks to avoid React hooks errors
   if (pathname.startsWith('/chat')) {
-    return null;
+    return undefined;
   }
 
   // Don't render until authentication is verified
-  if (isAuthenticated === null) {
-    return null; // Loading state
+  if (isAuthenticated === undefined) {
+    return undefined; // Loading state
   }
 
   // Don't render if not authenticated
   if (!isAuthenticated) {
-    return null;
+    return undefined;
   }
-
-  const isActiveRoute = (href: string) => {
-    if (href === '/home') {
-      return pathname === '/home' || pathname === '/';
-    }
-    if (href === '/profile') {
-      return pathname.startsWith('/profile');
-    }
-    if (href === '/dashboard/settings') {
-      return pathname === '/dashboard/settings';
-    }
-    if (href === '/videos') {
-      return pathname === '/videos' || pathname.startsWith('/videos/');
-    }
-    return pathname.startsWith(href);
-  };
-
-  const isCollectiveActive = (slug: string) => {
-    return pathname.includes(`/collectives/${slug}`);
-  };
 
   return (
     <div
@@ -159,7 +180,9 @@ export default function GlobalSidebar() {
                     isActive && 'bg-accent text-accent-foreground',
                   )}
                   style={{
-                    transitionDelay: isExpanded ? `${index * 50}ms` : '0ms',
+                    transitionDelay: isExpanded
+                      ? `${index * TRANSITION_DELAY_MULTIPLIER}ms`
+                      : '0ms',
                   }}
                   role="listitem"
                   aria-current={isActive ? 'page' : undefined}
@@ -187,7 +210,7 @@ export default function GlobalSidebar() {
         {/* Collectives Section with Toggleable Submenu */}
         <div className="px-3 border-t border-border">
           <button
-            onClick={() => setCollectivesExpanded(!collectivesExpanded)}
+            onClick={handleCollectivesToggle}
             className={cn(
               'w-full flex items-center justify-between gap-3 px-3 py-2.5 mt-3 rounded-lg transition-all duration-200',
               'hover:bg-accent/50 focus:bg-accent/50 focus:outline-none focus:ring-2 focus:ring-ring',
@@ -294,7 +317,9 @@ export default function GlobalSidebar() {
                   !isExpanded && 'justify-center',
                 )}
                 style={{
-                  transitionDelay: isExpanded ? `${index * 50}ms` : '0ms',
+                  transitionDelay: isExpanded
+                    ? `${index * TRANSITION_DELAY_MULTIPLIER}ms`
+                    : '0ms',
                 }}
                 role="button"
                 aria-label={item.label}

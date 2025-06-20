@@ -9,7 +9,7 @@ import {
   ExternalLink,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useState, useTransition } from 'react';
+import React, { useCallback, useState, useTransition } from 'react';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -19,6 +19,10 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 
+// Constants
+const MILLION = 1000000;
+const THOUSAND = 1000;
+const DECIMAL_PLACES = 1;
 
 interface PostInteractions {
   isLiked: boolean;
@@ -52,70 +56,99 @@ export default function PostCardFooter({
   onToggleBookmark,
   disabled = false,
   showViewCount = false,
-}: PostCardFooterProps) {
+}: PostCardFooterProps): React.ReactElement {
   const [isPending, startTransition] = useTransition();
   const [shareMenuOpen, setShareMenuOpen] = useState(false);
   const router = useRouter();
 
-  const postUrl = postSlug ? `/posts/${postSlug}` : `/posts/${postId}`;
+  const postUrl =
+    postSlug !== undefined && postSlug !== null && postSlug.length > 0
+      ? `/posts/${postSlug}`
+      : `/posts/${postId}`;
 
-  const handleReaction = (type: 'like' | 'dislike') => {
-    if (disabled || isPending) return;
+  const handleReaction = useCallback(
+    (type: 'like' | 'dislike'): void => {
+      if (disabled || isPending) return;
 
-    startTransition(() => {
-      if (type === 'like' && onToggleLike) {
-        onToggleLike();
-      } else if (type === 'dislike' && onToggleDislike) {
-        onToggleDislike();
-      }
-    });
-  };
+      startTransition(() => {
+        if (type === 'like' && onToggleLike) {
+          onToggleLike();
+        } else if (type === 'dislike' && onToggleDislike) {
+          onToggleDislike();
+        }
+      });
+    },
+    [disabled, isPending, onToggleLike, onToggleDislike],
+  );
 
-  const handleBookmark = () => {
+  const handleBookmark = useCallback((): void => {
     if (disabled || isPending || !onToggleBookmark) return;
 
     startTransition(() => {
       onToggleBookmark();
     });
-  };
+  }, [disabled, isPending, onToggleBookmark]);
 
-  const handleCommentsClick = () => {
+  const handleCommentsClick = useCallback((): void => {
     void router.push(`${postUrl}#comments`);
-  };
+  }, [router, postUrl]);
 
-  const handleShare = async (method: 'copy' | 'native') => {
-    const fullUrl = `${window.location.origin}${postUrl}`;
+  const handleShare = useCallback(
+    async (method: 'copy' | 'native'): Promise<void> => {
+      const fullUrl = `${window.location.origin}${postUrl}`;
 
-    if (
-      method === 'native' &&
-      typeof navigator !== 'undefined' &&
-      'share' in navigator
-    ) {
-      try {
-        await navigator.share({
-          title: postTitle,
-          url: fullUrl,
-        });
-      } catch (error: unknown) {
-        // User cancelled or error occurred, fallback to copy
+      if (
+        method === 'native' &&
+        typeof navigator !== 'undefined' &&
+        'share' in navigator
+      ) {
+        try {
+          await navigator.share({
+            title: postTitle,
+            url: fullUrl,
+          });
+        } catch {
+          // User cancelled or error occurred, fallback to copy
+          await navigator.clipboard.writeText(fullUrl);
+        }
+      } else {
         await navigator.clipboard.writeText(fullUrl);
       }
-    } else {
-      await navigator.clipboard.writeText(fullUrl);
-    }
 
-    setShareMenuOpen(false);
-  };
+      setShareMenuOpen(false);
+    },
+    [postUrl, postTitle],
+  );
 
-  const formatCount = (count: number): string => {
+  const handleLikeClick = useCallback((): void => {
+    void handleReaction('like');
+  }, [handleReaction]);
+
+  const handleDislikeClick = useCallback((): void => {
+    void handleReaction('dislike');
+  }, [handleReaction]);
+
+  const handleBookmarkClick = useCallback((): void => {
+    void handleBookmark();
+  }, [handleBookmark]);
+
+  const handleNativeShare = useCallback((): void => {
+    void handleShare('native');
+  }, [handleShare]);
+
+  const handleCopyShare = useCallback((): void => {
+    void handleShare('copy');
+  }, [handleShare]);
+
+  const formatCount = useCallback((count: number): string => {
     const num = count ?? 0;
-    if (num >= 1000000) {
-      return `${(num / 1000000).toFixed(1)}M`;
-    } else if (num >= 1000) {
-      return `${(num / 1000).toFixed(1)}K`;
+    if (num >= MILLION) {
+      return `${(num / MILLION).toFixed(DECIMAL_PLACES)}M`;
+    } else if (num >= THOUSAND) {
+      return `${(num / THOUSAND).toFixed(DECIMAL_PLACES)}K`;
     }
     return num.toString();
-  };
+  }, []);
 
   return (
     <div className="flex items-center justify-between pt-4 border-t border-border">
@@ -124,7 +157,7 @@ export default function PostCardFooter({
         <Button
           variant={interactions.isLiked ? 'default' : 'ghost'}
           size="sm"
-          onClick={() => void handleReaction('like')}
+          onClick={handleLikeClick}
           disabled={disabled || isPending}
           className="flex items-center gap-2 rounded-full"
           aria-label={interactions.isLiked ? 'Unlike post' : 'Like post'}
@@ -144,7 +177,7 @@ export default function PostCardFooter({
         <Button
           variant={interactions.isDisliked ? 'destructive' : 'ghost'}
           size="sm"
-          onClick={() => void handleReaction('dislike')}
+          onClick={handleDislikeClick}
           disabled={disabled || isPending}
           className="flex items-center gap-2 rounded-full"
           aria-label={
@@ -193,7 +226,7 @@ export default function PostCardFooter({
         <Button
           variant="ghost"
           size="sm"
-          onClick={() => void handleBookmark()}
+          onClick={handleBookmarkClick}
           disabled={disabled || isPending}
           className="rounded-full"
           aria-label={
@@ -223,12 +256,12 @@ export default function PostCardFooter({
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             {typeof navigator !== 'undefined' && 'share' in navigator && (
-              <DropdownMenuItem onClick={() => void handleShare('native')}>
+              <DropdownMenuItem onClick={handleNativeShare}>
                 <Share2 className="h-4 w-4 mr-2" />
                 Share
               </DropdownMenuItem>
             )}
-            <DropdownMenuItem onClick={() => void handleShare('copy')}>
+            <DropdownMenuItem onClick={handleCopyShare}>
               <ExternalLink className="h-4 w-4 mr-2" />
               Copy link
             </DropdownMenuItem>

@@ -9,8 +9,9 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
+import React from 'react';
 
-import RecentPostRow from '@/components/app/dashboard/organisms/RecentPostRow';
+import { default as RecentPostRowComponent } from '@/components/app/dashboard/organisms/RecentPostRow';
 import StatsRow from '@/components/app/dashboard/organisms/StatsRow';
 import { Button } from '@/components/primitives/Button';
 import { Card } from '@/components/primitives/Card';
@@ -57,7 +58,7 @@ type DashboardContent = {
 
 export const dynamic = 'force-dynamic';
 
-export default async function DashboardManagementPage() {
+export default async function DashboardManagementPage(): Promise<React.ReactElement> {
   const supabase = createServerSupabaseClient();
 
   // Get session to retrieve user reliably
@@ -99,7 +100,7 @@ export default async function DashboardManagementPage() {
 
     // Handle potential errors from RPC calls
     if (dashboardStatsResult.error) {
-      console.log(
+      console.error(
         'Dashboard stats RPC not available, falling back to individual queries:',
         dashboardStatsResult.error,
       );
@@ -109,7 +110,7 @@ export default async function DashboardManagementPage() {
     }
 
     if (dashboardContentResult.error) {
-      console.log(
+      console.error(
         'Dashboard content RPC not available, falling back to individual queries:',
         dashboardContentResult.error,
       );
@@ -132,12 +133,12 @@ export default async function DashboardManagementPage() {
     // Parse content result - this returns JSON so we need to parse it
     const dashboardContentData = dashboardContentResult.data;
     dashboardContent = dashboardContentData || {
-      profile: { username: null },
+      profile: { username: undefined },
       recent_posts: [],
       owned_collectives: [],
     };
   } catch (error: unknown) {
-    console.log('Falling back to individual queries:', error);
+    console.error('Falling back to individual queries:', error);
 
     // FALLBACK: Use individual queries if RPC functions are not available
     const [
@@ -170,6 +171,7 @@ export default async function DashboardManagementPage() {
         .from('posts')
         .select('id, title, published_at, created_at, is_public, collective_id')
         .eq('author_id', userId)
+        // eslint-disable-next-line unicorn/no-null
         .is('collective_id', null)
         .order('created_at', { ascending: false })
         .limit(MAX_RECENT_PERSONAL_POSTS_DISPLAY),
@@ -183,18 +185,27 @@ export default async function DashboardManagementPage() {
 
     // Build stats from individual query results
     dashboardStats = {
-      subscriber_count: subscriberCountResult.count || 0,
-      follower_count: followerCountResult.count || 0,
+      subscriber_count:
+        (subscriberCountResult.count ?? 0) > 0
+          ? (subscriberCountResult.count ?? 0)
+          : 0,
+      follower_count:
+        (followerCountResult.count ?? 0) > 0
+          ? (followerCountResult.count ?? 0)
+          : 0,
       total_views: 0, // TODO: Add post view aggregation
       total_likes: 0, // TODO: Add post like aggregation
       published_this_month: 0, // TODO: Add monthly post count
       total_posts: 0, // TODO: Add total post count
-      collective_count: collectivesResult.data?.length || 0,
+      collective_count:
+        (collectivesResult.data?.length ?? 0) > 0
+          ? (collectivesResult.data?.length ?? 0)
+          : 0,
     };
 
     // Build content from individual query results
     dashboardContent = {
-      profile: profileResult.data || { username: null },
+      profile: profileResult.data || { username: undefined },
       recent_posts: postsResult.data || [],
       owned_collectives: collectivesResult.data || [],
     };
@@ -205,7 +216,10 @@ export default async function DashboardManagementPage() {
     recent_posts: personalPosts,
     owned_collectives: ownedCollectives,
   } = dashboardContent;
-  const username = profile?.username;
+  const username =
+    (profile?.username ?? '').trim().length > 0
+      ? (profile?.username ?? '')
+      : '';
 
   return (
     <div className="pattern-stack gap-section">
@@ -263,7 +277,7 @@ export default async function DashboardManagementPage() {
               >
                 <Link href="/videos">Video Management</Link>
               </Button>
-              {username && (
+              {username.trim().length > 0 && (
                 <Button
                   variant="outline"
                   size="sm"
@@ -286,7 +300,10 @@ export default async function DashboardManagementPage() {
             </div>
 
             {/* Enhanced posts display */}
-            {personalPosts && personalPosts.length > 0 ? (
+            {personalPosts !== null &&
+            personalPosts !== undefined &&
+            Array.isArray(personalPosts) &&
+            personalPosts.length > 0 ? (
               <Card
                 size="md"
                 className="pattern-card border border-border-subtle"
@@ -295,12 +312,12 @@ export default async function DashboardManagementPage() {
                   {personalPosts
                     .slice(0, MAX_RECENT_PERSONAL_POSTS_DISPLAY)
                     .map((post: PersonalPost) => (
-                      <RecentPostRow
+                      <RecentPostRowComponent
                         key={post.id}
                         id={post.id}
                         title={post.title}
                         status={post.is_public ? 'published' : 'draft'}
-                        date={post.published_at || post.created_at}
+                        date={post.published_at ?? post.created_at}
                       />
                     ))}
                 </div>
@@ -319,7 +336,9 @@ export default async function DashboardManagementPage() {
             )}
 
             {/* Enhanced view all button */}
-            {personalPosts &&
+            {personalPosts !== null &&
+              personalPosts !== undefined &&
+              Array.isArray(personalPosts) &&
               personalPosts.length > MAX_RECENT_PERSONAL_POSTS_DISPLAY && (
                 <div className="text-center">
                   <Button
@@ -366,7 +385,10 @@ export default async function DashboardManagementPage() {
             </Button>
 
             {/* Enhanced collectives display */}
-            {ownedCollectives && ownedCollectives.length > 0 ? (
+            {ownedCollectives !== null &&
+            ownedCollectives !== undefined &&
+            Array.isArray(ownedCollectives) &&
+            ownedCollectives.length > 0 ? (
               <div className="dashboard-grid dashboard-grid-secondary">
                 {ownedCollectives.map((collective: OwnedCollective) => (
                   <Card
@@ -380,7 +402,11 @@ export default async function DashboardManagementPage() {
                           {collective.name}
                         </h3>
                         <p className="text-content-secondary text-sm truncate mt-1">
-                          {collective.description}
+                          {collective.description !== null &&
+                          collective.description !== undefined &&
+                          collective.description.trim().length > 0
+                            ? collective.description
+                            : 'No description'}
                         </p>
                       </div>
                       <Button

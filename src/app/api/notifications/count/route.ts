@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 import { notificationService } from '@/lib/notifications/service';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 
-export async function GET() {
+export async function GET(): Promise<NextResponse> {
   try {
     const supabase = createServerSupabaseClient();
     const {

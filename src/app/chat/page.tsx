@@ -1,9 +1,10 @@
 import { redirect } from 'next/navigation';
+import React from 'react';
 
 import ChatInterface from '@/components/chat/ChatInterface';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 
-export default async function ChatPage() {
+export default async function ChatPage(): Promise<React.ReactElement> {
   const supabase = createServerSupabaseClient();
   const {
     data: { user },

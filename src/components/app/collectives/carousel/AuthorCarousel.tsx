@@ -3,6 +3,7 @@
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
+import React, { useCallback } from 'react';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -18,7 +19,6 @@ import {
 
 import type { Database } from '@/lib/database.types';
 
-
 interface AuthorCarouselProps {
   collectiveSlug: string;
 }
@@ -33,35 +33,44 @@ type CollectiveMember =
     } | null;
   };
 
-export function AuthorCarousel({ collectiveSlug }: AuthorCarouselProps) {
+// Constants
+const MAX_VISIBLE_MEMBERS = 8;
+const SKELETON_MEMBERS_COUNT = 6;
+const SCROLL_DISTANCE = 200;
+const AVATAR_SIZE = 48;
+const MAX_BIO_LENGTH = 120;
+
+export function AuthorCarousel({
+  collectiveSlug,
+}: AuthorCarouselProps): React.ReactElement {
   const { data: collective } = useCollectiveData(collectiveSlug);
   const { data: members, isLoading } = useCollectiveMembers(
     collective?.id ?? '',
     {
-      enabled: Boolean(collective?.id),
+      enabled: collective?.id !== undefined && collective?.id !== null,
     },
   );
 
-  const scrollLeft = () => {
+  const scrollLeft = useCallback((): void => {
     const carousel = document.getElementById('author-carousel');
     if (carousel) {
-      carousel.scrollBy({ left: -200, behavior: 'smooth' });
+      carousel.scrollBy({ left: -SCROLL_DISTANCE, behavior: 'smooth' });
     }
-  };
+  }, []);
 
-  const scrollRight = () => {
+  const scrollRight = useCallback((): void => {
     const carousel = document.getElementById('author-carousel');
     if (carousel) {
-      carousel.scrollBy({ left: 200, behavior: 'smooth' });
+      carousel.scrollBy({ left: SCROLL_DISTANCE, behavior: 'smooth' });
     }
-  };
+  }, []);
 
   if (isLoading) {
     return (
       <div className="author-carousel-container">
         <h2 className="text-xl font-semibold mb-4">Contributors</h2>
         <div className="flex gap-4 animate-pulse">
-          {Array.from({ length: 6 }).map((_, i) => (
+          {Array.from({ length: SKELETON_MEMBERS_COUNT }).map((_, i) => (
             <div key={i} className="flex-shrink-0">
               <div className="w-12 h-12 rounded-full bg-muted"></div>
               <div className="w-16 h-3 bg-muted rounded mt-2"></div>
@@ -83,14 +92,14 @@ export function AuthorCarousel({ collectiveSlug }: AuthorCarouselProps) {
     );
   }
 
-  const displayMembers = members.slice(0, 8); // Max 8 visible as per spec
+  const displayMembers = members.slice(0, MAX_VISIBLE_MEMBERS);
 
   return (
     <div className="author-carousel-container">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-xl font-semibold">Contributors</h2>
 
-        {members.length > 8 && (
+        {members.length > MAX_VISIBLE_MEMBERS && (
           <div className="flex gap-2">
             <Button
               variant="outline"
@@ -125,24 +134,36 @@ export function AuthorCarousel({ collectiveSlug }: AuthorCarouselProps) {
               <Tooltip key={member.id}>
                 <TooltipTrigger asChild>
                   <Link
-                    href={`/profile/${member.user?.username ?? '#'}`}
+                    href={`/profile/${member.user?.username !== undefined && member.user?.username !== null && member.user.username.length > 0 ? member.user.username : '#'}`}
                     className="flex-shrink-0 group"
                   >
                     <div className="author-chip text-center">
                       {/* Avatar */}
                       <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-accent/20 group-hover:border-accent/40 transition-colors">
-                        {member.user?.avatar_url ? (
+                        {member.user?.avatar_url !== undefined &&
+                        member.user?.avatar_url !== null &&
+                        member.user.avatar_url.length > 0 ? (
                           <Image
                             src={member.user.avatar_url}
-                            alt={member.user.full_name ?? 'Author'}
-                            width={48}
-                            height={48}
+                            alt={
+                              member.user.full_name !== undefined &&
+                              member.user.full_name !== null &&
+                              member.user.full_name.length > 0
+                                ? member.user.full_name
+                                : 'Author'
+                            }
+                            width={AVATAR_SIZE}
+                            height={AVATAR_SIZE}
                             className="w-full h-full object-cover"
                           />
                         ) : (
                           <div className="w-full h-full bg-muted flex items-center justify-center">
                             <span className="text-lg">
-                              {member.user?.full_name?.charAt(0) ?? '?'}
+                              {member.user?.full_name !== undefined &&
+                              member.user?.full_name !== null &&
+                              member.user.full_name.length > 0
+                                ? member.user.full_name.charAt(0)
+                                : '?'}
                             </span>
                           </div>
                         )}
@@ -150,7 +171,11 @@ export function AuthorCarousel({ collectiveSlug }: AuthorCarouselProps) {
 
                       {/* Name */}
                       <p className="text-xs mt-2 max-w-[4rem] truncate group-hover:text-accent transition-colors">
-                        {member.user?.full_name ?? 'Unknown'}
+                        {member.user?.full_name !== undefined &&
+                        member.user?.full_name !== null &&
+                        member.user.full_name.length > 0
+                          ? member.user.full_name
+                          : 'Unknown'}
                       </p>
                     </div>
                   </Link>
@@ -159,16 +184,18 @@ export function AuthorCarousel({ collectiveSlug }: AuthorCarouselProps) {
                 <TooltipContent
                   side="bottom"
                   className="max-w-xs p-3"
-                  sideOffset={8}
+                  sideOffset={MAX_VISIBLE_MEMBERS}
                 >
                   <div className="space-y-1">
                     <p className="font-medium">{member.user?.full_name}</p>
-                    {member.user?.bio && (
-                      <p className="text-sm text-muted-foreground">
-                        {member.user.bio.slice(0, 120)}
-                        {member.user.bio.length > 120 ? '...' : ''}
-                      </p>
-                    )}
+                    {member.user?.bio !== undefined &&
+                      member.user?.bio !== null &&
+                      member.user.bio.length > 0 && (
+                        <p className="text-sm text-muted-foreground">
+                          {member.user.bio.slice(0, MAX_BIO_LENGTH)}
+                          {member.user.bio.length > MAX_BIO_LENGTH ? '...' : ''}
+                        </p>
+                      )}
                     <p className="text-xs text-muted-foreground capitalize">
                       {member.role}
                     </p>
@@ -181,7 +208,7 @@ export function AuthorCarousel({ collectiveSlug }: AuthorCarouselProps) {
       </div>
 
       {/* View all link if more than 8 members */}
-      {members.length > 8 && (
+      {members.length > MAX_VISIBLE_MEMBERS && (
         <div className="mt-4 text-center">
           <Button variant="ghost" size="sm" asChild>
             <Link href={`/collectives/${collectiveSlug}/members`}>

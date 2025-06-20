@@ -1,12 +1,11 @@
 'use client';
 import { Heart } from 'lucide-react';
 import Link from 'next/link';
-import { useState, useMemo, useTransition } from 'react';
+import React, { useState, useMemo, useTransition } from 'react';
 
 import { truncateText } from '@/components/app/posts/molecules/PostCard';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-
 
 import AudioSlider, { AudioPost } from './AudioSlider';
 import ContentFilterTabs from './ContentFilterTabs';
@@ -39,29 +38,42 @@ function PostCard({
   collectiveSlug,
 }: {
   post: PostWithSlug;
-  collectiveSlug: string | null;
-}) {
-  const [isPending, startTransition] = useTransition();
+  collectiveSlug: string | undefined;
+}): React.ReactElement {
+  const [isPending] = useTransition();
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [optimisticLikeCount, setOptimisticLikeCount] = useState(
-    post.like_count || 0,
+    post.like_count !== undefined && post.like_count !== null
+      ? post.like_count
+      : 0,
   );
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [optimisticUserHasLiked, setOptimisticUserHasLiked] = useState(
-    post.current_user_has_liked || false,
+    post.current_user_has_liked !== undefined &&
+      post.current_user_has_liked !== null
+      ? post.current_user_has_liked
+      : false,
   );
 
-  const formattedDate = post.created_at
-    ? new Date(post.created_at).toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-      })
-    : 'Date not available';
+  const formattedDate =
+    post.created_at !== undefined &&
+    post.created_at !== null &&
+    post.created_at.length > 0
+      ? new Date(post.created_at).toLocaleDateString('en-US', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+        })
+      : 'Date not available';
 
-  const postUrl = post.slug
-    ? `/posts/${post.slug}`
-    : collectiveSlug
-      ? `/collectives/${collectiveSlug}/${post.id}`
-      : `/posts/${post.id}`;
+  const postUrl =
+    post.slug !== undefined && post.slug !== null && post.slug.length > 0
+      ? `/posts/${post.slug}`
+      : collectiveSlug !== undefined &&
+          collectiveSlug !== null &&
+          collectiveSlug.length > 0
+        ? `/collectives/${collectiveSlug}/${post.id}`
+        : `/posts/${post.id}`;
 
   return (
     <article className="bg-card border border-border rounded-xl shadow-sm p-6 transition-all duration-200 hover:ring-2 hover:ring-primary hover:scale-[1.02] flex flex-col">
@@ -116,12 +128,24 @@ export default function ProfileFeed({
   posts,
   pinnedPost,
   microPosts,
-}: ProfileFeedProps) {
+}: ProfileFeedProps): React.ReactElement {
   const [activeTab, setActiveTab] = useState('all');
 
   const classifyPost = (p: PostWithLikes): ContentType => {
-    if (p.content && p.content.includes('<audio')) return 'audio';
-    if (p.content && p.content.includes('<iframe')) return 'videos';
+    if (
+      p.content !== undefined &&
+      p.content !== null &&
+      p.content.length > 0 &&
+      p.content.includes('<audio')
+    )
+      return 'audio';
+    if (
+      p.content !== undefined &&
+      p.content !== null &&
+      p.content.length > 0 &&
+      p.content.includes('<iframe')
+    )
+      return 'videos';
     return 'articles';
   };
 
@@ -134,7 +158,7 @@ export default function ProfileFeed({
     return combinedPosts.map((p) => ({ ...p, contentType: classifyPost(p) }));
   }, [combinedPosts]);
 
-  const pinned = pinnedPost ? categorized[0] : null;
+  const pinned = pinnedPost ? categorized[0] : undefined;
   const rest = pinnedPost ? categorized.slice(1) : categorized;
 
   const filtered = useMemo(() => {
@@ -160,7 +184,7 @@ export default function ProfileFeed({
             </Badge>
             <PostCard
               post={pinned}
-              collectiveSlug={pinned.collective_slug ?? null}
+              collectiveSlug={pinned.collective_slug ?? undefined}
             />
           </div>
         )}
@@ -169,7 +193,7 @@ export default function ProfileFeed({
             <PostCard
               key={post.id}
               post={post}
-              collectiveSlug={post.collective_slug ?? null}
+              collectiveSlug={post.collective_slug ?? undefined}
             />
           ))}
         </div>

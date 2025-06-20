@@ -6,7 +6,7 @@ import tsParser from '@typescript-eslint/parser';
 import importPlugin from 'eslint-plugin-import';
 import unusedImportsPluginRaw from 'eslint-plugin-unused-imports';
 import unicornPlugin from 'eslint-plugin-unicorn';
-import securityNodePlugin from 'eslint-plugin-security-node';
+// import securityNodePlugin from 'eslint-plugin-security-node'; // Temporarily disabled due to plugin crash
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -125,7 +125,7 @@ const eslintConfig = [
       import: importPlugin,
       'unused-imports': unusedImportsPlugin,
       unicorn: unicornPlugin,
-      'security-node': securityNodePlugin,
+      // 'security-node': securityNodePlugin, // Temporarily disabled due to plugin crash
     },
   },
   ...compat.extends(
@@ -137,7 +137,7 @@ const eslintConfig = [
     'next/typescript',
     'plugin:@typescript-eslint/recommended-type-checked',
     'plugin:import/recommended',
-    'plugin:security-node/recommended',
+    // 'plugin:security-node/recommended', // Temporarily disabled due to plugin crash
     'plugin:react/jsx-runtime',
   ),
   {
@@ -155,7 +155,7 @@ const eslintConfig = [
       import: importPlugin,
       'unused-imports': unusedImportsPlugin,
       unicorn: unicornPlugin,
-      'security-node': securityNodePlugin,
+      // 'security-node': securityNodePlugin, // Temporarily disabled due to plugin crash
     },
     rules: {
       // CORE SAFETY RULES

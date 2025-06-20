@@ -11,8 +11,9 @@ import {
   X,
   Loader2,
 } from 'lucide-react';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import React, { useEffect, useCallback } from 'react';
 
 import {
   CollectiveSelectionSummary,
@@ -33,7 +34,14 @@ import { Textarea } from '@/components/ui/textarea';
 import { useEnhancedPostEditor } from '@/hooks/posts/useEnhancedPostEditor';
 import { useThumbnailUpload } from '@/hooks/posts/useThumbnailUpload';
 
-export default function NewPostDetailsPage() {
+// Constants
+const SEO_TITLE_MAX_LENGTH = 60;
+const META_DESCRIPTION_MAX_LENGTH = 160;
+const THUMBNAIL_ASPECT_RATIO = 1.91;
+const THUMBNAIL_RECOMMENDED_WIDTH = 1200;
+const THUMBNAIL_RECOMMENDED_HEIGHT = 630;
+
+export default function NewPostDetailsPage(): React.ReactElement {
   const router = useRouter();
   const {
     formData,
@@ -51,52 +59,141 @@ export default function NewPostDetailsPage() {
     setCurrentPage('details');
   }, [setCurrentPage]);
 
-  const handleBackToEditor = () => {
+  const handleBackToEditor = useCallback((): void => {
     void router.push('/posts/new');
-  };
+  }, [router]);
 
-  const handleSaveDraft = async () => {
+  const handleSaveDraft = useCallback(async (): Promise<void> => {
     await savePost();
-  };
+  }, [savePost]);
 
-  const handlePublish = async () => {
+  const handleSaveDraftClick = useCallback((): void => {
+    void handleSaveDraft();
+  }, [handleSaveDraft]);
+
+  const handlePublish = useCallback(async (): Promise<void> => {
     try {
       await publishPost();
       void router.push('/dashboard/posts');
     } catch (error: unknown) {
-      console.error('Failed to publish post:', error);
       // Error will be handled by the enhanced error system
+      if (error instanceof Error) {
+        console.error('Failed to publish post:', error.message);
+      } else {
+        console.error('Failed to publish post: Unknown error');
+      }
     }
-  };
+  }, [publishPost, router]);
 
-  const handlePreview = () => {
+  const handlePublishClick = useCallback((): void => {
+    void handlePublish();
+  }, [handlePublish]);
+
+  const handlePreview = useCallback((): void => {
     // TODO: Implement preview functionality
-    console.info('Preview functionality to be implemented');
-  };
+    console.warn('Preview functionality to be implemented');
+  }, []);
 
-  const handleCollectiveSelectionChange = (collectiveIds: string[]) => {
-    setSelectedCollectives(collectiveIds);
-  };
+  const handleCollectiveSelectionChange = useCallback(
+    (collectiveIds: string[]): void => {
+      setSelectedCollectives(collectiveIds);
+    },
+    [setSelectedCollectives],
+  );
+
+  const handleSubtitleChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>): void => {
+      updateFormData({ subtitle: e.target.value });
+    },
+    [updateFormData],
+  );
+
+  const handleAuthorChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>): void => {
+      updateFormData({ author: e.target.value });
+    },
+    [updateFormData],
+  );
+
+  const handleSeoTitleChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>): void => {
+      updateFormData({ seo_title: e.target.value });
+    },
+    [updateFormData],
+  );
+
+  const handleMetaDescriptionChange = useCallback(
+    (e: React.ChangeEvent<HTMLTextAreaElement>): void => {
+      updateFormData({ meta_description: e.target.value });
+    },
+    [updateFormData],
+  );
+
+  const handlePublicToggle = useCallback(
+    (checked: boolean): void => {
+      updateFormData({ is_public: checked });
+    },
+    [updateFormData],
+  );
 
   // Thumbnail upload functionality
   const thumbnailUpload = useThumbnailUpload({
     postId: formData.id, // Will be undefined for new posts
-    onUploadSuccess: (thumbnailUrl) => {
-      updateFormData({ thumbnail_url: thumbnailUrl });
-    },
-    onUploadError: (error) => {
+    onUploadSuccess: useCallback(
+      (thumbnailUrl: string): void => {
+        updateFormData({ thumbnail_url: thumbnailUrl });
+      },
+      [updateFormData],
+    ),
+    onUploadError: useCallback((error: string): void => {
       console.error('Thumbnail upload error:', error);
       // Could add a toast notification here
-    },
+    }, []),
   });
 
-  const handleRemoveThumbnail = () => {
+  const handleRemoveThumbnail = useCallback((): void => {
     updateFormData({ thumbnail_url: '' });
     thumbnailUpload.clearError();
-  };
+  }, [updateFormData, thumbnailUpload]);
+
+  const handleThumbnailInputClick = useCallback((): void => {
+    const input = document.getElementById(
+      'thumbnail-input',
+    ) as HTMLInputElement | null;
+    if (input !== null && input !== undefined) {
+      input.click();
+    }
+  }, []);
+
+  const handleChangeThumbnailClick = useCallback((): void => {
+    if (!thumbnailUpload.isUploading) {
+      handleThumbnailInputClick();
+    }
+  }, [thumbnailUpload.isUploading, handleThumbnailInputClick]);
+
+  const handleUploadAreaClick = useCallback((): void => {
+    if (!thumbnailUpload.isUploading) {
+      handleThumbnailInputClick();
+    }
+  }, [thumbnailUpload.isUploading, handleThumbnailInputClick]);
+
+  const handleUploadAreaKeyDown = useCallback(
+    (e: React.KeyboardEvent): void => {
+      if (
+        (e.key === 'Enter' || e.key === ' ') &&
+        !thumbnailUpload.isUploading
+      ) {
+        e.preventDefault();
+        handleThumbnailInputClick();
+      }
+    },
+    [thumbnailUpload.isUploading, handleThumbnailInputClick],
+  );
 
   // Check if post is ready to publish
-  const canPublish = formData.title.trim() && formData.content.trim();
+  const canPublish =
+    (formData.title ?? '').trim().length > 0 &&
+    (formData.content ?? '').trim().length > 0;
 
   return (
     <div className="min-h-screen bg-background">
@@ -125,13 +222,13 @@ export default function NewPostDetailsPage() {
             </Button>
             <Button
               variant="outline"
-              onClick={() => void handleSaveDraft()}
+              onClick={handleSaveDraftClick}
               disabled={autoSaveStatus === 'saving'}
             >
               Save Draft
             </Button>
             <Button
-              onClick={() => void handlePublish()}
+              onClick={handlePublishClick}
               disabled={!canPublish}
               className="flex items-center gap-2"
             >
@@ -191,8 +288,8 @@ export default function NewPostDetailsPage() {
                 <Input
                   id="subtitle"
                   placeholder="Optional subtitle for your post"
-                  value={formData.subtitle || ''}
-                  onChange={(e) => updateFormData({ subtitle: e.target.value })}
+                  value={formData.subtitle ?? ''}
+                  onChange={handleSubtitleChange}
                 />
               </div>
 
@@ -201,8 +298,8 @@ export default function NewPostDetailsPage() {
                 <Input
                   id="author"
                   placeholder="Custom author name (optional)"
-                  value={formData.author || ''}
-                  onChange={(e) => updateFormData({ author: e.target.value })}
+                  value={formData.author ?? ''}
+                  onChange={handleAuthorChange}
                 />
               </div>
             </CardContent>
@@ -221,12 +318,14 @@ export default function NewPostDetailsPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               {/* Current thumbnail or upload area */}
-              {formData.thumbnail_url ? (
+              {(formData.thumbnail_url ?? '').trim().length > 0 ? (
                 <div className="space-y-4">
                   <div className="aspect-video rounded-lg bg-muted overflow-hidden relative">
-                    <img
-                      src={formData.thumbnail_url}
+                    <Image
+                      src={formData.thumbnail_url ?? ''}
                       alt="Post thumbnail"
+                      width={THUMBNAIL_RECOMMENDED_WIDTH}
+                      height={THUMBNAIL_RECOMMENDED_HEIGHT}
                       className="w-full h-full object-cover"
                     />
                     {thumbnailUpload.isUploading && (
@@ -234,12 +333,12 @@ export default function NewPostDetailsPage() {
                         <div className="text-center text-white">
                           <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2" />
                           <p className="text-sm">Uploading...</p>
-                          {thumbnailUpload.uploadProgress > 0 && (
+                          {(thumbnailUpload.uploadProgress ?? 0) > 0 && (
                             <div className="w-32 bg-white/20 rounded-full h-2 mx-auto mt-2">
                               <div
                                 className="bg-white rounded-full h-2 transition-all duration-300"
                                 style={{
-                                  width: `${thumbnailUpload.uploadProgress}%`,
+                                  width: `${thumbnailUpload.uploadProgress ?? 0}%`,
                                 }}
                               />
                             </div>
@@ -251,9 +350,7 @@ export default function NewPostDetailsPage() {
                   <div className="flex gap-2">
                     <button
                       type="button"
-                      onClick={() =>
-                        document.getElementById('thumbnail-input')?.click()
-                      }
+                      onClick={handleChangeThumbnailClick}
                       disabled={thumbnailUpload.isUploading}
                       className="px-3 py-2 text-sm border border-border rounded-md hover:bg-muted transition-colors disabled:opacity-50"
                     >
@@ -280,10 +377,11 @@ export default function NewPostDetailsPage() {
                   onDragOver={thumbnailUpload.handleDragOver}
                   onDragLeave={thumbnailUpload.handleDragLeave}
                   onDrop={thumbnailUpload.handleDrop}
-                  onClick={() =>
-                    !thumbnailUpload.isUploading &&
-                    document.getElementById('thumbnail-input')?.click()
-                  }
+                  onClick={handleUploadAreaClick}
+                  onKeyDown={handleUploadAreaKeyDown}
+                  role="button"
+                  tabIndex={0}
+                  aria-label="Upload thumbnail image"
                 >
                   {thumbnailUpload.isUploading ? (
                     <div className="text-center">
@@ -291,12 +389,12 @@ export default function NewPostDetailsPage() {
                       <p className="text-sm text-muted-foreground mb-2">
                         Uploading thumbnail...
                       </p>
-                      {thumbnailUpload.uploadProgress > 0 && (
+                      {(thumbnailUpload.uploadProgress ?? 0) > 0 && (
                         <div className="w-32 bg-muted rounded-full h-2 mx-auto">
                           <div
                             className="bg-primary rounded-full h-2 transition-all duration-300"
                             style={{
-                              width: `${thumbnailUpload.uploadProgress}%`,
+                              width: `${thumbnailUpload.uploadProgress ?? 0}%`,
                             }}
                           />
                         </div>
@@ -314,7 +412,9 @@ export default function NewPostDetailsPage() {
                         Choose File
                       </Button>
                       <p className="text-xs text-muted-foreground mt-2">
-                        Recommended: 1200×630px (1.91:1 ratio)
+                        Recommended: {THUMBNAIL_RECOMMENDED_WIDTH}×
+                        {THUMBNAIL_RECOMMENDED_HEIGHT}px (
+                        {THUMBNAIL_ASPECT_RATIO}:1 ratio)
                       </p>
                     </>
                   )}
@@ -332,7 +432,7 @@ export default function NewPostDetailsPage() {
               />
 
               {/* Upload Error */}
-              {thumbnailUpload.uploadError && (
+              {(thumbnailUpload.uploadError ?? '').trim().length > 0 && (
                 <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
                   <p className="text-sm text-destructive mb-2">
                     {thumbnailUpload.uploadError}
@@ -363,14 +463,13 @@ export default function NewPostDetailsPage() {
                 <Input
                   id="seo-title"
                   placeholder="SEO-optimized title (max 60 characters)"
-                  value={formData.seo_title || ''}
-                  onChange={(e) =>
-                    updateFormData({ seo_title: e.target.value })
-                  }
-                  maxLength={60}
+                  value={formData.seo_title ?? ''}
+                  onChange={handleSeoTitleChange}
+                  maxLength={SEO_TITLE_MAX_LENGTH}
                 />
                 <p className="text-xs text-muted-foreground mt-1">
-                  {formData.seo_title?.length || 0}/60 characters
+                  {(formData.seo_title ?? '').length}/{SEO_TITLE_MAX_LENGTH}{' '}
+                  characters
                 </p>
               </div>
 
@@ -379,15 +478,14 @@ export default function NewPostDetailsPage() {
                 <Textarea
                   id="meta-description"
                   placeholder="Brief description for search engines (max 160 characters)"
-                  value={formData.meta_description || ''}
-                  onChange={(e) =>
-                    updateFormData({ meta_description: e.target.value })
-                  }
-                  maxLength={160}
+                  value={formData.meta_description ?? ''}
+                  onChange={handleMetaDescriptionChange}
+                  maxLength={META_DESCRIPTION_MAX_LENGTH}
                   rows={3}
                 />
                 <p className="text-xs text-muted-foreground mt-1">
-                  {formData.meta_description?.length || 0}/160 characters
+                  {(formData.meta_description ?? '').length}/
+                  {META_DESCRIPTION_MAX_LENGTH} characters
                 </p>
               </div>
             </CardContent>
@@ -405,27 +503,27 @@ export default function NewPostDetailsPage() {
             <CardContent className="space-y-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  {formData.is_public ? (
+                  {formData.is_public === true ? (
                     <Globe className="h-5 w-5 text-green-600" />
                   ) : (
                     <Lock className="h-5 w-5 text-orange-600" />
                   )}
                   <div>
                     <Label className="text-base">
-                      {formData.is_public ? 'Public Post' : 'Private Post'}
+                      {formData.is_public === true
+                        ? 'Public Post'
+                        : 'Private Post'}
                     </Label>
                     <p className="text-sm text-muted-foreground">
-                      {formData.is_public
+                      {formData.is_public === true
                         ? 'Anyone can see this post'
                         : 'Only collective members can see this post'}
                     </p>
                   </div>
                 </div>
                 <Switch
-                  checked={formData.is_public}
-                  onCheckedChange={(checked) =>
-                    updateFormData({ is_public: checked })
-                  }
+                  checked={formData.is_public === true}
+                  onCheckedChange={handlePublicToggle}
                 />
               </div>
 
@@ -433,17 +531,19 @@ export default function NewPostDetailsPage() {
               <div className="pt-4 border-t">
                 <Label className="text-sm font-medium">Current Status</Label>
                 <p className="text-sm text-muted-foreground capitalize">
-                  {formData.status || 'draft'}
-                  {formData.published_at && (
+                  {formData.status ?? 'draft'}
+                  {(formData.published_at ?? '').trim().length > 0 && (
                     <span className="ml-2">
                       • Published{' '}
-                      {new Date(formData.published_at).toLocaleDateString()}
+                      {new Date(
+                        formData.published_at ?? '',
+                      ).toLocaleDateString()}
                     </span>
                   )}
                 </p>
 
                 {/* Show selected collectives count */}
-                {selectedCollectives.length > 0 && (
+                {(selectedCollectives ?? []).length > 0 && (
                   <p className="text-sm text-blue-600 mt-1">
                     Ready to share with {selectedCollectives.length} collective
                     {selectedCollectives.length !== 1 ? 's' : ''}
@@ -458,10 +558,10 @@ export default function NewPostDetailsPage() {
                     Before you can publish:
                   </h4>
                   <ul className="text-sm text-amber-700 space-y-1">
-                    {!formData.title.trim() && (
+                    {(formData.title ?? '').trim().length === 0 && (
                       <li>• Add a title to your post</li>
                     )}
-                    {!formData.content.trim() && (
+                    {(formData.content ?? '').trim().length === 0 && (
                       <li>• Add content to your post</li>
                     )}
                   </ul>

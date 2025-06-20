@@ -2,9 +2,16 @@
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Upload, X, Loader2 } from 'lucide-react';
-import { useState, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
+
+// Constants for magic numbers
+const MIN_NAME_LENGTH = 2;
+const MAX_NAME_LENGTH = 100;
+const MIN_USERNAME_LENGTH = 3;
+const MAX_USERNAME_LENGTH = 30;
+const MAX_BIO_LENGTH = 500;
 
 import {
   updateUserProfile,
@@ -19,11 +26,20 @@ import { validateAvatarFile, generateUserInitials } from '@/lib/utils/avatar';
 
 // Use a simplified schema that matches the server action expectations
 const UserSettingsSchema = z.object({
-  full_name: z.string().min(2, 'Name must be at least 2 characters').max(100),
+  full_name: z
+    .string()
+    .min(MIN_NAME_LENGTH, `Name must be at least ${MIN_NAME_LENGTH} characters`)
+    .max(MAX_NAME_LENGTH),
   username: z
     .string()
-    .min(3, 'Username must be at least 3 characters.')
-    .max(30, 'Username must be 30 characters or less.')
+    .min(
+      MIN_USERNAME_LENGTH,
+      `Username must be at least ${MIN_USERNAME_LENGTH} characters.`,
+    )
+    .max(
+      MAX_USERNAME_LENGTH,
+      `Username must be ${MAX_USERNAME_LENGTH} characters or less.`,
+    )
     .regex(
       /^[a-zA-Z0-9_-]+$/,
       'Username can only contain letters, numbers, underscores, and hyphens.',
@@ -33,7 +49,7 @@ const UserSettingsSchema = z.object({
   avatar_url: z.string().optional().nullable(),
   bio: z
     .string()
-    .max(500, 'Bio must be 500 characters or less.')
+    .max(MAX_BIO_LENGTH, `Bio must be ${MAX_BIO_LENGTH} characters or less.`)
     .optional()
     .nullable(),
   tags_string: z.string().optional().nullable(),
@@ -45,11 +61,11 @@ export default function EditUserSettingsForm({
   defaultValues,
 }: {
   defaultValues: UserSettingsFormValues;
-}) {
-  const [formError, setFormError] = useState<string | null>(null);
-  const [formSuccess, setFormSuccess] = useState<string | null>(null);
-  const [avatarPreview, setAvatarPreview] = useState<string | null>(
-    defaultValues.avatar_url || null,
+}): React.ReactElement {
+  const [formError, setFormError] = useState<string | undefined>(undefined);
+  const [formSuccess, setFormSuccess] = useState<string | undefined>(undefined);
+  const [avatarPreview, setAvatarPreview] = useState<string | undefined>(
+    defaultValues.avatar_url ?? undefined,
   );
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
@@ -66,7 +82,7 @@ export default function EditUserSettingsForm({
   });
 
   // Upload avatar file to API endpoint
-  const uploadAvatarFile = async (file: File): Promise<string | null> => {
+  const uploadAvatarFile = async (file: File): Promise<string | undefined> => {
     const formData = new FormData();
     formData.append('avatar', file);
 
@@ -76,12 +92,16 @@ export default function EditUserSettingsForm({
         body: formData,
       });
 
-      const result = await response.json();
+      const result = (await response.json()) as {
+        success: boolean;
+        avatarUrl?: string;
+        error?: string;
+      };
 
-      if (result.success) {
+      if (result.success && result.avatarUrl !== undefined) {
         return result.avatarUrl;
       } else {
-        throw new Error(result.error || 'Upload failed');
+        throw new Error(result.error ?? 'Upload failed');
       }
     } catch (error: unknown) {
       console.error('Avatar upload error:', error);
@@ -91,14 +111,14 @@ export default function EditUserSettingsForm({
 
   // Process image file
   const processImageFile = useCallback(
-    async (file: File) => {
+    async (file: File): Promise<void> => {
       setIsUploadingAvatar(true);
-      setFormError(null);
+      setFormError(undefined);
 
       // Validate file using utility function
       const validation = validateAvatarFile(file);
       if (!validation.isValid) {
-        setFormError(validation.error || 'Invalid file');
+        setFormError(validation.error ?? 'Invalid file');
         setIsUploadingAvatar(false);
         return;
       }
@@ -111,7 +131,11 @@ export default function EditUserSettingsForm({
         // Upload file to server
         const avatarUrl = await uploadAvatarFile(file);
 
-        if (avatarUrl) {
+        if (
+          avatarUrl !== undefined &&
+          avatarUrl !== null &&
+          avatarUrl.length > 0
+        ) {
           // Update form value with the storage URL
           setValue('avatar_url', avatarUrl, { shouldDirty: true });
           // Update preview to the actual stored image
@@ -126,7 +150,7 @@ export default function EditUserSettingsForm({
             : 'Failed to upload avatar. Please try again.',
         );
         // Reset preview on error
-        setAvatarPreview(defaultValues.avatar_url || null);
+        setAvatarPreview(defaultValues.avatar_url ?? undefined);
       } finally {
         setIsUploadingAvatar(false);
       }
@@ -134,33 +158,39 @@ export default function EditUserSettingsForm({
     [setValue, defaultValues.avatar_url],
   );
 
-  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    processImageFile(file);
-  };
+  const handleAvatarChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>): void => {
+      const { files } = e.target;
+      const file = files?.[0];
+      if (file === undefined) return;
+      void processImageFile(file);
+    },
+    [processImageFile],
+  );
 
   // Drag and drop handlers
-  const handleDragOver = useCallback((e: React.DragEvent) => {
+  const handleDragOver = useCallback((e: React.DragEvent): void => {
     e.preventDefault();
     setIsDragOver(true);
   }, []);
 
-  const handleDragLeave = useCallback((e: React.DragEvent) => {
+  const handleDragLeave = useCallback((e: React.DragEvent): void => {
     e.preventDefault();
     setIsDragOver(false);
   }, []);
 
   const handleDrop = useCallback(
-    (e: React.DragEvent) => {
+    (e: React.DragEvent): void => {
       e.preventDefault();
       setIsDragOver(false);
 
-      const files = Array.from(e.dataTransfer.files);
-      const imageFile = files.find((file) => file.type.startsWith('image/'));
+      const { files } = e.dataTransfer;
+      const imageFile = Array.from(files).find((file) =>
+        file.type.startsWith('image/'),
+      );
 
-      if (imageFile) {
-        processImageFile(imageFile);
+      if (imageFile !== undefined) {
+        void processImageFile(imageFile);
       } else {
         setFormError('Please drop an image file.');
       }
@@ -169,11 +199,11 @@ export default function EditUserSettingsForm({
   );
 
   // Remove avatar
-  const handleRemoveAvatar = () => {
-    setAvatarPreview(null);
-    setValue('avatar_url', null, { shouldDirty: true });
-    setFormError(null);
-  };
+  const handleRemoveAvatar = useCallback((): void => {
+    setAvatarPreview(undefined);
+    setValue('avatar_url', undefined, { shouldDirty: true });
+    setFormError(undefined);
+  }, [setValue]);
 
   // Generate initials using utility function
   const initials = generateUserInitials(
@@ -181,37 +211,96 @@ export default function EditUserSettingsForm({
     defaultValues.username,
   );
 
-  const onSubmit = async (data: UserSettingsFormValues) => {
-    setFormError(null);
-    setFormSuccess(null);
-
-    // Convert to the expected server action type
-    const serverData: RawUserProfileFormInput = {
-      full_name: data.full_name,
-      username: data.username,
-      bio: data.bio,
-      avatar_url: data.avatar_url,
-      tags_string: data.tags_string,
-    };
-
-    const result = await updateUserProfile(serverData);
-    if (!result.success) {
-      setFormError(
-        result.error ||
-          (result.fieldErrors
-            ? Object.values(result.fieldErrors).flat().join(', ')
-            : 'Unknown error.'),
-      );
-    } else {
-      setFormSuccess(result.message || 'Settings updated successfully.');
-      reset(data);
-      // Update the avatar preview with the saved value
-      setAvatarPreview(data.avatar_url || null);
+  // Upload click handler
+  const handleClickUpload = useCallback((): void => {
+    if (!isUploadingAvatar) {
+      const element = document.getElementById('avatar');
+      if (element !== null) {
+        element.click();
+      }
     }
+  }, [isUploadingAvatar]);
+
+  // Upload keyboard handler
+  const handleKeyDownUpload = useCallback(
+    (e: React.KeyboardEvent): void => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        handleClickUpload();
+      }
+    },
+    [handleClickUpload],
+  );
+
+  // Helper function to safely convert error message to string
+  const getErrorMessage = (error: unknown): string => {
+    if (typeof error === 'string') {
+      return error;
+    }
+    if (typeof error === 'object' && error !== null && 'message' in error) {
+      const { message } = error as { message: unknown };
+      return typeof message === 'string' ? message : 'Unknown error';
+    }
+    return 'Unknown error';
   };
 
+  const onSubmitAsync = useCallback(
+    async (data: UserSettingsFormValues): Promise<void> => {
+      setFormError(undefined);
+      setFormSuccess(undefined);
+
+      // Convert to the expected server action type
+      const serverData: RawUserProfileFormInput = {
+        full_name: data.full_name,
+        username: data.username,
+        bio: data.bio,
+        avatar_url: data.avatar_url,
+        tags_string: data.tags_string,
+      };
+
+      const result = await updateUserProfile(serverData);
+      if (!result.success) {
+        setFormError(
+          result.error ??
+            (result.fieldErrors !== undefined && result.fieldErrors !== null
+              ? Object.values(result.fieldErrors).flat().join(', ')
+              : 'Unknown error.'),
+        );
+      } else {
+        setFormSuccess(result.message ?? 'Settings updated successfully.');
+        reset(data);
+        // Update the avatar preview with the saved value
+        setAvatarPreview(data.avatar_url ?? undefined);
+      }
+    },
+    [reset, setFormError, setFormSuccess, setAvatarPreview],
+  );
+
+  // Helper functions for conditional styling
+  const getDragDropClass = (): string => {
+    const baseClass =
+      'border-2 border-dashed rounded-lg p-4 text-center transition-colors cursor-pointer';
+    const dragClass = isDragOver
+      ? 'border-primary bg-primary/5'
+      : 'border-border hover:border-primary/50';
+    const uploadClass = isUploadingAvatar
+      ? 'opacity-50 cursor-not-allowed'
+      : '';
+    return `${baseClass} ${dragClass} ${uploadClass}`;
+  };
+
+  // Form submission handler with proper typing
+  const handleFormSubmit = useCallback(
+    (e: React.FormEvent<HTMLFormElement>): void => {
+      void handleSubmit((data: UserSettingsFormValues): void => {
+        void onSubmitAsync(data);
+      })(e);
+    },
+    [handleSubmit, onSubmitAsync],
+  );
+
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+    <form onSubmit={handleFormSubmit} className="space-y-6">
       <div>
         <label htmlFor="avatar" className="block font-medium mb-1">
           Profile Picture
@@ -220,7 +309,7 @@ export default function EditUserSettingsForm({
           <div className="relative">
             <Avatar className="h-20 w-20">
               <AvatarImage
-                src={avatarPreview || undefined}
+                src={avatarPreview ?? undefined}
                 alt="Profile picture"
               />
               <AvatarFallback className="text-lg font-semibold">
@@ -231,32 +320,32 @@ export default function EditUserSettingsForm({
                 )}
               </AvatarFallback>
             </Avatar>
-            {avatarPreview && !isUploadingAvatar && (
-              <button
-                type="button"
-                onClick={handleRemoveAvatar}
-                className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center hover:bg-destructive/90 transition-colors"
-                title="Remove avatar"
-              >
-                <X className="h-3 w-3" />
-              </button>
-            )}
+            {avatarPreview !== undefined &&
+              avatarPreview !== null &&
+              avatarPreview.length > 0 &&
+              !isUploadingAvatar && (
+                <button
+                  type="button"
+                  onClick={handleRemoveAvatar}
+                  className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center hover:bg-destructive/90 transition-colors"
+                  title="Remove avatar"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              )}
           </div>
 
           <div className="flex-1 space-y-3">
             {/* Drag and Drop Area */}
             <div
-              className={`border-2 border-dashed rounded-lg p-4 text-center transition-colors cursor-pointer ${
-                isDragOver
-                  ? 'border-primary bg-primary/5'
-                  : 'border-border hover:border-primary/50'
-              } ${isUploadingAvatar ? 'opacity-50 cursor-not-allowed' : ''}`}
+              className={getDragDropClass()}
               onDragOver={handleDragOver}
               onDragLeave={handleDragLeave}
               onDrop={handleDrop}
-              onClick={() =>
-                !isUploadingAvatar && document.getElementById('avatar')?.click()
-              }
+              onClick={handleClickUpload}
+              onKeyDown={handleKeyDownUpload}
+              role="button"
+              tabIndex={0}
             >
               <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
               <p className="text-sm text-muted-foreground">
@@ -285,14 +374,9 @@ export default function EditUserSettingsForm({
 
         {/* Hidden input for the actual avatar_url value */}
         <input type="hidden" {...register('avatar_url')} />
-        {errors.avatar_url && (
+        {errors.avatar_url !== undefined && (
           <p className="text-destructive text-sm mt-1">
-            {String(
-              typeof errors.avatar_url === 'object' &&
-                'message' in errors.avatar_url
-                ? errors.avatar_url.message
-                : errors.avatar_url,
-            )}
+            {getErrorMessage(errors.avatar_url)}
           </p>
         )}
       </div>
@@ -302,14 +386,9 @@ export default function EditUserSettingsForm({
           Name
         </label>
         <Input id="full_name" {...register('full_name')} autoComplete="name" />
-        {errors.full_name && (
+        {errors.full_name !== undefined && (
           <p className="text-destructive text-sm mt-1">
-            {String(
-              typeof errors.full_name === 'object' &&
-                'message' in errors.full_name
-                ? errors.full_name.message
-                : errors.full_name,
-            )}
+            {getErrorMessage(errors.full_name)}
           </p>
         )}
       </div>
@@ -324,14 +403,9 @@ export default function EditUserSettingsForm({
           autoComplete="username"
           placeholder="Choose a unique username"
         />
-        {errors.username && (
+        {errors.username !== undefined && (
           <p className="text-destructive text-sm mt-1">
-            {String(
-              typeof errors.username === 'object' &&
-                'message' in errors.username
-                ? errors.username.message
-                : errors.username,
-            )}
+            {getErrorMessage(errors.username)}
           </p>
         )}
       </div>
@@ -341,13 +415,9 @@ export default function EditUserSettingsForm({
           Bio
         </label>
         <Textarea id="bio" {...register('bio')} rows={3} />
-        {errors.bio && (
+        {errors.bio !== undefined && (
           <p className="text-destructive text-sm mt-1">
-            {String(
-              typeof errors.bio === 'object' && 'message' in errors.bio
-                ? errors.bio.message
-                : errors.bio,
-            )}
+            {getErrorMessage(errors.bio)}
           </p>
         )}
       </div>
@@ -357,31 +427,30 @@ export default function EditUserSettingsForm({
           Tags (comma separated)
         </label>
         <Input id="tags_string" {...register('tags_string')} />
-        {errors.tags_string && (
+        {errors.tags_string !== undefined && (
           <p className="text-destructive text-sm mt-1">
-            {String(
-              typeof errors.tags_string === 'object' &&
-                'message' in errors.tags_string
-                ? errors.tags_string.message
-                : errors.tags_string,
-            )}
+            {getErrorMessage(errors.tags_string)}
           </p>
         )}
       </div>
 
-      {formError && (
-        <Alert variant="destructive">
-          <AlertTitle>Error</AlertTitle>
-          <AlertDescription>{formError}</AlertDescription>
-        </Alert>
-      )}
+      {formError !== undefined &&
+        formError !== null &&
+        formError.length > 0 && (
+          <Alert variant="destructive">
+            <AlertTitle>Error</AlertTitle>
+            <AlertDescription>{formError}</AlertDescription>
+          </Alert>
+        )}
 
-      {formSuccess && (
-        <Alert variant="default">
-          <AlertTitle>Success</AlertTitle>
-          <AlertDescription>{formSuccess}</AlertDescription>
-        </Alert>
-      )}
+      {formSuccess !== undefined &&
+        formSuccess !== null &&
+        formSuccess.length > 0 && (
+          <Alert variant="default">
+            <AlertTitle>Success</AlertTitle>
+            <AlertDescription>{formSuccess}</AlertDescription>
+          </Alert>
+        )}
 
       <Button
         type="submit"

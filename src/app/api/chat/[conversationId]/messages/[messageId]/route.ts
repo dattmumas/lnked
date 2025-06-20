@@ -1,3 +1,5 @@
+/* eslint-disable no-magic-numbers */
+
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
@@ -12,16 +14,18 @@ const enum HttpStatus {
   INTERNAL_SERVER_ERROR = 500,
 }
 
+const MESSAGE_MAX_LENGTH = 10000;
+
 // Schema for updating a message
 const UpdateMessageSchema = z.object({
-  content: z.string().trim().min(1, 'Message content is required').max(10000),
+  content: z.string().trim().min(1, 'Message content is required').max(MESSAGE_MAX_LENGTH),
 });
 
 // PUT /api/chat/[conversationId]/messages/[messageId] - Update a message
 export async function PUT(
   request: NextRequest,
   context: { params: Promise<{ conversationId: string; messageId: string }> }
-) {
+): Promise<NextResponse> {
   const { conversationId, messageId } = await context.params;
   
   const supabase = createServerSupabaseClient();
@@ -30,7 +34,7 @@ export async function PUT(
     error: authError,
   } = await supabase.auth.getUser();
 
-  if (authError || !user) {
+  if (authError !== null || user === null) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: HttpStatus.UNAUTHORIZED });
   }
 
@@ -60,7 +64,7 @@ export async function PUT(
     .eq('conversation_id', conversationId)
     .single();
 
-  if (messageError || !message) {
+  if (messageError !== null || message === null) {
     return NextResponse.json({ error: 'Message not found' }, { status: HttpStatus.NOT_FOUND });
   }
 
@@ -80,7 +84,7 @@ export async function PUT(
     .select('id, content, edited_at')
     .single();
 
-  if (updateError || !updatedMessage) {
+  if (updateError !== null || updatedMessage === null) {
     return NextResponse.json(
       { error: 'Failed to update message' },
       { status: HttpStatus.INTERNAL_SERVER_ERROR }
@@ -94,7 +98,7 @@ export async function PUT(
 export async function DELETE(
   request: NextRequest,
   context: { params: Promise<{ conversationId: string; messageId: string }> }
-) {
+): Promise<NextResponse> {
   const { conversationId, messageId } = await context.params;
   
   const supabase = createServerSupabaseClient();
@@ -103,7 +107,7 @@ export async function DELETE(
     error: authError,
   } = await supabase.auth.getUser();
 
-  if (authError || !user) {
+  if (authError !== null || user === null) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: HttpStatus.UNAUTHORIZED });
   }
 
@@ -115,7 +119,7 @@ export async function DELETE(
     .eq('conversation_id', conversationId)
     .single();
 
-  if (messageError || !message) {
+  if (messageError !== null || message === null) {
     return NextResponse.json({ error: 'Message not found' }, { status: HttpStatus.NOT_FOUND });
   }
 
@@ -134,7 +138,7 @@ export async function DELETE(
     })
     .eq('id', messageId);
 
-  if (deleteError) {
+  if (deleteError !== null) {
     return NextResponse.json(
       { error: 'Failed to delete message' },
       { status: HttpStatus.INTERNAL_SERVER_ERROR }

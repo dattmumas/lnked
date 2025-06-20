@@ -7,7 +7,7 @@ export default async function Page({
   params,
 }: {
   params: Promise<{ userId: string }>;
-}) {
+}): Promise<React.JSX.Element> {
   const { userId } = await params;
   const supabase = createServerSupabaseClient();
 
@@ -17,7 +17,7 @@ export default async function Page({
     .eq('id', userId)
     .single();
 
-  if (profileError || !profile) {
+  if (profileError !== null || profile === null) {
     notFound();
   }
 
@@ -29,7 +29,7 @@ export default async function Page({
     .eq('following_id', userId)
     .eq('following_type', 'user');
 
-  if (followersError) {
+  if (followersError !== null) {
     console.error('Error fetching followers:', followersError);
   }
 
@@ -45,22 +45,23 @@ export default async function Page({
       ) : (
         <ul className="space-y-4">
           {followers.map((f) =>
-            f.follower ? (
+            f.follower !== null ? (
               <li key={f.follower.id} className="flex items-center gap-3">
-                {f.follower.avatar_url && (
-                  <Image
-                    src={f.follower.avatar_url}
-                    alt={`${f.follower.full_name ?? 'Follower'} avatar`}
-                    width={40}
-                    height={40}
-                    className="rounded-full object-cover"
-                  />
-                )}
+                {f.follower.avatar_url !== null &&
+                  f.follower.avatar_url !== undefined && (
+                    <Image
+                      src={f.follower.avatar_url}
+                      alt={`${f.follower.full_name ?? 'Follower'} avatar`}
+                      width={40}
+                      height={40}
+                      className="rounded-full object-cover"
+                    />
+                  )}
                 <span className="font-medium">
                   {f.follower.full_name ?? 'User'}
                 </span>
               </li>
-            ) : null,
+            ) : undefined,
           )}
         </ul>
       )}

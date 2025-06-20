@@ -1,7 +1,7 @@
 'use client';
 
 import { Heart } from 'lucide-react';
-import { useState, useTransition, useEffect } from 'react';
+import React, { useState, useTransition, useEffect, useCallback } from 'react';
 
 import { togglePostLike } from '@/app/actions/likeActions';
 import { Button } from '@/components/ui/button';
@@ -20,27 +20,32 @@ export default function PostLikeButton({
   collectiveSlug,
   initialLikes,
   initialUserHasLiked,
-}: PostLikeButtonProps) {
+}: PostLikeButtonProps): React.ReactElement {
   const supabase = createSupabaseBrowserClient();
   const [isPending, startTransition] = useTransition();
   const [likeCount, setLikeCount] = useState(initialLikes);
   const [userHasLiked, setUserHasLiked] = useState(
-    initialUserHasLiked || false,
+    initialUserHasLiked !== undefined ? initialUserHasLiked : false,
   );
   const [currentUserId, setCurrentUserId] = useState<string | undefined>(
     undefined,
   );
   const [isLoadingInitialState, setIsLoadingInitialState] = useState(true);
+  const [errorMessage, setErrorMessage] = useState<string>('');
 
   useEffect((): void => {
-    const fetchInitialState = async () => {
+    const fetchInitialState = async (): Promise<void> => {
       setIsLoadingInitialState(true); // Ensure loading state is true at start of fetch
       const {
         data: { user },
       } = await supabase.auth.getUser();
-      setCurrentUserId(user?.id || undefined);
+      setCurrentUserId(user?.id ?? undefined);
 
-      if (user && initialUserHasLiked === undefined) {
+      if (
+        user !== undefined &&
+        user !== null &&
+        initialUserHasLiked === undefined
+      ) {
         const { data: like, error } = await supabase
           .from('post_reactions')
           .select('user_id')
@@ -51,14 +56,14 @@ export default function PostLikeButton({
         if (error) {
           console.error('Error fetching initial like state:', error.message);
         } else {
-          setUserHasLiked(Boolean(like));
+          setUserHasLiked(like !== undefined && like !== null);
         }
       } else if (initialUserHasLiked !== undefined) {
         setUserHasLiked(initialUserHasLiked);
       }
       setIsLoadingInitialState(false);
     };
-    fetchInitialState();
+    void fetchInitialState();
     // Rerun if the specific post or its initial liked status changes, or if user context might change externally (less likely for this button)
     // Keying on supabase client instance is also good practice if it could change, though unlikely for createSupabaseBrowserClient.
   }, [supabase, postId, initialUserHasLiked]);
@@ -67,9 +72,13 @@ export default function PostLikeButton({
     setLikeCount(initialLikes);
   }, [initialLikes]);
 
-  const handleLikeToggle = async () => {
-    if (!currentUserId) {
-      alert('Please sign in to like posts.');
+  const handleLikeToggle = useCallback((): void => {
+    if (
+      currentUserId === undefined ||
+      currentUserId === null ||
+      currentUserId.length === 0
+    ) {
+      setErrorMessage('Please sign in to like posts.');
       return;
     }
     if (isLoadingInitialState) return;
@@ -79,13 +88,20 @@ export default function PostLikeButton({
 
     setUserHasLiked(!userHasLiked);
     setLikeCount(userHasLiked ? likeCount - 1 : likeCount + 1);
+    setErrorMessage(''); // Clear any previous errors
 
     startTransition(async () => {
       const result = await togglePostLike(postId, collectiveSlug);
       if (!result.success) {
         setUserHasLiked(previousUserHasLiked);
         setLikeCount(previousLikeCount);
-        alert(result.message || 'Failed to update like.');
+        setErrorMessage(
+          result.message !== undefined &&
+            result.message !== null &&
+            result.message.length > 0
+            ? result.message
+            : 'Failed to update like.',
+        );
       } else {
         if (result.newLikeCount !== undefined)
           setLikeCount(result.newLikeCount);
@@ -93,30 +109,51 @@ export default function PostLikeButton({
           setUserHasLiked(result.userHadLiked);
       }
     });
-  };
+  }, [
+    currentUserId,
+    isLoadingInitialState,
+    likeCount,
+    userHasLiked,
+    startTransition,
+    postId,
+    collectiveSlug,
+  ]);
 
   return (
-    <div className="flex items-center space-x-2">
-      <Button
-        variant="ghost"
-        size="lg"
-        onClick={() => void handleLikeToggle()}
-        disabled={isPending || isLoadingInitialState || !currentUserId}
-        aria-label={userHasLiked ? 'Unlike post' : 'Like post'}
-        className="flex items-center space-x-2 px-3 py-2 rounded-md hover:bg-muted"
-      >
-        <Heart
-          className={`w-5 h-5 ${
-            userHasLiked
-              ? 'fill-destructive text-destructive'
-              : 'text-muted-foreground'
-          }`}
-        />
-        <span>{userHasLiked ? 'Liked' : 'Like'}</span>
-      </Button>
-      <span className="text-base text-muted-foreground tabular-nums">
-        {likeCount} {likeCount === 1 ? 'like' : 'likes'}
-      </span>
-    </div>
+    <>
+      {errorMessage !== undefined &&
+        errorMessage !== null &&
+        errorMessage.length > 0 && (
+          <div className="text-sm text-red-500 mb-2">{errorMessage}</div>
+        )}
+      <div className="flex items-center space-x-2">
+        <Button
+          variant="ghost"
+          size="lg"
+          onClick={handleLikeToggle}
+          disabled={
+            isPending ||
+            isLoadingInitialState ||
+            currentUserId === undefined ||
+            currentUserId === null ||
+            currentUserId.length === 0
+          }
+          aria-label={userHasLiked ? 'Unlike post' : 'Like post'}
+          className="flex items-center space-x-2 px-3 py-2 rounded-md hover:bg-muted"
+        >
+          <Heart
+            className={`w-5 h-5 ${
+              userHasLiked
+                ? 'fill-destructive text-destructive'
+                : 'text-muted-foreground'
+            }`}
+          />
+          <span>{userHasLiked ? 'Liked' : 'Like'}</span>
+        </Button>
+        <span className="text-base text-muted-foreground tabular-nums">
+          {likeCount} {likeCount === 1 ? 'like' : 'likes'}
+        </span>
+      </div>
+    </>
   );
 }

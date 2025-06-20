@@ -1,4 +1,3 @@
-/* eslint-disable security-node/detect-insecure-randomness */
 /* eslint-disable @typescript-eslint/strict-boolean-expressions */
 /* eslint-disable react-hooks/exhaustive-deps */
 
@@ -79,7 +78,7 @@ export function useSupabaseRealtime<T extends Record<string, unknown>>(
   const statusRef = useRef<REALTIME_SUBSCRIBE_STATES | 'UNSUBSCRIBED'>(
     'UNSUBSCRIBED',
   );
-  const debounceTimerRef = useRef<NodeJS.Timeout>();
+  const debounceTimerRef = useRef<NodeJS.Timeout | undefined>(undefined);
   const pendingUpdatesRef = useRef<RealtimePayload<T>[]>([]);
 
   // Memoize the onChange callback to prevent stale closures

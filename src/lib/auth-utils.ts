@@ -81,7 +81,6 @@ export class RateLimiter {
 }
 
 // Retry utility with exponential backoff
-/* eslint-disable security-node/detect-unhandled-async-errors */
 export async function retryWithBackoff<T>(
   fn: () => Promise<T>,
   maxRetries: number = DEFAULT_MAX_RETRIES,
@@ -125,7 +124,6 @@ export async function retryWithBackoff<T>(
   }
   throw new Error('All retry attempts failed');
 }
-/* eslint-enable security-node/detect-unhandled-async-errors */
 
 // Helper function to check if an error is a rate limit error
 export function isRateLimitError(error: unknown): boolean {

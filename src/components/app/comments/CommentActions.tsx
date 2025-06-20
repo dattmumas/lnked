@@ -6,7 +6,7 @@ import {
   MessageCircle,
   MoreHorizontal,
 } from 'lucide-react';
-import React from 'react';
+import React, { useCallback } from 'react';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -31,15 +31,36 @@ export const CommentActions: React.FC<CommentActionsProps> = ({
   onReaction,
   showReplyButton = true,
   className = '',
-}) => {
+}): React.ReactElement => {
   const likeReaction = comment.reactions?.find((r) => r.type === 'like');
   const dislikeReaction = comment.reactions?.find((r) => r.type === 'dislike');
-  const likeCount = likeReaction?.count || 0;
-  const dislikeCount = dislikeReaction?.count || 0;
+  const likeCount =
+    likeReaction?.count !== undefined &&
+    likeReaction.count !== null &&
+    likeReaction.count > 0
+      ? likeReaction.count
+      : 0;
+  const dislikeCount =
+    dislikeReaction?.count !== undefined &&
+    dislikeReaction.count !== null &&
+    dislikeReaction.count > 0
+      ? dislikeReaction.count
+      : 0;
 
-  const handleReaction = (reactionType: ReactionType) => {
-    onReaction(reactionType);
-  };
+  const handleReaction = useCallback(
+    (reactionType: ReactionType): void => {
+      onReaction(reactionType);
+    },
+    [onReaction],
+  );
+
+  const handleLikeClick = useCallback((): void => {
+    void handleReaction('like');
+  }, [handleReaction]);
+
+  const handleDislikeClick = useCallback((): void => {
+    void handleReaction('dislike');
+  }, [handleReaction]);
 
   return (
     <div className={`flex items-center gap-2 text-sm ${className}`}>
@@ -47,7 +68,7 @@ export const CommentActions: React.FC<CommentActionsProps> = ({
       <Button
         variant="ghost"
         size="sm"
-        onClick={() => void handleReaction('like')}
+        onClick={handleLikeClick}
         className="h-6 px-2 text-muted-foreground hover:text-foreground hover:bg-muted/50"
       >
         <ThumbsUp className="h-3 w-3 mr-1" />
@@ -58,7 +79,7 @@ export const CommentActions: React.FC<CommentActionsProps> = ({
       <Button
         variant="ghost"
         size="sm"
-        onClick={() => void handleReaction('dislike')}
+        onClick={handleDislikeClick}
         className="h-6 px-2 text-muted-foreground hover:text-foreground hover:bg-muted/50"
       >
         <ThumbsDown className="h-3 w-3 mr-1" />

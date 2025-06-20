@@ -13,8 +13,8 @@ interface DashboardShellProps {
 
 export default function DashboardShell({
   children,
-  userCollectives,
-}: DashboardShellProps) {
+  userCollectives: _userCollectives,
+}: DashboardShellProps): React.ReactElement {
   return (
     <div className="min-h-[calc(100vh-4rem)] bg-background text-foreground">
       <a

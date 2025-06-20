@@ -9,6 +9,7 @@ import {
   Globe,
 } from 'lucide-react';
 import { redirect } from 'next/navigation';
+import React from 'react';
 
 import DeleteAccountSection from '@/components/app/settings/DeleteAccountSection';
 import EditUserSettingsForm from '@/components/app/settings/EditUserSettingsForm';
@@ -23,14 +24,13 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 
-
-export default async function UserSettingsPage() {
+export default async function UserSettingsPage(): Promise<React.ReactElement> {
   const supabase = createServerSupabaseClient();
   const {
     data: { user: authUser },
   } = await supabase.auth.getUser();
 
-  if (!authUser) {
+  if (authUser === undefined || authUser === null) {
     redirect('/error');
   }
 
@@ -41,7 +41,11 @@ export default async function UserSettingsPage() {
     .eq('id', authUser.id)
     .single();
 
-  if (profileError || !userProfile) {
+  if (
+    (profileError !== undefined && profileError !== null) ||
+    userProfile === undefined ||
+    userProfile === null
+  ) {
     console.error(
       `Error fetching user profile for settings:`,
       profileError?.message,
@@ -66,10 +70,19 @@ export default async function UserSettingsPage() {
     ]);
 
   const defaultValues = {
-    full_name: userProfile.full_name || '',
-    username: userProfile.username || '',
-    bio: userProfile.bio || '',
-    avatar_url: userProfile.avatar_url || '',
+    full_name:
+      (userProfile.full_name ?? '').length > 0
+        ? (userProfile.full_name ?? '')
+        : '',
+    username:
+      (userProfile.username ?? '').length > 0
+        ? (userProfile.username ?? '')
+        : '',
+    bio: (userProfile.bio ?? '').length > 0 ? (userProfile.bio ?? '') : '',
+    avatar_url:
+      (userProfile.avatar_url ?? '').length > 0
+        ? (userProfile.avatar_url ?? '')
+        : '',
     tags_string: Array.isArray(userProfile.tags)
       ? userProfile.tags.join(', ')
       : '',
@@ -238,12 +251,14 @@ export default async function UserSettingsPage() {
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="text-center p-4 rounded-lg border">
-                  <div className="text-2xl font-bold">{followerCount || 0}</div>
+                  <div className="text-2xl font-bold">
+                    {(followerCount ?? 0) > 0 ? followerCount : 0}
+                  </div>
                   <div className="text-sm text-muted-foreground">Followers</div>
                 </div>
                 <div className="text-center p-4 rounded-lg border">
                   <div className="text-2xl font-bold">
-                    {subscriberCount || 0}
+                    {(subscriberCount ?? 0) > 0 ? subscriberCount : 0}
                   </div>
                   <div className="text-sm text-muted-foreground">
                     Subscribers

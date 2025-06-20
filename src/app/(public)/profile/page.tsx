@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation';
 
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 
-export default async function ProfileRedirectPage() {
+export default async function ProfileRedirectPage(): Promise<never> {
   const supabase = createServerSupabaseClient();
 
   const {
@@ -21,7 +21,7 @@ export default async function ProfileRedirectPage() {
     .eq('id', user.id)
     .single();
 
-  if (!userData?.username) {
+  if (userData?.username === null || userData?.username === undefined) {
     // If no username found, redirect to profile edit to set one up
     redirect('/dashboard/profile/edit');
   }

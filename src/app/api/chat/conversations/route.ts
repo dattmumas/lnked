@@ -29,13 +29,13 @@ type ConversationWithDetails = Database['public']['Tables']['conversations']['Ro
   }>;
 };
 
-export async function GET(): Promise<Response> {
+export async function GET(): Promise<NextResponse> {
   try {
     const supabase = createServerSupabaseClient();
     
     // Get current user
     const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
+    if (authError !== null || user === null) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -59,12 +59,12 @@ export async function GET(): Promise<Response> {
       .eq('user_id', user.id)
       .order('conversations(last_message_at)', { ascending: false });
 
-    if (participantError) {
+    if (participantError !== null) {
       console.error('Error fetching conversations:', participantError);
       return NextResponse.json({ error: 'Failed to fetch conversations' }, { status: 500 });
     }
 
-    if (!participantData || participantData.length === 0) {
+    if (participantData === null || participantData.length === 0) {
       return NextResponse.json({ conversations: [] });
     }
 
@@ -94,7 +94,7 @@ export async function GET(): Promise<Response> {
     type LastMessage = NonNullable<typeof lastMessages>[0];
     const lastMessageMap = new Map<string, LastMessage>();
     lastMessages?.forEach(msg => {
-      if (msg.conversation_id && !lastMessageMap.has(msg.conversation_id)) {
+      if (msg.conversation_id !== null && msg.conversation_id !== undefined && !lastMessageMap.has(msg.conversation_id)) {
         lastMessageMap.set(msg.conversation_id, msg);
       }
     });
@@ -102,7 +102,9 @@ export async function GET(): Promise<Response> {
     // Fetch unread counts for each conversation
     const unreadCountPromises = validParticipantData.map(async (participant) => {
       const conversationId = participant.conversation_id as string;
-      const lastReadAt = participant.last_read_at || '1970-01-01T00:00:00Z';
+      const lastReadAt = participant.last_read_at !== null && participant.last_read_at !== undefined 
+        ? participant.last_read_at 
+        : '1970-01-01T00:00:00Z';
       
       const { count } = await supabase
         .from('messages')
@@ -113,7 +115,7 @@ export async function GET(): Promise<Response> {
 
       return {
         conversation_id: conversationId,
-        unread_count: count || 0
+        unread_count: count !== null && count !== undefined ? count : 0
       };
     });
 
@@ -139,7 +141,7 @@ export async function GET(): Promise<Response> {
     // Group participants by conversation
     const participantsMap = new Map<string, Array<NonNullable<typeof allParticipants>[0]>>();
     allParticipants?.forEach(p => {
-      if (p.conversation_id) {
+      if (p.conversation_id !== null && p.conversation_id !== undefined) {
         const existing = participantsMap.get(p.conversation_id) || [];
         participantsMap.set(p.conversation_id, [...existing, p]);
       }
@@ -150,19 +152,27 @@ export async function GET(): Promise<Response> {
       const conv = p.conversations as Database['public']['Tables']['conversations']['Row'];
       const conversationId = p.conversation_id as string;
       const lastMessage = lastMessageMap.get(conversationId);
-      const participants = participantsMap.get(conversationId) || [];
+      const participants = participantsMap.get(conversationId) ?? [];
       
       return {
         ...conv,
-        unread_count: unreadCountMap.get(conversationId) || 0,
-        last_message: lastMessage && lastMessage.created_at ? {
+        unread_count: unreadCountMap.get(conversationId) ?? 0,
+        last_message: lastMessage !== undefined && 
+                     lastMessage !== null && 
+                     lastMessage.created_at !== null && 
+                     lastMessage.created_at !== undefined ? {
           id: lastMessage.id,
           content: lastMessage.content,
           created_at: lastMessage.created_at,
           sender: lastMessage.sender as NonNullable<typeof lastMessage.sender>
         } : null,
         participants: participants
-          .filter(p => p.user_id && p.role && p.user)
+          .filter(p => p.user_id !== null && 
+                      p.user_id !== undefined && 
+                      p.role !== null && 
+                      p.role !== undefined && 
+                      p.user !== null && 
+                      p.user !== undefined)
           .map(p => ({
             user_id: p.user_id as string,
             role: p.role as string,
@@ -179,18 +189,18 @@ export async function GET(): Promise<Response> {
   }
 }
 
-export async function POST(request: Request): Promise<Response> {
+export async function POST(request: Request): Promise<NextResponse> {
   try {
     const supabase = createServerSupabaseClient();
     
     // Get current user
     const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
+    if (authError !== null || user === null) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     // Parse request body
-    const body = await request.json();
+    const body: unknown = await request.json();
     const {
       title,
       type,
@@ -240,7 +250,7 @@ export async function POST(request: Request): Promise<Response> {
         return participantIds.includes(user.id) && participantIds.includes(otherUserId);
       });
 
-      if (existingDirectConv) {
+      if (existingDirectConv !== undefined) {
         return NextResponse.json({ 
           conversation: existingDirectConv,
           existing: true 
@@ -252,9 +262,9 @@ export async function POST(request: Request): Promise<Response> {
     const { data: conversation, error: convError } = await supabase
       .from('conversations')
       .insert({
-        title: title || null,
+        title: title !== undefined && title !== null ? title : null,
         type,
-        description: description || null,
+        description: description !== undefined && description !== null ? description : null,
         is_private,
         created_by: user.id,
         last_message_at: new Date().toISOString()
@@ -262,7 +272,7 @@ export async function POST(request: Request): Promise<Response> {
       .select()
       .single();
 
-    if (convError || !conversation) {
+    if (convError !== null || conversation === null) {
       console.error('Error creating conversation:', convError);
       return NextResponse.json({ error: 'Failed to create conversation' }, { status: 500 });
     }
@@ -282,7 +292,7 @@ export async function POST(request: Request): Promise<Response> {
       .from('conversation_participants')
       .insert(participants);
 
-    if (participantError) {
+    if (participantError !== null) {
       // Rollback conversation creation
       await supabase.from('conversations').delete().eq('id', conversation.id);
       console.error('Error adding participants:', participantError);
@@ -290,15 +300,19 @@ export async function POST(request: Request): Promise<Response> {
     }
 
     // For direct conversations, set a default title based on the other user's name
-    if (type === 'direct' && !title) {
+    if (type === 'direct' && (title === undefined || title === null)) {
       const { data: otherUser } = await supabase
         .from('users')
         .select('username, full_name')
         .eq('id', participant_ids[0])
         .single();
 
-      if (otherUser) {
-        const displayName = otherUser.full_name || otherUser.username || 'Unknown User';
+      if (otherUser !== null && otherUser !== undefined) {
+        const displayName = (otherUser.full_name !== null && otherUser.full_name !== undefined) 
+          ? otherUser.full_name 
+          : (otherUser.username !== null && otherUser.username !== undefined) 
+            ? otherUser.username 
+            : 'Unknown User';
         await supabase
           .from('conversations')
           .update({ title: displayName })

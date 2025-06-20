@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import Image from 'next/image';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 
 import {
   useProfileContext,
@@ -15,6 +16,12 @@ import type { ContentAreaProps, ProfilePost } from '@/lib/hooks/profile/types';
 
 type PostType = Database['public']['Enums']['post_type_enum'];
 
+// Constants for magic numbers
+const STICKY_HEADER_OFFSET = 80;
+const DEFAULT_VIDEO_LIMIT = 12;
+const DEFAULT_VIDEO_TIME = 5;
+const DEFAULT_ARTICLE_TIME = 3;
+
 /**
  * Content Area Component - Full-width content section below hero and sidebar
  *
@@ -25,7 +32,9 @@ type PostType = Database['public']['Enums']['post_type_enum'];
  * - Infinite scroll content loading
  * - Content type filtering
  */
-export function ContentArea({ className = '' }: ContentAreaProps) {
+export function ContentArea({
+  className = '',
+}: ContentAreaProps): React.ReactElement {
   const { profile, isOwner } = useProfileContext();
   const [activeType, setActiveType] = useState<PostType>('text');
   const [isSticky, setIsSticky] = useState(false);
@@ -66,24 +75,24 @@ export function ContentArea({ className = '' }: ContentAreaProps) {
 
   // Sticky tab behavior
   useEffect(() => {
-    const handleScroll = () => {
+    const handleScroll = (): void => {
       if (!tabsRef.current) return;
 
       const tabsRect = tabsRef.current.getBoundingClientRect();
-      const shouldBeSticky = tabsRect.top <= 80; // Account for header height
+      const shouldBeSticky = tabsRect.top <= STICKY_HEADER_OFFSET; // Account for header height
 
       setIsSticky(shouldBeSticky);
     };
 
     window.addEventListener('scroll', handleScroll);
 
-    return () => {
+    return (): void => {
       window.removeEventListener('scroll', handleScroll);
     };
   }, []);
 
   // Early return after hooks
-  if (!profile) {
+  if (profile === undefined || profile === null) {
     return (
       <div className="content-area-loading text-center py-12">
         <p className="text-muted-foreground">Loading content...</p>
@@ -128,12 +137,13 @@ export function ContentArea({ className = '' }: ContentAreaProps) {
       <div className="content-grid-container">
         {activeType === 'video' ? (
           // Show videos when Videos tab is selected
-          profile?.id && (
+          profile?.id !== undefined &&
+          profile?.id !== null && (
             <ProfileVideosSection
               userId={profile.id}
               isOwner={isOwner}
               className=""
-              limit={12}
+              limit={DEFAULT_VIDEO_LIMIT}
               showHeader={false}
             />
           )
@@ -167,7 +177,7 @@ function ContentTabs({
   onTypeChange: (type: PostType) => void;
   counts: { writing: number; video: number; total: number };
   className?: string;
-}) {
+}): React.ReactElement {
   const tabs: {
     key: PostType;
     label: string;
@@ -176,6 +186,13 @@ function ContentTabs({
     { key: 'text', label: 'Articles', count: counts.writing },
     { key: 'video', label: 'Videos', count: counts.video },
   ];
+
+  const handleTabClick = useCallback(
+    (tabKey: PostType) => (): void => {
+      onTypeChange(tabKey);
+    },
+    [onTypeChange],
+  );
 
   return (
     <nav
@@ -199,7 +216,7 @@ function ContentTabs({
       {tabs.map((tab) => (
         <button
           key={tab.key}
-          onClick={() => onTypeChange(tab.key)}
+          onClick={handleTabClick(tab.key)}
           className={`
             content-tab
             flex
@@ -248,9 +265,9 @@ function ContentGrid({
   onLoadMore?: () => void;
   hasMore?: boolean;
   isFetchingNextPage?: boolean;
-  error?: Error | null;
+  error?: Error | undefined;
   activeType: PostType;
-}) {
+}): React.ReactElement {
   if (loading) {
     return <ContentGridSkeleton />;
   }
@@ -290,7 +307,7 @@ function ContentGrid({
 /**
  * Content Grid Skeleton Component
  */
-function ContentGridSkeleton() {
+function ContentGridSkeleton(): React.ReactElement {
   return (
     <div
       className="
@@ -324,7 +341,11 @@ function ContentGridSkeleton() {
 /**
  * Content Grid Error Component
  */
-function ContentGridError({ error }: { error: Error }) {
+function ContentGridError({ error }: { error: Error }): React.ReactElement {
+  const handleReload = useCallback((): void => {
+    window.location.reload();
+  }, []);
+
   return (
     <div className="content-grid-error text-center py-12 space-y-4">
       <div className="text-6xl">⚠️</div>
@@ -337,7 +358,7 @@ function ContentGridError({ error }: { error: Error }) {
             'There was an error loading the content. Please try again.'}
         </p>
         <button
-          onClick={() => window.location.reload()}
+          onClick={handleReload}
           className="mt-4 px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm font-medium hover:bg-primary/90 transition-colors"
         >
           Retry
@@ -356,8 +377,9 @@ function ContentCard({
 }: {
   post: ProfilePost;
   className?: string;
-}) {
-  const getContentTypeLabel = (type: PostType) => {
+}): React.ReactElement {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const getContentTypeLabel = (type: PostType): string => {
     switch (type) {
       case 'video':
         return 'Watch';
@@ -366,9 +388,11 @@ function ContentCard({
     }
   };
 
-  const getTimeLabel = (type: PostType, time?: number) => {
-    const defaultTime = type === 'video' ? 5 : 3;
-    const duration = time || defaultTime;
+  const getTimeLabel = (type: PostType, time?: number): string => {
+    const defaultTime =
+      type === 'video' ? DEFAULT_VIDEO_TIME : DEFAULT_ARTICLE_TIME;
+    const duration =
+      time !== undefined && time !== null && time > 0 ? time : defaultTime;
 
     switch (type) {
       case 'video':
@@ -378,10 +402,20 @@ function ContentCard({
     }
   };
 
-  const handleCardClick = () => {
+  const handleCardClick = useCallback((): void => {
     // TODO: Navigate to post detail page
-    console.info('Navigate to post:', post.id);
-  };
+    console.warn('Navigate to post:', post.id);
+  }, [post.id]);
+
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent): void => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        handleCardClick();
+      }
+    },
+    [handleCardClick],
+  );
 
   return (
     <div
@@ -400,22 +434,21 @@ function ContentCard({
       ${className}
     `}
       onClick={handleCardClick}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          handleCardClick();
-        }
-      }}
+      onKeyDown={handleKeyDown}
       role="button"
       tabIndex={0}
       aria-label={`View post: ${post.title}`}
     >
       {/* Thumbnail/Preview */}
       <div className="relative aspect-video bg-muted overflow-hidden">
-        {post.thumbnailUrl ? (
-          <img
+        {post.thumbnailUrl !== undefined &&
+        post.thumbnailUrl !== null &&
+        post.thumbnailUrl.length > 0 ? (
+          <Image
             src={post.thumbnailUrl}
             alt={post.title}
+            width={400}
+            height={225}
             className="w-full h-full object-cover transition-transform duration-200 group-hover:scale-105"
           />
         ) : (
@@ -448,11 +481,14 @@ function ContentCard({
         )}
 
         {/* Duration badge for videos */}
-        {post.postType === 'video' && post.readTime && (
-          <div className="absolute bottom-2 right-2 bg-black/80 text-white text-xs px-2 py-1 rounded backdrop-blur-sm">
-            {post.readTime} min
-          </div>
-        )}
+        {post.postType === 'video' &&
+          post.readTime !== undefined &&
+          post.readTime !== null &&
+          post.readTime > 0 && (
+            <div className="absolute bottom-2 right-2 bg-black/80 text-white text-xs px-2 py-1 rounded backdrop-blur-sm">
+              {post.readTime} min
+            </div>
+          )}
       </div>
 
       {/* Content */}
@@ -463,16 +499,20 @@ function ContentCard({
         </h3>
 
         {/* Subtitle/Description */}
-        {post.subtitle && (
-          <p className="text-xs text-muted-foreground line-clamp-2">
-            {post.subtitle}
-          </p>
-        )}
+        {post.subtitle !== undefined &&
+          post.subtitle !== null &&
+          post.subtitle.length > 0 && (
+            <p className="text-xs text-muted-foreground line-clamp-2">
+              {post.subtitle}
+            </p>
+          )}
 
         {/* Meta */}
         <div className="flex items-center justify-between text-xs text-muted-foreground">
           <div>
-            {post.publishedAt
+            {post.publishedAt !== undefined &&
+            post.publishedAt !== null &&
+            post.publishedAt.length > 0
               ? new Date(post.publishedAt).toLocaleDateString('en-US', {
                   month: 'short',
                   day: 'numeric',
@@ -502,9 +542,9 @@ function LoadMoreButton({
   onClick?: () => void;
   loading?: boolean;
   hasMore?: boolean;
-}) {
+}): React.ReactElement | undefined {
   if (!hasMore && !loading) {
-    return null;
+    return undefined;
   }
 
   return (
@@ -544,8 +584,10 @@ function LoadMoreButton({
 /**
  * Empty Content State Component
  */
-function EmptyContentState({ type }: { type: PostType }) {
-  const getEmptyState = (type: PostType) => {
+function EmptyContentState({ type }: { type: PostType }): React.ReactElement {
+  const getEmptyState = (
+    type: PostType,
+  ): { title: string; description: string } => {
     switch (type) {
       case 'video':
         return {

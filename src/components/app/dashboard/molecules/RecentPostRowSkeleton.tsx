@@ -1,6 +1,8 @@
-import { Skeleton } from "@/components/ui/skeleton";
+import React from 'react';
 
-export function RecentPostRowSkeleton() {
+import { Skeleton } from '@/components/ui/skeleton';
+
+export function RecentPostRowSkeleton(): React.ReactElement {
   return (
     <div className="flex items-center justify-between gap-4 p-4 border-b border-border">
       <div className="flex-1 min-w-0">

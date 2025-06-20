@@ -38,14 +38,22 @@ export function PostCardWrapper({
     slug: null,
     created_at: item.published_at,
     post_type: item.type === 'video' ? ('video' as const) : ('text' as const),
-    metadata: item.duration ? { duration: item.duration } : null,
+    metadata:
+      item.duration !== undefined &&
+      item.duration !== null &&
+      item.duration.length > 0
+        ? { duration: item.duration }
+        : null,
     author: {
       id: '',
       username: item.author.username,
       full_name: item.author.name,
       avatar_url: item.author.avatar_url ?? null,
     },
-    collective: item.collective ? { id: '', ...item.collective } : null,
+    collective:
+      item.collective !== undefined && item.collective !== null
+        ? { id: '', ...item.collective }
+        : null,
   };
 
   return (

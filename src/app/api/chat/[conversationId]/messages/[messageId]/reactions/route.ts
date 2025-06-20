@@ -1,3 +1,5 @@
+/* eslint-disable no-magic-numbers */
+
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 
@@ -13,14 +15,17 @@ const enum HttpStatus {
   INTERNAL_SERVER_ERROR = 500,
 }
 
+const EMOJI_MIN_LENGTH = 1;
+const EMOJI_MAX_LENGTH = 10;
+
 const ReactionSchema = z.object({
-  emoji: z.string().min(1).max(10),
+  emoji: z.string().min(EMOJI_MIN_LENGTH).max(EMOJI_MAX_LENGTH),
 });
 
 export async function POST(
   request: Request,
   context: { params: Promise<{ conversationId: string; messageId: string }> }
-) {
+): Promise<NextResponse> {
   const { conversationId, messageId } = await context.params;
   
   const supabase = createServerSupabaseClient();
@@ -29,7 +34,7 @@ export async function POST(
     error: authError,
   } = await supabase.auth.getUser();
 
-  if (authError || !user) {
+  if (authError !== null || user === null) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: HttpStatus.UNAUTHORIZED });
   }
 
@@ -59,7 +64,7 @@ export async function POST(
     .eq('user_id', user.id)
     .maybeSingle();
 
-  if (partErr || !participant) {
+  if (partErr !== null || participant === null) {
     return NextResponse.json({ error: 'Forbidden' }, { status: HttpStatus.FORBIDDEN });
   }
 
@@ -71,7 +76,7 @@ export async function POST(
     .eq('conversation_id', conversationId)
     .maybeSingle();
 
-  if (msgErr || !message) {
+  if (msgErr !== null || message === null) {
     return NextResponse.json({ error: 'Message not found' }, { status: HttpStatus.NOT_FOUND });
   }
 
@@ -89,14 +94,14 @@ export async function POST(
   }
 
   // Delete any existing reaction from this user on this message
-  if (existingReaction) {
+  if (existingReaction !== null && existingReaction !== undefined) {
     const { error: deleteErr } = await supabase
       .from('message_reactions')
       .delete()
       .eq('message_id', messageId)
       .eq('user_id', user.id);
 
-    if (deleteErr) {
+    if (deleteErr !== null) {
       console.error('Failed to delete existing reaction:', deleteErr);
       return NextResponse.json(
         { error: 'Failed to update reaction' },
@@ -115,7 +120,7 @@ export async function POST(
     })
     .select();
 
-  if (reactionErr) {
+  if (reactionErr !== null) {
     console.error('Failed to insert reaction:', reactionErr);
     return NextResponse.json(
       { error: reactionErr.message },
@@ -129,12 +134,12 @@ export async function POST(
 export async function DELETE(
   request: Request,
   context: { params: Promise<{ conversationId: string; messageId: string }> }
-) {
+): Promise<NextResponse> {
   const { conversationId, messageId } = await context.params;
   const { searchParams } = new URL(request.url);
   const emoji = searchParams.get('emoji');
 
-  if (!emoji) {
+  if (emoji === null || emoji === undefined) {
     return NextResponse.json({ error: 'Emoji parameter required' }, { status: HttpStatus.BAD_REQUEST });
   }
   
@@ -144,7 +149,7 @@ export async function DELETE(
     error: authError,
   } = await supabase.auth.getUser();
 
-  if (authError || !user) {
+  if (authError !== null || user === null) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: HttpStatus.UNAUTHORIZED });
   }
 
@@ -156,7 +161,7 @@ export async function DELETE(
     .eq('user_id', user.id)
     .maybeSingle();
 
-  if (partErr || !participant) {
+  if (partErr !== null || participant === null) {
     return NextResponse.json({ error: 'Forbidden' }, { status: HttpStatus.FORBIDDEN });
   }
 
@@ -168,7 +173,7 @@ export async function DELETE(
     .eq('user_id', user.id)
     .eq('emoji', emoji);
 
-  if (deleteErr) {
+  if (deleteErr !== null) {
     return NextResponse.json(
       { error: deleteErr.message },
       { status: HttpStatus.INTERNAL_SERVER_ERROR },

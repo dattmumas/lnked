@@ -3,23 +3,39 @@ import { NextRequest, NextResponse } from 'next/server';
 import { commentsV2Service } from '@/lib/services/comments-v2';
 import { CommentEntityType, CommentValidationError, CommentPermissionError } from '@/types/comments-v2';
 
+// Constants for validation
+const DEFAULT_COMMENT_LIMIT = 20;
+const DEFAULT_COMMENT_OFFSET = 0;
+const MAX_COMMENT_LIMIT = 100;
+const MIN_COMMENT_LIMIT = 1;
+
+// Valid entity types
+const VALID_ENTITY_TYPES = ['video', 'post', 'collective', 'profile'] as const;
+
+interface CommentRequestBody {
+  content?: unknown;
+  parent_id?: unknown;
+}
+
 export async function GET(
   request: NextRequest, 
   { params }: { params: Promise<{ entityType: string; entityId: string }> }
-) {
+): Promise<NextResponse> {
   try {
     const { entityType, entityId } = await params;
     const { searchParams } = new URL(request.url);
     
-    const limit = parseInt(searchParams.get('limit') || '20');
-    const offset = parseInt(searchParams.get('offset') || '0');
+    const limitParam = searchParams.get('limit');
+    const offsetParam = searchParams.get('offset');
+    const limit = parseInt(limitParam ?? String(DEFAULT_COMMENT_LIMIT), 10);
+    const offset = parseInt(offsetParam ?? String(DEFAULT_COMMENT_OFFSET), 10);
     
-    if (!['video', 'post', 'collective', 'profile'].includes(entityType)) {
+    if (!VALID_ENTITY_TYPES.includes(entityType as typeof VALID_ENTITY_TYPES[number])) {
       return NextResponse.json({ error: 'Invalid entity type' }, { status: 400 });
     }
 
-    if (limit < 1 || limit > 100) {
-      return NextResponse.json({ error: 'Limit must be between 1 and 100' }, { status: 400 });
+    if (limit < MIN_COMMENT_LIMIT || limit > MAX_COMMENT_LIMIT) {
+      return NextResponse.json({ error: `Limit must be between ${MIN_COMMENT_LIMIT} and ${MAX_COMMENT_LIMIT}` }, { status: 400 });
     }
 
     const comments = await commentsV2Service.getComments(
@@ -46,27 +62,31 @@ export async function GET(
 export async function POST(
   request: NextRequest, 
   { params }: { params: Promise<{ entityType: string; entityId: string }> }
-) {
+): Promise<NextResponse> {
   try {
     const { entityType, entityId } = await params;
     
-    if (!['video', 'post', 'collective', 'profile'].includes(entityType)) {
+    if (!VALID_ENTITY_TYPES.includes(entityType as typeof VALID_ENTITY_TYPES[number])) {
       return NextResponse.json({ error: 'Invalid entity type' }, { status: 400 });
     }
 
-    const body = await request.json();
+    const body: CommentRequestBody = await request.json() as CommentRequestBody;
     const { content, parent_id } = body;
 
-    if (!content || typeof content !== 'string') {
+    if (content === null || content === undefined || typeof content !== 'string') {
       return NextResponse.json({ error: 'Content is required' }, { status: 400 });
     }
+
+    const parentId = parent_id !== null && parent_id !== undefined && typeof parent_id === 'string' 
+      ? parent_id 
+      : undefined;
 
     const result = await commentsV2Service.addComment(
       entityType as CommentEntityType,
       entityId,
       '',
       content,
-      parent_id || undefined,
+      parentId,
     );
 
     return NextResponse.json(result, { status: 201 });

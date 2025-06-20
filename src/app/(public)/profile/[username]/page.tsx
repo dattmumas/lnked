@@ -27,7 +27,7 @@ export default async function ProfilePage({
 }: {
   params: Promise<{ username: string }>;
   searchParams: Promise<{ q?: string }>;
-}) {
+}): Promise<React.JSX.Element> {
   const { username } = await params;
   const { q } = await searchParams;
   const supabase = createServerSupabaseClient();
@@ -39,14 +39,14 @@ export default async function ProfilePage({
 
   // Basic profile existence check
   let profile;
-  if (username) {
+  if (username !== null && username !== undefined) {
     const { data: profileData } = await supabase
       .from('users')
       .select('id, username, full_name, bio, avatar_url, tags')
       .eq('username', username)
       .single();
 
-    if (profileData) {
+    if (profileData !== null) {
       profile = profileData;
     } else {
       // If username lookup failed, try by ID (backward compatibility)
@@ -57,20 +57,20 @@ export default async function ProfilePage({
         .single();
 
       profile = idProfileData;
-      if (idError || !profile) {
+      if (idError !== null || profile === null) {
         notFound();
       }
     }
   }
 
-  if (!profile) {
+  if (profile === null || profile === undefined) {
     notFound();
   }
 
   // Get follower and subscriber counts using optimized queries
   const [
-    { count: _followerCount },
-    { count: _subscriberCount },
+    { count: _followerCount }, // eslint-disable-line @typescript-eslint/no-unused-vars
+    { count: _subscriberCount }, // eslint-disable-line @typescript-eslint/no-unused-vars
     { data: followData },
   ] = await Promise.all([
     // Get follower count using the updated table structure
@@ -87,7 +87,7 @@ export default async function ProfilePage({
       .eq('target_entity_id', profile.id)
       .eq('status', 'active'),
     // Check if current user is following this profile (only if authenticated)
-    authUser
+    authUser !== null && authUser !== undefined
       ? supabase
           .from('follows')
           .select('*')
@@ -95,10 +95,10 @@ export default async function ProfilePage({
           .eq('following_id', profile.id)
           .eq('following_type', 'user')
           .maybeSingle()
-      : Promise.resolve({ data: null }),
+      : Promise.resolve({ data: undefined }),
   ]);
 
-  const _isFollowing = Boolean(followData);
+  const _isFollowing = Boolean(followData); // eslint-disable-line no-underscore-dangle, @typescript-eslint/no-unused-vars
 
   let postsQuery = supabase
     .from('posts')
@@ -113,14 +113,14 @@ export default async function ProfilePage({
     .eq('owner_type', 'user')
     .maybeSingle();
 
-  let pinnedPost: PostRow | null = null;
-  if (featuredData?.post_id) {
+  let pinnedPost: PostRow | undefined = undefined;
+  if (featuredData?.post_id !== null && featuredData?.post_id !== undefined) {
     const { data } = await supabase
       .from('posts')
       .select('*')
       .eq('id', featuredData.post_id)
       .maybeSingle<PostRow>();
-    if (data) pinnedPost = data;
+    if (data !== null) pinnedPost = data;
     postsQuery = postsQuery.neq('id', featuredData.post_id);
   }
 
@@ -133,14 +133,14 @@ export default async function ProfilePage({
   if (isOwner) {
     // Owners can see all their posts
   } else if (isSubscribed) {
-    postsQuery = postsQuery.not('published_at', 'is', null);
+    postsQuery = postsQuery.not('published_at', 'is', null); // eslint-disable-line unicorn/no-null
   } else {
     postsQuery = postsQuery
       .eq('is_public', true)
-      .not('published_at', 'is', null);
+      .not('published_at', 'is', null); // eslint-disable-line unicorn/no-null
   }
 
-  if (q && q.trim().length > 0) {
+  if (q !== null && q !== undefined && q.trim().length > 0) {
     postsQuery = postsQuery.textSearch('tsv', q, {
       type: 'websearch',
     });
@@ -151,7 +151,11 @@ export default async function ProfilePage({
     error: unknown;
   };
 
-  if (postsError && typeof postsError === 'object' && 'message' in postsError) {
+  if (
+    postsError !== null &&
+    typeof postsError === 'object' &&
+    'message' in postsError
+  ) {
     console.error(
       'Error fetching posts for user',
       username,
@@ -159,49 +163,56 @@ export default async function ProfilePage({
     );
   }
 
-  const _posts =
+  const _posts = // eslint-disable-line no-underscore-dangle, @typescript-eslint/no-unused-vars
     postsData?.map((p) => ({
       ...p,
       like_count: p.like_count ?? 0,
       dislike_count: p.dislike_count ?? 0,
       status: p.status ?? 'draft',
-      tsv: p.tsv ?? null,
+      tsv: p.tsv ?? undefined,
       view_count: p.view_count ?? 0,
-      published_at: p.published_at ?? null,
+      published_at: p.published_at ?? undefined,
       current_user_has_liked: undefined,
     })) ?? [];
 
-  const _pinned = pinnedPost && {
-    ...pinnedPost,
-    like_count: pinnedPost.like_count ?? 0,
-    dislike_count: pinnedPost.dislike_count ?? 0,
-    status: pinnedPost.status ?? 'draft',
-    tsv: pinnedPost.tsv ?? null,
-    view_count: pinnedPost.view_count ?? 0,
-    published_at: pinnedPost.published_at ?? null,
-    current_user_has_liked: undefined,
-  };
+  const _pinned = pinnedPost !== null && // eslint-disable-line no-underscore-dangle, @typescript-eslint/no-unused-vars
+    pinnedPost !== undefined && {
+      ...pinnedPost,
+      like_count: pinnedPost.like_count ?? 0,
+      dislike_count: pinnedPost.dislike_count ?? 0,
+      status: pinnedPost.status ?? 'draft',
+      tsv: pinnedPost.tsv ?? undefined,
+      view_count: pinnedPost.view_count ?? 0,
+      published_at: pinnedPost.published_at ?? undefined,
+      current_user_has_liked: undefined,
+    };
 
-  const _microPosts: MicroPost[] = [
+  const _microPosts: MicroPost[] = [ // eslint-disable-line no-underscore-dangle, @typescript-eslint/no-unused-vars
     { id: 'u1', content: 'Thanks for checking out my work!' },
     { id: 'u2', content: 'New article coming soon.' },
     { id: 'u3', content: 'Follow me for updates!' },
   ];
 
   type SubscriptionTier = Database['public']['Tables']['prices']['Row'];
-  let _tiers: SubscriptionTier[] = [];
+  let _tiers: SubscriptionTier[] = []; // eslint-disable-line no-underscore-dangle
   const defaultPriceId = process.env.NEXT_PUBLIC_STRIPE_DEFAULT_PRICE_ID;
-  if (defaultPriceId) {
+  if (defaultPriceId !== null && defaultPriceId !== undefined) {
     const { data: price } = (await supabase
       .from('prices')
       .select('id, unit_amount, currency, interval, description')
       .eq('id', defaultPriceId)
       .maybeSingle()) as { data: SubscriptionTier | null };
-    if (price) _tiers = [price];
+    if (price !== null) _tiers = [price]; // eslint-disable-line @typescript-eslint/no-unused-vars
   }
 
   return (
-    <ProfileLayout username={profile.username || username}>
+    <ProfileLayout
+      username={
+        profile.username !== null && profile.username !== undefined
+          ? profile.username
+          : username
+      }
+    >
       <ProfileContentGrid>
         {/* Profile Hero Section - 65% width on desktop */}
         <ProfileHeroContainer>

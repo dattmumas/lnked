@@ -45,7 +45,7 @@ export async function inviteUserToCollective(
     data: { user: currentUser },
     error: authError,
   } = await supabase.auth.getUser();
-  if (authError || !currentUser) {
+  if (authError !== null || currentUser === null) {
     return { success: false, error: 'User not authenticated.' };
   }
 
@@ -63,7 +63,7 @@ export async function inviteUserToCollective(
     .eq('owner_id', currentUser.id)
     .single();
 
-  if (collectiveFetchError || !collective) {
+  if (collectiveFetchError !== null || collective === null) {
     return {
       success: false,
       error: 'Collective not found or you are not the owner.',
@@ -78,7 +78,7 @@ export async function inviteUserToCollective(
     .eq('email', inviteeEmail)
     .single();
 
-  if (inviteeFetchError && inviteeFetchError.code !== 'PGRST116') {
+  if (inviteeFetchError !== null && inviteeFetchError.code !== 'PGRST116') {
     // PGRST116 means no rows, which is fine before checking inviteeUser
     console.error(
       'Error fetching invitee by email:',
@@ -87,7 +87,7 @@ export async function inviteUserToCollective(
     return { success: false, error: 'Error finding user by email.' };
   }
 
-  if (!inviteeUser) {
+  if (inviteeUser === null) {
     return {
       success: false,
       error: `User with email ${inviteeEmail} not found.`,
@@ -111,10 +111,10 @@ export async function inviteUserToCollective(
     .eq('user_id', inviteeUser.id)
     .maybeSingle();
 
-  if (memberCheckError) {
+  if (memberCheckError !== null) {
     return { success: false, error: 'Error checking existing membership.' };
   }
-  if (existingMember) {
+  if (existingMember !== null) {
     return {
       success: false,
       error: 'This user is already a member of the collective.',
@@ -133,7 +133,7 @@ export async function inviteUserToCollective(
     .from('collective_members')
     .insert(memberData);
 
-  if (insertError) {
+  if (insertError !== null) {
     console.error('Error adding member to collective:', insertError.message);
     if (insertError.code === '23503') {
       // Foreign key violation
@@ -166,7 +166,7 @@ export async function removeUserFromCollective(
     data: { user: currentUser },
     error: authError,
   } = await supabase.auth.getUser();
-  if (authError || !currentUser) {
+  if (authError !== null || currentUser === null) {
     return { success: false, error: 'User not authenticated.' };
   }
 
@@ -179,11 +179,11 @@ export async function removeUserFromCollective(
     .single<MemberRecordWithCollective>();
 
   if (
-    memberFetchError ||
-    !memberRecord ||
+    memberFetchError !== null ||
+    memberRecord === null ||
     typeof memberRecord !== 'object' ||
     !('collective' in memberRecord) ||
-    !memberRecord.collective
+    memberRecord.collective === null
   ) {
     return {
       success: false,
@@ -218,7 +218,7 @@ export async function removeUserFromCollective(
     .delete()
     .eq('id', membershipId);
 
-  if (deleteError) {
+  if (deleteError !== null) {
     console.error(
       'Error removing member from collective:',
       deleteError.message,
@@ -247,7 +247,7 @@ export async function updateMemberRole(
     data: { user: currentUser },
     error: authError,
   } = await supabase.auth.getUser();
-  if (authError || !currentUser) {
+  if (authError !== null || currentUser === null) {
     return { success: false, error: 'User not authenticated.' };
   }
 
@@ -262,11 +262,11 @@ export async function updateMemberRole(
     .single<MemberRecordWithCollective>();
 
   if (
-    memberFetchError ||
-    !memberRecord ||
+    memberFetchError !== null ||
+    memberRecord === null ||
     typeof memberRecord !== 'object' ||
     !('collective' in memberRecord) ||
-    !memberRecord.collective
+    memberRecord.collective === null
   ) {
     return {
       success: false,
@@ -301,7 +301,7 @@ export async function updateMemberRole(
     .update({ role: newRole, updated_at: new Date().toISOString() })
     .eq('id', membershipId);
 
-  if (updateError) {
+  if (updateError !== null) {
     console.error('Error updating member role:', updateError.message);
     return {
       success: false,
@@ -336,7 +336,7 @@ export async function updateCollectiveSettings(
     error: authError,
   } = await supabase.auth.getUser();
 
-  if (authError || !currentUser) {
+  if (authError !== null || currentUser === null) {
     return { success: false, error: 'User not authenticated.' };
   }
 
@@ -347,7 +347,7 @@ export async function updateCollectiveSettings(
     .eq('id', collectiveId)
     .single();
 
-  if (collectiveFetchError || !collective) {
+  if (collectiveFetchError !== null || collective === null) {
     return { success: false, error: 'Collective not found.' };
   }
   if (collective.owner_id !== currentUser.id) {
@@ -382,14 +382,14 @@ export async function updateCollectiveSettings(
       .not('id', 'eq', collectiveId) // Exclude current collective
       .maybeSingle();
 
-    if (slugCheckError) {
+    if (slugCheckError !== null) {
       console.error('Error checking slug uniqueness:', slugCheckError);
       return {
         success: false,
         error: 'Database error checking slug uniqueness.',
       };
     }
-    if (existingSlug) {
+    if (existingSlug !== null) {
       return {
         success: false,
         error: 'This slug is already taken. Please choose another one.',
@@ -401,9 +401,9 @@ export async function updateCollectiveSettings(
   const collectiveUpdate: TablesUpdate<'collectives'> = {
     name,
     slug,
-    description: description || null,
+    description: description ?? null,
     tags:
-      transformed_tags && transformed_tags.length > 0 ? transformed_tags : null,
+      transformed_tags !== null && transformed_tags.length > 0 ? transformed_tags : null,
     // updated_at will be handled by the database
   };
 
@@ -412,7 +412,7 @@ export async function updateCollectiveSettings(
     .update(collectiveUpdate)
     .eq('id', collectiveId);
 
-  if (updateError) {
+  if (updateError !== null) {
     console.error('Error updating collective settings:', updateError);
     if (updateError.code === '23505') {
       // Unique constraint violation
@@ -450,13 +450,23 @@ export async function updateCollectiveSettings(
  * Fetch Stripe Connect account status for a collective.
  * Returns null if not connected, or Stripe account status fields if connected.
  */
-export async function getCollectiveStripeStatus(collectiveId: string) {
+export async function getCollectiveStripeStatus(collectiveId: string): Promise<{
+  error?: string;
+  status?: string;
+  charges_enabled?: boolean;
+  payouts_enabled?: boolean;
+  details_submitted?: boolean;
+  requirements?: Record<string, unknown>;
+  email?: string | null;
+  type?: string;
+  id?: string;
+}> {
   const supabase = createServerSupabaseClient();
   const {
     data: { user },
     error: authError,
   } = await supabase.auth.getUser();
-  if (authError || !user) {
+  if (authError !== null || user === null) {
     return { error: 'Not authenticated' };
   }
   // Only owner can view
@@ -465,21 +475,22 @@ export async function getCollectiveStripeStatus(collectiveId: string) {
     .select('id, owner_id, stripe_account_id')
     .eq('id', collectiveId)
     .single();
-  if (collectiveError || !collective) {
+  if (collectiveError !== null || collective === null) {
     return { error: 'Collective not found' };
   }
   if (collective.owner_id !== user.id) {
     return { error: 'Forbidden: Not the owner' };
   }
-  if (!collective.stripe_account_id) {
+  if (collective.stripe_account_id === null || collective.stripe_account_id === undefined) {
     return { status: 'not_connected' };
   }
   const stripe = getStripe();
-  if (!stripe) {
+  if (stripe === null) {
     return { error: 'Stripe not configured' };
   }
   try {
-    const account = await stripe.accounts.retrieve(
+    // TypeScript now knows stripe is not null after the check above
+    const account = await stripe!.accounts.retrieve(
       collective.stripe_account_id,
     );
     return {
@@ -492,7 +503,7 @@ export async function getCollectiveStripeStatus(collectiveId: string) {
       charges_enabled: account.charges_enabled,
       payouts_enabled: account.payouts_enabled,
       details_submitted: account.details_submitted,
-      requirements: account.requirements,
+      requirements: account.requirements as Record<string, unknown> | undefined,
       email: account.email,
       type: account.type,
       id: account.id,
@@ -519,7 +530,7 @@ export async function deleteCollective({
     data: { user: currentUser },
     error: authError,
   } = await supabase.auth.getUser();
-  if (authError || !currentUser) {
+  if (authError !== null || currentUser === null) {
     return { success: false, error: 'Not authenticated.' };
   }
   // Only owner can delete
@@ -528,7 +539,7 @@ export async function deleteCollective({
     .select('owner_id')
     .eq('id', collectiveId)
     .single();
-  if (collectiveError || !collective) {
+  if (collectiveError !== null || collective === null) {
     return { success: false, error: 'Collective not found.' };
   }
   if (collective.owner_id !== currentUser.id) {
@@ -554,7 +565,7 @@ export async function deleteCollective({
     .from('collectives')
     .delete()
     .eq('id', collectiveId);
-  if (deleteError) {
+  if (deleteError !== null) {
     return {
       success: false,
       error: `Failed to delete collective: ${deleteError.message}`,
@@ -578,7 +589,7 @@ export async function transferCollectiveOwnership({
     data: { user: currentUser },
     error: authError,
   } = await supabase.auth.getUser();
-  if (authError || !currentUser) {
+  if (authError !== null || currentUser === null) {
     return { success: false, error: 'Not authenticated.' };
   }
   // Only owner can transfer
@@ -587,7 +598,7 @@ export async function transferCollectiveOwnership({
     .select('owner_id')
     .eq('id', collectiveId)
     .single();
-  if (collectiveError || !collective) {
+  if (collectiveError !== null || collective === null) {
     return { success: false, error: 'Collective not found.' };
   }
   if (collective.owner_id !== currentUser.id) {
@@ -603,7 +614,7 @@ export async function transferCollectiveOwnership({
     .eq('collective_id', collectiveId)
     .eq('user_id', newOwnerId)
     .maybeSingle();
-  if (!member) {
+  if (member === null) {
     return { success: false, error: 'New owner must be a current member.' };
   }
   // Update owner_id in collectives
@@ -611,7 +622,7 @@ export async function transferCollectiveOwnership({
     .from('collectives')
     .update({ owner_id: newOwnerId })
     .eq('id', collectiveId);
-  if (updateError) {
+  if (updateError !== null) {
     return {
       success: false,
       error: `Failed to transfer ownership: ${updateError.message}`,

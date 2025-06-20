@@ -2,18 +2,21 @@
 
 import { UserPlus, UserMinus, Loader2 } from 'lucide-react';
 import { useRouter, usePathname } from 'next/navigation';
-import { useState, useTransition, useEffect, useCallback } from 'react';
+import React, { useState, useTransition, useEffect, useCallback } from 'react';
 
 import { followUser, unfollowUser } from '@/app/actions/followActions';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
 
+// Constants
+const VERIFICATION_DELAY = 500;
+
 interface FollowButtonProps {
   targetUserId: string;
   targetUserName: string;
   initialIsFollowing: boolean;
-  currentUserId?: string | null;
+  currentUserId?: string | undefined;
 }
 
 export default function FollowButton({
@@ -21,40 +24,41 @@ export default function FollowButton({
   targetUserName,
   initialIsFollowing,
   currentUserId: initialCurrentUserId,
-}: FollowButtonProps) {
+}: FollowButtonProps): React.ReactElement | undefined {
   const router = useRouter();
   const pathname = usePathname();
   const [isPending, startTransition] = useTransition();
   const [isFollowing, setIsFollowing] = useState(initialIsFollowing);
-  const [isLoadingCurrentUser, setIsLoadingCurrentUser] =
-    useState(!initialCurrentUserId);
-  const [actualCurrentUserId, setActualCurrentUserId] = useState<string | null>(
-    initialCurrentUserId || null,
+  const [isLoadingCurrentUser, setIsLoadingCurrentUser] = useState(
+    initialCurrentUserId === undefined || initialCurrentUserId === null,
   );
+  const [actualCurrentUserId, setActualCurrentUserId] = useState<
+    string | undefined
+  >(initialCurrentUserId ?? undefined);
   const [error, setError] = useState<string | undefined>(undefined);
   const supabase = createSupabaseBrowserClient();
 
   // Sync with server state when initialIsFollowing changes
-  useEffect(() => {
+  useEffect((): void => {
     setIsFollowing(initialIsFollowing);
   }, [initialIsFollowing]);
 
   // Fetch current user if not provided
-  useEffect(() => {
-    if (!initialCurrentUserId) {
-      const fetchUser = async () => {
+  useEffect((): void => {
+    if (initialCurrentUserId === undefined || initialCurrentUserId === null) {
+      const fetchUser = async (): Promise<void> => {
         try {
           const {
             data: { user },
             error: authError,
           } = await supabase.auth.getUser();
 
-          if (authError) {
+          if (authError !== undefined && authError !== null) {
             console.error('Error fetching user:', authError);
             setError('Failed to authenticate user');
           }
 
-          setActualCurrentUserId(user?.id || null);
+          setActualCurrentUserId(user?.id ?? undefined);
         } catch (err: unknown) {
           console.error('Error in fetchUser:', err);
           setError('Authentication error');
@@ -62,15 +66,21 @@ export default function FollowButton({
           setIsLoadingCurrentUser(false);
         }
       };
-      fetchUser();
+      void fetchUser();
     } else {
       setIsLoadingCurrentUser(false);
     }
   }, [initialCurrentUserId, supabase]);
 
   // Verify follow status with server to ensure consistency
-  const verifyFollowStatus = useCallback(async () => {
-    if (!actualCurrentUserId || actualCurrentUserId === targetUserId) return;
+  const verifyFollowStatus = useCallback(async (): Promise<void> => {
+    if (
+      actualCurrentUserId === undefined ||
+      actualCurrentUserId === null ||
+      actualCurrentUserId.length === 0 ||
+      actualCurrentUserId === targetUserId
+    )
+      return;
 
     try {
       const { data, error } = await supabase
@@ -81,14 +91,14 @@ export default function FollowButton({
         .eq('following_type', 'user')
         .maybeSingle();
 
-      if (error) {
+      if (error !== undefined && error !== null) {
         console.error('Error verifying follow status:', error);
         return;
       }
 
       const serverIsFollowing = Boolean(data);
       if (serverIsFollowing !== isFollowing) {
-        console.info(
+        console.warn(
           `Follow state sync: client=${isFollowing}, server=${serverIsFollowing}`,
         );
         setIsFollowing(serverIsFollowing);
@@ -98,9 +108,18 @@ export default function FollowButton({
     }
   }, [actualCurrentUserId, targetUserId, isFollowing, supabase]);
 
+  const handleVerifyFollowStatus = useCallback((): void => {
+    void verifyFollowStatus();
+  }, [verifyFollowStatus]);
+
   // Verify follow status periodically and on focus
-  useEffect(() => {
-    if (!actualCurrentUserId || actualCurrentUserId === targetUserId) {
+  useEffect((): (() => void) | undefined => {
+    if (
+      actualCurrentUserId === undefined ||
+      actualCurrentUserId === null ||
+      actualCurrentUserId.length === 0 ||
+      actualCurrentUserId === targetUserId
+    ) {
       return undefined;
     }
 
@@ -110,22 +129,30 @@ export default function FollowButton({
       return undefined;
     }
 
-    verifyFollowStatus();
+    void verifyFollowStatus();
 
-    const handleFocus = () => verifyFollowStatus();
-    window.addEventListener('focus', handleFocus);
+    window.addEventListener('focus', handleVerifyFollowStatus);
 
-    return () => {
-      window.removeEventListener('focus', handleFocus);
+    return (): void => {
+      window.removeEventListener('focus', handleVerifyFollowStatus);
     };
-  }, [actualCurrentUserId, targetUserId, verifyFollowStatus]);
+  }, [
+    actualCurrentUserId,
+    targetUserId,
+    verifyFollowStatus,
+    handleVerifyFollowStatus,
+  ]);
 
-  const handleFollowToggle = async () => {
+  const handleFollowToggle = useCallback((): void => {
     // Clear any existing errors
     setError(undefined);
 
     // Redirect to sign-in if not authenticated
-    if (!actualCurrentUserId) {
+    if (
+      actualCurrentUserId === undefined ||
+      actualCurrentUserId === null ||
+      actualCurrentUserId.length === 0
+    ) {
       void router.push(`/sign-in?redirect=${encodeURIComponent(pathname)}`);
       return;
     }
@@ -141,7 +168,7 @@ export default function FollowButton({
     // Optimistic update
     setIsFollowing(!isFollowing);
 
-    const runAction = async () => {
+    const runAction = async (): Promise<void> => {
       try {
         const action = previousIsFollowing ? unfollowUser : followUser;
         const result = await action(targetUserId);
@@ -149,12 +176,18 @@ export default function FollowButton({
         if (!result.success) {
           // Revert optimistic update on error
           setIsFollowing(previousIsFollowing);
-          setError(result.error || 'Action failed. Please try again.');
+          setError(
+            result.error !== undefined &&
+              result.error !== null &&
+              result.error.length > 0
+              ? result.error
+              : 'Action failed. Please try again.',
+          );
         } else {
           setError(undefined);
           // Verify the final state with the server
           if (process.env.NODE_ENV !== 'test') {
-            setTimeout(verifyFollowStatus, 500);
+            setTimeout(handleVerifyFollowStatus, VERIFICATION_DELAY);
           }
         }
       } catch (err: unknown) {
@@ -166,11 +199,20 @@ export default function FollowButton({
     };
 
     if (process.env.NODE_ENV === 'test') {
-      await runAction();
+      void runAction();
     } else {
-      startTransition(runAction);
+      startTransition(() => {
+        void runAction();
+      });
     }
-  };
+  }, [
+    actualCurrentUserId,
+    router,
+    pathname,
+    targetUserId,
+    isFollowing,
+    handleVerifyFollowStatus,
+  ]);
 
   // Don't render if loading user or if user is self
   if (isLoadingCurrentUser) {
@@ -184,19 +226,19 @@ export default function FollowButton({
 
   // Don't show follow button for self or if user not logged in (will show sign-in redirect)
   if (actualCurrentUserId === targetUserId) {
-    return null;
+    return undefined;
   }
 
   return (
     <div className="space-y-2">
-      {error && (
+      {error !== undefined && error !== null && error.length > 0 && (
         <Alert variant="destructive">
           <AlertTitle>Error</AlertTitle>
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
       <Button
-        onClick={() => void handleFollowToggle()}
+        onClick={handleFollowToggle}
         disabled={isPending || isLoadingCurrentUser}
         variant={isFollowing ? 'outline' : 'default'}
         size="sm"

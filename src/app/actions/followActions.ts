@@ -34,7 +34,7 @@ export async function followUser(
     .eq('id', userIdToFollow)
     .single();
 
-  if (targetUserError || !targetUser) {
+  if (targetUserError !== null || targetUser === null) {
     return { success: false, error: 'User not found.' };
   }
 
@@ -85,7 +85,7 @@ export async function followUser(
   revalidatePath(`/users/${userIdToFollow}/followers`);
   
   // Also revalidate username-based paths if username exists
-  if (targetUser.username) {
+  if (targetUser.username !== null && targetUser.username !== undefined) {
     revalidatePath(`/profile/${targetUser.username}`);
     revalidatePath(`/profile/${targetUser.username}/followers`);
   }
@@ -161,7 +161,7 @@ export async function unfollowUser(
   revalidatePath(`/users/${userIdToUnfollow}/followers`);
   
   // Also revalidate username-based paths if username exists
-  if (targetUser?.username) {
+  if (targetUser?.username !== null && targetUser?.username !== undefined) {
     revalidatePath(`/profile/${targetUser.username}`);
     revalidatePath(`/profile/${targetUser.username}/followers`);
   }
@@ -189,7 +189,7 @@ export async function followCollective(
     .eq('id', collectiveId)
     .single();
 
-  if (collectiveError || !collective) {
+  if (collectiveError !== null || collective === null) {
     return { success: false, error: 'Collective not found.' };
   }
 

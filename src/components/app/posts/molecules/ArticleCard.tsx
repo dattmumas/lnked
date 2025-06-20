@@ -1,10 +1,15 @@
+import Image from 'next/image';
 import Link from 'next/link';
+import React from 'react';
 
 import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 
 import PostCardFooter from './PostCardFooter';
 import PostCardHeader from './PostCardHeader';
+
+// Constants
+const DEFAULT_EXCERPT_LENGTH = 150;
 
 interface Author {
   id: string;
@@ -61,28 +66,52 @@ interface LexicalNode {
   children?: LexicalNode[];
 }
 
+// Type for Lexical document structure
+interface LexicalData {
+  root?: {
+    children?: LexicalNode[];
+  };
+}
+
 // Utility function to extract text from Lexical JSON or plain text
 const extractTextFromContent = (
   content: string | null,
-  maxLength = 150,
+  maxLength = DEFAULT_EXCERPT_LENGTH,
 ): string => {
-  if (!content) return '';
+  if (content === undefined || content === null || content.length === 0)
+    return '';
 
   try {
     // Try to parse as Lexical JSON
-    const lexicalData = JSON.parse(content);
-    if (lexicalData.root && lexicalData.root.children) {
+    const parsedData = JSON.parse(content) as unknown;
+
+    // Type guard to check if it's a valid LexicalData structure
+    const isLexicalData = (data: unknown): data is LexicalData => {
+      return typeof data === 'object' && data !== null && 'root' in data;
+    };
+
+    if (
+      isLexicalData(parsedData) &&
+      parsedData.root !== undefined &&
+      parsedData.root !== null &&
+      parsedData.root.children !== undefined &&
+      parsedData.root.children !== null
+    ) {
       const extractText = (node: LexicalNode): string => {
-        if (node.type === 'text') {
-          return node.text || '';
+        if (
+          node.type === 'text' &&
+          node.text !== undefined &&
+          node.text !== null
+        ) {
+          return node.text;
         }
-        if (node.children) {
+        if (node.children !== undefined && node.children !== null) {
           return node.children.map(extractText).join('');
         }
         return '';
       };
 
-      const fullText = lexicalData.root.children.map(extractText).join(' ');
+      const fullText = parsedData.root.children.map(extractText).join(' ');
       return fullText.length <= maxLength
         ? fullText
         : `${fullText.substring(0, maxLength)}...`;
@@ -108,12 +137,23 @@ export default function ArticleCard({
   currentUserId,
   showFollowButton = false,
   className,
-}: ArticleCardProps) {
-  const postUrl = post.slug ? `/posts/${post.slug}` : `/posts/${post.id}`;
+}: ArticleCardProps): React.ReactElement {
+  const postUrl =
+    post.slug !== undefined && post.slug !== null && post.slug.length > 0
+      ? `/posts/${post.slug}`
+      : `/posts/${post.id}`;
 
   // Use meta_description if available, otherwise extract from content
   const excerpt =
-    post.meta_description || extractTextFromContent(post.content || null);
+    post.meta_description !== undefined &&
+    post.meta_description !== null &&
+    post.meta_description.length > 0
+      ? post.meta_description
+      : extractTextFromContent(
+          post.content !== undefined && post.content !== null
+            ? post.content
+            : null,
+        );
 
   return (
     <Card
@@ -134,17 +174,21 @@ export default function ArticleCard({
         />
 
         {/* Thumbnail (if available) */}
-        {post.thumbnail_url && (
-          <Link href={postUrl} className="block mb-4">
-            <div className="relative aspect-video overflow-hidden rounded-lg bg-muted group">
-              <img
-                src={post.thumbnail_url}
-                alt={post.title}
-                className="w-full h-full object-cover transition-transform duration-200 group-hover:scale-105"
-              />
-            </div>
-          </Link>
-        )}
+        {post.thumbnail_url !== undefined &&
+          post.thumbnail_url !== null &&
+          post.thumbnail_url.length > 0 && (
+            <Link href={postUrl} className="block mb-4">
+              <div className="relative aspect-video overflow-hidden rounded-lg bg-muted group">
+                <Image
+                  src={post.thumbnail_url}
+                  alt={post.title}
+                  width={800}
+                  height={450}
+                  className="w-full h-full object-cover transition-transform duration-200 group-hover:scale-105"
+                />
+              </div>
+            </Link>
+          )}
 
         {/* Content */}
         <Link href={postUrl} className="group block">
@@ -152,7 +196,7 @@ export default function ArticleCard({
             {post.title}
           </h2>
 
-          {excerpt && (
+          {excerpt !== undefined && excerpt !== null && excerpt.length > 0 && (
             <p className="text-sm text-muted-foreground mb-4 line-clamp-3 leading-relaxed">
               {excerpt}
             </p>
@@ -165,7 +209,13 @@ export default function ArticleCard({
 
         <PostCardFooter
           postId={post.id}
-          postSlug={post.slug || undefined}
+          postSlug={
+            post.slug !== undefined &&
+            post.slug !== null &&
+            post.slug.length > 0
+              ? post.slug
+              : undefined
+          }
           postTitle={post.title}
           interactions={interactions}
           onToggleLike={onToggleLike}

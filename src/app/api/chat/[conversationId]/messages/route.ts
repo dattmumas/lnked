@@ -11,7 +11,7 @@ const enum HttpStatus {
   INTERNAL_SERVER_ERROR = 500,
 }
 
-export async function GET(request: NextRequest, context: { params: Promise<{ conversationId: string }> }) {
+export async function GET(request: NextRequest, context: { params: Promise<{ conversationId: string }> }): Promise<NextResponse> {
   const { conversationId } = await context.params;
   const { searchParams } = new URL(request.url);
   const beforeIso = searchParams.get('before');
@@ -24,7 +24,7 @@ export async function GET(request: NextRequest, context: { params: Promise<{ con
     error: authError,
   } = await supabase.auth.getUser();
 
-  if (authError || !user) {
+  if (authError !== null || user === null) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: HttpStatus.UNAUTHORIZED });
   }
 
@@ -36,10 +36,10 @@ export async function GET(request: NextRequest, context: { params: Promise<{ con
     .eq('user_id', user.id)
     .maybeSingle();
 
-  if (partErr) {
+  if (partErr !== null) {
     return NextResponse.json({ error: partErr.message }, { status: HttpStatus.INTERNAL_SERVER_ERROR });
   }
-  if (!participant) {
+  if (participant === null) {
     return NextResponse.json({ error: 'Forbidden' }, { status: HttpStatus.FORBIDDEN });
   }
 
@@ -54,7 +54,7 @@ export async function GET(request: NextRequest, context: { params: Promise<{ con
     )
     .eq('conversation_id', conversationId);
 
-  if (beforeIso) {
+  if (beforeIso !== null && beforeIso !== undefined) {
     msgQuery = msgQuery.lt('created_at', beforeIso);
   }
 
@@ -62,7 +62,7 @@ export async function GET(request: NextRequest, context: { params: Promise<{ con
     .order('created_at', { ascending: false })
     .limit(limit);
 
-  if (msgErr) {
+  if (msgErr !== null) {
     return NextResponse.json({ error: msgErr.message }, { status: HttpStatus.INTERNAL_SERVER_ERROR });
   }
 

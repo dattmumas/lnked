@@ -1,6 +1,7 @@
 import { Plus } from 'lucide-react';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
+import React from 'react';
 
 import PostListItem from '@/components/app/dashboard/posts/PostListItem';
 import { Button } from '@/components/ui/button';
@@ -23,7 +24,7 @@ type PublishingTargetCollective = Pick<
   'id' | 'name' | 'slug'
 >;
 
-export default async function MyPostsPage() {
+export default async function MyPostsPage(): Promise<React.ReactElement> {
   const supabase = createServerSupabaseClient();
 
   const {
@@ -31,7 +32,13 @@ export default async function MyPostsPage() {
     error: authErrorSession,
   } = await supabase.auth.getSession();
 
-  if (authErrorSession || !session || !session.user) {
+  if (
+    authErrorSession !== null ||
+    session === null ||
+    session === undefined ||
+    session.user === null ||
+    session.user === undefined
+  ) {
     redirect('/sign-in');
   }
 
@@ -79,7 +86,7 @@ export default async function MyPostsPage() {
     ] as Enums<'collective_member_role'>[])
     .order('collective(name)', { ascending: true });
 
-  if (postsError || ownedError || memberError) {
+  if (postsError !== null || ownedError !== null || memberError !== null) {
     console.error('Error fetching data for My Posts page:', {
       postsError: JSON.stringify(postsError),
       ownedError: JSON.stringify(ownedError),
@@ -91,7 +98,11 @@ export default async function MyPostsPage() {
   const publishingCollectives: PublishingTargetCollective[] = [];
   const addedCollectiveIds = new Set<string>();
 
-  if (ownedCollectives) {
+  if (
+    ownedCollectives !== null &&
+    ownedCollectives !== undefined &&
+    Array.isArray(ownedCollectives)
+  ) {
     ownedCollectives.forEach((c: PublishingTargetCollective) => {
       if (!addedCollectiveIds.has(c.id)) {
         publishingCollectives.push(c);
@@ -99,16 +110,19 @@ export default async function MyPostsPage() {
       }
     });
   }
-  if (memberCollectivesData) {
+  if (
+    memberCollectivesData !== null &&
+    memberCollectivesData !== undefined &&
+    Array.isArray(memberCollectivesData)
+  ) {
     memberCollectivesData.forEach(
       (membership: { collective?: PublishingTargetCollective }) => {
         if (
-          membership.collective &&
+          membership.collective !== null &&
+          membership.collective !== undefined &&
           !addedCollectiveIds.has(membership.collective.id)
         ) {
-          publishingCollectives.push(
-            membership.collective,
-          );
+          publishingCollectives.push(membership.collective);
           addedCollectiveIds.add(membership.collective.id);
         }
       },
@@ -131,10 +145,10 @@ export default async function MyPostsPage() {
 
   // Create a mapping of video post titles to video IDs
   const videoMap = new Map<string, { id: string; title: string | null }>();
-  if (videos) {
+  if (videos !== null && videos !== undefined && Array.isArray(videos)) {
     videos.forEach((video) => {
       // Match the title pattern used in getOrCreatePostForVideo
-      const videoPostTitle = `Video: ${video.title || video.id}`;
+      const videoPostTitle = `Video: ${(video.title ?? '').trim() || video.id}`;
       videoMap.set(videoPostTitle, video);
     });
   }
@@ -142,7 +156,7 @@ export default async function MyPostsPage() {
   // Map posts to include likeCount and video information
   const postsWithLikeCount = (posts as DashboardPost[]).map(
     (post: DashboardPost) => {
-      const video = videoMap.get(post.title) || null;
+      const video = videoMap.get(post.title) || undefined;
       return {
         ...post,
         likeCount: Array.isArray(post.post_reactions)
@@ -156,7 +170,7 @@ export default async function MyPostsPage() {
     },
   );
 
-  const renderNewPostButton = () => {
+  const renderNewPostButton = (): React.ReactElement => {
     return (
       <Button asChild size="sm" className="w-full md:w-auto">
         <Link href="/posts/new">
@@ -173,7 +187,10 @@ export default async function MyPostsPage() {
         {renderNewPostButton()}
       </div>
       <div className="overflow-x-auto rounded-lg border border-border bg-card">
-        {postsWithLikeCount && postsWithLikeCount.length > 0 ? (
+        {postsWithLikeCount !== null &&
+        postsWithLikeCount !== undefined &&
+        Array.isArray(postsWithLikeCount) &&
+        postsWithLikeCount.length > 0 ? (
           <table className="min-w-full text-sm divide-y divide-border">
             <thead>
               <tr className="bg-muted/50 text-muted-foreground">

@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import React from 'react';
 
 import type { Database } from '@/lib/database.types';
 
@@ -11,8 +12,10 @@ export type AudioPost = Database['public']['Tables']['posts']['Row'] & {
 interface AudioSliderProps {
   posts: (AudioPost & { collective_slug?: string | null })[];
 }
-export default function AudioSlider({ posts }: AudioSliderProps) {
-  if (!posts.length) return null;
+export default function AudioSlider({
+  posts,
+}: AudioSliderProps): React.ReactElement | undefined {
+  if (!posts.length) return undefined;
 
   return (
     <div className="mb-6 overflow-x-auto">
@@ -21,9 +24,13 @@ export default function AudioSlider({ posts }: AudioSliderProps) {
           <Link
             key={post.id}
             href={
-              post.slug
+              post.slug !== undefined &&
+              post.slug !== null &&
+              post.slug.length > 0
                 ? `/posts/${post.slug}`
-                : post.collective_slug
+                : post.collective_slug !== undefined &&
+                    post.collective_slug !== null &&
+                    post.collective_slug.length > 0
                   ? `/collectives/${post.collective_slug}/${post.id}`
                   : `/posts/${post.id}`
             }

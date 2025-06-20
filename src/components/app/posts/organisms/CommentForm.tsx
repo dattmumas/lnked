@@ -1,8 +1,13 @@
 import { Loader2 } from 'lucide-react';
+import React from 'react';
 
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+
+// Constants for magic numbers
+const REPLY_TEXTAREA_ROWS = 2;
+const COMMENT_TEXTAREA_ROWS = 3;
 
 interface CommentFormProps {
   value: string;
@@ -28,7 +33,7 @@ export default function CommentForm({
   avatarFallback = 'Me',
   onCancel,
   isReply = false,
-}: CommentFormProps) {
+}: CommentFormProps): React.ReactElement {
   return (
     <form onSubmit={onSubmit} className={isReply ? '' : 'flex gap-3'}>
       <Avatar
@@ -48,7 +53,7 @@ export default function CommentForm({
               ? 'min-h-[60px] border-0 bg-transparent resize-none focus-visible:ring-1 text-sm'
               : 'border-0 bg-transparent resize-none focus-visible:ring-1 text-sm min-h-[80px]'
           }
-          rows={isReply ? 2 : 3}
+          rows={isReply ? REPLY_TEXTAREA_ROWS : COMMENT_TEXTAREA_ROWS}
           disabled={disabled || loading}
         />
         <div className="flex gap-2 justify-end mt-3 pt-3 border-t">

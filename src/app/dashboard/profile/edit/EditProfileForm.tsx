@@ -3,7 +3,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Loader2 } from 'lucide-react';
 import Image from 'next/image';
-import React, { useState, useTransition } from 'react';
+import React, { useState, useTransition, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 
@@ -24,14 +24,25 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 
+// Constants
+const MAX_FULL_NAME_LENGTH = 100;
+const MAX_BIO_LENGTH = 500;
+const MAX_FILE_SIZE_MB = 10;
+const KILOBYTE = 1024;
+const BYTES_PER_MB = KILOBYTE * KILOBYTE;
+const AVATAR_SIZE = 128;
+
 const ClientUserProfileSchema = z.object({
   full_name: z
     .string()
     .min(1, 'Full name cannot be empty.')
-    .max(100, 'Full name must be 100 characters or less.'),
+    .max(
+      MAX_FULL_NAME_LENGTH,
+      `Full name must be ${MAX_FULL_NAME_LENGTH} characters or less.`,
+    ),
   bio: z
     .string()
-    .max(500, 'Bio must be 500 characters or less.')
+    .max(MAX_BIO_LENGTH, `Bio must be ${MAX_BIO_LENGTH} characters or less.`)
     .optional()
     .nullable(),
   avatar_url: z.string().optional().nullable(),
@@ -51,10 +62,12 @@ type SubmitHandler<T> = (data: T) => void | Promise<void>;
 
 export default function EditProfileForm({
   defaultValues,
-}: EditProfileFormProps) {
+}: EditProfileFormProps): React.ReactElement {
   const [isPending, startTransition] = useTransition();
-  const [error, setError] = useState<string | null>(null);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [error, setError] = useState<string | undefined>(undefined);
+  const [successMessage, setSuccessMessage] = useState<string | undefined>(
+    undefined,
+  );
 
   const form = useForm<UserProfileFormClientValues>({
     resolver: zodResolver(ClientUserProfileSchema),
@@ -69,62 +82,83 @@ export default function EditProfileForm({
     reset,
   } = form;
 
-  const [avatarPreview, setAvatarPreview] = useState<string | null>(
-    defaultValues.avatar_url || null,
+  const [avatarPreview, setAvatarPreview] = useState<string | undefined>(
+    (defaultValues.avatar_url ?? '').trim().length > 0
+      ? (defaultValues.avatar_url ?? undefined)
+      : undefined,
   );
 
-  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (!file.type.startsWith('image/')) {
-      setError('File must be an image.');
-      return;
-    }
-    if (file.size > 10 * 1024 * 1024) {
-      setError('Image must be less than 10MB.');
-      return;
-    }
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      const result = reader.result as string;
-      setAvatarPreview(result);
-      setValue('avatar_url', result, { shouldDirty: true });
-    };
-    reader.readAsDataURL(file);
-  };
-
-  const onSubmit: SubmitHandler<UserProfileFormClientValues> = async (data) => {
-    setError(null);
-    setSuccessMessage(null);
-
-    if (!isDirty) {
-      setSuccessMessage('No changes to save.');
-      return;
-    }
-
-    startTransition(async () => {
-      const result = await updateUserProfile(data as RawUserProfileFormInput);
-
-      if (result.error) {
-        setError(
-          result.fieldErrors
-            ? `${result.error} ${Object.values(result.fieldErrors)
-                .flat()
-                .join(', ')}`
-            : result.error,
-        );
-      } else {
-        setSuccessMessage(
-          result.message || 'Your profile has been updated successfully.',
-        );
-        reset(data);
+  const handleAvatarChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>): void => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      if (!file.type.startsWith('image/')) {
+        setError('File must be an image.');
+        return;
       }
-    });
-  };
+      if (file.size > MAX_FILE_SIZE_MB * BYTES_PER_MB) {
+        setError(`Image must be less than ${MAX_FILE_SIZE_MB}MB.`);
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = (): void => {
+        const result = reader.result as string;
+        setAvatarPreview(result);
+        setValue('avatar_url', result, { shouldDirty: true });
+      };
+      reader.readAsDataURL(file);
+    },
+    [setValue],
+  );
+
+  const onSubmit: SubmitHandler<UserProfileFormClientValues> = useCallback(
+    (data) => {
+      setError(undefined);
+      setSuccessMessage(undefined);
+
+      if (!isDirty) {
+        setSuccessMessage('No changes to save.');
+        return;
+      }
+
+      startTransition(async () => {
+        const result = await updateUserProfile(data as RawUserProfileFormInput);
+
+        if (
+          result.error !== undefined &&
+          result.error !== null &&
+          result.error.trim().length > 0
+        ) {
+          setError(
+            result.fieldErrors
+              ? `${result.error} ${Object.values(result.fieldErrors)
+                  .flat()
+                  .join(', ')}`
+              : result.error,
+          );
+        } else {
+          setSuccessMessage(
+            (result.message ?? '').trim().length > 0
+              ? result.message
+              : 'Your profile has been updated successfully.',
+          );
+          reset(data);
+        }
+      });
+    },
+    [isDirty, reset, startTransition],
+  );
+
+  const handleFormSubmit = useCallback(
+    (event: React.FormEvent<HTMLFormElement>): void => {
+      void handleSubmit(onSubmit)(event);
+    },
+    [handleSubmit, onSubmit],
+  );
 
   return (
     <Card>
-      <form onSubmit={handleSubmit(onSubmit)}>
+      <form onSubmit={handleFormSubmit}>
         <CardHeader>
           <CardTitle>Your Details</CardTitle>
           <CardDescription>
@@ -140,20 +174,20 @@ export default function EditProfileForm({
               {...register('full_name')}
               disabled={isPending || isSubmitting}
             />
-            {errors.full_name && (
+            {(errors.full_name?.message ?? '').trim().length > 0 && (
               <p className="text-sm text-destructive">
-                {errors.full_name.message}
+                {errors.full_name?.message}
               </p>
             )}
           </div>
           <div className="space-y-2">
             <Label htmlFor="avatar">Profile Image</Label>
-            {avatarPreview && (
+            {(avatarPreview ?? '').trim().length > 0 && (
               <Image
-                src={avatarPreview}
+                src={avatarPreview ?? ''}
                 alt="Avatar preview"
-                width={128}
-                height={128}
+                width={AVATAR_SIZE}
+                height={AVATAR_SIZE}
                 className="h-32 w-32 rounded-full object-cover"
               />
             )}
@@ -165,9 +199,9 @@ export default function EditProfileForm({
               disabled={isPending || isSubmitting}
             />
             <input type="hidden" {...register('avatar_url')}></input>
-            {errors.avatar_url && (
+            {(errors.avatar_url?.message ?? '').trim().length > 0 && (
               <p className="text-sm text-destructive">
-                {errors.avatar_url.message}
+                {errors.avatar_url?.message}
               </p>
             )}
           </div>
@@ -180,8 +214,8 @@ export default function EditProfileForm({
               rows={4}
               disabled={isPending || isSubmitting}
             />
-            {errors.bio && (
-              <p className="text-sm text-destructive">{errors.bio.message}</p>
+            {(errors.bio?.message ?? '').trim().length > 0 && (
+              <p className="text-sm text-destructive">{errors.bio?.message}</p>
             )}
           </div>
           <div className="space-y-2">
@@ -194,18 +228,18 @@ export default function EditProfileForm({
               placeholder="e.g., tech, startups, design, coffee"
               disabled={isPending || isSubmitting}
             />
-            {errors.tags_string && (
+            {(errors.tags_string?.message ?? '').trim().length > 0 && (
               <p className="text-sm text-destructive">
-                {errors.tags_string.message}
+                {errors.tags_string?.message}
               </p>
             )}
           </div>
-          {error && (
+          {(error ?? '').trim().length > 0 && (
             <p className="text-sm text-destructive p-3 bg-destructive/10 rounded-md">
               {error}
             </p>
           )}
-          {successMessage && (
+          {(successMessage ?? '').trim().length > 0 && (
             <p className="text-sm text-accent p-3 bg-accent/10 rounded-md">
               {successMessage}
             </p>
@@ -218,7 +252,7 @@ export default function EditProfileForm({
           >
             {isPending || isSubmitting ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : null}
+            ) : undefined}
             Save Changes
           </Button>
         </CardFooter>

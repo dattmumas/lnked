@@ -7,13 +7,16 @@ import {
   Users,
   Shield,
 } from 'lucide-react';
-import { useMemo } from 'react';
+import React, { useMemo } from 'react';
 
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { useCollectiveMemberships } from '@/hooks/posts/useCollectiveMemberships';
 import { cn } from '@/lib/utils';
+
+// Constants
+const COLLECTIVE_PREVIEW_LIMIT = 3;
 
 interface CollectiveValidationFeedbackProps {
   selectedCollectiveIds: string[];
@@ -42,7 +45,7 @@ export function CollectiveValidationFeedback({
   showSelectionLimits = true,
   showCollectiveInfo = true,
   className,
-}: CollectiveValidationFeedbackProps) {
+}: CollectiveValidationFeedbackProps): React.ReactElement | null {
   // Fetch collective data
   const { data: allCollectives = [], isLoading } =
     useCollectiveMemberships(false);
@@ -52,12 +55,17 @@ export function CollectiveValidationFeedback({
   );
 
   // Generate validation messages
-  const validationMessages = useMemo(() => {
+  const validationMessages = useMemo((): ValidationMessage[] => {
     const messages: ValidationMessage[] = [];
     const selectedCount = selectedCollectiveIds.length;
 
     // Check minimum selections - only show if minSelections > 0
-    if (minSelections > 0 && selectedCount < minSelections) {
+    if (
+      minSelections !== undefined &&
+      minSelections !== null &&
+      minSelections > 0 &&
+      selectedCount < minSelections
+    ) {
       messages.push({
         level: 'error',
         message: `You must select at least ${minSelections} collective${minSelections !== 1 ? 's' : ''} to publish this post.`,
@@ -67,7 +75,12 @@ export function CollectiveValidationFeedback({
     }
 
     // Check maximum selections
-    if (maxSelections && selectedCount > maxSelections) {
+    if (
+      maxSelections !== undefined &&
+      maxSelections !== null &&
+      maxSelections > 0 &&
+      selectedCount > maxSelections
+    ) {
       messages.push({
         level: 'error',
         message: `You can select a maximum of ${maxSelections} collective${maxSelections !== 1 ? 's' : ''}. Please remove ${selectedCount - maxSelections}.`,
@@ -79,7 +92,9 @@ export function CollectiveValidationFeedback({
     // Check approaching limit
     if (
       showSelectionLimits &&
-      maxSelections &&
+      maxSelections !== undefined &&
+      maxSelections !== null &&
+      maxSelections > 0 &&
       selectedCount === maxSelections
     ) {
       messages.push({
@@ -108,7 +123,9 @@ export function CollectiveValidationFeedback({
     // Success message - updated logic
     if (
       selectedCount >= minSelections &&
-      (!maxSelections || selectedCount <= maxSelections) &&
+      (maxSelections === undefined ||
+        maxSelections === null ||
+        selectedCount <= maxSelections) &&
       (selectedCollectives.length === 0 ||
         selectedCollectives.every((c) => c.can_post))
     ) {
@@ -130,10 +147,20 @@ export function CollectiveValidationFeedback({
     // Info about collective reach
     if (showCollectiveInfo && selectedCollectives.length > 0) {
       const totalMembers = selectedCollectives.reduce(
-        (sum, c) => sum + (c.member_count || 0),
+        (sum, c) =>
+          sum +
+          (c.member_count !== undefined &&
+          c.member_count !== null &&
+          c.member_count > 0
+            ? c.member_count
+            : 0),
         0,
       );
-      if (totalMembers > 0) {
+      if (
+        totalMembers !== undefined &&
+        totalMembers !== null &&
+        totalMembers > 0
+      ) {
         messages.push({
           level: 'info',
           message: `Your post will reach approximately ${totalMembers} member${totalMembers !== 1 ? 's' : ''} across selected collectives.`,
@@ -203,27 +230,31 @@ export function CollectiveValidationFeedback({
                 </span>
               </div>
 
-              {maxSelections && (
-                <Badge variant="secondary" className="text-xs">
-                  {selectedCollectives.length} / {maxSelections}
-                </Badge>
-              )}
+              {maxSelections !== undefined &&
+                maxSelections !== null &&
+                maxSelections > 0 && (
+                  <Badge variant="secondary" className="text-xs">
+                    {selectedCollectives.length} / {maxSelections}
+                  </Badge>
+                )}
             </div>
 
             {/* Show collective names */}
             <div className="mt-2 flex flex-wrap gap-1">
-              {selectedCollectives.slice(0, 3).map((collective) => (
-                <Badge
-                  key={collective.id}
-                  variant="outline"
-                  className="text-xs"
-                >
-                  {collective.name}
-                </Badge>
-              ))}
-              {selectedCollectives.length > 3 && (
+              {selectedCollectives
+                .slice(0, COLLECTIVE_PREVIEW_LIMIT)
+                .map((collective) => (
+                  <Badge
+                    key={collective.id}
+                    variant="outline"
+                    className="text-xs"
+                  >
+                    {collective.name}
+                  </Badge>
+                ))}
+              {selectedCollectives.length > COLLECTIVE_PREVIEW_LIMIT && (
                 <Badge variant="outline" className="text-xs text-gray-500">
-                  +{selectedCollectives.length - 3} more
+                  +{selectedCollectives.length - COLLECTIVE_PREVIEW_LIMIT} more
                 </Badge>
               )}
             </div>
@@ -239,7 +270,9 @@ interface ValidationAlertProps {
   message: ValidationMessage;
 }
 
-function ValidationAlert({ message }: ValidationAlertProps) {
+function ValidationAlert({
+  message,
+}: ValidationAlertProps): React.ReactElement {
   const { level, message: text, action, icon: Icon } = message;
 
   const alertStyles = {
@@ -261,7 +294,7 @@ function ValidationAlert({ message }: ValidationAlertProps) {
       <Icon className={cn('h-4 w-4', iconStyles[level])} />
       <AlertDescription className="flex items-center justify-between">
         <span>{text}</span>
-        {action && (
+        {action !== undefined && action !== null && action.length > 0 && (
           <Badge variant="outline" className="ml-2 text-xs">
             {action}
           </Badge>
@@ -274,7 +307,7 @@ function ValidationAlert({ message }: ValidationAlertProps) {
 // Compact version for inline validation
 export function CompactCollectiveValidationFeedback(
   props: CollectiveValidationFeedbackProps,
-) {
+): React.ReactElement {
   const { selectedCollectiveIds, maxSelections, minSelections = 0 } = props;
   const selectedCount = selectedCollectiveIds.length;
 
@@ -282,15 +315,30 @@ export function CompactCollectiveValidationFeedback(
   let message = '';
   let icon = CheckCircle2;
 
-  if (minSelections > 0 && selectedCount < minSelections) {
+  if (
+    minSelections !== undefined &&
+    minSelections !== null &&
+    minSelections > 0 &&
+    selectedCount < minSelections
+  ) {
     status = 'invalid';
     message = `Select ${minSelections - selectedCount} more`;
     icon = AlertCircle;
-  } else if (maxSelections && selectedCount > maxSelections) {
+  } else if (
+    maxSelections !== undefined &&
+    maxSelections !== null &&
+    maxSelections > 0 &&
+    selectedCount > maxSelections
+  ) {
     status = 'invalid';
     message = `Remove ${selectedCount - maxSelections}`;
     icon = AlertCircle;
-  } else if (maxSelections && selectedCount === maxSelections) {
+  } else if (
+    maxSelections !== undefined &&
+    maxSelections !== null &&
+    maxSelections > 0 &&
+    selectedCount === maxSelections
+  ) {
     status = 'warning';
     message = 'At maximum';
     icon = AlertTriangle;

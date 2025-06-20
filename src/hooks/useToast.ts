@@ -48,7 +48,6 @@ function generateToastId(): string {
   }
   
   // Fallback: timestamp + counter + random suffix (SSR-safe)
-  // eslint-disable-next-line security-node/detect-insecure-randomness
   const randomSuffix = Math.random().toString(FALLBACK_RADIX).substring(FALLBACK_SUBSTRING_START, ID_LENGTH);
   return `toast-${timestamp}-${counter}-${randomSuffix}`;
 }

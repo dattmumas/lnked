@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation';
-import { Suspense } from 'react';
+import React, { Suspense } from 'react';
 
 import { RightSidebar } from '@/components/app/chains/RightSidebar';
 import { CommentSection } from '@/components/app/comments';
@@ -19,7 +19,7 @@ interface VideoAsset {
   aspect_ratio: string | null;
   created_at: string | null;
   updated_at: string | null;
-  mux_asset_id: string;
+  mux_asset_id: string | null;
   mux_playback_id: string | null;
   created_by: string | null;
   comment_count: number;
@@ -30,7 +30,7 @@ interface VideoPlayerPageProps {
   params: Promise<{ id: string }>;
 }
 
-async function getVideoData(videoId: string) {
+async function getVideoData(videoId: string): Promise<VideoAsset | undefined> {
   const supabase = createServerSupabaseClient();
 
   const { data: video, error } = await supabase
@@ -39,8 +39,12 @@ async function getVideoData(videoId: string) {
     .eq('id', videoId)
     .single();
 
-  if (error || !video) {
-    return null;
+  if (
+    (error !== undefined && error !== null) ||
+    video === undefined ||
+    video === null
+  ) {
+    return undefined;
   }
 
   return video;
@@ -48,30 +52,33 @@ async function getVideoData(videoId: string) {
 
 export default async function VideoPlayerPage({
   params,
-}: VideoPlayerPageProps) {
+}: VideoPlayerPageProps): Promise<React.ReactElement> {
   const { id } = await params;
   const video = await getVideoData(id);
 
-  if (!video) {
+  if (video === undefined || video === null) {
     notFound();
   }
 
   // Check if video has the required non-null fields
-  if (!video.mux_asset_id) {
+  if (
+    video.mux_asset_id === undefined ||
+    video.mux_asset_id === null ||
+    video.mux_asset_id.length === 0
+  ) {
     notFound();
   }
 
-  // Safely cast to VideoAsset (includes comment_count)
-  const videoAsset = video as unknown as VideoAsset;
+  // Use the video data directly (includes comment_count)
+  const videoAsset = video;
 
   // Fetch user and profile for RightSidebar
   const supabase = createServerSupabaseClient();
   const {
     data: { user },
-    error: authError,
   } = await supabase.auth.getUser();
-  let profile = null;
-  if (user) {
+  let profile = undefined;
+  if (user !== undefined && user !== null) {
     const { data } = await supabase
       .from('users')
       .select('id, username, full_name, avatar_url, bio')
@@ -85,15 +92,15 @@ export default async function VideoPlayerPage({
       {/* Main content: video details + player + comments */}
       <main className="ml-16 w-[calc(100%-4rem)] lg:w-[calc(100%-4rem-28rem)] flex flex-col items-center py-8">
         {/* Video metadata - renders immediately (no Suspense) */}
-        <VideoDetailsServer video={videoAsset} />
+        <VideoDetailsServer video={videoAsset as any} />
 
         {/* Video player - independent Suspense boundary */}
         <Suspense fallback={<VideoPlayerSkeleton />}>
           <VideoPlayerClient
             video={{
               id: videoAsset.id,
-              title: videoAsset.title,
-              mux_playback_id: videoAsset.mux_playback_id,
+              title: videoAsset.title ?? undefined,
+              mux_playback_id: videoAsset.mux_playback_id ?? undefined,
             }}
           />
         </Suspense>
@@ -110,7 +117,10 @@ export default async function VideoPlayerPage({
       </main>
 
       {/* Right sidebar: chains (desktop only) */}
-      {user && profile && <RightSidebar user={user} profile={profile} />}
+      {user !== undefined &&
+        user !== null &&
+        profile !== undefined &&
+        profile !== null && <RightSidebar user={user} profile={profile} />}
     </div>
   );
 }

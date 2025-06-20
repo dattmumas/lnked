@@ -26,7 +26,7 @@ export default async function Page({
 
     if (profileData) {
       profile = profileData;
-      profileError = null;
+      profileError = undefined;
     } else {
       // If username lookup failed, try by ID (backward compatibility)
       const { data: idProfileData, error: idError } = await supabase
@@ -137,7 +137,7 @@ export default async function Page({
                     </Link>
                   </div>
                 </div>
-              ) : null,
+              ) : undefined,
             )}
           </div>
         </div>

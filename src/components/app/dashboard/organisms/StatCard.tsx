@@ -1,3 +1,5 @@
+import React from 'react';
+
 import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 
@@ -17,13 +19,13 @@ export default function StatCard({
   description,
   className,
   trend,
-}: StatCardProps) {
+}: StatCardProps): React.ReactElement {
   return (
     <Card className={cn('overflow-hidden', className)}>
       <div className="flex flex-col p-4 h-full">
         <div className="flex items-center justify-between gap-2 mb-2">
           <h3 className="text-sm font-medium text-foreground/70">{title}</h3>
-          {icon && (
+          {icon !== undefined && icon !== null && (
             <span className="size-4 text-foreground/60" aria-hidden="true">
               {icon}
             </span>
@@ -48,7 +50,7 @@ export default function StatCard({
           )}
         </div>
 
-        {description && (
+        {description !== undefined && description !== null && (
           <p className="mt-1 text-xs text-foreground/60">{description}</p>
         )}
       </div>

@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
+import React from 'react';
 
 import { acceptCollectiveInvite } from '@/app/actions/memberActions';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
@@ -8,7 +9,7 @@ export default async function InviteAcceptPage({
   params,
 }: {
   params: Promise<{ inviteCode: string }>;
-}) {
+}): Promise<React.ReactElement> {
   const supabase = createServerSupabaseClient();
   const { inviteCode } = await params;
   const {
@@ -34,7 +35,11 @@ export default async function InviteAcceptPage({
         </div>
       ) : (
         <div className="text-destructive bg-destructive/10 p-4 rounded mb-4">
-          <p>{result.error || 'Failed to accept invite.'}</p>
+          <p>
+            {(result.error ?? '').length > 0
+              ? result.error
+              : 'Failed to accept invite.'}
+          </p>
         </div>
       )}
       <Link href="/dashboard" className="text-accent underline">

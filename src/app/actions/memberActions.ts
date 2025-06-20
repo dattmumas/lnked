@@ -15,6 +15,9 @@ import { supabaseAdmin } from '@/lib/supabaseAdmin';
 
 import type { Enums } from '@/lib/database.types';
 
+// Constants for configuration
+const INVITE_CODE_BYTES = 16;
+
 interface ActionResult<T = null> {
   success: boolean;
   data?: T;
@@ -42,7 +45,7 @@ export async function inviteMemberToCollective(
     data: { user: currentUser },
   } = await supabase.auth.getUser();
 
-  if (!currentUser) {
+  if (currentUser === null) {
     return { success: false, error: 'Unauthorized: You must be logged in.' };
   }
 
@@ -65,7 +68,7 @@ export async function inviteMemberToCollective(
       .eq('id', collectiveId)
       .single();
 
-    if (collectiveError || !collective) {
+    if (collectiveError !== null || collective === null) {
       return { success: false, error: 'Collective not found.' };
     }
     if (collective.owner_id !== currentUser.id) {
@@ -85,7 +88,7 @@ export async function inviteMemberToCollective(
       .eq('email', email)
       .single();
 
-    if (!invitedUser) {
+    if (invitedUser === null) {
       // Pending invite: check for existing invite
       const { data: existingInvite } = await supabaseAdmin
         .from('collective_invites')
@@ -94,14 +97,14 @@ export async function inviteMemberToCollective(
         .eq('email', email)
         .eq('status', 'pending')
         .maybeSingle();
-      if (existingInvite) {
+      if (existingInvite !== null) {
         return {
           success: false,
           error: `An invite for ${email} is already pending.`,
         };
       }
       // Generate unique invite code
-      const invite_code = randomBytes(16).toString('hex');
+      const invite_code = randomBytes(INVITE_CODE_BYTES).toString('hex');
       const { error: inviteError } = await supabaseAdmin
         .from('collective_invites')
         .insert({
@@ -112,7 +115,7 @@ export async function inviteMemberToCollective(
           invite_code,
           invited_by_user_id: currentUser.id,
         });
-      if (inviteError) {
+      if (inviteError !== null) {
         return {
           success: false,
           error: `Failed to create invite: ${inviteError.message}`,
@@ -125,21 +128,21 @@ export async function inviteMemberToCollective(
         .eq('id', collectiveId)
         .single();
       const siteUrl =
-        process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+        process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000';
       const inviteLink = `${siteUrl}/invite/${invite_code}`;
       await sendInviteEmail({
         to: email,
         inviteLink,
-        collectiveName: collectiveDetails?.name || 'a collective',
+        collectiveName: collectiveDetails?.name !== null && collectiveDetails?.name !== undefined ? collectiveDetails.name : 'a collective',
         role,
       });
       return { success: true };
     }
 
-    if (userLookupError) {
+    if (userLookupError !== null) {
       return {
         success: false,
-        error: `User lookup error: ${hasMessage(userLookupError) ? userLookupError.message : String(userLookupError)}`,
+        error: `User lookup error: ${hasMessage(userLookupError) ? userLookupError.message : 'Unknown error'}`,
       };
     }
 
@@ -156,11 +159,11 @@ export async function inviteMemberToCollective(
         .eq('member_id', invitedUser.id)
         .maybeSingle();
 
-    if (memberCheckError) {
+    if (memberCheckError !== null) {
       console.error('Error checking existing member:', memberCheckError);
       return { success: false, error: 'Database error checking membership.' };
     }
-    if (existingMember) {
+    if (existingMember !== null) {
       return {
         success: false,
         error: 'This user is already a member of the collective.',
@@ -177,7 +180,7 @@ export async function inviteMemberToCollective(
         role: role as Enums<'collective_member_role'>,
       });
 
-    if (insertError) {
+    if (insertError !== null) {
       console.error('Error inviting member:', insertError);
       return {
         success: false,
@@ -208,7 +211,7 @@ export async function changeMemberRole({
   const {
     data: { user: currentUser },
   } = await supabase.auth.getUser();
-  if (!currentUser) {
+  if (currentUser === null) {
     return { success: false, error: 'Unauthorized: You must be logged in.' };
   }
   // Only owner can change roles
@@ -217,7 +220,7 @@ export async function changeMemberRole({
     .select('owner_id')
     .eq('id', collectiveId)
     .single();
-  if (collectiveError || !collective) {
+  if (collectiveError !== null || collective === null) {
     return { success: false, error: 'Collective not found.' };
   }
   if (collective.owner_id !== currentUser.id) {
@@ -229,7 +232,7 @@ export async function changeMemberRole({
     .select('member_id, role')
     .eq('id', memberId)
     .single();
-  if (memberError || !member) {
+  if (memberError !== null || member === null) {
     return { success: false, error: 'Member not found.' };
   }
   if (member.member_id === currentUser.id && newRole !== 'owner') {
@@ -240,7 +243,7 @@ export async function changeMemberRole({
     .from('collective_members')
     .update({ role: newRole as Enums<'collective_member_role'> })
     .eq('id', memberId);
-  if (updateError) {
+  if (updateError !== null) {
     return {
       success: false,
       error: `Failed to update role: ${updateError.message}`,
@@ -263,7 +266,7 @@ export async function removeMemberFromCollective({
   const {
     data: { user: currentUser },
   } = await supabase.auth.getUser();
-  if (!currentUser) {
+  if (currentUser === null) {
     return { success: false, error: 'Unauthorized: You must be logged in.' };
   }
   // Only owner can remove
@@ -272,7 +275,7 @@ export async function removeMemberFromCollective({
     .select('owner_id')
     .eq('id', collectiveId)
     .single();
-  if (collectiveError || !collective) {
+  if (collectiveError !== null || collective === null) {
     return { success: false, error: 'Collective not found.' };
   }
   if (collective.owner_id !== currentUser.id) {
@@ -284,7 +287,7 @@ export async function removeMemberFromCollective({
     .select('member_id, role')
     .eq('id', memberId)
     .single();
-  if (memberError || !member) {
+  if (memberError !== null || member === null) {
     return { success: false, error: 'Member not found.' };
   }
   if (member.member_id === currentUser.id) {
@@ -295,7 +298,7 @@ export async function removeMemberFromCollective({
     .from('collective_members')
     .delete()
     .eq('id', memberId);
-  if (deleteError) {
+  if (deleteError !== null) {
     return {
       success: false,
       error: `Failed to remove member: ${deleteError.message}`,
@@ -318,7 +321,7 @@ export async function resendCollectiveInvite({
   const {
     data: { user: currentUser },
   } = await supabase.auth.getUser();
-  if (!currentUser) {
+  if (currentUser === null) {
     return { success: false, error: 'Unauthorized: You must be logged in.' };
   }
   // Only owner can resend
@@ -327,14 +330,14 @@ export async function resendCollectiveInvite({
     .select('owner_id')
     .eq('id', collectiveId)
     .single();
-  if (collectiveError || !collective) {
+  if (collectiveError !== null || collective === null) {
     return { success: false, error: 'Collective not found.' };
   }
   if (collective.owner_id !== currentUser.id) {
     return { success: false, error: 'Only the owner can resend invites.' };
   }
   // Regenerate code and update
-  const invite_code = randomBytes(16).toString('hex');
+  const invite_code = randomBytes(INVITE_CODE_BYTES).toString('hex');
   const { error: updateError } = await supabaseAdmin
     .from('collective_invites')
     .update({
@@ -345,7 +348,7 @@ export async function resendCollectiveInvite({
     .eq('id', inviteId)
     .eq('collective_id', collectiveId)
     .eq('status', 'pending');
-  if (updateError) {
+  if (updateError !== null) {
     return {
       success: false,
       error: `Failed to resend invite: ${updateError.message}`,
@@ -362,13 +365,13 @@ export async function resendCollectiveInvite({
     .select('name')
     .eq('id', collectiveId)
     .single();
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000';
   const inviteLink = `${siteUrl}/invite/${invite_code}`;
-  if (invite?.email && invite?.role) {
+  if (invite?.email !== null && invite?.email !== undefined && invite?.role !== null && invite?.role !== undefined) {
     await sendInviteEmail({
       to: invite.email,
       inviteLink,
-      collectiveName: collectiveDetails?.name || 'a collective',
+      collectiveName: collectiveDetails?.name !== null && collectiveDetails?.name !== undefined ? collectiveDetails.name : 'a collective',
       role: invite.role,
     });
   }
@@ -389,7 +392,7 @@ export async function cancelCollectiveInvite({
   const {
     data: { user: currentUser },
   } = await supabase.auth.getUser();
-  if (!currentUser) {
+  if (currentUser === null) {
     return { success: false, error: 'Unauthorized: You must be logged in.' };
   }
   // Only owner can cancel
@@ -398,7 +401,7 @@ export async function cancelCollectiveInvite({
     .select('owner_id')
     .eq('id', collectiveId)
     .single();
-  if (collectiveError || !collective) {
+  if (collectiveError !== null || collective === null) {
     return { success: false, error: 'Collective not found.' };
   }
   if (collective.owner_id !== currentUser.id) {
@@ -410,7 +413,7 @@ export async function cancelCollectiveInvite({
     .eq('id', inviteId)
     .eq('collective_id', collectiveId)
     .eq('status', 'pending');
-  if (updateError) {
+  if (updateError !== null) {
     return {
       success: false,
       error: `Failed to cancel invite: ${updateError.message}`,
@@ -431,7 +434,7 @@ export async function acceptCollectiveInvite({
   const {
     data: { user: currentUser },
   } = await supabase.auth.getUser();
-  if (!currentUser || !currentUser.email) {
+  if (currentUser === null || currentUser.email === null || currentUser.email === undefined) {
     return {
       success: false,
       error: 'Unauthorized: You must be logged in with a valid email.',
@@ -444,7 +447,7 @@ export async function acceptCollectiveInvite({
     .eq('invite_code', inviteCode)
     .eq('status', 'pending')
     .maybeSingle();
-  if (inviteError || !invite) {
+  if (inviteError !== null || invite === null) {
     return {
       success: false,
       error: 'Invite not found or already accepted/cancelled.',
@@ -463,7 +466,7 @@ export async function acceptCollectiveInvite({
     .eq('collective_id', invite.collective_id)
     .eq('member_id', currentUser.id)
     .maybeSingle();
-  if (existingMember) {
+  if (existingMember !== null) {
     // Mark invite as accepted anyway
     await supabaseAdmin
       .from('collective_invites')
@@ -483,7 +486,7 @@ export async function acceptCollectiveInvite({
       member_type: 'user',
       role: invite.role as Enums<'collective_member_role'>,
     });
-  if (addError) {
+  if (addError !== null) {
     return {
       success: false,
       error: `Failed to add you as a member: ${addError.message}`,

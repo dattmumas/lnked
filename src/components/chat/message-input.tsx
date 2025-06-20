@@ -35,7 +35,6 @@ const generateTempId = (): string => {
     return `temp-${Date.now()}-${crypto.randomUUID()}`;
   }
   // Fallback for environments without crypto.randomUUID (temp IDs only)
-  // eslint-disable-next-line security-node/detect-insecure-randomness
   return `temp-${Date.now()}-${Math.random().toString(FALLBACK_RADIX).substr(FALLBACK_START_INDEX, FALLBACK_LENGTH)}`;
 };
 const CONTENT_PREVIEW_LENGTH = 50;

@@ -1,12 +1,12 @@
 import Link from 'next/link';
 import { redirect, notFound } from 'next/navigation';
+import React from 'react';
 
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 
 import ManageMembersClientUI from './ManageMembersClientUI'; // New client component
 
 import type { Tables } from '@/lib/database.types';
-
 
 export type MemberWithDetails = Tables<'collective_members'> & {
   user: Pick<Tables<'users'>, 'id' | 'full_name'> | null; // Removed email
@@ -25,7 +25,7 @@ export default async function ManageCollectiveMembersPage({
   params,
 }: {
   params: Promise<{ collectiveId: string }>;
-}) {
+}): Promise<React.ReactElement> {
   const { collectiveId } = await params;
   const supabase = createServerSupabaseClient();
 
@@ -34,7 +34,7 @@ export default async function ManageCollectiveMembersPage({
     error: authError,
   } = await supabase.auth.getUser();
 
-  if (authError || !currentUser) {
+  if (authError !== null || currentUser === null) {
     redirect('/sign-in');
   }
 
@@ -44,7 +44,7 @@ export default async function ManageCollectiveMembersPage({
     .eq('id', collectiveId)
     .single();
 
-  if (collectiveError || !collective) {
+  if (collectiveError !== null || collective === null) {
     console.error(
       `Error fetching collective ${collectiveId} for member management:`,
       collectiveError?.message,
@@ -74,7 +74,7 @@ export default async function ManageCollectiveMembersPage({
     .eq('collective_id', collectiveId)
     .order('created_at', { ascending: true });
 
-  if (membersError) {
+  if (membersError !== null) {
     console.error(
       `Error fetching members for collective ${collectiveId}:`,
       membersError.message,
@@ -89,7 +89,7 @@ export default async function ManageCollectiveMembersPage({
     .eq('status', 'pending')
     .order('created_at', { ascending: true });
 
-  if (invitesError) {
+  if (invitesError !== null) {
     console.error(
       `Error fetching pending invites for collective ${collectiveId}:`,
       invitesError.message,
@@ -102,17 +102,24 @@ export default async function ManageCollectiveMembersPage({
         <h1 className="text-3xl font-bold">
           Manage Members for: {collective.name}
         </h1>
-        <Link
-          href="/dashboard"
-          className="text-sm text-accent hover:underline"
-        >
+        <Link href="/dashboard" className="text-sm text-accent hover:underline">
           &larr; Back to Dashboard
         </Link>
       </header>
       <ManageMembersClientUI
         collectiveId={collective.id}
-        initialMembers={(members as unknown as MemberWithDetails[]) || []}
-        pendingInvites={(pendingInvites as PendingInvite[]) || []}
+        initialMembers={
+          (members as unknown as MemberWithDetails[]) !== null &&
+          (members as unknown as MemberWithDetails[]) !== undefined
+            ? (members as unknown as MemberWithDetails[])
+            : []
+        }
+        pendingInvites={
+          (pendingInvites as PendingInvite[]) !== null &&
+          (pendingInvites as PendingInvite[]) !== undefined
+            ? (pendingInvites as PendingInvite[])
+            : []
+        }
         isOwner={currentUser.id === collective.owner_id}
       />
     </div>

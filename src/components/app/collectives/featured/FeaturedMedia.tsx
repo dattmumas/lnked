@@ -4,36 +4,36 @@ import { useQuery } from '@tanstack/react-query';
 import { Play, BookOpen, Headphones } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
+import React from 'react';
 
 import { Badge } from '@/components/ui/badge';
 import { useCollectiveData } from '@/hooks/collectives/useCollectiveData';
 import supabase from '@/lib/supabase/browser';
+
+// Constants
+const FEATURED_POSTS_LIMIT = 2;
+const RECENT_POSTS_LIMIT = 2;
 
 interface FeaturedMediaProps {
   collectiveSlug: string;
   className?: string;
 }
 
-interface FeaturedPost {
-  id: string;
-  title: string;
-  subtitle: string | null;
-  thumbnail_url: string | null;
-  post_type: 'text' | 'video';
-  author: string | null;
-  published_at: string | null;
-}
-
 export function FeaturedMedia({
   collectiveSlug,
   className = '',
-}: FeaturedMediaProps) {
+}: FeaturedMediaProps): React.ReactElement {
   const { data: collective } = useCollectiveData(collectiveSlug);
 
   const { data: featuredPosts, isLoading } = useQuery({
     queryKey: ['featured-posts', collective?.id],
     queryFn: async () => {
-      if (!collective?.id) return [];
+      if (
+        collective?.id === undefined ||
+        collective.id === null ||
+        collective.id.length === 0
+      )
+        return [];
 
       const client = supabase;
 
@@ -44,9 +44,13 @@ export function FeaturedMedia({
         .eq('owner_id', collective.id)
         .eq('owner_type', 'collective')
         .order('display_order', { ascending: true })
-        .limit(2);
+        .limit(FEATURED_POSTS_LIMIT);
 
-      if (!featuredData || featuredData.length === 0) {
+      if (
+        featuredData === undefined ||
+        featuredData === null ||
+        featuredData.length === 0
+      ) {
         // Fallback to recent posts if no featured posts
         const { data: recentPosts } = await client
           .from('posts')
@@ -56,10 +60,10 @@ export function FeaturedMedia({
           `,
           )
           .eq('collective_id', collective.id)
-          .not('published_at', 'is', null)
+          .not('published_at', 'is', undefined)
           .eq('is_public', true)
           .order('published_at', { ascending: false })
-          .limit(2);
+          .limit(RECENT_POSTS_LIMIT);
 
         return recentPosts || [];
       }
@@ -80,7 +84,7 @@ export function FeaturedMedia({
     enabled: Boolean(collective?.id),
   });
 
-  const getOverlayIcon = (postType: string) => {
+  const getOverlayIcon = (postType: string): React.ReactElement => {
     switch (postType) {
       case 'video':
         return <Play className="h-8 w-8" />;
@@ -91,7 +95,7 @@ export function FeaturedMedia({
     }
   };
 
-  const getPostTypeLabel = (postType: string) => {
+  const getPostTypeLabel = (postType: string): string => {
     switch (postType) {
       case 'video':
         return 'Video';
@@ -107,7 +111,7 @@ export function FeaturedMedia({
       <div className={`featured-media-container ${className}`}>
         <h2 className="text-xl font-semibold mb-4">Featured</h2>
         <div className="space-y-4">
-          {Array.from({ length: 2 }).map((_, i) => (
+          {Array.from({ length: FEATURED_POSTS_LIMIT }).map((_, i) => (
             <div key={i} className="featured-media-card animate-pulse">
               <div className="aspect-video bg-muted rounded-lg"></div>
               <div className="p-4 space-y-2">
@@ -121,7 +125,11 @@ export function FeaturedMedia({
     );
   }
 
-  if (!featuredPosts || featuredPosts.length === 0) {
+  if (
+    featuredPosts === undefined ||
+    featuredPosts === null ||
+    featuredPosts.length === 0
+  ) {
     return (
       <div className={`featured-media-container ${className}`}>
         <h2 className="text-xl font-semibold mb-4">Featured</h2>
@@ -146,7 +154,9 @@ export function FeaturedMedia({
             <div className="featured-media-card rounded-lg border bg-card shadow-sm overflow-hidden hover:shadow-md transition-shadow">
               {/* Thumbnail with overlay */}
               <div className="relative aspect-video bg-muted">
-                {post.thumbnail_url ? (
+                {post.thumbnail_url !== undefined &&
+                post.thumbnail_url !== null &&
+                post.thumbnail_url.length > 0 ? (
                   <Image
                     src={post.thumbnail_url}
                     alt={post.title}
@@ -180,19 +190,25 @@ export function FeaturedMedia({
                   {post.title}
                 </h3>
 
-                {post.subtitle && (
-                  <p className="text-sm text-muted-foreground mt-1 line-clamp-1">
-                    {post.subtitle}
-                  </p>
-                )}
+                {post.subtitle !== undefined &&
+                  post.subtitle !== null &&
+                  post.subtitle.length > 0 && (
+                    <p className="text-sm text-muted-foreground mt-1 line-clamp-1">
+                      {post.subtitle}
+                    </p>
+                  )}
 
                 <div className="flex items-center justify-between mt-3 text-xs text-muted-foreground">
-                  {post.author && <span>by {post.author}</span>}
-                  {post.published_at && (
-                    <span>
-                      {new Date(post.published_at).toLocaleDateString()}
-                    </span>
-                  )}
+                  {post.author !== undefined &&
+                    post.author !== null &&
+                    post.author.length > 0 && <span>by {post.author}</span>}
+                  {post.published_at !== undefined &&
+                    post.published_at !== null &&
+                    post.published_at.length > 0 && (
+                      <span>
+                        {new Date(post.published_at).toLocaleDateString()}
+                      </span>
+                    )}
                 </div>
               </div>
             </div>

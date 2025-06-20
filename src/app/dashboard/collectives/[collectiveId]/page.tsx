@@ -1,6 +1,7 @@
 import { Info, Plus, Share2, Users } from 'lucide-react';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
+import React from 'react';
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -13,20 +14,18 @@ import {
 } from '@/components/ui/card';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 
-
-
 export default async function CollectiveDashboardPage({
   params,
 }: {
   params: Promise<{ collectiveId: string }>;
-}) {
+}): Promise<React.ReactElement> {
   const { collectiveId } = await params;
   const supabase = createServerSupabaseClient();
   const {
     data: { user: currentUser },
     error: authError,
   } = await supabase.auth.getUser();
-  if (authError || !currentUser) {
+  if (authError !== null || currentUser === null) {
     redirect('/sign-in');
   }
   const { data: collective, error: collectiveError } = await supabase
@@ -34,7 +33,7 @@ export default async function CollectiveDashboardPage({
     .select('id, name, owner_id, description')
     .eq('id', collectiveId)
     .single();
-  if (collectiveError || !collective) {
+  if (collectiveError !== null || collective === null) {
     redirect('/dashboard/collectives');
   }
   const isOwner = currentUser.id === collective.owner_id;
@@ -49,18 +48,22 @@ export default async function CollectiveDashboardPage({
 
   const userRole = membership?.role;
   const canPost =
-    userRole && ['owner', 'admin', 'editor', 'author'].includes(userRole);
+    userRole !== null &&
+    userRole !== undefined &&
+    ['owner', 'admin', 'editor', 'author'].includes(userRole);
 
   return (
     <div className="container mx-auto max-w-4xl p-6 space-y-6">
       {/* Header Section */}
       <div className="space-y-2">
         <h1 className="text-3xl font-bold">{collective.name}</h1>
-        {collective.description && (
-          <p className="text-muted-foreground text-lg">
-            {collective.description}
-          </p>
-        )}
+        {collective.description !== null &&
+          collective.description !== undefined &&
+          collective.description.trim().length > 0 && (
+            <p className="text-muted-foreground text-lg">
+              {collective.description}
+            </p>
+          )}
       </div>
       {/* Post Creation Guidance - New Individual-Centric Approach */}
       <Card>
@@ -75,7 +78,7 @@ export default async function CollectiveDashboardPage({
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {canPost ? (
+          {canPost === true ? (
             <>
               <Alert>
                 <Info className="h-4 w-4" />
@@ -100,8 +103,8 @@ export default async function CollectiveDashboardPage({
               </div>
 
               <div className="text-sm text-muted-foreground">
-                💡 <strong>Tip:</strong> When creating your post, you'll be able
-                to share it with {collective.name}
+                💡 <strong>Tip:</strong> When creating your post, you&apos;ll be
+                able to share it with {collective.name}
                 {userRole === 'owner' || userRole === 'admin'
                   ? ' and any other collectives you have access to'
                   : ''}
@@ -115,7 +118,7 @@ export default async function CollectiveDashboardPage({
               <AlertDescription>
                 You need author, editor, admin, or owner permissions to share
                 posts with this collective. Contact the collective
-                administrators if you'd like to contribute content.
+                administrators if you&apos;d like to contribute content.
               </AlertDescription>
             </Alert>
           )}
@@ -143,7 +146,7 @@ export default async function CollectiveDashboardPage({
               </Link>
             </Button>
 
-            {isOwner && (
+            {isOwner === true && (
               <>
                 <Button variant="outline" asChild>
                   <Link
@@ -173,13 +176,13 @@ export default async function CollectiveDashboardPage({
         </CardContent>
       </Card>
       {/* Role Information */}
-      {userRole && (
+      {userRole !== null && userRole !== undefined && (
         <Alert>
           <Info className="h-4 w-4" />
           <AlertTitle>Your Role</AlertTitle>
           <AlertDescription>
             You are a <strong>{userRole}</strong> in this collective.
-            {canPost &&
+            {canPost === true &&
               ' You can create posts and share them with this collective.'}
           </AlertDescription>
         </Alert>

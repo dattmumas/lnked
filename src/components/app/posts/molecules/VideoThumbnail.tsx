@@ -1,9 +1,14 @@
 'use client';
 
 import { Play, Loader2 } from 'lucide-react';
-import { useState } from 'react';
+import Image from 'next/image';
+import React, { useState, useCallback } from 'react';
 
 import { cn } from '@/lib/utils';
+
+// Constants for magic numbers
+const SECONDS_PER_MINUTE = 60;
+const PADDING_START = 2;
 
 interface VideoThumbnailProps {
   thumbnailUrl?: string | null;
@@ -23,24 +28,52 @@ export default function VideoThumbnail({
   className,
   onClick,
   aspectRatio = 'video',
-}: VideoThumbnailProps) {
+}: VideoThumbnailProps): React.ReactElement {
   const [imageError, setImageError] = useState(false);
   const [imageLoading, setImageLoading] = useState(true);
 
   // Format duration from seconds to MM:SS
   const formatDuration = (seconds: number): string => {
-    const minutes = Math.floor(seconds / 60);
-    const remainingSeconds = seconds % 60;
-    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+    const minutes = Math.floor(seconds / SECONDS_PER_MINUTE);
+    const remainingSeconds = seconds % SECONDS_PER_MINUTE;
+    return `${minutes}:${remainingSeconds.toString().padStart(PADDING_START, '0')}`;
   };
+
+  const handleImageLoad = useCallback((): void => {
+    setImageLoading(false);
+  }, []);
+
+  const handleImageError = useCallback((): void => {
+    setImageError(true);
+    setImageLoading(false);
+  }, []);
+
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent): void => {
+      if ((e.key === 'Enter' || e.key === ' ') && onClick) {
+        e.preventDefault();
+        onClick();
+      }
+    },
+    [onClick],
+  );
 
   // Generate Mux thumbnail URL if no thumbnail provided but playbackId exists
   const getThumbnailUrl = (): string => {
-    if (thumbnailUrl && !imageError) {
+    if (
+      thumbnailUrl !== undefined &&
+      thumbnailUrl !== null &&
+      thumbnailUrl.length > 0 &&
+      !imageError
+    ) {
       return thumbnailUrl;
     }
 
-    if (playbackId) {
+    if (
+      playbackId !== undefined &&
+      playbackId !== null &&
+      playbackId.length > 0
+    ) {
       // Use Mux thumbnail service
       return `https://image.mux.com/${playbackId}/thumbnail.jpg?width=640&height=360&fit_mode=smartcrop`;
     }
@@ -65,21 +98,26 @@ export default function VideoThumbnail({
         className,
       )}
       onClick={onClick}
+      onKeyDown={handleKeyDown}
+      role="button"
+      tabIndex={0}
+      aria-label="Play video"
     >
       {/* Thumbnail Image */}
-      {thumbnailSrc ? (
-        <img
+      {thumbnailSrc !== undefined &&
+      thumbnailSrc !== null &&
+      thumbnailSrc.length > 0 ? (
+        <Image
           src={thumbnailSrc}
           alt="Video thumbnail"
+          width={640}
+          height={360}
           className={cn(
             'w-full h-full object-cover transition-transform duration-200 group-hover:scale-105',
             imageLoading && 'opacity-0',
           )}
-          onLoad={() => setImageLoading(false)}
-          onError={() => {
-            setImageError(true);
-            setImageLoading(false);
-          }}
+          onLoad={handleImageLoad}
+          onError={handleImageError}
         />
       ) : (
         <div className="w-full h-full bg-gradient-to-br from-muted to-muted/60 flex items-center justify-center">
@@ -109,11 +147,14 @@ export default function VideoThumbnail({
       )}
 
       {/* Duration Badge */}
-      {duration && !isProcessing && (
-        <div className="absolute bottom-2 right-2 bg-black/80 text-white text-xs px-2 py-1 rounded backdrop-blur-sm">
-          {formatDuration(duration)}
-        </div>
-      )}
+      {duration !== undefined &&
+        duration !== null &&
+        duration > 0 &&
+        !isProcessing && (
+          <div className="absolute bottom-2 right-2 bg-black/80 text-white text-xs px-2 py-1 rounded backdrop-blur-sm">
+            {formatDuration(duration)}
+          </div>
+        )}
 
       {/* Processing Badge */}
       {isProcessing && (

@@ -1,10 +1,12 @@
-"use client";
+'use client';
+
+import React, { useCallback } from 'react';
 
 const tabs = [
-  { id: "all", label: "All" },
-  { id: "articles", label: "Articles" },
-  { id: "videos", label: "Videos" },
-  { id: "audio", label: "Audio" },
+  { id: 'all', label: 'All' },
+  { id: 'articles', label: 'Articles' },
+  { id: 'videos', label: 'Videos' },
+  { id: 'audio', label: 'Audio' },
 ];
 
 interface ContentFilterTabsProps {
@@ -15,7 +17,13 @@ interface ContentFilterTabsProps {
 export default function ContentFilterTabs({
   active,
   onChange,
-}: ContentFilterTabsProps) {
+}: ContentFilterTabsProps): React.ReactElement {
+  const handleTabClick = useCallback(
+    (tabId: string) => (): void => {
+      onChange(tabId);
+    },
+    [onChange],
+  );
   return (
     <div className="flex space-x-2 border-b border-border mb-4">
       {tabs.map((tab) => (
@@ -23,10 +31,10 @@ export default function ContentFilterTabs({
           key={tab.id}
           className={`px-3 pb-2 text-sm font-medium transition-colors border-b-2${
             active === tab.id
-              ? " border-accent text-accent"
-              : " border-transparent text-muted-foreground hover:text-foreground"
+              ? ' border-accent text-accent'
+              : ' border-transparent text-muted-foreground hover:text-foreground'
           }`}
-          onClick={() => onChange(tab.id)}
+          onClick={handleTabClick(tab.id)}
         >
           {tab.label}
         </button>

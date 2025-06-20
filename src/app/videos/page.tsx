@@ -1,9 +1,10 @@
 import { redirect } from 'next/navigation';
+import React from 'react';
 
 import VideoManagementDashboard from '@/components/app/video/manage/VideoManagementDashboard';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 
-export default async function VideosPage() {
+export default async function VideosPage(): Promise<React.ReactElement> {
   const supabase = createServerSupabaseClient();
 
   // Check authentication

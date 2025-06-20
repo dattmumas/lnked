@@ -4,10 +4,14 @@ import { createServerSupabaseClient } from '@/lib/supabase/server';
 
 import type { TablesInsert, Enums } from '@/types/database.types';
 
+interface ReactionRequestBody {
+  reaction_type?: unknown;
+}
+
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ commentId: string }> },
-) {
+): Promise<NextResponse> {
   const { commentId } = await params;
   const supabase = createServerSupabaseClient();
 
@@ -23,9 +27,9 @@ export async function POST(
     );
   }
 
-  let body: { reaction_type?: Enums<'reaction_type'> };
+  let body: ReactionRequestBody;
   try {
-    body = await req.json();
+    body = await req.json() as ReactionRequestBody;
   } catch {
     return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
   }
@@ -70,20 +74,20 @@ export async function POST(
       const payload: TablesInsert<'comment_reactions'> = {
         comment_id: commentId,
         user_id: user.id,
-        reaction_type,
+        reaction_type: reaction_type as Enums<'reaction_type'>,
       };
       await supabase.from('comment_reactions').insert(payload);
-      userReaction = reaction_type;
+      userReaction = reaction_type as Enums<'reaction_type'>;
     }
   } else {
     // No reaction, insert new
     const payload2: TablesInsert<'comment_reactions'> = {
       comment_id: commentId,
       user_id: user.id,
-      reaction_type,
+      reaction_type: reaction_type as Enums<'reaction_type'>,
     };
     await supabase.from('comment_reactions').insert(payload2);
-    userReaction = reaction_type;
+    userReaction = reaction_type as Enums<'reaction_type'>;
   }
 
   // Get new like/dislike counts

@@ -2,7 +2,7 @@
 
 import { UserPlus, UserMinus, Loader2 } from 'lucide-react';
 import { useRouter, usePathname } from 'next/navigation';
-import { useState, useTransition, useEffect } from 'react';
+import React, { useState, useTransition, useEffect, useCallback } from 'react';
 
 import {
   followCollective,
@@ -16,7 +16,7 @@ interface FollowCollectiveButtonProps {
   targetCollectiveId: string;
   targetCollectiveName: string;
   initialIsFollowing: boolean;
-  currentUserId?: string | null;
+  currentUserId?: string | undefined;
 }
 
 export default function FollowCollectiveButton({
@@ -24,16 +24,17 @@ export default function FollowCollectiveButton({
   targetCollectiveName,
   initialIsFollowing,
   currentUserId: initialCurrentUserId,
-}: FollowCollectiveButtonProps) {
+}: FollowCollectiveButtonProps): React.ReactElement | undefined {
   const router = useRouter();
   const pathname = usePathname();
   const [isPending, startTransition] = useTransition();
   const [isFollowing, setIsFollowing] = useState(initialIsFollowing);
-  const [isLoadingCurrentUser, setIsLoadingCurrentUser] =
-    useState(!initialCurrentUserId);
-  const [actualCurrentUserId, setActualCurrentUserId] = useState<string | null>(
-    initialCurrentUserId || null,
+  const [isLoadingCurrentUser, setIsLoadingCurrentUser] = useState(
+    initialCurrentUserId === undefined || initialCurrentUserId === null,
   );
+  const [actualCurrentUserId, setActualCurrentUserId] = useState<
+    string | undefined
+  >(initialCurrentUserId ?? undefined);
   const [error, setError] = useState<string | undefined>(undefined);
   const supabase = createSupabaseBrowserClient();
 
@@ -42,22 +43,26 @@ export default function FollowCollectiveButton({
   }, [initialIsFollowing]);
 
   useEffect((): void => {
-    if (!initialCurrentUserId) {
-      const fetchUser = async () => {
+    if (initialCurrentUserId === undefined || initialCurrentUserId === null) {
+      const fetchUser = async (): Promise<void> => {
         const {
           data: { user },
         } = await supabase.auth.getUser();
-        setActualCurrentUserId(user?.id || null);
+        setActualCurrentUserId(user?.id ?? undefined);
         setIsLoadingCurrentUser(false);
       };
-      fetchUser();
+      void fetchUser();
     } else {
       setIsLoadingCurrentUser(false);
     }
   }, [initialCurrentUserId, supabase]);
 
-  const handleFollowToggle = async () => {
-    if (!actualCurrentUserId) {
+  const handleFollowToggle = useCallback((): void => {
+    if (
+      actualCurrentUserId === undefined ||
+      actualCurrentUserId === null ||
+      actualCurrentUserId.length === 0
+    ) {
       void router.push(`/sign-in?redirect=${pathname}`);
       return;
     }
@@ -72,12 +77,25 @@ export default function FollowCollectiveButton({
       const result = await action(targetCollectiveId);
       if (!result.success) {
         setIsFollowing(previousIsFollowing);
-        setError(result.error || 'Action failed. Please try again.');
+        setError(
+          result.error !== undefined &&
+            result.error !== null &&
+            result.error.length > 0
+            ? result.error
+            : 'Action failed. Please try again.',
+        );
       } else {
         setError(undefined);
       }
     });
-  };
+  }, [
+    actualCurrentUserId,
+    router,
+    pathname,
+    isFollowing,
+    startTransition,
+    targetCollectiveId,
+  ]);
 
   if (isLoadingCurrentUser) {
     return (
@@ -88,20 +106,24 @@ export default function FollowCollectiveButton({
     );
   }
 
-  if (!actualCurrentUserId) {
-    return null;
+  if (
+    actualCurrentUserId === undefined ||
+    actualCurrentUserId === null ||
+    actualCurrentUserId.length === 0
+  ) {
+    return undefined;
   }
 
   return (
     <div className="space-y-2">
-      {error && (
+      {error !== undefined && error !== null && error.length > 0 && (
         <Alert variant="destructive">
           <AlertTitle>Error</AlertTitle>
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
       <Button
-        onClick={() => void handleFollowToggle()}
+        onClick={handleFollowToggle}
         disabled={isPending || isLoadingCurrentUser}
         variant={isFollowing ? 'outline' : 'default'}
         size="sm"

@@ -1,10 +1,11 @@
 import { redirect } from 'next/navigation';
+import React from 'react';
 
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 
 import HomePageClient from './HomePageClient';
 
-export default async function HomePage() {
+export default async function HomePage(): Promise<React.ReactElement> {
   // Server-side authentication check
   const supabase = createServerSupabaseClient();
   const {

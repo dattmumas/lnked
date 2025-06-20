@@ -1,19 +1,17 @@
+import clsx from 'clsx';
+import { Source_Serif_4, Inter } from 'next/font/google';
+import { ThemeProvider } from 'next-themes';
+import React from 'react';
+
+import GlobalSidebar from '@/components/app/nav/GlobalSidebar';
+import ModernNavbar from '@/components/ModernNavbar';
+import { QueryProvider } from '@/components/providers/query-provider';
+import { ToastContainer } from '@/components/ui/toast';
+import { createServerSupabaseClient } from '@/lib/supabase/server';
+
 import type { Metadata } from 'next';
 
 import './globals.css';
-import { ThemeProvider } from 'next-themes';
-
-import ModernNavbar from '@/components/ModernNavbar';
-import GlobalSidebar from '@/components/app/nav/GlobalSidebar';
-import { createServerSupabaseClient } from '@/lib/supabase/server';
-import { ContrastEnhancer } from '@/components/ContrastEnhancer';
-
-import { Source_Serif_4, Inter } from 'next/font/google';
-
-import { QueryProvider } from '@/components/providers/query-provider';
-import { ToastContainer } from '@/components/ui/toast';
-
-import clsx from 'clsx';
 
 const sourceSerif = Source_Serif_4({
   subsets: ['latin'],
@@ -38,7 +36,7 @@ export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
-}>) {
+}>): Promise<React.ReactElement> {
   const supabase = createServerSupabaseClient();
 
   // Get authentication state
@@ -48,11 +46,13 @@ export default async function RootLayout({
   } = await supabase.auth.getUser();
 
   // Only proceed with profile fetch if user exists and no auth error
-  let profile: {
-    username: string | null;
-    full_name: string | null;
-    avatar_url: string | null;
-  } | null = null;
+  let profile:
+    | {
+        username: string | null;
+        full_name: string | null;
+        avatar_url: string | null;
+      }
+    | undefined = undefined;
 
   if (user && !authError) {
     const { data: profileData } = await supabase
@@ -60,7 +60,7 @@ export default async function RootLayout({
       .select('username, full_name, avatar_url')
       .eq('id', user.id)
       .single();
-    profile = profileData;
+    profile = profileData ?? undefined;
   }
 
   // Determine if we should show authenticated layout
@@ -78,10 +78,13 @@ export default async function RootLayout({
             enableSystem
             disableTransitionOnChange
           >
-            <ContrastEnhancer />
             <div className="flex h-screen flex-col">
               <header className="shrink-0 sticky top-0 z-50 bg-background/80 backdrop-blur-md border-b border-border/50">
-                <ModernNavbar initialUser={user} initialProfile={profile} />
+                <ModernNavbar initialUser={user ?? undefined} initialProfile={profile ? {
+                  username: profile.username ?? undefined,
+                  full_name: profile.full_name ?? undefined,
+                  avatar_url: profile.avatar_url ?? undefined
+                } : undefined} />
               </header>
 
               {/* Layout body */}

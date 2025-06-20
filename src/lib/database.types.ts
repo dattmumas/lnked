@@ -51,6 +51,71 @@ export type Database = {
         }
         Relationships: []
       }
+      api_cache: {
+        Row: {
+          cache_key: string
+          created_at: string
+          data: Json
+        }
+        Insert: {
+          cache_key: string
+          created_at?: string
+          data: Json
+        }
+        Update: {
+          cache_key?: string
+          created_at?: string
+          data?: Json
+        }
+        Relationships: []
+      }
+      checkout_sessions: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          id: string
+          status: string
+          stripe_session_id: string
+          stripe_subscription_id: string | null
+          target_entity_id: string
+          target_entity_type: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          status?: string
+          stripe_session_id: string
+          stripe_subscription_id?: string | null
+          target_entity_id: string
+          target_entity_type: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          status?: string
+          stripe_session_id?: string
+          stripe_subscription_id?: string | null
+          target_entity_id?: string
+          target_entity_type?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "checkout_sessions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       chain_bookmarks: {
         Row: {
           chain_id: string
@@ -2479,6 +2544,12 @@ export type Database = {
       vector_typmod_in: {
         Args: { "": unknown[] }
         Returns: number
+      }
+      check_collective_subscription_permission: {
+        Args: { p_user_id: string; p_collective_id: string }
+        Returns: {
+          has_permission: boolean
+        }[]
       }
     }
     Enums: {

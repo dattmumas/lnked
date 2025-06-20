@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import Image from 'next/image';
+import React, { useState, useCallback } from 'react';
 
 import { useProfileContext } from '@/lib/hooks/profile';
 
@@ -18,7 +19,9 @@ import type {
  * - Responsive transformation to horizontal swipeable feed on tablet/mobile
  * - Real-time activity updates
  */
-export function SocialSidebar({ className = '' }: SocialSidebarProps) {
+export function SocialSidebar({
+  className = '',
+}: SocialSidebarProps): React.ReactElement {
   const [activeTab, setActiveTab] = useState<SocialFeedType>('activity');
 
   return (
@@ -60,12 +63,20 @@ function SocialTabs({
   activeTab: SocialFeedType;
   onTabChange: (tab: SocialFeedType) => void;
   className?: string;
-}) {
+}): React.ReactElement {
   const tabs: { key: SocialFeedType; label: string; count?: number }[] = [
     { key: 'activity', label: 'Activity' },
     { key: 'likes', label: 'Likes' },
     { key: 'following', label: 'Following' },
   ];
+
+  // Tab click handler
+  const handleTabClick = useCallback(
+    (tabKey: SocialFeedType) => (): void => {
+      onTabChange(tabKey);
+    },
+    [onTabChange],
+  );
 
   return (
     <nav
@@ -87,7 +98,7 @@ function SocialTabs({
       {tabs.map((tab) => (
         <button
           key={tab.key}
-          onClick={() => onTabChange(tab.key)}
+          onClick={handleTabClick(tab.key)}
           className={`
             tab-button
             px-3 
@@ -119,7 +130,7 @@ function SocialTabs({
 /**
  * Activity Feed Component - Recent user activity
  */
-function ActivityFeed() {
+function ActivityFeed(): React.ReactElement {
   const { profile } = useProfileContext();
 
   // Mock activity data for now
@@ -127,25 +138,33 @@ function ActivityFeed() {
     {
       id: '1',
       type: 'post_published',
-      actor: { username: profile.username, avatarUrl: profile.avatarUrl },
+      actor: {
+        username: profile.username,
+        avatarUrl: profile.avatarUrl ?? undefined,
+      },
       content: 'Published a new post: "Building Better UIs"',
       timestamp: '2 hours ago',
     },
     {
       id: '2',
       type: 'user_followed',
-      actor: { username: 'john_doe', avatarUrl: null },
+      actor: { username: 'john_doe', avatarUrl: undefined },
       content: 'Followed you',
       timestamp: '1 day ago',
     },
     {
       id: '3',
       type: 'post_liked',
-      actor: { username: 'jane_smith', avatarUrl: null },
+      actor: { username: 'jane_smith', avatarUrl: undefined },
       content: 'Liked your post "Design Systems"',
       timestamp: '2 days ago',
     },
   ];
+
+  // Load more activity handler
+  const handleLoadMoreActivity = useCallback((): void => {
+    console.warn('Load more activity');
+  }, []);
 
   return (
     <div className="activity-feed space-y-3">
@@ -162,7 +181,7 @@ function ActivityFeed() {
           ))}
 
           {/* Load More Button */}
-          <LoadMoreButton onClick={() => console.info('Load more activity')} />
+          <LoadMoreButton onClick={handleLoadMoreActivity} />
         </div>
       )}
     </div>
@@ -172,7 +191,7 @@ function ActivityFeed() {
 /**
  * Likes Feed Component - Posts liked by user
  */
-function LikesFeed() {
+function LikesFeed(): React.ReactElement {
   return (
     <div className="likes-feed space-y-3">
       <EmptyFeedState
@@ -187,7 +206,8 @@ function LikesFeed() {
 /**
  * Following Feed Component - Users being followed
  */
-function FollowingFeed() {
+function FollowingFeed(): React.ReactElement {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { profile } = useProfileContext();
 
   // Mock following data
@@ -196,7 +216,7 @@ function FollowingFeed() {
       id: '1',
       username: 'alice_dev',
       fullName: 'Alice Johnson',
-      avatarUrl: null,
+      avatarUrl: undefined,
       bio: 'Frontend developer passionate about React and TypeScript',
       followedAt: '2024-01-15',
     },
@@ -204,11 +224,16 @@ function FollowingFeed() {
       id: '2',
       username: 'bob_designer',
       fullName: 'Bob Smith',
-      avatarUrl: null,
+      avatarUrl: undefined,
       bio: 'UI/UX Designer creating beautiful digital experiences',
       followedAt: '2024-01-10',
     },
   ];
+
+  // Load more following handler
+  const handleLoadMoreFollowing = useCallback((): void => {
+    console.warn('Load more following');
+  }, []);
 
   return (
     <div className="following-feed space-y-3">
@@ -224,7 +249,7 @@ function FollowingFeed() {
             <UserConnectionItem key={user.id} user={user} />
           ))}
 
-          <LoadMoreButton onClick={() => console.info('Load more following')} />
+          <LoadMoreButton onClick={handleLoadMoreFollowing} />
         </div>
       )}
     </div>
@@ -240,20 +265,24 @@ function ActivityItem({
   activity: {
     id: string;
     type: string;
-    actor: { username: string; avatarUrl: string | null };
+    actor: { username: string; avatarUrl: string | undefined };
     content: string;
     timestamp: string;
   };
-}) {
+}): React.ReactElement {
   return (
     <div className="activity-item flex gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors">
       {/* Avatar */}
       <div className="avatar flex-shrink-0">
         <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
-          {activity.actor.avatarUrl ? (
-            <img
+          {activity.actor.avatarUrl !== undefined &&
+          activity.actor.avatarUrl !== null &&
+          activity.actor.avatarUrl.length > 0 ? (
+            <Image
               src={activity.actor.avatarUrl}
               alt={activity.actor.username}
+              width={40}
+              height={40}
               className="w-full h-full rounded-full object-cover"
             />
           ) : (
@@ -291,21 +320,25 @@ function UserConnectionItem({
   user: {
     id: string;
     username: string;
-    fullName: string | null;
-    avatarUrl: string | null;
-    bio: string | null;
+    fullName: string | undefined;
+    avatarUrl: string | undefined;
+    bio: string | undefined;
     followedAt: string;
   };
-}) {
+}): React.ReactElement {
   return (
     <div className="user-connection-item flex gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors">
       {/* Avatar */}
       <div className="avatar flex-shrink-0">
         <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
-          {user.avatarUrl ? (
-            <img
+          {user.avatarUrl !== undefined &&
+          user.avatarUrl !== null &&
+          user.avatarUrl.length > 0 ? (
+            <Image
               src={user.avatarUrl}
               alt={user.username}
+              width={40}
+              height={40}
               className="w-full h-full rounded-full object-cover"
             />
           ) : (
@@ -320,13 +353,17 @@ function UserConnectionItem({
       <div className="user-info flex-1 min-w-0">
         <div className="identity">
           <h4 className="name font-medium text-sm text-foreground">
-            {user.fullName || user.username}
+            {user.fullName !== undefined &&
+            user.fullName !== null &&
+            user.fullName.length > 0
+              ? user.fullName
+              : user.username}
           </h4>
           <p className="handle text-xs text-muted-foreground">
             @{user.username}
           </p>
         </div>
-        {user.bio && (
+        {user.bio !== undefined && user.bio !== null && user.bio.length > 0 && (
           <p className="bio text-xs text-muted-foreground mt-1 line-clamp-2">
             {user.bio}
           </p>
@@ -366,7 +403,7 @@ function EmptyFeedState({
   icon: string;
   title: string;
   description: string;
-}) {
+}): React.ReactElement {
   return (
     <div className="empty-feed-state text-center py-8 space-y-3">
       <div className="icon text-4xl">{icon}</div>
@@ -389,7 +426,7 @@ function LoadMoreButton({
 }: {
   onClick: () => void;
   loading?: boolean;
-}) {
+}): React.ReactElement {
   return (
     <button
       onClick={onClick}

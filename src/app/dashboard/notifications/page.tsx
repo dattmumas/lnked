@@ -1,13 +1,13 @@
 import { Bell } from 'lucide-react';
 import { redirect } from 'next/navigation';
-import { Suspense } from 'react';
+import React, { Suspense } from 'react';
 
 import { NotificationList } from '@/components/notifications/NotificationList';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { NotificationService } from '@/lib/notifications/service';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 
-async function NotificationsContent() {
+async function NotificationsContent(): Promise<React.ReactElement> {
   const supabase = createServerSupabaseClient();
   const {
     data: { user },
@@ -36,7 +36,7 @@ async function NotificationsContent() {
   );
 }
 
-function NotificationsLoading() {
+function NotificationsLoading(): React.ReactElement {
   return (
     <Card className="h-[calc(100vh-12rem)]">
       <CardHeader>
@@ -67,7 +67,7 @@ function NotificationsLoading() {
   );
 }
 
-export default function NotificationsPage() {
+export default function NotificationsPage(): React.ReactElement {
   return (
     <div className="container mx-auto py-6 space-y-6">
       <div>

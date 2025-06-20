@@ -1,14 +1,16 @@
 'use client';
 
-import { useEffect } from 'react';
+import React, { useEffect } from 'react';
 
-export function ContrastEnhancer() {
-  useEffect(() => {
+export function ContrastEnhancer(): React.ReactElement | undefined {
+  useEffect((): (() => void) => {
     // Create and inject high-priority styles
     const styleId = 'contrast-enhancer-styles';
-    let styleElement = document.getElementById(styleId) as HTMLStyleElement;
+    let styleElement = document.getElementById(
+      styleId,
+    ) as HTMLStyleElement | null;
 
-    if (!styleElement) {
+    if (styleElement === null || styleElement === undefined) {
       styleElement = document.createElement('style');
       styleElement.id = styleId;
       document.head.appendChild(styleElement);
@@ -81,9 +83,9 @@ export function ContrastEnhancer() {
     `;
 
     // Also apply inline styles to elements that might be dynamically created
-    const observer = new MutationObserver(() => {
+    const observer = new MutationObserver((): void => {
       const mutedElements = document.querySelectorAll('.text-muted-foreground');
-      mutedElements.forEach((el) => {
+      mutedElements.forEach((el): void => {
         const isDark = document.documentElement.classList.contains('dark');
         const opacity = isDark ? '0.65' : '0.7';
         (el as HTMLElement).style.setProperty(
@@ -99,10 +101,10 @@ export function ContrastEnhancer() {
       subtree: true,
     });
 
-    return () => {
+    return (): void => {
       observer.disconnect();
     };
   }, []);
 
-  return null;
+  return undefined;
 }

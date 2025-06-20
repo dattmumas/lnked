@@ -141,7 +141,7 @@ export async function toggleCommentReaction(
     ]);
 
     // Revalidate relevant paths
-    if (postSlug) {
+    if (postSlug !== null && postSlug !== undefined) {
       revalidatePath(`/posts/${postSlug}`);
     }
     // Could also revalidate other paths if needed (e.g., user profiles, feeds)

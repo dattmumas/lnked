@@ -1,4 +1,10 @@
-export default function LoadMoreButton({ nextCursor }: { nextCursor: string }) {
+import React from 'react';
+
+export default function LoadMoreButton({
+  nextCursor,
+}: {
+  nextCursor: string;
+}): React.ReactElement {
   return (
     <a
       href={`/discover?cursor=${encodeURIComponent(nextCursor)}`}

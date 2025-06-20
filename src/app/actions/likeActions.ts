@@ -82,7 +82,7 @@ export async function togglePostLike(
   }
 
   // Revalidation logic
-  if (collectiveSlug) {
+  if (collectiveSlug !== null && collectiveSlug !== undefined) {
     revalidatePath(`/collectives/${collectiveSlug}/${postId}`);
     revalidatePath(`/collectives/${collectiveSlug}`);
   } else {

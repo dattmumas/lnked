@@ -5,7 +5,7 @@ export const metadata: Metadata = {
   description: 'Terms of Service for Lnked platform',
 };
 
-export default function TermsPage() {
+export default function TermsPage(): React.JSX.Element {
   return (
     <div className="container mx-auto px-4 py-8 max-w-4xl">
       <div className="prose prose-gray dark:prose-invert max-w-none">

@@ -1,42 +1,271 @@
 import { NextResponse } from 'next/server';
+import { ZodError } from 'zod';
 
+import { HttpStatusCode, WEBHOOK_CONSTANTS } from '@/lib/constants/errors';
+import {
+  checkoutSessionMetadataSchema,
+  subscriptionMetadataSchema,
+  parseStripeSignature,
+  validateWebhookTimestamp,
+  getStripeSignatureHeader,
+  type CheckoutSessionMetadata,
+  type SubscriptionMetadata,
+  type SubscriptionStatus,
+} from '@/lib/schemas/webhook-validation';
 import { getStripe } from '@/lib/stripe';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
+import { webhookLogger, createWebhookTimer } from '@/lib/utils/webhook-logger';
 
-import type { Database } from '@/lib/database.types';
 import type Stripe from 'stripe';
 
 const relevantEvents = new Set([
   'checkout.session.completed',
   'customer.subscription.created',
-  'customer.subscription.updated',
+  'customer.subscription.updated', 
   'customer.subscription.deleted',
   'account.updated',
 ]);
 
 export const runtime = 'nodejs';
 
-export async function POST(req: Request) {
-  const stripe = getStripe();
+interface SubscriptionUpdateData {
+  id: string;
+  user_id: string;
+  status: SubscriptionStatus;
+  stripe_price_id: string;
+  target_entity_type: string;
+  target_entity_id: string;
+  quantity: number | null | undefined;
+  cancel_at_period_end: boolean;
+  created: string;
+  current_period_start: string;
+  current_period_end: string;
+  ended_at: string | null;
+  cancel_at: string | null;
+  canceled_at: string | null;
+  trial_start: string | null;
+  trial_end: string | null;
+  metadata: Record<string, unknown> | null;
+  updated_at: string;
+}
 
+interface AccountUpdateData {
+  charges_enabled: boolean;
+  payouts_enabled: boolean;
+  details_submitted: boolean;
+  requirements: Record<string, unknown> | undefined;
+  type: string;
+  email: string;
+}
+
+/**
+ * Enhanced webhook event processor with idempotency and security
+ */
+async function processWebhookEvent(
+  eventId: string,
+  eventType: string,
+  timer: ReturnType<typeof createWebhookTimer>
+): Promise<{ processed: boolean; fromCache: boolean }> {
+  // Check if event already processed (idempotency)
+  const { data: existingEvent } = await supabaseAdmin
+    .from('api_cache')
+    .select('data')
+    .eq('cache_key', `webhook_event:${eventId}`)
+    .maybeSingle();
+  
+  if (existingEvent !== null) {
+    webhookLogger.info('Webhook event already processed', {
+      eventId,
+      eventType,
+      processingTimeMs: timer.end(),
+    });
+    return { processed: true, fromCache: true };
+  }
+  
+  // Mark event as processing
+  await supabaseAdmin
+    .from('api_cache')
+    .upsert({
+      cache_key: `webhook_event:${eventId}`,
+      data: { 
+        status: 'processed', 
+        eventType, 
+        processedAt: new Date().toISOString() 
+      },
+    });
+  
+  return { processed: false, fromCache: false };
+}
+
+/**
+ * Selective subscription update - only update changed fields
+ */
+async function updateSubscriptionSelectively(
+  subscriptionId: string,
+  newData: SubscriptionUpdateData
+): Promise<{ error: unknown }> {
+  // Get current subscription data
+  const { data: currentSub } = await supabaseAdmin
+    .from('subscriptions')
+    .select('*')
+    .eq('id', subscriptionId)
+    .maybeSingle();
+  
+  if (currentSub === null) {
+    // New subscription - insert all data
+    const { error } = await supabaseAdmin
+      .from('subscriptions')
+      .upsert(newData as never, { onConflict: 'id' });
+    return { error };
+  }
+  
+  // Compare and update only changed fields
+  const updates: Partial<SubscriptionUpdateData> = {};
+  const fieldsToCheck: Array<keyof SubscriptionUpdateData> = [
+    'status', 'cancel_at_period_end', 'current_period_start', 
+    'current_period_end', 'ended_at', 'cancel_at', 'canceled_at', 
+    'trial_start', 'trial_end', 'metadata'
+  ];
+  
+  for (const field of fieldsToCheck) {
+    const newValue = newData[field];
+    const currentValue = currentSub[field];
+    if (newValue !== currentValue) {
+      (updates as any)[field] = newValue === null ? undefined : newValue;
+    }
+  }
+  
+  if (Object.keys(updates).length === 0) {
+    return { error: null }; // No changes needed
+  }
+  
+  updates.updated_at = new Date().toISOString();
+  
+  const { error } = await supabaseAdmin
+    .from('subscriptions')
+    .update(updates as never)
+    .eq('id', subscriptionId);
+  
+  return { error };
+}
+
+/**
+ * Idempotent customer upsert to handle race conditions
+ */
+async function upsertCustomerSafely(
+  userId: string,
+  stripeCustomerId: string
+): Promise<{ error: unknown }> {
+  // Use upsert with proper conflict resolution
+  const { error } = await supabaseAdmin
+    .from('customers')
+    .upsert(
+      { 
+        id: userId, 
+        stripe_customer_id: stripeCustomerId 
+      },
+      { 
+        onConflict: 'id',
+        ignoreDuplicates: false 
+      }
+    );
+  
+  return { error };
+}
+
+/**
+ * Update collective Stripe status with proper constraints
+ */
+async function updateCollectiveStripeStatus(
+  accountId: string,
+  accountData: AccountUpdateData
+): Promise<{ error: unknown; updated: boolean }> {
+  // Use limit(1) to prevent multiple row updates
+  const { data: collective, error: fetchError } = await supabaseAdmin
+    .from('collectives')
+    .select('id, stripe_account_id')
+    .eq('stripe_account_id', accountId)
+    .limit(1)
+    .maybeSingle();
+  
+  if (fetchError !== null) {
+    return { error: fetchError, updated: false };
+  }
+  
+  if (collective === null) {
+    return { error: null, updated: false };
+  }
+  
+  const { error: updateError } = await supabaseAdmin
+    .from('collectives')
+    .update({
+      stripe_charges_enabled: accountData.charges_enabled,
+      stripe_payouts_enabled: accountData.payouts_enabled,
+      stripe_details_submitted: accountData.details_submitted,
+      stripe_requirements: accountData.requirements,
+      stripe_account_type: accountData.type,
+      stripe_account_email: accountData.email,
+    })
+    .eq('id', collective.id);
+  
+  return { error: updateError, updated: true };
+}
+
+export async function POST(req: Request): Promise<NextResponse> {
+  const timer = createWebhookTimer();
+  
+  const stripe = getStripe();
   if (!stripe) {
-    // Stripe not set up: acknowledge so Stripe won't retry (HTTP 200)
+    webhookLogger.warn('Stripe not configured', { source: 'webhook' });
     return NextResponse.json(
       { ignored: true, reason: 'Stripe not configured' },
-      { status: 200 },
+      { status: HttpStatusCode.OK },
     );
   }
 
-  const sig = req.headers.get('stripe-signature');
+  // Enhanced header retrieval with fallback
+  const sig = getStripeSignatureHeader(req.headers);
   const rawBody = await req.text();
-
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
-  if (!sig || !webhookSecret) {
-    console.error('Stripe webhook error: Missing signature or secret.');
+  if (sig === null || sig === undefined || webhookSecret === null || webhookSecret === undefined) {
+    webhookLogger.error('Missing webhook signature or secret', undefined, {
+      hasSignature: sig !== null,
+      hasSecret: webhookSecret !== null,
+    });
     return NextResponse.json(
       { error: 'Webhook signature or secret missing.' },
-      { status: 400 },
+      { status: HttpStatusCode.BadRequest },
+    );
+  }
+
+  // Parse and validate signature timestamp
+  const parsedSig = parseStripeSignature(sig);
+  if (parsedSig.t === undefined || parsedSig.v1 === undefined) {
+    webhookLogger.error('Invalid signature format', undefined, {
+      hasTimestamp: parsedSig.t !== undefined,
+      hasSignature: parsedSig.v1 !== undefined,
+    });
+    return NextResponse.json(
+      { error: 'Invalid signature format.' },
+      { status: HttpStatusCode.BadRequest },
+    );
+  }
+
+  // Validate timestamp to prevent replay attacks
+  const timestampValidation = validateWebhookTimestamp(
+    parsedSig.t,
+    WEBHOOK_CONSTANTS.MAX_TIMESTAMP_AGE_SECONDS
+  );
+  
+  if (!timestampValidation.valid) {
+    webhookLogger.error('Webhook timestamp validation failed', undefined, {
+      error: timestampValidation.error,
+      timestamp: parsedSig.t,
+    });
+    return NextResponse.json(
+      { error: timestampValidation.error },
+      { status: HttpStatusCode.BadRequest },
     );
   }
 
@@ -44,219 +273,287 @@ export async function POST(req: Request) {
   try {
     event = stripe.webhooks.constructEvent(rawBody, sig, webhookSecret);
   } catch (err: unknown) {
-    const errorMessage =
-      err instanceof Error ? err.message : 'Unknown webhook signature error';
-    console.error(
-      `Stripe webhook signature verification failed: ${errorMessage}`,
-    );
+    const errorMessage = err instanceof Error ? err.message : 'Unknown webhook signature error';
+    webhookLogger.error('Webhook signature verification failed', err);
     return NextResponse.json(
       { error: `Webhook Error: ${errorMessage}` },
-      { status: 400 },
+      { status: HttpStatusCode.BadRequest },
     );
   }
 
-  if (process.env.NODE_ENV === 'development') {
-    console.info(`Received event in Next.js route: ${event.type}`);
-  }
+  webhookLogger.debug('Webhook event received', {
+    eventId: event.id,
+    eventType: event.type,
+  });
 
   if (relevantEvents.has(event.type)) {
     try {
+      // Check for idempotency
+      const { processed, fromCache } = await processWebhookEvent(
+        event.id,
+        event.type,
+        timer
+      );
+      
+      if (processed && fromCache) {
+        return NextResponse.json({ received: true, cached: true });
+      }
+
       switch (event.type) {
         case 'checkout.session.completed': {
           const session = event.data.object;
+          
           if (
             session.mode === 'subscription' &&
-            session.customer &&
-            session.subscription &&
-            session.metadata?.userId &&
-            session.metadata?.targetEntityType &&
-            session.metadata?.targetEntityId
+            session.customer !== null &&
+            session.customer !== undefined &&
+            session.subscription !== null &&
+            session.subscription !== undefined &&
+            session.metadata !== null &&
+            session.metadata !== undefined
           ) {
-            const {userId} = session.metadata;
-            const stripeCustomerId =
-              typeof session.customer === 'string'
+            try {
+              // Validate metadata with Zod
+              const validatedMetadata: CheckoutSessionMetadata = 
+                checkoutSessionMetadataSchema.parse(session.metadata);
+              
+              const stripeCustomerId = typeof session.customer === 'string'
                 ? session.customer
                 : session.customer.id;
-            const { error: customerErr } = await supabaseAdmin
-              .from('customers')
-              .upsert(
-                { id: userId, stripe_customer_id: stripeCustomerId },
-                { onConflict: 'id' },
+              
+              // Idempotent customer upsert
+              const { error: customerErr } = await upsertCustomerSafely(
+                validatedMetadata.userId,
+                stripeCustomerId
               );
-            if (customerErr)
-              console.error(
-                `Error upserting customer for user ${userId} (Next API):`,
-                customerErr.message,
-              );
-            else if (process.env.NODE_ENV === 'development')
-              console.info(
-                `Customer mapping for user ${userId} updated (Next API).`,
-              );
-
-            if (process.env.NODE_ENV === 'development')
-              console.info(
-                `Checkout session completed for user ${userId}, target: ${session.metadata.targetEntityType} - ${session.metadata.targetEntityId}`,
-              );
+              
+              if (customerErr !== null) {
+                webhookLogger.error('Failed to upsert customer', customerErr, {
+                  eventId: event.id,
+                  userId: validatedMetadata.userId,
+                });
+                // Return 500 so Stripe retries
+                return NextResponse.json(
+                  { error: 'Customer processing failed' },
+                  { status: HttpStatusCode.InternalServerError },
+                );
+              }
+              
+              // Track checkout session for webhook reconciliation
+              await supabaseAdmin
+                .from('checkout_sessions')
+                .upsert({
+                  stripe_session_id: session.id,
+                  user_id: validatedMetadata.userId,
+                  target_entity_type: validatedMetadata.targetEntityType,
+                  target_entity_id: validatedMetadata.targetEntityId,
+                  status: 'completed',
+                  stripe_subscription_id: typeof session.subscription === 'string' 
+                    ? session.subscription 
+                    : session.subscription.id,
+                  completed_at: new Date().toISOString(),
+                }, { onConflict: 'stripe_session_id' });
+              
+              timer.endAndLog('Checkout session processed successfully', {
+                eventId: event.id,
+                userId: validatedMetadata.userId,
+              });
+              
+            } catch (validationError) {
+              if (validationError instanceof ZodError) {
+                webhookLogger.error('Checkout session metadata validation failed', validationError, {
+                  eventId: event.id,
+                  validationErrors: validationError.errors,
+                });
+                return NextResponse.json(
+                  { error: 'Invalid checkout session metadata' },
+                  { status: HttpStatusCode.BadRequest },
+                );
+              }
+              throw validationError;
+            }
           } else {
-            console.warn(
-              'checkout.session.completed missing crucial metadata (userId, targetEntityType, targetEntityId) or not subscription (Next API):',
-              session.metadata,
-            );
+            webhookLogger.warn('Checkout session missing required fields', {
+              eventId: event.id,
+              hasMode: session.mode !== undefined,
+              hasCustomer: session.customer !== null,
+              hasSubscription: session.subscription !== null,
+              hasMetadata: session.metadata !== null,
+            });
           }
           break;
         }
+        
         case 'customer.subscription.created':
         case 'customer.subscription.updated':
         case 'customer.subscription.deleted': {
-          const subscriptionObject = event.data
-            .object as Stripe.Subscription & {
+          const subscriptionObject = event.data.object as Stripe.Subscription & {
             current_period_start: number;
             current_period_end: number;
           };
 
-          const subscriberUserId = subscriptionObject.metadata?.userId;
-          const targetEntityTypeFromMeta = subscriptionObject.metadata
-            ?.targetEntityType as
-            | Database['public']['Enums']['subscription_target_type']
-            | undefined;
-          const targetEntityIdFromMeta = subscriptionObject.metadata
-            ?.targetEntityId as string | undefined;
-
           if (
-            !subscriberUserId ||
-            !targetEntityTypeFromMeta ||
-            !targetEntityIdFromMeta
+            subscriptionObject.metadata === null ||
+            subscriptionObject.metadata === undefined
           ) {
-            console.error(
-              `CRITICAL: Subscription ${subscriptionObject.id} metadata missing userId, targetEntityType, or targetEntityId (Next API). Cannot map subscription.`,
-            );
+            webhookLogger.error('Subscription missing metadata', undefined, {
+              eventId: event.id,
+              subscriptionId: subscriptionObject.id,
+            });
             return NextResponse.json(
-              { error: 'Subscription metadata incomplete.' },
-              { status: 400 },
+              { error: 'Subscription metadata missing' },
+              { status: HttpStatusCode.BadRequest },
             );
           }
 
-          const priceItem = subscriptionObject.items.data[0];
-          if (!priceItem || !priceItem.price) {
-            console.error(
-              `CRITICAL: Subscription ${subscriptionObject.id} has no items or price info (Next API).`,
-            );
-            return NextResponse.json(
-              { error: 'Subscription item or price data missing.' },
-              { status: 400 },
-            );
-          }
-          const stripePriceId =
-            typeof priceItem.price === 'string'
+          try {
+            // Validate metadata with Zod
+            const validatedMetadata: SubscriptionMetadata = 
+              subscriptionMetadataSchema.parse(subscriptionObject.metadata);
+
+            const priceItem = subscriptionObject.items.data[0];
+            if (priceItem === null || priceItem === undefined || priceItem.price === null || priceItem.price === undefined) {
+              webhookLogger.error('Subscription missing price information', undefined, {
+                eventId: event.id,
+                subscriptionId: subscriptionObject.id,
+              });
+              return NextResponse.json(
+                { error: 'Subscription price data missing' },
+                { status: HttpStatusCode.BadRequest },
+              );
+            }
+            
+            const stripePriceId = typeof priceItem.price === 'string'
               ? priceItem.price
               : priceItem.price.id;
 
-          const subscriptionData = {
-            id: subscriptionObject.id,
-            user_id: subscriberUserId,
-            status:
-              subscriptionObject.status as Database['public']['Enums']['subscription_status'],
-            stripe_price_id: stripePriceId,
-            target_entity_type: targetEntityTypeFromMeta,
-            target_entity_id: targetEntityIdFromMeta,
-            quantity: priceItem.quantity,
-            cancel_at_period_end: subscriptionObject.cancel_at_period_end,
-            created: new Date(subscriptionObject.created * 1000).toISOString(),
-            current_period_start: new Date(
-              subscriptionObject.current_period_start * 1000,
-            ).toISOString(),
-            current_period_end: new Date(
-              subscriptionObject.current_period_end * 1000,
-            ).toISOString(),
-            ended_at: subscriptionObject.ended_at
-              ? new Date(subscriptionObject.ended_at * 1000).toISOString()
-              : null,
-            cancel_at: subscriptionObject.cancel_at
-              ? new Date(subscriptionObject.cancel_at * 1000).toISOString()
-              : null,
-            canceled_at: subscriptionObject.canceled_at
-              ? new Date(subscriptionObject.canceled_at * 1000).toISOString()
-              : null,
-            trial_start: subscriptionObject.trial_start
-              ? new Date(subscriptionObject.trial_start * 1000).toISOString()
-              : null,
-            trial_end: subscriptionObject.trial_end
-              ? new Date(subscriptionObject.trial_end * 1000).toISOString()
-              : null,
-            metadata: subscriptionObject.metadata,
-            updated_at: new Date().toISOString(),
-          };
-          const { error: upsertErr } = await supabaseAdmin
-            .from('subscriptions')
-            .upsert(subscriptionData, { onConflict: 'id' });
-          if (upsertErr) {
-            console.error(
-              `Error upserting subscription ${subscriptionObject.id} (Next API):`,
-              upsertErr.message,
+            const subscriptionData = {
+              id: subscriptionObject.id,
+              user_id: validatedMetadata.userId,
+              status: subscriptionObject.status as SubscriptionStatus,
+              stripe_price_id: stripePriceId,
+              target_entity_type: validatedMetadata.targetEntityType,
+              target_entity_id: validatedMetadata.targetEntityId,
+              quantity: priceItem.quantity,
+              cancel_at_period_end: subscriptionObject.cancel_at_period_end,
+              created: new Date(subscriptionObject.created * WEBHOOK_CONSTANTS.MILLISECONDS_PER_SECOND).toISOString(),
+              current_period_start: new Date(
+                subscriptionObject.current_period_start * WEBHOOK_CONSTANTS.MILLISECONDS_PER_SECOND,
+              ).toISOString(),
+              current_period_end: new Date(
+                subscriptionObject.current_period_end * WEBHOOK_CONSTANTS.MILLISECONDS_PER_SECOND,
+              ).toISOString(),
+              ended_at: (subscriptionObject.ended_at !== null && subscriptionObject.ended_at !== undefined && subscriptionObject.ended_at !== 0)
+                ? new Date(subscriptionObject.ended_at * WEBHOOK_CONSTANTS.MILLISECONDS_PER_SECOND).toISOString()
+                : null,
+              cancel_at: (subscriptionObject.cancel_at !== null && subscriptionObject.cancel_at !== undefined && subscriptionObject.cancel_at !== 0)
+                ? new Date(subscriptionObject.cancel_at * WEBHOOK_CONSTANTS.MILLISECONDS_PER_SECOND).toISOString()
+                : null,
+              canceled_at: (subscriptionObject.canceled_at !== null && subscriptionObject.canceled_at !== undefined && subscriptionObject.canceled_at !== 0)
+                ? new Date(subscriptionObject.canceled_at * WEBHOOK_CONSTANTS.MILLISECONDS_PER_SECOND).toISOString()
+                : null,
+              trial_start: (subscriptionObject.trial_start !== null && subscriptionObject.trial_start !== undefined && subscriptionObject.trial_start !== 0)
+                ? new Date(subscriptionObject.trial_start * WEBHOOK_CONSTANTS.MILLISECONDS_PER_SECOND).toISOString()
+                : null,
+              trial_end: (subscriptionObject.trial_end !== null && subscriptionObject.trial_end !== undefined && subscriptionObject.trial_end !== 0)
+                ? new Date(subscriptionObject.trial_end * WEBHOOK_CONSTANTS.MILLISECONDS_PER_SECOND).toISOString()
+                : null,
+              metadata: subscriptionObject.metadata,
+              updated_at: new Date().toISOString(),
+            };
+            
+            // Selective subscription update
+            const { error: upsertErr } = await updateSubscriptionSelectively(
+              subscriptionObject.id,
+              subscriptionData
             );
-          } else {
-            if (process.env.NODE_ENV === 'development')
-              console.info(
-                `Subscription ${subscriptionObject.id} upserted for user ${subscriberUserId} (Next API).`,
+            
+            if (upsertErr !== null) {
+              webhookLogger.error('Failed to update subscription', upsertErr, {
+                eventId: event.id,
+                subscriptionId: subscriptionObject.id,
+              });
+              // Return 500 so Stripe retries
+              return NextResponse.json(
+                { error: 'Subscription processing failed' },
+                { status: HttpStatusCode.InternalServerError },
               );
+            }
+            
+            timer.endAndLog('Subscription processed successfully', {
+              eventId: event.id,
+              subscriptionId: subscriptionObject.id,
+              userId: validatedMetadata.userId,
+            });
+            
+          } catch (validationError) {
+            if (validationError instanceof ZodError) {
+              webhookLogger.error('Subscription metadata validation failed', validationError, {
+                eventId: event.id,
+                subscriptionId: subscriptionObject.id,
+                validationErrors: validationError.errors,
+              });
+              return NextResponse.json(
+                { error: 'Invalid subscription metadata' },
+                { status: HttpStatusCode.BadRequest },
+              );
+            }
+            throw validationError;
           }
           break;
         }
+        
         case 'account.updated': {
           const account = event.data.object;
-          // Find the collective with this stripe_account_id
-          const { data: collective, error: fetchError } = await supabaseAdmin
-            .from('collectives')
-            .select('id')
-            .eq('stripe_account_id', account.id)
-            .maybeSingle();
-          if (fetchError) {
-            console.error(
-              'Error fetching collective for Stripe account:',
-              fetchError.message,
+          
+          const { error: updateError, updated } = await updateCollectiveStripeStatus(
+            account.id,
+            account as AccountUpdateData
+          );
+          
+          if (updateError !== null) {
+            webhookLogger.error('Failed to update collective Stripe status', updateError, {
+              eventId: event.id,
+              accountId: account.id,
+            });
+            // Return 500 so Stripe retries
+            return NextResponse.json(
+              { error: 'Account processing failed' },
+              { status: HttpStatusCode.InternalServerError },
             );
-            break;
           }
-          if (collective) {
-            const { error: updateError } = await supabaseAdmin
-              .from('collectives')
-              .update({
-                stripe_charges_enabled: account.charges_enabled,
-                stripe_payouts_enabled: account.payouts_enabled,
-                stripe_details_submitted: account.details_submitted,
-                stripe_requirements: account.requirements,
-                stripe_account_type: account.type,
-                stripe_account_email: account.email,
-              })
-              .eq('id', collective.id);
-            if (updateError) {
-              console.error(
-                'Error updating collective Stripe status:',
-                updateError.message,
-              );
-            } else {
-              if (process.env.NODE_ENV === 'development')
-                console.info(
-                  `Collective ${collective.id} Stripe status updated from webhook.`,
-                );
-            }
+          
+          if (updated) {
+            timer.endAndLog('Account status updated successfully', {
+              eventId: event.id,
+              accountId: account.id,
+            });
           } else {
-            console.warn(
-              `No collective found for Stripe account ID ${account.id}`,
-            );
+            webhookLogger.warn('No collective found for Stripe account', {
+              eventId: event.id,
+              accountId: account.id,
+            });
           }
           break;
         }
+        
         default:
-          // This should not happen as we filter by relevantEvents, but handle it gracefully
-          console.warn(`Unhandled Stripe webhook event type: ${event.type}`);
+          webhookLogger.warn('Unhandled webhook event type', {
+            eventId: event.id,
+            eventType: event.type,
+          });
           break;
       }
+      
     } catch (err: unknown) {
-      console.error('Error handling Stripe webhook event:', err);
+      webhookLogger.error('Error processing webhook event', err, {
+        eventId: event.id,
+        eventType: event.type,
+      });
+      // Return 500 so Stripe retries
       return NextResponse.json(
-        { error: 'Error handling Stripe webhook event.' },
-        { status: 500 },
+        { error: 'Webhook processing failed' },
+        { status: HttpStatusCode.InternalServerError },
       );
     }
   }

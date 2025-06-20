@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useState, useTransition, FormEvent } from 'react';
+import React, { useCallback, useState, useTransition, FormEvent } from 'react';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -24,59 +24,97 @@ export interface CreateCollectiveFormState {
   issues?: string[];
 }
 
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || '';
+// Constants
+const MAX_SLUG_LENGTH = 50;
 
-export default function NewCollectivePage() {
+const siteUrl =
+  (process.env.NEXT_PUBLIC_SITE_URL ?? '').trim().length > 0
+    ? (process.env.NEXT_PUBLIC_SITE_URL ?? '')
+    : '';
+
+export default function NewCollectivePage(): React.ReactElement {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [name, setName] = useState('');
   const [slug, setSlug] = useState('');
   const [description, setDescription] = useState('');
-  const [error, setError] = useState<string | null>(null);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [error, setError] = useState<string | undefined>(undefined);
+  const [successMessage, setSuccessMessage] = useState<string | undefined>(
+    undefined,
+  );
 
-  const generateSlug = (value: string) => {
+  const generateSlug = useCallback((value: string): string => {
     return value
       .toLowerCase()
       .replace(/\s+/g, '-') // Replace spaces with hyphens
       .replace(/[^a-z0-9-]/g, '') // Remove invalid characters
-      .substring(0, 50); // Max length for slug
-  };
+      .substring(0, MAX_SLUG_LENGTH); // Max length for slug
+  }, []);
 
-  const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newName = e.target.value;
-    setName(newName);
-    setSlug(generateSlug(newName));
-  };
-
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setError(null);
-    setSuccessMessage(null);
-
-    startTransition(async () => {
-      const result = await createCollective({
-        name,
-        slug,
-        description,
-      });
-
-      if (result.error) {
-        setError(result.error);
-      } else if (result.data) {
-        setSuccessMessage('Collective created successfully! Redirecting...');
-        // Optionally clear form fields
-        setName('');
-        setSlug('');
-        setDescription('');
-        // Redirect to the new collective's page or dashboard
-        void router.push(`/dashboard`); // Or `/collectives/${result.data.slug}` once that page exists
-        void router.refresh();
-      } else {
-        setError('An unexpected error occurred.');
+  const handleNameChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>): void => {
+      const newName = e.target.value;
+      setName(newName);
+      if (newName.trim().length > 0) {
+        setSlug(generateSlug(newName));
       }
-    });
-  };
+    },
+    [generateSlug],
+  );
+
+  const handleSlugChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>): void => {
+      setSlug(generateSlug(e.target.value));
+    },
+    [generateSlug],
+  );
+
+  const handleDescriptionChange = useCallback(
+    (e: React.ChangeEvent<HTMLTextAreaElement>): void => {
+      setDescription(e.target.value);
+    },
+    [],
+  );
+
+  const handleCancel = useCallback((): void => {
+    router.back();
+  }, [router]);
+
+  const handleSubmit = useCallback(
+    (event: FormEvent<HTMLFormElement>): void => {
+      event.preventDefault();
+      setError(undefined);
+      setSuccessMessage(undefined);
+
+      startTransition(() => {
+        void (async (): Promise<void> => {
+          const result = await createCollective({
+            name,
+            slug,
+            description,
+          });
+
+          if ((result.error ?? '').trim().length > 0) {
+            setError(result.error);
+          } else if (result.data !== undefined) {
+            setSuccessMessage(
+              'Collective created successfully! Redirecting...',
+            );
+            // Optionally clear form fields
+            setName('');
+            setSlug('');
+            setDescription('');
+            // Redirect to the new collective's page or dashboard
+            void router.push(`/dashboard`); // Or `/collectives/${result.data.slug}` once that page exists
+            void router.refresh();
+          } else {
+            setError('An unexpected error occurred.');
+          }
+        })();
+      });
+    },
+    [name, slug, description, router],
+  );
 
   return (
     <div className="container mx-auto p-4 md:p-6 max-w-2xl">
@@ -110,14 +148,16 @@ export default function NewCollectivePage() {
                 placeholder="my-awesome-newsletter"
                 required
                 value={slug}
-                onChange={(e) => setSlug(generateSlug(e.target.value))}
+                onChange={handleSlugChange}
                 pattern="^[a-z0-9]+(?:-[a-z0-9]+)*$"
                 title="Slug can only contain lowercase letters, numbers, and hyphens."
-                maxLength={50}
+                maxLength={MAX_SLUG_LENGTH}
                 disabled={isPending}
               />
               <p className="text-xs text-muted-foreground">
-                {siteUrl}/{slug}
+                {(siteUrl ?? '').trim().length > 0
+                  ? `${siteUrl}/${slug}`
+                  : `/${slug}`}
               </p>
             </div>
             <div className="space-y-2">
@@ -127,14 +167,16 @@ export default function NewCollectivePage() {
                 name="description"
                 placeholder="Tell us about your collective..."
                 value={description}
-                onChange={(e) => setDescription(e.target.value)}
+                onChange={handleDescriptionChange}
                 rows={4}
                 maxLength={500}
                 disabled={isPending}
               />
             </div>
-            {error && <p className="text-sm text-destructive">{error}</p>}
-            {successMessage && (
+            {(error ?? '').trim().length > 0 && (
+              <p className="text-sm text-destructive">{error}</p>
+            )}
+            {(successMessage ?? '').trim().length > 0 && (
               <p className="text-sm text-accent">{successMessage}</p>
             )}
           </CardContent>
@@ -142,7 +184,7 @@ export default function NewCollectivePage() {
             <Button
               type="button"
               variant="outline"
-              onClick={() => router.back()}
+              onClick={handleCancel}
               disabled={isPending}
               className="mr-2"
             >

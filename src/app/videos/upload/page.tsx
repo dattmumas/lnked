@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
+import React from 'react';
 
 import VideoUploadPageClient from '@/components/app/video/wizard/VideoUploadPageClient';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
@@ -8,7 +9,7 @@ export default async function VideoUploadPage({
   searchParams,
 }: {
   searchParams: Promise<{ collective?: string }>;
-}) {
+}): Promise<React.ReactElement> {
   const supabase = createServerSupabaseClient();
 
   // Check authentication

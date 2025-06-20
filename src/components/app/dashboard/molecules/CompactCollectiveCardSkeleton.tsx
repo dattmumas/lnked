@@ -1,7 +1,9 @@
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
+import React from 'react';
 
-export function CompactCollectiveCardSkeleton() {
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
+
+export function CompactCollectiveCardSkeleton(): React.ReactElement {
   return (
     <Card className="flex flex-col">
       <CardHeader className="flex-grow">

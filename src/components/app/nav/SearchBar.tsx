@@ -4,9 +4,13 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Search, X, TrendingUp, Clock } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useState, useRef, useEffect } from 'react';
+import React, { useCallback, useState, useRef, useEffect } from 'react';
 
 import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
+
+// Constants
+const SEARCH_LIMIT = 3;
+const SEARCH_DEBOUNCE_DELAY = 300;
 
 interface SearchResult {
   id: string;
@@ -34,7 +38,9 @@ const trendingSearches = [
   'Database optimization',
 ];
 
-export default function SearchBar({ className }: SearchBarProps) {
+export default function SearchBar({
+  className,
+}: SearchBarProps): React.ReactElement {
   const [query, setQuery] = useState('');
   const [isOpen, setIsOpen] = useState(false);
   const [results, setResults] = useState<SearchResult[]>([]);
@@ -45,103 +51,141 @@ export default function SearchBar({ className }: SearchBarProps) {
   const supabase = createSupabaseBrowserClient();
 
   // Real search function using Supabase
-  const performSearch = async (searchQuery: string) => {
-    if (!searchQuery.trim()) {
-      setResults([]);
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      const searchResults: SearchResult[] = [];
-
-      // Search posts (limit to 3 for dropdown)
-      const { data: postsData } = await supabase
-        .from('posts')
-        .select(
-          'id, title, subtitle, collective:collectives!posts_collective_id_fkey(slug)',
-        )
-        .eq('is_public', true)
-        .not('published_at', 'is', null)
-        .or(`title.ilike.%${searchQuery}%,subtitle.ilike.%${searchQuery}%`)
-        .limit(3);
-
-      if (postsData) {
-        postsData.forEach((post) => {
-          searchResults.push({
-            id: post.id,
-            title: post.title,
-            type: 'post',
-            description: post.subtitle || undefined,
-            href: `/posts/${post.id}`,
-          });
-        });
+  const performSearch = useCallback(
+    async (searchQuery: string): Promise<void> => {
+      if (
+        searchQuery !== undefined &&
+        searchQuery !== null &&
+        searchQuery.trim().length === 0
+      ) {
+        setResults([]);
+        return;
       }
 
-      // Search users (limit to 3 for dropdown)
-      const { data: usersData } = await supabase
-        .from('users')
-        .select('id, username, full_name, bio, avatar_url')
-        .or(`username.ilike.%${searchQuery}%,full_name.ilike.%${searchQuery}%`)
-        .limit(3);
+      setIsLoading(true);
+      try {
+        const searchResults: SearchResult[] = [];
 
-      if (usersData) {
-        usersData.forEach((user) => {
-          if (user.username) {
+        // Search posts (limit to 3 for dropdown)
+        const { data: postsData } = await supabase
+          .from('posts')
+          .select(
+            'id, title, subtitle, collective:collectives!posts_collective_id_fkey(slug)',
+          )
+          .eq('is_public', true)
+          .not('published_at', 'is', undefined)
+          .or(`title.ilike.%${searchQuery}%,subtitle.ilike.%${searchQuery}%`)
+          .limit(SEARCH_LIMIT);
+
+        if (postsData !== undefined && postsData !== null) {
+          postsData.forEach((post) => {
             searchResults.push({
-              id: user.id,
-              title: user.full_name || user.username,
-              type: 'user',
-              description: user.bio || undefined,
-              href: `/profile/${user.username}`,
-              avatarUrl: user.avatar_url || undefined,
+              id: post.id,
+              title: post.title,
+              type: 'post',
+              description:
+                post.subtitle !== undefined &&
+                post.subtitle !== null &&
+                post.subtitle.length > 0
+                  ? post.subtitle
+                  : undefined,
+              href: `/posts/${post.id}`,
             });
-          }
-        });
-      }
-
-      // Search collectives (limit to 3 for dropdown)
-      const { data: collectivesData } = await supabase
-        .from('collectives')
-        .select('id, name, slug, description')
-        .or(`name.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%`)
-        .limit(3);
-
-      if (collectivesData) {
-        collectivesData.forEach((collective) => {
-          searchResults.push({
-            id: collective.id,
-            title: collective.name,
-            type: 'collective',
-            description: collective.description || undefined,
-            href: `/collectives/${collective.slug}`,
-            slug: collective.slug,
           });
-        });
-      }
+        }
 
-      setResults(searchResults);
-    } catch (error: unknown) {
-      console.error('Search error:', error);
-      setResults([]);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+        // Search users (limit to 3 for dropdown)
+        const { data: usersData } = await supabase
+          .from('users')
+          .select('id, username, full_name, bio, avatar_url')
+          .or(
+            `username.ilike.%${searchQuery}%,full_name.ilike.%${searchQuery}%`,
+          )
+          .limit(SEARCH_LIMIT);
+
+        if (usersData !== undefined && usersData !== null) {
+          usersData.forEach((user) => {
+            if (
+              user.username !== undefined &&
+              user.username !== null &&
+              user.username.length > 0
+            ) {
+              searchResults.push({
+                id: user.id,
+                title:
+                  user.full_name !== undefined &&
+                  user.full_name !== null &&
+                  user.full_name.length > 0
+                    ? user.full_name
+                    : user.username,
+                type: 'user',
+                description:
+                  user.bio !== undefined &&
+                  user.bio !== null &&
+                  user.bio.length > 0
+                    ? user.bio
+                    : undefined,
+                href: `/profile/${user.username}`,
+                avatarUrl:
+                  user.avatar_url !== undefined &&
+                  user.avatar_url !== null &&
+                  user.avatar_url.length > 0
+                    ? user.avatar_url
+                    : undefined,
+              });
+            }
+          });
+        }
+
+        // Search collectives (limit to 3 for dropdown)
+        const { data: collectivesData } = await supabase
+          .from('collectives')
+          .select('id, name, slug, description')
+          .or(`name.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%`)
+          .limit(SEARCH_LIMIT);
+
+        if (collectivesData !== undefined && collectivesData !== null) {
+          collectivesData.forEach((collective) => {
+            searchResults.push({
+              id: collective.id,
+              title: collective.name,
+              type: 'collective',
+              description:
+                collective.description !== undefined &&
+                collective.description !== null &&
+                collective.description.length > 0
+                  ? collective.description
+                  : undefined,
+              href: `/collectives/${collective.slug}`,
+              slug: collective.slug,
+            });
+          });
+        }
+
+        setResults(searchResults);
+      } catch (error: unknown) {
+        console.error('Search error:', error);
+        setResults([]);
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [supabase],
+  );
 
   useEffect(() => {
     const delayedSearch = setTimeout(() => {
-      performSearch(query);
-    }, 300);
+      void performSearch(query);
+    }, SEARCH_DEBOUNCE_DELAY);
 
-    return () => clearTimeout(delayedSearch);
-  }, [query]);
+    return (): void => clearTimeout(delayedSearch);
+  }, [query, performSearch]);
 
   // Close search on outside click
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
+    const handleClickOutside = (event: MouseEvent): void => {
       if (
-        containerRef.current &&
+        containerRef.current !== null &&
         !containerRef.current.contains(event.target as Node)
       ) {
         setIsOpen(false);
@@ -149,23 +193,67 @@ export default function SearchBar({ className }: SearchBarProps) {
     };
 
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    return (): void =>
+      document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const handleClear = () => {
+  const handleClear = useCallback((): void => {
     setQuery('');
     setResults([]);
     inputRef.current?.focus();
-  };
+  }, []);
 
-  const handleEnterPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && query.trim()) {
-      setIsOpen(false);
-      void router.push(`/search?q=${encodeURIComponent(query.trim())}`);
-    }
-  };
+  const handleInputChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>): void => {
+      setQuery(e.target.value);
+    },
+    [],
+  );
 
-  const getTypeIcon = (type: SearchResult['type']) => {
+  const handleInputFocus = useCallback((): void => {
+    setIsOpen(true);
+  }, []);
+
+  const handleEnterPress = useCallback(
+    (e: React.KeyboardEvent): void => {
+      if (
+        e.key === 'Enter' &&
+        query !== undefined &&
+        query !== null &&
+        query.trim().length > 0
+      ) {
+        setIsOpen(false);
+        void router.push(`/search?q=${encodeURIComponent(query.trim())}`);
+      }
+    },
+    [query, router],
+  );
+
+  const handleResultClick = useCallback((): void => {
+    setIsOpen(false);
+  }, []);
+
+  const handleRecentSearchClick = useCallback(
+    (search: string) => (): void => {
+      setQuery(search);
+      inputRef.current?.focus();
+    },
+    [],
+  );
+
+  const handleTrendingSearchClick = useCallback(
+    (search: string) => (): void => {
+      setQuery(search);
+      inputRef.current?.focus();
+    },
+    [],
+  );
+
+  const handleViewAllResultsClick = useCallback((): void => {
+    setIsOpen(false);
+  }, []);
+
+  const getTypeIcon = useCallback((type: SearchResult['type']): string => {
     switch (type) {
       case 'post':
         return '📄';
@@ -176,9 +264,9 @@ export default function SearchBar({ className }: SearchBarProps) {
       default:
         return '🔍';
     }
-  };
+  }, []);
 
-  const getTypeLabel = (type: SearchResult['type']) => {
+  const getTypeLabel = useCallback((type: SearchResult['type']): string => {
     switch (type) {
       case 'post':
         return 'Post';
@@ -189,10 +277,10 @@ export default function SearchBar({ className }: SearchBarProps) {
       default:
         return '';
     }
-  };
+  }, []);
 
   return (
-    <div ref={containerRef} className={`relative ${className}`}>
+    <div ref={containerRef} className={`relative ${className ?? ''}`}>
       {/* Search Input */}
       <div className="relative">
         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
@@ -201,8 +289,8 @@ export default function SearchBar({ className }: SearchBarProps) {
           type="search"
           placeholder="Search posts, authors, collectives..."
           value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          onFocus={() => setIsOpen(true)}
+          onChange={handleInputChange}
+          onFocus={handleInputFocus}
           onKeyDown={handleEnterPress}
           className="
             w-full pl-10 pr-10 py-2.5 text-sm
@@ -213,7 +301,7 @@ export default function SearchBar({ className }: SearchBarProps) {
             shadow-sm hover:shadow-md
           "
         />
-        {query && (
+        {query.length > 0 && (
           <button
             onClick={handleClear}
             className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors duration-200"
@@ -235,7 +323,7 @@ export default function SearchBar({ className }: SearchBarProps) {
           >
             <div className="bg-gray-100 border border-border/60 rounded-xl shadow-xl overflow-hidden">
               {/* Search Results */}
-              {query && (
+              {query.length > 0 && (
                 <div className="p-3 border-b border-border/30">
                   <div className="flex items-center justify-between mb-2">
                     <h3 className="text-sm font-medium text-muted-foreground">
@@ -252,7 +340,7 @@ export default function SearchBar({ className }: SearchBarProps) {
                         <Link
                           key={result.id}
                           href={result.href}
-                          onClick={() => setIsOpen(false)}
+                          onClick={handleResultClick}
                           className="block p-2 rounded-lg hover:bg-accent/20 transition-colors duration-150"
                         >
                           <div className="flex items-center gap-3">
@@ -268,11 +356,13 @@ export default function SearchBar({ className }: SearchBarProps) {
                                   {getTypeLabel(result.type)}
                                 </span>
                               </div>
-                              {result.description && (
-                                <p className="text-xs text-muted-foreground truncate">
-                                  {result.description}
-                                </p>
-                              )}
+                              {result.description !== undefined &&
+                                result.description !== null &&
+                                result.description.length > 0 && (
+                                  <p className="text-xs text-muted-foreground truncate">
+                                    {result.description}
+                                  </p>
+                                )}
                             </div>
                           </div>
                         </Link>
@@ -289,7 +379,7 @@ export default function SearchBar({ className }: SearchBarProps) {
               )}
 
               {/* Recent and Trending Searches */}
-              {!query && (
+              {query.length === 0 && (
                 <div className="p-3 space-y-4">
                   {/* Recent Searches */}
                   <div>
@@ -303,10 +393,7 @@ export default function SearchBar({ className }: SearchBarProps) {
                       {recentSearches.map((search, index) => (
                         <button
                           key={index}
-                          onClick={() => {
-                            setQuery(search);
-                            inputRef.current?.focus();
-                          }}
+                          onClick={handleRecentSearchClick(search)}
                           className="block w-full text-left p-2 text-sm rounded-lg hover:bg-accent/20 transition-colors duration-150"
                         >
                           {search}
@@ -327,10 +414,7 @@ export default function SearchBar({ className }: SearchBarProps) {
                       {trendingSearches.map((search, index) => (
                         <button
                           key={index}
-                          onClick={() => {
-                            setQuery(search);
-                            inputRef.current?.focus();
-                          }}
+                          onClick={handleTrendingSearchClick(search)}
                           className="block w-full text-left p-2 text-sm rounded-lg hover:bg-accent/20 transition-colors duration-150"
                         >
                           {search}
@@ -343,13 +427,13 @@ export default function SearchBar({ className }: SearchBarProps) {
 
               {/* Footer */}
               <div className="px-3 py-2 bg-accent/5 border-t border-border/30">
-                {query && results.length > 0 ? (
+                {query.length > 0 && results.length > 0 ? (
                   <Link
                     href={`/search?q=${encodeURIComponent(query.trim())}`}
-                    onClick={() => setIsOpen(false)}
+                    onClick={handleViewAllResultsClick}
                     className="block text-center text-sm text-accent hover:text-accent/80 transition-colors duration-150"
                   >
-                    View all results for "{query}"
+                    View all results for &quot;{query}&quot;
                   </Link>
                 ) : (
                   <p className="text-xs text-muted-foreground text-center">

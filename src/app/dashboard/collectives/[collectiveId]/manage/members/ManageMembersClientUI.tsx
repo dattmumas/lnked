@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import {
   UserPlus,
@@ -6,23 +6,23 @@ import {
   Trash2,
   ShieldCheck,
   ShieldAlert,
-} from "lucide-react";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+} from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import React, { useCallback , useState } from 'react';
 
 import {
   changeMemberRole,
   removeMemberFromCollective,
   resendCollectiveInvite,
   cancelCollectiveInvite,
-} from "@/app/actions/memberActions";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { COLLECTIVE_MEMBER_ROLES } from "@/lib/schemas/memberSchemas";
+} from '@/app/actions/memberActions';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { COLLECTIVE_MEMBER_ROLES } from '@/lib/schemas/memberSchemas';
 
-import InviteMemberForm from "./InviteMemberForm";
+import InviteMemberForm from './InviteMemberForm';
 
-import type { MemberWithDetails } from "./page";
+import type { MemberWithDetails } from './page';
 
 interface PendingInvite {
   id: string;
@@ -45,104 +45,218 @@ export default function ManageMembersClientUI({
   initialMembers: initialMembersProp,
   pendingInvites,
   isOwner,
-}: ManageMembersClientUIProps) {
+}: ManageMembersClientUIProps): React.ReactElement {
   const router = useRouter();
   const [members] = useState<MemberWithDetails[]>(initialMembersProp);
   const [showInviteForm, setShowInviteForm] = useState(false);
-  const [actionError, setActionError] = useState<string | null>(null);
-  const [actionSuccess, setActionSuccess] = useState<string | null>(null);
-  const [changingRoleId, setChangingRoleId] = useState<string | null>(null);
-  const [removingId, setRemovingId] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | undefined>(undefined);
+  const [actionSuccess, setActionSuccess] = useState<string | undefined>(
+    undefined,
+  );
+  const [changingRoleId, setChangingRoleId] = useState<string | undefined>(
+    undefined,
+  );
+  const [removingId, setRemovingId] = useState<string | undefined>(undefined);
   const [roleDropdown, setRoleDropdown] = useState<{
     id: string;
     open: boolean;
-  }>({ id: "", open: false });
-  const [inviteActionId, setInviteActionId] = useState<string | null>(null);
+  }>({ id: '', open: false });
+  const [inviteActionId, setInviteActionId] = useState<string | undefined>(
+    undefined,
+  );
   const [inviteActionType, setInviteActionType] = useState<
-    "resend" | "cancel" | null
-  >(null);
+    'resend' | 'cancel' | undefined
+  >(undefined);
+  const [removeConfirmId, setRemoveConfirmId] = useState<string | undefined>(
+    undefined,
+  );
+  const [cancelInviteConfirmId, setCancelInviteConfirmId] = useState<
+    string | undefined
+  >(undefined);
 
-  const handleInviteSuccess = () => {
+  const handleInviteSuccess = useCallback((): void => {
     setShowInviteForm(false);
     void router.refresh(); // Re-fetches server components, including member list
-  };
+  }, [router]);
 
-  const getRoleIcon = (role: string | null | undefined) => {
-    if (role === "owner")
-      return <ShieldCheck className="h-4 w-4 text-accent mr-1" />;
-    if (role === "editor")
-      return <Edit3 className="h-4 w-4 text-accent mr-1" />;
-    if (role === "contributor")
-      return <UserPlus className="h-4 w-4 text-foreground mr-1" />;
-    return <ShieldAlert className="h-4 w-4 text-muted-foreground mr-1" />;
-  };
+  const getRoleIcon = useCallback(
+    (role: string | null | undefined): React.ReactElement => {
+      if (role === 'owner')
+        return <ShieldCheck className="h-4 w-4 text-accent mr-1" />;
+      if (role === 'editor')
+        return <Edit3 className="h-4 w-4 text-accent mr-1" />;
+      if (role === 'contributor')
+        return <UserPlus className="h-4 w-4 text-foreground mr-1" />;
+      return <ShieldAlert className="h-4 w-4 text-muted-foreground mr-1" />;
+    },
+    [],
+  );
 
-  const handleRoleChange = async (memberId: string, newRole: string) => {
-    setActionError(null);
-    setChangingRoleId(memberId);
-    const result = await changeMemberRole({
-      collectiveId,
-      memberId,
-      newRole,
-    });
-    setChangingRoleId(null);
-    if (result.success) {
-      setActionSuccess("Role updated.");
-      void router.refresh();
-    } else {
-      setActionError(result.error || "Failed to change role.");
-    }
-  };
+  const handleRoleChange = useCallback(
+    async (memberId: string, newRole: string): Promise<void> => {
+      setActionError(undefined);
+      setChangingRoleId(memberId);
+      const result = await changeMemberRole({
+        collectiveId,
+        memberId,
+        newRole,
+      });
+      setChangingRoleId(undefined);
+      if (result.success === true) {
+        setActionSuccess('Role updated.');
+        void router.refresh();
+      } else {
+        setActionError(
+          (result.error ?? '').trim().length > 0
+            ? (result.error ?? undefined)
+            : 'Failed to change role.',
+        );
+      }
+    },
+    [collectiveId, router],
+  );
 
-  const handleRemove = async (memberId: string) => {
-    setActionError(null);
-    setRemovingId(memberId);
-    const result = await removeMemberFromCollective({
-      collectiveId,
-      memberId,
-    });
-    setRemovingId(null);
-    if (result.success) {
-      setActionSuccess("Member removed.");
-      void router.refresh();
-    } else {
-      setActionError(result.error || "Failed to remove member.");
-    }
-  };
+  const handleRemove = useCallback(
+    async (memberId: string): Promise<void> => {
+      setActionError(undefined);
+      setRemovingId(memberId);
+      const result = await removeMemberFromCollective({
+        collectiveId,
+        memberId,
+      });
+      setRemovingId(undefined);
+      if (result.success === true) {
+        setActionSuccess('Member removed.');
+        void router.refresh();
+      } else {
+        setActionError(
+          (result.error ?? '').trim().length > 0
+            ? (result.error ?? undefined)
+            : 'Failed to remove member.',
+        );
+      }
+    },
+    [collectiveId, router],
+  );
 
-  const handleResendInvite = async (inviteId: string) => {
-    setActionError(null);
-    setInviteActionId(inviteId);
-    setInviteActionType("resend");
-    const result = await resendCollectiveInvite({ collectiveId, inviteId });
-    setInviteActionId(null);
-    setInviteActionType(null);
-    if (result.success) {
-      setActionSuccess("Invite resent.");
-      void router.refresh();
-    } else {
-      setActionError(result.error || "Failed to resend invite.");
-    }
-  };
+  const handleResendInvite = useCallback(
+    async (inviteId: string): Promise<void> => {
+      setActionError(undefined);
+      setInviteActionId(inviteId);
+      setInviteActionType('resend');
+      const result = await resendCollectiveInvite({ collectiveId, inviteId });
+      setInviteActionId(undefined);
+      setInviteActionType(undefined);
+      if (result.success === true) {
+        setActionSuccess('Invite resent.');
+        void router.refresh();
+      } else {
+        setActionError(
+          (result.error ?? '').trim().length > 0
+            ? (result.error ?? undefined)
+            : 'Failed to resend invite.',
+        );
+      }
+    },
+    [collectiveId, router],
+  );
 
-  const handleCancelInvite = async (inviteId: string) => {
-    setActionError(null);
-    setInviteActionId(inviteId);
-    setInviteActionType("cancel");
-    const result = await cancelCollectiveInvite({ collectiveId, inviteId });
-    setInviteActionId(null);
-    setInviteActionType(null);
-    if (result.success) {
-      setActionSuccess("Invite cancelled.");
-      void router.refresh();
-    } else {
-      setActionError(result.error || "Failed to cancel invite.");
-    }
-  };
+  const handleCancelInvite = useCallback(
+    async (inviteId: string): Promise<void> => {
+      setActionError(undefined);
+      setInviteActionId(inviteId);
+      setInviteActionType('cancel');
+      const result = await cancelCollectiveInvite({ collectiveId, inviteId });
+      setInviteActionId(undefined);
+      setInviteActionType(undefined);
+      if (result.success === true) {
+        setActionSuccess('Invite cancelled.');
+        void router.refresh();
+      } else {
+        setActionError(
+          (result.error ?? '').trim().length > 0
+            ? (result.error ?? undefined)
+            : 'Failed to cancel invite.',
+        );
+      }
+    },
+    [collectiveId, router],
+  );
+
+  const handleShowInviteForm = useCallback((): void => {
+    setShowInviteForm(true);
+  }, []);
+
+  const handleRoleDropdownToggle = useCallback(
+    (memberId: string): (() => void) => {
+      return (): void => {
+        setRoleDropdown({
+          id: memberId,
+          open: !roleDropdown.open || roleDropdown.id !== memberId,
+        });
+      };
+    },
+    [roleDropdown],
+  );
+
+  const handleRoleSelect = useCallback(
+    (memberId: string, role: string): (() => void) => {
+      return (): void => {
+        setRoleDropdown({ id: '', open: false });
+        void handleRoleChange(memberId, role);
+      };
+    },
+    [handleRoleChange],
+  );
+
+  const handleRemoveClick = useCallback(
+    (memberId: string): (() => void) => {
+      return (): void => {
+        if (removeConfirmId === memberId) {
+          void handleRemove(memberId);
+          setRemoveConfirmId(undefined);
+        } else {
+          setRemoveConfirmId(memberId);
+        }
+      };
+    },
+    [removeConfirmId, handleRemove],
+  );
+
+  const handleRemoveCancel = useCallback((): void => {
+    setRemoveConfirmId(undefined);
+  }, []);
+
+  const handleResendInviteClick = useCallback(
+    (inviteId: string): (() => void) => {
+      return (): void => {
+        void handleResendInvite(inviteId);
+      };
+    },
+    [handleResendInvite],
+  );
+
+  const handleCancelInviteClick = useCallback(
+    (inviteId: string): (() => void) => {
+      return (): void => {
+        if (cancelInviteConfirmId === inviteId) {
+          void handleCancelInvite(inviteId);
+          setCancelInviteConfirmId(undefined);
+        } else {
+          setCancelInviteConfirmId(inviteId);
+        }
+      };
+    },
+    [cancelInviteConfirmId, handleCancelInvite],
+  );
+
+  const handleCancelInviteCancel = useCallback((): void => {
+    setCancelInviteConfirmId(undefined);
+  }, []);
 
   return (
     <div className="space-y-8">
-      {isOwner && (
+      {isOwner === true && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center">
@@ -150,13 +264,13 @@ export default function ManageMembersClientUI({
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {showInviteForm ? (
+            {showInviteForm === true ? (
               <InviteMemberForm
                 collectiveId={collectiveId}
                 onSuccess={handleInviteSuccess}
               />
             ) : (
-              <Button onClick={() => setShowInviteForm(true)} variant="outline">
+              <Button onClick={handleShowInviteForm} variant="outline">
                 <UserPlus className="mr-2 h-4 w-4" /> Invite Member
               </Button>
             )}
@@ -179,70 +293,87 @@ export default function ManageMembersClientUI({
                   <div className="flex items-center">
                     {getRoleIcon(member.role)}
                     <span className="font-medium">
-                      {member.user?.full_name || "Unknown User"}
+                      {member.user?.full_name !== undefined &&
+                      member.user?.full_name !== null &&
+                      member.user.full_name.trim().length > 0
+                        ? member.user.full_name
+                        : 'Unknown User'}
                     </span>
                     <span className="text-xs text-muted-foreground ml-2 capitalize">
                       ({member.role})
                     </span>
                   </div>
-                  {isOwner && member.user?.id && (
-                    <div className="flex space-x-2 self-end sm:self-center">
-                      <div className="relative inline-block">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() =>
-                            setRoleDropdown({
-                              id: member.id,
-                              open:
-                                !roleDropdown.open ||
-                                roleDropdown.id !== member.id,
-                            })
-                          }
-                          disabled={member.role === "owner"}
-                        >
-                          <Edit3 className="h-3 w-3 mr-1" /> Change Role
-                        </Button>
-                        {roleDropdown.open && roleDropdown.id === member.id && (
-                          <div className="absolute z-10 bg-card border rounded shadow p-2 mt-1">
-                            {COLLECTIVE_MEMBER_ROLES.filter(
-                              (r) => r !== member.role && r !== "owner"
-                            ).map((role) => (
-                              <button
-                                key={role}
-                                className="block w-full text-left px-2 py-1 hover:bg-accent rounded"
-                                onClick={() => {
-                                  setRoleDropdown({ id: "", open: false });
-                                  handleRoleChange(member.id, role);
-                                }}
-                                disabled={changingRoleId === member.id}
-                              >
-                                {role.charAt(0).toUpperCase() + role.slice(1)}
-                              </button>
-                            ))}
+                  {isOwner === true &&
+                    member.user?.id !== undefined &&
+                    member.user?.id !== null && (
+                      <div className="flex space-x-2 self-end sm:self-center">
+                        <div className="relative inline-block">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={handleRoleDropdownToggle(member.id)}
+                            disabled={member.role === 'owner'}
+                          >
+                            <Edit3 className="h-3 w-3 mr-1" /> Change Role
+                          </Button>
+                          {roleDropdown.open === true &&
+                            roleDropdown.id === member.id && (
+                              <div className="absolute z-10 bg-card border rounded shadow p-2 mt-1">
+                                {COLLECTIVE_MEMBER_ROLES.filter(
+                                  (r) => r !== member.role && r !== 'owner',
+                                ).map((role) => (
+                                  <button
+                                    key={role}
+                                    className="block w-full text-left px-2 py-1 hover:bg-accent rounded"
+                                    onClick={handleRoleSelect(member.id, role)}
+                                    disabled={changingRoleId === member.id}
+                                  >
+                                    {role.charAt(0).toUpperCase() +
+                                      role.slice(1)}
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+                        </div>
+                        {removeConfirmId === member.id ? (
+                          <div className="flex gap-2">
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              onClick={handleRemoveClick(member.id)}
+                              disabled={removingId === member.id}
+                            >
+                              <Trash2 className="h-3 w-3 mr-1" />
+                              {removingId === member.id
+                                ? 'Removing...'
+                                : 'Confirm Remove'}
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={handleRemoveCancel}
+                            >
+                              Cancel
+                            </Button>
                           </div>
+                        ) : (
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={handleRemoveClick(member.id)}
+                            disabled={
+                              member.role === 'owner' ||
+                              removingId === member.id
+                            }
+                          >
+                            <Trash2 className="h-3 w-3 mr-1" />
+                            {removingId === member.id
+                              ? 'Removing...'
+                              : 'Remove'}
+                          </Button>
                         )}
                       </div>
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => {
-                          if (
-                            window.confirm(
-                              "Are you sure you want to remove this member?"
-                            )
-                          )
-                            handleRemove(member.id);
-                        }}
-                        disabled={
-                          member.role === "owner" || removingId === member.id
-                        }
-                      >
-                        <Trash2 className="h-3 w-3 mr-1" />
-                        {removingId === member.id ? "Removing..." : "Remove"}
-                      </Button>
-                    </div>
-                  )}
+                    )}
                 </li>
               ))}
             </ul>
@@ -251,16 +382,20 @@ export default function ManageMembersClientUI({
               No members found for this collective.
             </p>
           )}
-          {actionError && (
-            <p className="text-destructive mb-2">{actionError}</p>
-          )}
-          {actionSuccess && (
-            <p className="text-success mb-2">{actionSuccess}</p>
-          )}
+          {actionError !== undefined &&
+            actionError !== null &&
+            actionError.trim().length > 0 && (
+              <p className="text-destructive mb-2">{actionError}</p>
+            )}
+          {actionSuccess !== undefined &&
+            actionSuccess !== null &&
+            actionSuccess.trim().length > 0 && (
+              <p className="text-success mb-2">{actionSuccess}</p>
+            )}
         </CardContent>
       </Card>
 
-      {isOwner && pendingInvites.length > 0 && (
+      {isOwner === true && pendingInvites.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle>Pending Invites ({pendingInvites.length})</CardTitle>
@@ -285,38 +420,57 @@ export default function ManageMembersClientUI({
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => void handleResendInvite(invite.id)}
+                      onClick={handleResendInviteClick(invite.id)}
                       disabled={
                         inviteActionId === invite.id &&
-                        inviteActionType === "resend"
+                        inviteActionType === 'resend'
                       }
                     >
                       {inviteActionId === invite.id &&
-                      inviteActionType === "resend"
-                        ? "Resending..."
-                        : "Resend"}
+                      inviteActionType === 'resend'
+                        ? 'Resending...'
+                        : 'Resend'}
                     </Button>
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => {
-                        if (
-                          window.confirm(
-                            "Are you sure you want to cancel this invite?"
-                          )
-                        )
-                          handleCancelInvite(invite.id);
-                      }}
-                      disabled={
-                        inviteActionId === invite.id &&
-                        inviteActionType === "cancel"
-                      }
-                    >
-                      {inviteActionId === invite.id &&
-                      inviteActionType === "cancel"
-                        ? "Cancelling..."
-                        : "Cancel"}
-                    </Button>
+                    {cancelInviteConfirmId === invite.id ? (
+                      <div className="flex gap-2">
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={handleCancelInviteClick(invite.id)}
+                          disabled={
+                            inviteActionId === invite.id &&
+                            inviteActionType === 'cancel'
+                          }
+                        >
+                          {inviteActionId === invite.id &&
+                          inviteActionType === 'cancel'
+                            ? 'Cancelling...'
+                            : 'Confirm Cancel'}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handleCancelInviteCancel}
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                    ) : (
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={handleCancelInviteClick(invite.id)}
+                        disabled={
+                          inviteActionId === invite.id &&
+                          inviteActionType === 'cancel'
+                        }
+                      >
+                        {inviteActionId === invite.id &&
+                        inviteActionType === 'cancel'
+                          ? 'Cancelling...'
+                          : 'Cancel'}
+                      </Button>
+                    )}
                   </div>
                 </li>
               ))}

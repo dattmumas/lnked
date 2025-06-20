@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 
 import ModeToggle from '@/components/app/nav/ModeToggle';
 import SearchBar from '@/components/app/nav/SearchBar';
@@ -41,49 +41,55 @@ import { Button } from './ui/button';
 
 import type { User } from '@supabase/supabase-js';
 
-// Navigation items are now handled by GlobalSidebar
-const publicNavItems: never[] = [];
-const authenticatedNavItems: never[] = [];
+// Constants
+const MAX_INITIALS_LENGTH = 2;
+const MAX_UNREAD_DISPLAY = 99;
+const AVATAR_SIZE_SMALL = 36;
+const AVATAR_SIZE_MEDIUM = 48;
 
 export interface ModernNavbarProps {
-  initialUser?: User | null;
-  initialProfile?: {
-    username: string | null;
-    full_name: string | null;
-    avatar_url: string | null;
-  } | null;
+  initialUser?: User | undefined;
+  initialProfile?:
+    | {
+        username: string | undefined;
+        full_name: string | undefined;
+        avatar_url: string | undefined;
+      }
+    | undefined;
 }
 
 export default function ModernNavbar({
-  initialUser,
   initialProfile,
-}: ModernNavbarProps) {
+}: ModernNavbarProps): React.ReactElement {
   const router = useRouter();
   const pathname = usePathname();
   const { user, loading } = useUser();
-  const [username, setUsername] = useState<string | null>(
-    initialProfile?.username ?? null,
+  const [username, setUsername] = useState<string | undefined>(
+    initialProfile?.username ?? undefined,
   );
   const [userMetadata, setUserMetadata] = useState({
-    full_name: initialProfile?.full_name ?? null,
-    avatar_url: initialProfile?.avatar_url ?? null,
+    full_name: initialProfile?.full_name ?? undefined,
+    avatar_url: initialProfile?.avatar_url ?? undefined,
   });
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const { unreadCount } = useUnreadMessages(user?.id);
 
-  // supabase is now the singleton instance directly
-
   // Memoized optimized avatar URLs
   const optimizedAvatarUrls = useMemo(() => {
-    if (!userMetadata.avatar_url) return null;
+    if (
+      userMetadata.avatar_url === undefined ||
+      userMetadata.avatar_url === null ||
+      userMetadata.avatar_url.length === 0
+    )
+      return undefined;
     return {
       small: getOptimizedAvatarUrl(userMetadata.avatar_url, {
-        width: 36,
-        height: 36,
+        width: AVATAR_SIZE_SMALL,
+        height: AVATAR_SIZE_SMALL,
       }),
       medium: getOptimizedAvatarUrl(userMetadata.avatar_url, {
-        width: 48,
-        height: 48,
+        width: AVATAR_SIZE_MEDIUM,
+        height: AVATAR_SIZE_MEDIUM,
       }),
     };
   }, [userMetadata.avatar_url]);
@@ -91,43 +97,73 @@ export default function ModernNavbar({
   useEffect((): void => {
     // If the user object is available from the hook but we don't have profile data, fetch it.
     // This handles client-side sign-ins where initialProfile isn't available.
-    if (user && !username && !userMetadata.full_name) {
+    if (
+      user !== undefined &&
+      user !== null &&
+      (username === undefined || username === null || username.length === 0) &&
+      (userMetadata.full_name === undefined ||
+        userMetadata.full_name === null ||
+        userMetadata.full_name.length === 0)
+    ) {
       supabase
         .from('users')
         .select('username, full_name, avatar_url')
         .eq('id', user.id)
         .single()
-        .then(
-          ({
-            data: profile,
-          }: {
-            data: {
-              username: string | null;
-              full_name: string | null;
-              avatar_url: string | null;
-            } | null;
-          }) => {
-            if (profile) {
-              setUsername(profile.username);
-              setUserMetadata({
-                full_name: profile.full_name,
-                avatar_url: profile.avatar_url,
-              });
-            }
-          },
-        );
-    } else if (!user) {
+        .then(({ data: profile }): void => {
+          if (profile !== undefined && profile !== null) {
+            setUsername(profile.username ?? undefined);
+            setUserMetadata({
+              full_name: profile.full_name ?? undefined,
+              avatar_url: profile.avatar_url ?? undefined,
+            });
+          }
+        });
+    } else if (user === undefined || user === null) {
       // Clear profile data on sign out
-      setUsername(null);
-      setUserMetadata({ full_name: null, avatar_url: null });
+      setUsername(undefined);
+      setUserMetadata({ full_name: undefined, avatar_url: undefined });
     }
-  }, [user, username, userMetadata.full_name, supabase]);
+  }, [user, username, userMetadata.full_name]);
 
-  const handleSignOut = async () => {
-    await void supabase.auth.signOut();
+  const handleSignOut = useCallback(async (): Promise<void> => {
+    await supabase.auth.signOut();
     void router.push('/');
     // No need to set user/loading state manually, the useUser hook handles it.
-  };
+  }, [router]);
+
+  const handleSearchClick = useCallback((): void => {
+    void router.push('/search');
+  }, [router]);
+
+  const handleSignOutClick = useCallback((): void => {
+    void handleSignOut();
+  }, [handleSignOut]);
+
+  const getUserInitials = useCallback((): string => {
+    const name =
+      userMetadata.full_name !== undefined &&
+      userMetadata.full_name !== null &&
+      userMetadata.full_name.length > 0
+        ? userMetadata.full_name
+        : username !== undefined && username !== null && username.length > 0
+          ? username
+          : user !== undefined &&
+              user !== null &&
+              user.email !== undefined &&
+              user.email !== null &&
+              user.email.length > 0
+            ? user.email
+            : undefined;
+    return name !== undefined && name !== null && name.length > 0
+      ? name
+          .split(' ')
+          .map((part) => part[0])
+          .join('')
+          .toUpperCase()
+          .slice(0, MAX_INITIALS_LENGTH)
+      : 'U';
+  }, [userMetadata.full_name, username, user]);
 
   const isAuthPage = pathname === '/sign-in' || pathname === '/sign-up';
 
@@ -147,18 +183,6 @@ export default function ModernNavbar({
     );
   }
 
-  const getUserInitials = () => {
-    const name = userMetadata.full_name || username || user?.email;
-    return name
-      ? name
-          .split(' ')
-          .map((part) => part[0])
-          .join('')
-          .toUpperCase()
-          .slice(0, 2)
-      : 'U';
-  };
-
   return (
     <nav className="w-full">
       <div className="w-full px-4 md:px-6 lg:px-8">
@@ -173,7 +197,7 @@ export default function ModernNavbar({
             </Link>
           </div>
 
-          {user && (
+          {user !== undefined && user !== null && (
             <div className="hidden lg:block flex-1 max-w-xl mx-8">
               <SearchBar className="w-full h-9" />
             </div>
@@ -185,7 +209,7 @@ export default function ModernNavbar({
                 <div className="h-10 w-20 rounded-lg bg-muted animate-pulse" />
                 <div className="h-10 w-10 rounded-full bg-muted animate-pulse" />
               </div>
-            ) : user ? (
+            ) : user !== undefined && user !== null ? (
               <>
                 <Button
                   variant="default"
@@ -203,7 +227,7 @@ export default function ModernNavbar({
                   variant="ghost"
                   size="sm"
                   className="lg:hidden h-9 w-9 p-0"
-                  onClick={() => void router.push('/search')}
+                  onClick={handleSearchClick}
                 >
                   <Search className="h-4 w-4" />
                   <span className="sr-only">Search</span>
@@ -221,7 +245,9 @@ export default function ModernNavbar({
                     <MessageCircle className="h-4 w-4" />
                     {unreadCount > 0 && (
                       <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-destructive text-destructive-foreground text-xs font-medium flex items-center justify-center">
-                        {unreadCount > 99 ? '99+' : unreadCount}
+                        {unreadCount > MAX_UNREAD_DISPLAY
+                          ? `${MAX_UNREAD_DISPLAY}+`
+                          : unreadCount}
                       </span>
                     )}
                     <span className="sr-only">Chat</span>
@@ -240,12 +266,35 @@ export default function ModernNavbar({
                     >
                       <Avatar className="h-9 w-9">
                         <AvatarImage
-                          src={
-                            optimizedAvatarUrls?.small ||
-                            userMetadata.avatar_url ||
-                            undefined
+                          src={(() => {
+                            const smallAvatar = optimizedAvatarUrls?.small;
+                            if (
+                              smallAvatar !== undefined &&
+                              smallAvatar !== null &&
+                              smallAvatar.length > 0
+                            ) {
+                              return smallAvatar;
+                            }
+                            if (
+                              userMetadata.avatar_url !== undefined &&
+                              userMetadata.avatar_url !== null &&
+                              userMetadata.avatar_url.length > 0
+                            ) {
+                              return userMetadata.avatar_url;
+                            }
+                            return undefined;
+                          })()}
+                          alt={
+                            userMetadata.full_name !== undefined &&
+                            userMetadata.full_name !== null &&
+                            userMetadata.full_name.length > 0
+                              ? userMetadata.full_name
+                              : username !== undefined &&
+                                  username !== null &&
+                                  username.length > 0
+                                ? username
+                                : 'User'
                           }
-                          alt={userMetadata.full_name || username || 'User'}
                         />
                         <AvatarFallback className="text-xs font-medium">
                           {getUserInitials()}
@@ -256,16 +305,28 @@ export default function ModernNavbar({
                   <DropdownMenuContent align="end" className="w-64 shadow-lg">
                     <div className="flex flex-col gap-1 p-3 border-b">
                       <p className="font-medium">
-                        {userMetadata.full_name || username || 'User'}
+                        {userMetadata.full_name !== undefined &&
+                        userMetadata.full_name !== null &&
+                        userMetadata.full_name.length > 0
+                          ? userMetadata.full_name
+                          : username !== undefined &&
+                              username !== null &&
+                              username.length > 0
+                            ? username
+                            : 'User'}
                       </p>
                       <span className="text-xs text-foreground/60">
-                        {user.email}
+                        {user.email !== undefined &&
+                        user.email !== null &&
+                        user.email.length > 0
+                          ? user.email
+                          : 'No email'}
                       </span>
                     </div>
                     <div className="p-1">
                       <DropdownMenuItem asChild className="cursor-pointer">
                         <Link
-                          href={`/profile/${username ?? user.id}`}
+                          href={`/profile/${username !== undefined && username !== null && username.length > 0 ? username : user.id}`}
                           className="gap-3 p-2"
                         >
                           <UserIcon className="h-4 w-4" />
@@ -334,7 +395,7 @@ export default function ModernNavbar({
             <div className="h-5 w-px bg-border mx-1" />
             <ModeToggle />
 
-            {user && (
+            {user !== undefined && user !== null && (
               <div className="md:hidden">
                 <Sheet>
                   <SheetTrigger asChild>
@@ -352,12 +413,35 @@ export default function ModernNavbar({
                       <div className="flex items-center gap-4 p-4 rounded-lg bg-accent/30">
                         <Avatar className="h-12 w-12">
                           <AvatarImage
-                            src={
-                              optimizedAvatarUrls?.medium ||
-                              userMetadata.avatar_url ||
-                              undefined
+                            src={(() => {
+                              const mediumAvatar = optimizedAvatarUrls?.medium;
+                              if (
+                                mediumAvatar !== undefined &&
+                                mediumAvatar !== null &&
+                                mediumAvatar.length > 0
+                              ) {
+                                return mediumAvatar;
+                              }
+                              if (
+                                userMetadata.avatar_url !== undefined &&
+                                userMetadata.avatar_url !== null &&
+                                userMetadata.avatar_url.length > 0
+                              ) {
+                                return userMetadata.avatar_url;
+                              }
+                              return undefined;
+                            })()}
+                            alt={
+                              userMetadata.full_name !== undefined &&
+                              userMetadata.full_name !== null &&
+                              userMetadata.full_name.length > 0
+                                ? userMetadata.full_name
+                                : username !== undefined &&
+                                    username !== null &&
+                                    username.length > 0
+                                  ? username
+                                  : 'User'
                             }
-                            alt={userMetadata.full_name || username || 'User'}
                           />
                           <AvatarFallback className="text-sm font-medium">
                             {getUserInitials()}
@@ -365,10 +449,22 @@ export default function ModernNavbar({
                         </Avatar>
                         <div className="flex-1 min-w-0">
                           <p className="font-medium truncate">
-                            {userMetadata.full_name || username || 'User'}
+                            {userMetadata.full_name !== undefined &&
+                            userMetadata.full_name !== null &&
+                            userMetadata.full_name.length > 0
+                              ? userMetadata.full_name
+                              : username !== undefined &&
+                                  username !== null &&
+                                  username.length > 0
+                                ? username
+                                : 'User'}
                           </p>
                           <p className="text-sm text-foreground/60 truncate">
-                            {user.email}
+                            {user.email !== undefined &&
+                            user.email !== null &&
+                            user.email.length > 0
+                              ? user.email
+                              : 'No email'}
                           </p>
                         </div>
                       </div>
@@ -408,7 +504,9 @@ export default function ModernNavbar({
                           className="w-full justify-start gap-3 h-11"
                           asChild
                         >
-                          <Link href={`/profile/${username ?? user.id}`}>
+                          <Link
+                            href={`/profile/${username !== undefined && username !== null && username.length > 0 ? username : user.id}`}
+                          >
                             <UserIcon className="h-5 w-5" />
                             <span className="font-medium">Profile</span>
                           </Link>
@@ -426,7 +524,7 @@ export default function ModernNavbar({
                         <Button
                           variant="ghost"
                           className="w-full justify-start gap-3 h-11 text-destructive hover:text-destructive hover:bg-destructive/10"
-                          onClick={() => void handleSignOut()}
+                          onClick={handleSignOutClick}
                         >
                           <LogOut className="h-5 w-5" />
                           <span className="font-medium">Sign Out</span>

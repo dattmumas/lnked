@@ -1,13 +1,10 @@
 'use client';
 
 import { formatDistanceToNow } from 'date-fns';
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import {
-  CommentThread,
-  ReactionType,
-} from '@/types/comments-v2';
+import { CommentThread, ReactionType } from '@/types/comments-v2';
 
 import { CommentActions } from './CommentActions';
 import { CommentForm } from './CommentForm';
@@ -27,23 +24,29 @@ export const CommentItem: React.FC<CommentItemProps> = ({
   onReaction,
   onLoadReplies,
   className = '',
-}) => {
+}): React.ReactElement => {
   const [showReplyForm, setShowReplyForm] = useState(false);
   const { comment } = thread;
   const user = comment.user || comment.author;
 
-  const handleReplySubmit = (content: string) => {
-    onReply(comment.id, content);
-    setShowReplyForm(false);
-  };
+  const handleReplySubmit = useCallback(
+    (content: string): void => {
+      onReply(comment.id, content);
+      setShowReplyForm(false);
+    },
+    [onReply, comment.id],
+  );
 
-  const handleReplyClick = () => {
+  const handleReplyClick = useCallback((): void => {
     setShowReplyForm(!showReplyForm);
-  };
+  }, [showReplyForm]);
 
-  const handleReaction = (reactionType: ReactionType) => {
-    onReaction(comment.id, reactionType);
-  };
+  const handleReaction = useCallback(
+    (reactionType: ReactionType): void => {
+      onReaction(comment.id, reactionType);
+    },
+    [onReaction, comment.id],
+  );
 
   const formattedTime = formatDistanceToNow(new Date(comment.created_at), {
     addSuffix: true,
@@ -54,7 +57,15 @@ export const CommentItem: React.FC<CommentItemProps> = ({
       <div className="flex gap-3">
         {/* Avatar */}
         <Avatar className="h-8 w-8 flex-shrink-0">
-          <AvatarImage src={user.avatar_url || ''} />
+          <AvatarImage
+            src={
+              user.avatar_url !== undefined &&
+              user.avatar_url !== null &&
+              user.avatar_url.length > 0
+                ? user.avatar_url
+                : ''
+            }
+          />
           <AvatarFallback className="text-xs">
             {user.full_name?.[0] || user.username?.[0] || 'U'}
           </AvatarFallback>
@@ -70,11 +81,13 @@ export const CommentItem: React.FC<CommentItemProps> = ({
             <span className="text-xs text-muted-foreground">
               {formattedTime}
             </span>
-            {comment.is_pinned && (
-              <span className="text-xs bg-accent/20 text-accent px-2 py-1 rounded">
-                Pinned
-              </span>
-            )}
+            {comment.is_pinned !== undefined &&
+              comment.is_pinned !== null &&
+              comment.is_pinned === true && (
+                <span className="text-xs bg-accent/20 text-accent px-2 py-1 rounded">
+                  Pinned
+                </span>
+              )}
           </div>
 
           {/* Comment Content */}

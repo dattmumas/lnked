@@ -1,10 +1,11 @@
-import { redirect } from "next/navigation";
+import { redirect } from 'next/navigation';
+import React from 'react';
 
-import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { createServerSupabaseClient } from '@/lib/supabase/server';
 
-import NewCollectiveForm from "./NewCollectiveForm";
+import NewCollectiveForm from './NewCollectiveForm';
 
-export default async function NewCollectivePage() {
+export default async function NewCollectivePage(): Promise<React.ReactElement> {
   const supabase = createServerSupabaseClient();
   const {
     data: { user },
@@ -12,7 +13,7 @@ export default async function NewCollectivePage() {
   } = await supabase.auth.getUser();
 
   if (error || !user) {
-    redirect("/sign-in");
+    redirect('/sign-in');
   }
 
   return <NewCollectiveForm />;

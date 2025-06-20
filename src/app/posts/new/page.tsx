@@ -3,25 +3,26 @@
 import { ArrowLeft, Save } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
-import { useEffect, useCallback, useMemo } from 'react';
+import React, { useEffect, useCallback, useMemo, useState } from 'react';
 
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useEnhancedPostEditor } from '@/hooks/posts/useEnhancedPostEditor';
 
-
 // Dynamic import for the editor to avoid SSR issues
 const PostEditor = dynamic(() => import('@/components/editor/PostEditor'), {
   ssr: false,
-  loading: () => (
+  loading: (): React.ReactElement => (
     <div className="h-96 bg-muted/30 rounded-lg animate-pulse flex items-center justify-center">
       <span className="text-muted-foreground">Loading editor...</span>
     </div>
   ),
 });
 
-export default function NewPostEditorPage() {
+export default function NewPostEditorPage(): React.ReactElement {
   const router = useRouter();
+  const [showUnsavedWarning, setShowUnsavedWarning] = useState(false);
   const {
     formData,
     updateFormData,
@@ -36,46 +37,87 @@ export default function NewPostEditorPage() {
     setCurrentPage('editor');
   }, [setCurrentPage]);
 
-  const handleContinue = async () => {
+  const handleContinue = useCallback(async (): Promise<void> => {
     // Save before navigating if there are changes
     if (isDirty && formData.title.trim()) {
       await savePost();
     }
     void router.push('/posts/new/details');
-  };
+  }, [isDirty, formData.title, savePost, router]);
 
-  const handleGoBack = () => {
+  const handleGoBack = useCallback((): void => {
     if (isDirty) {
-      const confirmed = window.confirm(
-        'You have unsaved changes. Are you sure you want to leave?',
-      );
-      if (!confirmed) return;
+      setShowUnsavedWarning(true);
+      return;
     }
     void router.push('/dashboard/posts');
-  };
+  }, [isDirty, router]);
+
+  const handleConfirmLeave = useCallback((): void => {
+    setShowUnsavedWarning(false);
+    void router.push('/dashboard/posts');
+  }, [router]);
+
+  const handleCancelLeave = useCallback((): void => {
+    setShowUnsavedWarning(false);
+  }, []);
 
   // Memoize the content change handler to prevent unnecessary re-renders
   const handleContentChange = useCallback(
-    (content: string) => {
+    (content: string): void => {
       updateFormData({ content });
     },
     [updateFormData],
   );
 
-  const handleManualSave = async () => {
+  const handleManualSave = useCallback(async (): Promise<void> => {
     if (formData.title.trim()) {
       await savePost();
     }
-  };
+  }, [formData.title, savePost]);
+
+  const handleManualSaveClick = useCallback((): void => {
+    void handleManualSave();
+  }, [handleManualSave]);
+
+  const handleContinueClick = useCallback((): void => {
+    void handleContinue();
+  }, [handleContinue]);
+
+  const handleTitleChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>): void => {
+      updateFormData({ title: e.target.value });
+    },
+    [updateFormData],
+  );
 
   // Memoize the initial content to prevent the editor from re-initializing
-  const stableInitialContent = useMemo(() => {
+  const stableInitialContent = useMemo((): undefined => {
     // For new posts, don't pass any initial content - let the editor start empty
     return undefined;
   }, []); // Empty dependency array means this only runs once
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Unsaved changes warning */}
+      {showUnsavedWarning && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <Alert className="max-w-md bg-background border shadow-lg">
+            <AlertDescription className="space-y-4">
+              <p>You have unsaved changes. Are you sure you want to leave?</p>
+              <div className="flex gap-2 justify-end">
+                <Button variant="outline" onClick={handleCancelLeave}>
+                  Cancel
+                </Button>
+                <Button variant="destructive" onClick={handleConfirmLeave}>
+                  Leave Without Saving
+                </Button>
+              </div>
+            </AlertDescription>
+          </Alert>
+        </div>
+      )}
+
       {/* Minimal header */}
       <header className="border-b bg-card/50 backdrop-blur-sm px-4 py-3">
         <div className="flex items-center justify-between max-w-4xl mx-auto">
@@ -122,7 +164,7 @@ export default function NewPostEditorPage() {
             <Button
               variant="ghost"
               size="sm"
-              onClick={handleManualSave}
+              onClick={handleManualSaveClick}
               disabled={!formData.title.trim() || autoSaveStatus === 'saving'}
               className="flex items-center gap-2"
             >
@@ -142,9 +184,8 @@ export default function NewPostEditorPage() {
               type="text"
               placeholder="Post title..."
               value={formData.title}
-              onChange={(e) => updateFormData({ title: e.target.value })}
+              onChange={handleTitleChange}
               className="w-full text-3xl font-bold bg-transparent border-none outline-none placeholder:text-muted-foreground focus:ring-0 p-0"
-              autoFocus
             />
           </div>
 
@@ -165,7 +206,7 @@ export default function NewPostEditorPage() {
         <Button
           size="lg"
           className="shadow-lg"
-          onClick={handleContinue}
+          onClick={handleContinueClick}
           disabled={!formData.title.trim()}
         >
           Continue to Settings →

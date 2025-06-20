@@ -6,6 +6,10 @@ import { ProfileContextProvider } from '@/lib/hooks/profile';
 
 import type { ProfileLayoutProps } from '@/lib/hooks/profile/types';
 
+// Constants for responsive breakpoints
+const DESKTOP_BREAKPOINT = 1024;
+const TABLET_BREAKPOINT = 768;
+
 /**
  * Main layout component for profile pages implementing the split-screen design
  * with 65%/35% desktop layout and responsive transformations.
@@ -15,7 +19,10 @@ import type { ProfileLayoutProps } from '@/lib/hooks/profile/types';
  * - Tablet (768-1023px): Stacked layout with horizontal social feed
  * - Mobile (≤767px): Single column with touch-optimized interactions
  */
-export function ProfileLayout({ username, children }: ProfileLayoutProps) {
+export function ProfileLayout({
+  username,
+  children,
+}: ProfileLayoutProps): React.ReactElement {
   return (
     <ProfileContextProvider username={username}>
       <div className="profile-layout min-h-screen bg-background">
@@ -34,7 +41,7 @@ export function ProfileContentGrid({
   children,
 }: {
   children: React.ReactNode;
-}) {
+}): React.ReactElement {
   return (
     <div className="profile-content-grid relative">
       {/* CSS Grid Layout - Desktop First */}
@@ -71,7 +78,7 @@ export function ProfileHeroContainer({
 }: {
   children: React.ReactNode;
   className?: string;
-}) {
+}): React.ReactElement {
   return (
     <div
       className={`
@@ -99,7 +106,7 @@ export function SocialSidebarContainer({
 }: {
   children: React.ReactNode;
   className?: string;
-}) {
+}): React.ReactElement {
   return (
     <div
       className={`
@@ -127,7 +134,7 @@ export function ContentAreaContainer({
 }: {
   children: React.ReactNode;
   className?: string;
-}) {
+}): React.ReactElement {
   return (
     <div
       className={`
@@ -151,17 +158,22 @@ export function ContentAreaContainer({
 /**
  * Responsive layout utility hook for layout-aware components
  */
-export function useResponsiveLayout() {
+export function useResponsiveLayout(): {
+  isDesktop: boolean;
+  isTablet: boolean;
+  isMobile: boolean;
+  layoutType: string;
+} {
   const [isDesktop, setIsDesktop] = React.useState(false);
   const [isTablet, setIsTablet] = React.useState(false);
   const [isMobile, setIsMobile] = React.useState(false);
 
   React.useEffect(() => {
-    const checkLayout = () => {
+    const checkLayout = (): void => {
       const width = window.innerWidth;
-      setIsDesktop(width >= 1024);
-      setIsTablet(width >= 768 && width < 1024);
-      setIsMobile(width < 768);
+      setIsDesktop(width >= DESKTOP_BREAKPOINT);
+      setIsTablet(width >= TABLET_BREAKPOINT && width < DESKTOP_BREAKPOINT);
+      setIsMobile(width < TABLET_BREAKPOINT);
     };
 
     // Initial check
@@ -184,11 +196,11 @@ export function useResponsiveLayout() {
  * Layout debugging component (development only)
  * Helps visualize the grid system during development
  */
-export function LayoutDebugger() {
+export function LayoutDebugger(): React.ReactElement | undefined {
   const { layoutType } = useResponsiveLayout();
 
   if (process.env.NODE_ENV !== 'development') {
-    return null;
+    return undefined;
   }
 
   return (

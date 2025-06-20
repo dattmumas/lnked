@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation';
+import React from 'react';
 
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 
@@ -15,7 +16,7 @@ export default async function CollectiveSettingsPage({
   params,
 }: {
   params: Promise<{ collectiveId: string }>;
-}) {
+}): Promise<React.ReactElement> {
   const { collectiveId } = await params;
   const supabase = createServerSupabaseClient();
 
@@ -24,7 +25,7 @@ export default async function CollectiveSettingsPage({
     error: authError,
   } = await supabase.auth.getUser();
 
-  if (authError || !authUser) {
+  if (authError !== null || authUser === null || authUser === undefined) {
     redirect('/sign-in');
   }
 
@@ -34,7 +35,11 @@ export default async function CollectiveSettingsPage({
     .eq('id', collectiveId)
     .single();
 
-  if (collectiveError || !collective) {
+  if (
+    collectiveError !== null ||
+    collective === null ||
+    collective === undefined
+  ) {
     console.error(
       `Error fetching collective ${collectiveId} for settings:`,
       collectiveError?.message,
@@ -52,10 +57,15 @@ export default async function CollectiveSettingsPage({
   }
 
   const defaultValues = {
-    name: collective.name || '',
-    slug: collective.slug || '',
-    description: collective.description || '',
-    tags_string: (collective.tags)?.join(', ') || '',
+    name:
+      (collective.name ?? '').trim().length > 0 ? (collective.name ?? '') : '',
+    slug:
+      (collective.slug ?? '').trim().length > 0 ? (collective.slug ?? '') : '',
+    description:
+      (collective.description ?? '').trim().length > 0
+        ? (collective.description ?? '')
+        : '',
+    tags_string: collective.tags?.join(', ') ?? '',
   };
 
   if ('id' in collective) {

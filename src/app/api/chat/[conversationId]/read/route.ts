@@ -5,14 +5,14 @@ import { createServerSupabaseClient } from '@/lib/supabase/server';
 export async function PATCH(
   _request: Request,
   context: { params: Promise<{ conversationId: string }> }
-): Promise<Response> {
+): Promise<NextResponse> {
   try {
     const { conversationId } = await context.params;
     const supabase = createServerSupabaseClient();
     
     // Get current user
     const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
+    if (authError !== null || user === null) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -24,7 +24,7 @@ export async function PATCH(
       .eq('user_id', user.id)
       .single();
 
-    if (participantError || !participant) {
+    if (participantError !== null || participant === null) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
@@ -36,7 +36,7 @@ export async function PATCH(
       .eq('conversation_id', conversationId)
       .eq('user_id', user.id);
 
-    if (updateError) {
+    if (updateError !== null) {
       console.error('Error updating read status:', updateError);
       return NextResponse.json({ error: 'Failed to update read status' }, { status: 500 });
     }
@@ -52,7 +52,7 @@ export async function PATCH(
     return NextResponse.json({ 
       success: true,
       last_read_at: now,
-      unread_count: unreadCount || 0
+      unread_count: unreadCount !== null && unreadCount !== undefined ? unreadCount : 0
     });
 
   } catch (error) {

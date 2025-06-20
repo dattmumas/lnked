@@ -1,24 +1,27 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 
 import { deleteUserAccount } from '@/app/actions/userActions';
 import { Button } from '@/components/ui/button';
+
+// Constants for magic numbers
+const REDIRECT_DELAY_MS = 2000;
 
 export default function DeleteAccountSection({
   userEmail,
 }: {
   userEmail: string;
-}) {
+}): React.ReactElement {
   const [confirmEmail, setConfirmEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | undefined>(undefined);
   const [success, setSuccess] = useState(false);
   const router = useRouter();
 
-  const handleDelete = async () => {
-    setError(null);
+  const handleDelete = useCallback(async (): Promise<void> => {
+    setError(undefined);
     setIsLoading(true);
     const result = await deleteUserAccount();
     setIsLoading(false);
@@ -26,11 +29,24 @@ export default function DeleteAccountSection({
       setSuccess(true);
       setTimeout(() => {
         void router.push('/goodbye');
-      }, 2000);
+      }, REDIRECT_DELAY_MS);
     } else {
-      setError(result.error || 'Failed to delete account.');
+      setError(result.error ?? 'Failed to delete account.');
     }
-  };
+  }, [router]);
+
+  // Email input change handler
+  const handleEmailChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>): void => {
+      setConfirmEmail(e.target.value);
+    },
+    [],
+  );
+
+  // Delete button click handler
+  const handleDeleteClick = useCallback((): void => {
+    void handleDelete();
+  }, [handleDelete]);
 
   return (
     <section className="mt-12 border-t pt-8">
@@ -50,18 +66,20 @@ export default function DeleteAccountSection({
         type="email"
         className="input input-bordered w-full max-w-xs mb-4"
         value={confirmEmail}
-        onChange={(e) => setConfirmEmail(e.target.value)}
+        onChange={handleEmailChange}
         placeholder="your@email.com"
         disabled={isLoading || success}
       />
-      {error && <p className="text-destructive mb-2">{error}</p>}
+      {error !== undefined && error !== null && error.length > 0 && (
+        <p className="text-destructive mb-2">{error}</p>
+      )}
       {success ? (
         <p className="text-success mb-2">Account deleted. Goodbye!</p>
       ) : (
         <Button
           variant="destructive"
           disabled={isLoading || confirmEmail !== userEmail}
-          onClick={() => void handleDelete()}
+          onClick={handleDeleteClick}
         >
           {isLoading ? 'Deleting...' : 'Delete My Account'}
         </Button>

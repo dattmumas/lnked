@@ -1,14 +1,23 @@
 'use client';
 
-import React from 'react';
+import Image from 'next/image';
+import React, { useCallback } from 'react';
 
-import { useProfileContext , useFollowMutation } from '@/lib/hooks/profile';
+import { useProfileContext, useFollowMutation } from '@/lib/hooks/profile';
 import {
   getOptimizedAvatarUrl,
   generateUserInitials,
 } from '@/lib/utils/avatar';
 
 import type { ProfileHeroProps } from '@/lib/hooks/profile/types';
+
+// Constants for magic numbers
+const AVATAR_SIZE_LARGE = 128;
+const AVATAR_QUALITY_HIGH = 85;
+const AVATAR_QUALITY_STANDARD = 80;
+const BIO_TRUNCATE_LENGTH = 140;
+const COUNT_MILLION = 1000000;
+const COUNT_THOUSAND = 1000;
 
 /**
  * Profile Hero Component - Main profile display section (65% desktop width)
@@ -20,14 +29,27 @@ import type { ProfileHeroProps } from '@/lib/hooks/profile/types';
  * - Social links and location
  * - Follow/Edit button based on permissions
  */
-export function ProfileHero({ className = '' }: ProfileHeroProps) {
+export function ProfileHero({
+  className = '',
+}: ProfileHeroProps): React.ReactElement {
   const {
     profile,
     metrics,
     isOwner,
     canEdit,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     permissions: _permissions,
   } = useProfileContext();
+
+  const handleAvatarEdit = useCallback(() => {
+    // TODO: Implement avatar edit functionality
+    console.warn('Edit avatar clicked');
+  }, []);
+
+  const handleSocialLinksEdit = useCallback(() => {
+    // TODO: Implement social links edit
+    console.warn('Edit social links clicked');
+  }, []);
 
   return (
     <section
@@ -50,12 +72,9 @@ export function ProfileHero({ className = '' }: ProfileHeroProps) {
         <div className="avatar-section flex-shrink-0">
           <AvatarCard
             src={profile.avatarUrl}
-            size={128}
+            size={AVATAR_SIZE_LARGE}
             editable={canEdit}
-            onEdit={() => {
-              // TODO: Implement avatar edit functionality
-              console.info('Edit avatar clicked');
-            }}
+            onEdit={handleAvatarEdit}
           />
         </div>
 
@@ -80,18 +99,16 @@ export function ProfileHero({ className = '' }: ProfileHeroProps) {
           </div>
 
           {/* Social Links */}
-          {profile.socialLinks && (
-            <div className="social-links">
-              <SocialLinks
-                links={profile.socialLinks}
-                editable={canEdit}
-                onEdit={() => {
-                  // TODO: Implement social links edit
-                  console.info('Edit social links clicked');
-                }}
-              />
-            </div>
-          )}
+          {profile.socialLinks !== undefined &&
+            profile.socialLinks !== null && (
+              <div className="social-links">
+                <SocialLinks
+                  links={profile.socialLinks}
+                  editable={canEdit}
+                  onEdit={handleSocialLinksEdit}
+                />
+              </div>
+            )}
         </div>
 
         {/* Action Button */}
@@ -118,7 +135,7 @@ function AvatarCard({
   editable?: boolean;
   onEdit?: () => void;
   className?: string;
-}) {
+}): React.ReactElement {
   const { profile } = useProfileContext();
 
   // Generate initials from full name or username
@@ -128,13 +145,39 @@ function AvatarCard({
 
   // Get optimized avatar URL with appropriate size and quality
   const optimizedAvatarUrl = React.useMemo(() => {
-    return getOptimizedAvatarUrl(src || undefined, {
-      width: size,
-      height: size,
-      quality: size >= 128 ? 85 : 80, // Higher quality for larger avatars
-      resize: 'cover',
-    });
+    return getOptimizedAvatarUrl(
+      src !== undefined && src !== null ? src : undefined,
+      {
+        width: size,
+        height: size,
+        quality:
+          size >= AVATAR_SIZE_LARGE
+            ? AVATAR_QUALITY_HIGH
+            : AVATAR_QUALITY_STANDARD,
+        resize: 'cover',
+      },
+    );
   }, [src, size]);
+
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key === 'Enter' && onEdit) {
+        onEdit();
+      }
+    },
+    [onEdit],
+  );
+
+  const handleError = useCallback(
+    (event: React.SyntheticEvent<HTMLImageElement>) => {
+      // Fallback to original URL if optimized version fails
+      if (src !== undefined && src !== null && optimizedAvatarUrl !== src) {
+        const imgElement = event.currentTarget;
+        imgElement.src = src;
+      }
+    },
+    [src, optimizedAvatarUrl],
+  );
 
   return (
     <div className={`avatar-card relative ${className}`}>
@@ -159,22 +202,19 @@ function AvatarCard({
         onClick={editable ? onEdit : undefined}
         role={editable ? 'button' : undefined}
         tabIndex={editable ? 0 : undefined}
-        onKeyDown={
-          editable ? (e) => e.key === 'Enter' && onEdit?.() : undefined
-        }
+        onKeyDown={editable ? handleKeyDown : undefined}
       >
-        {optimizedAvatarUrl ? (
-          <img
+        {optimizedAvatarUrl !== undefined &&
+        optimizedAvatarUrl !== null &&
+        optimizedAvatarUrl.length > 0 ? (
+          <Image
             src={optimizedAvatarUrl}
-            alt={`${profile.fullName || profile.username} avatar`}
+            alt={`${profile.fullName !== undefined && profile.fullName !== null ? profile.fullName : profile.username} avatar`}
+            width={size}
+            height={size}
             className="w-full h-full object-cover"
             loading="lazy"
-            onError={(e) => {
-              // Fallback to original URL if optimized version fails
-              if (src && optimizedAvatarUrl !== src) {
-                e.currentTarget.src = src;
-              }
-            }}
+            onError={handleError}
           />
         ) : (
           <div
@@ -233,9 +273,14 @@ function ProfileMeta({
   handle: string;
   bio: string | null;
   className?: string;
-}) {
+}): React.ReactElement {
   const [showFullBio, setShowFullBio] = React.useState(false);
-  const bioTruncated = bio && bio.length > 140;
+  const bioTruncated =
+    bio !== undefined && bio !== null && bio.length > BIO_TRUNCATE_LENGTH;
+
+  const handleToggleBio = useCallback(() => {
+    setShowFullBio(!showFullBio);
+  }, [showFullBio]);
 
   return (
     <div className={`profile-meta ${className}`}>
@@ -250,7 +295,7 @@ function ProfileMeta({
         max-md:text-xl
       "
       >
-        {name || handle}
+        {name !== undefined && name !== null && name.length > 0 ? name : handle}
       </h1>
 
       {/* Handle */}
@@ -266,7 +311,7 @@ function ProfileMeta({
       </p>
 
       {/* Bio */}
-      {bio && (
+      {bio !== undefined && bio !== null && bio.length > 0 && (
         <div className="bio mt-2">
           <p
             className="
@@ -276,10 +321,12 @@ function ProfileMeta({
             leading-relaxed
           "
           >
-            {bioTruncated && !showFullBio ? `${bio.slice(0, 140)}...` : bio}
+            {bioTruncated && !showFullBio
+              ? `${bio.slice(0, BIO_TRUNCATE_LENGTH)}...`
+              : bio}
             {bioTruncated && (
               <button
-                onClick={() => setShowFullBio(!showFullBio)}
+                onClick={handleToggleBio}
                 className="
                   ml-2 
                   text-primary 
@@ -312,27 +359,29 @@ function CounterPills({
   followingCount: number;
   postCounts: { writing: number; video: number; total: number };
   className?: string;
-}) {
-  const formatCount = (count: number) => {
-    if (count >= 1000000) return `${(count / 1000000).toFixed(1)}M`;
-    if (count >= 1000) return `${(count / 1000).toFixed(1)}K`;
+}): React.ReactElement {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const formatCount = (count: number): string => {
+    if (count >= COUNT_MILLION) return `${(count / COUNT_MILLION).toFixed(1)}M`;
+    if (count >= COUNT_THOUSAND)
+      return `${(count / COUNT_THOUSAND).toFixed(1)}K`;
     return count.toString();
   };
 
-  const handleFollowersClick = () => {
+  const handleFollowersClick = useCallback((): void => {
     // TODO: Navigate to followers page or show followers modal
-    console.info('Show followers');
-  };
+    console.warn('Show followers');
+  }, []);
 
-  const handleFollowingClick = () => {
+  const handleFollowingClick = useCallback((): void => {
     // TODO: Navigate to following page or show following modal
-    console.info('Show following');
-  };
+    console.warn('Show following');
+  }, []);
 
-  const handlePostsClick = () => {
+  const handlePostsClick = useCallback((): void => {
     // TODO: Scroll to posts section
-    console.info('Scroll to posts');
-  };
+    console.warn('Scroll to posts');
+  }, []);
 
   return (
     <div className={`counter-pills flex gap-3 ${className}`}>
@@ -366,10 +415,11 @@ function CounterPill({
   label: string;
   count: number;
   onClick?: () => void;
-}) {
-  const _formatCount = (count: number) => {
-    if (count >= 1000000) return `${(count / 1000000).toFixed(1)}M`;
-    if (count >= 1000) return `${(count / 1000).toFixed(1)}K`;
+}): React.ReactElement {
+  const formatCountInternal = (count: number): string => {
+    if (count >= COUNT_MILLION) return `${(count / COUNT_MILLION).toFixed(1)}M`;
+    if (count >= COUNT_THOUSAND)
+      return `${(count / COUNT_THOUSAND).toFixed(1)}K`;
     return count.toString();
   };
 
@@ -394,7 +444,7 @@ function CounterPill({
       "
     >
       <span className="count text-foreground font-semibold">
-        {_formatCount(count)}
+        {formatCountInternal(count)}
       </span>
       <span className="label text-muted-foreground">{label}</span>
     </button>
@@ -414,34 +464,42 @@ function SocialLinks({
   editable?: boolean;
   onEdit?: () => void;
   className?: string;
-}) {
-  if (!links || Object.keys(links).length === 0) {
-    return null;
+}): React.ReactElement | undefined {
+  if (
+    links === undefined ||
+    links === null ||
+    Object.keys(links).length === 0
+  ) {
+    return undefined;
   }
 
   return (
     <div className={`social-links flex items-center gap-3 ${className}`}>
       {/* Location */}
-      {links.location && (
-        <span className="location text-sm text-muted-foreground flex items-center gap-1">
-          📍 {links.location}
-        </span>
-      )}
+      {links.location !== undefined &&
+        links.location !== null &&
+        links.location.length > 0 && (
+          <span className="location text-sm text-muted-foreground flex items-center gap-1">
+            📍 {links.location}
+          </span>
+        )}
 
       {/* Website */}
-      {links.website && (
-        <a
-          href={links.website}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="website text-sm text-primary hover:text-primary/80 transition-colors"
-        >
-          🔗 Website
-        </a>
-      )}
+      {links.website !== undefined &&
+        links.website !== null &&
+        links.website.length > 0 && (
+          <a
+            href={links.website}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="website text-sm text-primary hover:text-primary/80 transition-colors"
+          >
+            🔗 Website
+          </a>
+        )}
 
       {/* Edit Button */}
-      {editable && onEdit && (
+      {editable && onEdit !== undefined && onEdit !== null && (
         <button
           onClick={onEdit}
           className="
@@ -462,11 +520,11 @@ function SocialLinks({
 /**
  * Follow Button Component - Now with real mutation hooks
  */
-function FollowButton() {
+function FollowButton(): React.ReactElement | undefined {
   const { isFollowing, profile, permissions } = useProfileContext();
   const followMutation = useFollowMutation();
 
-  const handleFollowClick = async () => {
+  const handleFollowClickAsync = useCallback(async (): Promise<void> => {
     if (!permissions.canFollow) return;
 
     try {
@@ -477,10 +535,14 @@ function FollowButton() {
     } catch (error: unknown) {
       console.error('Follow/unfollow error:', error);
     }
-  };
+  }, [permissions.canFollow, followMutation, profile.username, isFollowing]);
+
+  const handleFollowClick = useCallback((): void => {
+    void handleFollowClickAsync();
+  }, [handleFollowClickAsync]);
 
   if (!permissions.canFollow) {
-    return null; // Don't show follow button to owner or unauthenticated users
+    return undefined; // Don't show follow button to owner or unauthenticated users
   }
 
   return (
@@ -520,7 +582,7 @@ function FollowButton() {
 /**
  * Edit Profile Button Component
  */
-function EditProfileButton() {
+function EditProfileButton(): React.ReactElement {
   return (
     <button
       className="

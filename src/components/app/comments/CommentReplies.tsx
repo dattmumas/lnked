@@ -2,7 +2,7 @@
 
 import { formatDistanceToNow } from 'date-fns';
 import { ChevronDown } from 'lucide-react';
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -25,26 +25,26 @@ interface CommentRepliesProps {
 export const CommentReplies: React.FC<CommentRepliesProps> = ({
   thread,
   onLoadReplies,
-  onReply,
+  onReply: _onReply,
   onReaction,
   className = '',
-}) => {
+}): React.ReactElement | undefined => {
   const [isExpanded, setIsExpanded] = useState(false);
   const { comment, replies, hasMoreReplies, repliesLoading } = thread;
 
-  const handleToggleReplies = () => {
+  const handleToggleReplies = useCallback((): void => {
     if (!isExpanded && replies.length === 0) {
       onLoadReplies(comment.id);
     }
     setIsExpanded(!isExpanded);
-  };
+  }, [isExpanded, replies.length, onLoadReplies, comment.id]);
 
-  const handleLoadMoreReplies = () => {
+  const handleLoadMoreReplies = useCallback((): void => {
     onLoadReplies(comment.id);
-  };
+  }, [onLoadReplies, comment.id]);
 
   if (comment.reply_count === 0) {
-    return null;
+    return undefined;
   }
 
   return (
@@ -98,18 +98,33 @@ interface ReplyItemProps {
   onReaction: (commentId: string, reactionType: ReactionType) => void;
 }
 
-const ReplyItem: React.FC<ReplyItemProps> = ({ reply, onReaction }) => {
+const ReplyItem: React.FC<ReplyItemProps> = ({
+  reply,
+  onReaction,
+}): React.ReactElement => {
   const formattedTime = formatDistanceToNow(new Date(reply.created_at), {
     addSuffix: true,
   });
 
-  const handleReaction = (reactionType: ReactionType) => {
-    onReaction(reply.id, reactionType);
-  };
+  const handleReaction = useCallback(
+    (reactionType: ReactionType): void => {
+      onReaction(reply.id, reactionType);
+    },
+    [onReaction, reply.id],
+  );
+
+  const handleReplyClick = useCallback((): void => {
+    // Replies to replies are handled at parent level
+  }, []);
 
   // Use author if user is not available
   const userInfo = reply.user || reply.author;
-  const avatarUrl = userInfo?.avatar_url || '';
+  const avatarUrl =
+    userInfo?.avatar_url !== undefined &&
+    userInfo?.avatar_url !== null &&
+    userInfo.avatar_url.length > 0
+      ? userInfo.avatar_url
+      : '';
   const displayName = userInfo?.full_name || userInfo?.username || 'Anonymous';
   const initial = displayName[0] || 'U';
 
@@ -139,7 +154,7 @@ const ReplyItem: React.FC<ReplyItemProps> = ({ reply, onReaction }) => {
         {/* Reply Actions */}
         <CommentActions
           comment={reply}
-          onReply={() => {}} // Replies to replies are handled at parent level
+          onReply={handleReplyClick}
           onReaction={handleReaction}
           showReplyButton={false} // No nested reply buttons in flat design
         />

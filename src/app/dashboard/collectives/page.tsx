@@ -1,6 +1,7 @@
 import { Plus } from 'lucide-react';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
+import React from 'react';
 
 import DashboardCollectiveCard from '@/components/app/dashboard/collectives/DashboardCollectiveCard';
 import { Button } from '@/components/ui/button';
@@ -19,7 +20,7 @@ type Membership = {
   collective: Database['public']['Tables']['collectives']['Row'] | null;
 };
 
-export default async function MyCollectivesPage() {
+export default async function MyCollectivesPage(): Promise<React.ReactElement> {
   const supabase = createServerSupabaseClient();
 
   const {
@@ -27,7 +28,13 @@ export default async function MyCollectivesPage() {
     error: authErrorSession,
   } = await supabase.auth.getSession();
 
-  if (authErrorSession || !session || !session.user) {
+  if (
+    authErrorSession !== null ||
+    session === null ||
+    session === undefined ||
+    session.user === null ||
+    session.user === undefined
+  ) {
     redirect('/sign-in');
   }
 
@@ -61,12 +68,19 @@ export default async function MyCollectivesPage() {
     .eq('user_id', userId)) as { data: Membership[] | null };
 
   const eligibleMemberships = (memberships ?? []).filter(
-    (member) => member.collective && member.collective.owner_id !== userId,
+    (member) =>
+      member.collective !== null &&
+      member.collective !== undefined &&
+      member.collective.owner_id !== userId,
   );
 
   const hasCollectives =
-    (ownedCollectives && ownedCollectives.length > 0) ||
-    (eligibleMemberships && eligibleMemberships.length > 0);
+    (ownedCollectives !== null &&
+      ownedCollectives !== undefined &&
+      ownedCollectives.length > 0) ||
+    (eligibleMemberships !== null &&
+      eligibleMemberships !== undefined &&
+      eligibleMemberships.length > 0);
 
   return (
     <div className="flex flex-col gap-8">
@@ -100,53 +114,56 @@ export default async function MyCollectivesPage() {
         </div>
       )}
 
-      {ownedCollectives && ownedCollectives.length > 0 && (
-        <section>
-          <h2 className="text-xl font-semibold mb-4">Collectives I Own</h2>
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {ownedCollectives.map((collective: OwnedCollectiveWithStats) => {
-              const subscriberCount = collective.subscriptions?.[0]?.count || 0;
-              // Note: This assumes all subscriptions are active. For accuracy, filter by status='active'.
-              // If subscriptions is null or empty array, count is 0.
-              return (
-                <DashboardCollectiveCard
-                  key={collective.id}
-                  collective={collective}
-                  role="Owner"
-                  subscriberCount={subscriberCount}
-                />
-              );
-            })}
-          </div>
-        </section>
-      )}
+      {ownedCollectives !== null &&
+        ownedCollectives !== undefined &&
+        ownedCollectives.length > 0 && (
+          <section>
+            <h2 className="text-xl font-semibold mb-4">Collectives I Own</h2>
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {ownedCollectives.map((collective: OwnedCollectiveWithStats) => {
+                const subscriberCount =
+                  (collective.subscriptions?.[0]?.count ?? 0) > 0
+                    ? (collective.subscriptions?.[0]?.count ?? 0)
+                    : 0;
+                // Note: This assumes all subscriptions are active. For accuracy, filter by status='active'.
+                // If subscriptions is null or empty array, count is 0.
+                return (
+                  <DashboardCollectiveCard
+                    key={collective.id}
+                    collective={collective}
+                    userRole="owner"
+                    subscriberCount={subscriberCount}
+                  />
+                );
+              })}
+            </div>
+          </section>
+        )}
 
-      {eligibleMemberships && eligibleMemberships.length > 0 && (
-        <section>
-          <h2 className="text-xl font-semibold mb-4">
-            Collectives I Contribute To
-          </h2>
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {eligibleMemberships.map((membership: Membership) =>
-              membership.collective ? (
-                <DashboardCollectiveCard
-                  key={membership.id}
-                  collective={membership.collective}
-                  role={
-                    membership.role as
-                      | 'admin'
-                      | 'editor'
-                      | 'author'
-                      | 'owner'
-                      | 'Owner'
-                  }
-                  memberId={membership.id}
-                />
-              ) : null,
-            )}
-          </div>
-        </section>
-      )}
+      {eligibleMemberships !== null &&
+        eligibleMemberships !== undefined &&
+        eligibleMemberships.length > 0 && (
+          <section>
+            <h2 className="text-xl font-semibold mb-4">
+              Collectives I Contribute To
+            </h2>
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {eligibleMemberships.map((membership: Membership) =>
+                membership.collective !== null &&
+                membership.collective !== undefined ? (
+                  <DashboardCollectiveCard
+                    key={membership.id}
+                    collective={membership.collective}
+                    userRole={
+                      membership.role as 'admin' | 'editor' | 'author' | 'owner'
+                    }
+                    memberId={membership.id}
+                  />
+                ) : undefined,
+              )}
+            </div>
+          </section>
+        )}
     </div>
   );
 }

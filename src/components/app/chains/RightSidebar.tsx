@@ -10,7 +10,7 @@ import {
   Image,
   Send,
 } from 'lucide-react';
-import { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -18,6 +18,13 @@ import { Textarea } from '@/components/ui/textarea';
 import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
 import { cn } from '@/lib/utils';
 import { formatTimestamp } from '@/utils/home/formatTimestamp';
+
+// Constants
+const CHAINS_LIMIT = 20;
+const MAX_CONTENT_PREVIEW_LENGTH = 50;
+const MAX_INITIALS_LENGTH = 2;
+const CHARACTER_LIMIT = 280;
+const WARNING_THRESHOLD = 20;
 
 // Types
 interface UserProfile {
@@ -65,98 +72,128 @@ type ChainDBRow = {
   } | null;
 };
 
-function useChainInteractions(userId: string) {
+function useChainInteractions(userId: string): {
+  likedChains: Set<string>;
+  replyingTo: string | undefined;
+  replyContent: string;
+  setReplyContent: (content: string) => void;
+  isPosting: boolean;
+  toggleLike: (chainId: string) => void;
+  startReply: (chainId: string) => void;
+  cancelReply: () => void;
+  submitReply: (parentChainId: string) => void;
+  shareChain: (chainId: string, content: string) => void;
+} {
   const [likedChains, setLikedChains] = useState<Set<string>>(new Set());
-  const [replyingTo, setReplyingTo] = useState<string | null>(null);
+  const [replyingTo, setReplyingTo] = useState<string | undefined>(undefined);
   const [replyContent, setReplyContent] = useState('');
   const [isPosting, setIsPosting] = useState(false);
   const supabase = createSupabaseBrowserClient();
 
-  const toggleLike = async (chainId: string) => {
-    const isCurrentlyLiked = likedChains.has(chainId);
-    try {
-      if (isCurrentlyLiked) {
-        setLikedChains((prev) => {
-          const newSet = new Set(prev);
-          newSet.delete(chainId);
-          return newSet;
-        });
-        await supabase
-          .from('chain_reactions')
-          .delete()
-          .match({ user_id: userId, chain_id: chainId, reaction: 'like' });
-      } else {
-        setLikedChains((prev) => new Set(prev).add(chainId));
-        await supabase.from('chain_reactions').upsert({
-          user_id: userId,
-          chain_id: chainId,
-          reaction: 'like',
-        });
+  const toggleLike = useCallback(
+    async (chainId: string): Promise<void> => {
+      const isCurrentlyLiked = likedChains.has(chainId);
+      try {
+        if (isCurrentlyLiked) {
+          setLikedChains((prev) => {
+            const newSet = new Set(prev);
+            newSet.delete(chainId);
+            return newSet;
+          });
+          await supabase
+            .from('chain_reactions')
+            .delete()
+            .match({ user_id: userId, chain_id: chainId, reaction: 'like' });
+        } else {
+          setLikedChains((prev) => new Set(prev).add(chainId));
+          await supabase.from('chain_reactions').upsert({
+            user_id: userId,
+            chain_id: chainId,
+            reaction: 'like',
+          });
+        }
+      } catch (error: unknown) {
+        console.error('Error toggling chain like:', error);
       }
-    } catch (error: unknown) {
-      console.error('Error toggling chain like:', error);
-    }
-  };
+    },
+    [likedChains, supabase, userId],
+  );
 
-  const startReply = (chainId: string) => {
+  const startReply = useCallback((chainId: string): void => {
     setReplyingTo(chainId);
     setReplyContent('');
-  };
-  const cancelReply = () => {
-    setReplyingTo(null);
+  }, []);
+
+  const cancelReply = useCallback((): void => {
+    setReplyingTo(undefined);
     setReplyContent('');
-  };
-  const submitReply = async (parentChainId: string) => {
-    if (!replyContent.trim() || isPosting) return;
-    setIsPosting(true);
-    try {
-      await supabase.from('chains').insert({
-        author_id: userId,
-        content: replyContent.trim(),
-        parent_chain_id: parentChainId,
-        status: 'active',
-      });
-      setReplyContent('');
-      setReplyingTo(null);
-    } catch (error: unknown) {
-      console.error('Error posting reply:', error);
-    } finally {
-      setIsPosting(false);
-    }
-  };
-  const shareChain = (chainId: string, content: string) => {
-    if (navigator.share) {
-      navigator.share({
-        title: `${content.slice(0, 50)}...`,
+  }, []);
+
+  const submitReply = useCallback(
+    async (parentChainId: string): Promise<void> => {
+      if (replyContent.trim().length === 0 || isPosting) return;
+      setIsPosting(true);
+      try {
+        await supabase.from('chains').insert({
+          author_id: userId,
+          content: replyContent.trim(),
+          parent_chain_id: parentChainId,
+          status: 'active',
+        });
+        setReplyContent('');
+        setReplyingTo(undefined);
+      } catch (error: unknown) {
+        console.error('Error posting reply:', error);
+      } finally {
+        setIsPosting(false);
+      }
+    },
+    [replyContent, isPosting, supabase, userId],
+  );
+
+  const shareChain = useCallback((chainId: string, content: string): void => {
+    if (navigator.share !== undefined && navigator.share !== null) {
+      void navigator.share({
+        title: `${content.slice(0, MAX_CONTENT_PREVIEW_LENGTH)}...`,
         url: `${window.location.origin}/chains/${chainId}`,
       });
     } else {
-      navigator.clipboard.writeText(
+      void navigator.clipboard.writeText(
         `${window.location.origin}/chains/${chainId}`,
       );
     }
-  };
+  }, []);
+
   return {
     likedChains,
     replyingTo,
     replyContent,
     setReplyContent,
     isPosting,
-    toggleLike,
+    toggleLike: (chainId: string): void => {
+      void toggleLike(chainId);
+    },
     startReply,
     cancelReply,
-    submitReply,
+    submitReply: (parentChainId: string): void => {
+      void submitReply(parentChainId);
+    },
     shareChain,
   };
 }
 
-function useChains() {
+function useChains(): {
+  chains: ChainItem[];
+  loading: boolean;
+  error: string | undefined;
+  refetch: () => void;
+} {
   const [chains, setChains] = useState<ChainItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | undefined>(undefined);
   const supabase = createSupabaseBrowserClient();
 
-  const fetchChains = useCallback(async () => {
+  const fetchChains = useCallback(async (): Promise<void> => {
     try {
       const { data, error } = await supabase
         .from('chains')
@@ -176,8 +213,8 @@ function useChains() {
         )
         .eq('status', 'active')
         .order('created_at', { ascending: false })
-        .limit(20);
-      if (error) {
+        .limit(CHAINS_LIMIT);
+      if (error !== undefined && error !== null) {
         setError(error.message);
         return;
       }
@@ -188,9 +225,28 @@ function useChains() {
         return {
           id: chain.id,
           user: {
-            name: user?.full_name ?? user?.username ?? 'Anonymous',
-            username: user?.username ?? 'unknown',
-            avatar_url: user?.avatar_url ?? undefined,
+            name:
+              user?.full_name !== undefined &&
+              user?.full_name !== null &&
+              user.full_name.length > 0
+                ? user.full_name
+                : user?.username !== undefined &&
+                    user?.username !== null &&
+                    user.username.length > 0
+                  ? user.username
+                  : 'Anonymous',
+            username:
+              user?.username !== undefined &&
+              user?.username !== null &&
+              user.username.length > 0
+                ? user.username
+                : 'unknown',
+            avatar_url:
+              user?.avatar_url !== undefined &&
+              user?.avatar_url !== null &&
+              user.avatar_url.length > 0
+                ? user.avatar_url
+                : undefined,
           },
           content: chain.content,
           timestamp: formatTimestamp(chain.created_at),
@@ -200,20 +256,24 @@ function useChains() {
         };
       });
       setChains(transformedChains);
-      setError(null);
-    } catch (err: unknown) {
+      setError(undefined);
+    } catch {
       setError('Failed to load chains');
     } finally {
       setLoading(false);
     }
   }, [supabase]);
 
+  const handleRefetch = useCallback((): void => {
+    void fetchChains();
+  }, [fetchChains]);
+
   useEffect((): void => {
-    fetchChains();
+    void fetchChains();
     // Real-time subscription could be added here
   }, [fetchChains]);
 
-  return { chains, loading, error, refetch: fetchChains };
+  return { chains, loading, error, refetch: handleRefetch };
 }
 
 function ChainPostForm({
@@ -224,65 +284,104 @@ function ChainPostForm({
   user: User;
   profile: UserProfile | null;
   onPostSuccess?: () => void;
-}) {
+}): React.ReactElement {
   const [content, setContent] = useState('');
   const [isPosting, setIsPosting] = useState(false);
   const supabase = createSupabaseBrowserClient();
-  const maxLength = 280;
-  const remainingChars = maxLength - content.length;
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (!content.trim() || isPosting) return;
-    setIsPosting(true);
-    try {
-      const { data, error } = await supabase
-        .from('chains')
-        .insert({
-          author_id: user.id,
-          content: content.trim(),
-          status: 'active',
-          created_at: new Date().toISOString(),
-        })
-        .select()
-        .single();
-      if (error) return;
-      setContent('');
-      if (onPostSuccess) onPostSuccess();
-    } catch (error: unknown) {
-      console.error('Error posting chain:', error);
-    } finally {
-      setIsPosting(false);
-    }
-  };
-  const getUserInitials = () => {
-    if (profile?.full_name) {
+  const remainingChars = CHARACTER_LIMIT - content.length;
+
+  const handleSubmit = useCallback(
+    async (e: React.FormEvent<HTMLFormElement>): Promise<void> => {
+      e.preventDefault();
+      if (content.trim().length === 0 || isPosting) return;
+      setIsPosting(true);
+      try {
+        const { error } = await supabase
+          .from('chains')
+          .insert({
+            author_id: user.id,
+            content: content.trim(),
+            status: 'active',
+            created_at: new Date().toISOString(),
+          })
+          .select()
+          .single();
+        if (error !== undefined && error !== null) return;
+        setContent('');
+        if (onPostSuccess !== undefined && onPostSuccess !== null)
+          onPostSuccess();
+      } catch (error: unknown) {
+        console.error('Error posting chain:', error);
+      } finally {
+        setIsPosting(false);
+      }
+    },
+    [content, isPosting, supabase, user.id, onPostSuccess],
+  );
+
+  const handleFormSubmit = useCallback(
+    (e: React.FormEvent<HTMLFormElement>): void => {
+      void handleSubmit(e);
+    },
+    [handleSubmit],
+  );
+
+  const handleContentChange = useCallback(
+    (e: React.ChangeEvent<HTMLTextAreaElement>): void => {
+      setContent(e.target.value);
+    },
+    [],
+  );
+
+  const getUserInitials = useCallback((): string => {
+    if (
+      profile?.full_name !== undefined &&
+      profile?.full_name !== null &&
+      profile.full_name.length > 0
+    ) {
       return profile.full_name
         .split(' ')
         .map((name) => name[0])
         .join('')
         .toUpperCase()
-        .slice(0, 2);
+        .slice(0, MAX_INITIALS_LENGTH);
     }
-    return (
-      profile?.username?.slice(0, 2).toUpperCase() ||
-      user.email?.slice(0, 2).toUpperCase() ||
-      'U'
-    );
-  };
+    const usernameInitials =
+      profile?.username !== undefined &&
+      profile?.username !== null &&
+      profile.username.length > 0
+        ? profile.username.slice(0, MAX_INITIALS_LENGTH).toUpperCase()
+        : undefined;
+
+    const emailInitials =
+      user.email !== undefined && user.email !== null && user.email.length > 0
+        ? user.email.slice(0, MAX_INITIALS_LENGTH).toUpperCase()
+        : undefined;
+
+    return usernameInitials ?? emailInitials ?? 'U';
+  }, [profile, user.email]);
+
   return (
     <div className="border-t border-gray-200 dark:border-gray-700 p-4">
-      <form
-        onSubmit={(e): void => {
-          void handleSubmit(e);
-        }}
-        className="space-y-3"
-      >
+      <form onSubmit={handleFormSubmit} className="space-y-3">
         <div className="flex gap-3">
           <Avatar className="w-9 h-9 flex-shrink-0">
-            {profile?.avatar_url ? (
+            {profile?.avatar_url !== undefined &&
+            profile?.avatar_url !== null &&
+            profile.avatar_url.length > 0 ? (
               <AvatarImage
                 src={profile.avatar_url}
-                alt={profile.full_name || profile.username || 'User'}
+                alt={
+                  profile.full_name !== undefined &&
+                  profile.full_name !== null &&
+                  profile.full_name.length > 0
+                    ? profile.full_name
+                    : profile.username !== undefined &&
+                        profile.username !== null &&
+                        profile.username.length > 0
+                      ? profile.username
+                      : 'User'
+                }
               />
             ) : (
               <AvatarFallback className="text-xs">
@@ -293,10 +392,10 @@ function ChainPostForm({
           <div className="flex-1 space-y-3">
             <Textarea
               value={content}
-              onChange={(e) => setContent(e.target.value)}
+              onChange={handleContentChange}
               placeholder="What's happening?"
               className="min-h-[90px] resize-none border-0 p-0 text-sm placeholder:text-gray-500 focus-visible:ring-0 focus-visible:ring-offset-0"
-              maxLength={maxLength}
+              maxLength={CHARACTER_LIMIT}
               disabled={isPosting}
             />
             <div className="flex items-center justify-between">
@@ -315,6 +414,7 @@ function ChainPostForm({
                   title="Add image"
                   disabled={isPosting}
                 >
+                  {/* eslint-disable-next-line jsx-a11y/alt-text */}
                   <Image className="w-4 h-4" />
                 </button>
               </div>
@@ -322,7 +422,9 @@ function ChainPostForm({
                 <span
                   className={cn(
                     'text-xs font-medium',
-                    remainingChars < 20 ? 'text-red-500' : 'text-gray-500',
+                    remainingChars < WARNING_THRESHOLD
+                      ? 'text-red-500'
+                      : 'text-gray-500',
                   )}
                 >
                   {remainingChars}
@@ -330,7 +432,11 @@ function ChainPostForm({
                 <Button
                   type="submit"
                   size="sm"
-                  disabled={!content.trim() || isPosting || remainingChars < 0}
+                  disabled={
+                    content.trim().length === 0 ||
+                    isPosting ||
+                    remainingChars < 0
+                  }
                   className="px-5 py-2 h-auto text-sm font-medium"
                 >
                   {isPosting ? (
@@ -360,9 +466,45 @@ export function RightSidebar({
 }: {
   user: User;
   profile: UserProfile | null;
-}) {
+}): React.ReactElement {
   const { chains, loading, error, refetch } = useChains();
   const chainInteractions = useChainInteractions(user.id);
+
+  const handleToggleLike = useCallback(
+    (itemId: string) => (): void => {
+      chainInteractions.toggleLike(itemId);
+    },
+    [chainInteractions],
+  );
+
+  const handleStartReply = useCallback(
+    (itemId: string) => (): void => {
+      chainInteractions.startReply(itemId);
+    },
+    [chainInteractions],
+  );
+
+  const handleShareChain = useCallback(
+    (itemId: string, itemContent: string) => (): void => {
+      chainInteractions.shareChain(itemId, itemContent);
+    },
+    [chainInteractions],
+  );
+
+  const handleReplyContentChange = useCallback(
+    (e: React.ChangeEvent<HTMLTextAreaElement>): void => {
+      chainInteractions.setReplyContent(e.target.value);
+    },
+    [chainInteractions],
+  );
+
+  const handleSubmitReply = useCallback(
+    (itemId: string) => (): void => {
+      chainInteractions.submitReply(itemId);
+    },
+    [chainInteractions],
+  );
+
   return (
     <div className="fixed right-0 top-16 w-[28rem] h-[calc(100vh-4rem)] bg-white dark:bg-gray-900 border-l border-gray-200 dark:border-gray-700 hidden lg:block z-20">
       <div className="h-full overflow-hidden flex flex-col">
@@ -382,7 +524,7 @@ export function RightSidebar({
             <div className="flex items-center justify-center py-8">
               <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
             </div>
-          ) : error ? (
+          ) : error !== undefined && error !== null && error.length > 0 ? (
             <div className="text-center py-8">
               <p className="text-red-500 text-sm mb-2">Error loading chains</p>
               <Button size="sm" variant="outline" onClick={refetch}>
@@ -403,7 +545,9 @@ export function RightSidebar({
                 >
                   <div className="flex gap-3">
                     <Avatar className="w-9 h-9 flex-shrink-0">
-                      {item.user.avatar_url ? (
+                      {item.user.avatar_url !== undefined &&
+                      item.user.avatar_url !== null &&
+                      item.user.avatar_url.length > 0 ? (
                         <AvatarImage
                           src={item.user.avatar_url}
                           alt={item.user.name}
@@ -438,7 +582,7 @@ export function RightSidebar({
                       <div className="flex items-center gap-5">
                         {/* Like Button */}
                         <button
-                          onClick={() => chainInteractions.toggleLike(item.id)}
+                          onClick={handleToggleLike(item.id)}
                           className={cn(
                             'flex items-center gap-1.5 text-xs transition-colors',
                             chainInteractions.likedChains.has(item.id)
@@ -457,7 +601,7 @@ export function RightSidebar({
                         </button>
                         {/* Reply Button */}
                         <button
-                          onClick={() => chainInteractions.startReply(item.id)}
+                          onClick={handleStartReply(item.id)}
                           className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-blue-500 transition-colors"
                         >
                           <Reply className="w-4 h-4" />
@@ -465,9 +609,7 @@ export function RightSidebar({
                         </button>
                         {/* Share Button */}
                         <button
-                          onClick={() =>
-                            chainInteractions.shareChain(item.id, item.content)
-                          }
+                          onClick={handleShareChain(item.id, item.content)}
                           className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-green-500 transition-colors"
                         >
                           <Share2 className="w-4 h-4" />
@@ -483,16 +625,15 @@ export function RightSidebar({
                         <div className="mt-4 space-y-3">
                           <Textarea
                             value={chainInteractions.replyContent}
-                            onChange={(e) =>
-                              chainInteractions.setReplyContent(e.target.value)
-                            }
+                            onChange={handleReplyContentChange}
                             placeholder={`Reply to ${item.user.name}...`}
                             className="w-full text-sm min-h-[70px] resize-none"
-                            maxLength={280}
+                            maxLength={CHARACTER_LIMIT}
                           />
                           <div className="flex items-center justify-between">
                             <span className="text-xs text-gray-500">
-                              {280 - chainInteractions.replyContent.length}{' '}
+                              {CHARACTER_LIMIT -
+                                chainInteractions.replyContent.length}{' '}
                               characters remaining
                             </span>
                             <div className="flex gap-2">
@@ -506,12 +647,10 @@ export function RightSidebar({
                               </Button>
                               <Button
                                 size="sm"
-                                onClick={() =>
-                                  chainInteractions.submitReply(item.id)
-                                }
+                                onClick={handleSubmitReply(item.id)}
                                 disabled={
-                                  !chainInteractions.replyContent.trim() ||
-                                  chainInteractions.isPosting
+                                  chainInteractions.replyContent.trim()
+                                    .length === 0 || chainInteractions.isPosting
                                 }
                                 className="h-7 text-xs px-3"
                               >

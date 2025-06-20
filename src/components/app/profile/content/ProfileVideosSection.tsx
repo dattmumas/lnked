@@ -2,10 +2,15 @@
 
 import { Play, Clock, Calendar } from 'lucide-react';
 import Link from 'next/link';
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 
 import VideoThumbnail from '@/components/app/posts/molecules/VideoThumbnail';
 import { Button } from '@/components/ui/button';
+
+// Constants for magic numbers
+const DEFAULT_VIDEO_LIMIT = 12;
+const SECONDS_PER_MINUTE = 60;
+const SECONDS_REMAINDER_PADDING = 2;
 
 interface VideoAsset {
   id: string;
@@ -16,6 +21,13 @@ interface VideoAsset {
   created_at: string;
   updated_at: string;
   status: string;
+}
+
+interface VideosApiResponse {
+  data: {
+    videos: VideoAsset[];
+    total: number;
+  };
 }
 
 interface ProfileVideosSectionProps {
@@ -30,19 +42,23 @@ export function ProfileVideosSection({
   userId,
   isOwner = false,
   className = '',
-  limit = 12,
+  limit = DEFAULT_VIDEO_LIMIT,
   showHeader = true,
-}: ProfileVideosSectionProps) {
+}: ProfileVideosSectionProps): React.ReactElement {
   const [videos, setVideos] = useState<VideoAsset[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | undefined>(undefined);
   const [total, setTotal] = useState(0);
 
+  const handleReload = useCallback((): void => {
+    window.location.reload();
+  }, []);
+
   useEffect((): void => {
-    const fetchVideos = async () => {
+    const fetchVideos = async (): Promise<void> => {
       try {
         setIsLoading(true);
-        setError(null);
+        setError(undefined);
 
         const response = await fetch(
           `/api/videos/user/${userId}?limit=${limit}&sort=created_at&order=desc`,
@@ -52,9 +68,9 @@ export function ProfileVideosSection({
           throw new Error('Failed to fetch videos');
         }
 
-        const result = await response.json();
-        setVideos(result.data.videos || []);
-        setTotal(result.data.total || 0);
+        const result = (await response.json()) as VideosApiResponse;
+        setVideos(result.data?.videos ?? []);
+        setTotal(result.data?.total ?? 0);
       } catch (err: unknown) {
         setError(err instanceof Error ? err.message : 'Failed to load videos');
       } finally {
@@ -62,7 +78,7 @@ export function ProfileVideosSection({
       }
     };
 
-    fetchVideos();
+    void fetchVideos();
   }, [userId, limit]);
 
   if (isLoading) {
@@ -81,7 +97,7 @@ export function ProfileVideosSection({
     );
   }
 
-  if (error) {
+  if (error !== undefined && error !== null && error.length > 0) {
     return (
       <section className={`${showHeader ? 'space-y-6' : ''} ${className}`}>
         {showHeader && (
@@ -99,11 +115,7 @@ export function ProfileVideosSection({
               Error Loading Videos
             </h3>
             <p className="text-muted-foreground mt-2">{error}</p>
-            <Button
-              onClick={() => window.location.reload()}
-              className="mt-4"
-              variant="outline"
-            >
+            <Button onClick={handleReload} className="mt-4" variant="outline">
               Try Again
             </Button>
           </div>
@@ -173,11 +185,11 @@ export function ProfileVideosSection({
   );
 }
 
-function VideoCard({ video }: { video: VideoAsset }) {
+function VideoCard({ video }: { video: VideoAsset }): React.ReactElement {
   const formatDuration = (seconds: number): string => {
-    const minutes = Math.floor(seconds / 60);
-    const remainingSeconds = seconds % 60;
-    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+    const minutes = Math.floor(seconds / SECONDS_PER_MINUTE);
+    const remainingSeconds = seconds % SECONDS_PER_MINUTE;
+    return `${minutes}:${remainingSeconds.toString().padStart(SECONDS_REMAINDER_PADDING, '0')}`;
   };
 
   const formatDate = (dateString: string): string => {
@@ -196,8 +208,19 @@ function VideoCard({ video }: { video: VideoAsset }) {
     >
       <div className="relative aspect-video bg-muted">
         <VideoThumbnail
-          playbackId={video.mux_playback_id || undefined}
-          duration={video.duration || undefined}
+          playbackId={
+            video.mux_playback_id !== undefined &&
+            video.mux_playback_id !== null
+              ? video.mux_playback_id
+              : undefined
+          }
+          duration={
+            video.duration !== undefined &&
+            video.duration !== null &&
+            video.duration > 0
+              ? video.duration
+              : undefined
+          }
           isProcessing={video.status === 'preparing'}
           className="w-full h-full"
         />
@@ -205,7 +228,11 @@ function VideoCard({ video }: { video: VideoAsset }) {
 
       <div className="p-3 space-y-2">
         <h3 className="font-medium text-foreground line-clamp-2 group-hover:text-primary transition-colors">
-          {video.title || 'Untitled Video'}
+          {video.title !== undefined &&
+          video.title !== null &&
+          video.title.length > 0
+            ? video.title
+            : 'Untitled Video'}
         </h3>
 
         <div className="flex items-center justify-between text-xs text-muted-foreground">
@@ -213,25 +240,29 @@ function VideoCard({ video }: { video: VideoAsset }) {
             <Calendar className="h-3 w-3" />
             {formatDate(video.created_at)}
           </div>
-          {video.duration && (
-            <div className="flex items-center gap-1">
-              <Clock className="h-3 w-3" />
-              {formatDuration(video.duration)}
-            </div>
-          )}
+          {video.duration !== undefined &&
+            video.duration !== null &&
+            video.duration > 0 && (
+              <div className="flex items-center gap-1">
+                <Clock className="h-3 w-3" />
+                {formatDuration(video.duration)}
+              </div>
+            )}
         </div>
 
-        {video.description && (
-          <p className="text-xs text-muted-foreground line-clamp-2">
-            {video.description}
-          </p>
-        )}
+        {video.description !== undefined &&
+          video.description !== null &&
+          video.description.length > 0 && (
+            <p className="text-xs text-muted-foreground line-clamp-2">
+              {video.description}
+            </p>
+          )}
       </div>
     </Link>
   );
 }
 
-function VideoGridSkeleton() {
+function VideoGridSkeleton(): React.ReactElement {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
       {Array.from({ length: 8 }).map((_, i) => (

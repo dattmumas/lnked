@@ -10,9 +10,9 @@ import {
   Calendar,
   type LucideIcon,
 } from 'lucide-react';
+import React from 'react';
 
 import { MetricCard } from '@/components/primitives/Card';
-
 
 interface StatItem {
   label: string;
@@ -47,7 +47,7 @@ export default function StatsRow({
   pendingPayout = 0,
   openRate = '0%',
   publishedThisMonth = 0,
-}: StatsRowProps) {
+}: StatsRowProps): React.ReactElement {
   // Organize stats into primary and secondary for better visual hierarchy
   const primaryStats: StatItem[] = [
     {
@@ -120,7 +120,7 @@ export default function StatsRow({
             <MetricCard
               key={stat.label}
               label={stat.label}
-              value={`${stat.prefix || ''}${stat.value}${stat.suffix || ''}`}
+              value={`${stat.prefix !== undefined && stat.prefix !== null && stat.prefix.length > 0 ? stat.prefix : ''}${stat.value}${stat.suffix !== undefined && stat.suffix !== null && stat.suffix.length > 0 ? stat.suffix : ''}`}
               icon={<Icon className="h-5 w-5" />}
               className="micro-interaction card-lift"
             />
@@ -136,7 +136,7 @@ export default function StatsRow({
             <MetricCard
               key={stat.label}
               label={stat.label}
-              value={`${stat.prefix || ''}${stat.value}${stat.suffix || ''}`}
+              value={`${stat.prefix !== undefined && stat.prefix !== null && stat.prefix.length > 0 ? stat.prefix : ''}${stat.value}${stat.suffix !== undefined && stat.suffix !== null && stat.suffix.length > 0 ? stat.suffix : ''}`}
               icon={<Icon className="h-4 w-4" />}
               className="micro-interaction card-lift"
             />
@@ -153,7 +153,7 @@ export default function StatsRow({
               <MetricCard
                 key={stat.label}
                 label={stat.label}
-                value={`${stat.prefix || ''}${stat.value}${stat.suffix || ''}`}
+                value={`${stat.prefix !== undefined && stat.prefix !== null && stat.prefix.length > 0 ? stat.prefix : ''}${stat.value}${stat.suffix !== undefined && stat.suffix !== null && stat.suffix.length > 0 ? stat.suffix : ''}`}
                 icon={<Icon className="h-4 w-4" />}
                 className="micro-interaction card-lift"
               />

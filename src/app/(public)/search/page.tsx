@@ -8,17 +8,21 @@ import type { Database } from '@/lib/database.types';
 
 export const dynamic = 'force-dynamic';
 
+// Constants for configuration
+const MIN_FTS_LENGTH = 3;
+const RESULTS_LIMIT = 20;
+
 export default async function Page({
   searchParams,
 }: {
   searchParams: Promise<{ q?: string }>;
-}) {
+}): Promise<React.JSX.Element> {
   const supabase = createServerSupabaseClient();
   const { q: queryParam } = await searchParams;
-  const rawQ = queryParam?.trim() || '';
+  const rawQ = queryParam?.trim() ?? '';
   const q = rawQ;
   const tsQuery = buildWebsearchQuery(rawQ);
-  const useFTS = tsQuery.length >= 3;
+  const useFTS = tsQuery.length >= MIN_FTS_LENGTH;
 
   type PostCardData = {
     id: string;
@@ -86,7 +90,7 @@ export default async function Page({
   let users: UserResult[] = [];
   let collectives: CollectiveResult[] = [];
 
-  if (q && q.length > 0) {
+  if (q !== null && q !== undefined && q.length > 0) {
     let postQuery = supabase
       .from('posts')
       .select(
@@ -106,21 +110,19 @@ export default async function Page({
       `,
       )
       .eq('is_public', true)
-      .not('published_at', 'is', null);
+      .not('published_at', 'is', null); // eslint-disable-line unicorn/no-null
 
     if (useFTS) {
       postQuery = postQuery.textSearch('tsv', tsQuery, { type: 'websearch' });
     } else {
-      const pattern = `%${escapeLike(q)}%`;
       postQuery = postQuery.or(
-        'title.ilike.:pat,subtitle.ilike.:pat,content.ilike.:pat',
-        { pat: pattern } as any,
+        `title.ilike.%${escapeLike(q)}%,subtitle.ilike.%${escapeLike(q)}%,content.ilike.%${escapeLike(q)}%`,
       );
     }
 
     const { data: postsData } = await postQuery
       .order('published_at', { ascending: false })
-      .limit(20);
+      .limit(RESULTS_LIMIT);
 
     posts =
       (postsData as PostQueryRow[] | null)?.map((p) => ({
@@ -129,28 +131,32 @@ export default async function Page({
         content: p.content,
         meta_description: p.meta_description,
         thumbnail_url: p.thumbnail_url,
-        slug: (p as { slug?: string }).slug ?? null,
+        slug: (p as { slug?: string }).slug ?? null, // eslint-disable-line unicorn/no-null
         created_at: p.created_at,
         post_type: p.post_type,
         metadata: p.metadata,
         like_count: p.like_count ?? 0,
         dislike_count: p.dislike_count ?? 0,
-        collective_slug: p.collective?.slug ?? null,
+        collective_slug: p.collective?.slug ?? null, // eslint-disable-line unicorn/no-null
         current_user_has_liked: undefined,
         author: {
-          id: p.author?.id || '',
-          username: p.author?.username || null,
-          full_name: p.author?.full_name || null,
-          avatar_url: p.author?.avatar_url || null,
+          id:
+            p.author?.id !== null && p.author?.id !== undefined
+              ? p.author.id
+              : '',
+          username: p.author?.username ?? null, // eslint-disable-line unicorn/no-null
+          full_name: p.author?.full_name ?? null, // eslint-disable-line unicorn/no-null
+          avatar_url: p.author?.avatar_url ?? null, // eslint-disable-line unicorn/no-null
         },
-        collective: p.collective
-          ? {
-              id: p.collective.id,
-              name: p.collective.name,
-              slug: p.collective.slug,
-            }
-          : null,
-      })) || [];
+        collective:
+          p.collective !== null && p.collective !== undefined
+            ? {
+                id: p.collective.id,
+                name: p.collective.name,
+                slug: p.collective.slug,
+              }
+            : null, // eslint-disable-line unicorn/no-null
+      })) ?? [];
 
     let userQuery = supabase
       .from('users')
@@ -159,16 +165,14 @@ export default async function Page({
     if (useFTS) {
       userQuery = userQuery.textSearch('tsv', tsQuery, { type: 'websearch' });
     } else {
-      const pattern = `%${escapeLike(q)}%`;
       userQuery = userQuery.or(
-        'username.ilike.:pat,full_name.ilike.:pat,bio.ilike.:pat',
-        { pat: pattern } as any,
+        `username.ilike.%${escapeLike(q)}%,full_name.ilike.%${escapeLike(q)}%,bio.ilike.%${escapeLike(q)}%`,
       );
     }
 
-    const { data: usersData } = await userQuery.limit(20);
+    const { data: usersData } = await userQuery.limit(RESULTS_LIMIT);
 
-    users = (usersData as UserResult[] | null) || [];
+    users = (usersData as UserResult[] | null) ?? [];
 
     let collectiveQuery = supabase
       .from('collectives')
@@ -179,26 +183,29 @@ export default async function Page({
         type: 'websearch',
       });
     } else {
-      const pattern = `%${escapeLike(q)}%`;
       collectiveQuery = collectiveQuery.or(
-        'name.ilike.:pat,description.ilike.:pat',
-        { pat: pattern } as any,
+        `name.ilike.%${escapeLike(q)}%,description.ilike.%${escapeLike(q)}%`,
       );
     }
 
-    const { data: collectivesData } = await collectiveQuery.limit(20);
+    const { data: collectivesData } =
+      await collectiveQuery.limit(RESULTS_LIMIT);
 
-    collectives = (collectivesData as CollectiveResult[] | null) || [];
+    collectives = (collectivesData as CollectiveResult[] | null) ?? [];
   }
 
   const noResults =
-    q && posts.length === 0 && users.length === 0 && collectives.length === 0;
+    q !== null &&
+    q !== undefined &&
+    posts.length === 0 &&
+    users.length === 0 &&
+    collectives.length === 0;
 
   return (
     <div className="container mx-auto p-4 md:p-6 space-y-8">
       <div>
         <h1 className="text-3xl font-bold mb-4">
-          Search Results{q ? ` for "${q}"` : ''}
+          Search Results{q !== null && q !== undefined ? ` for "${q}"` : ''}
         </h1>
         <form action="" className="flex items-center gap-2 max-w-md">
           <input
@@ -226,9 +233,12 @@ export default async function Page({
                   content: post.content,
                   meta_description: post.meta_description,
                   thumbnail_url: post.thumbnail_url,
-                  slug: post.slug ?? null,
+                  slug: post.slug ?? undefined,
                   created_at: post.created_at,
-                  post_type: (post.post_type) || 'text',
+                  post_type:
+                    post.post_type !== null && post.post_type !== undefined
+                      ? post.post_type
+                      : 'text',
                   metadata: post.metadata,
                   author: post.author,
                   collective: post.collective,
@@ -237,8 +247,15 @@ export default async function Page({
                   isLiked: false,
                   isDisliked: false,
                   isBookmarked: false,
-                  likeCount: post.like_count || 0,
-                  dislikeCount: post.dislike_count || 0,
+                  likeCount:
+                    post.like_count !== null && post.like_count !== undefined
+                      ? post.like_count
+                      : 0,
+                  dislikeCount:
+                    post.dislike_count !== null &&
+                    post.dislike_count !== undefined
+                      ? post.dislike_count
+                      : 0,
                   commentCount: 0,
                 }}
               />
@@ -255,31 +272,41 @@ export default async function Page({
                 key={user.id}
                 className="flex items-center gap-4 p-4 border border-border rounded-lg hover:bg-accent/5 transition-colors"
               >
-                {user.avatar_url && (
+                {user.avatar_url !== null && user.avatar_url !== undefined && (
                   // eslint-disable-next-line @next/next/no-img-element
-                  (<img
+                  <img
                     src={user.avatar_url}
-                    alt={user.full_name || user.username || 'User'}
+                    alt={
+                      user.full_name !== null && user.full_name !== undefined
+                        ? user.full_name
+                        : user.username !== null && user.username !== undefined
+                          ? user.username
+                          : 'User'
+                    }
                     className="w-12 h-12 rounded-full object-cover"
-                  />)
+                  />
                 )}
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
                     <span className="font-medium">
-                      {user.full_name || user.username || 'Unnamed User'}
+                      {user.full_name !== null && user.full_name !== undefined
+                        ? user.full_name
+                        : user.username !== null && user.username !== undefined
+                          ? user.username
+                          : 'Unnamed User'}
                     </span>
-                    {user.username && (
+                    {user.username !== null && user.username !== undefined && (
                       <span className="text-sm text-muted-foreground">
                         @{user.username}
                       </span>
                     )}
                   </div>
-                  {user.bio && (
+                  {user.bio !== null && user.bio !== undefined && (
                     <p className="text-sm text-muted-foreground mt-1">
                       {user.bio}
                     </p>
                   )}
-                  {user.username && (
+                  {user.username !== null && user.username !== undefined && (
                     <Button
                       variant="outline"
                       size="sm"
@@ -305,7 +332,7 @@ export default async function Page({
           </div>
         </div>
       )}
-      {noResults && <p>No results found.</p>}
+      {noResults === true && <p>No results found.</p>}
     </div>
   );
 }

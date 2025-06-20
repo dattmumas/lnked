@@ -7,7 +7,7 @@ import { createServerSupabaseClient } from '@/lib/supabase/server';
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ slug: string }> },
-) {
+): Promise<NextResponse> {
   const { slug: postId } = await params;
   const supabase = createServerSupabaseClient();
 
@@ -40,9 +40,13 @@ export async function POST(
     );
   }
 
-  let body: { type?: string };
+  interface ReactionBody {
+    type?: string;
+  }
+  
+  let body: ReactionBody;
   try {
-    body = await req.json();
+    body = await req.json() as ReactionBody;
   } catch {
     return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
   }

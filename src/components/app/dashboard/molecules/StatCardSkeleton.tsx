@@ -1,14 +1,18 @@
-import { Card } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
-import { cn } from "@/lib/utils";
+import React from 'react';
+
+import { Card } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
+import { cn } from '@/lib/utils';
 
 interface StatCardSkeletonProps {
   className?: string;
 }
 
-export function StatCardSkeleton({ className }: StatCardSkeletonProps) {
+export function StatCardSkeleton({
+  className,
+}: StatCardSkeletonProps): React.ReactElement {
   return (
-    <Card className={cn("overflow-hidden animate-pulse", className)}>
+    <Card className={cn('overflow-hidden animate-pulse', className)}>
       <div className="flex flex-col p-4 h-full">
         <div className="flex items-center justify-between gap-2 mb-2">
           <Skeleton className="h-4 w-24" />

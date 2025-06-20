@@ -6,13 +6,15 @@ import { ReactionType, CommentValidationError, CommentPermissionError, CommentNo
 export async function POST(
   request: NextRequest, 
   { params }: { params: Promise<{ commentId: string }> }
-) {
+): Promise<NextResponse> {
   try {
     const { commentId } = await params;
-    const body = await request.json();
+    const body: { reaction_type?: unknown } = await request.json() as { reaction_type?: unknown };
     const { reaction_type } = body;
 
-    if (!reaction_type || !['like', 'dislike'].includes(reaction_type)) {
+    if (reaction_type === null || reaction_type === undefined || 
+        typeof reaction_type !== 'string' || 
+        !['like', 'dislike'].includes(reaction_type)) {
       return NextResponse.json(
         { error: 'Valid reaction_type is required' }, 
         { status: 400 }
@@ -44,4 +46,4 @@ export async function POST(
     
     return NextResponse.json({ error: 'Failed to toggle reaction' }, { status: 500 });
   }
-} 
+}

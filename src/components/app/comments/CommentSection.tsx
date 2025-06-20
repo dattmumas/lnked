@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useCallback } from 'react';
 
 import { Separator } from '@/components/ui/separator';
 import { useCommentsV2 } from '@/hooks/comments/useCommentsV2';
@@ -9,7 +9,6 @@ import { CommentEntityType, ReactionType } from '@/types/comments-v2';
 import { CommentForm } from './CommentForm';
 import { CommentList } from './CommentList';
 import { CommentStats } from './CommentStats';
-
 
 interface CommentSectionProps {
   entityType: CommentEntityType;
@@ -23,7 +22,7 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
   entityId,
   initialCommentsCount = 0,
   className = '',
-}) => {
+}): React.ReactElement => {
   const {
     comments,
     loading,
@@ -39,32 +38,71 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
     enableRealtime: true,
   });
 
-  const handleNewComment = async (content: string) => {
-    try {
-      await addComment(content);
-    } catch (error: unknown) {
-      console.error('Failed to add comment:', error);
-    }
-  };
+  const handleNewComment = useCallback(
+    async (content: string): Promise<void> => {
+      try {
+        await addComment(content);
+      } catch (error: unknown) {
+        console.error('Failed to add comment:', error);
+      }
+    },
+    [addComment],
+  );
 
-  const handleReply = async (parentId: string, content: string) => {
-    try {
-      await addComment(content, parentId);
-    } catch (error: unknown) {
-      console.error('Failed to add reply:', error);
-    }
-  };
+  const handleReply = useCallback(
+    async (parentId: string, content: string): Promise<void> => {
+      try {
+        await addComment(content, parentId);
+      } catch (error: unknown) {
+        console.error('Failed to add reply:', error);
+      }
+    },
+    [addComment],
+  );
 
-  const handleReaction = async (
-    commentId: string,
-    reactionType: ReactionType,
-  ) => {
-    try {
-      await toggleReaction(commentId, reactionType);
-    } catch (error: unknown) {
-      console.error('Failed to toggle reaction:', error);
-    }
-  };
+  const handleReaction = useCallback(
+    async (commentId: string, reactionType: ReactionType): Promise<void> => {
+      try {
+        await toggleReaction(commentId, reactionType);
+      } catch (error: unknown) {
+        console.error('Failed to toggle reaction:', error);
+      }
+    },
+    [toggleReaction],
+  );
+
+  // Wrapper functions for event handlers to fix no-misused-promises
+  const handleSubmitComment = useCallback(
+    (content: string): void => {
+      void handleNewComment(content);
+    },
+    [handleNewComment],
+  );
+
+  const handleReplyWrapper = useCallback(
+    (parentId: string, content: string): void => {
+      void handleReply(parentId, content);
+    },
+    [handleReply],
+  );
+
+  const handleReactionWrapper = useCallback(
+    (commentId: string, reactionType: ReactionType): void => {
+      void handleReaction(commentId, reactionType);
+    },
+    [handleReaction],
+  );
+
+  const handleLoadMoreWrapper = useCallback((): void => {
+    void loadMoreComments();
+  }, [loadMoreComments]);
+
+  const handleLoadRepliesWrapper = useCallback(
+    (commentId: string): void => {
+      void loadReplies(commentId);
+    },
+    [loadReplies],
+  );
 
   // Calculate total comment count from loaded comments
   const totalCommentsCount = comments.reduce((count, thread) => {
@@ -73,7 +111,7 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
 
   const displayCount = Math.max(totalCommentsCount, initialCommentsCount);
 
-  if (error) {
+  if (error !== undefined && error !== null && error.length > 0) {
     return (
       <div
         className={`bg-background p-6 rounded-lg border border-destructive/20 ${className}`}
@@ -92,7 +130,7 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
       <Separator className="border-border" />
 
       <CommentForm
-        onSubmit={handleNewComment}
+        onSubmit={handleSubmitComment}
         placeholder={`Add a comment to this ${entityType}...`}
         loading={loading}
       />
@@ -100,10 +138,10 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
       <CommentList
         comments={comments}
         loading={loading}
-        onReply={handleReply}
-        onReaction={handleReaction}
-        onLoadMore={loadMoreComments}
-        onLoadReplies={loadReplies}
+        onReply={handleReplyWrapper}
+        onReaction={handleReactionWrapper}
+        onLoadMore={handleLoadMoreWrapper}
+        onLoadReplies={handleLoadRepliesWrapper}
         hasMoreComments={hasMore}
       />
     </div>

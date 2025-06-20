@@ -2,17 +2,20 @@
 
 import { usePathname } from 'next/navigation';
 import nprogress from 'nprogress';
-import { useEffect, useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
 import 'nprogress/nprogress.css';
+
+// Constants
+const PROGRESS_COMPLETE_DELAY = 300;
 
 // Minimal nprogress config: thin bar, no spinner
 nprogress.configure({ showSpinner: false, trickleSpeed: 120 });
 
-export default function RouteProgress() {
+export default function RouteProgress(): React.ReactElement | undefined {
   const pathname = usePathname();
   const previousPath = useRef<string>(pathname);
 
-  useEffect(() => {
+  useEffect((): (() => void) | void => {
     if (pathname !== previousPath.current) {
       nprogress.start();
       previousPath.current = pathname;
@@ -20,10 +23,11 @@ export default function RouteProgress() {
       // Give the page a tiny delay to ensure layout paint
       const timer = setTimeout(() => {
         nprogress.done();
-      }, 300);
-      return () => clearTimeout(timer);
+      }, PROGRESS_COMPLETE_DELAY);
+      return (): void => clearTimeout(timer);
     }
+    return undefined;
   }, [pathname]);
 
-  return null; // This component doesn't render anything visible
+  return undefined; // This component doesn't render anything visible
 }

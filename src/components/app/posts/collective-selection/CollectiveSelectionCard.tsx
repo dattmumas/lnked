@@ -10,7 +10,8 @@ import {
   AlertCircle,
   Info,
 } from 'lucide-react';
-import { useState } from 'react';
+import Image from 'next/image';
+import React, { useCallback, useState } from 'react';
 
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
@@ -22,6 +23,10 @@ import {
 } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { CollectiveWithPermission } from '@/types/enhanced-database.types';
+
+// Constants
+const AVATAR_SIZE_COMPACT = 32;
+const AVATAR_SIZE_NORMAL = 40;
 
 interface CollectiveSelectionCardProps {
   collective: CollectiveWithPermission;
@@ -71,17 +76,25 @@ export function CollectiveSelectionCard({
   disabled = false,
   showMemberCount = true,
   compact = false,
-}: CollectiveSelectionCardProps) {
+}: CollectiveSelectionCardProps): React.ReactElement {
   const [isHovered, setIsHovered] = useState(false);
 
   const roleInfo = roleConfig[collective.user_role];
   const RoleIcon = roleInfo.icon;
 
-  const handleClick = () => {
+  const handleClick = useCallback((): void => {
     if (!disabled && collective.can_post) {
       onToggleSelection(collective.id);
     }
-  };
+  }, [disabled, collective.can_post, collective.id, onToggleSelection]);
+
+  const handleMouseEnter = useCallback((): void => {
+    setIsHovered(true);
+  }, []);
+
+  const handleMouseLeave = useCallback((): void => {
+    setIsHovered(false);
+  }, []);
 
   const canPost = collective.can_post;
   const isInteractive = canPost && !disabled;
@@ -103,8 +116,8 @@ export function CollectiveSelectionCard({
           disabled && 'opacity-50 cursor-not-allowed',
         )}
         onClick={handleClick}
-        onMouseEnter={() => setIsHovered(true)}
-        onMouseLeave={() => setIsHovered(false)}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
       >
         <CardContent className={cn('p-3', compact && 'p-2')}>
           <div className="flex items-start justify-between gap-3">
@@ -113,10 +126,16 @@ export function CollectiveSelectionCard({
               <div className="flex items-center gap-2 mb-2">
                 {/* Collective Avatar/Logo */}
                 <div className="flex-shrink-0">
-                  {collective.logo_url ? (
-                    <img
+                  {collective.logo_url !== undefined &&
+                  collective.logo_url !== null &&
+                  collective.logo_url.length > 0 ? (
+                    <Image
                       src={collective.logo_url}
                       alt={`${collective.name} logo`}
+                      width={compact ? AVATAR_SIZE_COMPACT : AVATAR_SIZE_NORMAL}
+                      height={
+                        compact ? AVATAR_SIZE_COMPACT : AVATAR_SIZE_NORMAL
+                      }
                       className={cn(
                         'rounded-full object-cover',
                         compact ? 'w-8 h-8' : 'w-10 h-10',
@@ -144,11 +163,14 @@ export function CollectiveSelectionCard({
                   >
                     {collective.name}
                   </h3>
-                  {!compact && collective.description && (
-                    <p className="text-sm text-gray-600 truncate mt-1">
-                      {collective.description}
-                    </p>
-                  )}
+                  {!compact &&
+                    collective.description !== undefined &&
+                    collective.description !== null &&
+                    collective.description.length > 0 && (
+                      <p className="text-sm text-gray-600 truncate mt-1">
+                        {collective.description}
+                      </p>
+                    )}
                 </div>
               </div>
 
@@ -189,12 +211,15 @@ export function CollectiveSelectionCard({
                 </div>
 
                 {/* Member Count */}
-                {showMemberCount && collective.member_count && (
-                  <div className="flex items-center gap-1 text-xs text-gray-500">
-                    <Users className="w-3 h-3" />
-                    <span>{collective.member_count}</span>
-                  </div>
-                )}
+                {showMemberCount &&
+                  collective.member_count !== undefined &&
+                  collective.member_count !== null &&
+                  collective.member_count > 0 && (
+                    <div className="flex items-center gap-1 text-xs text-gray-500">
+                      <Users className="w-3 h-3" />
+                      <span>{collective.member_count}</span>
+                    </div>
+                  )}
               </div>
             </div>
 
@@ -243,7 +268,7 @@ export function CollectiveSelectionCard({
 // Compact version for smaller spaces
 export function CompactCollectiveSelectionCard(
   props: CollectiveSelectionCardProps,
-) {
+): React.ReactElement {
   return <CollectiveSelectionCard {...props} compact />;
 }
 
@@ -252,7 +277,7 @@ export function CollectiveSelectionCardSkeleton({
   compact = false,
 }: {
   compact?: boolean;
-}) {
+}): React.ReactElement {
   return (
     <Card className={cn('animate-pulse', compact ? 'p-2' : 'p-1')}>
       <CardContent className={cn('p-3', compact && 'p-2')}>

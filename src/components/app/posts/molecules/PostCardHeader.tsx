@@ -2,10 +2,14 @@
 
 import { UserPlus } from 'lucide-react';
 import Link from 'next/link';
+import React from 'react';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+
+// Constants
+const MAX_INITIALS_LENGTH = 2;
 
 interface Author {
   id: string;
@@ -38,15 +42,31 @@ export default function PostCardHeader({
   currentUserId,
   onFollow,
   isFollowing = false,
-}: PostCardHeaderProps) {
-  const authorName = author.full_name || author.username || 'Anonymous';
-  const authorUsername = author.username || 'unknown';
+}: PostCardHeaderProps): React.ReactElement {
+  const authorName =
+    author.full_name !== undefined &&
+    author.full_name !== null &&
+    author.full_name.length > 0
+      ? author.full_name
+      : author.username !== undefined &&
+          author.username !== null &&
+          author.username.length > 0
+        ? author.username
+        : 'Anonymous';
+
+  const authorUsername =
+    author.username !== undefined &&
+    author.username !== null &&
+    author.username.length > 0
+      ? author.username
+      : 'unknown';
+
   const authorInitials = authorName
     .split(' ')
     .map((n) => n[0])
     .join('')
     .toUpperCase()
-    .slice(0, 2);
+    .slice(0, MAX_INITIALS_LENGTH);
 
   const formattedDate = new Date(timestamp).toLocaleDateString('en-US', {
     year: 'numeric',
@@ -65,7 +85,13 @@ export default function PostCardHeader({
         >
           <Avatar className="h-10 w-10 ring-2 ring-transparent group-hover:ring-accent/20 transition-all">
             <AvatarImage
-              src={author.avatar_url || undefined}
+              src={
+                author.avatar_url !== undefined &&
+                author.avatar_url !== null &&
+                author.avatar_url.length > 0
+                  ? author.avatar_url
+                  : undefined
+              }
               alt={authorName}
             />
             <AvatarFallback className="bg-muted text-muted-foreground font-medium">
@@ -85,7 +111,7 @@ export default function PostCardHeader({
           </div>
         </Link>
 
-        {collective && (
+        {collective !== undefined && collective !== null && (
           <Link href={`/collectives/${collective.slug}`}>
             <Badge
               variant="secondary"

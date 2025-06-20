@@ -1,10 +1,13 @@
 'use client';
 
 import { Loader2 } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 
 import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
 import { cn } from '@/lib/utils';
+
+// Constants for magic numbers
+const POSTS_LIMIT = 20;
 
 import { usePostInteractions } from '../hooks/usePostInteractions';
 import PostCard from '../molecules/PostCard';
@@ -68,10 +71,6 @@ interface PostFeedProps {
   loading?: boolean;
 }
 
-interface PostWithInteractions extends UnifiedPost {
-  interactions: ReturnType<typeof usePostInteractions>;
-}
-
 // Default empty array to avoid re-creating on each render
 const DEFAULT_POSTS: UnifiedPost[] = [];
 
@@ -83,19 +82,31 @@ function PostCardWithInteractions({
   post: UnifiedPost;
   currentUserId?: string;
   showFollowButtons?: boolean;
-}) {
+}): React.ReactElement {
   const interactions = usePostInteractions({
     postId: post.id,
     userId: currentUserId,
   });
 
+  const handleToggleLike = useCallback((): void => {
+    void interactions.toggleLike();
+  }, [interactions]);
+
+  const handleToggleDislike = useCallback((): void => {
+    void interactions.toggleDislike();
+  }, [interactions]);
+
+  const handleToggleBookmark = useCallback((): void => {
+    void interactions.toggleBookmark();
+  }, [interactions]);
+
   return (
     <PostCard
       post={post}
       interactions={interactions.interactions}
-      onToggleLike={interactions.toggleLike}
-      onToggleDislike={interactions.toggleDislike}
-      onToggleBookmark={interactions.toggleBookmark}
+      onToggleLike={handleToggleLike}
+      onToggleDislike={handleToggleDislike}
+      onToggleBookmark={handleToggleBookmark}
       currentUserId={currentUserId}
       showFollowButton={showFollowButtons}
       className="h-full"
@@ -110,7 +121,7 @@ export default function PostFeed({
   className,
   emptyMessage = 'No posts found',
   loading = false,
-}: PostFeedProps) {
+}: PostFeedProps): React.ReactElement {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -152,18 +163,23 @@ export default function PostFeed({
 }
 
 // Hook for fetching posts data
-export function usePostFeed(userId?: string) {
+export function usePostFeed(_userId?: string): {
+  posts: UnifiedPost[];
+  loading: boolean;
+  error: string | undefined;
+  refetch: () => void;
+} {
   const [posts, setPosts] = useState<UnifiedPost[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | undefined>(undefined);
 
   const supabase = createSupabaseBrowserClient();
 
   useEffect((): void => {
-    const fetchPosts = async () => {
+    const fetchPosts = async (): Promise<void> => {
       try {
         setLoading(true);
-        setError(null);
+        setError(undefined);
 
         // Fetch posts with author and collective information
         const { data, error: fetchError } = await supabase
@@ -194,7 +210,7 @@ export function usePostFeed(userId?: string) {
           )
           .eq('status', 'active')
           .order('created_at', { ascending: false })
-          .limit(20);
+          .limit(POSTS_LIMIT);
 
         if (fetchError) {
           throw fetchError;
@@ -210,21 +226,45 @@ export function usePostFeed(userId?: string) {
           thumbnail_url: post.thumbnail_url,
           slug: post.slug,
           created_at: post.created_at,
-          post_type: post.post_type || 'text',
+          post_type:
+            post.post_type !== undefined && post.post_type !== null
+              ? post.post_type
+              : 'text',
           metadata: post.metadata ?? undefined,
           author: {
-            id: post.author?.id || '',
-            username: post.author?.username || null,
-            full_name: post.author?.full_name || null,
-            avatar_url: post.author?.avatar_url || null,
+            id:
+              post.author?.id !== undefined &&
+              post.author?.id !== null &&
+              post.author.id.length > 0
+                ? post.author.id
+                : '',
+            username:
+              post.author?.username !== undefined &&
+              post.author?.username !== null &&
+              post.author.username.length > 0
+                ? post.author.username
+                : null,
+            full_name:
+              post.author?.full_name !== undefined &&
+              post.author?.full_name !== null &&
+              post.author.full_name.length > 0
+                ? post.author.full_name
+                : null,
+            avatar_url:
+              post.author?.avatar_url !== undefined &&
+              post.author?.avatar_url !== null &&
+              post.author.avatar_url.length > 0
+                ? post.author.avatar_url
+                : null,
           },
-          collective: post.collective
-            ? {
-                id: post.collective.id,
-                name: post.collective.name,
-                slug: post.collective.slug,
-              }
-            : null,
+          collective:
+            post.collective !== undefined && post.collective !== null
+              ? {
+                  id: post.collective.id,
+                  name: post.collective.name,
+                  slug: post.collective.slug,
+                }
+              : null,
         }));
 
         setPosts(transformedPosts);
@@ -236,13 +276,13 @@ export function usePostFeed(userId?: string) {
       }
     };
 
-    fetchPosts();
+    void fetchPosts();
   }, [supabase]);
 
-  const refetch = () => {
+  const refetch = useCallback((): void => {
     setLoading(true);
     // Re-trigger the effect by updating a dependency
-  };
+  }, []);
 
   return {
     posts,

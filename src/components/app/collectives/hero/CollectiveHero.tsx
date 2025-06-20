@@ -1,7 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 
 import FollowCollectiveButton from '@/components/FollowCollectiveButton';
 import { Badge } from '@/components/ui/badge';
@@ -12,29 +12,37 @@ import {
 } from '@/hooks/collectives/useCollectiveData';
 import supabase from '@/lib/supabase/browser';
 
+// Constants
+const MAX_TAGS_DISPLAY = 3;
+
 interface CollectiveHeroProps {
   collectiveSlug: string;
 }
 
-export function CollectiveHero({ collectiveSlug }: CollectiveHeroProps) {
+export function CollectiveHero({
+  collectiveSlug,
+}: CollectiveHeroProps): React.ReactElement {
   const { data: collective, isLoading } = useCollectiveData(collectiveSlug);
   const { data: stats } = useCollectiveStats(collective?.id ?? '', {
     enabled: Boolean(collective?.id),
   }) as { data: { memberCount: number; followerCount: number } | undefined };
-  const [currentUser, setCurrentUser] = useState<{ id: string } | null>(null);
+  const [currentUser, setCurrentUser] = useState<{ id: string } | undefined>(
+    undefined,
+  );
   const [isLoadingUser, setIsLoadingUser] = useState(true);
 
-  useEffect((): void => {
-    const fetchUser = async () => {
-      const client = supabase;
-      const {
-        data: { user },
-      } = await client.auth.getUser();
-      setCurrentUser(user);
-      setIsLoadingUser(false);
-    };
-    fetchUser();
+  const fetchUser = useCallback(async (): Promise<void> => {
+    const client = supabase;
+    const {
+      data: { user },
+    } = await client.auth.getUser();
+    setCurrentUser(user ?? undefined);
+    setIsLoadingUser(false);
   }, []);
+
+  useEffect((): void => {
+    void fetchUser();
+  }, [fetchUser]);
 
   if (isLoading) {
     return (
@@ -67,7 +75,9 @@ export function CollectiveHero({ collectiveSlug }: CollectiveHeroProps) {
       <div className="flex flex-col items-center text-center space-y-4">
         {/* Logo */}
         <div className="w-32 h-32 rounded-full overflow-hidden border-2 border-accent/20">
-          {collective.logo_url ? (
+          {collective.logo_url !== undefined &&
+          collective.logo_url !== null &&
+          collective.logo_url.length > 0 ? (
             <Image
               src={collective.logo_url}
               alt={`${collective.name} logo`}
@@ -89,42 +99,62 @@ export function CollectiveHero({ collectiveSlug }: CollectiveHeroProps) {
             <span className="text-accent">.</span>
           </h1>
 
-          {collective.description && (
-            <p className="text-muted-foreground max-w-sm text-sm leading-relaxed">
-              {collective.description}
-            </p>
-          )}
+          {collective.description !== undefined &&
+            collective.description !== null &&
+            collective.description.length > 0 && (
+              <p className="text-muted-foreground max-w-sm text-sm leading-relaxed">
+                {collective.description}
+              </p>
+            )}
 
           {/* Owner info */}
-          {collective.owner?.full_name && (
-            <p className="text-xs text-muted-foreground">
-              by {collective.owner.full_name}
-            </p>
-          )}
+          {collective.owner?.full_name !== undefined &&
+            collective.owner?.full_name !== null &&
+            collective.owner.full_name.length > 0 && (
+              <p className="text-xs text-muted-foreground">
+                by {collective.owner.full_name}
+              </p>
+            )}
         </div>
 
         {/* Stats */}
         <div className="flex items-center gap-4 text-sm text-muted-foreground">
-          <span>{stats?.followerCount || 0} followers</span>
+          <span>
+            {stats?.followerCount !== undefined &&
+            stats.followerCount !== null &&
+            stats.followerCount >= 0
+              ? stats.followerCount
+              : 0}{' '}
+            followers
+          </span>
           <span>•</span>
-          <span>{stats?.memberCount || 0} members</span>
+          <span>
+            {stats?.memberCount !== undefined &&
+            stats.memberCount !== null &&
+            stats.memberCount >= 0
+              ? stats.memberCount
+              : 0}{' '}
+            members
+          </span>
         </div>
 
         {/* Tags */}
-        {collective.tags && collective.tags.length > 0 && (
-          <div className="flex flex-wrap justify-center gap-2 max-w-sm">
-            {collective.tags.slice(0, 3).map((tag) => (
-              <Badge key={tag} variant="secondary" className="text-xs">
-                #{tag}
-              </Badge>
-            ))}
-          </div>
-        )}
+        {collective.tags !== undefined &&
+          collective.tags !== null &&
+          collective.tags.length > 0 && (
+            <div className="flex flex-wrap justify-center gap-2 max-w-sm">
+              {collective.tags.slice(0, MAX_TAGS_DISPLAY).map((tag) => (
+                <Badge key={tag} variant="secondary" className="text-xs">
+                  #{tag}
+                </Badge>
+              ))}
+            </div>
+          )}
 
         {/* Actions */}
         {!isLoadingUser && (
           <div className="flex flex-col gap-2 w-full max-w-xs">
-            {!isOwner && currentUser && (
+            {!isOwner && currentUser !== undefined && (
               <FollowCollectiveButton
                 targetCollectiveId={collective.id}
                 targetCollectiveName={collective.name}

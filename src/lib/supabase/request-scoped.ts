@@ -1,0 +1,125 @@
+import { createServerClient } from '@supabase/ssr';
+import { cookies } from 'next/headers';
+
+import type { Database } from '@/lib/database.types';
+
+/**
+ * Request-scoped Supabase client factory
+ * Properly handles session context for edge runtimes and RLS
+ */
+
+let cachedClient: ReturnType<typeof createServerClient<Database>> | undefined;
+let cachedRequestId: string | undefined;
+
+/**
+ * Create a session-aware Supabase client for the current request
+ * Reuses the client within the same request for efficiency
+ */
+export function createRequestScopedSupabaseClient(request: Request): ReturnType<typeof createServerClient<Database>> {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  if (supabaseUrl === null || supabaseUrl === undefined || supabaseAnonKey === null || supabaseAnonKey === undefined) {
+    throw new Error('Missing Supabase environment variables');
+  }
+
+  // Generate a simple request ID for caching
+  const requestIdHeader = request.headers.get('x-request-id');
+  const cfRayHeader = request.headers.get('cf-ray');
+  const requestId = requestIdHeader !== null && requestIdHeader !== undefined
+    ? requestIdHeader
+    : cfRayHeader !== null && cfRayHeader !== undefined
+      ? cfRayHeader
+      : crypto.randomUUID();
+
+  // Return cached client if it's for the same request
+  if (cachedClient !== undefined && cachedRequestId === requestId) {
+    return cachedClient;
+  }
+
+  // Create new client with proper session context
+  const client = createServerClient<Database>(supabaseUrl, supabaseAnonKey, {
+    cookies: {
+      get(name: string) {
+        const cookieHeader = request.headers.get('cookie');
+        return cookieHeader !== null && cookieHeader !== undefined
+          ? cookieHeader
+              .split(';')
+              .find(c => c.trim().startsWith(`${name}=`))
+              ?.split('=')[1]
+          : undefined;
+      },
+      set() {
+        // No-op for API routes - we don't set cookies in responses here
+      },
+      remove() {
+        // No-op for API routes
+      },
+    },
+    global: {
+      headers: {
+        // Forward important headers for RLS context
+        Authorization: request.headers.get('Authorization') ?? '',
+        'X-Client-Info': request.headers.get('X-Client-Info') ?? '',
+        'X-Forwarded-For': request.headers.get('X-Forwarded-For') ?? '',
+        'User-Agent': request.headers.get('User-Agent') ?? '',
+      },
+    },
+  });
+
+  // Cache for this request
+  cachedClient = client;
+  cachedRequestId = requestId;
+
+  return client;
+}
+
+/**
+ * Create a session-aware Supabase client using Next.js cookies (for App Router)
+ * Use this for routes that have access to the cookies() function
+ */
+export async function createServerSupabaseClientWithContext(): Promise<ReturnType<typeof createServerClient<Database>>> {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  if (supabaseUrl === null || supabaseUrl === undefined || supabaseAnonKey === null || supabaseAnonKey === undefined) {
+    throw new Error('Missing Supabase environment variables');
+  }
+
+  const cookieStore = await cookies();
+
+  return createServerClient<Database>(supabaseUrl, supabaseAnonKey, {
+    cookies: {
+      get(name: string): string | undefined {
+        try {
+          const cookie = cookieStore.get(name);
+          return cookie?.value;
+        } catch {
+          return undefined;
+        }
+      },
+      set(name: string, value: string, options: Record<string, unknown>): void {
+        try {
+          cookieStore.set({ name, value, ...options });
+        } catch {
+          // This can fail in middleware where cookies() is not available
+        }
+      },
+      remove(name: string, options: Record<string, unknown>): void {
+        try {
+          cookieStore.set({ name, value: '', ...options });
+        } catch {
+          // This can fail in middleware where cookies() is not available
+        }
+      },
+    },
+  });
+}
+
+/**
+ * Clear the cached client (useful for testing or explicit cleanup)
+ */
+export function clearClientCache(): void {
+  cachedClient = undefined;
+  cachedRequestId = undefined;
+} 

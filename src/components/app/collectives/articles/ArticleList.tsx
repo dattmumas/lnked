@@ -34,9 +34,19 @@ interface ArticlePost {
 
 type FilterType = 'all' | 'text' | 'video';
 
+// Constants
 const POSTS_PER_PAGE = 10;
+const SKELETON_POSTS_COUNT = 5;
+const MILLISECONDS_PER_SECOND = 1000;
+const SECONDS_PER_MINUTE = 60;
+const MINUTES_PER_HOUR = 60;
+const HOURS_PER_DAY = 24;
+const DAYS_PER_WEEK = 7;
+const WORDS_PER_MINUTE = 200;
 
-export function ArticleList({ collectiveSlug }: ArticleListProps) {
+export function ArticleList({
+  collectiveSlug,
+}: ArticleListProps): React.ReactElement {
   const { data: collective } = useCollectiveData(collectiveSlug);
   const [filter, setFilter] = useState<FilterType>('all');
 
@@ -44,7 +54,12 @@ export function ArticleList({ collectiveSlug }: ArticleListProps) {
     useInfiniteQuery({
       queryKey: ['collective-posts', collective?.id, filter],
       queryFn: async ({ pageParam }: { pageParam: number }) => {
-        if (!collective?.id) return { posts: [], hasMore: false };
+        if (
+          collective?.id === undefined ||
+          collective?.id === null ||
+          collective.id.length === 0
+        )
+          return { posts: [], hasMore: false };
 
         const supabase = createSupabaseBrowserClient();
         const from = pageParam * POSTS_PER_PAGE;
@@ -59,7 +74,7 @@ export function ArticleList({ collectiveSlug }: ArticleListProps) {
           `,
           )
           .eq('collective_id', collective.id)
-          .not('published_at', 'is', null)
+          .not('published_at', 'is', undefined)
           .eq('is_public', true);
 
         // Apply filter
@@ -74,8 +89,11 @@ export function ArticleList({ collectiveSlug }: ArticleListProps) {
         if (error) throw error;
 
         return {
-          posts: posts || [],
-          hasMore: posts ? posts.length === POSTS_PER_PAGE : false,
+          posts: posts ?? [],
+          hasMore:
+            posts !== undefined &&
+            posts !== null &&
+            posts.length === POSTS_PER_PAGE,
         };
       },
       initialPageParam: 0,
@@ -85,18 +103,22 @@ export function ArticleList({ collectiveSlug }: ArticleListProps) {
       ) => {
         return lastPage.hasMore ? pages.length : undefined;
       },
-      enabled: Boolean(collective?.id),
+      enabled: collective?.id !== undefined && collective?.id !== null,
     });
 
   const allPosts = useMemo(() => {
-    return data?.pages.flatMap((page) => page.posts) || [];
+    return data?.pages.flatMap((page) => page.posts) ?? [];
   }, [data?.pages]);
 
-  const handleLoadMore = useCallback(() => {
+  const handleLoadMore = useCallback((): void => {
     if (hasNextPage && !isFetchingNextPage) {
-      fetchNextPage();
+      void fetchNextPage();
     }
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+
+  const handleFilterChange = useCallback((value: FilterType): void => {
+    setFilter(value);
+  }, []);
 
   if (isLoading) {
     return (
@@ -107,7 +129,7 @@ export function ArticleList({ collectiveSlug }: ArticleListProps) {
         </div>
 
         <div className="space-y-4">
-          {Array.from({ length: 5 }).map((_, i) => (
+          {Array.from({ length: SKELETON_POSTS_COUNT }).map((_, i) => (
             <div key={i} className="article-row animate-pulse">
               <div className="rounded-lg border bg-card p-4">
                 <div className="space-y-2">
@@ -129,10 +151,7 @@ export function ArticleList({ collectiveSlug }: ArticleListProps) {
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-xl font-semibold">Latest Posts</h2>
 
-        <Select
-          value={filter}
-          onValueChange={(value: FilterType) => setFilter(value)}
-        >
+        <Select value={filter} onValueChange={handleFilterChange}>
           <SelectTrigger className="w-32">
             <Filter className="h-4 w-4 mr-2" />
             <SelectValue />
@@ -182,25 +201,35 @@ export function ArticleList({ collectiveSlug }: ArticleListProps) {
 const ArticleRow = React.memo<{
   post: ArticlePost;
   collectiveSlug: string;
-}>(({ post, collectiveSlug }) => {
-  const formatDate = (dateString: string) => {
+}>(({ post }) => {
+  const formatDate = useCallback((dateString: string): string => {
     const date = new Date(dateString);
     const now = new Date();
     const diffInDays = Math.floor(
-      (now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24),
+      (now.getTime() - date.getTime()) /
+        (MILLISECONDS_PER_SECOND *
+          SECONDS_PER_MINUTE *
+          MINUTES_PER_HOUR *
+          HOURS_PER_DAY),
     );
 
     if (diffInDays === 0) return 'Today';
     if (diffInDays === 1) return 'Yesterday';
-    if (diffInDays < 7) return `${diffInDays} days ago`;
+    if (diffInDays < DAYS_PER_WEEK) return `${diffInDays} days ago`;
     return date.toLocaleDateString();
-  };
+  }, []);
 
-  const getReadingTime = (title: string, subtitle: string | null) => {
-    const wordCount = `${title} ${subtitle || ''}`.split(' ').length;
-    const readingTime = Math.max(1, Math.ceil(wordCount / 200)); // ~200 words per minute
-    return `${readingTime} min read`;
-  };
+  const getReadingTime = useCallback(
+    (title: string, subtitle: string | null): string => {
+      const wordCount =
+        `${title} ${subtitle !== undefined && subtitle !== null && subtitle.length > 0 ? subtitle : ''}`.split(
+          ' ',
+        ).length;
+      const readingTime = Math.max(1, Math.ceil(wordCount / WORDS_PER_MINUTE));
+      return `${readingTime} min read`;
+    },
+    [],
+  );
 
   return (
     <Link href={`/posts/${post.id}`} className="group block">
@@ -213,27 +242,33 @@ const ArticleRow = React.memo<{
             </h3>
 
             {/* Subtitle */}
-            {post.subtitle && (
-              <p className="text-sm text-muted-foreground mt-1 line-clamp-1">
-                {post.subtitle}
-              </p>
-            )}
+            {post.subtitle !== undefined &&
+              post.subtitle !== null &&
+              post.subtitle.length > 0 && (
+                <p className="text-sm text-muted-foreground mt-1 line-clamp-1">
+                  {post.subtitle}
+                </p>
+              )}
 
             {/* Metadata */}
             <div className="flex items-center gap-2 mt-3 text-xs text-muted-foreground">
-              {post.author && (
-                <>
-                  <span className="font-medium">{post.author}</span>
-                  <span>•</span>
-                </>
-              )}
+              {post.author !== undefined &&
+                post.author !== null &&
+                post.author.length > 0 && (
+                  <>
+                    <span className="font-medium">{post.author}</span>
+                    <span>•</span>
+                  </>
+                )}
 
-              {post.published_at && (
-                <>
-                  <span>{formatDate(post.published_at)}</span>
-                  <span>•</span>
-                </>
-              )}
+              {post.published_at !== undefined &&
+                post.published_at !== null &&
+                post.published_at.length > 0 && (
+                  <>
+                    <span>{formatDate(post.published_at)}</span>
+                    <span>•</span>
+                  </>
+                )}
 
               <span>{getReadingTime(post.title, post.subtitle)}</span>
 
@@ -246,12 +281,14 @@ const ArticleRow = React.memo<{
                 </>
               )}
 
-              {post.view_count && post.view_count > 0 && (
-                <>
-                  <span>•</span>
-                  <span>{post.view_count} views</span>
-                </>
-              )}
+              {post.view_count !== undefined &&
+                post.view_count !== null &&
+                post.view_count > 0 && (
+                  <>
+                    <span>•</span>
+                    <span>{post.view_count} views</span>
+                  </>
+                )}
             </div>
           </div>
 
