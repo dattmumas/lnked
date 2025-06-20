@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-import { notificationService } from '@/lib/notifications/service';
+import { createNotificationService } from '@/lib/notifications/service';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 
 import type { NotificationPreferencesUpdate } from '@/types/notifications';
@@ -9,7 +9,7 @@ interface PreferencesRequestBody {
   preferences?: unknown;
 }
 
-export async function GET(): Promise<NextResponse> {
+export async function GET(): Promise<Response> {
   try {
     const supabase = createServerSupabaseClient();
     const {
@@ -24,7 +24,9 @@ export async function GET(): Promise<NextResponse> {
       );
     }
 
+    const notificationService = createNotificationService();
     const preferences = await notificationService.getPreferences();
+
     return NextResponse.json({ preferences });
   } catch (error: unknown) {
     console.error('Error fetching notification preferences:', error);
@@ -35,7 +37,7 @@ export async function GET(): Promise<NextResponse> {
   }
 }
 
-export async function PUT(req: NextRequest): Promise<NextResponse> {
+export async function POST(request: NextRequest): Promise<Response> {
   try {
     const supabase = createServerSupabaseClient();
     const {
@@ -50,22 +52,23 @@ export async function PUT(req: NextRequest): Promise<NextResponse> {
       );
     }
 
-    const body: PreferencesRequestBody = await req.json() as PreferencesRequestBody;
+    const body = (await request.json()) as PreferencesRequestBody;
     const { preferences } = body;
 
-    if (preferences === null || preferences === undefined || !Array.isArray(preferences)) {
+    if (!Array.isArray(preferences)) {
       return NextResponse.json(
-        { error: 'preferences array is required' },
+        { error: 'Invalid preferences format' },
         { status: 400 }
       );
     }
 
+    const notificationService = createNotificationService();
     const result = await notificationService.updatePreferences(preferences as NotificationPreferencesUpdate[]);
 
-    if (result.success === false) {
+    if (!result.success) {
       return NextResponse.json(
         { error: result.error },
-        { status: 400 }
+        { status: 500 }
       );
     }
 

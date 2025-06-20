@@ -106,7 +106,7 @@ interface RPCFunctionSignature {
     returns: CreateDirectConversationResult[];
   };
   get_direct_conversations_with_participants: {
-    params: { user_id: string; limit_count: number };
+    params: { p_user_id: string; limit_count: number };
     returns: DirectConversationWithParticipant[];
   };
 }
@@ -402,7 +402,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       supabase,
       'get_direct_conversations_with_participants',
       {
-        user_id: authenticatedUser.id,
+        p_user_id: authenticatedUser.id,
         limit_count: queryValidation.data.limit,
       }
     );

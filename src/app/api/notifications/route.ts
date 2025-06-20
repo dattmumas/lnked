@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { HttpStatusCode } from '@/lib/constants/errors';
-import { notificationService } from '@/lib/notifications/service';
-import { createRequestScopedSupabaseClient } from '@/lib/supabase/request-scoped';
+import { createNotificationService } from '@/lib/notifications/service';
+import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { recordAPIMetrics, createMetricsTimer } from '@/lib/utils/metrics';
 import { applyRateLimit } from '@/lib/utils/rate-limiting';
 import { 
@@ -12,7 +12,7 @@ import {
 } from '@/lib/utils/request-validation';
 import { createAPILogger } from '@/lib/utils/structured-logger';
 
-import type { NotificationFilters } from '@/types/notifications';
+import type { NotificationFilters, NotificationType } from '@/types/notifications';
 
 /**
  * Enhanced notifications API with enterprise-grade security and performance
@@ -21,22 +21,32 @@ import type { NotificationFilters } from '@/types/notifications';
 
 const ENDPOINT_NAME = '/api/notifications';
 
-export async function GET(req: NextRequest): Promise<NextResponse> {
-  const logger = createAPILogger(req, ENDPOINT_NAME);
+// Define request body interfaces
+interface MarkReadRequestBody {
+  notification_ids?: string[];
+}
+
+interface DeleteNotificationsRequestBody {
+  notification_ids: string[];
+}
+
+/**
+ * GET /api/notifications
+ * Fetch notifications for the authenticated user
+ */
+export async function GET(request: NextRequest): Promise<Response> {
+  const logger = createAPILogger(request, ENDPOINT_NAME);
   const timer = createMetricsTimer();
   let userId: string | undefined;
 
   try {
-    // 1. Session-aware Supabase client with proper context
-    const supabase = createRequestScopedSupabaseClient(req);
-    
-    // 2. Authentication check
+    const supabase = createServerSupabaseClient();
     const {
       data: { user },
       error: authError,
     } = await supabase.auth.getUser();
 
-    if (authError !== null || user === null) {
+    if (authError || !user) {
       const duration = timer();
       recordAPIMetrics({
         endpoint: ENDPOINT_NAME,
@@ -59,43 +69,42 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
 
     userId = user.id;
 
-    // 3. Rate limiting (per-user and per-IP)
-    const rateLimitResult = await applyRateLimit(req, userId);
-    if (!rateLimitResult.allowed) {
-      const duration = timer();
-      recordAPIMetrics({
-        endpoint: ENDPOINT_NAME,
-        method: 'GET',
-        statusCode: HttpStatusCode.TooManyRequests,
-        duration,
-        userId,
-        error: 'Rate limit exceeded',
-      });
+    // Parse query parameters
+    const { searchParams } = new URL(request.url);
+    const limitParam = searchParams.get('limit');
+    const offsetParam = searchParams.get('offset');
+    const typeParam = searchParams.get('type');
+    const readParam = searchParams.get('read');
 
-      logger.warn('Rate limit exceeded for notifications fetch', {
-        userId,
-        statusCode: HttpStatusCode.TooManyRequests,
-      });
+    // Convert and validate parameters
+    const limit = limitParam !== null ? parseInt(limitParam, 10) : undefined;
+    const offset = offsetParam !== null ? parseInt(offsetParam, 10) : undefined;
+    
+    // Validate type parameter against allowed notification types
+    const validTypes: NotificationType[] = [
+      'follow', 'unfollow', 'post_like', 'post_comment', 'comment_reply', 
+      'comment_like', 'post_published', 'collective_invite', 'collective_join', 
+      'collective_leave', 'subscription_created', 'subscription_cancelled', 
+      'mention', 'post_bookmark', 'featured_post'
+    ];
+    const type: NotificationType | undefined = typeParam !== null && validTypes.includes(typeParam as NotificationType) 
+      ? typeParam as NotificationType 
+      : undefined;
+    
+    let read: boolean | undefined;
 
-      return NextResponse.json(
-        { error: rateLimitResult.error },
-        { 
-          status: HttpStatusCode.TooManyRequests,
-          headers: rateLimitResult.headers,
-        }
-      );
+    if (readParam !== null) {
+      if (readParam === 'true') {
+        read = true;
+      } else if (readParam === 'false') {
+        read = false;
+      }
+      // If readParam is not 'true' or 'false', leave read as undefined
     }
 
-    // 4. Query parameter validation with Zod (numeric validation, clamping)
-    const { searchParams } = new URL(req.url);
-    const queryValidation = notificationQuerySchema.safeParse({
-      type: searchParams.get('type'),
-      read: searchParams.get('read'),
-      limit: searchParams.get('limit'),
-      offset: searchParams.get('offset'),
-    });
-
-    if (!queryValidation.success) {
+    // Validate numeric parameters
+    if ((limitParam !== null && (isNaN(limit!) || limit! < 0)) ||
+        (offsetParam !== null && (isNaN(offset!) || offset! < 0))) {
       const duration = timer();
       recordAPIMetrics({
         endpoint: ENDPOINT_NAME,
@@ -103,33 +112,29 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
         statusCode: HttpStatusCode.BadRequest,
         duration,
         userId,
-        error: 'Invalid query parameters',
+        error: 'Invalid limit or offset parameter',
       });
 
-      logger.warn('Invalid query parameters for notifications', {
+      logger.warn('Invalid limit or offset parameter', {
         userId,
         statusCode: HttpStatusCode.BadRequest,
-        error: 'Query validation failed',
+        error: 'Invalid limit or offset parameter',
       });
 
       return NextResponse.json(
-        { 
-          error: 'Invalid query parameters',
-          details: queryValidation.error.errors,
-        },
+        { error: 'Invalid limit or offset parameter' },
         { status: HttpStatusCode.BadRequest }
       );
     }
 
-    const filters = queryValidation.data;
+    // Build service filters
+    const serviceFilters: NotificationFilters = {};
+    if (limit !== undefined) serviceFilters.limit = limit;
+    if (offset !== undefined) serviceFilters.offset = offset;
+    if (type !== undefined) serviceFilters.type = type;
+    if (read !== undefined) serviceFilters.read = read;
 
-    // 5. User-scoped service call (ownership implicit via user context)
-    const serviceFilters: NotificationFilters = {
-      type: filters.type as typeof filters.type,
-      read: filters.read,
-      limit: filters.limit,
-      offset: filters.offset,
-    };
+    const notificationService = createNotificationService();
     const response = await notificationService.getNotifications(serviceFilters);
 
     const duration = timer();
@@ -148,18 +153,15 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       metadata: {
         count: response.notifications?.length ?? 0,
         filters: {
-          type: filters.type,
-          read: filters.read,
-          limit: filters.limit,
-          offset: filters.offset,
+          type: type,
+          read: read,
+          limit: limit,
+          offset: offset,
         },
       },
     });
 
-    return NextResponse.json(response, {
-      headers: rateLimitResult.headers,
-    });
-
+    return NextResponse.json(response);
   } catch (error: unknown) {
     const duration = timer();
     recordAPIMetrics({
@@ -185,22 +187,23 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   }
 }
 
-export async function PATCH(req: NextRequest): Promise<NextResponse> {
-  const logger = createAPILogger(req, ENDPOINT_NAME);
+/**
+ * PATCH /api/notifications
+ * Mark notifications as read
+ */
+export async function PATCH(request: NextRequest): Promise<Response> {
+  const logger = createAPILogger(request, ENDPOINT_NAME);
   const timer = createMetricsTimer();
   let userId: string | undefined;
 
   try {
-    // 1. Session-aware Supabase client
-    const supabase = createRequestScopedSupabaseClient(req);
-    
-    // 2. Authentication check
+    const supabase = createServerSupabaseClient();
     const {
       data: { user },
       error: authError,
     } = await supabase.auth.getUser();
 
-    if (authError !== null || user === null) {
+    if (authError || !user) {
       const duration = timer();
       recordAPIMetrics({
         endpoint: ENDPOINT_NAME,
@@ -223,64 +226,62 @@ export async function PATCH(req: NextRequest): Promise<NextResponse> {
 
     userId = user.id;
 
-    // 3. Rate limiting
-    const rateLimitResult = await applyRateLimit(req, userId);
-    if (!rateLimitResult.allowed) {
-      const duration = timer();
-      recordAPIMetrics({
-        endpoint: ENDPOINT_NAME,
-        method: 'PATCH',
-        statusCode: HttpStatusCode.TooManyRequests,
-        duration,
-        userId,
-        error: 'Rate limit exceeded',
-      });
+    const body = (await request.json()) as MarkReadRequestBody;
+    const { notification_ids } = body;
 
-      logger.warn('Rate limit exceeded for notification update', {
-        userId,
-        statusCode: HttpStatusCode.TooManyRequests,
-      });
+    // Validate notification IDs if provided
+    if (notification_ids !== undefined) {
+      if (!Array.isArray(notification_ids)) {
+        const duration = timer();
+        recordAPIMetrics({
+          endpoint: ENDPOINT_NAME,
+          method: 'PATCH',
+          statusCode: HttpStatusCode.BadRequest,
+          duration,
+          userId,
+          error: 'notification_ids must be an array',
+        });
 
-      return NextResponse.json(
-        { error: rateLimitResult.error },
-        { 
-          status: HttpStatusCode.TooManyRequests,
-          headers: rateLimitResult.headers,
-        }
-      );
+        logger.warn('Invalid notification_ids format', {
+          userId,
+          statusCode: HttpStatusCode.BadRequest,
+          error: 'notification_ids must be an array',
+        });
+
+        return NextResponse.json(
+          { error: 'notification_ids must be an array' },
+          { status: HttpStatusCode.BadRequest }
+        );
+      }
+
+      if (notification_ids.some(id => typeof id !== 'string' || id.trim() === '')) {
+        const duration = timer();
+        recordAPIMetrics({
+          endpoint: ENDPOINT_NAME,
+          method: 'PATCH',
+          statusCode: HttpStatusCode.BadRequest,
+          duration,
+          userId,
+          error: 'All notification IDs must be non-empty strings',
+        });
+
+        logger.warn('Invalid notification_ids format', {
+          userId,
+          statusCode: HttpStatusCode.BadRequest,
+          error: 'All notification IDs must be non-empty strings',
+        });
+
+        return NextResponse.json(
+          { error: 'All notification IDs must be non-empty strings' },
+          { status: HttpStatusCode.BadRequest }
+        );
+      }
     }
 
-    // 4. Body validation with size limits and Zod schema
-    const bodyValidation = await safeParseJson(req, notificationActionSchema);
-    if (!bodyValidation.success) {
-      const duration = timer();
-      recordAPIMetrics({
-        endpoint: ENDPOINT_NAME,
-        method: 'PATCH',
-        statusCode: HttpStatusCode.BadRequest,
-        duration,
-        userId,
-        error: 'Invalid request body',
-      });
-
-      logger.warn('Invalid request body for notification update', {
-        userId,
-        statusCode: HttpStatusCode.BadRequest,
-        error: bodyValidation.error,
-      });
-
-      return NextResponse.json(
-        { error: bodyValidation.error },
-        { status: HttpStatusCode.BadRequest }
-      );
-    }
-
-    const { notification_ids } = bodyValidation.data;
-
-    // 5. User-scoped service call with ownership check
+    const notificationService = createNotificationService();
     const result = await notificationService.markAsRead(notification_ids);
 
-    if (result.success === null || result.success === undefined || result.success === false) {
+    if (!result.success) {
       // 11. Distinguish between 404 (not found) and 400 (bad request)
       const statusCode = result.error !== null && result.error !== undefined && result.error.includes('not found') 
         ? HttpStatusCode.NotFound 
@@ -301,7 +302,7 @@ export async function PATCH(req: NextRequest): Promise<NextResponse> {
         statusCode,
         error: result.error,
         metadata: {
-          requestedCount: notification_ids.length,
+          requestedCount: notification_ids?.length ?? 0,
         },
       });
 
@@ -327,14 +328,11 @@ export async function PATCH(req: NextRequest): Promise<NextResponse> {
       statusCode: HttpStatusCode.OK,
       duration,
       metadata: {
-        updatedCount: notification_ids.length,
+        updatedCount: notification_ids?.length ?? 0,
       },
     });
 
-    return NextResponse.json({ success: true }, {
-      headers: rateLimitResult.headers,
-    });
-
+    return NextResponse.json({ success: true });
   } catch (error: unknown) {
     const duration = timer();
     recordAPIMetrics({
@@ -346,7 +344,7 @@ export async function PATCH(req: NextRequest): Promise<NextResponse> {
       error: error instanceof Error ? error.message : 'Unknown error',
     });
 
-    logger.error('Failed to update notifications', {
+    logger.error('Failed to mark notifications as read', {
       userId,
       statusCode: HttpStatusCode.InternalServerError,
       duration,
@@ -360,22 +358,23 @@ export async function PATCH(req: NextRequest): Promise<NextResponse> {
   }
 }
 
-export async function DELETE(req: NextRequest): Promise<NextResponse> {
-  const logger = createAPILogger(req, ENDPOINT_NAME);
+/**
+ * DELETE /api/notifications
+ * Delete specific notifications
+ */
+export async function DELETE(request: NextRequest): Promise<Response> {
+  const logger = createAPILogger(request, ENDPOINT_NAME);
   const timer = createMetricsTimer();
   let userId: string | undefined;
 
   try {
-    // Session-aware Supabase client, authentication, rate limiting, validation, service call
-    // Similar pattern as PATCH but for deletion
-    const supabase = createRequestScopedSupabaseClient(req);
-    
+    const supabase = createServerSupabaseClient();
     const {
       data: { user },
       error: authError,
     } = await supabase.auth.getUser();
 
-    if (authError !== null || user === null) {
+    if (authError || !user) {
       const duration = timer();
       recordAPIMetrics({
         endpoint: ENDPOINT_NAME,
@@ -393,29 +392,11 @@ export async function DELETE(req: NextRequest): Promise<NextResponse> {
 
     userId = user.id;
 
-    const rateLimitResult = await applyRateLimit(req, userId);
-    if (!rateLimitResult.allowed) {
-      const duration = timer();
-      recordAPIMetrics({
-        endpoint: ENDPOINT_NAME,
-        method: 'DELETE',
-        statusCode: HttpStatusCode.TooManyRequests,
-        duration,
-        userId,
-        error: 'Rate limit exceeded',
-      });
+    const body = (await request.json()) as DeleteNotificationsRequestBody;
+    const { notification_ids } = body;
 
-      return NextResponse.json(
-        { error: rateLimitResult.error },
-        { 
-          status: HttpStatusCode.TooManyRequests,
-          headers: rateLimitResult.headers,
-        }
-      );
-    }
-
-    const bodyValidation = await safeParseJson(req, notificationActionSchema);
-    if (!bodyValidation.success) {
+    // Validate required notification IDs
+    if (!Array.isArray(notification_ids) || notification_ids.length === 0) {
       const duration = timer();
       recordAPIMetrics({
         endpoint: ENDPOINT_NAME,
@@ -423,20 +404,48 @@ export async function DELETE(req: NextRequest): Promise<NextResponse> {
         statusCode: HttpStatusCode.BadRequest,
         duration,
         userId,
-        error: 'Invalid request body',
+        error: 'notification_ids array is required and cannot be empty',
+      });
+
+      logger.warn('Invalid notification_ids format', {
+        userId,
+        statusCode: HttpStatusCode.BadRequest,
+        error: 'notification_ids array is required and cannot be empty',
       });
 
       return NextResponse.json(
-        { error: bodyValidation.error },
+        { error: 'notification_ids array is required and cannot be empty' },
         { status: HttpStatusCode.BadRequest }
       );
     }
 
-    const { notification_ids } = bodyValidation.data;
+    if (notification_ids.some(id => typeof id !== 'string' || id.trim() === '')) {
+      const duration = timer();
+      recordAPIMetrics({
+        endpoint: ENDPOINT_NAME,
+        method: 'DELETE',
+        statusCode: HttpStatusCode.BadRequest,
+        duration,
+        userId,
+        error: 'All notification IDs must be non-empty strings',
+      });
 
+      logger.warn('Invalid notification_ids format', {
+        userId,
+        statusCode: HttpStatusCode.BadRequest,
+        error: 'All notification IDs must be non-empty strings',
+      });
+
+      return NextResponse.json(
+        { error: 'All notification IDs must be non-empty strings' },
+        { status: HttpStatusCode.BadRequest }
+      );
+    }
+
+    const notificationService = createNotificationService();
     const result = await notificationService.deleteNotifications(notification_ids);
 
-    if (result.success === null || result.success === undefined || result.success === false) {
+    if (!result.success) {
       const statusCode = result.error !== null && result.error !== undefined && result.error.includes('not found') 
         ? HttpStatusCode.NotFound 
         : HttpStatusCode.BadRequest;
@@ -477,10 +486,7 @@ export async function DELETE(req: NextRequest): Promise<NextResponse> {
       },
     });
 
-    return NextResponse.json({ success: true }, {
-      headers: rateLimitResult.headers,
-    });
-
+    return NextResponse.json({ success: true });
   } catch (error: unknown) {
     const duration = timer();
     recordAPIMetrics({

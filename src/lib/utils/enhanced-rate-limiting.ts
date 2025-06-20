@@ -96,7 +96,7 @@ async function checkRateLimit(
       .from('api_cache')
       .select('data')
       .eq('cache_key', limitKey)
-      .single();
+      .maybeSingle(); // Use maybeSingle instead of single to avoid 406 errors
 
     if (fetchError !== null && fetchError.code !== 'PGRST116') { // Not "not found"
       throw fetchError;
@@ -198,9 +198,14 @@ async function checkRateLimit(
     // On database error, allow the request but log the issue
     console.error(`Rate limiting error for ${limitType} ${limitKey}:`, error);
     
+    // For authentication errors, still allow the request to proceed
+    // This prevents rate limiting from blocking legitimate requests when auth fails
     return {
       allowed: true,
-      headers: {},
+      headers: {
+        'X-RateLimit-Fallback': 'true',
+        'X-RateLimit-Error': limitType === 'user' ? 'auth-failed' : 'service-unavailable',
+      },
       error: `Rate limiting service unavailable`,
     };
   }

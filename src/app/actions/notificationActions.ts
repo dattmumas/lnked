@@ -2,14 +2,22 @@
 
 import { revalidatePath } from 'next/cache';
 
-import { notificationService } from '@/lib/notifications/service';
+import { NotificationService } from '@/lib/notifications/service';
 
 import type { NotificationActionResult, NotificationPreferencesUpdate } from '@/types/notifications';
+
+/**
+ * Get a NotificationService instance when needed (lazy initialization)
+ */
+function getNotificationService(): NotificationService {
+  return new NotificationService();
+}
 
 export async function markNotificationsAsRead(
   notificationIds?: string[]
 ): Promise<NotificationActionResult> {
   try {
+    const notificationService = getNotificationService();
     const result = await notificationService.markAsRead(notificationIds);
     
     if (result.success) {
@@ -30,6 +38,7 @@ export async function deleteNotifications(
   notificationIds: string[]
 ): Promise<NotificationActionResult> {
   try {
+    const notificationService = getNotificationService();
     const result = await notificationService.deleteNotifications(notificationIds);
     
     if (result.success) {
@@ -50,6 +59,7 @@ export async function updateNotificationPreferences(
   preferences: NotificationPreferencesUpdate[]
 ): Promise<NotificationActionResult> {
   try {
+    const notificationService = getNotificationService();
     const result = await notificationService.updatePreferences(preferences);
     
     if (result.success) {

@@ -73,22 +73,59 @@ export function CollectiveChannelsSidebar({
       if (collectiveId === null) return [];
       const res = await fetch(
         `/api/collectives/${collectiveId}/channels?limit=100`,
+        {
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        },
       );
-      if (!res.ok) throw new Error('Failed to load channels');
+      if (!res.ok) {
+        if (res.status === 401) {
+          console.warn('Authentication required for channels');
+          return [];
+        }
+        throw new Error('Failed to load channels');
+      }
       return res.json() as Promise<Channel[]>;
     },
     enabled: collectiveId !== null,
+    retry: (failureCount, error: unknown) => {
+      if (error instanceof Error && error.message.includes('401')) {
+        return false;
+      }
+      return failureCount < 2;
+    },
   });
 
   // Fetch direct conversations when no collective is selected
   const { data: dms = [] } = useQuery({
     queryKey: ['direct-conversations'],
     queryFn: async (): Promise<DMConversation[]> => {
-      const res = await fetch('/api/chat/direct?limit=100');
-      if (!res.ok) throw new Error('Failed to load DMs');
+      const res = await fetch('/api/chat/direct?limit=100', {
+        credentials: 'include', // Ensure cookies are sent
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      if (!res.ok) {
+        if (res.status === 401) {
+          // Silent fail for auth issues to prevent crashes
+          console.warn('Authentication required for direct messages');
+          return [];
+        }
+        throw new Error('Failed to load DMs');
+      }
       return res.json() as Promise<DMConversation[]>;
     },
     enabled: collectiveId === null,
+    retry: (failureCount, error: unknown) => {
+      // Don't retry on auth failures
+      if (error instanceof Error && error.message.includes('401')) {
+        return false;
+      }
+      return failureCount < 2;
+    },
   });
 
   // Filter channels based on search term with proper memoization dependencies

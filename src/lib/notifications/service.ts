@@ -26,15 +26,19 @@ const DEFAULT_LIMIT = 20;
 const DEFAULT_OFFSET = 0;
 
 export class NotificationService {
-  private readonly supabase: ReturnType<typeof createServerSupabaseClient>;
+  private supabase: ReturnType<typeof createServerSupabaseClient> | null = null;
 
-  constructor() {
-    this.supabase =
-      typeof window === 'undefined'
+  /**
+   * Lazy initialization of Supabase client to avoid cookies context issues
+   */
+  private getSupabaseClient(): ReturnType<typeof createServerSupabaseClient> {
+    if (this.supabase === null) {
+      this.supabase = typeof window === 'undefined'
         ? createServerSupabaseClient()   // Node / SSR
         : supabaseBrowser; // Browser
+    }
+    return this.supabase;
   }
-
 
   /**
    * Get notifications for the current user
@@ -42,7 +46,7 @@ export class NotificationService {
   async getNotifications(
     filters: NotificationFilters = {}
   ): Promise<NotificationResponse> {
-    const supabase = this.supabase;
+    const supabase = this.getSupabaseClient();
     const { limit = DEFAULT_LIMIT, offset = DEFAULT_OFFSET, type, read } = filters;
 
     let query = supabase
@@ -109,7 +113,7 @@ export class NotificationService {
    * Get unread notification count
    */
   async getUnreadCount(): Promise<number> {
-    const supabase = this.supabase;
+    const supabase = this.getSupabaseClient();
 
     const { count, error } = await supabase
       .from('notifications')
@@ -128,7 +132,7 @@ export class NotificationService {
    * Mark notifications as read
    */
   async markAsRead(notificationIds?: string[]): Promise<NotificationActionResult> {
-    const supabase = this.supabase;
+    const supabase = this.getSupabaseClient();
 
     try {
       const {
@@ -179,7 +183,7 @@ export class NotificationService {
    * Delete notifications
    */
   async deleteNotifications(notificationIds: string[]): Promise<NotificationActionResult> {
-    const supabase = this.supabase;
+    const supabase = this.getSupabaseClient();
 
     try {
       const {
@@ -218,7 +222,7 @@ export class NotificationService {
    * Create a notification (server-side only)
    */
   async createNotification(params: CreateNotificationParams): Promise<NotificationActionResult> {
-    const supabase = this.supabase;
+    const supabase = this.getSupabaseClient();
 
     try {
       const { data, error } = await supabase.rpc('create_notification', {
@@ -249,7 +253,7 @@ export class NotificationService {
    * Get notification preferences
    */
   async getPreferences(): Promise<NotificationPreferences[]> {
-    const supabase = this.supabase;
+    const supabase = this.getSupabaseClient();
 
     const { data, error } = await supabase
       .from('notification_preferences')
@@ -277,7 +281,7 @@ export class NotificationService {
   async updatePreferences(
     updates: NotificationPreferencesUpdate[]
   ): Promise<NotificationActionResult> {
-    const supabase = this.supabase;
+    const supabase = this.getSupabaseClient();
 
     try {
       const {
@@ -333,7 +337,7 @@ export class NotificationService {
       return null;
     }
 
-    const channel = this.supabase
+    const channel = this.getSupabaseClient()
       .channel(`notifications:${userId}`)
       .on(
         'postgres_changes',
@@ -346,7 +350,7 @@ export class NotificationService {
         (payload: { new: Record<string, unknown> }) => {
           void (async () => {
             // Fetch the full notification with actor data
-            const { data: notification } = await this.supabase
+            const { data: notification } = await this.getSupabaseClient()
               .from('notifications')
               .select(`
                 *,
@@ -378,7 +382,7 @@ export class NotificationService {
       .subscribe();
 
     return () => {
-      void this.supabase?.removeChannel(channel);
+      void this.getSupabaseClient()?.removeChannel(channel);
     };
   }
 
@@ -386,7 +390,7 @@ export class NotificationService {
    * Clean up old notifications (server-side only)
    */
   async cleanupOldNotifications(): Promise<NotificationActionResult> {
-    const supabase = this.supabase;
+    const supabase = this.getSupabaseClient();
 
     try {
       const { data, error } = await supabase.rpc('cleanup_old_notifications');
@@ -405,9 +409,10 @@ export class NotificationService {
   }
 }
 
-// Singleton instances
-export const notificationService = new NotificationService();
-export const serverNotificationService = new NotificationService();
+// Factory function for creating NotificationService instances
+export function createNotificationService(): NotificationService {
+  return new NotificationService();
+}
 
 // Helper functions for common notification creation patterns
 export async function createFollowNotification(
@@ -416,6 +421,7 @@ export async function createFollowNotification(
   followingType: 'user' | 'collective'
 ): Promise<NotificationActionResult> {
   const supabase = createServerSupabaseClient();
+  const notificationService = createNotificationService();
 
   // Get follower name
   const { data: follower } = await supabase
@@ -427,7 +433,7 @@ export async function createFollowNotification(
   const actorName = follower?.full_name ?? follower?.username ?? 'Someone';
 
   if (followingType === 'user') {
-    return serverNotificationService.createNotification({
+    return notificationService.createNotification({
       recipient_id: followingId,
       actor_id: followerId,
       type: 'follow',
@@ -446,7 +452,7 @@ export async function createFollowNotification(
 
     const ownerId = collective?.owner_id;
     if (isNonEmptyString(ownerId)) {
-      return serverNotificationService.createNotification({
+      return notificationService.createNotification({
         recipient_id: ownerId,
         actor_id: followerId,
         type: 'follow',
@@ -466,6 +472,7 @@ export async function createPostLikeNotification(
   postId: string
 ): Promise<NotificationActionResult> {
   const supabase = createServerSupabaseClient();
+  const notificationService = createNotificationService();
 
   // Get user and post details
   const [{ data: user }, { data: post }] = await Promise.all([
@@ -483,7 +490,7 @@ export async function createPostLikeNotification(
     message += `: "${post.title.substring(0, MAX_NOTIFICATION_PREVIEW_LENGTH)}"`;
   }
 
-  return serverNotificationService.createNotification({
+  return notificationService.createNotification({
     recipient_id: post.author_id,
     actor_id: userId,
     type: 'post_like',
@@ -501,6 +508,7 @@ export async function createCommentNotification(
   parentCommentId?: string
 ): Promise<NotificationActionResult> {
   const supabase = createServerSupabaseClient();
+  const notificationService = createNotificationService();
 
   // Get user and post details
   const [{ data: user }, { data: post }] = await Promise.all([
@@ -527,7 +535,7 @@ export async function createCommentNotification(
       parentComment.user_id !== null &&
       parentComment.user_id !== userId
     ) {
-      await serverNotificationService.createNotification({
+      await notificationService.createNotification({
         recipient_id: parentComment.user_id,
         actor_id: userId,
         type: 'comment_reply',
@@ -546,7 +554,7 @@ export async function createCommentNotification(
       message += `: "${post.title.substring(0, MAX_NOTIFICATION_PREVIEW_LENGTH)}"`;
     }
 
-    return serverNotificationService.createNotification({
+    return notificationService.createNotification({
       recipient_id: post.author_id,
       actor_id: userId,
       type: 'post_comment',

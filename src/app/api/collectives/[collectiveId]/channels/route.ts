@@ -11,7 +11,7 @@ import { createAPILogger } from '@/lib/utils/structured-logger';
 
 // Environment-driven configuration constants
 const CHANNEL_CONFIG = {
-  PAGE_MAX: Number(process.env.CHANNEL_PAGE_MAX) || 100,
+  PAGE_MAX: Number(process.env.CHANNEL_PAGE_MAX) || 200, // Increased default to handle client requests
   PAGE_DEFAULT: Number(process.env.CHANNEL_PAGE_DEFAULT) || 50,
   BATCH_SIZE: Number(process.env.CHANNEL_PARTICIPANT_BATCH_SIZE) || 1000,
   CACHE_MAX_AGE: Number(process.env.CHANNEL_CACHE_MAX_AGE) || 30,
@@ -288,12 +288,32 @@ export async function GET(
     const { collectiveId } = await context.params; // Await params in Next.js 15
     const { searchParams } = new URL(request.url);
 
-    // Validate pagination parameters (issue #6, #7)
-    const paginationResult = PaginationSchema.safeParse({
+    // Log pagination parameters for debugging
+    const rawParams = {
       before: searchParams.get('before'),
       after: searchParams.get('after'),
       limit: searchParams.get('limit'),
+    };
+    
+    // Convert null to undefined for Zod validation
+    const processedParams = {
+      before: rawParams.before === null ? undefined : rawParams.before,
+      after: rawParams.after === null ? undefined : rawParams.after,
+      limit: rawParams.limit,
+    };
+    
+    logger.info('Processing channels request', {
+      metadata: {
+        collectiveId,
+        rawParams,
+        processedParams,
+        pageMax: CHANNEL_CONFIG.PAGE_MAX,
+        pageDefault: CHANNEL_CONFIG.PAGE_DEFAULT,
+      },
     });
+
+    // Validate pagination parameters (issue #6, #7)
+    const paginationResult = PaginationSchema.safeParse(processedParams);
 
     if (!paginationResult.success) {
       const duration = timer();
@@ -303,6 +323,17 @@ export async function GET(
         statusCode: HTTP_STATUS.BAD_REQUEST,
         duration,
         error: 'Invalid pagination parameters',
+      });
+
+      logger.error('Pagination validation failed', {
+        error: new Error('Pagination validation failed'),
+        metadata: {
+          collectiveId,
+          rawParams,
+          processedParams,
+          validationErrors: paginationResult.error.flatten(),
+          pageMax: CHANNEL_CONFIG.PAGE_MAX,
+        },
       });
 
       return NextResponse.json(

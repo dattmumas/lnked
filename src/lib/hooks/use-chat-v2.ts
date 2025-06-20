@@ -196,9 +196,16 @@ export const useChatV2 = (): UseChatV2Return => {
    * Set active conversation
    */
   const setActiveConversation = useCallback(async (conversationId: string | undefined) => {
+    // Use current state via setState callback to avoid stale closure
+    let currentActiveConversationId: string | undefined;
+    setState(prev => {
+      currentActiveConversationId = prev.activeConversationId;
+      return prev;
+    });
+
     // Unsubscribe from previous conversation
-    if (state.activeConversationId !== undefined && ENABLE_REALTIME) {
-      void realtimeService.unsubscribeFromConversation(state.activeConversationId);
+    if (currentActiveConversationId !== undefined && ENABLE_REALTIME) {
+      void realtimeService.unsubscribeFromConversation(currentActiveConversationId);
     }
 
     setState(prev => ({ 
@@ -298,7 +305,7 @@ export const useChatV2 = (): UseChatV2Return => {
         },
       });
     }
-  }, [state.activeConversationId, loadMessages]);
+  }, [loadMessages]); // Remove state.activeConversationId from deps to prevent infinite loops
 
   /**
    * Send a message

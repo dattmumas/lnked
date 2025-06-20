@@ -41,13 +41,25 @@ export function createRequestScopedSupabaseClient(request: Request): ReturnType<
   const client = createServerClient<Database>(supabaseUrl, supabaseAnonKey, {
     cookies: {
       get(name: string) {
-        const cookieHeader = request.headers.get('cookie');
-        return cookieHeader !== null && cookieHeader !== undefined
-          ? cookieHeader
-              .split(';')
-              .find(c => c.trim().startsWith(`${name}=`))
-              ?.split('=')[1]
-          : undefined;
+        try {
+          const cookieHeader = request.headers.get('cookie');
+          if (!cookieHeader) return undefined;
+          
+          // More robust cookie parsing
+          const cookies = cookieHeader.split(';').reduce((acc, cookie) => {
+            const [key, ...valueParts] = cookie.trim().split('=');
+            if (key && valueParts.length > 0) {
+              acc[key] = decodeURIComponent(valueParts.join('='));
+            }
+            return acc;
+          }, {} as Record<string, string>);
+          
+          return cookies[name];
+        } catch (error) {
+          // Silent fail for cookie parsing errors
+          console.warn(`Failed to parse cookie ${name}:`, error);
+          return undefined;
+        }
       },
       set() {
         // No-op for API routes - we don't set cookies in responses here
@@ -57,13 +69,24 @@ export function createRequestScopedSupabaseClient(request: Request): ReturnType<
       },
     },
     global: {
-      headers: {
-        // Forward important headers for RLS context
-        Authorization: request.headers.get('Authorization') ?? '',
-        'X-Client-Info': request.headers.get('X-Client-Info') ?? '',
-        'X-Forwarded-For': request.headers.get('X-Forwarded-For') ?? '',
-        'User-Agent': request.headers.get('User-Agent') ?? '',
-      },
+      headers: (() => {
+        const headers: Record<string, string> = {};
+        
+        // Only add headers if they exist to avoid empty strings
+        const authHeader = request.headers.get('Authorization');
+        if (authHeader) headers.Authorization = authHeader;
+        
+        const clientInfo = request.headers.get('X-Client-Info');
+        if (clientInfo) headers['X-Client-Info'] = clientInfo;
+        
+        const forwardedFor = request.headers.get('X-Forwarded-For');
+        if (forwardedFor) headers['X-Forwarded-For'] = forwardedFor;
+        
+        const userAgent = request.headers.get('User-Agent');
+        if (userAgent) headers['User-Agent'] = userAgent;
+        
+        return headers;
+      })(),
     },
   });
 

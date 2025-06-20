@@ -206,12 +206,14 @@ export function ChatPanel({
   const { isLoadingConversations, isSendingMessage, error } = chat;
 
   // Load initial conversation when conversationId changes
-  // Using conversationId directly in deps to avoid function dependency issues
+  // Extract setActiveConversation to avoid including entire chat object in deps
+  const { setActiveConversation } = chat;
+
   useEffect(() => {
     if (conversationId && conversation?.id !== conversationId) {
-      void chat.setActiveConversation(conversationId);
+      void setActiveConversation(conversationId);
     }
-  }, [conversationId, conversation?.id, chat]);
+  }, [conversationId, conversation?.id, setActiveConversation]);
 
   const handleSendMessage = useCallback(async (): Promise<void> => {
     if (!message.trim() || conversation === null || conversation === undefined)

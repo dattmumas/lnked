@@ -30,6 +30,7 @@ export class RealtimeService {
   private messageHandlers: Map<string, (_message: MessageWithSender) => void> = new Map();
   private typingHandlers: Map<string, (_typing: TypingIndicator[]) => void> = new Map();
   private typingTimeout: Map<string, NodeJS.Timeout> = new Map();
+  private subscriptionDebounce: Map<string, NodeJS.Timeout> = new Map();
 
   /**
    * Subscribe to a conversation channel following Supabase broadcast patterns with security checks
@@ -46,6 +47,19 @@ export class RealtimeService {
     }
   ): Promise<RealtimeChannel | undefined> {
     const channelName = `conversation:${conversationId}`;
+    
+    // Debounce rapid subscription attempts
+    const existingDebounce = this.subscriptionDebounce.get(conversationId);
+    if (existingDebounce) {
+      clearTimeout(existingDebounce);
+    }
+
+    // If there's already an active, healthy channel, reuse it
+    const existingChannel = this.channels.get(conversationId);
+    if (existingChannel && existingChannel.state === 'joined') {
+      console.log(`♻️ Reusing existing healthy channel for conversation ${conversationId}`);
+      return existingChannel;
+    }
     
     // Security check: Verify user can access this conversation
     const user = await this.getCurrentUser();
@@ -210,26 +224,40 @@ export class RealtimeService {
         }
       );
 
-    // Subscribe to the channel (keeping original API since receive doesn't exist)
+    // Subscribe to the channel with enhanced error handling
     channel.subscribe((status) => {
       switch (status as string) {
         case 'SUBSCRIBED':
-          console.warn(`Subscribed to conversation ${conversationId}`);
+          console.log(`✅ Successfully subscribed to conversation ${conversationId}`);
           if (typeof callbacks.onUserJoin === 'function') {
             void this.broadcastUserJoin(conversationId);
           }
           break;
         case 'CHANNEL_ERROR':
-          console.error(`Channel error for conversation ${conversationId}`);
+          console.error(`❌ Channel error for conversation ${conversationId}`);
+          // Auto-retry after a delay to prevent infinite retry loops
+          setTimeout(() => {
+            if (this.channels.has(conversationId)) {
+              console.log(`🔄 Retrying subscription to conversation ${conversationId}`);
+              void this.subscribeToConversation(conversationId, callbacks);
+            }
+          }, 3000);
           break;
         case 'TIMED_OUT':
-          console.error(`Subscription timeout for conversation ${conversationId}`);
+          console.error(`⏰ Subscription timeout for conversation ${conversationId}`);
+          // Clean up and retry
+          this.channels.delete(conversationId);
+          setTimeout(() => {
+            console.log(`🔄 Retrying subscription after timeout: ${conversationId}`);
+            void this.subscribeToConversation(conversationId, callbacks);
+          }, 2000);
           break;
         case 'CLOSED':
-          console.warn(`Channel closed for conversation ${conversationId}`);
+          console.warn(`🔒 Channel closed for conversation ${conversationId}`);
+          this.channels.delete(conversationId);
           break;
         default:
-          console.error(`Failed to subscribe to conversation ${conversationId}:`, status);
+          console.error(`❓ Unknown subscription status for conversation ${conversationId}:`, status);
       }
     });
 
@@ -271,6 +299,13 @@ export class RealtimeService {
       if (timeout) {
         clearTimeout(timeout);
         this.typingTimeout.delete(conversationId);
+      }
+
+      // Clear subscription debounce timeout
+      const debounceTimeout = this.subscriptionDebounce.get(conversationId);
+      if (debounceTimeout) {
+        clearTimeout(debounceTimeout);
+        this.subscriptionDebounce.delete(conversationId);
       }
     }
   }
