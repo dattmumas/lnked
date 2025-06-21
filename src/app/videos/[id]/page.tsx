@@ -7,24 +7,11 @@ import VideoDetailsServer from '@/components/app/video/VideoDetailsServer';
 import VideoPlayerClient from '@/components/app/video/VideoPlayerClient';
 import { CommentsSkeleton } from '@/components/ui/CommentsSkeleton';
 import { VideoPlayerSkeleton } from '@/components/ui/VideoPlayerSkeleton';
+import {
+  VideoAssetSchema,
+  VideoAsset,
+} from '@/lib/data-access/schemas/video.schema';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
-
-// Type based on database schema
-interface VideoAsset {
-  id: string;
-  title: string | null;
-  description: string | null;
-  status: string | null;
-  duration: number | null;
-  aspect_ratio: string | null;
-  created_at: string | null;
-  updated_at: string | null;
-  mux_asset_id: string | null;
-  mux_playback_id: string | null;
-  created_by: string | null;
-  comment_count: number;
-  mp4_support?: string | null; // 'none' | 'capped-1080p' | 'audio-only'
-}
 
 interface VideoPlayerPageProps {
   params: Promise<{ id: string }>;
@@ -47,7 +34,8 @@ async function getVideoData(videoId: string): Promise<VideoAsset | undefined> {
     return undefined;
   }
 
-  return video;
+  // Transform null values to undefined for frontend compatibility
+  return VideoAssetSchema.parse(video);
 }
 
 export default async function VideoPlayerPage({
@@ -92,7 +80,7 @@ export default async function VideoPlayerPage({
       {/* Main content: video details + player + comments */}
       <main className="ml-16 w-[calc(100%-4rem)] lg:w-[calc(100%-4rem-28rem)] flex flex-col items-center py-8">
         {/* Video metadata - renders immediately (no Suspense) */}
-        <VideoDetailsServer video={videoAsset as Record<string, unknown>} />
+        <VideoDetailsServer video={videoAsset} />
 
         {/* Video player - independent Suspense boundary */}
         <Suspense fallback={<VideoPlayerSkeleton />}>

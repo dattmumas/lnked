@@ -1,34 +1,34 @@
-:global(.editor-shell) {
+.editor-shell {
   @apply mx-auto my-10 text-foreground relative leading-[1.7] font-normal;
   max-width: 100%;
   padding: 0;
 }
 
 @media (max-width: 768px) {
-  :global(.editor-shell) {
+  .editor-shell {
     @apply px-3 my-6;
   }
 }
 
 @media (max-width: 640px) {
-  :global(.editor-shell) {
+  .editor-shell {
     @apply px-4 my-4;
   }
 }
 
 @media (max-width: 480px) {
-  :global(.editor-shell) {
+  .editor-shell {
     @apply px-2 my-2;
   }
 }
 
-:global(.editor-shell .editor-container) {
+.editor-shell .editor-container {
   background: transparent;
   position: relative;
   display: block;
 }
 
-:global(.editor-scroller) {
+.editor-scroller {
   min-height: 150px;
   max-width: 100%;
   border: 0;
@@ -39,7 +39,7 @@
   resize: vertical;
 }
 
-:global(.editor) {
+.editor {
   flex: auto;
   max-width: 100%;
   position: relative;
@@ -47,12 +47,12 @@
   z-index: -1;
 }
 
-:global(.editor img) {
+.editor img {
   max-width: 100%;
   height: auto;
 }
 
-:global(.editor table) {
+.editor table {
   display: block;
   width: 100%;
   overflow-x: auto;
@@ -60,47 +60,48 @@
 
 /* Responsive editor content */
 @media (max-width: 768px) {
-  :global(.editor) {
+  .editor {
     font-size: 15px;
     line-height: 1.6;
   }
 
-  :global(.editor h1) {
+  .editor h1 {
     font-size: 1.8rem;
   }
 
-  :global(.editor h2) {
+  .editor h2 {
     font-size: 1.5rem;
   }
 
-  :global(.editor h3) {
+  .editor h3 {
     font-size: 1.3rem;
   }
 }
 
 @media (max-width: 480px) {
-  :global(.editor) {
+  .editor {
     font-size: 14px;
     line-height: 1.5;
   }
 
-  :global(.editor h1) {
+  .editor h1 {
     font-size: 1.6rem;
   }
 
-  :global(.editor h2) {
+  .editor h2 {
     font-size: 1.4rem;
   }
 
-  :global(.editor h3) {
+  .editor h3 {
     font-size: 1.2rem;
   }
 
-  :global(.editor p) {
+  .editor p {
     margin-bottom: 0.8rem;
   }
 
-  :global(.editor ul, .editor ol) {
+  .editor ul,
+  .editor ol {
     padding-left: 1.2rem;
   }
 }

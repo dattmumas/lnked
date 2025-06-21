@@ -1,10 +1,10 @@
-:global(.typeahead-popover) {
+.typeahead-popover {
   background: hsl(var(--card));
   box-shadow: 0 5px 10px rgba(0, 0, 0, 0.3);
   border-radius: 8px;
   position: relative;
 }
-:global(.typeahead-popover ul) {
+.typeahead-popover ul {
   padding: 0;
   list-style: none;
   margin: 0;
@@ -12,14 +12,14 @@
   max-height: 200px;
   overflow-y: scroll;
 }
-:global(.typeahead-popover ul::-webkit-scrollbar) {
+.typeahead-popover ul::-webkit-scrollbar {
   display: none;
 }
-:global(.typeahead-popover ul) {
+.typeahead-popover ul {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
-:global(.typeahead-popover ul li) {
+.typeahead-popover ul li {
   margin: 0;
   min-width: 180px;
   font-size: 14px;
@@ -27,10 +27,10 @@
   cursor: pointer;
   border-radius: 8px;
 }
-:global(.typeahead-popover ul li.selected) {
+.typeahead-popover ul li.selected {
   background: #eee;
 }
-:global(.typeahead-popover li) {
+.typeahead-popover li {
   margin: 0 8px;
   padding: 8px;
   color: #050505;
@@ -45,28 +45,28 @@
   border-radius: 8px;
   border: 0;
 }
-:global(.typeahead-popover li.active) {
+.typeahead-popover li.active {
   display: flex;
   width: 20px;
   height: 20px;
   background-size: contain;
 }
-:global(.typeahead-popover li:first-child) {
+.typeahead-popover li:first-child {
   border-radius: 8px 8px 0 0;
 }
-:global(.typeahead-popover li:last-child) {
+.typeahead-popover li:last-child {
   border-radius: 0 0 8px 8px;
 }
-:global(.typeahead-popover li:hover) {
+.typeahead-popover li:hover {
   background-color: #eee;
 }
-:global(.typeahead-popover li .text) {
+.typeahead-popover li .text {
   display: flex;
   line-height: 20px;
   flex-grow: 1;
   min-width: 150px;
 }
-:global(.typeahead-popover li .icon) {
+.typeahead-popover li .icon {
   display: flex;
   width: 20px;
   height: 20px;
@@ -77,24 +77,24 @@
   background-repeat: no-repeat;
   background-position: center;
 }
-:global(.component-picker-menu) {
+.component-picker-menu {
   width: 200px;
 }
-:global(.mentions-menu) {
+.mentions-menu {
   width: 250px;
 }
-:global(.auto-embed-menu) {
+.auto-embed-menu {
   width: 150px;
 }
-:global(.emoji-menu) {
+.emoji-menu {
   width: 200px;
 }
 
 @media (max-width: 640px) {
-  :global(.typeahead-popover) {
+  .typeahead-popover {
     width: 90vw;
   }
-  :global(.typeahead-popover ul) {
+  .typeahead-popover ul {
     max-height: 40vh;
   }
 }

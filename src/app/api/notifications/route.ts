@@ -4,12 +4,6 @@ import { HttpStatusCode } from '@/lib/constants/errors';
 import { createNotificationService } from '@/lib/notifications/service';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { recordAPIMetrics, createMetricsTimer } from '@/lib/utils/metrics';
-import { applyRateLimit } from '@/lib/utils/rate-limiting';
-import { 
-  notificationQuerySchema, 
-  notificationActionSchema, 
-  safeParseJson
-} from '@/lib/utils/request-validation';
 import { createAPILogger } from '@/lib/utils/structured-logger';
 
 import type { NotificationFilters, NotificationType } from '@/types/notifications';
@@ -103,8 +97,8 @@ export async function GET(request: NextRequest): Promise<Response> {
     }
 
     // Validate numeric parameters
-    if ((limitParam !== null && (isNaN(limit!) || limit! < 0)) ||
-        (offsetParam !== null && (isNaN(offset!) || offset! < 0))) {
+    if ((limitParam !== null && (isNaN(limit ?? 0) || (limit ?? 0) < 0)) ||
+        (offsetParam !== null && (isNaN(offset ?? 0) || (offset ?? 0) < 0))) {
       const duration = timer();
       recordAPIMetrics({
         endpoint: ENDPOINT_NAME,
@@ -153,10 +147,10 @@ export async function GET(request: NextRequest): Promise<Response> {
       metadata: {
         count: response.notifications?.length ?? 0,
         filters: {
-          type: type,
-          read: read,
-          limit: limit,
-          offset: offset,
+          type,
+          read,
+          limit,
+          offset,
         },
       },
     });

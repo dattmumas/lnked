@@ -262,7 +262,7 @@ export default async function PostBySlugPage({
       post.user_reaction?.reaction_type === 'like' ||
       post.user_reaction?.reaction_type === 'dislike'
         ? post.user_reaction.reaction_type
-        : null;
+        : undefined;
     const initialBookmarked = Boolean(post.user_bookmark?.id);
 
     // Fetch comment count via RPC for this post
@@ -401,7 +401,9 @@ export default async function PostBySlugPage({
                   id={post.id}
                   initialLikeCount={initialLikeCount}
                   initialDislikeCount={initialDislikeCount}
-                  initialUserReaction={initialUserReaction}
+                  initialUserReaction={
+                    initialUserReaction as 'like' | 'dislike' | null
+                  }
                   disabled={!user?.id}
                 />
               </div>

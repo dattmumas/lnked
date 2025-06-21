@@ -31,9 +31,21 @@ if (CLIENT_CONFIG.url === '' || CLIENT_CONFIG.anonKey === '') {
  * Cookie handler interface for request-scoped cookie operations
  */
 export interface CookieHandler {
-  get: (name: string) => Promise<string | null | undefined>;
+  get: (name: string) => string | null | undefined;
   set: (name: string, value: string, options?: CookieOptions) => void;
   remove: (name: string, options?: CookieOptions) => void;
+}
+
+/**
+ * Next.js cookie store types
+ */
+interface NextCookieValue {
+  value: string;
+  name: string;
+}
+
+interface NextCookieStore {
+  get: (name: string) => NextCookieValue | undefined;
 }
 
 /**
@@ -90,7 +102,7 @@ export async function getSupabaseSingleton(cookieHandler: CookieHandler): Promis
  * Creates a production-safe cookie handler with header deduplication
  */
 export function createCookieHandler(
-  cookieStore: any, // Next.js 15 RequestCookies type
+  cookieStore: NextCookieStore,
   responseRef: Response,
   verbose = false
 ): CookieHandler {
@@ -124,12 +136,12 @@ export function createCookieHandler(
   };
 
   return {
-    get: async (name: string): Promise<string | null | undefined> => {
+    get: (name: string): string | null | undefined => {
       try {
-        // Handle Next.js 15 cookie format: CookieValue | undefined
+        // Handle Next.js 15 cookie format: NextCookieValue | undefined
         const cookie = cookieStore.get(name);
-        // If cookie is a string (legacy), return it; if it's an object with .value, return .value; otherwise null
-        return typeof cookie === 'string' ? cookie : cookie?.value ?? null;
+        // Return the value property from the cookie object, or null if not found
+        return cookie?.value ?? null;
       } catch (unknownError) {
         if (isVerbose) {
           console.warn(`Failed to get cookie ${name}:`, unknownError instanceof Error ? unknownError : new Error('Unknown cookie error'));

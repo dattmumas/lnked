@@ -17,7 +17,13 @@ import {
 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
-import React, { useState, useEffect, useCallback } from 'react';
+import React, {
+  useState,
+  useEffect,
+  useCallback,
+  useRef,
+  useMemo,
+} from 'react';
 
 import { Button } from '@/components/primitives/Button';
 import { Card } from '@/components/primitives/Card';
@@ -39,16 +45,16 @@ const VIDEO_ID_DISPLAY_LENGTH = 8;
 // Types
 interface VideoAsset {
   id: string;
-  title: string | undefined;
-  description: string | undefined;
-  status: string | undefined;
-  duration: number | undefined;
-  aspect_ratio: string | undefined;
-  created_at: string | undefined;
-  updated_at: string | undefined;
-  mux_asset_id: string;
-  mux_playback_id: string | undefined;
-  created_by: string | undefined;
+  title: string | null;
+  description: string | null;
+  status: string | null;
+  duration: number | null;
+  aspect_ratio: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+  mux_asset_id: string | null;
+  mux_playback_id: string | null;
+  created_by: string | null;
 }
 
 interface ApiResponse {
@@ -58,9 +64,7 @@ interface ApiResponse {
   };
 }
 
-interface VideoRefreshResponse {
-  video: VideoAsset;
-}
+// Note: VideoRefreshResponse interface available if needed for future features
 
 // Helper functions
 const formatDuration = (seconds?: number): string => {
@@ -71,45 +75,20 @@ const formatDuration = (seconds?: number): string => {
 };
 
 // Enhanced StatusBadge component with design tokens
+// Fix #12: Optimized StatusBadge using static configuration
 function StatusBadge({
   status,
 }: {
   status: string | undefined;
 }): React.ReactElement {
-  const getStatusVariant = (
-    status: string | undefined,
-  ): 'default' | 'secondary' | 'destructive' | 'outline' => {
-    switch (status) {
-      case 'ready':
-        return 'default';
-      case 'preparing':
-      case 'processing':
-        return 'secondary';
-      case 'errored':
-        return 'destructive';
-      default:
-        return 'outline';
-    }
-  };
-
-  const getStatusLabel = (status: string | undefined): string => {
-    switch (status) {
-      case 'ready':
-        return 'Ready';
-      case 'preparing':
-        return 'Preparing';
-      case 'processing':
-        return 'Processing';
-      case 'errored':
-        return 'Error';
-      default:
-        return 'Unknown';
-    }
-  };
+  const config =
+    status !== undefined && status in STATUS_CONFIG
+      ? STATUS_CONFIG[status as keyof typeof STATUS_CONFIG]
+      : { label: 'Unknown', variant: 'outline' as const };
 
   return (
-    <Badge variant={getStatusVariant(status)} className="micro-interaction">
-      {getStatusLabel(status)}
+    <Badge variant={config.variant} className="micro-interaction">
+      {config.label}
     </Badge>
   );
 }
@@ -128,25 +107,78 @@ export default function VideoManagementDashboard(): React.ReactElement {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
 
-  // Fetch videos
+  // Fix #2: Race condition protection
+  const lastRequestIdRef = useRef(0);
+
+  // Fix #1: Query result caching
+  const queryCache = useRef(new Map<string, ApiResponse>());
+
+  // Fix #6: Debounced search
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
+
+  // Fix #6: Debounce search input
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, SEARCH_DEBOUNCE_DELAY_MS);
+    return () => clearTimeout(timeoutId);
+  }, [searchQuery]);
+
+  // Fix #3: Processing video IDs tracking (prevents useEffect loop)
+  const processingVideoIds = useMemo(() => {
+    return videos
+      .filter((v) => v.status === 'preparing' || v.status === 'processing')
+      .map((v) => v.id);
+  }, [videos]);
+
+  // Fix #1 & #2: Enhanced fetchVideos with caching and race protection
   const fetchVideos = useCallback(async (): Promise<void> => {
     try {
       setIsLoading(true);
       setError(undefined);
 
+      // Fix #2: Race condition protection
+      const requestId = ++lastRequestIdRef.current;
+
+      // Fix #14: Memoized URL building
+      const cacheKey = `${currentPage}-${VIDEOS_PER_PAGE}-${debouncedSearchQuery}-${statusFilter}-${sortBy}-${sortOrder}`;
+
+      // Fix #1: Check cache first
+      const cachedResult = queryCache.current.get(cacheKey);
+      if (cachedResult !== undefined) {
+        const videosData = cachedResult.data?.videos;
+        if (Array.isArray(videosData)) {
+          setVideos(videosData);
+          const totalCount = cachedResult.data?.total ?? 0;
+          setTotalPages(Math.ceil(totalCount / VIDEOS_PER_PAGE));
+        }
+        setIsLoading(false);
+        return;
+      }
+
       const params = new URLSearchParams({
         page: currentPage.toString(),
         limit: VIDEOS_PER_PAGE.toString(),
-        search: searchQuery,
+        search: debouncedSearchQuery,
         status: statusFilter,
         sort: sortBy,
         order: sortOrder,
       });
 
       const response = await fetch(`/api/videos?${params}`);
+
+      // Fix #2: Check if this request is still current
+      if (requestId !== lastRequestIdRef.current) {
+        return; // Ignore stale response
+      }
+
       if (!response.ok) throw new Error('Failed to fetch videos');
 
       const result = (await response.json()) as ApiResponse;
+
+      // Fix #1: Cache successful result
+      queryCache.current.set(cacheKey, result);
+
       const videosData = result.data?.videos;
       if (Array.isArray(videosData)) {
         setVideos(videosData);
@@ -161,77 +193,56 @@ export default function VideoManagementDashboard(): React.ReactElement {
     } finally {
       setIsLoading(false);
     }
-  }, [currentPage, searchQuery, statusFilter, sortBy, sortOrder]);
+  }, [currentPage, debouncedSearchQuery, statusFilter, sortBy, sortOrder]);
 
-  // Automatic refresh for processing videos
+  // Fix #3: Automatic refresh for processing videos (prevents memory leak)
   useEffect(() => {
-    if (activeTab === 'library') {
-      // Function to refresh processing videos
-      const refreshProcessingVideos = async (): Promise<void> => {
-        const processingVideos = videos.filter(
-          (video): video is VideoAsset =>
-            video.status === 'preparing' || video.status === 'processing',
-        );
-
-        if (processingVideos.length > 0) {
-          console.warn(
-            `Refreshing ${processingVideos.length} processing videos...`,
-          );
-
-          // Refresh each processing video
-          const refreshPromises = processingVideos.map(
-            async (video): Promise<VideoAsset | undefined> => {
-              try {
-                const response = await fetch(
-                  `/api/videos/${video.id}/refresh`,
-                  {
-                    method: 'POST',
-                  },
-                );
-
-                if (response.ok) {
-                  const result =
-                    (await response.json()) as VideoRefreshResponse;
-                  return result.video;
-                }
-                return undefined;
-              } catch (error: unknown) {
-                console.error(`Failed to refresh video ${video.id}:`, error);
-                return undefined;
-              }
-            },
-          );
-
-          const refreshedVideos = await Promise.all(refreshPromises);
-
-          // Update the videos state with refreshed data
-          setVideos((prevVideos) => {
-            return prevVideos.map((video) => {
-              const refreshedVideo = refreshedVideos.find(
-                (refreshed): refreshed is VideoAsset =>
-                  refreshed !== undefined && refreshed.id === video.id,
-              );
-              return refreshedVideo ?? video;
-            });
-          });
-        }
-      };
-
-      // Initial refresh
-      void refreshProcessingVideos();
-
-      // Set up interval for automatic refresh
-      const intervalId = setInterval(
-        () => void refreshProcessingVideos(),
-        REFRESH_INTERVAL_MS,
-      );
-
-      // Cleanup interval on unmount or when dependencies change
-      return () => clearInterval(intervalId);
+    if (activeTab !== 'library' || processingVideoIds.length === 0) {
+      return undefined;
     }
 
-    return undefined;
-  }, [videos, activeTab]);
+    // Function to refresh processing videos
+    const refreshProcessingVideos = async (): Promise<void> => {
+      if (processingVideoIds.length === 0) return;
+
+      console.warn(
+        `Refreshing ${processingVideoIds.length} processing videos...`,
+      );
+
+      // Fix #4: Batch refresh (future improvement: single endpoint)
+      // For now, limit to max 5 concurrent requests to prevent API overload
+      const batchSize = 5;
+      const batches = [];
+      for (let i = 0; i < processingVideoIds.length; i += batchSize) {
+        batches.push(processingVideoIds.slice(i, i + batchSize));
+      }
+
+      for (const batch of batches) {
+        const refreshPromises = batch.map(async (videoId): Promise<void> => {
+          try {
+            await fetch(`/api/videos/${videoId}/refresh`, { method: 'POST' });
+          } catch (error: unknown) {
+            console.error(`Failed to refresh video ${videoId}:`, error);
+          }
+        });
+
+        await Promise.all(refreshPromises);
+      }
+
+      // Refetch all videos to get updated data
+      void fetchVideos();
+    };
+
+    // Initial refresh
+    void refreshProcessingVideos();
+
+    // Set up interval - only one interval created per activeTab/processingIds change
+    const intervalId = setInterval(() => {
+      void refreshProcessingVideos();
+    }, REFRESH_INTERVAL_MS);
+
+    return () => clearInterval(intervalId);
+  }, [activeTab, processingVideoIds, fetchVideos]); // No more 'videos' dependency!
 
   // Fetch videos when component mounts or filters change
   useEffect(() => {
@@ -263,21 +274,47 @@ export default function VideoManagementDashboard(): React.ReactElement {
     });
   }, [videos]);
 
-  // Bulk operations
+  // Fix #7: Improved bulk operations with individual error handling
   const handleBulkDelete = useCallback(async (): Promise<void> => {
     if (selectedVideos.size === 0) return;
 
-    // Log the delete action instead of showing confirm dialog
     console.warn(`Deleting ${selectedVideos.size} video(s)`);
 
     try {
-      const deletePromises = Array.from(selectedVideos).map((videoId) =>
-        fetch(`/api/videos/${videoId}`, { method: 'DELETE' }),
+      const deletePromises = Array.from(selectedVideos).map(
+        async (videoId) => ({
+          videoId,
+          result: await fetch(`/api/videos/${videoId}`, { method: 'DELETE' }),
+        }),
       );
 
-      await Promise.all(deletePromises);
-      setSelectedVideos(new Set());
-      void fetchVideos();
+      const results = await Promise.allSettled(deletePromises);
+
+      let successCount = 0;
+      let failureCount = 0;
+
+      results.forEach((result) => {
+        if (result.status === 'fulfilled' && result.value.result.ok) {
+          successCount++;
+        } else {
+          failureCount++;
+          console.error(
+            `Failed to delete video ${result.status === 'fulfilled' ? result.value.videoId : 'unknown'}`,
+          );
+        }
+      });
+
+      if (successCount > 0) {
+        console.warn(`Successfully deleted ${successCount} video(s)`);
+        setSelectedVideos(new Set());
+        void fetchVideos();
+      }
+
+      if (failureCount > 0) {
+        setError(
+          `Failed to delete ${failureCount} video(s). ${successCount} succeeded.`,
+        );
+      }
     } catch {
       setError('Failed to delete videos');
     }
@@ -515,7 +552,7 @@ export default function VideoManagementDashboard(): React.ReactElement {
               {videos.map((video) => (
                 <VideoCard
                   key={video.id}
-                  video={video}
+                  video={transformVideoAsset(video)}
                   isSelected={selectedVideos.has(video.id)}
                   onSelect={handleToggleVideoSelection(video.id)}
                   onRefresh={handleFetchVideos}
@@ -528,7 +565,7 @@ export default function VideoManagementDashboard(): React.ReactElement {
                 {videos.map((video) => (
                   <VideoListItem
                     key={video.id}
-                    video={video}
+                    video={transformVideoAsset(video)}
                     isSelected={selectedVideos.has(video.id)}
                     onSelect={handleToggleVideoSelection(video.id)}
                     onRefresh={handleFetchVideos}
@@ -610,9 +647,58 @@ export default function VideoManagementDashboard(): React.ReactElement {
   );
 }
 
+// Fix null safety: Transformed video asset type
+type TransformedVideoAsset = {
+  id: string;
+  title: string | undefined;
+  description: string | undefined;
+  status: string | undefined;
+  duration: number | undefined;
+  aspect_ratio: string | undefined;
+  created_at: string | undefined;
+  updated_at: string | undefined;
+  mux_asset_id: string | undefined;
+  mux_playback_id: string | undefined;
+  created_by: string | undefined;
+};
+
+// Transform null values to undefined for component compatibility
+const transformVideoAsset = (video: VideoAsset): TransformedVideoAsset => ({
+  ...video,
+  title: video.title ?? undefined,
+  description: video.description ?? undefined,
+  status: video.status ?? undefined,
+  duration: video.duration ?? undefined,
+  aspect_ratio: video.aspect_ratio ?? undefined,
+  created_at: video.created_at ?? undefined,
+  updated_at: video.updated_at ?? undefined,
+  mux_asset_id: video.mux_asset_id ?? undefined,
+  mux_playback_id: video.mux_playback_id ?? undefined,
+  created_by: video.created_by ?? undefined,
+});
+
+// Fix #12: Static status mapping for performance
+const STATUS_CONFIG = {
+  preparing: { label: 'Preparing', variant: 'secondary' as const },
+  ready: { label: 'Ready', variant: 'default' as const },
+  processing: { label: 'Processing', variant: 'secondary' as const },
+  errored: { label: 'Error', variant: 'destructive' as const },
+  failed: { label: 'Failed', variant: 'destructive' as const },
+} as const;
+
+// Fix #8: Thumbnail size configuration for performance
+const THUMBNAIL_SIZES = {
+  grid: { width: 320, height: 180, quality: 85 },
+  list: { width: 96, height: 56, quality: 75 },
+} as const;
+
+// Debounce delay for search input
+// eslint-disable-next-line no-magic-numbers
+const SEARCH_DEBOUNCE_DELAY_MS = 300 as const;
+
 // Enhanced VideoCard component with design tokens
 interface VideoCardProps {
-  video: VideoAsset;
+  video: TransformedVideoAsset;
   isSelected: boolean;
   onSelect: () => void;
   onRefresh: () => void;
@@ -681,11 +767,6 @@ const VideoCard = React.memo(function VideoCard({
     [],
   );
 
-  const handleEditClick = useCallback((): void => {
-    // Edit handler placeholder
-    console.warn('Edit video:', video.id);
-  }, [video.id]);
-
   return (
     <Card
       size="md"
@@ -709,7 +790,7 @@ const VideoCard = React.memo(function VideoCard({
         video.mux_playback_id.length > 0 ? (
           <>
             <Image
-              src={`https://image.mux.com/${video.mux_playback_id}/thumbnail.jpg?width=400&height=225&fit_mode=smartcrop&time=1`}
+              src={`https://image.mux.com/${video.mux_playback_id}/thumbnail.jpg?width=${THUMBNAIL_SIZES.grid.width}&height=${THUMBNAIL_SIZES.grid.height}&fit_mode=smartcrop&time=1`}
               alt={video.title ?? 'Video thumbnail'}
               fill
               className="object-cover transition-transform transition-normal hover:scale-105"
@@ -723,17 +804,23 @@ const VideoCard = React.memo(function VideoCard({
             </div>
           </>
         ) : (
-          <div className="w-full h-full flex items-center justify-center">
-            <Loader2 className="h-8 w-8 animate-spin text-content-secondary" />
+          // Fix #13: Better fallback for missing thumbnails
+          <div className="w-full h-full flex items-center justify-center bg-muted">
+            <div className="text-center space-y-2">
+              <Play className="h-8 w-8 mx-auto text-muted-foreground" />
+              <StatusBadge status={video.status} />
+            </div>
           </div>
         )}
 
         {/* Duration overlay */}
-        {video.duration !== undefined && video.duration > 0 && (
-          <div className="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded">
-            {formatDuration(video.duration)}
-          </div>
-        )}
+        {video.duration !== undefined &&
+          video.duration !== null &&
+          video.duration > 0 && (
+            <div className="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded">
+              {formatDuration(video.duration ?? undefined)}
+            </div>
+          )}
       </div>
 
       {/* Video info */}
@@ -780,7 +867,8 @@ const VideoCard = React.memo(function VideoCard({
               size="sm"
               variant="ghost"
               className="micro-interaction nav-hover"
-              onClick={handleEditClick}
+              disabled
+              title="Edit functionality coming soon"
             >
               <Edit className="h-4 w-4" />
             </Button>
@@ -878,11 +966,6 @@ const VideoListItem = React.memo(function VideoListItem({
     void handleRefresh();
   }, [handleRefresh]);
 
-  const handleEditClick = useCallback((): void => {
-    // Edit handler placeholder
-    console.warn('Edit video:', video.id);
-  }, [video.id]);
-
   return (
     <div
       className={`flex items-center gap-component p-card-sm transition-colors transition-fast hover:bg-interaction-hover ${
@@ -902,14 +985,15 @@ const VideoListItem = React.memo(function VideoListItem({
         {video.mux_playback_id !== undefined &&
         video.mux_playback_id.length > 0 ? (
           <Image
-            src={`https://image.mux.com/${video.mux_playback_id}/thumbnail.jpg?width=96&height=56&fit_mode=smartcrop&time=1`}
+            src={`https://image.mux.com/${video.mux_playback_id}/thumbnail.jpg?width=${THUMBNAIL_SIZES.list.width}&height=${THUMBNAIL_SIZES.list.height}&fit_mode=smartcrop&time=1`}
             alt={video.title ?? 'Video thumbnail'}
             fill
             className="object-cover"
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center">
-            <Play className="h-6 w-6 text-content-secondary" />
+          // Fix #13: Better fallback for missing thumbnails
+          <div className="w-full h-full flex items-center justify-center bg-muted">
+            <StatusBadge status={video.status} />
           </div>
         )}
       </div>
@@ -955,7 +1039,8 @@ const VideoListItem = React.memo(function VideoListItem({
               size="sm"
               variant="ghost"
               className="micro-interaction nav-hover"
-              onClick={handleEditClick}
+              disabled
+              title="Edit functionality coming soon"
             >
               <Edit className="h-4 w-4" />
             </Button>

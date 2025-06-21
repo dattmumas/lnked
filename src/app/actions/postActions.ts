@@ -759,7 +759,7 @@ export async function uploadThumbnail(
             .eq('member_id', user.id)
             .maybeSingle();
 
-          if (membership !== null && ['admin', 'editor'].includes(membership.role)) {
+          if (membership !== null && ['owner', 'admin', 'editor'].includes(membership.role)) {
             hasPermission = true;
           }
         }

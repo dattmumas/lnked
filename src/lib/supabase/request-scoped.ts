@@ -40,10 +40,10 @@ export function createRequestScopedSupabaseClient(request: Request): ReturnType<
   // Create new client with proper session context
   const client = createServerClient<Database>(supabaseUrl, supabaseAnonKey, {
     cookies: {
-      get(name: string) {
-        try {
-          const cookieHeader = request.headers.get('cookie');
-          if (!cookieHeader) return undefined;
+              get(name: string) {
+          try {
+            const cookieHeader = request.headers.get('cookie');
+            if (cookieHeader === null || cookieHeader === undefined || cookieHeader === '') return undefined;
           
           // More robust cookie parsing
           const cookies = cookieHeader.split(';').reduce((acc, cookie) => {
@@ -74,16 +74,24 @@ export function createRequestScopedSupabaseClient(request: Request): ReturnType<
         
         // Only add headers if they exist to avoid empty strings
         const authHeader = request.headers.get('Authorization');
-        if (authHeader) headers.Authorization = authHeader;
+        if (authHeader !== null && authHeader !== undefined && authHeader !== '') {
+          headers.Authorization = authHeader;
+        }
         
         const clientInfo = request.headers.get('X-Client-Info');
-        if (clientInfo) headers['X-Client-Info'] = clientInfo;
+        if (clientInfo !== null && clientInfo !== undefined && clientInfo !== '') {
+          headers['X-Client-Info'] = clientInfo;
+        }
         
         const forwardedFor = request.headers.get('X-Forwarded-For');
-        if (forwardedFor) headers['X-Forwarded-For'] = forwardedFor;
+        if (forwardedFor !== null && forwardedFor !== undefined && forwardedFor !== '') {
+          headers['X-Forwarded-For'] = forwardedFor;
+        }
         
         const userAgent = request.headers.get('User-Agent');
-        if (userAgent) headers['User-Agent'] = userAgent;
+        if (userAgent !== null && userAgent !== undefined && userAgent !== '') {
+          headers['User-Agent'] = userAgent;
+        }
         
         return headers;
       })(),

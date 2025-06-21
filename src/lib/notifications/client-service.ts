@@ -353,8 +353,42 @@ export class ClientNotificationService {
       )
       .subscribe();
 
+    let isCleanedUp = false;
+    let cleanupTimeout: NodeJS.Timeout | null = null;
+
     return () => {
-      void this.supabase.removeChannel(channel);
+      // Prevent multiple cleanup calls
+      if (isCleanedUp) {
+        return;
+      }
+      isCleanedUp = true;
+
+      // Clear any existing cleanup timeout
+      if (cleanupTimeout) {
+        clearTimeout(cleanupTimeout);
+      }
+
+      // Use setTimeout to allow WebSocket to stabilize before cleanup
+      cleanupTimeout = setTimeout(() => {
+        try {
+          // Check if the channel is in a valid state before removing
+          if (channel && typeof channel.unsubscribe === 'function') {
+            void this.supabase.removeChannel(channel);
+          }
+        } catch (error: unknown) {
+          // Silently ignore common development errors
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          if (
+            errorMessage.includes('WebSocket is closed') ||
+            errorMessage.includes('connection is not open') ||
+            process.env.NODE_ENV === 'development'
+          ) {
+            // Expected error in development with React Strict Mode
+            return;
+          }
+          console.warn('Channel cleanup error:', errorMessage);
+        }
+      }, 150); // Increased delay to allow connection to stabilize
     };
   }
 }

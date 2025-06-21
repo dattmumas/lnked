@@ -506,9 +506,18 @@ export async function POST(req: Request): Promise<NextResponse> {
         case 'account.updated': {
           const account = event.data.object;
           
+          const accountData: AccountUpdateData = {
+            charges_enabled: account.charges_enabled,
+            payouts_enabled: account.payouts_enabled,
+            details_submitted: account.details_submitted,
+            requirements: account.requirements as Record<string, unknown> | undefined,
+            type: account.type,
+            email: account.email ?? '',
+          };
+          
           const { error: updateError, updated } = await updateCollectiveStripeStatus(
             account.id,
-            account as Record<string, unknown>
+            accountData
           );
           
           if (updateError !== null) {

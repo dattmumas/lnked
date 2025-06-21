@@ -1,32 +1,18 @@
 import { formatDistanceToNow } from 'date-fns';
 import React from 'react';
 
+import { VideoAsset } from '@/lib/data-access/schemas/video.schema';
+
 // Constants
 const SECONDS_PER_HOUR = 3600;
 const SECONDS_PER_MINUTE = 60;
 const PADDING_LENGTH = 2;
 
-// Type based on database schema
-interface VideoAsset {
-  id: string;
-  title: string | null;
-  description: string | null;
-  status: string | null;
-  duration: number | null;
-  aspect_ratio: string | null;
-  created_at: string | null;
-  updated_at: string | null;
-  mux_asset_id: string;
-  mux_playback_id: string | null;
-  created_by: string | null;
-  mp4_support?: string | null;
-}
-
 interface VideoDetailsServerProps {
   video: VideoAsset;
 }
 
-function formatDuration(seconds: number | null): string {
+function formatDuration(seconds: number | undefined): string {
   if (seconds === null || seconds === undefined || seconds <= 0)
     return 'Unknown duration';
 
@@ -40,7 +26,7 @@ function formatDuration(seconds: number | null): string {
   return `${minutes}:${remainingSeconds.toString().padStart(PADDING_LENGTH, '0')}`;
 }
 
-function formatUploadDate(dateString: string | null): string {
+function formatUploadDate(dateString: string | undefined): string {
   if (
     dateString === null ||
     dateString === undefined ||

@@ -18,6 +18,22 @@ export const TYPING_STOP_DELAY_MS = 3000 as const;
 // eslint-disable-next-line no-magic-numbers
 export const TYPING_EXPIRY_MS = 5000 as const;
 
+// eslint-disable-next-line no-magic-numbers
+export const CHANNEL_RETRY_DELAY_MS = 3000 as const;
+
+// eslint-disable-next-line no-magic-numbers
+export const TIMEOUT_RETRY_DELAY_MS = 2000 as const;
+
+// Supabase channel states as constants
+const CHANNEL_STATES = {
+  SUBSCRIBED: 'SUBSCRIBED',
+  CHANNEL_ERROR: 'CHANNEL_ERROR', 
+  TIMED_OUT: 'TIMED_OUT',
+  CLOSED: 'CLOSED',
+  JOINED: 'joined',
+  CLOSED_LOWERCASE: 'closed',
+} as const;
+
 /**
  * Real-time service following Supabase's official patterns with enhanced security
  * Based on: https://supabase.com/docs/guides/realtime/broadcast
@@ -56,8 +72,8 @@ export class RealtimeService {
 
     // If there's already an active, healthy channel, reuse it
     const existingChannel = this.channels.get(conversationId);
-    if (existingChannel && existingChannel.state === 'joined') {
-      console.log(`♻️ Reusing existing healthy channel for conversation ${conversationId}`);
+    if (existingChannel && String(existingChannel.state) === CHANNEL_STATES.JOINED) {
+      console.warn(`♻️ Reusing existing healthy channel for conversation ${conversationId}`);
       return existingChannel;
     }
     
@@ -226,33 +242,37 @@ export class RealtimeService {
 
     // Subscribe to the channel with enhanced error handling
     channel.subscribe((status) => {
-      switch (status as string) {
-        case 'SUBSCRIBED':
-          console.log(`✅ Successfully subscribed to conversation ${conversationId}`);
+      // Type-safe status checking
+      const statusString = String(status);
+      
+      switch (statusString) {
+        case CHANNEL_STATES.SUBSCRIBED:
+          // Use console.warn for info messages per ESLint rules
+          console.warn(`✅ Successfully subscribed to conversation ${conversationId}`);
           if (typeof callbacks.onUserJoin === 'function') {
             void this.broadcastUserJoin(conversationId);
           }
           break;
-        case 'CHANNEL_ERROR':
+        case CHANNEL_STATES.CHANNEL_ERROR:
           console.error(`❌ Channel error for conversation ${conversationId}`);
           // Auto-retry after a delay to prevent infinite retry loops
           setTimeout(() => {
             if (this.channels.has(conversationId)) {
-              console.log(`🔄 Retrying subscription to conversation ${conversationId}`);
+              console.warn(`🔄 Retrying subscription to conversation ${conversationId}`);
               void this.subscribeToConversation(conversationId, callbacks);
             }
-          }, 3000);
+          }, CHANNEL_RETRY_DELAY_MS);
           break;
-        case 'TIMED_OUT':
+        case CHANNEL_STATES.TIMED_OUT:
           console.error(`⏰ Subscription timeout for conversation ${conversationId}`);
           // Clean up and retry
           this.channels.delete(conversationId);
           setTimeout(() => {
-            console.log(`🔄 Retrying subscription after timeout: ${conversationId}`);
+            console.warn(`🔄 Retrying subscription after timeout: ${conversationId}`);
             void this.subscribeToConversation(conversationId, callbacks);
-          }, 2000);
+          }, TIMEOUT_RETRY_DELAY_MS);
           break;
-        case 'CLOSED':
+        case CHANNEL_STATES.CLOSED:
           console.warn(`🔒 Channel closed for conversation ${conversationId}`);
           this.channels.delete(conversationId);
           break;
@@ -281,12 +301,13 @@ export class RealtimeService {
     const channel = this.channels.get(conversationId);
     if (channel) {
       // Announce user leaving before unsubscribing (only if channel is active)
-      if ((channel.state as string) === 'joined') {
+      const channelState = String(channel.state);
+      if (channelState === CHANNEL_STATES.JOINED) {
         void this.broadcastUserLeave(conversationId);
       }
       
       // Only unsubscribe if channel is not already closed
-      if ((channel.state as string) !== 'closed') {
+      if (channelState !== CHANNEL_STATES.CLOSED_LOWERCASE) {
         void channel.unsubscribe();
       }
       

@@ -2,6 +2,8 @@ import { NextRequest } from 'next/server';
 
 import { createRequestScopedSupabaseClient } from '@/lib/supabase/request-scoped';
 
+import type { Database } from '@/lib/database.types';
+
 // Rate limiting configuration constants
 const RATE_LIMIT_DEFAULTS = {
   USER_REQUESTS_PER_HOUR: 60,
@@ -163,17 +165,18 @@ async function checkRateLimit(
       expires_at: expiresAt.toISOString(),
     };
 
-    // Upsert the record using correct api_cache schema
-    const recordDataJson: unknown = JSON.parse(JSON.stringify(newRecord));
+    // Build row for api_cache table with proper typing
+    type ApiCacheInsert = Database['public']['Tables']['api_cache']['Insert'];
+
+    const row: ApiCacheInsert = {
+      cache_key: limitKey,
+      data: newRecord as unknown as Database['public']['Tables']['api_cache']['Insert']['data'],
+      created_at: now.toISOString(),
+    };
+
     const { error: upsertError } = await supabase
       .from('api_cache')
-      .upsert({
-        cache_key: limitKey,
-        data: recordDataJson as any,
-        created_at: now.toISOString(),
-      }, {
-        onConflict: 'cache_key',
-      });
+      .upsert(row, { onConflict: 'cache_key' });
 
     if (upsertError !== null) {
       throw upsertError;

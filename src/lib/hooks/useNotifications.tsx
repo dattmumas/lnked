@@ -192,28 +192,54 @@ export function useNotifications(
     }
   }, [autoFetch, userId, fetchNotifications]);
 
-  // Real-time subscription
+  // Real-time subscription with development mode stability
   useEffect(() => {
     if (!realtime || userId === null || userId === undefined || userId === '') {
       // Return undefined to satisfy `consistent-return`
       return undefined;
     }
-    const unsubscribe = clientNotificationService.subscribeToNotifications(
-      userId,
-      (newNotification: Notification) => {
-        setNotifications((prev) => [newNotification, ...prev]);
-        if (
-          newNotification.read_at === null ||
-          newNotification.read_at === undefined ||
-          newNotification.read_at === ''
-        ) {
-          setUnreadCount((prev) => prev + 1);
-        }
-      },
-    );
+
+    let subscriptionTimeout: NodeJS.Timeout | null = null;
+    let unsubscribe: (() => void) | null = null;
+    let isComponentMounted = true;
+
+    // In development mode, add a small delay to prevent rapid subscribe/unsubscribe cycles
+    // Can be overridden with NEXT_PUBLIC_ENABLE_REALTIME_DEV=true
+    const isDevelopment = process.env.NODE_ENV === 'development';
+    const enableRealtimeInDev =
+      process.env.NEXT_PUBLIC_ENABLE_REALTIME_DEV === 'true';
+    const subscriptionDelay = isDevelopment && !enableRealtimeInDev ? 200 : 0;
+
+    subscriptionTimeout = setTimeout(() => {
+      if (!isComponentMounted) return;
+
+      unsubscribe = clientNotificationService.subscribeToNotifications(
+        userId,
+        (newNotification: Notification) => {
+          if (!isComponentMounted) return;
+
+          setNotifications((prev) => [newNotification, ...prev]);
+          if (
+            newNotification.read_at === null ||
+            newNotification.read_at === undefined ||
+            newNotification.read_at === ''
+          ) {
+            setUnreadCount((prev) => prev + 1);
+          }
+        },
+      );
+    }, subscriptionDelay);
 
     // Always return a cleanup function to satisfy `consistent-return`
     return () => {
+      isComponentMounted = false;
+
+      // Clear subscription timeout if component unmounts before subscription is created
+      if (subscriptionTimeout) {
+        clearTimeout(subscriptionTimeout);
+      }
+
+      // Call unsubscribe if subscription was created
       if (typeof unsubscribe === 'function') {
         unsubscribe();
       }

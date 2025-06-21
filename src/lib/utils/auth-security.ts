@@ -137,6 +137,40 @@ interface AuthLogger {
   warn: (message: string, context: Record<string, unknown>) => void;
 }
 
+// Supabase auth response types
+interface SupabaseUser {
+  id: string;
+  email?: string;
+  [key: string]: unknown;
+}
+
+interface SupabaseSession {
+  access_token: string;
+  refresh_token: string;
+  expires_at: number;
+  expires_in: number;
+  token_type: string;
+  user: SupabaseUser;
+  [key: string]: unknown;
+}
+
+interface SupabaseAuthResponse {
+  data: {
+    user: SupabaseUser | null;
+    session: SupabaseSession | null;
+  };
+  error: {
+    message: string;
+    [key: string]: unknown;
+  } | null;
+}
+
+interface SessionValidationResult {
+  valid: boolean;
+  session?: SupabaseSession;
+  error?: string;
+}
+
 // CSRF and Origin validation
 export class AuthSecurityValidator {
   private static readonly APP_ORIGINS = getAppOrigins();
@@ -428,9 +462,9 @@ export class SessionManager {
    * Optimized session validation - accepts Supabase AuthResponse<Session>
    */
   static validateSessionIntegrity(
-    authResponse: { data: { user: any; session: any }; error: any },
+    authResponse: SupabaseAuthResponse,
     expectedUserId?: string
-  ): { valid: boolean; session?: any; error?: string } {
+  ): SessionValidationResult {
     try {
       // Trust the setSession result as primary validation
       if (authResponse.error !== null && authResponse.error !== undefined) {

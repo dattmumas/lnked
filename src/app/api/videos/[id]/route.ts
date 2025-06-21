@@ -12,33 +12,13 @@ import Mux from '@mux/mux-node';
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
+import { VideoAssetSchema, VideoAsset } from '@/lib/data-access/schemas/video.schema';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types & Interfaces
 // ─────────────────────────────────────────────────────────────────────────────
-interface VideoAsset {
-  id: string;
-  mux_asset_id: string | null;
-  mux_playback_id: string | null;
-  title: string | null;
-  description: string | null;
-  duration: number | null;
-  status: string | null;
-  aspect_ratio: string | null;
-  created_by: string | null;
-  created_at: string | null;
-  updated_at: string | null;
-  mux_upload_id: string | null;
-  mp4_support: string | null;
-  is_public: boolean | null;
-  playback_policy: string | null;
-  encoding_tier: string | null;
-  collective_id: string | null;
-  post_id: string | null;
-  comment_count: number;
-  deleted_at?: string | null;
-}
+// VideoAsset type imported from schema with null-to-undefined transformation
 
 interface MuxRetryOptions {
   maxRetries: number;
@@ -236,7 +216,6 @@ function generateETag(video: VideoAsset): string {
     is_public: video.is_public,
     mux_playback_id: video.mux_playback_id,
     status: video.status,
-    deleted_at: video.deleted_at,
   };
   
   const hash = createHash('sha1')
@@ -258,7 +237,6 @@ async function assertOwnership(
     .select('*')
     .eq('id', videoId)
     .eq('created_by', userId)
-    .is('deleted_at', null) // Exclude soft-deleted videos
     .maybeSingle(); // Use maybeSingle to avoid 406 errors
     
   if (error !== null) {
@@ -269,7 +247,7 @@ async function assertOwnership(
     throw new Error('Video not found or access denied');
   }
   
-  return data as VideoAsset;
+  return VideoAssetSchema.parse(data);
 }
 
 // Fix #6: Queue-based asset cleanup (preparation for durable queue)
@@ -423,7 +401,10 @@ export async function GET(
       return new NextResponse(null, { status: HTTP_STATUS_NOT_MODIFIED });
     }
     
-    const response = NextResponse.json({ data: video });
+    // Transform null values to undefined for frontend
+    const transformedVideo = VideoAssetSchema.parse(video);
+    
+    const response = NextResponse.json({ data: transformedVideo });
     response.headers.set('ETag', etag);
     response.headers.set('Cache-Control', `private, max-age=${CACHE_MAX_AGE_SECONDS}`);
     
@@ -458,6 +439,7 @@ const UpdateSchema = z.object({
   encoding_tier: z.enum(ALLOWED_ENCODING_TIERS as [string, ...string[]]).optional(), // Fix #13: Env-based tiers
   collective_id: z.string().uuid().nullable().optional(),
   post_id: z.string().uuid().nullable().optional(),
+  // Note: is_published, published_at, tags, thumbnail_url are not database columns
 }).strict();
 
 export async function PATCH(
@@ -521,7 +503,10 @@ export async function PATCH(
       );
     }
     
-    return NextResponse.json({ data });
+    // Transform null values to undefined for frontend
+    const transformedData = VideoAssetSchema.parse(data);
+    
+    return NextResponse.json({ data: transformedData });
   } catch (error: unknown) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
@@ -578,7 +563,7 @@ export async function DELETE(
     const { error: deleteError } = await supabase
       .from('video_assets')
       .update({ 
-        deleted_at: new Date().toISOString(),
+        status: 'deleted',
         updated_at: new Date().toISOString(),
       })
       .eq('id', videoId)

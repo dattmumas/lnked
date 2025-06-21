@@ -1,29 +1,47 @@
 import { z } from 'zod';
 
-// Video status enum
-export const VideoStatusEnum = z.enum(['processing', 'ready', 'error', 'deleted']);
+// Video status enum - includes 'preparing' which is the database default
+export const VideoStatusEnum = z.enum(['preparing', 'processing', 'ready', 'error', 'deleted']);
 
-// Video asset schema with null to undefined transformation
+// Video asset schema with null to undefined transformation - aligned with database schema
 export const VideoAssetSchema = z.object({
   id: z.string(),
-  user_id: z.string(),
+  created_by: z.string().nullable().transform(val => val ?? undefined),
   title: z.string().nullable().transform(val => val ?? undefined),
   description: z.string().nullable().transform(val => val ?? undefined),
   mux_asset_id: z.string().nullable().transform(val => val ?? undefined),
   mux_playback_id: z.string().nullable().transform(val => val ?? undefined),
   mux_upload_id: z.string().nullable().transform(val => val ?? undefined),
-  status: VideoStatusEnum,
+  status: z.string().nullable().transform(val => val ?? undefined), // Allow any status for flexibility
   duration: z.number().nullable().transform(val => val ?? undefined),
-  thumbnail_url: z.string().nullable().transform(val => val ?? undefined),
-  visibility: z.string().nullable().transform(val => val ?? undefined),
-  created_at: z.string(),
-  updated_at: z.string(),
-  deleted_at: z.string().nullable().transform(val => val ?? undefined),
-  comment_count: z.number(),
+  aspect_ratio: z.string().nullable().transform(val => val ?? undefined),
+  created_at: z.string().nullable().transform(val => val ?? undefined),
+  updated_at: z.string().nullable().transform(val => val ?? undefined),
+  comment_count: z.number().default(0), // Required field with default
+  is_public: z.boolean().nullable().transform(val => val ?? undefined),
+  playback_policy: z.string().nullable().transform(val => val ?? undefined),
+  encoding_tier: z.string().nullable().transform(val => val ?? undefined),
+  collective_id: z.string().nullable().transform(val => val ?? undefined),
+  post_id: z.string().nullable().transform(val => val ?? undefined),
+  mp4_support: z.string().nullable().transform(val => val ?? undefined),
   metadata: z.any().nullable().transform(val => val ?? undefined),
 });
 
 export type VideoAsset = z.infer<typeof VideoAssetSchema>;
+
+// Minimal schema for list view API responses (matches LIST_VIEW_FIELDS)
+export const VideoAssetListSchema = z.object({
+  id: z.string(),
+  title: z.string().nullable().transform(val => val ?? undefined),
+  status: z.string().nullable().transform(val => val ?? undefined),
+  duration: z.number().nullable().transform(val => val ?? undefined),
+  created_at: z.string().nullable().transform(val => val ?? undefined),
+  updated_at: z.string().nullable().transform(val => val ?? undefined),
+  is_public: z.boolean().nullable().transform(val => val ?? undefined),
+  mux_playback_id: z.string().nullable().transform(val => val ?? undefined),
+});
+
+export type VideoAssetList = z.infer<typeof VideoAssetListSchema>;
 
 // Video with user info
 export const VideoWithUserSchema = VideoAssetSchema.extend({
@@ -39,7 +57,7 @@ export type VideoWithUser = z.infer<typeof VideoWithUserSchema>;
 
 // Video insert schema
 export const VideoInsertSchema = z.object({
-  user_id: z.string(),
+  created_by: z.string(),
   title: z.string().optional().transform(val => val ?? null),
   description: z.string().optional().transform(val => val ?? null),
   mux_asset_id: z.string().optional().transform(val => val ?? null),
@@ -47,8 +65,13 @@ export const VideoInsertSchema = z.object({
   mux_upload_id: z.string().optional().transform(val => val ?? null),
   status: VideoStatusEnum.optional(),
   duration: z.number().optional().transform(val => val ?? null),
-  thumbnail_url: z.string().optional().transform(val => val ?? null),
-  visibility: z.string().optional().transform(val => val ?? null),
+  aspect_ratio: z.string().optional().transform(val => val ?? null),
+  is_public: z.boolean().optional().transform(val => val ?? null),
+  playback_policy: z.string().optional().transform(val => val ?? null),
+  encoding_tier: z.string().optional().transform(val => val ?? null),
+  collective_id: z.string().optional().transform(val => val ?? null),
+  post_id: z.string().optional().transform(val => val ?? null),
+  mp4_support: z.string().optional().transform(val => val ?? null),
   metadata: z.any().optional().transform(val => val ?? null),
 });
 
@@ -58,9 +81,14 @@ export type VideoInsert = z.input<typeof VideoInsertSchema>;
 export const VideoUpdateSchema = z.object({
   title: z.string().optional().transform(val => val ?? null),
   description: z.string().optional().transform(val => val ?? null),
-  thumbnail_url: z.string().optional().transform(val => val ?? null),
-  visibility: z.string().optional().transform(val => val ?? null),
   status: VideoStatusEnum.optional(),
+  aspect_ratio: z.string().optional().transform(val => val ?? null),
+  is_public: z.boolean().optional().transform(val => val ?? null),
+  playback_policy: z.string().optional().transform(val => val ?? null),
+  encoding_tier: z.string().optional().transform(val => val ?? null),
+  collective_id: z.string().optional().transform(val => val ?? null),
+  post_id: z.string().optional().transform(val => val ?? null),
+  mp4_support: z.string().optional().transform(val => val ?? null),
   metadata: z.any().optional().transform(val => val ?? null),
 });
 

@@ -8,7 +8,7 @@ import { useVideoProcessing } from './useVideoProcessing';
 import { useVideoUploadState } from './useVideoUploadState';
 
 import type { VideoFormData, ValidationErrors } from './useVideoFormState';
-import type { VideoAsset } from './useVideoProcessing';
+import type { VideoAsset } from '@/lib/data-access/schemas/video.schema';
 
 // Constants for upload steps
 const UPLOAD_STEP = 0;

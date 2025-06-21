@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
+import { VideoAssetListSchema } from '@/lib/data-access/schemas/video.schema';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 
 // Constants for scalability
@@ -140,10 +141,15 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       : Date.now();
     const etag = `"${user.id}-${lastUpdated}-${JSON.stringify(params)}"`;
 
+    // Transform null values to undefined for frontend compatibility
+    const transformedVideos = videos !== null && videos !== undefined
+      ? videos.map(video => VideoAssetListSchema.parse(video))
+      : [];
+
     return NextResponse.json({
       success: true,
       data: {
-        videos: videos ?? [],
+        videos: transformedVideos,
         pagination: {
           page,
           limit,

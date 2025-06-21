@@ -2,6 +2,8 @@
 
 import { useState, useCallback } from 'react';
 
+import { VideoAsset } from '@/lib/data-access/schemas/video.schema';
+
 import { VideoFormData } from './useVideoFormState';
 
 // API Response types
@@ -21,47 +23,7 @@ interface ErrorResponse {
   error?: string;
 }
 
-// Helper function to normalize video asset data from database to expected format
-const normalizeVideoAsset = (asset: VideoAsset): VideoAsset => {
-  return {
-    ...asset,
-    // Provide sensible defaults for form fields that don't exist in database
-    privacy_setting: 'public', // Default since is_public column doesn't exist
-    encoding_tier: 'smart', // Default since encoding_tier column doesn't exist
-    thumbnail_url: '', // Default since thumbnail_url column doesn't exist
-    tags: [], // Default since tags column doesn't exist
-    collective_id: undefined, // Default since collective_id column doesn't exist
-    is_public: true, // Default since is_public column doesn't exist
-    processed_at: undefined, // Default since processed_at column doesn't exist
-  };
-};
-
-// ACTUAL database schema from migration file
-export interface VideoAsset {
-  id: string;
-  mux_asset_id: string | null;
-  mux_playback_id: string | null;
-  title: string | null;
-  description: string | null;
-  duration: number | null;
-  status: string; // varchar(50) with default 'preparing'
-  aspect_ratio: string | null;
-  created_by: string | null;
-  created_at: string;
-  updated_at: string;
-  mux_upload_id: string | null;
-  mp4_support: string | null; // default 'none'
-  published_at?: string | null;
-  post_id?: string | null;
-  // Form-compatibility fields (derived/defaults for backward compatibility)
-  privacy_setting?: string;
-  encoding_tier?: string;
-  thumbnail_url?: string;
-  tags?: string[];
-  collective_id?: string | null;
-  is_public?: boolean;
-  processed_at?: string | null;
-}
+// Note: VideoAsset type now imported from schema with null-to-undefined transformation
 
 interface UseVideoProcessingReturn {
   // State
@@ -134,7 +96,7 @@ export const useVideoProcessing = (): UseVideoProcessingReturn => {
 
       // Store the video asset for later use
       if (result.video !== undefined) {
-        setAsset(normalizeVideoAsset(result.video));
+        setAsset(result.video);
       }
 
       return result.uploadUrl as string; // Already validated above
@@ -157,8 +119,7 @@ export const useVideoProcessing = (): UseVideoProcessingReturn => {
       description: formData.description,
       privacy_setting: formData.privacySetting,
       encoding_tier: formData.encodingTier,
-      tags: formData.tags,
-      thumbnail_url: formData.thumbnailUrl,
+      // Note: tags, thumbnail_url are not supported by API
     };
 
     console.warn('Updating video metadata:', { assetId, payload: updatePayload });
@@ -187,7 +148,7 @@ export const useVideoProcessing = (): UseVideoProcessingReturn => {
     // Video metadata updated successfully
       
       if (updatedAsset.video !== undefined) {
-        setAsset(normalizeVideoAsset(updatedAsset.video));
+        setAsset(updatedAsset.video);
       }
     } catch (error: unknown) {
       console.error('Failed to update video metadata:', error);
@@ -212,10 +173,7 @@ export const useVideoProcessing = (): UseVideoProcessingReturn => {
           description: formData.description,
           privacy_setting: formData.privacySetting,
           encoding_tier: formData.encodingTier,
-          tags: formData.tags,
-          thumbnail_url: formData.thumbnailUrl,
-          is_published: true,
-          published_at: new Date().toISOString(),
+          // Note: tags, thumbnail_url, is_published, published_at are not supported by API
         }),
       });
 
@@ -235,7 +193,7 @@ export const useVideoProcessing = (): UseVideoProcessingReturn => {
 
       const publishedAsset = await response.json() as unknown as VideoUpdateResponse;
       if (publishedAsset.video !== undefined) {
-        setAsset(normalizeVideoAsset(publishedAsset.video));
+        setAsset(publishedAsset.video);
       }
     } catch (error: unknown) {
       console.error('Failed to publish video:', error);
@@ -259,7 +217,7 @@ export const useVideoProcessing = (): UseVideoProcessingReturn => {
       if (response.ok) {
         const refreshedAsset = await response.json() as unknown as VideoUpdateResponse;
         if (refreshedAsset.video !== undefined) {
-          setAsset(normalizeVideoAsset(refreshedAsset.video));
+          setAsset(refreshedAsset.video);
         }
       }
     } catch (error: unknown) {

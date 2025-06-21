@@ -5,6 +5,8 @@ import { z } from 'zod';
 
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 
+import type { Json } from '@/lib/database.types';
+
 const enum HttpStatus {
   OK = 200,
   CREATED = 201,
@@ -128,7 +130,7 @@ export async function POST(request: Request, context: { params: Promise<{ conver
       conversation_id: conversationId,
       content,
       message_type,
-      metadata: finalMetadata,
+      metadata: finalMetadata as Json,
       sender_id: user.id,
       reply_to_id: reply_to_id ?? null,
     })
@@ -178,7 +180,7 @@ export async function POST(request: Request, context: { params: Promise<{ conver
                   metadata: { 
                     ...finalMetadata, 
                     embed: preview as Record<string, unknown>
-                  } as Record<string, unknown> 
+                  } as Json 
                 })
                 .eq('id', msg.id)
                 .eq('conversation_id', conversationId);
