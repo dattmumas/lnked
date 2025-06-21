@@ -16,7 +16,7 @@ import type {
   EntityType,
 } from '@/types/notifications';
 
-/* eslint-disable prefer-destructuring */
+ 
 
 // ---------------------------------------------------------------------------
 // Constants

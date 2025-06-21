@@ -11,6 +11,8 @@ interface VideoAsset {
   id: string;
   title: string | undefined;
   mux_playback_id: string | undefined;
+  is_public?: boolean;
+  playback_policy?: string;
 }
 
 interface VideoPlayerClientProps {
@@ -46,6 +48,10 @@ export default function VideoPlayerClient({
           viewerId={currentUser?.id}
           viewerEmail={currentUser?.email}
           className="w-full h-full rounded-lg"
+          isPrivate={
+            video.is_public === false || video.playback_policy === 'signed'
+          }
+          videoId={video.id}
         />
       ) : (
         <div className="flex items-center justify-center w-full h-full text-white min-h-[400px]">

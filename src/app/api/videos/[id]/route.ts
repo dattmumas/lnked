@@ -225,18 +225,19 @@ function generateETag(video: VideoAsset): string {
   return `"${hash}"`;
 }
 
-// Fix #14: Ownership validation with RLS compliance
+// Fix #14: Ownership validation with RLS compliance - excludes deleted videos
 async function assertOwnership(
   supabase: ReturnType<typeof createServerSupabaseClient>,
   userId: string,
   videoId: string,
 ): Promise<VideoAsset> {
-  // Use authenticated user client to respect RLS
+  // Use authenticated user client to respect RLS - only active videos
   const { data, error } = await supabase
     .from('video_assets')
     .select('*')
     .eq('id', videoId)
     .eq('created_by', userId)
+    .is('deleted_at', null) // Only active (non-deleted) videos
     .maybeSingle(); // Use maybeSingle to avoid 406 errors
     
   if (error !== null) {
@@ -271,10 +272,29 @@ async function cleanupMuxResources(video: VideoAsset): Promise<void> {
   try {
     // Handle asset deletion with correct SDK method
     if (video.mux_asset_id !== null && video.mux_asset_id !== undefined && video.mux_asset_id.trim().length > 0) {
-      await withMuxRetry(
-        () => mux.video.assets.delete(video.mux_asset_id as string), // Fix #1: Use .delete() method
-        'asset_deletion',
-      );
+      try {
+        await withMuxRetry(
+          () => mux.video.assets.delete(video.mux_asset_id as string), // Fix #1: Use .delete() method
+          'asset_deletion',
+        );
+        logWarn('Mux asset deleted successfully', {
+          video_id: video.id,
+          mux_asset_id: video.mux_asset_id,
+        });
+      } catch (assetError: unknown) {
+        // 404 means asset doesn't exist - that's actually success for deletion
+        const muxError = assetError as MuxError;
+        const statusCode = muxError.statusCode ?? muxError.status;
+        if (statusCode === HTTP_STATUS_NOT_FOUND || (assetError instanceof Error && assetError.message.includes('not_found'))) {
+          logWarn('Mux asset already deleted or never existed - cleanup successful', {
+            video_id: video.id,
+            mux_asset_id: video.mux_asset_id,
+          });
+        } else {
+          // Only log actual errors, not expected 404s
+          throw assetError;
+        }
+      }
     }
     
     // Handle upload cancellation with orphaned asset awareness
@@ -284,17 +304,31 @@ async function cleanupMuxResources(video: VideoAsset): Promise<void> {
           () => mux.video.uploads.cancel(video.mux_upload_id as string),
           'upload_cancellation',
         );
+        logWarn('Mux upload cancelled successfully', {
+          video_id: video.id,
+          mux_upload_id: video.mux_upload_id,
+        });
       } catch (cancelError: unknown) {
-        // Upload might have already completed, creating an orphaned asset
-        if (cancelError instanceof Error && cancelError.message.includes('already completed')) {
+        const muxError = cancelError as MuxError;
+        const statusCode = muxError.statusCode ?? muxError.status;
+        
+        // Handle expected scenarios gracefully
+        if (statusCode === HTTP_STATUS_NOT_FOUND || (cancelError instanceof Error && cancelError.message.includes('not_found'))) {
+          logWarn('Mux upload already cancelled or never existed - cleanup successful', {
+            video_id: video.id,
+            mux_upload_id: video.mux_upload_id,
+          });
+        } else if (cancelError instanceof Error && cancelError.message.includes('already completed')) {
           logWarn('Upload completed before cancellation - potential orphaned asset', {
             upload_id: video.mux_upload_id,
             video_id: video.id,
           });
-          
           // Fix #8: Subscribe to video.upload.asset_created webhook
           // In production, implement webhook handler to track and clean orphaned assets
           // For now, log for manual follow-up
+        } else {
+          // Only log unexpected errors
+          throw cancelError;
         }
       }
     }
@@ -314,7 +348,8 @@ async function updatePlaybackPolicy(
   newIsPublic: boolean,
   supabase: ReturnType<typeof createServerSupabaseClient>, // Fix #2: Inject client
 ): Promise<void> {
-  if (video.mux_asset_id === null || video.is_public === newIsPublic) {
+  // Skip if no Mux asset ID yet (video still uploading/processing) or no change needed
+  if (video.mux_asset_id === null || video.mux_asset_id === undefined || video.mux_asset_id.trim() === '' || video.is_public === newIsPublic) {
     return; // No change needed
   }
   
@@ -470,14 +505,23 @@ export async function PATCH(
     if (body.privacy_setting !== undefined) {
       const newIsPublic = body.privacy_setting === 'public';
       
-      // Update playback policy in Mux if needed (with injected client)
-      if (video.mux_asset_id !== null) {
-        await updatePlaybackPolicy(video, newIsPublic, supabase); // Fix #2: Pass client
-      }
-      
+      // Always update database fields
       updateData.is_public = newIsPublic;
       updateData.playback_policy = newIsPublic ? 'public' : 'signed';
       delete updateData.privacy_setting;
+      
+      // Update playback policy in Mux if asset exists and is ready
+      if (video.mux_asset_id !== null && video.mux_asset_id !== undefined && video.mux_asset_id.trim() !== '') {
+        try {
+          await updatePlaybackPolicy(video, newIsPublic, supabase);
+        } catch (error) {
+          // Log error but don't fail the request - the database update is more important
+          logError('mux_playback_policy_sync_failed', error, { 
+            video_id: video.id,
+            mux_asset_id: video.mux_asset_id 
+          });
+        }
+      }
     }
 
     if (Object.keys(updateData).length === 0) {
@@ -558,13 +602,16 @@ export async function DELETE(
     const videoId = VIDEO_ID.parse(id);
     const video = await assertOwnership(supabase, user.id, videoId);
 
-    // Soft delete: mark as deleted instead of hard delete
-    // Fix #14: Use authenticated client to respect RLS
+    // Enhanced soft delete: timestamp + anonymization following codebase patterns
+    const now = new Date().toISOString();
     const { error: deleteError } = await supabase
       .from('video_assets')
       .update({ 
-        status: 'deleted',
-        updated_at: new Date().toISOString(),
+        deleted_at: now,
+        status: 'deleted', // Keep for backward compatibility
+        title: '[Deleted Video]', // Anonymize sensitive data
+        description: null, // Remove description
+        updated_at: now,
       })
       .eq('id', videoId)
       .eq('created_by', user.id); // RLS-safe: only delete own videos

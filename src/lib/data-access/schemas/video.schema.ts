@@ -25,6 +25,7 @@ export const VideoAssetSchema = z.object({
   post_id: z.string().nullable().transform(val => val ?? undefined),
   mp4_support: z.string().nullable().transform(val => val ?? undefined),
   metadata: z.any().nullable().transform(val => val ?? undefined),
+  deleted_at: z.string().nullable().transform(val => val ?? undefined),
 });
 
 export type VideoAsset = z.infer<typeof VideoAssetSchema>;

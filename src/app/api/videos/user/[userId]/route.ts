@@ -44,7 +44,7 @@ export async function GET(
     const { data: { user: currentUser } } = await supabase.auth.getUser();
     const isOwner = currentUser?.id === userId;
 
-    // Build query - only show published videos for non-owners
+    // Build query - only show active (non-deleted) videos
     let query = supabase
       .from('video_assets')
       .select(`
@@ -57,7 +57,8 @@ export async function GET(
         updated_at,
         status
       `, { count: 'exact' })
-      .eq('created_by', userId);
+      .eq('created_by', userId)
+      .is('deleted_at', null); // Only active (non-deleted) videos
 
     // Apply privacy filters - only owners can see all videos
     if (isOwner !== true) {

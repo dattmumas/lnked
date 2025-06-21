@@ -82,11 +82,12 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
     const { page, limit, search, status, sort, order } = params;
 
-    // Build optimized query with minimal field projection
+    // Build optimized query with minimal field projection - only active videos
     let query = supabase
       .from('video_assets')
       .select(LIST_VIEW_FIELDS) // No count for performance - use keyset pagination in future
-      .eq('created_by', user.id);
+      .eq('created_by', user.id)
+      .is('deleted_at', null); // Only active (non-deleted) videos
 
     // Apply search filter (requires trigram index: CREATE INDEX video_assets_title_trgm ON video_assets USING gin (title gin_trgm_ops))
     if (search !== undefined && search.trim().length > 0) {

@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation';
 import React, { useCallback } from 'react';
 
-import VideoUploadWizard from './VideoUploadWizard';
+import VideoUploadForm from './VideoUploadForm';
 
 interface VideoUploadPageClientProps {
   collectiveId?: string;
@@ -28,7 +28,7 @@ export default function VideoUploadPageClient({
   }, [router]);
 
   return (
-    <VideoUploadWizard
+    <VideoUploadForm
       collectiveId={collectiveId}
       onComplete={handleComplete}
       onCancel={handleCancel}
