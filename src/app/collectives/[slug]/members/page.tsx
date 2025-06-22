@@ -68,7 +68,7 @@ export default async function ManageCollectiveMembersPage({
       id,
       role,
       created_at,
-      user:users!user_id(id, full_name)
+      user:users!member_id(id, full_name)
     `,
     )
     .eq('collective_id', collective.id)
@@ -102,11 +102,8 @@ export default async function ManageCollectiveMembersPage({
         <h1 className="text-3xl font-bold">
           Manage Members for: {collective.name}
         </h1>
-        <Link
-          href="/collectives"
-          className="text-sm text-accent hover:underline"
-        >
-          &larr; Back to Collectives
+        <Link href="/dashboard" className="text-sm text-accent hover:underline">
+          &larr; Back to Dashboard
         </Link>
       </header>
       <ManageMembersClientUI

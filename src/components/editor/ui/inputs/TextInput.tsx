@@ -6,11 +6,11 @@
  *
  */
 
-import type {JSX} from 'react';
+import React, { forwardRef, HTMLInputTypeAttribute } from 'react';
+
+import type { JSX } from 'react';
 
 import './Input.css';
-
-import {HTMLInputTypeAttribute} from 'react';
 
 type Props = Readonly<{
   'data-test-id'?: string;
@@ -21,18 +21,22 @@ type Props = Readonly<{
   type?: HTMLInputTypeAttribute;
 }>;
 
-export default function TextInput({
-  label,
-  value,
-  onChange,
-  placeholder = '',
-  'data-test-id': dataTestId,
-  type = 'text',
-}: Props): JSX.Element {
+const TextInput = forwardRef<HTMLInputElement, Props>(function TextInput(
+  {
+    label,
+    value,
+    onChange,
+    placeholder = '',
+    'data-test-id': dataTestId,
+    type = 'text',
+  },
+  ref,
+): JSX.Element {
   return (
     <div className="Input__wrapper">
       <label className="Input__label">{label}</label>
       <input
+        ref={ref}
         type={type}
         className="Input__input"
         placeholder={placeholder}
@@ -44,4 +48,8 @@ export default function TextInput({
       />
     </div>
   );
-}
+});
+
+TextInput.displayName = 'TextInput';
+
+export default TextInput;

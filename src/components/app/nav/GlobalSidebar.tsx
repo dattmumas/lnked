@@ -21,6 +21,7 @@ import React, { useCallback, useState, useEffect } from 'react';
 import { useCollectiveMemberships } from '@/hooks/posts/useCollectiveMemberships';
 import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
 import { cn } from '@/lib/utils';
+import { CollectivesTableModal } from './CollectivesTableModal';
 
 // Constants
 const MOUSE_LEAVE_DELAY = 200;
@@ -59,6 +60,7 @@ interface Collective {
 export default function GlobalSidebar(): React.ReactElement | undefined {
   const [isExpanded, setIsExpanded] = useState(false);
   const [collectivesExpanded, setCollectivesExpanded] = useState(false);
+  const [collectivesModalOpen, setCollectivesModalOpen] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | undefined>(
     undefined,
   );
@@ -156,7 +158,7 @@ export default function GlobalSidebar(): React.ReactElement | undefined {
     <div
       className={cn(
         'fixed left-0 top-16 bottom-0 z-30 transition-all duration-200 ease-in-out',
-        'bg-background/80 dark:bg-background/80 backdrop-blur-md border-r border-border',
+        'bg-background backdrop-blur-md border-r border-border',
         isExpanded ? 'w-64' : 'w-16',
       )}
       onMouseEnter={handleMouseEnter}
@@ -250,7 +252,7 @@ export default function GlobalSidebar(): React.ReactElement | undefined {
             className={cn(
               'overflow-hidden transition-all duration-200',
               collectivesExpanded && isExpanded
-                ? 'max-h-48 opacity-100'
+                ? 'max-h-60 opacity-100'
                 : 'max-h-0 opacity-0',
             )}
             role="group"
@@ -261,42 +263,65 @@ export default function GlobalSidebar(): React.ReactElement | undefined {
                 <div className="px-2 py-1.5 text-sm text-muted-foreground">
                   Loading...
                 </div>
-              ) : collectives.length > 0 ? (
-                collectives.map((collective) => (
+              ) : (
+                <>
+                  {/* "All" button - always show if we have collectives */}
+                  {collectives.length > 0 && (
+                    <button
+                      onClick={() => setCollectivesModalOpen(true)}
+                      className={cn(
+                        'flex items-center gap-2 px-2 py-1.5 rounded-md transition-all duration-200',
+                        'text-sm font-medium hover:bg-accent/50 focus:bg-accent/50 focus:outline-none focus:ring-2 focus:ring-ring',
+                        'w-full text-left',
+                      )}
+                    >
+                      <span>All Collectives</span>
+                    </button>
+                  )}
+
+                  {/* Individual collective links */}
+                  {collectives.length > 0 ? (
+                    collectives.map((collective) => (
+                      <Link
+                        key={collective.id}
+                        href={`/collectives/${collective.slug}`}
+                        className={cn(
+                          'flex items-center gap-2 px-2 py-1.5 rounded-md transition-all duration-200',
+                          'text-sm hover:bg-accent/50 focus:bg-accent/50 focus:outline-none focus:ring-2 focus:ring-ring',
+                          isCollectiveActive(collective.slug) &&
+                            'bg-accent text-accent-foreground',
+                        )}
+                        aria-current={
+                          isCollectiveActive(collective.slug)
+                            ? 'page'
+                            : undefined
+                        }
+                      >
+                        <span className="truncate" title={collective.name}>
+                          {collective.name}
+                        </span>
+                      </Link>
+                    ))
+                  ) : (
+                    <div className="px-2 py-1.5 text-sm text-muted-foreground">
+                      No collectives yet
+                    </div>
+                  )}
+
+                  {/* Create new collective link */}
                   <Link
-                    key={collective.id}
-                    href={`/collectives/${collective.slug}`}
+                    href="/collectives/new"
                     className={cn(
                       'flex items-center gap-2 px-2 py-1.5 rounded-md transition-all duration-200',
-                      'text-sm hover:bg-accent/50 focus:bg-accent/50 focus:outline-none focus:ring-2 focus:ring-ring',
-                      isCollectiveActive(collective.slug) &&
-                        'bg-accent text-accent-foreground',
+                      'text-sm text-muted-foreground hover:text-foreground hover:bg-accent/50',
+                      'focus:bg-accent/50 focus:outline-none focus:ring-2 focus:ring-ring',
                     )}
-                    aria-current={
-                      isCollectiveActive(collective.slug) ? 'page' : undefined
-                    }
                   >
-                    <span className="truncate" title={collective.name}>
-                      {collective.name}
-                    </span>
+                    <Plus className="w-3 h-3" aria-hidden="true" />
+                    <span>Create Collective</span>
                   </Link>
-                ))
-              ) : (
-                <div className="px-2 py-1.5 text-sm text-muted-foreground">
-                  No collectives yet
-                </div>
+                </>
               )}
-              <Link
-                href="/collectives/new"
-                className={cn(
-                  'flex items-center gap-2 px-2 py-1.5 rounded-md transition-all duration-200',
-                  'text-sm text-muted-foreground hover:text-foreground hover:bg-accent/50',
-                  'focus:bg-accent/50 focus:outline-none focus:ring-2 focus:ring-ring',
-                )}
-              >
-                <Plus className="w-3 h-3" aria-hidden="true" />
-                <span>Create Collective</span>
-              </Link>
             </div>
           </div>
         </div>
@@ -343,6 +368,12 @@ export default function GlobalSidebar(): React.ReactElement | undefined {
           </div>
         </div>
       </div>
+
+      {/* Collectives Table Modal */}
+      <CollectivesTableModal
+        open={collectivesModalOpen}
+        onOpenChange={setCollectivesModalOpen}
+      />
     </div>
   );
 }

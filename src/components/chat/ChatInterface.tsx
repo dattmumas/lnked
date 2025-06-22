@@ -146,7 +146,7 @@ export default function ChatInterface({
       />
 
       {/* Right: Main Chat Area */}
-      <div className="flex flex-1 flex-col overflow-y-hidden bg-background">
+      <div className="flex flex-1 flex-col bg-background min-h-0">
         {activeChannel ? (
           <>
             {/* Channel Header */}
@@ -187,10 +187,7 @@ export default function ChatInterface({
             </header>
 
             {/* Chat Panel */}
-            <ChatPanel
-              conversationId={activeChannel.id}
-              className="flex-1 overflow-hidden"
-            />
+            <ChatPanel conversationId={activeChannel.id} className="flex-1" />
           </>
         ) : (
           <div className="flex flex-1 items-center justify-center text-muted-foreground">

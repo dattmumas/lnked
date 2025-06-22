@@ -8,6 +8,7 @@ import React, {
   useRef,
   useState,
   useEffect,
+  useLayoutEffect,
   useCallback,
   useMemo,
 } from 'react';
@@ -19,8 +20,8 @@ import type { MessageWithSender } from '@/lib/chat/types';
 // Constants
 const DEFAULT_ITEM_HEIGHT = 80;
 const DEFAULT_OVERSCAN = 10;
-const NEAR_BOTTOM_THRESHOLD = 100;
-const SCROLL_BUTTON_THRESHOLD = 300;
+const NEAR_BOTTOM_THRESHOLD = 50; // More conservative threshold
+const SCROLL_BUTTON_THRESHOLD = 600; // Show FAB when >600px from bottom
 const INTERSECTION_THRESHOLD = 0.5;
 const AVATAR_SIZE = 40;
 
@@ -300,13 +301,16 @@ export function VirtualMessageList({
   onMessageInView,
 }: VirtualMessageListProps): React.JSX.Element {
   const parentRef = useRef<HTMLDivElement>(null);
-  const [isNearBottom, setIsNearBottom] = useState(true);
+  const bottomSentinelRef = useRef<HTMLDivElement>(null);
+  const stickToBottomRef = useRef(true); // Start stuck to bottom
+  const lastUserScrollRef = useRef(Date.now());
+
   const [showScrollButton, setShowScrollButton] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
 
-  // RAF state for optimized scroll handling
+  // RAF state for scroll button visibility
   const scrollRafRef = useRef<number | null>(null);
-  const lastScrollTopRef = useRef<number>(0);
+  const previousMessageCountRef = useRef<number>(0);
 
   // Find first unread message index
   const firstUnreadIndex = useMemo(() => {
@@ -345,56 +349,78 @@ export function VirtualMessageList({
     measureElement,
   } = virtualizer;
 
-  // Check if we need to load more messages
+  // Top sentinel for load-more detection
+  const topSentinelRef = useRef<HTMLDivElement>(null);
+
+  // Top sentinel - IntersectionObserver for load-more detection
   useEffect(() => {
-    if (!hasMore || isLoading || virtualItems.length === 0) return;
+    if (!topSentinelRef.current || !parentRef.current) return;
 
-    const firstItem = virtualItems[0];
-    if (firstItem !== undefined && firstItem.index === 0) {
-      onLoadMore?.();
-    }
-  }, [virtualItems, hasMore, isLoading, onLoadMore]);
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        // Only trigger if we have messages loaded (prevents empty state infinite loop)
+        if (
+          entry.isIntersecting &&
+          !isLoading &&
+          hasMore &&
+          messages.length > 0
+        ) {
+          onLoadMore?.();
+        }
+      },
+      {
+        root: parentRef.current,
+        threshold: 0,
+        rootMargin: '20px', // Trigger slightly before reaching the very top
+      },
+    );
 
-  // Optimized scroll handler that buffers DOM reads with RAF
-  const handleScrollStateUpdate = useCallback((): void => {
-    const element = parentRef.current;
-    if (element === null) return;
+    observer.observe(topSentinelRef.current);
+    return () => observer.disconnect();
+  }, [hasMore, isLoading, onLoadMore]);
 
-    // Buffer DOM reads in RAF to avoid forced layout
-    const { scrollTop, scrollHeight, clientHeight } = element;
-    const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
+  // Bottom sentinel - IntersectionObserver for sticky-to-bottom detection
+  useEffect(() => {
+    if (!bottomSentinelRef.current || !parentRef.current) return;
 
-    // Update virtual scrolling (this already uses RAF internally)
-    setScrollTop(scrollTop);
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        // When sentinel is visible, user is at/near bottom - enable stick mode
+        stickToBottomRef.current = entry.isIntersecting;
+      },
+      {
+        root: parentRef.current,
+        threshold: 1, // Fully visible
+      },
+    );
 
-    // Batch state updates
-    const nearBottom = distanceFromBottom < NEAR_BOTTOM_THRESHOLD;
-    const shouldShowScrollButton = distanceFromBottom > SCROLL_BUTTON_THRESHOLD;
+    observer.observe(bottomSentinelRef.current);
+    return () => observer.disconnect();
+  }, []);
 
-    setIsNearBottom(nearBottom);
-    setShowScrollButton(shouldShowScrollButton);
-
-    scrollRafRef.current = null;
-    return;
-  }, [setScrollTop]);
-
-  // Handle scroll position tracking with RAF buffering
+  // Simple scroll handler - just track user scroll time and update scroll button
   const handleScroll = useCallback((): void => {
     const element = parentRef.current;
     if (element === null) return;
 
-    // Store the current scroll position immediately for virtual scrolling
-    const { scrollTop: currentScrollTop } = element;
-    lastScrollTopRef.current = currentScrollTop;
+    // Update user scroll timestamp
+    lastUserScrollRef.current = Date.now();
 
-    // Cancel previous RAF if pending
+    // Update virtual scrolling position
+    setScrollTop(element.scrollTop);
+
+    // Update scroll button visibility (debounced)
     if (scrollRafRef.current !== null) {
       cancelAnimationFrame(scrollRafRef.current);
     }
 
-    // Schedule DOM reads and state updates for next frame
-    scrollRafRef.current = requestAnimationFrame(handleScrollStateUpdate);
-  }, [handleScrollStateUpdate]);
+    scrollRafRef.current = requestAnimationFrame(() => {
+      const { scrollTop, scrollHeight, clientHeight } = element;
+      const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
+      setShowScrollButton(distanceFromBottom > SCROLL_BUTTON_THRESHOLD);
+      scrollRafRef.current = null;
+    });
+  }, [setScrollTop]);
 
   // Cleanup RAF on unmount
   useEffect(() => {
@@ -405,17 +431,6 @@ export function VirtualMessageList({
     };
   }, []);
 
-  // Scroll to bottom
-  const scrollToBottom = useCallback(
-    (smooth = true): void => {
-      scrollToIndex(messages.length - 1, {
-        align: 'end',
-        behavior: smooth ? 'smooth' : 'auto',
-      });
-    },
-    [scrollToIndex, messages.length],
-  );
-
   const scrollToFirstUnread = useCallback((): void => {
     if (firstUnreadIndex >= 0) {
       scrollToIndex(firstUnreadIndex, {
@@ -425,30 +440,28 @@ export function VirtualMessageList({
     }
   }, [firstUnreadIndex, scrollToIndex]);
 
-  // Scroll to first unread or bottom on conversation change
-  useEffect(() => {
-    if (firstUnreadIndex >= 0) {
-      // Scroll to first unread message
-      scrollToIndex(firstUnreadIndex, {
-        align: 'center',
-        behavior: 'auto',
-      });
-    } else {
-      // Scroll to bottom
-      scrollToBottom(false);
-    }
-  }, [conversationId, firstUnreadIndex, scrollToIndex, scrollToBottom]);
+  // Sticky auto-scroll: whenever messages OR virtual positions change,
+  // run synchronous auto-scroll if in stick-to-bottom mode
+  useLayoutEffect(() => {
+    if (!stickToBottomRef.current || messages.length === 0) return;
 
-  // Auto-scroll for new messages if near bottom
+    scrollToIndex(messages.length - 1, {
+      align: 'end',
+      behavior: 'auto', // Immediate scroll, no animation for natural feel
+    });
+  }, [
+    messages.length,
+    virtualItems[virtualItems.length - 1]?.end,
+    scrollToIndex,
+  ]);
+
+  // Initial conversation load - enable stick mode and scroll to bottom immediately
   useEffect(() => {
-    if (isNearBottom && messages.length > 0) {
-      const lastMessage = messages[messages.length - 1];
-      if (lastMessage?.sender?.id === currentUserId) {
-        // Always scroll for user's own messages
-        scrollToBottom(true);
-      }
+    if (messages.length > 0) {
+      stickToBottomRef.current = true;
+      scrollToIndex(messages.length - 1, { align: 'end', behavior: 'auto' });
     }
-  }, [messages, isNearBottom, currentUserId, scrollToBottom]);
+  }, [conversationId, messages.length, scrollToIndex]); // Depend on messages.length for immediate scroll
 
   // Handle message visibility for read receipts with optimized observer
   const observerRef = useRef<IntersectionObserver | null>(null);
@@ -520,15 +533,19 @@ export function VirtualMessageList({
   }, [virtualItems]);
 
   const handleScrollToBottom = useCallback((): void => {
-    scrollToBottom(true);
-  }, [scrollToBottom]);
+    stickToBottomRef.current = true; // Re-enable sticky mode
+    scrollToIndex(messages.length - 1, { align: 'end', behavior: 'smooth' });
+  }, [scrollToIndex, messages.length]);
 
   return (
-    <div className="relative flex-1 overflow-hidden">
+    <div className="relative flex-1 overflow-hidden min-h-0">
       <div
         ref={parentRef}
-        className="h-full overflow-y-auto scroll-smooth"
+        className="h-full overflow-y-auto scroll-smooth bg-[#F7F7F9]"
         onScroll={handleScroll}
+        role="log"
+        aria-live="polite"
+        aria-label="Chat messages"
       >
         <div
           style={{
@@ -537,12 +554,25 @@ export function VirtualMessageList({
             position: 'relative',
           }}
         >
-          {/* Loading indicator at top */}
+          {/* Top sentinel for load-more detection */}
+          <div
+            ref={topSentinelRef}
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: '100%',
+              height: '1px',
+              pointerEvents: 'none',
+            }}
+          />
+
+          {/* Sticky loading indicator at top */}
           {isLoading && hasMore && (
-            <div className="absolute top-0 left-0 right-0 flex justify-center p-2 z-10">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground bg-background/80 backdrop-blur-sm px-3 py-2 rounded-full">
+            <div className="sticky top-0 left-0 right-0 flex justify-center p-3 z-20 bg-gradient-to-b from-[#F7F7F9] to-transparent">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground bg-background/95 backdrop-blur-md px-4 py-2 rounded-full shadow-sm border">
                 <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                Loading earlier messages...
+                ••• Loading earlier messages
               </div>
             </div>
           )}
@@ -574,13 +604,26 @@ export function VirtualMessageList({
                 />
               );
             })}
+
+          {/* Bottom sentinel positioned after all virtual items */}
+          <div
+            ref={bottomSentinelRef}
+            style={{
+              position: 'absolute',
+              top: `${totalSize}px`,
+              left: 0,
+              width: '100%',
+              height: '1px',
+              pointerEvents: 'none',
+            }}
+          />
         </div>
       </div>
 
       {/* Scroll to bottom button */}
       {showScrollButton && (
         <div className="absolute bottom-4 right-4 flex flex-col items-end gap-2">
-          {unreadCount > 0 && !isNearBottom && (
+          {unreadCount > 0 && !stickToBottomRef.current && (
             <Button
               size="sm"
               onClick={scrollToFirstUnread}
@@ -626,11 +669,28 @@ const VirtualMessageRowComponent = ({
   const ref = useMeasuredElement(virtualItem.index, measureElement);
 
   const showUnreadDivider = virtualItem.index === firstUnreadIndex;
-  const isFirstMessageFromUser =
-    virtualItem.index === 0 ||
-    messages[virtualItem.index - 1]?.sender?.id !== message.sender?.id;
-  const showAvatar = isFirstMessageFromUser;
-  const showUsername = isFirstMessageFromUser;
+  const isFromCurrentUser = message.sender?.id === currentUserId;
+  const previousMessage = messages[virtualItem.index - 1];
+
+  // Message grouping logic: group if same sender within 2 minutes
+  const shouldGroupWithPrevious = (() => {
+    if (virtualItem.index === 0 || !previousMessage) return false;
+    if (previousMessage.sender?.id !== message.sender?.id) return false;
+
+    const prevTime = previousMessage.created_at
+      ? new Date(previousMessage.created_at).getTime()
+      : 0;
+    const currentTime = message.created_at
+      ? new Date(message.created_at).getTime()
+      : 0;
+    const timeDiff = currentTime - prevTime;
+
+    return timeDiff < 2 * 60 * 1000; // 2 minutes in milliseconds
+  })();
+
+  const showAvatar = !shouldGroupWithPrevious && !isFromCurrentUser;
+  const showUsername = !shouldGroupWithPrevious && !isFromCurrentUser;
+  const showGroupTimestamp = !shouldGroupWithPrevious;
 
   return (
     <div
@@ -658,108 +718,154 @@ const VirtualMessageRowComponent = ({
       )}
 
       {/* Add space between different users */}
-      {isFirstMessageFromUser && virtualItem.index > 0 && (
+      {!shouldGroupWithPrevious && virtualItem.index > 0 && (
         <div className="h-4" />
       )}
 
       <div
-        className={`flex gap-3 px-4 py-1 ${
-          message.sender?.id === currentUserId ? 'justify-end' : 'justify-start'
-        }`}
+        className={`px-4 py-1 ${isFromCurrentUser ? 'flex justify-end' : 'flex justify-start'}`}
       >
-        {/* Avatar placeholder for consistent alignment */}
-        {message.sender?.id !== currentUserId && (
-          <div className="w-10 h-10 flex-shrink-0">
-            {showAvatar && (
-              <div className="w-10 h-10 rounded-full overflow-hidden bg-muted">
-                {message.sender?.avatar_url !== null &&
-                message.sender?.avatar_url !== undefined ? (
-                  <Image
-                    src={message.sender.avatar_url}
-                    alt={
-                      message.sender?.username ??
-                      message.sender?.full_name ??
-                      'User'
-                    }
-                    width={AVATAR_SIZE}
-                    height={AVATAR_SIZE}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <div className="w-full h-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-semibold text-sm">
-                    {(
-                      message.sender?.username?.[0] ??
-                      message.sender?.full_name?.[0] ??
-                      'U'
-                    ).toUpperCase()}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        )}
-
-        <div className="flex flex-col min-w-0 flex-1 max-w-[70%]">
-          {/* Username and timestamp header */}
-          {showUsername && message.sender?.id !== currentUserId && (
-            <div className="flex items-center gap-2 mb-1">
-              <span className="text-sm font-semibold text-foreground">
-                {message.sender?.username ??
-                  message.sender?.full_name ??
-                  'Unknown'}
-              </span>
-              <span className="text-xs text-muted-foreground">
-                {message.created_at !== null && message.created_at !== undefined
-                  ? new Date(message.created_at).toLocaleString([], {
-                      month: 'short',
-                      day: 'numeric',
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    })
-                  : ''}
-              </span>
+        <div
+          className={`flex gap-3 max-w-[75%] ${isFromCurrentUser ? 'flex-row-reverse' : 'flex-row'}`}
+        >
+          {/* Avatar for received messages only */}
+          {!isFromCurrentUser && (
+            <div className="w-8 h-8 flex-shrink-0 self-end">
+              {showAvatar && (
+                <div className="w-8 h-8 rounded-full overflow-hidden bg-muted">
+                  {message.sender?.avatar_url !== null &&
+                  message.sender?.avatar_url !== undefined ? (
+                    <Image
+                      src={message.sender.avatar_url}
+                      alt={
+                        message.sender?.username ??
+                        message.sender?.full_name ??
+                        'User'
+                      }
+                      width={32}
+                      height={32}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-semibold text-xs">
+                      {(
+                        message.sender?.username?.[0] ??
+                        message.sender?.full_name?.[0] ??
+                        'U'
+                      ).toUpperCase()}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
 
-          <div
-            className={`group-hover:bg-muted/30 transition-colors duration-150 rounded px-3 py-2 ${
-              message.sender?.id === currentUserId
-                ? 'bg-primary text-primary-foreground rounded-br-sm ml-auto'
-                : showUsername
-                  ? 'bg-transparent'
-                  : 'bg-transparent hover:bg-muted/20'
-            }`}
-          >
-            <div className="text-sm whitespace-pre-wrap break-words leading-relaxed">
-              {message.content}
-            </div>
-
-            {/* Actions and timestamp for hover */}
-            <div
-              className={`flex items-center mt-1 gap-2 text-xs text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity ${
-                message.sender?.id === currentUserId
-                  ? 'justify-end'
-                  : 'justify-start'
-              }`}
-            >
-              {/* Show timestamp on hover for grouped messages */}
-              {!showUsername && (
-                <span>
+          <div className="flex flex-col min-w-0 flex-1">
+            {/* Username and timestamp header for new message groups */}
+            {showUsername && showGroupTimestamp && (
+              <div
+                className={`flex items-center gap-2 mb-1 ${isFromCurrentUser ? 'justify-end' : 'justify-start'}`}
+              >
+                <span className="text-sm font-semibold text-foreground">
+                  {isFromCurrentUser
+                    ? 'You'
+                    : (message.sender?.username ??
+                      message.sender?.full_name ??
+                      'Unknown')}
+                </span>
+                <span className="text-xs text-muted-foreground">
                   {message.created_at !== null &&
                   message.created_at !== undefined
-                    ? new Date(message.created_at).toLocaleTimeString([], {
+                    ? new Date(message.created_at).toLocaleString([], {
                         hour: '2-digit',
                         minute: '2-digit',
                       })
                     : ''}
                 </span>
-              )}
-              <button
-                type="button"
-                className="hover:text-primary transition-colors px-1 py-0.5 rounded hover:bg-muted"
+              </div>
+            )}
+
+            {/* Group timestamp for message groups */}
+            {showGroupTimestamp && !showUsername && (
+              <div className="flex justify-center mb-2 mt-4">
+                <span className="text-xs text-muted-foreground bg-background/80 px-2 py-1 rounded-full">
+                  {message.created_at !== null &&
+                  message.created_at !== undefined
+                    ? (() => {
+                        const date = new Date(message.created_at);
+                        const now = new Date();
+                        const isToday =
+                          date.toDateString() === now.toDateString();
+                        const isYesterday =
+                          new Date(
+                            now.getTime() - 24 * 60 * 60 * 1000,
+                          ).toDateString() === date.toDateString();
+
+                        if (isToday) {
+                          return date.toLocaleTimeString([], {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          });
+                        } else if (isYesterday) {
+                          return `Yesterday ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+                        } else {
+                          return date.toLocaleDateString([], {
+                            month: 'short',
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          });
+                        }
+                      })()
+                    : ''}
+                </span>
+              </div>
+            )}
+
+            {/* Message bubble */}
+            <div
+              className={`
+                group-hover:shadow-sm transition-all duration-150 rounded-2xl px-4 py-2 relative
+                ${
+                  isFromCurrentUser
+                    ? 'bg-primary/20 text-foreground rounded-br-md'
+                    : 'bg-muted/90 text-foreground rounded-bl-md'
+                }
+                ${shouldGroupWithPrevious ? 'mt-1' : 'mt-0'}
+              `}
+              title={
+                message.created_at !== null && message.created_at !== undefined
+                  ? new Date(message.created_at).toLocaleString()
+                  : ''
+              }
+            >
+              <div className="text-sm whitespace-pre-wrap break-words leading-relaxed">
+                {message.content}
+              </div>
+
+              {/* Hover actions */}
+              <div
+                className={`
+                  absolute top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 
+                  transition-opacity duration-200 flex gap-1
+                  ${isFromCurrentUser ? '-left-16' : '-right-16'}
+                `}
               >
-                Reply
-              </button>
+                <button
+                  type="button"
+                  className="w-8 h-8 rounded-full bg-background/90 border shadow-sm hover:bg-muted/50 flex items-center justify-center text-xs"
+                  title="Reply"
+                >
+                  ↩
+                </button>
+                <button
+                  type="button"
+                  className="w-8 h-8 rounded-full bg-background/90 border shadow-sm hover:bg-muted/50 flex items-center justify-center text-xs"
+                  title="React"
+                >
+                  😊
+                </button>
+              </div>
             </div>
           </div>
         </div>

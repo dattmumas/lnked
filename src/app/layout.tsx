@@ -79,12 +79,19 @@ export default async function RootLayout({
             disableTransitionOnChange
           >
             <div className="flex h-screen flex-col">
-              <header className="shrink-0 sticky top-0 z-50 bg-background/80 backdrop-blur-md border-b border-border/50">
-                <ModernNavbar initialUser={user ?? undefined} initialProfile={profile ? {
-                  username: profile.username ?? undefined,
-                  full_name: profile.full_name ?? undefined,
-                  avatar_url: profile.avatar_url ?? undefined
-                } : undefined} />
+              <header className="shrink-0 sticky top-0 z-50 bg-background backdrop-blur-md border-b border-border/50">
+                <ModernNavbar
+                  initialUser={user ?? undefined}
+                  initialProfile={
+                    profile
+                      ? {
+                          username: profile.username ?? undefined,
+                          full_name: profile.full_name ?? undefined,
+                          avatar_url: profile.avatar_url ?? undefined,
+                        }
+                      : undefined
+                  }
+                />
               </header>
 
               {/* Layout body */}

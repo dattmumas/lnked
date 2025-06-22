@@ -1,7 +1,14 @@
 'use client';
 
 import { Send, Loader2, X } from 'lucide-react';
-import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
+import {
+  useEffect,
+  useState,
+  useRef,
+  useCallback,
+  useMemo,
+  useLayoutEffect,
+} from 'react';
 
 // import { useChat } from '@/lib/hooks/use-chat'; // Temporarily disabled due to server import issue
 
@@ -176,7 +183,8 @@ export function ChatPanel({
     null,
   );
 
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+  const didSendRef = useRef(false);
 
   // Get conversation details and data
   const conversation = chat.activeConversation;
@@ -215,6 +223,14 @@ export function ChatPanel({
     }
   }, [conversationId, conversation?.id, setActiveConversation]);
 
+  // Handle focus management after message sends - runs after DOM commit but before paint
+  useLayoutEffect(() => {
+    if (didSendRef.current) {
+      inputRef.current?.focus();
+      didSendRef.current = false;
+    }
+  });
+
   const handleSendMessage = useCallback(async (): Promise<void> => {
     if (!message.trim() || conversation === null || conversation === undefined)
       return;
@@ -222,6 +238,7 @@ export function ChatPanel({
     const trimmedMessage = message.trim();
     setMessage('');
     stopTyping();
+    didSendRef.current = true; // Mark that we just sent a message
 
     try {
       const result = await chat.sendMessage({
@@ -231,17 +248,18 @@ export function ChatPanel({
       });
 
       if (result) {
-        // Clear reply target and focus input on successful send
+        // Clear reply target on successful send
         setReplyTarget(null);
-        inputRef.current?.focus();
       } else {
         // Restore message if send failed
         setMessage(trimmedMessage);
+        didSendRef.current = true; // Still want to refocus on failure
       }
     } catch (error) {
       console.error('Failed to send message:', error);
       // Restore message on error
       setMessage(trimmedMessage);
+      didSendRef.current = true; // Still want to refocus on error
     }
   }, [message, conversation, replyTarget, chat, stopTyping]);
 
@@ -258,7 +276,7 @@ export function ChatPanel({
   );
 
   const handleInputChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>): void => {
+    (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>): void => {
       const { value } = e.target;
       setMessage(value);
 
@@ -280,7 +298,7 @@ export function ChatPanel({
     if (chat.hasMoreMessages && !chat.isLoadingMessages) {
       void chat.loadMoreMessages();
     }
-  }, [chat]);
+  }, [chat.hasMoreMessages, chat.isLoadingMessages, chat.loadMoreMessages]);
 
   const handleMessageInView = useCallback((messageId: string): void => {
     // Mark message as read when it comes into view
@@ -291,7 +309,7 @@ export function ChatPanel({
 
   const clearReply = useCallback((): void => {
     setReplyTarget(null);
-    inputRef.current?.focus();
+    didSendRef.current = true; // Trigger focus via useLayoutEffect
   }, []);
 
   const handleRetry = useCallback((): void => {
@@ -329,8 +347,8 @@ export function ChatPanel({
   }
 
   return (
-    <div className={`flex flex-col h-full ${className ?? ''}`}>
-      {/* Messages - Only Virtual List */}
+    <div className={`flex flex-col h-full min-h-0 ${className ?? ''}`}>
+      {/* Messages - Virtual List */}
       <VirtualMessageList
         messages={messages}
         currentUserId={user?.id ?? ''}
@@ -345,8 +363,20 @@ export function ChatPanel({
       <div className="shrink-0 border-t bg-background/95 backdrop-blur-sm">
         {/* Reply preview */}
         {replyTarget && (
-          <div className="px-4 py-2 bg-muted/50 border-b flex items-center justify-between">
-            <div className="flex-1 min-w-0">
+          <div
+            className="px-4 py-2 bg-muted/50 border-b flex items-center justify-between cursor-pointer hover:bg-muted/70 transition-colors"
+            onClick={clearReply}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                clearReply();
+              }
+            }}
+            aria-label="Reply preview. Click to cancel or press Escape"
+          >
+            <div className="flex-1 min-w-0 pointer-events-none">
               <p className="text-xs text-muted-foreground">
                 Replying to{' '}
                 <span className="font-medium">
@@ -354,52 +384,80 @@ export function ChatPanel({
                     replyTarget.sender?.full_name ??
                     'Unknown'}
                 </span>
+                <span className="ml-2 text-xs opacity-60">(Esc to cancel)</span>
               </p>
               <p className="text-sm truncate">{replyTarget.content}</p>
             </div>
             <Button
               variant="ghost"
               size="sm"
-              onClick={clearReply}
-              className="h-6 w-6 p-0"
+              onClick={(e) => {
+                e.stopPropagation();
+                clearReply();
+              }}
+              className="h-8 w-8 p-0 hover:bg-muted-foreground/20"
               aria-label="Cancel reply"
+              title="Cancel reply (Esc)"
             >
-              <X className="h-3 w-3" />
+              <X className="h-4 w-4" />
             </Button>
           </div>
         )}
 
         {/* Message input */}
         <div className="p-4">
-          <div className="flex gap-2">
-            <Input
-              ref={inputRef}
-              value={message}
-              onChange={handleInputChange}
-              onKeyDown={handleKeyPress}
-              placeholder={
-                replyTarget
-                  ? `Reply to ${replyTarget.sender?.username ?? 'message'}...`
-                  : 'Type a message...'
-              }
-              className="flex-1"
-              disabled={isSendingMessage}
-              aria-label="Message input"
-            />
+          <div className="flex gap-3 items-end">
+            <div className="flex-1 relative">
+              <textarea
+                ref={inputRef}
+                value={message}
+                onChange={handleInputChange}
+                onKeyDown={handleKeyPress}
+                placeholder={
+                  replyTarget
+                    ? `Reply to ${replyTarget.sender?.username ?? 'message'}...`
+                    : 'Type a message...'
+                }
+                className="w-full min-h-[48px] max-h-[120px] resize-none rounded-2xl bg-background px-4 py-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary disabled:cursor-not-allowed disabled:opacity-50"
+                disabled={isSendingMessage}
+                aria-label="Message input"
+                rows={1}
+                style={{
+                  height: 'auto',
+                  minHeight: '48px',
+                }}
+                onInput={(e) => {
+                  const target = e.target as HTMLTextAreaElement;
+                  target.style.height = 'auto';
+                  target.style.height = `${Math.min(target.scrollHeight, 120)}px`;
+                }}
+              />
+
+              {/* Emoji picker button */}
+              <button
+                type="button"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                title="Add emoji"
+              >
+                😊
+              </button>
+            </div>
+
             <Button
               onClick={handleSendClick}
               disabled={!message.trim() || isSendingMessage}
               size="icon"
+              className="h-12 w-12 rounded-full"
               aria-label="Send message"
             >
               {isSendingMessage ? (
                 <Loader2
-                  className="h-4 w-4 animate-spin"
+                  className="h-5 w-5 animate-spin"
                   role="status"
                   aria-live="polite"
                 />
               ) : (
-                <Send className="h-4 w-4" />
+                <Send className="h-5 w-5" />
               )}
             </Button>
           </div>

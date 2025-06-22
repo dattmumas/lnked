@@ -11,6 +11,12 @@
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,css,html,yml,yaml,mdx}\"",
     "precommit": "pnpm lint && pnpm typecheck",
     "test": "jest",
+    "test:watch": "jest --watch",
+    "test:unit": "jest --testPathPattern='(/__tests__/|\\.(test|spec))\\.(ts|tsx|js|jsx)$' --testPathIgnorePatterns='/tests/e2e/'",
+    "test:integration": "jest --testPathPattern='__tests__/.*\\.integration\\.(test|spec)\\.(ts|tsx)$'",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:all": "npm run test:unit && npm run test:e2e",
     "generate:db-types": "tsx scripts/generate-db-types.ts"
   },
   "dependencies": {

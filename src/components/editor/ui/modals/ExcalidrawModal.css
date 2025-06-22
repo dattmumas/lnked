@@ -19,7 +19,7 @@
   flex-grow: 0px;
   flex-shrink: 1px;
   z-index: 100;
-  background-color: rgba(40, 40, 40, 0.6);
+  background-color: rgb(40, 40, 40);
 }
 .ExcalidrawModal__actions {
   text-align: end;
@@ -38,8 +38,10 @@
   width: 70vw;
   height: 70vh;
   border-radius: 8px;
-  box-shadow: 0 12px 28px 0 rgba(0, 0, 0, 0.2), 0 2px 4px 0 rgba(0, 0, 0, 0.1),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.5);
+  box-shadow:
+    0 12px 28px 0 rgb(0, 0, 0),
+    0 2px 4px 0 rgb(0, 0, 0),
+    inset 0 0 0 1px rgb(255, 255, 255);
 }
 .ExcalidrawModal__row > div {
   border-radius: 5px;

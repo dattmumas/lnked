@@ -1,4 +1,4 @@
-import { renderHook, waitFor } from '@testing-library/react';
+import { renderHook, waitFor, act } from '@testing-library/react';
 
 import { useFirstChannel } from '../useFirstChannel';
 
@@ -81,7 +81,9 @@ describe('useFirstChannel', () => {
     expect(result.current.channel?.title).toBe('General');
 
     // Trigger reload
-    result.current.reload();
+    act(() => {
+      result.current.reload();
+    });
 
     await waitFor(() => {
       expect(result.current.loading).toBe(false);
@@ -109,7 +111,7 @@ describe('useFirstChannel', () => {
     expect(result.current.channel).toBeNull();
   });
 
-  it('should reset state when collectiveId becomes null', () => {
+  it('should reset state when collectiveId becomes null', async () => {
     const { result, rerender } = renderHook(
       ({ collectiveId }: { collectiveId: string | null }) => 
         useFirstChannel(collectiveId, { fetchFn: mockFetch }),
@@ -118,8 +120,15 @@ describe('useFirstChannel', () => {
       },
     );
 
+    // Wait for initial state to settle
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+    });
+
     // Rerender with null collectiveId
-    rerender({ collectiveId: null });
+    act(() => {
+      rerender({ collectiveId: null });
+    });
 
     expect(result.current.channel).toBeNull();
     expect(result.current.error).toBeNull();

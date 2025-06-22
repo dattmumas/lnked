@@ -148,6 +148,15 @@ export const useChatV2 = (): UseChatV2Return => {
     }
   }, []);
 
+  // Refs to track latest values and prevent stale closures
+  const oldestTimestampRef = useRef<string | undefined>(undefined);
+  const hasMoreRef = useRef<boolean>(true);
+
+  // Update refs when state changes
+  useEffect(() => {
+    hasMoreRef.current = state.hasMoreMessages;
+  }, [state.hasMoreMessages]);
+
   /**
    * Load messages for a conversation
    */
@@ -155,16 +164,9 @@ export const useChatV2 = (): UseChatV2Return => {
     setState(prev => ({ ...prev, isLoadingMessages: true, error: undefined }));
     
     try {
-      // Get current state to determine options
-      let currentOldestTimestamp: string | undefined;
-      setState(prev => {
-        currentOldestTimestamp = prev.oldestMessageTimestamp;
-        return prev;
-      });
-
       const options =
-        loadMore && currentOldestTimestamp !== undefined
-          ? { before: currentOldestTimestamp, limit: MESSAGES_PER_PAGE }
+        loadMore && oldestTimestampRef.current !== undefined
+          ? { before: oldestTimestampRef.current, limit: MESSAGES_PER_PAGE }
           : { limit: MESSAGES_PER_PAGE };
 
       const newMessages = await chatApiClient.getMessages(conversationId, options);
@@ -172,17 +174,31 @@ export const useChatV2 = (): UseChatV2Return => {
       // API returns messages newest-first, but we want oldest-first for display
       const sortedMessages = [...newMessages].reverse();
       
-      setState(prev => ({
-        ...prev,
-        messages: loadMore 
+      // Single setState to prevent race conditions
+      setState(prev => {
+        const messages = loadMore 
           ? [...sortedMessages, ...prev.messages]
-          : sortedMessages,
-        isLoadingMessages: false,
-        hasMoreMessages: newMessages.length === MESSAGES_PER_PAGE,
-        oldestMessageTimestamp: newMessages.length > 0
-          ? (newMessages[newMessages.length - 1].created_at ?? undefined)
-          : prev.oldestMessageTimestamp,
-      }));
+          : sortedMessages;
+        
+        // Deduplicate messages to prevent real-time duplicates
+        const uniqueMessages = Array.from(
+          new Map(messages.map(m => [m.id, m])).values()
+        );
+        
+        // Update oldest timestamp ref
+        const oldestMessage = uniqueMessages[0];
+        if (oldestMessage?.created_at) {
+          oldestTimestampRef.current = oldestMessage.created_at;
+        }
+        
+        return {
+          ...prev,
+          messages: uniqueMessages,
+          isLoadingMessages: false,
+          hasMoreMessages: newMessages.length === MESSAGES_PER_PAGE,
+          oldestMessageTimestamp: oldestMessage?.created_at ?? undefined,
+        };
+      });
     } catch (error) {
       setState(prev => ({
         ...prev,
@@ -190,7 +206,7 @@ export const useChatV2 = (): UseChatV2Return => {
         isLoadingMessages: false,
       }));
     }
-  }, []); // Remove dependency on state.oldestMessageTimestamp to break circular dependency
+  }, []); // No state dependencies to prevent circular issues
 
   /**
    * Set active conversation
@@ -208,6 +224,10 @@ export const useChatV2 = (): UseChatV2Return => {
       void realtimeService.unsubscribeFromConversation(currentActiveConversationId);
     }
 
+    // Reset refs immediately
+    oldestTimestampRef.current = undefined;
+    hasMoreRef.current = true;
+
     setState(prev => ({ 
       ...prev, 
       activeConversationId: conversationId,
@@ -218,7 +238,7 @@ export const useChatV2 = (): UseChatV2Return => {
 
     if (conversationId === undefined) return;
 
-    // Load initial messages
+    // Load initial messages and wait for completion
     await loadMessages(conversationId);
 
     // Mark as read
@@ -412,14 +432,14 @@ export const useChatV2 = (): UseChatV2Return => {
   const loadMoreMessages = useCallback(async () => {
     if (
       state.activeConversationId === undefined ||
-      !state.hasMoreMessages ||
+      !hasMoreRef.current ||
       state.isLoadingMessages
     ) {
       return;
     }
 
     await loadMessages(state.activeConversationId, true);
-  }, [state.activeConversationId, state.hasMoreMessages, state.isLoadingMessages, loadMessages]);
+  }, [state.activeConversationId, state.isLoadingMessages, loadMessages]);
 
   /**
    * Typing indicators
