@@ -87,6 +87,7 @@ export function useMarkAsRead() {
     mutationFn: async (conversationId: string) => {
       return await chatApiClient.markAsRead(conversationId);
     },
+    retry: false, // Disable automatic retries
     onSuccess: (data, conversationId) => {
       // Update the unread count in the cache
       queryClient.setQueryData<ConversationWithDetails[]>(

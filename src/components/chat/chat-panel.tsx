@@ -21,6 +21,9 @@ interface ChatPanelProps {
   className?: string;
 }
 
+// Track which conversations have been marked as read globally
+const markedAsReadConversations = new Set<string>();
+
 export function ChatPanel({
   conversationId,
   className,
@@ -29,7 +32,6 @@ export function ChatPanel({
   const [message, setMessage] = useState('');
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const didSendRef = useRef(false);
-  const hasMarkedAsReadRef = useRef<string | null>(null);
 
   // UI State from Zustand
   const { setActiveConversation, getReplyTarget, setReplyTarget } =
@@ -62,15 +64,23 @@ export function ChatPanel({
 
   // Mark conversation as read when first viewing
   useEffect(() => {
-    if (
-      conversationId &&
-      conversation &&
-      hasMarkedAsReadRef.current !== conversationId
-    ) {
-      hasMarkedAsReadRef.current = conversationId;
-      markAsRead.mutate(conversationId);
+    if (!conversationId || !conversation) return;
+
+    // Check if we've already marked this conversation globally
+    if (markedAsReadConversations.has(conversationId)) {
+      console.log(
+        `[ChatPanel] Already marked ${conversationId} as read, skipping`,
+      );
+      return;
     }
-  }, [conversationId, conversation, markAsRead.mutate]);
+
+    console.log(`[ChatPanel] Marking conversation ${conversationId} as read`);
+    markedAsReadConversations.add(conversationId);
+
+    // Call the mutation directly without timeout
+    markAsRead.mutate(conversationId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [conversationId]); // Only depend on conversationId, not the mutation object
 
   // Handle focus management after message sends
   useLayoutEffect(() => {

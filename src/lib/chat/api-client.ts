@@ -122,6 +122,7 @@ export class ChatApiClient {
     last_read_at: string;
     unread_count: number;
   }> {
+    console.trace(`[ChatAPI] markAsRead called for conversation: ${conversationId}`);
     const response = await fetch(API_ROUTES.CHAT_CONVERSATION_READ(conversationId), {
       method: 'PATCH',
       headers: {
