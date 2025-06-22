@@ -16,19 +16,9 @@ const enum HttpStatus {
   INTERNAL_SERVER_ERROR = 500,
 }
 
-// Type definitions for link preview
-type LinkPreviewData = {
-  title?: string;
-  description?: string;
-  image?: string;
-  url?: string;
-  [key: string]: unknown;
-};
 
-type MessageMetadata = {
-  embed?: LinkPreviewData;
-  [key: string]: unknown;
-};
+
+
 
 const BodySchema = z.object({
   content: z.string().trim().min(1, 'Message content is required').max(10000),

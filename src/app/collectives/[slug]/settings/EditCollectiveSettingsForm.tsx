@@ -214,7 +214,7 @@ export default function EditCollectiveSettingsForm({
               result.updatedSlug !== currentSlug
             ) {
               void router.push(
-                `/dashboard/collectives/${collectiveId}/settings?slug_changed_to=${newSlug}`,
+                `/collectives/${newSlug}/settings?slug_changed_to=${newSlug}`,
               );
             } else {
               void router.refresh(); // Refresh data on current page if slug didn't change
@@ -292,7 +292,7 @@ export default function EditCollectiveSettingsForm({
     if (result.success === true) {
       setDeleteSuccess(true);
       setTimeout(() => {
-        void router.push('/dashboard/collectives');
+        void router.push('/collectives');
       }, REDIRECT_DELAY_MS);
     } else {
       setDeleteError(

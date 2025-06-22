@@ -187,7 +187,7 @@ export default function DashboardCollectiveCard({
               className="flex-grow basis-1/3 sm:basis-auto"
             >
               <Link
-                href={`/dashboard/collectives/${collective.id}/manage/members`}
+                href={`/collectives/${collective.slug}/members`}
                 className="flex items-center justify-center w-full"
               >
                 <Users2 className="h-4 w-4 mr-1.5" /> Members
@@ -199,9 +199,8 @@ export default function DashboardCollectiveCard({
               asChild
               className="flex-grow basis-1/3 sm:basis-auto"
             >
-              {/* TODO: Create /dashboard/collectives/[collectiveId]/settings page */}
               <Link
-                href={`/dashboard/collectives/${collective.id}/settings`}
+                href={`/collectives/${collective.slug}/settings`}
                 className="flex items-center justify-center w-full"
               >
                 <Settings className="h-4 w-4 mr-1.5" /> Settings
@@ -214,7 +213,7 @@ export default function DashboardCollectiveCard({
               className="flex-grow basis-1/3 sm:basis-auto"
             >
               <Link
-                href={`/dashboard/collectives/${collective.id}/subscribers`}
+                href={`/collectives/${collective.slug}/subscribers`}
                 className="flex items-center justify-center w-full"
               >
                 <Users2 className="h-4 w-4 mr-1.5" /> Subscribers

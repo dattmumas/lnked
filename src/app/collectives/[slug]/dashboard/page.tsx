@@ -17,9 +17,9 @@ import { createServerSupabaseClient } from '@/lib/supabase/server';
 export default async function CollectiveDashboardPage({
   params,
 }: {
-  params: Promise<{ collectiveId: string }>;
+  params: Promise<{ slug: string }>;
 }): Promise<React.ReactElement> {
-  const { collectiveId } = await params;
+  const { slug } = await params;
   const supabase = createServerSupabaseClient();
   const {
     data: { user: currentUser },
@@ -30,11 +30,11 @@ export default async function CollectiveDashboardPage({
   }
   const { data: collective, error: collectiveError } = await supabase
     .from('collectives')
-    .select('id, name, owner_id, description')
-    .eq('id', collectiveId)
+    .select('id, name, slug, owner_id, description')
+    .eq('slug', slug)
     .single();
   if (collectiveError !== null || collective === null) {
-    redirect('/dashboard/collectives');
+    redirect('/collectives');
   }
   const isOwner = currentUser.id === collective.owner_id;
 
@@ -42,7 +42,7 @@ export default async function CollectiveDashboardPage({
   const { data: membership } = await supabase
     .from('collective_members')
     .select('role')
-    .eq('collective_id', collectiveId)
+    .eq('collective_id', collective.id)
     .eq('member_id', currentUser.id)
     .single();
 
@@ -138,9 +138,7 @@ export default async function CollectiveDashboardPage({
         <CardContent>
           <div className="flex flex-wrap gap-3">
             <Button variant="outline" asChild>
-              <Link
-                href={`/dashboard/collectives/${collectiveId}/manage/members`}
-              >
+              <Link href={`/collectives/${collective.slug}/members`}>
                 <Users className="h-4 w-4 mr-2" />
                 Members
               </Link>
@@ -149,16 +147,12 @@ export default async function CollectiveDashboardPage({
             {isOwner === true && (
               <>
                 <Button variant="outline" asChild>
-                  <Link
-                    href={`/dashboard/collectives/${collectiveId}/settings`}
-                  >
+                  <Link href={`/collectives/${collective.slug}/settings`}>
                     Settings
                   </Link>
                 </Button>
                 <Button variant="outline" asChild>
-                  <Link
-                    href={`/dashboard/collectives/${collectiveId}/subscribers`}
-                  >
+                  <Link href={`/collectives/${collective.slug}/subscribers`}>
                     Subscribers
                   </Link>
                 </Button>
@@ -166,9 +160,7 @@ export default async function CollectiveDashboardPage({
             )}
 
             <Button variant="outline" asChild>
-              <Link
-                href={`/collectives/${collective.name.toLowerCase().replace(/\s+/g, '-')}`}
-              >
+              <Link href={`/collectives/${collective.slug}`}>
                 View Public Page
               </Link>
             </Button>

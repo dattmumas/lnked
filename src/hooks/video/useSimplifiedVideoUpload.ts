@@ -13,7 +13,9 @@ import {
 const MIN_TITLE_LENGTH = 3;
 const MAX_TITLE_LENGTH = 100;
 const MAX_FILE_SIZE_GB = 10;
-const BYTES_PER_GB = 1024 * 1024 * 1024;
+const BYTES_PER_KB = 1024;
+const BYTES_PER_MB = BYTES_PER_KB * BYTES_PER_KB;
+const BYTES_PER_GB = BYTES_PER_MB * BYTES_PER_KB;
 const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_GB * BYTES_PER_GB;
 const UPLOAD_PROGRESS_COMPLETE = 100;
 const STATUS_OK_MIN = 200;
@@ -152,23 +154,23 @@ export const useSimplifiedVideoUpload = (
               setUploadProgress(UPLOAD_PROGRESS_COMPLETE);
               resolve();
             } else {
-              const error = new Error(`Upload failed: ${xhr.status} ${xhr.statusText}`) as any;
-              error.status = xhr.status;
-              reject(error);
+              const uploadError = new Error(`Upload failed: ${xhr.status} ${xhr.statusText}`) as Error & { status: number };
+              uploadError.status = xhr.status;
+              reject(uploadError);
             }
           });
 
           // Error handlers
           xhr.addEventListener('error', () => {
-            const error = new Error('Upload failed due to network error') as any;
-            error.code = 'NETWORK_ERROR';
-            reject(error);
+            const networkError = new Error('Upload failed due to network error') as Error & { code: string };
+            networkError.code = 'NETWORK_ERROR';
+            reject(networkError);
           });
 
           xhr.addEventListener('abort', () => {
-            const error = new Error('Upload cancelled') as any;
-            error.retryable = false; // Don't retry manual cancellations
-            reject(error);
+            const abortError = new Error('Upload cancelled') as Error & { retryable: boolean };
+            abortError.retryable = false; // Don't retry manual cancellations
+            reject(abortError);
           });
 
           // Handle abort signal
@@ -185,7 +187,7 @@ export const useSimplifiedVideoUpload = (
         maxRetries: 3,
         baseDelay: 2000, // 2 seconds
         maxDelay: 30000, // 30 seconds
-        onRetryProgress: (attempt, max) => {
+        onRetryProgress: (attempt, max): void => {
           setUploadState('retrying');
           setRetryAttempt(attempt);
           setMaxRetries(max);

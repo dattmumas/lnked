@@ -1,23 +1,21 @@
 'use client';
 
-import React, { useCallback, useRef, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-
 import {
-  Upload,
   AlertTriangle,
   CheckCircle,
   Loader2,
   RotateCcw,
+  Upload,
 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { useCallback, useRef, useEffect } from 'react';
 
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { useSimplifiedVideoUpload } from '@/hooks/video/useSimplifiedVideoUpload';
 
 // Constants
@@ -102,10 +100,41 @@ export default function VideoUploadForm({
     }
   }, [uploadAndPublish, isComplete, videoAsset, onComplete, router]);
 
+  // Event handlers with proper callbacks
+  const handleTitleChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      updateFormData({ title: e.target.value });
+    },
+    [updateFormData],
+  );
+
+  const handleDescriptionChange = useCallback(
+    (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+      updateFormData({ description: e.target.value });
+    },
+    [updateFormData],
+  );
+
+  const handlePrivacyChange = useCallback(
+    (e: React.ChangeEvent<HTMLSelectElement>) => {
+      updateFormData({
+        privacySetting: e.target.value as 'public' | 'private',
+      });
+    },
+    [updateFormData],
+  );
+
+  const handleEncodingChange = useCallback(
+    (e: React.ChangeEvent<HTMLSelectElement>) => {
+      updateFormData({ encodingTier: e.target.value as 'baseline' | 'plus' });
+    },
+    [updateFormData],
+  );
+
   // Load draft on mount
   useEffect(() => {
     const savedDraft = localStorage.getItem('video-upload-draft');
-    if (savedDraft !== null && savedDraft !== undefined) {
+    if (savedDraft !== null) {
       try {
         const draftData = JSON.parse(savedDraft) as {
           title?: string;
@@ -122,7 +151,14 @@ export default function VideoUploadForm({
         console.error('Failed to load draft:', error);
       }
     }
-  }, [collectiveId, updateFormData]);
+  }, [
+    collectiveId,
+    updateFormData,
+    handleTitleChange,
+    handleDescriptionChange,
+    handlePrivacyChange,
+    handleEncodingChange,
+  ]);
 
   // Save draft when form data changes
   useEffect(() => {
@@ -138,20 +174,37 @@ export default function VideoUploadForm({
     return () => clearTimeout(timeoutId);
   }, [formData]);
 
+  // Click handlers
+  const handleUploadAreaClick = useCallback(() => {
+    fileInputRef.current?.click();
+  }, []);
+
+  const handleUploadAreaKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      fileInputRef.current?.click();
+    }
+  }, []);
+
+  // Submit handler for retry button
+  const handleRetrySubmit = useCallback(() => {
+    void handleSubmit();
+  }, [handleSubmit]);
+
+  // Submit handler for main upload button
+  const handleMainSubmit = useCallback(() => {
+    void handleSubmit();
+  }, [handleSubmit]);
+
   const renderUploadArea = useCallback(
     (): React.JSX.Element => (
       <div className="space-y-4">
         <div
           className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center cursor-pointer hover:border-gray-400 transition-colors"
-          onClick={() => fileInputRef.current?.click()}
+          onClick={handleUploadAreaClick}
           role="button"
           tabIndex={0}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-              e.preventDefault();
-              fileInputRef.current?.click();
-            }
-          }}
+          onKeyDown={handleUploadAreaKeyDown}
         >
           <Upload className="mx-auto h-12 w-12 text-gray-400 mb-4" />
           <p className="text-lg font-medium mb-2">Choose a video file</p>
@@ -166,7 +219,7 @@ export default function VideoUploadForm({
         </div>
       </div>
     ),
-    [handleFileSelect],
+    [handleFileSelect, handleUploadAreaClick, handleUploadAreaKeyDown],
   );
 
   const renderForm = useCallback(
@@ -177,7 +230,7 @@ export default function VideoUploadForm({
           <Input
             id="title"
             value={formData.title}
-            onChange={(e) => updateFormData({ title: e.target.value })}
+            onChange={handleTitleChange}
             placeholder="Enter video title..."
             maxLength={100}
             disabled={isUploading || isRetrying || isProcessing}
@@ -192,7 +245,7 @@ export default function VideoUploadForm({
           <Textarea
             id="description"
             value={formData.description}
-            onChange={(e) => updateFormData({ description: e.target.value })}
+            onChange={handleDescriptionChange}
             placeholder="Describe your video..."
             className="min-h-[100px]"
             disabled={isUploading || isRetrying || isProcessing}
@@ -205,11 +258,7 @@ export default function VideoUploadForm({
             <select
               id="privacy"
               value={formData.privacySetting}
-              onChange={(e) =>
-                updateFormData({
-                  privacySetting: e.target.value as 'public' | 'private',
-                })
-              }
+              onChange={handlePrivacyChange}
               className="w-full p-2 border border-gray-300 rounded-md"
               disabled={isUploading || isRetrying || isProcessing}
             >
@@ -223,11 +272,7 @@ export default function VideoUploadForm({
             <select
               id="encoding"
               value={formData.encodingTier}
-              onChange={(e) =>
-                updateFormData({
-                  encodingTier: e.target.value as 'baseline' | 'plus',
-                })
-              }
+              onChange={handleEncodingChange}
               className="w-full p-2 border border-gray-300 rounded-md"
               disabled={isUploading || isRetrying || isProcessing}
             >
@@ -238,11 +283,20 @@ export default function VideoUploadForm({
         </div>
       </div>
     ),
-    [formData, updateFormData, isUploading, isRetrying, isProcessing],
+    [
+      formData,
+      handleTitleChange,
+      handleDescriptionChange,
+      handlePrivacyChange,
+      handleEncodingChange,
+      isUploading,
+      isRetrying,
+      isProcessing,
+    ],
   );
 
-  const renderUploadStatus = (): React.JSX.Element | null => {
-    if (uploadState === 'idle') return null;
+  const renderUploadStatus = (): React.JSX.Element | undefined => {
+    if (uploadState === 'idle') return undefined;
 
     return (
       <Card className="mt-6">
@@ -302,7 +356,7 @@ export default function VideoUploadForm({
                   <div className="space-y-1">
                     <p className="font-medium">Upload failed</p>
                     <p className="text-sm">{error}</p>
-                    {isRetryable && (
+                    {isRetryable === true && (
                       <div className="flex items-center space-x-2 mt-2">
                         <Badge variant="outline" className="text-xs">
                           Retryable Error
@@ -328,11 +382,11 @@ export default function VideoUploadForm({
               {hasError && (
                 <div className="flex space-x-2">
                   <Button
-                    onClick={handleSubmit}
+                    onClick={handleRetrySubmit}
                     size="sm"
                     disabled={!canSubmit}
                   >
-                    {isRetryable ? 'Retry Upload' : 'Try Again'}
+                    {isRetryable === true ? 'Retry Upload' : 'Try Again'}
                   </Button>
                   <Button onClick={reset} variant="outline" size="sm">
                     Reset Form
@@ -358,7 +412,7 @@ export default function VideoUploadForm({
 
           <div className="flex space-x-3 pt-4">
             <Button
-              onClick={handleSubmit}
+              onClick={handleMainSubmit}
               disabled={!canSubmit}
               className="flex-1"
             >

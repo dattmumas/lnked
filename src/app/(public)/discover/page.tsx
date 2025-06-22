@@ -18,7 +18,7 @@ export default async function DiscoverPage({
   searchParams,
 }: {
   searchParams: Promise<{ cursor?: string }>;
-}) {
+}): Promise<React.JSX.Element> {
   let recommendations: Recommendation[] = [];
   let nextCursor: string | undefined = undefined;
 
@@ -70,7 +70,7 @@ export default async function DiscoverPage({
           ))
         )}
       </div>
-      {nextCursor && (
+      {nextCursor !== null && nextCursor !== undefined && (
         <div className="mt-6 text-center">
           <LoadMoreButton nextCursor={nextCursor} />
         </div>

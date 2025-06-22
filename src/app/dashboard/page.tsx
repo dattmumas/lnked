@@ -381,7 +381,7 @@ export default async function DashboardManagementPage(): Promise<React.ReactElem
               className="micro-interaction btn-scale w-fit"
               asChild
             >
-              <Link href="/dashboard/collectives/new">Create Collective</Link>
+              <Link href="/collectives/new">Create Collective</Link>
             </Button>
 
             {/* Enhanced collectives display */}

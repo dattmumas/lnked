@@ -54,9 +54,9 @@ type SubscriptionRow = {
 export default async function SubscribersPage({
   params,
 }: {
-  params: Promise<{ collectiveId: string }>;
+  params: Promise<{ slug: string }>;
 }): Promise<React.ReactElement> {
-  const { collectiveId } = await params;
+  const { slug } = await params;
   const supabase = createServerSupabaseClient();
 
   const {
@@ -71,8 +71,8 @@ export default async function SubscribersPage({
   // 1. Fetch collective details and verify ownership
   const { data: collective, error: collectiveError } = await supabase
     .from('collectives')
-    .select('id, name, owner_id')
-    .eq('id', collectiveId)
+    .select('id, name, slug, owner_id')
+    .eq('slug', slug)
     .single();
 
   if (
@@ -81,7 +81,7 @@ export default async function SubscribersPage({
     collective === undefined
   ) {
     console.error(
-      `Error fetching collective ${collectiveId}:`,
+      `Error fetching collective ${slug}:`,
       collectiveError?.message,
     );
     notFound();
@@ -90,7 +90,7 @@ export default async function SubscribersPage({
   if (collective.owner_id !== currentUser.id) {
     // Or show a more specific "access denied" page
     console.warn(
-      `User ${currentUser.id} tried to access subscribers for collective ${collectiveId} they do not own.`,
+      `User ${currentUser.id} tried to access subscribers for collective ${collective.id} they do not own.`,
     );
     notFound();
   }
@@ -197,7 +197,9 @@ export default async function SubscribersPage({
         )}
       <div className="mt-8">
         <Button variant="outline" asChild>
-          <Link href="/dashboard">Back to Dashboard</Link>
+          <Link href={`/collectives/${collective.slug}/dashboard`}>
+            Back to Collective Dashboard
+          </Link>
         </Button>
       </div>
     </div>

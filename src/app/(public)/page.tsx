@@ -8,7 +8,7 @@ import { createServerSupabaseClient } from '@/lib/supabase/server';
 // Enable ISR with 5-minute revalidation for static content
 export const revalidate = 300;
 
-export default async function LandingPage() {
+export default async function LandingPage(): Promise<React.JSX.Element> {
   // Check if user is already logged in for smart redirect
   const supabase = createServerSupabaseClient();
   const {
@@ -16,7 +16,7 @@ export default async function LandingPage() {
   } = await supabase.auth.getSession();
 
   // If user is logged in, redirect to dashboard
-  if (session?.user) {
+  if (session?.user !== null && session?.user !== undefined) {
     redirect('/dashboard');
   }
 

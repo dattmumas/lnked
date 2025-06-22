@@ -9,6 +9,7 @@ import type { Notification, NotificationFilters } from '@/types/notifications';
 
 // Debounce duration in milliseconds
 const DEBOUNCE_DELAY_MS = 300;
+const HTTP_OK = 200;
 
 interface UseNotificationsOptions {
   autoFetch?: boolean;

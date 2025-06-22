@@ -10,16 +10,14 @@ export default async function CollectiveLayout({
 }: {
   children: React.ReactNode;
   params: Promise<{ slug: string }>;
-}) {
-  const { slug } = await params;
-  if (process.env.NODE_ENV === 'development') {
-    console.info('Rendering layout for collective slug:', slug);
-  }
+}): Promise<React.ReactNode> {
+  // Extract slug parameter (for future theme implementation)
+  await params;
 
-  return (
-    // <div style={style as React.CSSProperties}>
-    // Simplest pass-through for now
-    // </div>
-    <>{children}</>
-  );
+  // TODO: Log to proper logging service instead of console
+  // if (process.env.NODE_ENV === 'development') {
+  //   console.info('Rendering layout for collective slug:', slug);
+  // }
+
+  return children;
 }

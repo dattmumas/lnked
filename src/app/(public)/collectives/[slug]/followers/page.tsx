@@ -7,7 +7,7 @@ export default async function Page({
   params,
 }: {
   params: Promise<{ slug: string }>;
-}) {
+}): Promise<React.JSX.Element> {
   const { slug } = await params;
   const supabase = createServerSupabaseClient();
 
@@ -17,7 +17,7 @@ export default async function Page({
     .eq('slug', slug)
     .single();
 
-  if (collectiveError || !collectiveData) {
+  if (collectiveError !== null || collectiveData === null) {
     notFound();
   }
 
@@ -26,20 +26,24 @@ export default async function Page({
     .select('follower_id')
     .eq('following_id', collectiveData.id);
 
-  if (followersError) {
+  if (followersError !== null) {
     console.error('Error fetching followers:', followersError);
   }
 
   // Get user data for each follower
   const followers = [];
-  if (followersData && followersData.length > 0) {
+  if (
+    followersData !== null &&
+    followersData !== undefined &&
+    followersData.length > 0
+  ) {
     const followerIds = followersData.map((f) => f.follower_id);
     const { data: usersData } = await supabase
       .from('users')
       .select('id, full_name, avatar_url')
       .in('id', followerIds);
 
-    if (usersData) {
+    if (usersData !== null && usersData !== undefined) {
       followers.push(...usersData.map((user) => ({ follower: user })));
     }
   }
@@ -54,20 +58,24 @@ export default async function Page({
       ) : (
         <ul className="space-y-4">
           {followers
-            .filter((f) => f.follower)
+            .filter((f) => f.follower !== null && f.follower !== undefined)
             .map((f) => (
               <li key={f.follower.id} className="flex items-center gap-3">
-                {f.follower.avatar_url && (
-                  <Image
-                    src={f.follower.avatar_url}
-                    alt={`${f.follower.full_name ?? 'Follower'} avatar`}
-                    width={40}
-                    height={40}
-                    className="rounded-full object-cover"
-                  />
-                )}
+                {f.follower.avatar_url !== null &&
+                  f.follower.avatar_url !== undefined && (
+                    <Image
+                      src={f.follower.avatar_url}
+                      alt={`${f.follower.full_name ?? 'Follower'} avatar`}
+                      width={40}
+                      height={40}
+                      className="rounded-full object-cover"
+                    />
+                  )}
                 <span className="font-medium">
-                  {f.follower.full_name ?? 'User'}
+                  {f.follower.full_name !== null &&
+                  f.follower.full_name !== undefined
+                    ? f.follower.full_name
+                    : 'User'}
                 </span>
               </li>
             ))}

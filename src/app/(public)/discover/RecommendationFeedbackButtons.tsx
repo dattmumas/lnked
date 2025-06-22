@@ -1,12 +1,12 @@
-"use client";
+'use client';
 
-import { ThumbsUp, ThumbsDown } from "lucide-react";
-import { useEffect } from "react";
-import { useFormState, useFormStatus } from "react-dom";
+import { ThumbsUp, ThumbsDown } from 'lucide-react';
+import { useEffect } from 'react';
+import { useFormState, useFormStatus } from 'react-dom';
 
-import { Button } from "@/components/ui/button";
+import { Button } from '@/components/ui/button';
 
-import { logRecommendationFeedback } from "./_actions";
+import { logRecommendationFeedback } from './_actions';
 
 interface RecommendationFeedbackButtonsProps {
   collectiveId: string;
@@ -22,10 +22,10 @@ const initialState = {
 function SubmitButton({
   feedbackType,
 }: {
-  feedbackType: "recommended_interested" | "recommended_not_interested";
-}) {
+  feedbackType: 'recommended_interested' | 'recommended_not_interested';
+}): React.JSX.Element {
   const { pending } = useFormStatus();
-  const isInterested = feedbackType === "recommended_interested";
+  const isInterested = feedbackType === 'recommended_interested';
 
   return (
     <Button
@@ -36,31 +36,35 @@ function SubmitButton({
       size="sm"
       disabled={pending}
       aria-label={
-        isInterested ? "Mark as interested" : "Mark as not interested"
+        isInterested ? 'Mark as interested' : 'Mark as not interested'
       }
     >
       {pending ? (
-        "Submitting..."
+        'Submitting...'
       ) : isInterested ? (
         <ThumbsUp className="h-4 w-4 mr-1" />
       ) : (
         <ThumbsDown className="h-4 w-4 mr-1" />
       )}
-      {isInterested ? "Interested" : "Not Interested"}
+      {isInterested ? 'Interested' : 'Not Interested'}
     </Button>
   );
 }
 
 export default function RecommendationFeedbackButtons({
   collectiveId,
-}: RecommendationFeedbackButtonsProps) {
+}: RecommendationFeedbackButtonsProps): React.JSX.Element {
   const [state, formAction] = useFormState(
     logRecommendationFeedback,
-    initialState
+    initialState,
   );
 
   useEffect((): void => {
-    if (state.success && state.message) {
+    if (
+      state.success &&
+      state.message !== null &&
+      state.message !== undefined
+    ) {
       // Potential future use: trigger a toast notification or more complex UI update
     }
   }, [state.success, state.message]);
@@ -69,8 +73,10 @@ export default function RecommendationFeedbackButtons({
   // display the message and prevent further button submissions for this instance.
   if (
     state.success &&
-    (state.message === "Feedback recorded successfully." ||
-      state.message === "Feedback already recorded.")
+    state.message !== null &&
+    state.message !== undefined &&
+    (state.message === 'Feedback recorded successfully.' ||
+      state.message === 'Feedback already recorded.')
   ) {
     return <p className="text-xs text-accent mt-1">{state.message}</p>;
   }
@@ -80,7 +86,7 @@ export default function RecommendationFeedbackButtons({
       <input type="hidden" name="collectiveId" value={collectiveId} />
       <SubmitButton feedbackType="recommended_interested" />
       <SubmitButton feedbackType="recommended_not_interested" />
-      {state.error && (
+      {state.error !== null && state.error !== undefined && (
         <p className="text-xs text-destructive mt-1">Error: {state.error}</p>
       )}
       {/* More specific field errors can be displayed if needed from state.fieldErrors */}

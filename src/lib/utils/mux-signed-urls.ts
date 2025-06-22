@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken';
 // Constants
 const DEFAULT_EXPIRY_HOURS = 1;
 const SECONDS_PER_HOUR = 3600;
+const MILLISECONDS_PER_SECOND = 1000;
 
 interface MuxSigningConfig {
   keyId: string;
@@ -38,7 +39,7 @@ export function generateMuxSignedUrl(config: MuxSigningConfig): string | undefin
   try {
     // Calculate expiry time
     const expiryHours = config.expiryHours ?? DEFAULT_EXPIRY_HOURS;
-    const expiryTime = Math.floor(Date.now() / 1000) + (expiryHours * SECONDS_PER_HOUR);
+    const expiryTime = Math.floor(Date.now() / MILLISECONDS_PER_SECOND) + (expiryHours * SECONDS_PER_HOUR);
 
     // Create JWT payload
     const payload: TokenPayload = {

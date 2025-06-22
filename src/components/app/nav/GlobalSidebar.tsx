@@ -287,7 +287,7 @@ export default function GlobalSidebar(): React.ReactElement | undefined {
                 </div>
               )}
               <Link
-                href="/dashboard/collectives/new"
+                href="/collectives/new"
                 className={cn(
                   'flex items-center gap-2 px-2 py-1.5 rounded-md transition-all duration-200',
                   'text-sm text-muted-foreground hover:text-foreground hover:bg-accent/50',

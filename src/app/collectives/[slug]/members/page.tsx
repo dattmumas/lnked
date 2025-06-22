@@ -24,9 +24,9 @@ type PendingInvite = {
 export default async function ManageCollectiveMembersPage({
   params,
 }: {
-  params: Promise<{ collectiveId: string }>;
+  params: Promise<{ slug: string }>;
 }): Promise<React.ReactElement> {
-  const { collectiveId } = await params;
+  const { slug } = await params;
   const supabase = createServerSupabaseClient();
 
   const {
@@ -40,13 +40,13 @@ export default async function ManageCollectiveMembersPage({
 
   const { data: collective, error: collectiveError } = await supabase
     .from('collectives')
-    .select('id, name, owner_id')
-    .eq('id', collectiveId)
+    .select('id, name, slug, owner_id')
+    .eq('slug', slug)
     .single();
 
   if (collectiveError !== null || collective === null) {
     console.error(
-      `Error fetching collective ${collectiveId} for member management:`,
+      `Error fetching collective ${slug} for member management:`,
       collectiveError?.message,
     );
     notFound();
@@ -55,7 +55,7 @@ export default async function ManageCollectiveMembersPage({
   // Permission check: Only owner can manage members (for now, can be expanded to admin role members)
   if (collective.owner_id !== currentUser.id) {
     console.warn(
-      `User ${currentUser.id} attempted to manage members for collective ${collectiveId} without ownership.`,
+      `User ${currentUser.id} attempted to manage members for collective ${collective.id} without ownership.`,
     );
     // redirect('/dashboard'); // Or a more specific unauthorized page
     notFound();
@@ -71,12 +71,12 @@ export default async function ManageCollectiveMembersPage({
       user:users!user_id(id, full_name)
     `,
     )
-    .eq('collective_id', collectiveId)
+    .eq('collective_id', collective.id)
     .order('created_at', { ascending: true });
 
   if (membersError !== null) {
     console.error(
-      `Error fetching members for collective ${collectiveId}:`,
+      `Error fetching members for collective ${collective.id}:`,
       membersError.message,
     );
     // Handle error, maybe show empty list with an error message
@@ -85,13 +85,13 @@ export default async function ManageCollectiveMembersPage({
   const { data: pendingInvites, error: invitesError } = await supabase
     .from('collective_invites')
     .select('id, email, role, status, created_at, invite_code')
-    .eq('collective_id', collectiveId)
+    .eq('collective_id', collective.id)
     .eq('status', 'pending')
     .order('created_at', { ascending: true });
 
   if (invitesError !== null) {
     console.error(
-      `Error fetching pending invites for collective ${collectiveId}:`,
+      `Error fetching pending invites for collective ${collective.id}:`,
       invitesError.message,
     );
   }
@@ -102,8 +102,11 @@ export default async function ManageCollectiveMembersPage({
         <h1 className="text-3xl font-bold">
           Manage Members for: {collective.name}
         </h1>
-        <Link href="/dashboard" className="text-sm text-accent hover:underline">
-          &larr; Back to Dashboard
+        <Link
+          href="/collectives"
+          className="text-sm text-accent hover:underline"
+        >
+          &larr; Back to Collectives
         </Link>
       </header>
       <ManageMembersClientUI

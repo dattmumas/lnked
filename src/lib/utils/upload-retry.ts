@@ -140,7 +140,7 @@ export async function withRetry<T>(
   const { maxRetries = DEFAULT_MAX_RETRIES } = config;
   const startTime = Date.now();
   
-  let lastError: RetryableError | null = null;
+  let lastError: RetryableError | undefined = undefined;
   
   for (let attempt = 1; attempt <= maxRetries + 1; attempt++) {
     try {
@@ -179,13 +179,13 @@ export async function withRetry<T>(
   }
   
   // This should never be reached, but TypeScript requires it
-  throw lastError || new Error('Unknown error occurred during retry attempts');
+  throw lastError ?? new Error('Unknown error occurred during retry attempts');
 }
 
 /**
  * Creates a retryable fetch wrapper with enhanced error handling
  */
-export function createRetryableFetch(config: RetryConfig = {}) {
+export function createRetryableFetch(config: RetryConfig = {}): (url: string, options?: RequestInit) => Promise<Response> {
   return async function retryableFetch(
     url: string, 
     options: RequestInit = {}
@@ -231,7 +231,7 @@ export function createRetryableFetch(config: RetryConfig = {}) {
 /**
  * Upload-specific retry wrapper with progress preservation
  */
-export async function withUploadRetry<T>(
+export function withUploadRetry<T>(
   uploadOperation: (onProgress?: (progress: number) => void) => Promise<T>,
   config: RetryConfig & { 
     onProgress?: (progress: number) => void;
@@ -295,11 +295,11 @@ export function createUploadStateManager(
     ...initialState
   };
   
-  const updateState = (updates: Partial<UploadState>) => {
+  const updateState = (updates: Partial<UploadState>): void => {
     state = { ...state, ...updates };
   };
   
-  const setRetrying = (attempt: number, maxRetries: number, error: string) => {
+  const setRetrying = (attempt: number, maxRetries: number, error: string): void => {
     updateState({
       status: 'retrying',
       retryAttempt: attempt,
@@ -309,7 +309,7 @@ export function createUploadStateManager(
     });
   };
   
-  const setFailed = (error: string, isRetryable: boolean) => {
+  const setFailed = (error: string, isRetryable: boolean): void => {
     updateState({
       status: 'failed',
       error,
@@ -317,7 +317,7 @@ export function createUploadStateManager(
     });
   };
   
-  const reset = () => {
+  const reset = (): void => {
     state = {
       status: 'idle',
       progress: 0

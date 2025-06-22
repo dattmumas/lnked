@@ -8,7 +8,7 @@ export default async function Page({
   params,
 }: {
   params: Promise<{ slug: string }>;
-}) {
+}): Promise<React.JSX.Element> {
   const { slug } = await params;
 
   return <CollectiveLayout collectiveSlug={slug} />;

@@ -1,7 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { cookies } from 'next/headers';
+
 
 import {
   CreatePostServerSchema,
@@ -194,7 +194,6 @@ interface CreatePostResult {
 export async function createPost(
   formData: CreatePostFormValues,
 ): Promise<CreatePostResult> {
-  const cookieStore = cookies();
   const supabase = createServerSupabaseClient();
 
   const {
@@ -368,7 +367,6 @@ export async function updatePost(
   postId: string,
   formData: UpdatePostClientValues,
 ): Promise<UpdatePostResult> {
-  const cookieStore = cookies();
   const supabase = createServerSupabaseClient();
 
   const {
@@ -554,7 +552,6 @@ interface DeletePostResult {
 }
 
 export async function deletePost(postId: string): Promise<DeletePostResult> {
-  const cookieStore = cookies();
   const supabase = createServerSupabaseClient();
 
   const {
@@ -615,7 +612,6 @@ export async function incrementPostViewCount(
   }
   
   try {
-    const cookieStore = cookies();
     const supabase = createServerSupabaseClient();
     
     // Use the existing RPC function (rate limiting would need to be implemented in the RPC function itself)
@@ -646,7 +642,6 @@ export async function featurePost(
   postId: string,
   feature: boolean,
 ): Promise<FeaturePostResult> {
-  const cookieStore = cookies();
   const supabase = createServerSupabaseClient();
 
   const {
@@ -702,7 +697,6 @@ export async function uploadThumbnail(
   formData: FormData,
   postId?: string
 ): Promise<{ success: boolean; thumbnailUrl?: string; error?: string }> {
-  const cookieStore = cookies();
   const supabase = createServerSupabaseClient();
 
   const {

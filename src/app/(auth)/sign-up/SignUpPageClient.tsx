@@ -13,7 +13,17 @@ import {
 } from '@/lib/auth-utils';
 import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
 
-export default function SignUpPage() {
+// Constants for magic numbers
+const MIN_FULLNAME_LENGTH = 2;
+const MAX_FULLNAME_LENGTH = 100;
+const MIN_USERNAME_LENGTH = 3;
+const MAX_USERNAME_LENGTH = 20;
+const RATE_LIMIT_ATTEMPTS = 3;
+const RATE_LIMIT_WINDOW_MS = 60000; // 1 minute
+const AUTH_MAX_RETRIES = 2;
+const AUTH_RETRY_DELAY_MS = 2000;
+
+export default function SignUpPage(): React.JSX.Element {
   const router = useRouter();
   const supabase = createSupabaseBrowserClient();
   const [error, setError] = useState<string | undefined>(undefined);
@@ -22,7 +32,9 @@ export default function SignUpPage() {
   const [rateLimitMessage, setRateLimitMessage] = useState<string | undefined>(
     undefined,
   );
-  const rateLimiterRef = useRef(new RateLimiter(3, 60000)); // 3 attempts per minute for sign-up
+  const rateLimiterRef = useRef(
+    new RateLimiter(RATE_LIMIT_ATTEMPTS, RATE_LIMIT_WINDOW_MS),
+  );
 
   const handleSignUp = useCallback(
     async (formData: Record<string, string>) => {
@@ -41,19 +53,29 @@ export default function SignUpPage() {
 
       const { fullName } = formData;
       if (
-        !fullName ||
-        fullName.trim().length < 2 ||
-        fullName.trim().length > 100
+        fullName === null ||
+        fullName === undefined ||
+        fullName.trim().length < MIN_FULLNAME_LENGTH ||
+        fullName.trim().length > MAX_FULLNAME_LENGTH
       ) {
-        setError('Full name must be between 2 and 100 characters long');
+        setError(
+          `Full name must be between ${MIN_FULLNAME_LENGTH} and ${MAX_FULLNAME_LENGTH} characters long`,
+        );
         setIsLoading(false);
         return;
       }
 
       // Validate username format
       const { username } = formData;
-      if (!username || username.length < 3 || username.length > 20) {
-        setError('Username must be between 3 and 20 characters long');
+      if (
+        username === null ||
+        username === undefined ||
+        username.length < MIN_USERNAME_LENGTH ||
+        username.length > MAX_USERNAME_LENGTH
+      ) {
+        setError(
+          `Username must be between ${MIN_USERNAME_LENGTH} and ${MAX_USERNAME_LENGTH} characters long`,
+        );
         setIsLoading(false);
         return;
       }
@@ -77,7 +99,7 @@ export default function SignUpPage() {
           .eq('username', username)
           .single();
 
-        if (existingUser) {
+        if (existingUser !== null) {
           setError('Username is already taken. Please choose another one.');
           setIsLoading(false);
           return;
@@ -96,11 +118,11 @@ export default function SignUpPage() {
                 // emailRedirectTo: `${window.location.origin}/auth/callback`, // Uncomment if email confirmation is enabled
               },
             }),
-          2, // Max 2 retries for auth requests
-          2000, // 2 second base delay
+          AUTH_MAX_RETRIES,
+          AUTH_RETRY_DELAY_MS,
         );
 
-        if (signUpError) {
+        if (signUpError !== null) {
           // Handle rate limit errors specifically
           if (isRateLimitError(signUpError)) {
             setRateLimitMessage(
@@ -111,18 +133,19 @@ export default function SignUpPage() {
 
           setError(getAuthErrorMessage(signUpError));
         } else if (
-          data.user &&
-          data.user.identities &&
+          data.user !== null &&
+          data.user.identities !== null &&
+          data.user.identities !== undefined &&
           data.user.identities.length === 0
         ) {
           setError(
             'This email may already be registered but not confirmed. Please check your email or try signing in.',
           );
-        } else if (data.session) {
+        } else if (data.session !== null) {
           setMessage('Sign up successful! Redirecting...');
           void router.push('/dashboard');
           void router.refresh(); // Ensure the layout re-renders with the new auth state
-        } else if (data.user) {
+        } else if (data.user !== null) {
           setMessage(
             'Sign up successful! Please check your email to confirm your account before signing in.',
           );
@@ -155,7 +178,7 @@ export default function SignUpPage() {
       mode="signUp"
       onSubmit={handleSignUp}
       isLoading={isLoading}
-      error={error || rateLimitMessage}
+      error={error !== undefined ? error : rateLimitMessage}
       message={message}
     />
   );

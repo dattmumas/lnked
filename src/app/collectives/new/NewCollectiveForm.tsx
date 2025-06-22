@@ -104,8 +104,8 @@ export default function NewCollectivePage(): React.ReactElement {
             setName('');
             setSlug('');
             setDescription('');
-            // Redirect to the new collective's page or dashboard
-            void router.push(`/dashboard`); // Or `/collectives/${result.data.slug}` once that page exists
+            // Redirect to the new collective's dashboard
+            void router.push(`/collectives/${result.data.slug}/dashboard`);
             void router.refresh();
           } else {
             setError('An unexpected error occurred.');

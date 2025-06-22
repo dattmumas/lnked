@@ -49,7 +49,7 @@ const mainNavItems = [
     label: 'Videos',
   },
   {
-    href: '/dashboard/collectives',
+    href: '/collectives',
     icon: Users2,
     label: 'Collectives',
   },
@@ -94,7 +94,7 @@ export function SidebarNav({
         >
           {mainNavItems.map((item) => {
             // Handle collectives toggle in expanded mode
-            if (item.href === '/dashboard/collectives' && !collapsed) {
+            if (item.href === '/collectives' && !collapsed) {
               return (
                 <div key={item.href}>
                   <div className="flex items-center">
@@ -135,12 +135,12 @@ export function SidebarNav({
                             className="flex items-center justify-between pr-component group"
                           >
                             <SidebarLink
-                              href={`/dashboard/collectives/${col.id}`}
+                              href={`/collectives/${col.slug}/dashboard`}
                               icon={Users2}
                               label={col.name}
                             />
                             <Link
-                              href={`/${col.slug}`}
+                              href={`/collectives/${col.slug}`}
                               className="text-content-secondary hover:text-content-accent transition-colors transition-fast micro-interaction opacity-0 group-hover:opacity-100"
                               aria-label={`View ${col.name}`}
                             >
@@ -178,7 +178,7 @@ export function SidebarNav({
               {collectives.map((col) => (
                 <SidebarLink
                   key={col.id}
-                  href={`/dashboard/collectives/${col.id}`}
+                  href={`/collectives/${col.slug}/dashboard`}
                   icon={Users2}
                   label={col.name}
                   collapsed

@@ -9,6 +9,8 @@ import { useDebounce } from '@/hooks/useDebounce';
 
 // Constants
 const SEARCH_DEBOUNCE_MS = 300;
+const HTTP_UNAUTHORIZED = 401;
+const MAX_RETRY_ATTEMPTS = 2;
 
 interface Collective {
   id: string;
@@ -81,7 +83,7 @@ export function CollectiveChannelsSidebar({
         },
       );
       if (!res.ok) {
-        if (res.status === 401) {
+        if (res.status === HTTP_UNAUTHORIZED) {
           console.warn('Authentication required for channels');
           return [];
         }
@@ -94,7 +96,7 @@ export function CollectiveChannelsSidebar({
       if (error instanceof Error && error.message.includes('401')) {
         return false;
       }
-      return failureCount < 2;
+      return failureCount < MAX_RETRY_ATTEMPTS;
     },
   });
 
@@ -109,7 +111,7 @@ export function CollectiveChannelsSidebar({
         },
       });
       if (!res.ok) {
-        if (res.status === 401) {
+        if (res.status === HTTP_UNAUTHORIZED) {
           // Silent fail for auth issues to prevent crashes
           console.warn('Authentication required for direct messages');
           return [];
@@ -124,7 +126,7 @@ export function CollectiveChannelsSidebar({
       if (error instanceof Error && error.message.includes('401')) {
         return false;
       }
-      return failureCount < 2;
+      return failureCount < MAX_RETRY_ATTEMPTS;
     },
   });
 

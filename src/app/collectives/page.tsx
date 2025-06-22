@@ -87,7 +87,7 @@ export default async function MyCollectivesPage(): Promise<React.ReactElement> {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-2">
         <h1 className="text-2xl font-serif font-semibold">My Collectives</h1>
         <Button asChild size="sm" className="w-full md:w-auto">
-          <Link href="/dashboard/collectives/new">
+          <Link href="/collectives/new">
             <Plus className="h-4 w-4 mr-2" /> Create New Collective
           </Link>
         </Button>
@@ -100,9 +100,7 @@ export default async function MyCollectivesPage(): Promise<React.ReactElement> {
             You haven&apos;t created or joined any collectives.
           </p>
           <Button asChild>
-            <Link href="/dashboard/collectives/new">
-              Create Your First Collective
-            </Link>
+            <Link href="/collectives/new">Create Your First Collective</Link>
           </Button>
           <p className="text-sm text-muted-foreground mt-4">
             Or{' '}

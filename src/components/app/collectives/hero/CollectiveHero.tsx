@@ -165,7 +165,7 @@ export function CollectiveHero({
 
             {isOwner && (
               <Button variant="outline" size="sm" asChild>
-                <a href={`/dashboard/collectives/${collective.id}/settings`}>
+                <a href={`/collectives/${collective.slug}/settings`}>
                   Manage Collective
                 </a>
               </Button>

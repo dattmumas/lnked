@@ -15,9 +15,9 @@ type SubscriptionTier = Database['public']['Tables']['prices']['Row'];
 export default async function CollectiveSettingsPage({
   params,
 }: {
-  params: Promise<{ collectiveId: string }>;
+  params: Promise<{ slug: string }>;
 }): Promise<React.ReactElement> {
-  const { collectiveId } = await params;
+  const { slug } = await params;
   const supabase = createServerSupabaseClient();
 
   const {
@@ -32,7 +32,7 @@ export default async function CollectiveSettingsPage({
   const { data: collective, error: collectiveError } = await supabase
     .from('collectives')
     .select('id, name, slug, description, tags, owner_id')
-    .eq('id', collectiveId)
+    .eq('slug', slug)
     .single();
 
   if (
@@ -41,7 +41,7 @@ export default async function CollectiveSettingsPage({
     collective === undefined
   ) {
     console.error(
-      `Error fetching collective ${collectiveId} for settings:`,
+      `Error fetching collective ${slug} for settings:`,
       collectiveError?.message,
     );
     redirect('/error');
@@ -76,7 +76,7 @@ export default async function CollectiveSettingsPage({
   const { data: members } = (await supabase
     .from('collective_members')
     .select('user:users!user_id(id, full_name)')
-    .eq('collective_id', collectiveId)) as { data: MemberWithUser[] | null };
+    .eq('collective_id', collective.id)) as { data: MemberWithUser[] | null };
   const eligibleMembers = (members ?? [])
     .map((m) => m.user)
     .filter(
@@ -89,7 +89,7 @@ export default async function CollectiveSettingsPage({
     .select(
       'id, unit_amount, currency, interval, description, active, product:products!product_id(collective_id)',
     )
-    .eq('product.collective_id', collectiveId)
+    .eq('product.collective_id', collective.id)
     .order('unit_amount', { ascending: true })) as {
     data: SubscriptionTier[] | null;
   };

@@ -1,5 +1,5 @@
 import SignInPageClient from './SignInPageClient';
 
-export default function SignInPage() {
+export default function SignInPage(): React.JSX.Element {
   return <SignInPageClient />;
 }

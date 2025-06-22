@@ -5,7 +5,7 @@ export const metadata: Metadata = {
   description: 'Privacy Policy for Lnked platform',
 };
 
-export default function PrivacyPage() {
+export default function PrivacyPage(): React.JSX.Element {
   return (
     <div className="container mx-auto px-4 py-8 max-w-4xl">
       <div className="prose prose-gray dark:prose-invert max-w-none">
@@ -86,7 +86,7 @@ export default function PrivacyPage() {
           policy does not cover their practices.
         </p>
 
-        <h2>8. Children's Privacy</h2>
+        <h2>8. Children&apos;s Privacy</h2>
         <p>
           Our service is not intended for children under 13. We do not knowingly
           collect personal information from children under 13.
