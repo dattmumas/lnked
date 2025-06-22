@@ -54,13 +54,18 @@ export async function GET(request: NextRequest, context: { params: Promise<{ con
     )
     .eq('conversation_id', conversationId);
 
+  // For pagination, get messages older than the cursor
   if (beforeIso !== null && beforeIso !== undefined) {
     msgQuery = msgQuery.lt('created_at', beforeIso);
   }
 
-  const { data: messages, error: msgErr } = await msgQuery
+  // First get messages newest-first to get the most recent ones
+  const { data: messagesDesc, error: msgErr } = await msgQuery
     .order('created_at', { ascending: false })
     .limit(limit);
+
+  // Then reverse to oldest-first for display
+  const messages = messagesDesc?.reverse() ?? [];
 
   if (msgErr !== null) {
     return NextResponse.json({ error: msgErr.message }, { status: HttpStatus.INTERNAL_SERVER_ERROR });

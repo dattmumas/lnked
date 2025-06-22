@@ -2,172 +2,23 @@
 
 import { Send, Loader2, X } from 'lucide-react';
 import {
-  useEffect,
   useState,
   useRef,
   useCallback,
-  useMemo,
+  useEffect,
   useLayoutEffect,
 } from 'react';
-
-// import { useChat } from '@/lib/hooks/use-chat'; // Temporarily disabled due to server import issue
-
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { useUser } from '@/hooks/useUser';
-import { useChatV2 } from '@/lib/hooks/use-chat-v2';
-
 import { VirtualMessageList } from './virtual-message-list';
-
-import type { MessageWithSender } from '@/lib/chat/types';
+import { useChatUIStore } from '@/lib/stores/chat-ui-store';
+import { useConversation } from '@/lib/hooks/chat/use-conversations';
+import { useMessages, useSendMessage } from '@/lib/hooks/chat/use-messages';
+import { useMarkAsRead } from '@/lib/hooks/chat/use-conversations';
 
 interface ChatPanelProps {
   conversationId: string;
   className?: string;
-}
-
-// Constants
-const TYPING_DEBOUNCE_DELAY = 3000; // 3 seconds
-
-// Loading state component
-function LoadingSpinner({
-  children,
-}: {
-  children: React.ReactNode;
-}): React.ReactElement {
-  return (
-    <div className="flex items-center justify-center h-full">
-      <div className="flex items-center gap-2">
-        <div
-          className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"
-          role="status"
-          aria-live="polite"
-        />
-        {children}
-      </div>
-    </div>
-  );
-}
-
-// Empty state component
-function EmptyState({
-  variant,
-}: {
-  variant: 'no-conversation' | 'no-messages';
-}): React.ReactElement {
-  if (variant === 'no-conversation') {
-    return (
-      <div className="flex items-center justify-center h-full">
-        <div className="text-center">
-          <svg
-            className="w-12 h-12 mx-auto mb-4 text-muted-foreground/50"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-            aria-hidden="true"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
-            />
-          </svg>
-          <p className="text-lg font-medium mb-2">No conversation selected</p>
-          <p className="text-sm text-muted-foreground">
-            Choose a conversation to start messaging
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="flex items-center justify-center text-center p-8">
-      <div>
-        <p className="text-muted-foreground mb-2">No messages yet</p>
-        <p className="text-sm text-muted-foreground">
-          Start the conversation by sending a message below
-        </p>
-      </div>
-    </div>
-  );
-}
-
-// Error state component
-function ErrorState({
-  error,
-  onRetry,
-}: {
-  error: string;
-  onRetry: () => void;
-}): React.ReactElement {
-  return (
-    <div className="flex items-center justify-center h-full">
-      <div className="text-center">
-        <p className="text-destructive mb-2">Error: {error}</p>
-        <button
-          onClick={onRetry}
-          className="text-sm text-primary hover:underline"
-        >
-          Try again
-        </button>
-      </div>
-    </div>
-  );
-}
-
-// Custom hook for typing indicator
-function useTypingIndicator(chat: ReturnType<typeof useChatV2>): {
-  isTyping: boolean;
-  startTyping: () => void;
-  stopTyping: () => void;
-} {
-  const [isTyping, setIsTyping] = useState(false);
-  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-
-  const startTyping = useCallback((): void => {
-    // Clear any existing timeout first to avoid double scheduling
-    if (typingTimeoutRef.current !== null) {
-      clearTimeout(typingTimeoutRef.current);
-      typingTimeoutRef.current = null;
-    }
-
-    // Start typing if not already typing
-    if (!isTyping) {
-      setIsTyping(true);
-      void chat.startTyping();
-    }
-
-    // Set debounced stop timeout
-    typingTimeoutRef.current = setTimeout(() => {
-      setIsTyping(false);
-      void chat.stopTyping();
-      typingTimeoutRef.current = null;
-    }, TYPING_DEBOUNCE_DELAY);
-  }, [isTyping, chat]);
-
-  const stopTyping = useCallback((): void => {
-    if (typingTimeoutRef.current !== null) {
-      clearTimeout(typingTimeoutRef.current);
-      typingTimeoutRef.current = null;
-    }
-    if (isTyping) {
-      setIsTyping(false);
-      void chat.stopTyping();
-    }
-  }, [isTyping, chat]);
-
-  // Cleanup on unmount
-  useEffect(() => {
-    return (): void => {
-      if (typingTimeoutRef.current !== null) {
-        clearTimeout(typingTimeoutRef.current);
-      }
-    };
-  }, []);
-
-  return { isTyping, startTyping, stopTyping };
 }
 
 export function ChatPanel({
@@ -175,55 +26,53 @@ export function ChatPanel({
   className,
 }: ChatPanelProps): React.ReactElement {
   const { user } = useUser();
-  const chat = useChatV2();
-  const { startTyping, stopTyping } = useTypingIndicator(chat);
-
   const [message, setMessage] = useState('');
-  const [replyTarget, setReplyTarget] = useState<MessageWithSender | null>(
-    null,
-  );
-
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const didSendRef = useRef(false);
+  const hasMarkedAsReadRef = useRef<string | null>(null);
 
-  // Get conversation details and data
-  const conversation = chat.activeConversation;
+  // UI State from Zustand
+  const { setActiveConversation, getReplyTarget, setReplyTarget } =
+    useChatUIStore();
 
-  // Efficient message deduplication using Set
-  const messages = useMemo(() => {
-    const rawMessages = chat.messages;
-    if (
-      rawMessages === null ||
-      rawMessages === undefined ||
-      rawMessages.length === 0
-    ) {
-      return [];
-    }
+  // Server state from React Query
+  const conversation = useConversation(conversationId);
+  const {
+    messages,
+    isLoading,
+    hasNextPage,
+    fetchNextPage,
+    isFetchingNextPage,
+  } = useMessages(conversationId);
 
-    const seen = new Set<string>();
-    return rawMessages.filter((message) => {
-      if (seen.has(message.id)) {
-        return false;
-      }
-      seen.add(message.id);
-      return true;
-    });
-  }, [chat.messages]);
+  const sendMessage = useSendMessage();
+  const markAsRead = useMarkAsRead();
 
-  const isLoading = chat.isLoadingMessages;
-  const { isLoadingConversations, isSendingMessage, error } = chat;
+  // Get reply target from UI store
+  const replyTargetId = getReplyTarget(conversationId);
+  const replyTarget = messages.find((m) => m.id === replyTargetId) || null;
 
-  // Load initial conversation when conversationId changes
-  // Extract setActiveConversation to avoid including entire chat object in deps
-  const { setActiveConversation } = chat;
-
+  // Set active conversation when component mounts or conversationId changes
   useEffect(() => {
-    if (conversationId && conversation?.id !== conversationId) {
-      void setActiveConversation(conversationId);
-    }
-  }, [conversationId, conversation?.id, setActiveConversation]);
+    setActiveConversation(conversationId);
+    return () => {
+      // Don't clear active conversation on unmount to prevent flicker
+    };
+  }, [conversationId, setActiveConversation]);
 
-  // Handle focus management after message sends - runs after DOM commit but before paint
+  // Mark conversation as read when first viewing
+  useEffect(() => {
+    if (
+      conversationId &&
+      conversation &&
+      hasMarkedAsReadRef.current !== conversationId
+    ) {
+      hasMarkedAsReadRef.current = conversationId;
+      markAsRead.mutate(conversationId);
+    }
+  }, [conversationId, conversation, markAsRead.mutate]);
+
+  // Handle focus management after message sends
   useLayoutEffect(() => {
     if (didSendRef.current) {
       inputRef.current?.focus();
@@ -232,116 +81,91 @@ export function ChatPanel({
   });
 
   const handleSendMessage = useCallback(async (): Promise<void> => {
-    if (!message.trim() || conversation === null || conversation === undefined)
-      return;
+    if (!message.trim() || !conversation) return;
 
     const trimmedMessage = message.trim();
     setMessage('');
-    stopTyping();
-    didSendRef.current = true; // Mark that we just sent a message
+    didSendRef.current = true;
 
     try {
-      const result = await chat.sendMessage({
+      await sendMessage.mutateAsync({
         content: trimmedMessage,
         message_type: 'text',
-        ...(replyTarget ? { reply_to_id: replyTarget.id } : {}),
+        ...(replyTargetId ? { reply_to_id: replyTargetId } : {}),
       });
 
-      if (result) {
-        // Clear reply target on successful send
-        setReplyTarget(null);
-      } else {
-        // Restore message if send failed
-        setMessage(trimmedMessage);
-        didSendRef.current = true; // Still want to refocus on failure
-      }
+      // Clear reply target on success
+      setReplyTarget(conversationId, null);
     } catch (error) {
-      console.error('Failed to send message:', error);
       // Restore message on error
       setMessage(trimmedMessage);
-      didSendRef.current = true; // Still want to refocus on error
+      console.error('Failed to send message:', error);
     }
-  }, [message, conversation, replyTarget, chat, stopTyping]);
+  }, [
+    message,
+    conversation,
+    conversationId,
+    replyTargetId,
+    sendMessage,
+    setReplyTarget,
+  ]);
 
   const handleKeyPress = useCallback(
     (e: React.KeyboardEvent): void => {
       if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
         void handleSendMessage();
-      } else if (e.key === 'Escape' && replyTarget) {
-        setReplyTarget(null);
+      } else if (e.key === 'Escape' && replyTargetId) {
+        setReplyTarget(conversationId, null);
       }
     },
-    [handleSendMessage, replyTarget],
+    [handleSendMessage, replyTargetId, conversationId, setReplyTarget],
   );
 
   const handleInputChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>): void => {
-      const { value } = e.target;
-      setMessage(value);
-
-      // Clear reply target on manual edit if send failed previously
-      if (replyTarget && value.length === 0) {
-        setReplyTarget(null);
-      }
-
-      if (value.length > 0) {
-        startTyping();
-      } else {
-        stopTyping();
-      }
+    (e: React.ChangeEvent<HTMLTextAreaElement>): void => {
+      setMessage(e.target.value);
     },
-    [replyTarget, startTyping, stopTyping],
+    [],
   );
 
   const handleLoadMore = useCallback((): void => {
-    if (chat.hasMoreMessages && !chat.isLoadingMessages) {
-      void chat.loadMoreMessages();
+    if (hasNextPage && !isFetchingNextPage) {
+      void fetchNextPage();
     }
-  }, [chat.hasMoreMessages, chat.isLoadingMessages, chat.loadMoreMessages]);
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   const handleMessageInView = useCallback((messageId: string): void => {
-    // Mark message as read when it comes into view
-    // TODO: Implement message tracking logic when message comes into view
-    // This would typically mark the message as read and update read receipts
-    void messageId; // Acknowledge parameter to avoid unused parameter warning
+    // This could be used for read receipts
+    void messageId;
   }, []);
 
   const clearReply = useCallback((): void => {
-    setReplyTarget(null);
-    didSendRef.current = true; // Trigger focus via useLayoutEffect
-  }, []);
+    setReplyTarget(conversationId, null);
+    didSendRef.current = true;
+  }, [conversationId, setReplyTarget]);
 
-  const handleRetry = useCallback((): void => {
-    chat.clearError();
-  }, [chat]);
-
-  const handleSendClick = useCallback((): void => {
-    void handleSendMessage();
-  }, [handleSendMessage]);
-
-  // Error display
-  if (error !== null && error !== undefined) {
+  // Loading state
+  if (!conversation && isLoading) {
     return (
-      <div className={className}>
-        <ErrorState error={error} onRetry={handleRetry} />
-      </div>
-    );
-  }
-
-  // Loading state for conversations
-  if (isLoadingConversations) {
-    return (
-      <div className={className}>
-        <LoadingSpinner>Loading conversations...</LoadingSpinner>
+      <div className={`flex items-center justify-center h-full ${className}`}>
+        <div className="flex items-center gap-2">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          Loading...
+        </div>
       </div>
     );
   }
 
   if (!conversation) {
     return (
-      <div className={className}>
-        <EmptyState variant="no-conversation" />
+      <div className={`flex items-center justify-center h-full ${className}`}>
+        <div className="text-center">
+          <p className="text-lg font-medium mb-2">No conversation selected</p>
+          <p className="text-sm text-muted-foreground">
+            Choose a conversation to start messaging
+          </p>
+        </div>
       </div>
     );
   }
@@ -354,8 +178,8 @@ export function ChatPanel({
         currentUserId={user?.id ?? ''}
         conversationId={conversationId}
         onLoadMore={handleLoadMore}
-        hasMore={chat.hasMoreMessages}
-        isLoading={isLoading}
+        hasMore={hasNextPage}
+        isLoading={isFetchingNextPage}
         onMessageInView={handleMessageInView}
       />
 
@@ -380,9 +204,7 @@ export function ChatPanel({
               <p className="text-xs text-muted-foreground">
                 Replying to{' '}
                 <span className="font-medium">
-                  {replyTarget.sender?.username ??
-                    replyTarget.sender?.full_name ??
-                    'Unknown'}
+                  {replyTarget.sender?.username ?? 'Unknown'}
                 </span>
                 <span className="ml-2 text-xs opacity-60">(Esc to cancel)</span>
               </p>
@@ -419,7 +241,7 @@ export function ChatPanel({
                     : 'Type a message...'
                 }
                 className="w-full min-h-[48px] max-h-[120px] resize-none rounded-2xl bg-background px-4 py-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary disabled:cursor-not-allowed disabled:opacity-50"
-                disabled={isSendingMessage}
+                disabled={sendMessage.isPending}
                 aria-label="Message input"
                 rows={1}
                 style={{
@@ -444,18 +266,14 @@ export function ChatPanel({
             </div>
 
             <Button
-              onClick={handleSendClick}
-              disabled={!message.trim() || isSendingMessage}
+              onClick={() => void handleSendMessage()}
+              disabled={!message.trim() || sendMessage.isPending}
               size="icon"
               className="h-12 w-12 rounded-full"
               aria-label="Send message"
             >
-              {isSendingMessage ? (
-                <Loader2
-                  className="h-5 w-5 animate-spin"
-                  role="status"
-                  aria-live="polite"
-                />
+              {sendMessage.isPending ? (
+                <Loader2 className="h-5 w-5 animate-spin" />
               ) : (
                 <Send className="h-5 w-5" />
               )}

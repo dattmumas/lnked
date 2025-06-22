@@ -171,24 +171,26 @@ export const useChatV2 = (): UseChatV2Return => {
 
       const newMessages = await chatApiClient.getMessages(conversationId, options);
       
-      // API returns messages newest-first, but we want oldest-first for display
-      const sortedMessages = [...newMessages].reverse();
+      // API now returns messages oldest-first, no reversal needed
       
       // Single setState to prevent race conditions
       setState(prev => {
         const messages = loadMore 
-          ? [...sortedMessages, ...prev.messages]
-          : sortedMessages;
+          ? [...prev.messages, ...newMessages]
+          : newMessages;
         
         // Deduplicate messages to prevent real-time duplicates
         const uniqueMessages = Array.from(
           new Map(messages.map(m => [m.id, m])).values()
         );
         
-        // Update oldest timestamp ref
-        const oldestMessage = uniqueMessages[0];
-        if (oldestMessage?.created_at) {
-          oldestTimestampRef.current = oldestMessage.created_at;
+        // Update oldest timestamp ref for pagination
+        if (loadMore && uniqueMessages.length > 0) {
+          // When loading more, we need the oldest message timestamp
+          const oldestMessage = uniqueMessages[0];
+          if (oldestMessage?.created_at) {
+            oldestTimestampRef.current = oldestMessage.created_at;
+          }
         }
         
         return {
@@ -196,7 +198,7 @@ export const useChatV2 = (): UseChatV2Return => {
           messages: uniqueMessages,
           isLoadingMessages: false,
           hasMoreMessages: newMessages.length === MESSAGES_PER_PAGE,
-          oldestMessageTimestamp: oldestMessage?.created_at ?? undefined,
+          oldestMessageTimestamp: uniqueMessages[0]?.created_at ?? undefined,
         };
       });
     } catch (error) {

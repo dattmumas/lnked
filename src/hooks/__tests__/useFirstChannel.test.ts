@@ -82,7 +82,7 @@ describe('useFirstChannel', () => {
 
     // Trigger reload
     act(() => {
-      result.current.reload();
+    result.current.reload();
     });
 
     await waitFor(() => {
@@ -127,7 +127,7 @@ describe('useFirstChannel', () => {
 
     // Rerender with null collectiveId
     act(() => {
-      rerender({ collectiveId: null });
+    rerender({ collectiveId: null });
     });
 
     expect(result.current.channel).toBeNull();

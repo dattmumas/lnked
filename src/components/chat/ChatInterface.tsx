@@ -7,7 +7,7 @@ import { useFirstChannel } from '@/hooks/useFirstChannel';
 import { useToast } from '@/hooks/useToast';
 import { useUser } from '@/hooks/useUser';
 import { CHAT_HEADER_HEIGHT } from '@/lib/constants/chat';
-import { useChatV2 } from '@/lib/hooks/use-chat-v2';
+import { useChatUIStore } from '@/lib/stores/chat-ui-store';
 
 import { CenteredSpinner } from '../ui/CenteredSpinner';
 
@@ -43,8 +43,8 @@ export default function ChatInterface({
   const { channel: firstChannel, error: firstChannelError } =
     useFirstChannel(activeCollectiveId);
 
-  // Get chat state for typing indicators (destructure for memoization)
-  const { typingUsers } = useChatV2();
+  // Get chat state for typing indicators using new store
+  const typingUsers = useChatUIStore((state) => state.typingUsers);
 
   // Handle first channel fetch errors with toast notifications
   useEffect(() => {
@@ -74,22 +74,22 @@ export default function ChatInterface({
 
   // Memoize typing indicator text to prevent unnecessary re-renders
   const typingIndicatorText = useMemo(() => {
-    if (
-      typingUsers === null ||
-      typingUsers === undefined ||
-      typingUsers.length === 0
-    )
-      return null;
+    if (!activeChannel?.id) return null;
 
-    const filteredUsers = typingUsers.filter((u) => u.user_id !== user?.id);
+    const channelTypingUsers = typingUsers.get(activeChannel.id);
+    if (!channelTypingUsers || channelTypingUsers.length === 0) return null;
+
+    const filteredUsers = channelTypingUsers.filter(
+      (u) => u.user_id !== user?.id,
+    );
     if (filteredUsers.length === 0) return null;
 
     const userNames = filteredUsers
-      .map((u) => u.username ?? u.full_name ?? 'Someone')
+      .map((u) => u.username ?? 'Someone')
       .join(', ');
 
     return `${userNames} ${filteredUsers.length === 1 ? 'is' : 'are'} typing...`;
-  }, [typingUsers, user?.id]);
+  }, [typingUsers, user?.id, activeChannel?.id]);
 
   // Memoize collective list transformation
   const collectiveList = useMemo(
