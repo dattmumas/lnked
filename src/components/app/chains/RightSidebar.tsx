@@ -40,6 +40,7 @@ interface User {
 }
 interface ChainItem {
   id: string;
+  author_id?: string;
   user: {
     name: string;
     username: string;
@@ -224,6 +225,7 @@ function useChains(): {
         const user = chain.users;
         return {
           id: chain.id,
+          author_id: chain.author_id,
           user: {
             name:
               user?.full_name !== undefined &&
@@ -505,6 +507,25 @@ export function RightSidebar({
     [chainInteractions],
   );
 
+  const handleDeleteChain = useCallback(
+    (itemId: string) => (): void => {
+      void (async (): Promise<void> => {
+        try {
+          const supabase = createSupabaseBrowserClient();
+          await supabase
+            .from('chains')
+            .update({ status: 'deleted' })
+            .eq('id', itemId)
+            .eq('author_id', user.id);
+          refetch();
+        } catch (error: unknown) {
+          console.error('Error deleting chain:', error);
+        }
+      })();
+    },
+    [user.id, refetch],
+  );
+
   return (
     <div className="fixed right-0 top-16 w-[28rem] h-[calc(100vh-4rem)] bg-white dark:bg-gray-900 border-l border-gray-200 dark:border-gray-700 hidden lg:block z-20">
       <div className="h-full overflow-hidden flex flex-col">
@@ -616,9 +637,19 @@ export function RightSidebar({
                           <span>{item.stats.shares}</span>
                         </button>
                         {/* More Options */}
-                        <button className="ml-auto text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition-colors">
-                          <MoreHorizontal className="w-4 h-4" />
-                        </button>
+                        {item.author_id === user.id ? (
+                          <button
+                            onClick={handleDeleteChain(item.id)}
+                            className="ml-auto text-red-500 hover:text-red-600 transition-colors text-xs flex items-center gap-1"
+                            title="Delete chain"
+                          >
+                            <MoreHorizontal className="w-4 h-4" /> Delete
+                          </button>
+                        ) : (
+                          <button className="ml-auto text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition-colors">
+                            <MoreHorizontal className="w-4 h-4" />
+                          </button>
+                        )}
                       </div>
                       {/* Reply Form */}
                       {chainInteractions.replyingTo === item.id && (
