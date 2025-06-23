@@ -35,8 +35,7 @@
 - `src/app/api/chat/[conversationId]/message/route.ts` - Send new message
 - `src/app/api/chat/[conversationId]/messages/[messageId]/route.ts` - Update/delete message
 - `src/app/api/chat/[conversationId]/messages/[messageId]/reactions/route.ts` - Message reactions
-- `src/app/api/chat/[conversationId]/read/route.ts` - Mark conversation as read
-- `src/app/api/chat/direct/route.ts` - Direct message conversations
+- `src/app/api/chat/[conversationId]/read/route.ts` - Mark conversation as read.ts` - Direct message conversations
 - `src/app/api/chat/direct/[userId]/route.ts` - Direct message with specific user
 - `src/app/api/chat/group/route.ts` - Group conversations
 - `src/app/api/chat/search/route.ts` - Search messages
@@ -52,8 +51,6 @@
 - `src/hooks/useFirstChannel.ts` - Hook to get first channel for a collective
 - `src/hooks/useOptimisticMessages.ts` - Optimistic message updates
 - `src/hooks/useTypingStatus.ts` - Typing indicator management
-- `src/hooks/useBatchedReadStatus.ts` - Batched read status updates
-- `src/hooks/useConversationSecurity.ts` - Conversation security checks
 - `src/hooks/use-unread-messages.ts` - Unread message count
 
 ## Constants & Types
@@ -73,12 +70,6 @@
 - `src/components/chat/icons/loading-spinner.tsx`
 - `src/components/chat/icons/send-icon.tsx`
 
-## Deprecated/Old Hooks (Still Present but Not Used)
-
-- `src/lib/hooks/use-chat-v2.ts` - Old monolithic chat hook (552 lines - to be removed)
-- `src/lib/hooks/use-chat.ts` - Original chat hook (to be removed)
-- `src/lib/hooks/use-chat-realtime.ts` - Old realtime hook (to be removed)
-
 ## External Dependencies
 
 - `@tanstack/react-query` - Server state management
@@ -86,8 +77,19 @@
 - `zustand` - Client state management
 - `lucide-react` - Icons
 
-## Total Code Reduction
+## Code Metrics
 
 - Virtual list: 937 → 390 lines (58% reduction)
 - Chat panel: 469 → 245 lines (48% reduction)
 - Overall: ~1900 → ~900 lines (53% total reduction)
+
+## Recent Cleanup (Latest)
+
+**Removed 12 deprecated files:** All backup files, disabled files, and unused chat components have been removed, including:
+
+- Legacy chat hooks (use-chat-v2.ts, use-chat.ts, use-chat-realtime.ts)
+- Unused security components (useConversationSecurity.ts, security-status.tsx)
+- Multiple backup files (.backup, .backup_final, .rej)
+- Empty directories and test stubs
+
+**Final implementation is now clean and production-ready!**
