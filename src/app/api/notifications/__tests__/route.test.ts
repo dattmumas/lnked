@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { createSupabaseClient, mockUser } from '@/lib/test-utils';
+import { createMockSupabaseClient, createMockUser } from '../../../../lib/test-utils';
 import { GET, PATCH, DELETE } from '../route';
 
 // Mock notification data factory
@@ -16,7 +16,7 @@ const mockNotification = (overrides: any = {}) => ({
 
 // Mock Supabase
 jest.mock('@/lib/supabase/server', () => ({
-  createServerSupabaseClient: jest.fn(() => createSupabaseClient()),
+  createServerSupabaseClient: jest.fn(() => createMockSupabaseClient()),
 }));
 
 // Mock logger and metrics
@@ -60,7 +60,7 @@ describe('/api/notifications', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    mockSupabase = createSupabaseClient();
+    mockSupabase = createMockSupabaseClient();
     
     const { createNotificationService } = require('@/lib/notifications/service');
     mockNotificationService = createNotificationService();
@@ -74,7 +74,7 @@ describe('/api/notifications', () => {
       ];
 
       mockSupabase.auth.getUser.mockResolvedValue({
-        data: { user: mockUser() },
+        data: { user: createMockUser() },
         error: null,
       });
 
@@ -112,7 +112,7 @@ describe('/api/notifications', () => {
 
     it('handles service errors gracefully', async () => {
       mockSupabase.auth.getUser.mockResolvedValue({
-        data: { user: mockUser() },
+        data: { user: createMockUser() },
         error: null,
       });
 
@@ -131,7 +131,7 @@ describe('/api/notifications', () => {
     });
 
     it('supports query parameters', async () => {
-      const user = mockUser();
+      const user = createMockUser();
       mockSupabase.auth.getUser.mockResolvedValue({
         data: { user },
         error: null,
@@ -156,7 +156,7 @@ describe('/api/notifications', () => {
     });
 
     it('validates numeric parameters', async () => {
-      const user = mockUser();
+      const user = createMockUser();
       mockSupabase.auth.getUser.mockResolvedValue({
         data: { user },
         error: null,
@@ -178,7 +178,7 @@ describe('/api/notifications', () => {
 
   describe('PATCH /api/notifications', () => {
     it('marks notifications as read', async () => {
-      const user = mockUser();
+      const user = createMockUser();
       const notificationIds = ['notification-1', 'notification-2'];
 
       mockSupabase.auth.getUser.mockResolvedValue({
@@ -204,7 +204,7 @@ describe('/api/notifications', () => {
     });
 
     it('validates notification_ids format', async () => {
-      const user = mockUser();
+      const user = createMockUser();
       mockSupabase.auth.getUser.mockResolvedValue({
         data: { user },
         error: null,
@@ -245,7 +245,7 @@ describe('/api/notifications', () => {
     });
 
     it('handles service failures', async () => {
-      const user = mockUser();
+      const user = createMockUser();
       mockSupabase.auth.getUser.mockResolvedValue({
         data: { user },
         error: null,
@@ -273,7 +273,7 @@ describe('/api/notifications', () => {
 
   describe('DELETE /api/notifications', () => {
     it('deletes notifications successfully', async () => {
-      const user = mockUser();
+      const user = createMockUser();
       const notificationIds = ['notification-1', 'notification-2'];
 
       mockSupabase.auth.getUser.mockResolvedValue({
@@ -299,7 +299,7 @@ describe('/api/notifications', () => {
     });
 
     it('requires notification_ids array', async () => {
-      const user = mockUser();
+      const user = createMockUser();
       mockSupabase.auth.getUser.mockResolvedValue({
         data: { user },
         error: null,
@@ -320,7 +320,7 @@ describe('/api/notifications', () => {
     });
 
     it('validates all IDs are non-empty strings', async () => {
-      const user = mockUser();
+      const user = createMockUser();
       mockSupabase.auth.getUser.mockResolvedValue({
         data: { user },
         error: null,
@@ -341,7 +341,7 @@ describe('/api/notifications', () => {
     });
 
     it('handles service errors', async () => {
-      const user = mockUser();
+      const user = createMockUser();
       mockSupabase.auth.getUser.mockResolvedValue({
         data: { user },
         error: null,
@@ -385,7 +385,7 @@ describe('/api/notifications', () => {
     });
 
     it('handles JSON parsing errors', async () => {
-      const user = mockUser();
+      const user = createMockUser();
       mockSupabase.auth.getUser.mockResolvedValue({
         data: { user },
         error: null,

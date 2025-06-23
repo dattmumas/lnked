@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { commentsV2Service } from '@/lib/services/comments-v2';
+import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { CommentEntityType, CommentValidationError, CommentPermissionError } from '@/types/comments-v2';
 
 // Constants for validation
@@ -66,6 +67,17 @@ export async function POST(
   try {
     const { entityType, entityId } = await params;
     
+    // Get authenticated user
+    const supabase = createServerSupabaseClient();
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+    }
+    
     if (!VALID_ENTITY_TYPES.includes(entityType as typeof VALID_ENTITY_TYPES[number])) {
       return NextResponse.json({ error: 'Invalid entity type' }, { status: 400 });
     }
@@ -84,7 +96,7 @@ export async function POST(
     const result = await commentsV2Service.addComment(
       entityType as CommentEntityType,
       entityId,
-      '',
+      user.id,
       content,
       parentId,
     );

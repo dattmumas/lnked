@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { commentsV2Service } from '@/lib/services/comments-v2';
+import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { ReactionType, CommentValidationError, CommentPermissionError, CommentNotFoundError } from '@/types/comments-v2';
 
 export async function POST(
@@ -9,6 +10,18 @@ export async function POST(
 ): Promise<NextResponse> {
   try {
     const { commentId } = await params;
+    
+    // Get authenticated user
+    const supabase = createServerSupabaseClient();
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+    }
+    
     const body: { reaction_type?: unknown } = await request.json() as { reaction_type?: unknown };
     const { reaction_type } = body;
 
@@ -23,7 +36,7 @@ export async function POST(
 
     const result = await commentsV2Service.toggleReaction(
       commentId,
-      '',
+      user.id,
       reaction_type as ReactionType,
     );
 

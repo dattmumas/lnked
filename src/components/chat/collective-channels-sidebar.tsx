@@ -7,6 +7,8 @@ import { type ReactElement, useState, useMemo, useCallback } from 'react';
 import { Input } from '@/components/ui/input';
 import { useDebounce } from '@/hooks/useDebounce';
 
+import { UserSearchDialog } from './UserSearchDialog';
+
 // Constants
 const SEARCH_DEBOUNCE_MS = 300;
 const HTTP_UNAUTHORIZED = 401;
@@ -59,6 +61,7 @@ export function CollectiveChannelsSidebar({
   className: _className,
 }: CollectiveChannelsSidebarProps): ReactElement {
   const [searchTerm, setSearchTerm] = useState('');
+  const [userSearchOpen, setUserSearchOpen] = useState(false);
 
   // Debounce search term to avoid excessive filtering on every keystroke
   const debouncedSearchTerm = useDebounce(searchTerm, SEARCH_DEBOUNCE_MS);
@@ -222,6 +225,27 @@ export function CollectiveChannelsSidebar({
     [],
   );
 
+  const handleNewConversation = useCallback(() => {
+    setUserSearchOpen(true);
+  }, []);
+
+  const handleConversationCreated = useCallback(
+    (conversationId: string) => {
+      // Find the newly created conversation in the DMs
+      const newDM = dms.find((dm) => dm.id === conversationId);
+      if (newDM) {
+        const displayName =
+          newDM.user.full_name ?? newDM.user.username ?? 'Unknown User';
+        onSelectChannel({
+          id: newDM.id,
+          title: displayName,
+          type: 'direct',
+        });
+      }
+    },
+    [dms, onSelectChannel],
+  );
+
   return (
     <div className="flex flex-col h-full w-64 bg-muted/20 border-r border-border/40">
       {/* Header */}
@@ -303,7 +327,11 @@ export function CollectiveChannelsSidebar({
                 <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
                   Text Channels
                 </h3>
-                <button className="w-4 h-4 text-muted-foreground hover:text-foreground transition-colors">
+                <button
+                  className="w-4 h-4 text-muted-foreground hover:text-foreground transition-colors"
+                  title="Create new channel"
+                  disabled
+                >
                   <svg fill="currentColor" viewBox="0 0 20 20">
                     <path
                       fillRule="evenodd"
@@ -376,7 +404,11 @@ export function CollectiveChannelsSidebar({
               <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
                 Direct Messages
               </h3>
-              <button className="w-4 h-4 text-muted-foreground hover:text-foreground transition-colors">
+              <button
+                onClick={handleNewConversation}
+                className="w-4 h-4 text-muted-foreground hover:text-foreground transition-colors"
+                title="Start new conversation"
+              >
                 <svg fill="currentColor" viewBox="0 0 20 20">
                   <path
                     fillRule="evenodd"
@@ -454,6 +486,13 @@ export function CollectiveChannelsSidebar({
           </div>
         )}
       </div>
+
+      {/* User Search Dialog */}
+      <UserSearchDialog
+        open={userSearchOpen}
+        onOpenChange={setUserSearchOpen}
+        onConversationCreated={handleConversationCreated}
+      />
     </div>
   );
 }

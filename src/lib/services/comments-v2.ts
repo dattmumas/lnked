@@ -167,7 +167,7 @@ export class CommentsV2Service {
     >('add_comment', {
       p_entity_type: entityType,
       p_entity_id: entityId,
-      p_user_id: userId,
+      p_author_id: userId,
       p_content: content.trim(),
       p_parent_id: parentId,
     });

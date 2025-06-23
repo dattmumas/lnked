@@ -5,7 +5,7 @@ import '@testing-library/jest-dom';
 
 import { NotificationItem } from '../NotificationItem';
 
-import type { Notification } from '@/types/notifications';
+import type { Notification } from '../../../types/notifications';
 
 // Mock Next.js router
 const mockPush = jest.fn();

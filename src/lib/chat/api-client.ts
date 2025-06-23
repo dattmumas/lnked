@@ -115,7 +115,6 @@ export class ChatApiClient {
     last_read_at: string;
     unread_count: number;
   }> {
-    console.error(`[ChatAPI] markAsRead called for conversation: ${conversationId}`);
     const response = await fetch(API_ROUTES.CHAT_CONVERSATION_READ(conversationId), {
       method: 'PATCH',
       headers: {
@@ -145,20 +144,34 @@ export class ChatApiClient {
     is_private?: boolean;
     participant_ids: string[];
   }): Promise<ConversationWithParticipants> {
-    const response = await fetch(API_ROUTES.CHAT_CONVERSATIONS, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(params),
-    });
+    try {
+      const response = await fetch(API_ROUTES.CHAT_CONVERSATIONS, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(params),
+      });
 
-    if (!response.ok) {
-      const error = await response.json() as { error?: string };
-      throw new Error(error.error ?? 'Failed to create conversation');
+      if (!response.ok) {
+        const errorData: unknown = await response.json().catch(() => ({ error: 'Unknown error' }));
+        const errorMessage = (errorData as { error?: string }).error ?? 'Failed to create conversation';
+        console.error('Create conversation failed:', response.status, errorMessage);
+        throw new Error(errorMessage);
+      }
+
+      const data = await response.json() as { conversation: ConversationWithParticipants; existing: boolean };
+      
+      if (data.conversation === null || data.conversation === undefined) {
+        console.error('Invalid response structure:', data);
+        throw new Error('Invalid response from server');
+      }
+      
+      return data.conversation;
+    } catch (error) {
+      console.error('Create conversation error:', error);
+      throw error;
     }
-
-    return response.json() as Promise<ConversationWithParticipants>;
   }
 
   /**
