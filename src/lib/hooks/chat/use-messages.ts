@@ -1,198 +1,234 @@
 'use client';
 
 import { useInfiniteQuery, useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
+import { useMemo } from 'react';
+
 import { chatApiClient } from '@/lib/chat/api-client';
-import type { MessageWithSender } from '@/lib/chat/types';
 import { useChatUIStore } from '@/lib/stores/chat-ui-store';
+
 import { conversationKeys } from './use-conversations';
-import { useEffect, useMemo } from 'react';
+
+import type { MessageWithSender } from '@/lib/chat/types';
 
 const MESSAGES_PER_PAGE = 50;
+const MESSAGES_STALE_TIME = 5 * 60 * 1000; // 5 minutes
+const SEARCH_STALE_TIME = 30 * 1000; // 30 seconds
 
 // Query keys
 export const messageKeys = {
   all: ['messages'] as const,
-  conversation: (conversationId: string) => [...messageKeys.all, conversationId] as const,
-  search: (query: string, conversationId?: string) => [...messageKeys.all, 'search', query, conversationId] as const,
+  conversation: (conversationId: string): readonly string[] => [...messageKeys.all, conversationId] as const,
+  search: (query: string, conversationId?: string): readonly string[] => {
+    const baseKey = [...messageKeys.all, 'search', query] as const;
+    return conversationId ? [...baseKey, conversationId] as const : baseKey;
+  },
 };
 
-// Hook to fetch messages with infinite scroll
-export function useMessages(conversationId: string | null) {
-  const queryClient = useQueryClient();
-  
+interface UseMessagesReturn {
+  messages: MessageWithSender[];
+  hasNextPage: boolean;
+  isFetchingNextPage: boolean;
+  isLoading: boolean;
+  error: Error | null;
+  fetchNextPage: () => Promise<unknown>;
+}
+
+// Hook to fetch messages for a conversation
+export function useMessages(conversationId: string | null): UseMessagesReturn {
+  // Handle null conversationId case
+  const enabledQuery = Boolean(conversationId);
+  const safeConversationId = conversationId || '';
+
   const query = useInfiniteQuery({
-    queryKey: conversationId ? messageKeys.conversation(conversationId) : ['disabled'],
+    queryKey: enabledQuery ? messageKeys.conversation(safeConversationId) : ['messages', 'empty'],
     queryFn: async ({ pageParam }: { pageParam?: string }) => {
-      if (!conversationId) throw new Error('No conversation selected');
+      if (!conversationId) {
+        return [];
+      }
       
-      const options = pageParam 
-        ? { before: pageParam, limit: MESSAGES_PER_PAGE }
-        : { limit: MESSAGES_PER_PAGE };
-      
-      return await chatApiClient.getMessages(conversationId, options);
+      const oldestMessage = pageParam ? { created_at: pageParam } : undefined;
+      return chatApiClient.getMessages(conversationId, {
+        before: oldestMessage?.created_at || undefined,
+        limit: MESSAGES_PER_PAGE,
+      });
     },
     getNextPageParam: (lastPage) => {
-      if (lastPage.length < MESSAGES_PER_PAGE) return undefined;
-      
-      // Get the oldest message's timestamp for pagination
-      const oldestMessage = lastPage[0];
-      return oldestMessage?.created_at;
+      if (!lastPage || lastPage.length === 0) return undefined;
+      const oldestMessage = lastPage[lastPage.length - 1];
+      return oldestMessage?.created_at || undefined;
     },
     initialPageParam: undefined as string | undefined,
-    enabled: !!conversationId,
-    staleTime: 5 * 60 * 1000, // Consider data fresh for 5 minutes
+    enabled: enabledQuery,
+    staleTime: MESSAGES_STALE_TIME,
   });
-  
+
   // Flatten all pages into a single array
   const messages = useMemo(() => {
     if (!query.data) return [];
     return query.data.pages.flat();
   }, [query.data]);
-  
+
   return {
     messages,
-    isLoading: query.isLoading,
-    isError: query.isError,
-    error: query.error,
-    hasNextPage: query.hasNextPage,
-    fetchNextPage: query.fetchNextPage,
+    hasNextPage: query.hasNextPage || false,
     isFetchingNextPage: query.isFetchingNextPage,
+    isLoading: query.isLoading,
+    error: query.error,
+    fetchNextPage: query.fetchNextPage,
   };
 }
 
-// Hook to send a message with optimistic updates
-export function useSendMessage() {
+// Hook to send a message
+export function useSendMessage(): {
+  mutate: (params: {
+    content: string;
+    message_type?: 'text' | 'image' | 'file' | 'system';
+    reply_to_id?: string;
+    metadata?: Record<string, unknown>;
+  }) => void;
+  mutateAsync: (params: {
+    content: string;
+    message_type?: 'text' | 'image' | 'file' | 'system';
+    reply_to_id?: string;
+    metadata?: Record<string, unknown>;
+  }) => Promise<MessageWithSender>;
+  isPending: boolean;
+  error: Error | null;
+} {
   const queryClient = useQueryClient();
-  const activeConversationId = useChatUIStore(state => state.activeConversationId);
-  
+  const { activeConversationId } = useChatUIStore();
+
   return useMutation({
     mutationFn: async (params: {
       content: string;
       message_type?: 'text' | 'image' | 'file' | 'system';
       reply_to_id?: string;
       metadata?: Record<string, unknown>;
-    }) => {
-      if (!activeConversationId) throw new Error('No active conversation');
-      
-      return await chatApiClient.sendMessage({
+    }): Promise<MessageWithSender> => {
+      if (!activeConversationId) {
+        throw new Error('No active conversation');
+      }
+
+      return chatApiClient.sendMessage({
         conversation_id: activeConversationId,
-        ...params,
-      });
-    },
-    
-    // Optimistic update
-    onMutate: async (params) => {
-      if (!activeConversationId) return;
-      
-      // Cancel outgoing refetches
-      await queryClient.cancelQueries({ 
-        queryKey: messageKeys.conversation(activeConversationId) 
-      });
-      
-      // Snapshot previous value
-      const previousMessages = queryClient.getQueryData(
-        messageKeys.conversation(activeConversationId)
-      );
-      
-      // Create optimistic message
-      const optimisticMessage: MessageWithSender = {
-        id: `temp-${Date.now()}`,
-        conversation_id: activeConversationId,
-        sender_id: 'current-user', // Will be replaced by actual user ID
         content: params.content,
         message_type: params.message_type || 'text',
-        reply_to_id: params.reply_to_id || null,
-        metadata: (params.metadata as any) || null,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        edited_at: null,
-        deleted_at: null,
-        sender: null, // Will be populated by server response
-        reply_to: null,
+        reply_to_id: params.reply_to_id,
+        metadata: params.metadata,
+      });
+    },
+    onSuccess: (newMessage) => {
+      if (!activeConversationId) return;
+
+      // Update the messages cache
+      void queryClient.invalidateQueries({
+        queryKey: messageKeys.conversation(activeConversationId)
+      });
+
+      // Update conversation list to show latest message
+      void queryClient.invalidateQueries({
+        queryKey: conversationKeys.lists(),
+      });
+
+      // Optimistically add the message to cache
+      const optimisticMessage: MessageWithSender = {
+        ...newMessage,
+        conversation_id: activeConversationId,
       };
-      
-      // Optimistically update to the new value
+
       queryClient.setQueryData(
         messageKeys.conversation(activeConversationId),
-        (old: any) => {
-          if (!old) return old;
+        (oldData: { pages: MessageWithSender[][]; pageParams: unknown[] } | undefined) => {
+          if (!oldData) return oldData;
+          
+          const newPages = [...oldData.pages];
+          if (newPages.length > 0) {
+            newPages[0] = [optimisticMessage, ...newPages[0]];
+          } else {
+            newPages.push([optimisticMessage]);
+          }
+          
           return {
-            ...old,
-            pages: old.pages.map((page: MessageWithSender[], index: number) => 
-              index === old.pages.length - 1 
-                ? [...page, optimisticMessage]
-                : page
-            ),
+            ...oldData,
+            pages: newPages,
           };
         }
       );
+    },
+    onError: () => {
+      if (!activeConversationId) return;
       
-      // Return context for rollback
-      return { previousMessages, activeConversationId };
-    },
-    
-    // Always refetch after error or success
-    onSettled: (data, error, variables, context) => {
-      if (context?.activeConversationId) {
-        queryClient.invalidateQueries({ 
-          queryKey: messageKeys.conversation(context.activeConversationId) 
-        });
-        
-        // Also update conversations list to show latest message
-        queryClient.invalidateQueries({ 
-          queryKey: conversationKeys.lists() 
-        });
-      }
+      // Invalidate to refetch on error
+      void queryClient.invalidateQueries({
+        queryKey: messageKeys.conversation(activeConversationId)
+      });
     },
   });
 }
 
-// Hook to add a reaction
-export function useAddReaction() {
+// Hook to add reaction to a message
+export function useAddReaction(): {
+  mutate: (params: { messageId: string; emoji: string }) => void;
+  isPending: boolean;
+} {
   const queryClient = useQueryClient();
-  const activeConversationId = useChatUIStore(state => state.activeConversationId);
-  
+  const { activeConversationId } = useChatUIStore();
+
   return useMutation({
-    mutationFn: async ({ messageId, emoji }: { messageId: string; emoji: string }) => {
-      return await chatApiClient.addReaction(messageId, emoji);
+    mutationFn: async (params: { messageId: string; emoji: string }): Promise<void> => {
+      return chatApiClient.addReaction(params.messageId, params.emoji);
     },
     onSuccess: () => {
-      if (activeConversationId) {
-        queryClient.invalidateQueries({ 
-          queryKey: messageKeys.conversation(activeConversationId) 
-        });
-      }
+      if (!activeConversationId) return;
+      
+      void queryClient.invalidateQueries({
+        queryKey: messageKeys.conversation(activeConversationId)
+      });
     },
   });
 }
 
-// Hook to remove a reaction
-export function useRemoveReaction() {
+// Hook to remove reaction from a message
+export function useRemoveReaction(): {
+  mutate: (params: { messageId: string; emoji: string }) => void;
+  isPending: boolean;
+} {
   const queryClient = useQueryClient();
-  const activeConversationId = useChatUIStore(state => state.activeConversationId);
-  
+  const { activeConversationId } = useChatUIStore();
+
   return useMutation({
-    mutationFn: async ({ messageId, emoji }: { messageId: string; emoji: string }) => {
-      return await chatApiClient.removeReaction(messageId, emoji);
+    mutationFn: async (params: { messageId: string; emoji: string }): Promise<void> => {
+      return chatApiClient.removeReaction(params.messageId, params.emoji);
     },
     onSuccess: () => {
-      if (activeConversationId) {
-        queryClient.invalidateQueries({ 
-          queryKey: messageKeys.conversation(activeConversationId) 
-        });
-      }
+      if (!activeConversationId) return;
+      
+      void queryClient.invalidateQueries({
+        queryKey: messageKeys.conversation(activeConversationId)
+      });
     },
   });
 }
 
 // Hook to search messages
-export function useSearchMessages(query: string, conversationId?: string) {
-  return useQuery({
+export function useSearchMessages(
+  query: string,
+  conversationId?: string
+): {
+  messages: MessageWithSender[];
+  isLoading: boolean;
+  error: Error | null;
+} {
+  const searchQuery = useQuery({
     queryKey: messageKeys.search(query, conversationId),
-    queryFn: async () => {
-      return await chatApiClient.searchMessages(query, conversationId);
-    },
-    enabled: query.length > 0,
-    staleTime: 30 * 1000, // Cache search results for 30 seconds
+    queryFn: () => chatApiClient.searchMessages(query, conversationId),
+    enabled: Boolean(query.trim()),
+    staleTime: SEARCH_STALE_TIME,
   });
+
+  return {
+    messages: searchQuery.data || [],
+    isLoading: searchQuery.isLoading,
+    error: searchQuery.error,
+  };
 } 

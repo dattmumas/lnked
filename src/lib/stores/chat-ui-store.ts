@@ -10,7 +10,7 @@ interface TypingUser {
 
 interface ChatUIState {
   // Active conversation
-  activeConversationId: string | null;
+  activeConversationId: string | undefined;
   
   // Typing indicators
   typingUsers: Map<string, TypingUser[]>; // conversationId -> typing users
@@ -23,7 +23,7 @@ interface ChatUIState {
   onlineUsers: Set<string>;
   
   // Actions
-  setActiveConversation: (conversationId: string | null) => void;
+  setActiveConversation: (conversationId: string | undefined) => void;
   addTypingUser: (conversationId: string, user: TypingUser) => void;
   removeTypingUser: (conversationId: string, userId: string) => void;
   clearTypingUsers: (conversationId: string) => void;
@@ -31,8 +31,8 @@ interface ChatUIState {
   setScrollPosition: (conversationId: string, position: number) => void;
   getScrollPosition: (conversationId: string) => number;
   
-  setReplyTarget: (conversationId: string, messageId: string | null) => void;
-  getReplyTarget: (conversationId: string) => string | null;
+  setReplyTarget: (conversationId: string, messageId: string | undefined) => void;
+  getReplyTarget: (conversationId: string) => string | undefined;
   
   addOnlineUser: (userId: string) => void;
   removeOnlineUser: (userId: string) => void;
@@ -46,7 +46,7 @@ export const useChatUIStore = create<ChatUIState>()(
   devtools(
     (set, get) => ({
       // Initial state
-      activeConversationId: null,
+      activeConversationId: undefined,
       typingUsers: new Map(),
       scrollPositions: new Map(),
       replyTargets: new Map(),
@@ -94,19 +94,22 @@ export const useChatUIStore = create<ChatUIState>()(
       setScrollPosition: (conversationId, position) => {
         set((state) => {
           const newScrollPositions = new Map(state.scrollPositions);
-          newScrollPositions.set(conversationId, position);
+          if (typeof position === 'number' && position >= 0) {
+            newScrollPositions.set(conversationId, position);
+          }
           return { scrollPositions: newScrollPositions };
         });
       },
       
       getScrollPosition: (conversationId) => {
-        return get().scrollPositions.get(conversationId) || 0;
+        const position = get().scrollPositions.get(conversationId);
+        return (position !== null && position !== undefined && !Number.isNaN(position)) ? position : 0;
       },
       
       setReplyTarget: (conversationId, messageId) => {
         set((state) => {
           const newReplyTargets = new Map(state.replyTargets);
-          if (messageId === null) {
+          if (messageId === undefined || messageId === '') {
             newReplyTargets.delete(conversationId);
           } else {
             newReplyTargets.set(conversationId, messageId);
@@ -116,7 +119,8 @@ export const useChatUIStore = create<ChatUIState>()(
       },
       
       getReplyTarget: (conversationId) => {
-        return get().replyTargets.get(conversationId) || null;
+        const target = get().replyTargets.get(conversationId);
+        return (target !== null && target !== undefined && target.trim().length > 0) ? target : undefined;
       },
       
       addOnlineUser: (userId) => {
@@ -141,7 +145,7 @@ export const useChatUIStore = create<ChatUIState>()(
       
       reset: () => {
         set({
-          activeConversationId: null,
+          activeConversationId: undefined,
           typingUsers: new Map(),
           scrollPositions: new Map(),
           replyTargets: new Map(),

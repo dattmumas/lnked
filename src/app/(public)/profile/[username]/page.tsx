@@ -133,11 +133,11 @@ export default async function ProfilePage({
   if (isOwner) {
     // Owners can see all their posts
   } else if (isSubscribed) {
-    postsQuery = postsQuery.not('published_at', 'is', null); // eslint-disable-line unicorn/no-null
+    postsQuery = postsQuery.not('published_at', 'is', null);
   } else {
     postsQuery = postsQuery
       .eq('is_public', true)
-      .not('published_at', 'is', null); // eslint-disable-line unicorn/no-null
+      .not('published_at', 'is', null);
   }
 
   if (q !== null && q !== undefined && q.trim().length > 0) {
@@ -187,7 +187,8 @@ export default async function ProfilePage({
       current_user_has_liked: undefined,
     };
 
-  const _microPosts: MicroPost[] = [ // eslint-disable-line no-underscore-dangle, @typescript-eslint/no-unused-vars
+  const _microPosts: MicroPost[] = [
+    // eslint-disable-line no-underscore-dangle, @typescript-eslint/no-unused-vars
     { id: 'u1', content: 'Thanks for checking out my work!' },
     { id: 'u2', content: 'New article coming soon.' },
     { id: 'u3', content: 'Follow me for updates!' },

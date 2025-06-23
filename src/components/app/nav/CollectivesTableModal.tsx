@@ -4,7 +4,7 @@ import { ExternalLink, Users, Settings } from 'lucide-react';
 import Link from 'next/link';
 import { useMemo } from 'react';
 
-import { useCollectiveMemberships } from '@/hooks/posts/useCollectiveMemberships';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -21,7 +21,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
+import { useCollectiveMemberships } from '@/hooks/posts/useCollectiveMemberships';
 
 interface CollectivesTableModalProps {
   open: boolean;

@@ -269,7 +269,6 @@ function LoadInitialJsonPlugin({
       }
     });
   }, [editor, json]);
-  // eslint-disable-next-line unicorn/no-null -- React components can return null to render nothing
   return null;
 }
 

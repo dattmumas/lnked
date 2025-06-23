@@ -3,7 +3,7 @@ import { Source_Serif_4, Inter } from 'next/font/google';
 import { ThemeProvider } from 'next-themes';
 import React from 'react';
 
-import GlobalSidebar from '@/components/app/nav/GlobalSidebar';
+import { GlobalSidebar } from '@/components/app/nav/GlobalSidebar';
 import ModernNavbar from '@/components/ModernNavbar';
 import { QueryProvider } from '@/components/providers/query-provider';
 import { ToastContainer } from '@/components/ui/toast';

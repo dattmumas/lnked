@@ -1,25 +1,32 @@
 'use client';
 
-import { Send, Loader2, X } from 'lucide-react';
-import {
-  useState,
-  useRef,
+import { Loader2, Send, X } from 'lucide-react';
+import React, {
   useCallback,
   useEffect,
   useLayoutEffect,
+  useRef,
+  useState,
 } from 'react';
+
 import { Button } from '@/components/ui/button';
 import { useUser } from '@/hooks/useUser';
-import { VirtualMessageList } from './virtual-message-list';
-import { useChatUIStore } from '@/lib/stores/chat-ui-store';
-import { useConversation } from '@/lib/hooks/chat/use-conversations';
+import {
+  useConversation,
+  useMarkAsRead,
+} from '@/lib/hooks/chat/use-conversations';
 import { useMessages, useSendMessage } from '@/lib/hooks/chat/use-messages';
-import { useMarkAsRead } from '@/lib/hooks/chat/use-conversations';
+import { useChatUIStore } from '@/lib/stores/chat-ui-store';
+
+import { VirtualMessageList } from './virtual-message-list';
 
 interface ChatPanelProps {
   conversationId: string;
   className?: string;
 }
+
+// Constants
+const MAX_TEXTAREA_HEIGHT = 120;
 
 // Track which conversations have been marked as read globally
 const markedAsReadConversations = new Set<string>();
@@ -52,7 +59,7 @@ export function ChatPanel({
 
   // Get reply target from UI store
   const replyTargetId = getReplyTarget(conversationId);
-  const replyTarget = messages.find((m) => m.id === replyTargetId) || null;
+  const replyTarget = messages.find((m) => m.id === replyTargetId) ?? undefined;
 
   // Set active conversation when component mounts or conversationId changes
   useEffect(() => {
@@ -64,17 +71,19 @@ export function ChatPanel({
 
   // Mark conversation as read when first viewing
   useEffect(() => {
-    if (!conversationId || !conversation) return;
+    if (
+      conversationId === null ||
+      conversationId === undefined ||
+      conversation === null ||
+      conversation === undefined
+    )
+      return;
 
     // Check if we've already marked this conversation globally
     if (markedAsReadConversations.has(conversationId)) {
-      console.log(
-        `[ChatPanel] Already marked ${conversationId} as read, skipping`,
-      );
       return;
     }
 
-    console.log(`[ChatPanel] Marking conversation ${conversationId} as read`);
     markedAsReadConversations.add(conversationId);
 
     // Call the mutation directly without timeout
@@ -91,7 +100,12 @@ export function ChatPanel({
   });
 
   const handleSendMessage = useCallback(async (): Promise<void> => {
-    if (!message.trim() || !conversation) return;
+    if (
+      message.trim().length === 0 ||
+      conversation === null ||
+      conversation === undefined
+    )
+      return;
 
     const trimmedMessage = message.trim();
     setMessage('');
@@ -101,15 +115,17 @@ export function ChatPanel({
       await sendMessage.mutateAsync({
         content: trimmedMessage,
         message_type: 'text',
-        ...(replyTargetId ? { reply_to_id: replyTargetId } : {}),
+        ...(replyTargetId !== null && replyTargetId !== undefined
+          ? { reply_to_id: replyTargetId }
+          : {}),
       });
 
       // Clear reply target on success
-      setReplyTarget(conversationId, null);
+      setReplyTarget(conversationId, undefined);
     } catch (error) {
       // Restore message on error
       setMessage(trimmedMessage);
-      console.error('Failed to send message:', error);
+      // Error already handled by mutation
     }
   }, [
     message,
@@ -125,8 +141,12 @@ export function ChatPanel({
       if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
         void handleSendMessage();
-      } else if (e.key === 'Escape' && replyTargetId) {
-        setReplyTarget(conversationId, null);
+      } else if (
+        e.key === 'Escape' &&
+        replyTargetId !== null &&
+        replyTargetId !== undefined
+      ) {
+        setReplyTarget(conversationId, undefined);
       }
     },
     [handleSendMessage, replyTargetId, conversationId, setReplyTarget],
@@ -151,14 +171,16 @@ export function ChatPanel({
   }, []);
 
   const clearReply = useCallback((): void => {
-    setReplyTarget(conversationId, null);
+    setReplyTarget(conversationId, undefined);
     didSendRef.current = true;
   }, [conversationId, setReplyTarget]);
 
   // Loading state
-  if (!conversation && isLoading) {
+  if ((conversation === null || conversation === undefined) && isLoading) {
     return (
-      <div className={`flex items-center justify-center h-full ${className}`}>
+      <div
+        className={`flex items-center justify-center h-full ${className ?? ''}`}
+      >
         <div className="flex items-center gap-2">
           <Loader2 className="h-4 w-4 animate-spin" />
           Loading...
@@ -167,9 +189,11 @@ export function ChatPanel({
     );
   }
 
-  if (!conversation) {
+  if (conversation === null || conversation === undefined) {
     return (
-      <div className={`flex items-center justify-center h-full ${className}`}>
+      <div
+        className={`flex items-center justify-center h-full ${className ?? ''}`}
+      >
         <div className="text-center">
           <p className="text-lg font-medium mb-2">No conversation selected</p>
           <p className="text-sm text-muted-foreground">
@@ -196,7 +220,7 @@ export function ChatPanel({
       {/* Input */}
       <div className="shrink-0 border-t bg-background/95 backdrop-blur-sm">
         {/* Reply preview */}
-        {replyTarget && (
+        {replyTarget !== null && replyTarget !== undefined && (
           <div
             className="px-4 py-2 bg-muted/50 border-b flex items-center justify-between cursor-pointer hover:bg-muted/70 transition-colors"
             onClick={clearReply}
@@ -246,7 +270,7 @@ export function ChatPanel({
                 onChange={handleInputChange}
                 onKeyDown={handleKeyPress}
                 placeholder={
-                  replyTarget
+                  replyTarget !== null && replyTarget !== undefined
                     ? `Reply to ${replyTarget.sender?.username ?? 'message'}...`
                     : 'Type a message...'
                 }
@@ -261,7 +285,7 @@ export function ChatPanel({
                 onInput={(e) => {
                   const target = e.target as HTMLTextAreaElement;
                   target.style.height = 'auto';
-                  target.style.height = `${Math.min(target.scrollHeight, 120)}px`;
+                  target.style.height = `${Math.min(target.scrollHeight, MAX_TEXTAREA_HEIGHT)}px`;
                 }}
               />
 
@@ -277,7 +301,7 @@ export function ChatPanel({
 
             <Button
               onClick={() => void handleSendMessage()}
-              disabled={!message.trim() || sendMessage.isPending}
+              disabled={message.trim().length === 0 || sendMessage.isPending}
               size="icon"
               className="h-12 w-12 rounded-full"
               aria-label="Send message"

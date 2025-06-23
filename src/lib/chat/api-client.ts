@@ -2,39 +2,13 @@
 
 import { API_ROUTES } from '@/lib/constants/api-routes';
 
-import type { MessageWithSender } from './types';
-import type { Database } from '@/lib/database.types';
-
-type ConversationWithDetails = Database['public']['Tables']['conversations']['Row'] & {
-  unread_count: number;
-  last_message: {
-    id: string;
-    content: string;
-    created_at: string;
-    sender: {
-      id: string;
-      username: string | null;
-      full_name: string | null;
-      avatar_url: string | null;
-    };
-  } | null;
-  participants: Array<{
-    user_id: string;
-    role: string;
-    user: {
-      id: string;
-      username: string | null;
-      full_name: string | null;
-      avatar_url: string | null;
-    };
-  }>;
-};
+import type { MessageWithSender, ConversationWithParticipants } from './types';
 
 export class ChatApiClient {
   /**
    * Fetch user's conversations with unread counts and participants
    */
-  async getConversations(): Promise<{ conversations: ConversationWithDetails[] }> {
+  async getConversations(): Promise<{ conversations: ConversationWithParticipants[] }> {
     const response = await fetch(API_ROUTES.CHAT_CONVERSATIONS, {
       method: 'GET',
       headers: {
@@ -47,7 +21,26 @@ export class ChatApiClient {
       throw new Error(error.error ?? 'Failed to fetch conversations');
     }
 
-    return response.json() as Promise<{ conversations: ConversationWithDetails[] }>;
+    return response.json() as Promise<{ conversations: ConversationWithParticipants[] }>;
+  }
+
+  /**
+   * Fetch a single conversation by ID
+   */
+  async getConversation(conversationId: string): Promise<ConversationWithParticipants> {
+    const response = await fetch(`${API_ROUTES.CHAT_CONVERSATIONS}/${conversationId}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      const error = await response.json() as { error?: string };
+      throw new Error(error.error ?? 'Failed to fetch conversation');
+    }
+
+    return response.json() as Promise<ConversationWithParticipants>;
   }
 
   /**
@@ -122,7 +115,7 @@ export class ChatApiClient {
     last_read_at: string;
     unread_count: number;
   }> {
-    console.trace(`[ChatAPI] markAsRead called for conversation: ${conversationId}`);
+    console.error(`[ChatAPI] markAsRead called for conversation: ${conversationId}`);
     const response = await fetch(API_ROUTES.CHAT_CONVERSATION_READ(conversationId), {
       method: 'PATCH',
       headers: {
@@ -151,7 +144,7 @@ export class ChatApiClient {
     description?: string;
     is_private?: boolean;
     participant_ids: string[];
-  }): Promise<Database['public']['Tables']['conversations']['Row']> {
+  }): Promise<ConversationWithParticipants> {
     const response = await fetch(API_ROUTES.CHAT_CONVERSATIONS, {
       method: 'POST',
       headers: {
@@ -165,7 +158,24 @@ export class ChatApiClient {
       throw new Error(error.error ?? 'Failed to create conversation');
     }
 
-    return response.json() as Promise<Database['public']['Tables']['conversations']['Row']>;
+    return response.json() as Promise<ConversationWithParticipants>;
+  }
+
+  /**
+   * Leave a conversation
+   */
+  async leaveConversation(conversationId: string): Promise<void> {
+    const response = await fetch(`${API_ROUTES.CHAT_CONVERSATIONS}/${conversationId}/leave`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      const error = await response.json() as { error?: string };
+      throw new Error(error.error ?? 'Failed to leave conversation');
+    }
   }
 
   /**

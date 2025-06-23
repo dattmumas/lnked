@@ -171,7 +171,6 @@ export default async function DashboardManagementPage(): Promise<React.ReactElem
         .from('posts')
         .select('id, title, published_at, created_at, is_public, collective_id')
         .eq('author_id', userId)
-        // eslint-disable-next-line unicorn/no-null
         .is('collective_id', null)
         .order('created_at', { ascending: false })
         .limit(MAX_RECENT_PERSONAL_POSTS_DISPLAY),

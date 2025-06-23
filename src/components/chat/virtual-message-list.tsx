@@ -1,5 +1,8 @@
 'use client';
 
+import { useVirtualizer } from '@tanstack/react-virtual';
+import { ArrowDown, MessageSquare } from 'lucide-react';
+import Image from 'next/image';
 import React, {
   useCallback,
   useEffect,
@@ -7,10 +10,9 @@ import React, {
   useState,
   useLayoutEffect,
 } from 'react';
-import { useVirtualizer } from '@tanstack/react-virtual';
-import Image from 'next/image';
+
 import { Button } from '@/components/ui/button';
-import { ArrowDown, MessageSquare } from 'lucide-react';
+
 import type { MessageWithSender } from '@/lib/chat/types';
 
 interface VirtualMessageListProps {

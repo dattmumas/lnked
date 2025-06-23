@@ -110,7 +110,7 @@ export default async function Page({
       `,
       )
       .eq('is_public', true)
-      .not('published_at', 'is', null); // eslint-disable-line unicorn/no-null
+      .not('published_at', 'is', null);
 
     if (useFTS) {
       postQuery = postQuery.textSearch('tsv', tsQuery, { type: 'websearch' });
@@ -131,22 +131,22 @@ export default async function Page({
         content: p.content,
         meta_description: p.meta_description,
         thumbnail_url: p.thumbnail_url,
-        slug: (p as { slug?: string }).slug ?? null, // eslint-disable-line unicorn/no-null
+        slug: (p as { slug?: string }).slug ?? null,
         created_at: p.created_at,
         post_type: p.post_type,
         metadata: p.metadata,
         like_count: p.like_count ?? 0,
         dislike_count: p.dislike_count ?? 0,
-        collective_slug: p.collective?.slug ?? null, // eslint-disable-line unicorn/no-null
+        collective_slug: p.collective?.slug ?? null,
         current_user_has_liked: undefined,
         author: {
           id:
             p.author?.id !== null && p.author?.id !== undefined
               ? p.author.id
               : '',
-          username: p.author?.username ?? null, // eslint-disable-line unicorn/no-null
-          full_name: p.author?.full_name ?? null, // eslint-disable-line unicorn/no-null
-          avatar_url: p.author?.avatar_url ?? null, // eslint-disable-line unicorn/no-null
+          username: p.author?.username ?? null,
+          full_name: p.author?.full_name ?? null,
+          avatar_url: p.author?.avatar_url ?? null,
         },
         collective:
           p.collective !== null && p.collective !== undefined
@@ -155,7 +155,7 @@ export default async function Page({
                 name: p.collective.name,
                 slug: p.collective.slug,
               }
-            : null, // eslint-disable-line unicorn/no-null
+            : null,
       })) ?? [];
 
     let userQuery = supabase

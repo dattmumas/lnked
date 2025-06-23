@@ -1,106 +1,153 @@
 'use client';
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+
 import { chatApiClient } from '@/lib/chat/api-client';
-import type { Database } from '@/lib/database.types';
 
-type ConversationWithDetails = Database['public']['Tables']['conversations']['Row'] & {
-  unread_count: number;
-  last_message: {
-    id: string;
-    content: string;
-    created_at: string;
-    sender: {
-      id: string;
-      username: string | null;
-      full_name: string | null;
-      avatar_url: string | null;
-    } | null;
-  } | null;
-  participants: Array<{
-    user_id: string;
-    role: string;
-    user: {
-      id: string;
-      username: string | null;
-      full_name: string | null;
-      avatar_url: string | null;
-    };
-  }>;
-};
+import type { ConversationWithParticipants } from '@/lib/chat/types';
 
-// Query keys
+const CONVERSATION_STALE_TIME = 5 * 60 * 1000; // 5 minutes
+const CONVERSATION_RETRY_DELAY = 5 * 60 * 1000; // 5 minutes
+
+// Query keys for conversations
 export const conversationKeys = {
   all: ['conversations'] as const,
-  lists: () => [...conversationKeys.all, 'list'] as const,
-  detail: (id: string) => [...conversationKeys.all, 'detail', id] as const,
+  lists: (): readonly string[] => [...conversationKeys.all, 'list'] as const,
+  detail: (id: string): readonly string[] => [...conversationKeys.all, 'detail', id] as const,
+  participants: (id: string): readonly string[] => [...conversationKeys.all, 'participants', id] as const,
 };
 
-// Hook to fetch all conversations
-export function useConversations() {
-  return useQuery({
+// Hook to fetch user's conversations
+export function useConversations(): {
+  conversations: ConversationWithParticipants[];
+  isLoading: boolean;
+  error: Error | null;
+  refetch: () => Promise<unknown>;
+} {
+  const query = useQuery({
     queryKey: conversationKeys.lists(),
     queryFn: async () => {
-      const { conversations } = await chatApiClient.getConversations();
-      return conversations;
+      const result = await chatApiClient.getConversations();
+      return result.conversations;
     },
-    staleTime: 5 * 60 * 1000, // Consider data fresh for 5 minutes
-    refetchInterval: 5 * 60 * 1000, // Refetch every 5 minutes
-    refetchOnWindowFocus: false, // Disable refetch on window focus
-    refetchOnMount: 'always', // Only refetch on mount if stale
+    staleTime: CONVERSATION_STALE_TIME,
+    retry: 3,
+    retryDelay: CONVERSATION_RETRY_DELAY,
   });
+
+  return {
+    conversations: query.data || [],
+    isLoading: query.isLoading,
+    error: query.error,
+    refetch: query.refetch,
+  };
 }
 
-// Hook to get a single conversation
-export function useConversation(conversationId: string | null) {
-  const { data: conversations } = useConversations();
-  
-  return conversations?.find(c => c.id === conversationId) || null;
+// Hook to fetch a single conversation
+export function useConversation(conversationId: string): {
+  conversation: ConversationWithParticipants | undefined;
+  isLoading: boolean;
+  error: Error | null;
+} {
+  const query = useQuery({
+    queryKey: conversationKeys.detail(conversationId),
+    queryFn: () => chatApiClient.getConversation(conversationId),
+    enabled: Boolean(conversationId),
+  });
+
+  return {
+    conversation: query.data,
+    isLoading: query.isLoading,
+    error: query.error,
+  };
 }
 
 // Hook to create a new conversation
-export function useCreateConversation() {
+export function useCreateConversation(): {
+  mutate: (params: {
+    type: 'direct' | 'group' | 'channel';
+    title?: string;
+    participantIds: string[];
+    isPrivate?: boolean;
+    collectiveId?: string;
+  }) => Promise<ConversationWithParticipants>;
+  isLoading: boolean;
+  error: Error | null;
+} {
   const queryClient = useQueryClient();
   
-  return useMutation({
-    mutationFn: async (params: {
-      title?: string;
+  const mutation = useMutation({
+    mutationFn: (params: {
       type: 'direct' | 'group' | 'channel';
-      description?: string;
-      is_private?: boolean;
-      participant_ids: string[];
+      title?: string;
+      participantIds: string[];
+      isPrivate?: boolean;
+      collectiveId?: string;
     }) => {
-      return await chatApiClient.createConversation(params);
+      // Map frontend parameter names to API parameter names
+      return chatApiClient.createConversation({
+        type: params.type,
+        title: params.title,
+        description: undefined, // Not used by frontend
+        is_private: params.isPrivate,
+        participant_ids: params.participantIds,
+      });
     },
     onSuccess: () => {
-      // Invalidate conversations list to refetch
-      queryClient.invalidateQueries({ queryKey: conversationKeys.lists() });
+      void queryClient.invalidateQueries({ queryKey: conversationKeys.lists() });
     },
   });
+
+  return {
+    mutate: mutation.mutateAsync,
+    isLoading: mutation.isPending,
+    error: mutation.error,
+  };
+}
+
+// Hook to leave a conversation
+export function useLeaveConversation(): {
+  mutate: (conversationId: string) => Promise<void>;
+  isLoading: boolean;
+  error: Error | null;
+} {
+  const queryClient = useQueryClient();
+  
+  const mutation = useMutation({
+    mutationFn: (conversationId: string) => {
+      return chatApiClient.leaveConversation(conversationId);
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: conversationKeys.lists() });
+    },
+  });
+
+  return {
+    mutate: mutation.mutateAsync,
+    isLoading: mutation.isPending,
+    error: mutation.error,
+  };
 }
 
 // Hook to mark conversation as read
-export function useMarkAsRead() {
+export function useMarkAsRead(): {
+  mutate: (conversationId: string) => void;
+  mutateAsync: (conversationId: string) => Promise<void>;
+  isPending: boolean;
+} {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
-    mutationFn: async (conversationId: string) => {
-      return await chatApiClient.markAsRead(conversationId);
+    mutationFn: async (conversationId: string): Promise<void> => {
+      await chatApiClient.markAsRead(conversationId);
     },
-    retry: false, // Disable automatic retries
-    onSuccess: (data, conversationId) => {
-      // Update the unread count in the cache
-      queryClient.setQueryData<ConversationWithDetails[]>(
-        conversationKeys.lists(),
-        (old) => {
-          if (!old) return old;
-          return old.map(conv =>
-            conv.id === conversationId
-              ? { ...conv, unread_count: data.unread_count }
-              : conv
-          );
-        }
-      );
+    onSuccess: (_, conversationId) => {
+      void queryClient.invalidateQueries({
+        queryKey: conversationKeys.detail(conversationId),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: conversationKeys.lists(),
+      });
     },
   });
 } 
