@@ -47,7 +47,8 @@ export async function PATCH(
       .select('*', { count: 'exact', head: true })
       .eq('conversation_id', conversationId)
       .gt('created_at', now)
-      .neq('sender_id', user.id);
+      .neq('sender_id', user.id)
+      .is('deleted_at', null);
 
     return NextResponse.json({ 
       success: true,

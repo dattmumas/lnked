@@ -33,6 +33,14 @@ export const API_ROUTES = {
     
   CHAT_MESSAGE_EDIT: (conversationId: string, messageId: string) => 
     `/api/chat/${conversationId}/messages/${messageId}`,
+
+  // Delete chat for current user
+  CHAT_CONVERSATION_DELETE_FOR_ME: (conversationId: string) =>
+    `/api/chat/${conversationId}/delete`,
+
+  // Delete specific message (same as edit path, but convenience)
+  CHAT_MESSAGE_DELETE: (conversationId: string, messageId: string) =>
+    `/api/chat/${conversationId}/messages/${messageId}`,
 } as const;
 
 // Type helper for API route functions

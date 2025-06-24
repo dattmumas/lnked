@@ -1,3 +1,4 @@
+/* eslint-disable import/order */
 'use client';
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -5,6 +6,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { chatApiClient } from '@/lib/chat/api-client';
 
 import type { ConversationWithParticipants } from '@/lib/chat/types';
+import { useChatUIStore } from '@/lib/stores/chat-ui-store';
 
 const CONVERSATION_STALE_TIME = 5 * 60 * 1000; // 5 minutes
 const CONVERSATION_RETRY_DELAY = 5 * 60 * 1000; // 5 minutes
@@ -49,16 +51,27 @@ export function useConversation(conversationId: string): {
   isLoading: boolean;
   error: Error | null;
 } {
-  const query = useQuery({
-    queryKey: conversationKeys.detail(conversationId),
-    queryFn: () => chatApiClient.getConversation(conversationId),
-    enabled: Boolean(conversationId),
+  const queryClient = useQueryClient();
+  
+  // Get conversation from the conversations list cache instead of a separate endpoint
+  const conversationsQuery = useQuery({
+    queryKey: conversationKeys.lists(),
+    queryFn: async () => {
+      const result = await chatApiClient.getConversations();
+      return result.conversations;
+    },
+    staleTime: CONVERSATION_STALE_TIME,
+    retry: 3,
+    retryDelay: CONVERSATION_RETRY_DELAY,
   });
 
+  // Find the specific conversation in the list
+  const conversation = conversationsQuery.data?.find(c => c.id === conversationId);
+
   return {
-    conversation: query.data,
-    isLoading: query.isLoading,
-    error: query.error,
+    conversation,
+    isLoading: conversationsQuery.isLoading,
+    error: conversationsQuery.error,
   };
 }
 
@@ -147,6 +160,59 @@ export function useMarkAsRead(): {
       });
       void queryClient.invalidateQueries({
         queryKey: conversationKeys.lists(),
+      });
+    },
+  });
+}
+
+// Delete chat for current user
+export function useDeleteConversation(): { mutate: (conversationId: string)=>void; isPending: boolean } {
+  const queryClient = useQueryClient();
+  const { setActiveConversation, activeConversationId } = useChatUIStore();
+
+  return useMutation({
+    mutationFn: async (conversationId: string): Promise<void> => {
+      await chatApiClient.deleteConversationForMe(conversationId);
+    },
+    onMutate: async (conversationId) => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: conversationKeys.lists() });
+
+      // Snapshot the previous value
+      const previousConversations = queryClient.getQueryData(conversationKeys.lists());
+
+      // Optimistically remove the conversation from cache
+      queryClient.setQueryData(
+        conversationKeys.lists(),
+        (oldData: ConversationWithParticipants[] | undefined) => {
+          if (!oldData) return oldData;
+          return oldData.filter(c => c.id !== conversationId);
+        }
+      );
+
+      // Clear active conversation if it's the one being deleted
+      if (activeConversationId === conversationId) {
+        setActiveConversation(undefined);
+      }
+
+      // Return a context object with the snapshotted value
+      return { previousConversations };
+    },
+    onError: (_err, _variables, context) => {
+      // If the mutation fails, use the context returned from onMutate to roll back
+      if (context?.previousConversations) {
+        queryClient.setQueryData(conversationKeys.lists(), context.previousConversations);
+      }
+    },
+    onSuccess: (_data, conversationId) => {
+      // Invalidate to ensure consistency
+      void queryClient.invalidateQueries({
+        queryKey: conversationKeys.lists(),
+      });
+      
+      // Also invalidate direct conversations cache
+      void queryClient.invalidateQueries({
+        queryKey: ['chat', 'direct'],
       });
     },
   });

@@ -1,7 +1,7 @@
 'use client';
 
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { ArrowDown, MessageSquare } from 'lucide-react';
+import { ArrowDown, MessageSquare, MoreHorizontal } from 'lucide-react';
 import Image from 'next/image';
 import React, {
   useCallback,
@@ -12,6 +12,21 @@ import React, {
 } from 'react';
 
 import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from '@/components/ui/dropdown-menu';
+import { useDeleteMessage } from '@/lib/hooks/chat/use-messages';
 
 import type { MessageWithSender } from '@/lib/chat/types';
 
@@ -237,6 +252,7 @@ export function VirtualMessageList({
                 currentUserId={currentUserId}
                 firstUnreadIndex={firstUnreadIndex}
                 measureElement={virtualizer.measureElement}
+                conversationId={conversationId}
               />
             );
           })}
@@ -279,6 +295,7 @@ interface MessageRowProps {
   currentUserId: string;
   firstUnreadIndex: number;
   measureElement: (el: HTMLElement | null) => void;
+  conversationId: string;
 }
 
 const MessageRow = React.memo(
@@ -289,10 +306,13 @@ const MessageRow = React.memo(
     currentUserId,
     firstUnreadIndex,
     measureElement,
+    conversationId,
   }: MessageRowProps) => {
     const isFromCurrentUser = message.sender?.id === currentUserId;
     const previousMessage = messages[virtualItem.index - 1];
     const showUnreadDivider = virtualItem.index === firstUnreadIndex;
+    const deleteMutation = useDeleteMessage();
+    const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
     // Message grouping logic
     const shouldGroup = React.useMemo(() => {
@@ -308,130 +328,210 @@ const MessageRow = React.memo(
             new Date(previousMessage.created_at).getTime()
           : Infinity;
       return timeDiff < 2 * 60 * 1000; // 2 minutes
-    }, [message, previousMessage]);
+    }, [message.sender?.id, message.created_at, previousMessage]);
 
     const showAvatar = !shouldGroup && !isFromCurrentUser;
     const showUsername = !shouldGroup && !isFromCurrentUser;
 
+    const handleDeleteClick = React.useCallback(() => {
+      setDeleteConfirmId(message.id);
+    }, [message.id]);
+
+    const handleConfirmDelete = React.useCallback(() => {
+      deleteMutation.mutate({
+        messageId: message.id,
+        conversationId,
+      });
+      setDeleteConfirmId(null);
+    }, [deleteMutation, message.id, conversationId]);
+
+    const handleCancelDelete = React.useCallback(() => {
+      setDeleteConfirmId(null);
+    }, []);
+
     return (
-      <div
-        ref={measureElement}
-        data-message-id={message.id}
-        style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          width: '100%',
-          transform: `translateY(${virtualItem.start}px)`,
-        }}
-        className="group px-4 py-1"
-      >
-        {showUnreadDivider && (
-          <div className="flex items-center gap-2 py-2">
-            <div className="h-px flex-1 bg-gradient-to-r from-transparent via-primary to-transparent" />
-            <span className="text-xs font-medium text-primary bg-primary/10 px-3 py-1 rounded-full">
-              New messages
-            </span>
-            <div className="h-px flex-1 bg-gradient-to-r from-transparent via-primary to-transparent" />
-          </div>
-        )}
-
-        {!shouldGroup && virtualItem.index > 0 && <div className="h-4" />}
-
+      <>
         <div
-          className={`flex ${isFromCurrentUser ? 'justify-end' : 'justify-start'}`}
+          ref={measureElement}
+          data-message-id={message.id}
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: '100%',
+            transform: `translateY(${virtualItem.start}px)`,
+          }}
+          className="group px-4 py-1"
         >
-          <div
-            className={`flex gap-3 max-w-[75%] ${isFromCurrentUser ? 'flex-row-reverse' : 'flex-row'}`}
-          >
-            {/* Avatar */}
-            {!isFromCurrentUser && (
-              <div className="w-8 h-8 flex-shrink-0 self-end">
-                {showAvatar && (
-                  <div className="w-8 h-8 rounded-full overflow-hidden bg-muted">
-                    {message.sender?.avatar_url ? (
-                      <Image
-                        src={message.sender.avatar_url}
-                        alt={message.sender?.username || 'User'}
-                        width={32}
-                        height={32}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-full h-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-semibold text-xs">
-                        {(message.sender?.username?.[0] || 'U').toUpperCase()}
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
+          {showUnreadDivider && (
+            <div className="flex items-center gap-2 py-2">
+              <div className="h-px flex-1 bg-gradient-to-r from-transparent via-primary to-transparent" />
+              <span className="text-xs font-medium text-primary bg-primary/10 px-3 py-1 rounded-full">
+                New messages
+              </span>
+              <div className="h-px flex-1 bg-gradient-to-r from-transparent via-primary to-transparent" />
+            </div>
+          )}
 
-            {/* Message content */}
-            <div className="flex flex-col min-w-0 flex-1">
-              {showUsername && (
-                <div
-                  className={`flex items-center gap-2 mb-1 ${isFromCurrentUser ? 'justify-end' : 'justify-start'}`}
-                >
-                  <span className="text-sm font-semibold text-foreground">
-                    {isFromCurrentUser
-                      ? 'You'
-                      : message.sender?.username || 'Unknown'}
-                  </span>
-                  <span className="text-xs text-muted-foreground">
-                    {message.created_at
-                      ? new Date(message.created_at).toLocaleTimeString([], {
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        })
-                      : ''}
-                  </span>
+          {!shouldGroup && virtualItem.index > 0 && <div className="h-4" />}
+
+          <div
+            className={`flex ${isFromCurrentUser ? 'justify-end' : 'justify-start'}`}
+          >
+            <div
+              className={`flex gap-3 max-w-[75%] ${isFromCurrentUser ? 'flex-row-reverse' : 'flex-row'}`}
+            >
+              {/* Avatar */}
+              {!isFromCurrentUser && (
+                <div className="w-8 h-8 flex-shrink-0 self-end">
+                  {showAvatar && (
+                    <div className="w-8 h-8 rounded-full overflow-hidden bg-muted">
+                      {message.sender?.avatar_url ? (
+                        <Image
+                          src={message.sender.avatar_url}
+                          alt={message.sender?.username || 'User'}
+                          width={32}
+                          height={32}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-semibold text-xs">
+                          {(message.sender?.username?.[0] || 'U').toUpperCase()}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
 
-              <div
-                className={`
-                group-hover:shadow-sm transition-all duration-150 rounded-2xl px-4 py-2 relative
-                ${
-                  isFromCurrentUser
-                    ? 'bg-primary/20 text-foreground rounded-br-md'
-                    : 'bg-muted/90 text-foreground rounded-bl-md'
-                }
-                ${shouldGroup ? 'mt-1' : 'mt-0'}
-              `}
-              >
-                <div className="text-sm whitespace-pre-wrap break-words leading-relaxed">
-                  {message.content}
-                </div>
+              {/* Message content */}
+              <div className="flex flex-col min-w-0 flex-1">
+                {showUsername && (
+                  <div
+                    className={`flex items-center gap-2 mb-1 ${isFromCurrentUser ? 'justify-end' : 'justify-start'}`}
+                  >
+                    <span className="text-sm font-semibold text-foreground">
+                      {isFromCurrentUser
+                        ? 'You'
+                        : message.sender?.username || 'Unknown'}
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      {message.created_at
+                        ? new Date(message.created_at).toLocaleTimeString([], {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })
+                        : ''}
+                    </span>
+                  </div>
+                )}
 
-                {/* Hover actions */}
                 <div
                   className={`
-                  absolute top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 
-                  transition-opacity duration-200 flex gap-1
-                  ${isFromCurrentUser ? '-left-16' : '-right-16'}
+                  group-hover:shadow-sm transition-all duration-150 rounded-2xl px-4 py-2 relative
+                  ${
+                    isFromCurrentUser
+                      ? 'bg-primary/20 text-foreground rounded-br-md'
+                      : 'bg-muted/90 text-foreground rounded-bl-md'
+                  }
+                  ${shouldGroup ? 'mt-1' : 'mt-0'}
                 `}
                 >
-                  <button
-                    type="button"
-                    className="w-8 h-8 rounded-full bg-background/90 border shadow-sm hover:bg-muted/50 flex items-center justify-center text-xs"
-                    title="Reply"
-                  >
-                    ↩
-                  </button>
-                  <button
-                    type="button"
-                    className="w-8 h-8 rounded-full bg-background/90 border shadow-sm hover:bg-muted/50 flex items-center justify-center text-xs"
-                    title="React"
-                  >
-                    😊
-                  </button>
+                  <div className="text-sm whitespace-pre-wrap break-words leading-relaxed">
+                    {message.deleted_at ? (
+                      <em className="italic text-muted-foreground">
+                        This message was deleted
+                      </em>
+                    ) : (
+                      message.content
+                    )}
+                  </div>
+
+                  {/* Hover actions */}
+                  {!message.deleted_at && (
+                    <div
+                      className={`
+                      absolute top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 
+                      transition-opacity duration-200 flex gap-1
+                      ${isFromCurrentUser ? '-left-16' : '-right-16'}
+                    `}
+                    >
+                      <button
+                        type="button"
+                        className="w-8 h-8 rounded-full bg-background/90 border shadow-sm hover:bg-muted/50 flex items-center justify-center text-xs"
+                        title="Reply"
+                      >
+                        ↩
+                      </button>
+                      {isFromCurrentUser ? (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <button
+                              type="button"
+                              className="w-8 h-8 rounded-full bg-background/90 border shadow-sm hover:bg-muted/50 flex items-center justify-center text-xs"
+                              title="More"
+                            >
+                              <MoreHorizontal className="w-4 h-4" />
+                            </button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent
+                            align="center"
+                            sideOffset={4}
+                            className="p-1 bg-white dark:bg-gray-900 rounded-md border shadow-md"
+                          >
+                            <DropdownMenuItem
+                              onSelect={handleDeleteClick}
+                              className="text-red-600 focus:bg-red-50 dark:focus:bg-red-600/20"
+                            >
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      ) : (
+                        <button
+                          type="button"
+                          className="w-8 h-8 rounded-full bg-background/90 border shadow-sm hover:bg-muted/50 flex items-center justify-center text-xs"
+                          title="React"
+                        >
+                          😊
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
+
+        {/* Delete Confirmation Dialog */}
+        <Dialog
+          open={deleteConfirmId === message.id}
+          onOpenChange={(open) => !open && handleCancelDelete()}
+        >
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Delete Message</DialogTitle>
+              <DialogDescription>
+                Are you sure you want to delete this message? This action cannot
+                be undone.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button variant="outline" onClick={handleCancelDelete}>
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={handleConfirmDelete}
+                disabled={deleteMutation.isPending}
+              >
+                {deleteMutation.isPending ? 'Deleting...' : 'Delete'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </>
     );
   },
 );

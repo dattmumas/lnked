@@ -12,8 +12,15 @@ import {
 } from 'lucide-react';
 import React, { useState, useEffect, useCallback } from 'react';
 
+// internal ui components
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from '@/components/ui/dropdown-menu';
 import { Textarea } from '@/components/ui/textarea';
 import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
 import { cn } from '@/lib/utils';
@@ -636,17 +643,35 @@ export function RightSidebar({
                           <Share2 className="w-4 h-4" />
                           <span>{item.stats.shares}</span>
                         </button>
-                        {/* More Options */}
+                        {/* More / Delete menu */}
                         {item.author_id === user.id ? (
-                          <button
-                            onClick={handleDeleteChain(item.id)}
-                            className="ml-auto text-red-500 hover:text-red-600 transition-colors text-xs flex items-center gap-1"
-                            title="Delete chain"
-                          >
-                            <MoreHorizontal className="w-4 h-4" /> Delete
-                          </button>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <button
+                                className="ml-auto text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
+                                aria-label="Chain options"
+                              >
+                                <MoreHorizontal className="w-4 h-4" />
+                              </button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent
+                              sideOffset={4}
+                              align="center"
+                              className="z-50 min-w-[120px] rounded-md border bg-white dark:bg-gray-900 p-1 shadow-md"
+                            >
+                              <DropdownMenuItem
+                                onSelect={handleDeleteChain(item.id)}
+                                className="flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm text-red-600 focus:bg-gray-100 dark:focus:bg-gray-700 outline-none"
+                              >
+                                Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         ) : (
-                          <button className="ml-auto text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition-colors">
+                          <button
+                            className="ml-auto text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
+                            aria-label="Chain options"
+                          >
                             <MoreHorizontal className="w-4 h-4" />
                           </button>
                         )}

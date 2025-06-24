@@ -26,22 +26,23 @@ export class ChatApiClient {
 
   /**
    * Fetch a single conversation by ID
+   * NOTE: Currently unused - we get individual conversations from the conversations list
    */
-  async getConversation(conversationId: string): Promise<ConversationWithParticipants> {
-    const response = await fetch(`${API_ROUTES.CHAT_CONVERSATIONS}/${conversationId}`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
+  // async getConversation(conversationId: string): Promise<ConversationWithParticipants> {
+  //   const response = await fetch(`${API_ROUTES.CHAT_CONVERSATIONS}/${conversationId}`, {
+  //     method: 'GET',
+  //     headers: {
+  //       'Content-Type': 'application/json',
+  //     },
+  //   });
 
-    if (!response.ok) {
-      const error = await response.json() as { error?: string };
-      throw new Error(error.error ?? 'Failed to fetch conversation');
-    }
+  //   if (!response.ok) {
+  //     const error = await response.json() as { error?: string };
+  //     throw new Error(error.error ?? 'Failed to fetch conversation');
+  //   }
 
-    return response.json() as Promise<ConversationWithParticipants>;
-  }
+  //   return response.json() as Promise<ConversationWithParticipants>;
+  // }
 
   /**
    * Fetch messages for a conversation with pagination
@@ -251,6 +252,39 @@ export class ChatApiClient {
     if (!response.ok) {
       const error = await response.json() as { error?: string };
       throw new Error(error.error ?? 'Failed to remove reaction');
+    }
+  }
+
+  /**
+   * Delete (soft) a message
+   */
+  async deleteMessage(messageId: string, conversationId?: string): Promise<void> {
+    // conversationId optional for convenience, construct if provided else caller must send full path constant
+    const endpoint = conversationId
+      ? API_ROUTES.CHAT_MESSAGE_DELETE(conversationId, messageId)
+      : `/api/chat/messages/${messageId}`;
+
+    const response = await fetch(endpoint, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+    });
+
+    if (!response.ok) {
+      const error = (await response.json().catch(() => ({}))) as { error?: string };
+      throw new Error(error.error ?? 'Failed to delete message');
+    }
+  }
+
+  /** Delete chat for me */
+  async deleteConversationForMe(conversationId: string): Promise<void> {
+    const response = await fetch(API_ROUTES.CHAT_CONVERSATION_DELETE_FOR_ME(conversationId), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+    });
+
+    if (!response.ok) {
+      const error = (await response.json().catch(() => ({}))) as { error?: string };
+      throw new Error(error.error ?? 'Failed to delete conversation');
     }
   }
 }

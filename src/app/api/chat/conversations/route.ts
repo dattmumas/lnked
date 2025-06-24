@@ -57,6 +57,7 @@ export async function GET(): Promise<NextResponse> {
         )
       `)
       .eq('user_id', user.id)
+      .is('deleted_at', null)
       .order('conversations(last_message_at)', { ascending: false });
 
     if (participantError !== null) {
@@ -88,6 +89,7 @@ export async function GET(): Promise<NextResponse> {
         )
       `)
       .in('conversation_id', conversationIds)
+      .is('deleted_at', null)
       .order('created_at', { ascending: false });
 
     // Group last messages by conversation
@@ -111,7 +113,8 @@ export async function GET(): Promise<NextResponse> {
         .select('*', { count: 'exact', head: true })
         .eq('conversation_id', conversationId)
         .gt('created_at', lastReadAt)
-        .neq('sender_id', user.id);
+        .neq('sender_id', user.id)
+        .is('deleted_at', null);
 
       return {
         conversation_id: conversationId,

@@ -1,9 +1,10 @@
 'use client';
 
 import { useInfiniteQuery, useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
-import { useMemo } from 'react';
+import { useMemo, useEffect } from 'react';
 
 import { chatApiClient } from '@/lib/chat/api-client';
+import { selectAdapter } from '@/lib/chat/realtime-adapter';
 import { useChatUIStore } from '@/lib/stores/chat-ui-store';
 
 import { conversationKeys } from './use-conversations';
@@ -231,4 +232,162 @@ export function useSearchMessages(
     isLoading: searchQuery.isLoading,
     error: searchQuery.error,
   };
+}
+
+// Hook to delete a message (soft delete)
+export function useDeleteMessage(): { mutate: (params: { messageId: string; conversationId: string }) => void; isPending: boolean } {
+  const queryClient = useQueryClient();
+  const { activeConversationId } = useChatUIStore();
+
+  return useMutation({
+    mutationFn: async ({ messageId, conversationId }: { messageId: string; conversationId: string }): Promise<void> => {
+      return chatApiClient.deleteMessage(messageId, conversationId);
+    },
+    onMutate: async ({ messageId, conversationId }) => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: messageKeys.conversation(conversationId) });
+
+      // Snapshot the previous value
+      const previousMessages = queryClient.getQueryData(messageKeys.conversation(conversationId));
+
+      // Optimistically update the message to show as deleted
+      queryClient.setQueryData(
+        messageKeys.conversation(conversationId),
+        (oldData: { pages: MessageWithSender[][]; pageParams: unknown[] } | undefined) => {
+          if (!oldData) return oldData;
+
+          const newPages = oldData.pages.map(page =>
+            page.map(message =>
+              message.id === messageId
+                ? { ...message, deleted_at: new Date().toISOString() }
+                : message
+            )
+          );
+
+          return {
+            ...oldData,
+            pages: newPages,
+          };
+        }
+      );
+
+      // Return a context object with the snapshotted value
+      return { previousMessages, conversationId };
+    },
+    onError: (_err, _variables, context) => {
+      // If the mutation fails, use the context returned from onMutate to roll back
+      if (context?.previousMessages) {
+        queryClient.setQueryData(
+          messageKeys.conversation(context.conversationId),
+          context.previousMessages
+        );
+      }
+    },
+    onSuccess: (_data, { conversationId }) => {
+      // Invalidate queries to ensure consistency
+      void queryClient.invalidateQueries({
+        queryKey: messageKeys.conversation(conversationId),
+      });
+      // Also invalidate conversation list in case this was the last message
+      void queryClient.invalidateQueries({
+        queryKey: conversationKeys.lists(),
+      });
+    },
+  });
+}
+
+// Hook to subscribe to realtime message updates
+export function useRealtimeMessages(conversationId: string | null): void {
+  const queryClient = useQueryClient();
+  
+  useEffect(() => {
+    if (!conversationId) return;
+    
+    const adapter = selectAdapter('supabase');
+    let unsubscribe: (() => void | Promise<void>) | undefined;
+    
+    const setupSubscription = async (): Promise<void> => {
+      const unsub = await adapter.subscribe(conversationId, {
+        onMessage: (message) => {
+          // Add new message to cache
+          queryClient.setQueryData(
+            messageKeys.conversation(conversationId),
+            (oldData: { pages: MessageWithSender[][]; pageParams: unknown[] } | undefined) => {
+              if (!oldData) return oldData;
+              
+              const newPages = [...oldData.pages];
+              if (newPages.length > 0) {
+                // Check if message already exists
+                const exists = newPages[0].some(m => m.id === (message as MessageWithSender).id);
+                if (!exists) {
+                  newPages[0] = [message as MessageWithSender, ...newPages[0]];
+                }
+              }
+              
+              return {
+                ...oldData,
+                pages: newPages,
+              };
+            }
+          );
+        },
+        onMessageUpdate: (message) => {
+          // Update existing message in cache
+          queryClient.setQueryData(
+            messageKeys.conversation(conversationId),
+            (oldData: { pages: MessageWithSender[][]; pageParams: unknown[] } | undefined) => {
+              if (!oldData) return oldData;
+              
+              const newPages = oldData.pages.map(page =>
+                page.map(m =>
+                  m.id === (message as MessageWithSender).id ? message as MessageWithSender : m
+                )
+              );
+              
+              return {
+                ...oldData,
+                pages: newPages,
+              };
+            }
+          );
+        },
+        onMessageDelete: (messageId) => {
+          // Mark message as deleted in cache
+          queryClient.setQueryData(
+            messageKeys.conversation(conversationId),
+            (oldData: { pages: MessageWithSender[][]; pageParams: unknown[] } | undefined) => {
+              if (!oldData) return oldData;
+              
+              const newPages = oldData.pages.map(page =>
+                page.map(m =>
+                  m.id === messageId
+                    ? { ...m, deleted_at: new Date().toISOString() }
+                    : m
+                )
+              );
+              
+              return {
+                ...oldData,
+                pages: newPages,
+              };
+            }
+          );
+        },
+      });
+      
+      unsubscribe = unsub;
+    };
+    
+    void setupSubscription();
+    
+    return () => {
+      if (unsubscribe) {
+        // Call unsubscribe but don't return the promise
+        const cleanup = unsubscribe();
+        if (cleanup instanceof Promise) {
+          void cleanup;
+        }
+      }
+    };
+  }, [conversationId, queryClient]);
 } 

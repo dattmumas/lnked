@@ -15,7 +15,11 @@ import {
   useConversation,
   useMarkAsRead,
 } from '@/lib/hooks/chat/use-conversations';
-import { useMessages, useSendMessage } from '@/lib/hooks/chat/use-messages';
+import {
+  useMessages,
+  useSendMessage,
+  useRealtimeMessages,
+} from '@/lib/hooks/chat/use-messages';
 import { useChatUIStore } from '@/lib/stores/chat-ui-store';
 
 import { VirtualMessageList } from './virtual-message-list';
@@ -56,6 +60,9 @@ export function ChatPanel({
 
   const sendMessage = useSendMessage();
   const markAsRead = useMarkAsRead();
+
+  // Subscribe to realtime message updates
+  useRealtimeMessages(conversationId);
 
   // Get reply target from UI store
   const replyTargetId = getReplyTarget(conversationId);

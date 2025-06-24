@@ -1,3 +1,4 @@
+/* eslint-disable import/order */
 'use client';
 
 import { useCallback, useEffect, useState, useMemo } from 'react';
@@ -9,7 +10,15 @@ import { useUser } from '@/hooks/useUser';
 import { CHAT_HEADER_HEIGHT } from '@/lib/constants/chat';
 import { useChatUIStore } from '@/lib/stores/chat-ui-store';
 
+import { MoreHorizontal } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from '@/components/ui/dropdown-menu';
 import { CenteredSpinner } from '../ui/CenteredSpinner';
+import { useDeleteConversation } from '@/lib/hooks/chat/use-conversations';
 
 import { ChannelIcon } from './ChannelIcon';
 import { ChatPanel } from './chat-panel';
@@ -124,6 +133,8 @@ export default function ChatInterface({
     [],
   );
 
+  const deleteConversation = useDeleteConversation();
+
   if (loadingMemberships && memberships.length === 0 && !activeChannel) {
     return <CenteredSpinner label="Loading chat interface..." />;
   }
@@ -182,7 +193,30 @@ export default function ChatInterface({
 
               {/* Optional: Channel actions */}
               <div className="flex items-center gap-2">
-                {/* Add channel settings, search, etc. here */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      className="p-2 rounded-md hover:bg-muted transition-colors"
+                      aria-label="Channel options"
+                    >
+                      <MoreHorizontal className="w-4 h-4" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent
+                    align="end"
+                    sideOffset={4}
+                    className="p-1 bg-white dark:bg-gray-900 rounded-md border shadow-md"
+                  >
+                    <DropdownMenuItem
+                      onSelect={() =>
+                        deleteConversation.mutate(activeChannel.id)
+                      }
+                      className="text-red-600 focus:bg-red-50 dark:focus:bg-red-600/20"
+                    >
+                      Delete chat
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             </header>
 

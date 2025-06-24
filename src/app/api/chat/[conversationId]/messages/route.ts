@@ -52,7 +52,8 @@ export async function GET(request: NextRequest, context: { params: Promise<{ con
       reply_to:messages(*, sender:users(id, full_name, username, avatar_url)),
       message_reactions(emoji, user_id)`,
     )
-    .eq('conversation_id', conversationId);
+    .eq('conversation_id', conversationId)
+    .is('deleted_at', null);
 
   // For pagination, get messages older than the cursor
   if (beforeIso !== null && beforeIso !== undefined) {
