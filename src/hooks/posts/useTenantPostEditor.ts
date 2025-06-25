@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useState, useCallback } from 'react';
 
 import { createPost, updatePost } from '@/app/actions/postActions';
-import { useTenantContext } from '@/providers/TenantProvider';
+import { useTenant } from '@/providers/TenantProvider';
 
 import type { CreatePostServerValues, UpdatePostServerValues } from '@/lib/schemas/postSchemas';
 
@@ -57,7 +57,7 @@ export interface UseTenantPostEditorReturn {
 
 export function useTenantPostEditor(options: TenantPostEditorOptions = {}): UseTenantPostEditorReturn {
   const router = useRouter();
-  const { currentTenant } = useTenantContext();
+  const { currentTenant } = useTenant();
   const { postId, initialData } = options;
   
   // Form state

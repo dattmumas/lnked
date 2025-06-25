@@ -6,7 +6,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useState, useEffect, useCallback, useMemo } from 'react';
 
-import { useTenantContext } from '@/providers/TenantProvider';
+import { useTenant } from '@/providers/TenantProvider';
 
 import type { FeedItem } from '@/types/home/types';
 
@@ -95,7 +95,7 @@ export interface UseTenantFeedReturn {
 // =============================================================================
 
 export function useTenantFeed(options: TenantFeedOptions = {}): UseTenantFeedReturn {
-  const { currentTenant, userTenants } = useTenantContext();
+  const { currentTenant, userTenants } = useTenant();
   const [offset, setOffset] = useState(0);
   const [allPosts, setAllPosts] = useState<TenantFeedPost[]>([]);
   

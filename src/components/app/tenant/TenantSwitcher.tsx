@@ -16,7 +16,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { useTenantContext } from '@/providers/TenantProvider';
+import { useTenant } from '@/providers/TenantProvider';
 
 import type { UserTenantsResponse } from '@/types/tenant.types';
 
@@ -36,7 +36,7 @@ function TenantSwitcher({
     personalTenant,
     collectiveTenants,
     switchTenant,
-  } = useTenantContext();
+  } = useTenant();
 
   const getDisplayName = React.useCallback(
     (tenant: UserTenantsResponse): string => {

@@ -15,7 +15,7 @@ import { Input } from '@/components/ui/input';
 import { useDirectMessages } from '@/hooks/chat/useDirectMessages';
 import { useCreateTenantChannel , useTenantChannels } from '@/hooks/chat/useTenantChannels';
 import { useDebounce } from '@/hooks/useDebounce';
-import { useTenantContext } from '@/providers/TenantProvider';
+import { useTenant } from '@/providers/TenantProvider';
 
 import { UserSearchDialog } from './UserSearchDialog';
 
@@ -37,7 +37,7 @@ export function TenantChannelsSidebar({
   selectedChannelId,
   onSelectChannel,
 }: TenantChannelsSidebarProps): React.JSX.Element {
-  const { currentTenant } = useTenantContext();
+  const { currentTenant } = useTenant();
   const { data: channels = [], isLoading: channelsLoading } =
     useTenantChannels();
   const { data: conversations = [], isLoading: dmsLoading } =

@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useCallback } from 'react';
 
-import { useTenantContext } from '@/providers/TenantProvider';
+import { useTenant } from '@/providers/TenantProvider';
 
 import type { TenantSettingsFormData } from '@/types/tenant.types';
 
@@ -61,7 +61,7 @@ export interface UseTenantSettingsReturn {
  * Hook for managing tenant settings
  */
 export function useTenantSettings(tenantId?: string): UseTenantSettingsReturn {
-  const { currentTenant } = useTenantContext();
+  const { currentTenant } = useTenant();
   const queryClient = useQueryClient();
   const effectiveTenantId = tenantId ?? currentTenant?.tenant_id;
 

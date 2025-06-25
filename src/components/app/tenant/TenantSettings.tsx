@@ -47,7 +47,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { useTenantSettings } from '@/hooks/useTenantSettings';
 import { useToast } from '@/hooks/useToast';
-import { useTenantContext } from '@/providers/TenantProvider';
+import { useTenant } from '@/providers/TenantProvider';
 
 import { TenantPermissions, PermissionGate } from './TenantPermissions';
 
@@ -95,7 +95,7 @@ export function TenantSettings({
   tenantId,
   className,
 }: TenantSettingsProps): React.JSX.Element {
-  const { currentTenant } = useTenantContext();
+  const { currentTenant } = useTenant();
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState('general');
 

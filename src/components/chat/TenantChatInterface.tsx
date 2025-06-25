@@ -18,7 +18,7 @@ import {
   useDeleteConversation,
 } from '@/lib/hooks/chat/use-conversations';
 import { useChatUIStore } from '@/lib/stores/chat-ui-store';
-import { useTenantContext } from '@/providers/TenantProvider';
+import { useTenant } from '@/providers/TenantProvider';
 
 import { CenteredSpinner } from '../ui/CenteredSpinner';
 
@@ -42,7 +42,7 @@ export default function TenantChatInterface({
 }: TenantChatInterfaceProps): React.JSX.Element {
   const { user } = useUser();
   const { toast } = useToast();
-  const { currentTenant, userTenants } = useTenantContext();
+  const { currentTenant, userTenants } = useTenant();
   const {
     data: channels = [],
     isLoading: channelsLoading,

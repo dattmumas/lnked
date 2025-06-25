@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 
-import { useTenantContext } from '@/providers/TenantProvider';
+import { useTenant } from '@/providers/TenantProvider';
 
 const TENANT_ANALYTICS_STALE_TIME = 10 * 60 * 1000; // 10 minutes
 
@@ -57,7 +57,7 @@ export interface UseTenantAnalyticsReturn {
  * Hook for tenant analytics and dashboard data
  */
 export function useTenantAnalytics(tenantId?: string): UseTenantAnalyticsReturn {
-  const { currentTenant } = useTenantContext();
+  const { currentTenant } = useTenant();
   const effectiveTenantId = tenantId ?? currentTenant?.tenant_id;
 
   // Fetch overview statistics
@@ -157,7 +157,7 @@ export function useTenantAnalytics(tenantId?: string): UseTenantAnalyticsReturn 
  * Hook for simplified tenant overview (for dashboard widgets)
  */
 export function useTenantOverview(tenantId?: string) {
-  const { currentTenant } = useTenantContext();
+  const { currentTenant } = useTenant();
   const effectiveTenantId = tenantId ?? currentTenant?.tenant_id;
 
   return useQuery({

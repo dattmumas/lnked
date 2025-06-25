@@ -9,6 +9,7 @@ import React, {
   useEffect,
   useState,
   useCallback,
+  useMemo,
 } from 'react';
 
 import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
@@ -42,6 +43,7 @@ interface TenantContextType {
 
   // Actions
   switchTenant: (tenantId: string) => Promise<void>;
+  switchToPersonal: () => Promise<void>;
   refreshTenants: () => Promise<void>;
   refreshCurrentTenant: () => Promise<void>;
 
@@ -226,6 +228,13 @@ export function TenantProvider({
     [currentTenantId, userTenants],
   );
 
+  const switchToPersonal = useCallback((): Promise<void> => {
+    if (personalTenant) {
+      return switchTenant(personalTenant.id);
+    }
+    return Promise.resolve();
+  }, [personalTenant, switchTenant]);
+
   // Check if user can perform an action in current tenant
   const canPerformAction = useCallback(
     (action: 'read' | 'write' | 'admin' | 'manage'): boolean => {
@@ -277,22 +286,42 @@ export function TenantProvider({
     }
   }, [currentTenantId, refreshCurrentTenant, userTenants.length]);
 
-  const value: TenantContextType = {
-    currentTenantId,
-    currentTenant,
-    userTenants,
-    personalTenant,
-    isLoading,
-    error,
-    switchTenant,
-    refreshTenants,
-    refreshCurrentTenant,
-    canPerformAction,
-    isPersonalTenant,
-  };
+  // Memoize the context value to prevent unnecessary re-renders
+  const contextValue = useMemo(
+    () => ({
+      userTenants,
+      currentTenantId,
+      currentTenant,
+      personalTenant,
+      isLoading: isLoading,
+      error: error,
+      switchTenant,
+      switchToPersonal,
+      refreshTenants,
+      refreshCurrentTenant,
+      canPerformAction,
+      isPersonalTenant,
+    }),
+    [
+      userTenants,
+      currentTenantId,
+      currentTenant,
+      personalTenant,
+      isLoading,
+      error,
+      switchTenant,
+      switchToPersonal,
+      refreshTenants,
+      refreshCurrentTenant,
+      canPerformAction,
+      isPersonalTenant,
+    ],
+  );
 
   return (
-    <TenantContext.Provider value={value}>{children}</TenantContext.Provider>
+    <TenantContext.Provider value={contextValue}>
+      {children}
+    </TenantContext.Provider>
   );
 }
 
@@ -306,7 +335,7 @@ export function useTenant(): TenantContextType {
 }
 
 // Alias for backward compatibility
-export const useTenantContext = useTenant;
+// export const useTenantContext = useTenant;
 
 // Hook for tenant switching with error handling
 export function useTenantSwitcher() {

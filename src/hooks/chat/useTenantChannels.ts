@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
-import { useTenantContext } from '@/providers/TenantProvider';
+import { useTenant } from '@/providers/TenantProvider';
 
 const TENANT_CHANNELS_STALE_TIME = 5 * 60 * 1000; // 5 minutes
 
@@ -25,7 +25,7 @@ export interface CreateTenantChannelParams {
 }
 
 export function useTenantChannels() {
-  const { currentTenant } = useTenantContext();
+  const { currentTenant } = useTenant();
   const isCollective = currentTenant?.is_personal === false;
   const tenantId = currentTenant?.tenant_id;
 
@@ -49,7 +49,7 @@ export function useTenantChannels() {
 }
 
 export function useCreateTenantChannel(tenantId?: string) {
-  const { currentTenant } = useTenantContext();
+  const { currentTenant } = useTenant();
   const queryClient = useQueryClient();
   const effectiveTenantId = tenantId || currentTenant?.tenant_id;
 

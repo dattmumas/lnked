@@ -8,7 +8,7 @@ import React, { useEffect, useCallback, useMemo, useState } from 'react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { useEnhancedPostEditor } from '@/hooks/posts/useEnhancedPostEditor';
+import { usePostEditor } from '@/hooks/posts/usePostEditor';
 
 // Dynamic import for the editor to avoid SSR issues
 const PostEditor = dynamic(() => import('@/components/editor/PostEditor'), {
@@ -30,7 +30,7 @@ export default function NewPostEditorPage(): React.ReactElement {
     isDirty,
     savePost,
     setCurrentPage,
-  } = useEnhancedPostEditor();
+  } = usePostEditor();
 
   // Set current page for state management
   useEffect((): void => {

@@ -2,7 +2,7 @@
 
 import { Building, User } from 'lucide-react';
 
-import { useTenantContext } from '@/providers/TenantProvider';
+import { useTenant } from '@/providers/TenantProvider';
 
 import type { UserTenantsResponse } from '@/types/tenant.types';
 
@@ -16,7 +16,7 @@ export function TenantSwitcherSidebar({
   tenants,
   currentTenant,
 }: TenantSwitcherSidebarProps): React.JSX.Element {
-  const { switchTenant } = useTenantContext();
+  const { switchTenant } = useTenant();
 
   const getTenantIcon = (tenant: UserTenantsResponse) => {
     if (tenant.tenant_type === 'personal') {

@@ -31,7 +31,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
-import { useEnhancedPostEditor } from '@/hooks/posts/useEnhancedPostEditor';
+import { usePostEditor } from '@/hooks/posts/usePostEditor';
 import { useThumbnailUpload } from '@/hooks/posts/useThumbnailUpload';
 
 // Constants
@@ -52,7 +52,7 @@ export default function NewPostDetailsPage(): React.ReactElement {
     setCurrentPage,
     selectedCollectives,
     setSelectedCollectives,
-  } = useEnhancedPostEditor();
+  } = usePostEditor();
 
   // Set current page for state management
   useEffect((): void => {

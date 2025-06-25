@@ -6,7 +6,7 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { usePostFeedInteractions } from '@/hooks/home/usePostFeedInteractions';
 import { useTenantFeed } from '@/hooks/home/useTenantFeed';
-import { useTenantContext } from '@/providers/TenantProvider';
+import { useTenant } from '@/providers/TenantProvider';
 
 import { PostCardWrapper } from './PostCardWrapper';
 
@@ -22,7 +22,7 @@ export function CenterFeed({ user }: Props): React.JSX.Element {
     userTenants,
     isLoading: tenantLoading,
     error: tenantError,
-  } = useTenantContext();
+  } = useTenant();
   const [includeCollectives] = useState(true);
 
   const { feedItems, isLoading, error, refetch, loadMore, hasMore } =

@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 
 import { chatApiClient } from '@/lib/chat/api-client';
-import { useTenantContext } from '@/providers/TenantProvider';
+import { useTenant } from '@/providers/TenantProvider';
 
 import type { ConversationWithParticipants } from '@/lib/chat/types';
 
@@ -13,7 +13,7 @@ export const directMessageKeys = {
 };
 
 export function useDirectMessages() {
-  const { currentTenant } = useTenantContext();
+  const { currentTenant } = useTenant();
   const isPersonal = currentTenant?.is_personal === true;
   const tenantId = currentTenant?.tenant_id;
 
