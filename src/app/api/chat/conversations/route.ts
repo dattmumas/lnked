@@ -217,7 +217,7 @@ async function getLegacyConversations(supabase: any, userId: string): Promise<Ne
 
   const conversations: ConversationWithDetails[] = validParticipantData.map((p: any) => {
     const conversationId = p.conversation_id;
-    const conv = conversationsMetaMap.get(conversationId) as NonNullable<typeof conversationsMeta>[0];
+    const conv = conversationsMetaMap.get(conversationId);
     const lastMessage = lastMessageMap.get(conversationId);
     const participants = participantsMap.get(conversationId) ?? [];
     
@@ -237,7 +237,7 @@ async function getLegacyConversations(supabase: any, userId: string): Promise<Ne
         id: lastMessage.id,
         content: lastMessage.content,
         created_at: lastMessage.created_at,
-        sender: lastMessage.sender as NonNullable<typeof lastMessage.sender>
+        sender: lastMessage.sender
       } : null,
       participants: participants
         .filter(p => p.user_id !== null && 
@@ -249,7 +249,7 @@ async function getLegacyConversations(supabase: any, userId: string): Promise<Ne
         .map(p => ({
           user_id: p.user_id as string,
           role: p.role as string,
-          user: p.user as NonNullable<typeof p.user>
+          user: p.user
         }))
     };
   });

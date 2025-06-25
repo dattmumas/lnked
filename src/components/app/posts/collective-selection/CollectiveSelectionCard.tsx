@@ -1,29 +1,19 @@
 'use client';
 
-import React, { useCallback, useMemo } from 'react';
 import {
   Check,
   Settings,
   Users,
-  CheckCircle2,
   Crown,
   Shield,
   Edit3,
   PenTool,
-  AlertCircle,
-  Info,
 } from 'lucide-react';
-import Image from 'next/image';
+import React, { useCallback, useMemo } from 'react';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 
 import type {

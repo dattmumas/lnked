@@ -1,6 +1,5 @@
 'use client';
 
-import React, { useMemo } from 'react';
 import {
   Users,
   Settings,
@@ -9,6 +8,7 @@ import {
   Calendar,
   CheckCircle,
 } from 'lucide-react';
+import React, { useMemo } from 'react';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -52,12 +52,23 @@ export function CollectiveSelectionSummary({
     selectedCollectives.forEach((collective) => {
       const settings = sharingSettings[collective.id];
       if (settings) {
-        if (settings.status === 'published') {
+        switch (settings.status) {
+        case 'published': {
           counts.published++;
-        } else if (settings.status === 'draft') {
+        
+        break;
+        }
+        case 'draft': {
           counts.draft++;
-        } else if (settings.status === 'pending_approval') {
+        
+        break;
+        }
+        case 'pending_approval': {
           counts.pending_approval++;
+        
+        break;
+        }
+        // No default
         }
 
         if (settings.auto_publish) {

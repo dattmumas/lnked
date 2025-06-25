@@ -93,21 +93,38 @@ export function TenantProvider({
       }
 
       // Transform RPC result to tenant format
-      const transformedTenants: TenantType[] = tenants.map((t: any) => ({
-        id: t.tenant_id,
-        name: t.tenant_name,
-        slug: t.tenant_slug,
-        type: t.tenant_type,
-        description: t.tenant_description,
-        is_public: t.is_public,
-        logo_url: t.logo_url,
-        cover_image_url: t.cover_image_url,
-        settings: t.settings || {},
-        created_at: t.created_at,
-        updated_at: t.updated_at,
-        deleted_at: null,
-        member_count: t.member_count || 0,
-      }));
+      const transformedTenants: TenantType[] = tenants.map((t: unknown) => {
+        const tenant = t as {
+          tenant_id: string;
+          tenant_name: string;
+          tenant_slug: string;
+          tenant_type: 'personal' | 'collective';
+          tenant_description?: string;
+          is_public: boolean;
+          logo_url?: string;
+          cover_image_url?: string;
+          settings?: Record<string, unknown>;
+          created_at: string;
+          updated_at: string;
+          member_count?: number;
+        };
+
+        return {
+          id: tenant.tenant_id,
+          name: tenant.tenant_name,
+          slug: tenant.tenant_slug,
+          type: tenant.tenant_type,
+          description: tenant.tenant_description ?? null,
+          is_public: tenant.is_public,
+          logo_url: tenant.logo_url ?? null,
+          cover_image_url: tenant.cover_image_url ?? null,
+          settings: tenant.settings || {},
+          created_at: tenant.created_at,
+          updated_at: tenant.updated_at,
+          deleted_at: null,
+          member_count: tenant.member_count ?? 0,
+        };
+      });
 
       setUserTenants(transformedTenants);
 
@@ -156,7 +173,16 @@ export function TenantProvider({
       }
 
       // Transform to our context format (cast to any for RPC response)
-      const tenantData = tenantContext as any;
+      const tenantData = tenantContext as {
+        id: string;
+        name: string;
+        slug: string;
+        type: 'personal' | 'collective';
+        description?: string;
+        is_public: boolean;
+        user_role: UserRole;
+        member_count?: number;
+      };
       const context: TenantContext = {
         id: tenantData.id,
         name: tenantData.name,
@@ -279,6 +305,9 @@ export function useTenant(): TenantContextType {
   return context;
 }
 
+// Alias for backward compatibility
+export const useTenantContext = useTenant;
+
 // Hook for tenant switching with error handling
 export function useTenantSwitcher() {
   const { switchTenant, userTenants, currentTenantId, personalTenant } =
@@ -309,10 +338,11 @@ export function useTenantSwitcher() {
     [switchTenant, isSwitching],
   );
 
-  const switchToPersonal = useCallback(async (): Promise<void> => {
+  const switchToPersonal = useCallback((): Promise<void> => {
     if (personalTenant) {
-      await handleSwitchTenant(personalTenant.id);
+      return handleSwitchTenant(personalTenant.id);
     }
+    return Promise.resolve();
   }, [personalTenant, handleSwitchTenant]);
 
   return {

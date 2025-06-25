@@ -56,7 +56,7 @@ export const useAutoSavePost = (): UseMutationResult<
           ...data.metadata,
           collective_sharing_settings: data.collective_sharing_settings ?? {},
           selected_collectives: data.selected_collectives ?? [],
-        } as any,
+        } as unknown as Database['public']['Tables']['posts']['Row']['metadata'],
         is_public: data.is_public,
         status: data.status,
         collective_id: data.collective_id || null,
