@@ -1,10 +1,8 @@
+import { SECOND_MS, MINUTE_MS } from './time';
+
 // -----------------------------------------------------------------------------
 // Profile-feature constants
 // -----------------------------------------------------------------------------
-
-// Base units
-export const SECOND_MS = 1_000 as const;
-export const MINUTE_MS = 60 * SECOND_MS;
 
 // -----------------------------------------------------------------------------
 // Pagination & Limits
@@ -32,11 +30,8 @@ export const SOCIAL_FEED_GC_MS      = 2 * MINUTE_MS;
 export const SOCIAL_FEED_REFRESH_MS = 30 * SECOND_MS;  // only for “activity” feed
 
 // -----------------------------------------------------------------------------
-// Utility helpers (optional)
+// Utility helpers (re-exported for convenience)
 // -----------------------------------------------------------------------------
-/** Convert minutes to milliseconds at call-site without new magic numbers. */
-export const minutes = (n: number): number => n * MINUTE_MS;
-/** Convert seconds to milliseconds at call-site without new magic numbers. */
-export const seconds = (n: number): number => n * SECOND_MS;
+export { minutes, seconds } from './time';
 export const RETRY_LIMIT_SHORT = 1 as const;
 

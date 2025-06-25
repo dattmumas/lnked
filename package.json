@@ -17,7 +17,8 @@
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "test:all": "npm run test:unit && npm run test:e2e",
-    "generate:db-types": "tsx scripts/generate-db-types.ts"
+    "generate:db-types": "tsx scripts/generate-db-types.ts",
+    "db:types": "pnpm generate:db-types"
   },
   "dependencies": {
     "@excalidraw/excalidraw": "^0.18.0",

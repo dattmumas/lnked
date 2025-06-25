@@ -3,33 +3,34 @@
 import { revalidatePath } from 'next/cache';
 
 import { createServerSupabaseClient } from '@/lib/supabase/server';
-
+import { authenticateUser, checkExistingFollow, revalidateFollowPaths } from '@/lib/utils/follow-helpers';
 
 interface FollowActionResult {
   success: boolean;
   error?: string;
 }
 
+interface EntityInfo {
+  id: string;
+  username?: string | null;
+  slug?: string | null;
+  type: 'user' | 'collective';
+}
+
 export async function followUser(
   userIdToFollow: string,
 ): Promise<FollowActionResult> {
-  const supabase = await createServerSupabaseClient();
-
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser();
-
-  if (authError !== null || user === null) {
-    return { success: false, error: 'User not authenticated.' };
+  const authResult = await authenticateUser();
+  if (!authResult.success) {
+    return authResult;
   }
 
-  if (user.id === userIdToFollow) {
+  if (authResult.user.id === userIdToFollow) {
     return { success: false, error: 'You cannot follow yourself.' };
   }
 
   // Validate that the target user exists
-  const { data: targetUser, error: targetUserError } = await supabase
+  const { data: targetUser, error: targetUserError } = await authResult.supabase
     .from('users')
     .select('id, username')
     .eq('id', userIdToFollow)
@@ -39,30 +40,19 @@ export async function followUser(
     return { success: false, error: 'User not found.' };
   }
 
-  // Check if already following to prevent unnecessary database operations
-  const { data: existingFollow, error: checkError } = await supabase
-    .from('follows')
-    .select('*')
-    .eq('follower_id', user.id)
-    .eq('following_id', userIdToFollow)
-    .eq('following_type', 'user')
-    .maybeSingle();
-
-  if (checkError) {
-    console.error('Error checking existing follow:', checkError.message);
-    return {
-      success: false,
-      error: 'Failed to check follow status.',
-    };
+  // Check if already following
+  const followCheck = await checkExistingFollow(authResult.supabase, authResult.user.id, userIdToFollow, 'user');
+  if (!followCheck.success) {
+    return followCheck;
   }
 
-  if (existingFollow) {
+  if (followCheck.existingFollow) {
     return { success: true }; // Already following, treat as success
   }
 
   // Insert new follow relationship
-  const { error: insertError } = await supabase.from('follows').insert({
-    follower_id: user.id,
+  const { error: insertError } = await authResult.supabase.from('follows').insert({
+    follower_id: authResult.user.id,
     following_id: userIdToFollow,
     following_type: 'user',
   });
@@ -70,8 +60,7 @@ export async function followUser(
   if (insertError) {
     console.error('Error following user:', insertError.message);
     if (insertError.code === '23505') {
-      // Unique constraint violation - already following
-      return { success: true }; // Treat as success since the relationship exists
+      return { success: true }; // Unique constraint violation - already following
     }
     return {
       success: false,
@@ -79,17 +68,12 @@ export async function followUser(
     };
   }
 
-  // Revalidate relevant paths to update follower counts and UI
-  revalidatePath('/');
-  revalidatePath(`/profile/${userIdToFollow}`);
-  revalidatePath(`/users/${userIdToFollow}`);
-  revalidatePath(`/users/${userIdToFollow}/followers`);
-  
-  // Also revalidate username-based paths if username exists
-  if (targetUser.username !== null && targetUser.username !== undefined) {
-    revalidatePath(`/profile/${targetUser.username}`);
-    revalidatePath(`/profile/${targetUser.username}/followers`);
-  }
+  // Revalidate paths
+  revalidateFollowPaths({
+    id: userIdToFollow,
+    username: targetUser.username,
+    type: 'user'
+  });
 
   return { success: true };
 }
@@ -97,52 +81,35 @@ export async function followUser(
 export async function unfollowUser(
   userIdToUnfollow: string,
 ): Promise<FollowActionResult> {
-  const supabase = await createServerSupabaseClient();
-
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser();
-
-  if (authError !== null || user === null) {
-    return { success: false, error: 'User not authenticated.' };
+  const authResult = await authenticateUser();
+  if (!authResult.success) {
+    return authResult;
   }
 
-  if (user.id === userIdToUnfollow) {
+  if (authResult.user.id === userIdToUnfollow) {
     return { success: false, error: 'You cannot unfollow yourself.' };
   }
 
   // Get target user info for path revalidation
-  const { data: targetUser } = await supabase
+  const { data: targetUser } = await authResult.supabase
     .from('users')
     .select('id, username')
     .eq('id', userIdToUnfollow)
     .single();
 
   // Check if currently following
-  const { data: existingFollow, error: checkError } = await supabase
-    .from('follows')
-    .select('*')
-    .eq('follower_id', user.id)
-    .eq('following_id', userIdToUnfollow)
-    .eq('following_type', 'user')
-    .maybeSingle();
-
-  if (checkError) {
-    console.error('Error checking existing follow:', checkError.message);
-    return {
-      success: false,
-      error: 'Failed to check follow status.',
-    };
+  const followCheck = await checkExistingFollow(authResult.supabase, authResult.user.id, userIdToUnfollow, 'user');
+  if (!followCheck.success) {
+    return followCheck;
   }
 
-  if (!existingFollow) {
+  if (!followCheck.existingFollow) {
     return { success: true }; // Not following, treat as success
   }
 
   // Delete the follow relationship
-  const { error: deleteError } = await supabase.from('follows').delete().match({
-    follower_id: user.id,
+  const { error: deleteError } = await authResult.supabase.from('follows').delete().match({
+    follower_id: authResult.user.id,
     following_id: userIdToUnfollow,
     following_type: 'user',
   });
@@ -155,17 +122,12 @@ export async function unfollowUser(
     };
   }
 
-  // Revalidate relevant paths to update follower counts and UI
-  revalidatePath('/');
-  revalidatePath(`/profile/${userIdToUnfollow}`);
-  revalidatePath(`/users/${userIdToUnfollow}`);
-  revalidatePath(`/users/${userIdToUnfollow}/followers`);
-  
-  // Also revalidate username-based paths if username exists
-  if (targetUser?.username !== null && targetUser?.username !== undefined) {
-    revalidatePath(`/profile/${targetUser.username}`);
-    revalidatePath(`/profile/${targetUser.username}/followers`);
-  }
+  // Revalidate paths
+  revalidateFollowPaths({
+    id: userIdToUnfollow,
+    username: targetUser?.username,
+    type: 'user'
+  });
 
   return { success: true };
 }
@@ -173,18 +135,12 @@ export async function unfollowUser(
 export async function followCollective(
   collectiveId: string,
 ): Promise<FollowActionResult> {
-  const supabase = await createServerSupabaseClient();
-
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser();
-
-  if (authError !== null || user === null) {
-    return { success: false, error: 'User not authenticated.' };
+  const authResult = await authenticateUser();
+  if (!authResult.success) {
+    return authResult;
   }
 
-  const { data: collective, error: collectiveError } = await supabase
+  const { data: collective, error: collectiveError } = await authResult.supabase
     .from('collectives')
     .select('owner_id, slug')
     .eq('id', collectiveId)
@@ -194,12 +150,22 @@ export async function followCollective(
     return { success: false, error: 'Collective not found.' };
   }
 
-  if (collective.owner_id === user.id) {
+  if (collective.owner_id === authResult.user.id) {
     return { success: false, error: 'You cannot follow your own collective.' };
   }
 
-  const { error: insertError } = await supabase.from('follows').insert({
-    follower_id: user.id,
+  // Check if already following
+  const followCheck = await checkExistingFollow(authResult.supabase, authResult.user.id, collectiveId, 'collective');
+  if (!followCheck.success) {
+    return followCheck;
+  }
+
+  if (followCheck.existingFollow) {
+    return { success: false, error: 'You are already following this collective.' };
+  }
+
+  const { error: insertError } = await authResult.supabase.from('follows').insert({
+    follower_id: authResult.user.id,
     following_id: collectiveId,
     following_type: 'collective',
   });
@@ -218,8 +184,12 @@ export async function followCollective(
     };
   }
 
-  revalidatePath(`/collectives/${collective.slug}`);
-  revalidatePath('/');
+  // Revalidate paths
+  revalidateFollowPaths({
+    id: collectiveId,
+    slug: collective.slug,
+    type: 'collective'
+  });
 
   return { success: true };
 }
@@ -227,28 +197,22 @@ export async function followCollective(
 export async function unfollowCollective(
   collectiveId: string,
 ): Promise<FollowActionResult> {
-  const supabase = await createServerSupabaseClient();
-
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser();
-
-  if (authError !== null || user === null) {
-    return { success: false, error: 'User not authenticated.' };
+  const authResult = await authenticateUser();
+  if (!authResult.success) {
+    return authResult;
   }
 
-  const { data: collective } = await supabase
+  const { data: collective } = await authResult.supabase
     .from('collectives')
     .select('slug')
     .eq('id', collectiveId)
     .single();
 
-  const { error: deleteError } = await supabase.from('follows').delete().match({
-      follower_id: user.id,
-      following_id: collectiveId,
+  const { error: deleteError } = await authResult.supabase.from('follows').delete().match({
+    follower_id: authResult.user.id,
+    following_id: collectiveId,
     following_type: 'collective',
-    });
+  });
 
   if (deleteError) {
     console.error('Error unfollowing collective:', deleteError.message);
@@ -258,10 +222,12 @@ export async function unfollowCollective(
     };
   }
 
-  if (collective) {
-    revalidatePath(`/collectives/${collective.slug}`);
-  }
-  revalidatePath('/');
+  // Revalidate paths
+  revalidateFollowPaths({
+    id: collectiveId,
+    slug: collective?.slug,
+    type: 'collective'
+  });
 
   return { success: true };
 }

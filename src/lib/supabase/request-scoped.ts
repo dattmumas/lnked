@@ -1,5 +1,4 @@
 import { createServerClient } from '@supabase/ssr';
-import { cookies } from 'next/headers';
 
 import type { Database } from '@/lib/database.types';
 
@@ -110,6 +109,9 @@ export function createRequestScopedSupabaseClient(request: Request): ReturnType<
  * Use this for routes that have access to the cookies() function
  */
 export async function createServerSupabaseClientWithContext(): Promise<ReturnType<typeof createServerClient<Database>>> {
+  // Import next/headers only when needed to avoid client-side import issues
+  const { cookies } = await import('next/headers');
+  
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 

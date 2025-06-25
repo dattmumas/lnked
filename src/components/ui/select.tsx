@@ -1,9 +1,9 @@
 // @ts-nocheck
 'use client';
 
+import * as SelectPrimitive from '@radix-ui/react-select';
 import { ChevronDown, Check } from 'lucide-react';
 import * as React from 'react';
-import * as SelectPrimitive from '@radix-ui/react-select';
 
 import { cn } from '@/lib/utils';
 

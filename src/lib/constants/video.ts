@@ -37,8 +37,7 @@ export const PLAYBACK_RATES = [
 export const DEFAULT_PLAYBACK_RATE = PLAYBACK_RATE_NORMAL;
 
 // Upload constants
-export const MAX_TITLE_LENGTH = 255;
-export const MAX_DESCRIPTION_LENGTH = 2000;
+export { MAX_TITLE_LENGTH, MAX_META_DESCRIPTION_LENGTH as MAX_DESCRIPTION_LENGTH } from './content';
 
 // Time formatting
 export const PAD_LENGTH = 2;

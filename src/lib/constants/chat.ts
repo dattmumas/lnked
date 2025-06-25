@@ -1,6 +1,6 @@
 export const USER_SEARCH_LIMIT = 10;
 export const DEFAULT_MESSAGE_LIMIT = 50;
-export const MAX_TITLE_LENGTH = 255;
+export { MAX_TITLE_LENGTH } from './content';
 
 // Design tokens
 export const CHAT_HEADER_HEIGHT = 'h-16';
