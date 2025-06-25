@@ -366,6 +366,7 @@ export type Database = {
           governance_model: string | null
           id: string
           intro_video_url: string | null
+          is_public: boolean | null
           logo_url: string | null
           member_count: number | null
           name: string
@@ -387,6 +388,7 @@ export type Database = {
           governance_model?: string | null
           id?: string
           intro_video_url?: string | null
+          is_public?: boolean | null
           logo_url?: string | null
           member_count?: number | null
           name: string
@@ -408,6 +410,7 @@ export type Database = {
           governance_model?: string | null
           id?: string
           intro_video_url?: string | null
+          is_public?: boolean | null
           logo_url?: string | null
           member_count?: number | null
           name?: string
@@ -422,6 +425,13 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "collectives_id_fkey"
+            columns: ["id"]
+            isOneToOne: true
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "collectives_owner_id_fkey"
             columns: ["owner_id"]
@@ -1453,6 +1463,51 @@ export type Database = {
           },
         ]
       }
+      post_slug_history: {
+        Row: {
+          changed_at: string
+          changed_by: string | null
+          id: string
+          new_slug: string
+          old_slug: string
+          post_id: string
+          tenant_id: string
+        }
+        Insert: {
+          changed_at?: string
+          changed_by?: string | null
+          id?: string
+          new_slug: string
+          old_slug: string
+          post_id: string
+          tenant_id: string
+        }
+        Update: {
+          changed_at?: string
+          changed_by?: string | null
+          id?: string
+          new_slug?: string
+          old_slug?: string
+          post_id?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "post_slug_history_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "posts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "post_slug_history_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       post_views: {
         Row: {
           id: string
@@ -1506,6 +1561,7 @@ export type Database = {
           published_at: string | null
           seo_title: string | null
           sharing_settings: Json | null
+          slug: string
           status: Database["public"]["Enums"]["post_status_type"]
           subtitle: string | null
           tenant_id: string
@@ -1531,6 +1587,7 @@ export type Database = {
           published_at?: string | null
           seo_title?: string | null
           sharing_settings?: Json | null
+          slug: string
           status?: Database["public"]["Enums"]["post_status_type"]
           subtitle?: string | null
           tenant_id: string
@@ -1556,6 +1613,7 @@ export type Database = {
           published_at?: string | null
           seo_title?: string | null
           sharing_settings?: Json | null
+          slug?: string
           status?: Database["public"]["Enums"]["post_status_type"]
           subtitle?: string | null
           tenant_id?: string
@@ -2321,6 +2379,18 @@ export type Database = {
           },
         ]
       }
+      index_usage_stats: {
+        Row: {
+          idx_scan: number | null
+          idx_tup_fetch: number | null
+          idx_tup_read: number | null
+          indexname: unknown | null
+          schemaname: unknown | null
+          tablename: unknown | null
+          usage_category: string | null
+        }
+        Relationships: []
+      }
       search_documents: {
         Row: {
           author_id: string | null
@@ -2332,6 +2402,18 @@ export type Database = {
           title: string | null
           tsv: unknown | null
           type: string | null
+        }
+        Relationships: []
+      }
+      table_scan_stats: {
+        Row: {
+          idx_scan: number | null
+          idx_tup_fetch: number | null
+          schemaname: unknown | null
+          seq_scan: number | null
+          seq_scan_ratio: number | null
+          seq_tup_read: number | null
+          tablename: unknown | null
         }
         Relationships: []
       }
@@ -2468,6 +2550,18 @@ export type Database = {
           tenant_id: string
         }[]
       }
+      find_post_by_slug: {
+        Args: { tenant_uuid: string; post_slug: string }
+        Returns: {
+          post_id: string
+          title: string
+          content: string
+          author_id: string
+          created_at: string
+          updated_at: string
+          is_current_slug: boolean
+        }[]
+      }
       find_video_by_mux_id: {
         Args: { p_mux_id: string }
         Returns: {
@@ -2501,6 +2595,10 @@ export type Database = {
         }
         Returns: string
       }
+      generate_post_slug: {
+        Args: { post_title: string; post_tenant_id: string; post_id?: string }
+        Returns: string
+      }
       get_cached_recommendations: {
         Args: {
           p_user_id: string
@@ -2512,6 +2610,10 @@ export type Database = {
       get_collective_stats: {
         Args: { collective_id: string }
         Returns: Json
+      }
+      get_collective_tenant_id: {
+        Args: { collective_uuid: string }
+        Returns: string
       }
       get_comment_count: {
         Args: {
@@ -2762,6 +2864,10 @@ export type Database = {
         Args: { p_user_id: string; p_notification_ids?: string[] }
         Returns: number
       }
+      tenant_is_public: {
+        Args: { tenant_uuid: string }
+        Returns: boolean
+      }
       toggle_comment_reaction: {
         Args: {
           p_comment_id: string
@@ -2779,6 +2885,18 @@ export type Database = {
           required_role?: Database["public"]["Enums"]["member_role"]
         }
         Returns: boolean
+      }
+      user_is_tenant_member: {
+        Args: { tenant_uuid: string }
+        Returns: boolean
+      }
+      validate_collective_tenant_consistency: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          collective_id: string
+          tenant_id: string
+          issue_type: string
+        }[]
       }
     }
     Enums: {
