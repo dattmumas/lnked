@@ -257,4 +257,4 @@ export const usePostEditor = (postId?: string): UsePostEditorReturn => {
 };
 
 // Backward compatibility export
-export const usePostEditor = usePostEditor; 
+export { usePostEditor as useEnhancedPostEditor }; 

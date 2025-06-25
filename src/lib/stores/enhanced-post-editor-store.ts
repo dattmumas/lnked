@@ -431,5 +431,5 @@ export const usePostEditor = (): {
   };
 };
 
-// Backward compatibility: export the store with the old name temporarily
-export const usePostEditorStore = usePostEditorStore;
+// Backward compatibility export
+export { usePostEditorStore as useEnhancedPostEditorStore };

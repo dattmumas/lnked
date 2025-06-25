@@ -267,18 +267,17 @@ export async function createPost(
   const postToInsert: TablesInsert<'posts'> = {
     author_id: user.id,
     title,
-    subtitle: subtitle ?? null,
+    subtitle: subtitle || null,
     content,
     is_public,
-    collective_id: collectiveId ?? null,
-    tenant_id,
-    published_at,
+    collective_id: collectiveId || null,
+    tenant_id: tenant_id,
+    published_at: published_at || null,
     status: dbStatus,
-    view_count: 0,
-    like_count: 0,
-    author: author ?? null,
-    seo_title: seo_title ?? null,
-    meta_description: meta_description ?? null,
+    post_type: 'text',
+    seo_title: seo_title || null,
+    meta_description: meta_description || null,
+    slug: postSlug,
   };
 
   try {

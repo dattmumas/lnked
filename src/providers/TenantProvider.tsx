@@ -21,11 +21,16 @@ type UserRole = Database['public']['Enums']['member_role'];
 
 interface TenantContext {
   id: string;
+  tenant_id: string; // Alias for id for backward compatibility
   name: string;
+  tenant_name: string; // Alias for name for backward compatibility
   slug: string;
+  tenant_slug: string; // Alias for slug for backward compatibility
   type: 'personal' | 'collective';
+  tenant_type: 'personal' | 'collective'; // Alias for type for backward compatibility
   description?: string;
   is_public: boolean;
+  is_personal: boolean; // Computed from type === 'personal'
   user_role: UserRole;
   member_count?: number;
 }
@@ -187,11 +192,16 @@ export function TenantProvider({
       };
       const context: TenantContext = {
         id: tenantData.id,
+        tenant_id: tenantData.id,
         name: tenantData.name,
+        tenant_name: tenantData.name,
         slug: tenantData.slug,
+        tenant_slug: tenantData.slug,
         type: tenantData.type,
+        tenant_type: tenantData.type,
         description: tenantData.description,
         is_public: tenantData.is_public,
+        is_personal: tenantData.type === 'personal',
         user_role: tenantData.user_role,
         member_count: tenantData.member_count,
       };

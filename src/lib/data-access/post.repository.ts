@@ -108,11 +108,16 @@ export class PostRepository {
   /**
    * Create a new post
    */
-  async create(post: PostInsert): Promise<Post | undefined> {
-    const dbPost = PostInsertSchema.parse(post);
-    
+  async create(postData: PostInsert): Promise<Post | undefined> {
     const tenantRepo = await createTenantAwareRepository();
-    const { data, error } = await tenantRepo.insertPost(dbPost);
+    
+    // Ensure slug is included
+    const postWithSlug = {
+      ...postData,
+      slug: postData.slug || `${postData.title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${Date.now()}`,
+    };
+    
+    const { data, error } = await tenantRepo.insertPost(postWithSlug);
 
     if (error !== null) {
       throw error;
