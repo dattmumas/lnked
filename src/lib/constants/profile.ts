@@ -32,6 +32,6 @@ export const SOCIAL_FEED_REFRESH_MS = 30 * SECOND_MS;  // only for â€œactivityâ€
 // -----------------------------------------------------------------------------
 // Utility helpers (re-exported for convenience)
 // -----------------------------------------------------------------------------
-export { minutes, seconds } from './time';
+export { minutes, seconds, SECOND_MS, MINUTE_MS } from './time';
 export const RETRY_LIMIT_SHORT = 1 as const;
 

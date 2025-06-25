@@ -1,20 +1,11 @@
 'use server';
 
-import { revalidatePath } from 'next/cache';
 
-import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { authenticateUser, checkExistingFollow, revalidateFollowPaths } from '@/lib/utils/follow-helpers';
 
 interface FollowActionResult {
   success: boolean;
   error?: string;
-}
-
-interface EntityInfo {
-  id: string;
-  username?: string | null;
-  slug?: string | null;
-  type: 'user' | 'collective';
 }
 
 export async function followUser(

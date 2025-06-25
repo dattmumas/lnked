@@ -8,7 +8,7 @@ const HTTP_OK = 200;
 const HTTP_UNAUTHORIZED = 401;
 const HTTP_INTERNAL_SERVER_ERROR = 500;
 
-export async function GET(request: NextRequest): Promise<NextResponse> {
+export async function GET(_request: NextRequest): Promise<NextResponse> {
   try {
     const supabase = await createServerSupabaseClient();
 
@@ -42,7 +42,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
     return NextResponse.json(
       { 
-        unreadCount: count || 0
+        unreadCount: count !== null ? count : 0
       },
       { status: HTTP_OK }
     );

@@ -49,37 +49,38 @@ export function ProfileVideosSection({
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | undefined>(undefined);
   const [total, setTotal] = useState(0);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   const handleReload = useCallback((): void => {
-    window.location.reload();
+    setRefreshKey((prev) => prev + 1);
   }, []);
 
-  useEffect((): void => {
-    const fetchVideos = async (): Promise<void> => {
-      try {
-        setIsLoading(true);
-        setError(undefined);
+  const fetchVideos = useCallback(async (): Promise<void> => {
+    try {
+      setIsLoading(true);
+      setError(undefined);
 
-        const response = await fetch(
-          `/api/videos/user/${userId}?limit=${limit}&sort=created_at&order=desc`,
-        );
+      const response = await fetch(
+        `/api/videos/user/${userId}?limit=${limit}&sort=created_at&order=desc`,
+      );
 
-        if (!response.ok) {
-          throw new Error('Failed to fetch videos');
-        }
-
-        const result = (await response.json()) as VideosApiResponse;
-        setVideos(result.data?.videos ?? []);
-        setTotal(result.data?.total ?? 0);
-      } catch (err: unknown) {
-        setError(err instanceof Error ? err.message : 'Failed to load videos');
-      } finally {
-        setIsLoading(false);
+      if (!response.ok) {
+        throw new Error('Failed to fetch videos');
       }
-    };
 
-    void fetchVideos();
+      const result = (await response.json()) as VideosApiResponse;
+      setVideos(result.data?.videos ?? []);
+      setTotal(result.data?.total ?? 0);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to load videos');
+    } finally {
+      setIsLoading(false);
+    }
   }, [userId, limit]);
+
+  useEffect((): void => {
+    void fetchVideos();
+  }, [fetchVideos, refreshKey]);
 
   if (isLoading) {
     return (

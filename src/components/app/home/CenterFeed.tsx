@@ -25,19 +25,12 @@ export function CenterFeed({ user }: Props): React.JSX.Element {
   } = useTenantContext();
   const [includeCollectives] = useState(true);
 
-  const {
-    feedItems,
-    isLoading,
-    error,
-    refetch,
-    loadMore,
-    hasMore,
-    currentTenant: feedTenant,
-  } = useTenantFeed({
-    includeCollectives,
-    status: 'published',
-    limit: 20,
-  });
+  const { feedItems, isLoading, error, refetch, loadMore, hasMore } =
+    useTenantFeed({
+      includeCollectives,
+      status: 'published',
+      limit: 20,
+    });
 
   const interactions = usePostFeedInteractions(user.id);
 
@@ -67,7 +60,7 @@ export function CenterFeed({ user }: Props): React.JSX.Element {
     );
   }
 
-  if (currentTenant === null || currentTenant === undefined) {
+  if (currentTenant === null) {
     return (
       <div className="text-center py-10">
         <div className="mb-4">
@@ -113,7 +106,7 @@ export function CenterFeed({ user }: Props): React.JSX.Element {
     return (
       <div className="text-center py-10">
         <div className="mb-4">
-          {currentTenant !== null && currentTenant !== undefined ? (
+          {currentTenant !== null ? (
             <div className="flex items-center justify-center gap-2 mb-2">
               {currentTenant.is_personal ? (
                 <UserIcon className="w-5 h-5 text-blue-600" />

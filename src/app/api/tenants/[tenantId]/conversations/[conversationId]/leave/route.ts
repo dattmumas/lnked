@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { withTenantAccess, createTenantErrorResponse, createTenantSuccessResponse } from '@/lib/api/tenant-helpers';
 
+const HTTP_INTERNAL_SERVER_ERROR = 500;
+
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ tenantId: string; conversationId: string }> }
@@ -9,7 +11,7 @@ export async function POST(
   try {
     const { tenantId, conversationId } = await params;
 
-    const result = await withTenantAccess(tenantId, 'member', async (supabase, userRole) => {
+    const result = await withTenantAccess(tenantId, 'member', async (supabase, _userRole) => {
       // Get current user
       const { data: { user }, error: authError } = await supabase.auth.getUser();
       if (authError || !user) {

@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { z } from "zod";
 
+import { followCollective as followCollectiveAction, unfollowCollective as unfollowCollectiveAction } from '@/app/actions/followActions';
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 import type { Database } from '@/types/database.types';
@@ -133,7 +134,7 @@ export async function getCollectives(
     .range(offset, offset + limit);
 
   // Add search filter if provided
-  if (searchTerm !== undefined && searchTerm !== null && searchTerm.trim() !== '') {
+  if (searchTerm !== undefined && searchTerm.trim() !== '') {
     query = query.or(`name.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%`);
   }
 
@@ -177,59 +178,11 @@ export async function getCollectives(
   };
 }
 
+// Server action wrappers for follow/unfollow functions
 export async function followCollective(collectiveId: string): Promise<{ success: boolean; error?: string }> {
-  const supabase = await createServerSupabaseClient();
-
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser();
-
-  if (authError !== null || user === null) {
-    return { success: false, error: 'Authentication required' };
-  }
-
-  const { error } = await supabase
-    .from('follows')
-    .insert({
-      follower_id: user.id,
-      following_id: collectiveId,
-      following_type: 'collective',
-    });
-
-  if (error !== null) {
-    console.error('Error following collective:', error);
-    return { success: false, error: 'Failed to follow collective' };
-  }
-
-  revalidatePath('/discover');
-  return { success: true };
+  return await followCollectiveAction(collectiveId);
 }
 
 export async function unfollowCollective(collectiveId: string): Promise<{ success: boolean; error?: string }> {
-  const supabase = await createServerSupabaseClient();
-
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser();
-
-  if (authError !== null || user === null) {
-    return { success: false, error: 'Authentication required' };
-  }
-
-  const { error } = await supabase
-    .from('follows')
-    .delete()
-    .eq('follower_id', user.id)
-    .eq('following_id', collectiveId)
-    .eq('following_type', 'collective');
-
-  if (error !== null) {
-    console.error('Error unfollowing collective:', error);
-    return { success: false, error: 'Failed to unfollow collective' };
-  }
-
-  revalidatePath('/discover');
-  return { success: true };
+  return await unfollowCollectiveAction(collectiveId);
 }

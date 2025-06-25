@@ -1,5 +1,5 @@
-import SignUpPageClient from './SignUpPageClient';
+import AuthPage from '../AuthPage';
 
 export default function SignUpPage(): React.JSX.Element {
-  return <SignUpPageClient />;
+  return <AuthPage mode="sign-up" />;
 }

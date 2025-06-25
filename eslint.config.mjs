@@ -32,8 +32,6 @@ const eslintConfig = [
 
       // Generated files
       'src/types/database.types.ts',
-      'src/lib/database.types.ts',
-      'src/lib/database.types.updated.ts',
 
       // Data access layer
       'src/lib/data-access/**/*',
@@ -81,6 +79,7 @@ const eslintConfig = [
       '.vscode/**',
       '.cursor/**',
       'cursor-memory-bank/**',
+      '/src/components/ui',
 
       // Scripts and database
       '**/*.sh',
@@ -125,7 +124,6 @@ const eslintConfig = [
       import: importPlugin,
       'unused-imports': unusedImportsPlugin,
       unicorn: unicornPlugin,
-      // 'security-node': securityNodePlugin, // Temporarily disabled due to plugin crash
     },
   },
   ...compat.extends(
@@ -137,7 +135,6 @@ const eslintConfig = [
     'next/typescript',
     'plugin:@typescript-eslint/recommended-type-checked',
     'plugin:import/recommended',
-    // 'plugin:security-node/recommended', // Temporarily disabled due to plugin crash
     'plugin:react/jsx-runtime',
   ),
   {
@@ -155,7 +152,6 @@ const eslintConfig = [
       import: importPlugin,
       'unused-imports': unusedImportsPlugin,
       unicorn: unicornPlugin,
-      // 'security-node': securityNodePlugin, // Temporarily disabled due to plugin crash
     },
     rules: {
       // CORE SAFETY RULES

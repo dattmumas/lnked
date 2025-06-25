@@ -1,5 +1,5 @@
-import SignInPageClient from './SignInPageClient';
+import AuthPage from '../AuthPage';
 
 export default function SignInPage(): React.JSX.Element {
-  return <SignInPageClient />;
+  return <AuthPage mode="sign-in" />;
 }

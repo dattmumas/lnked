@@ -1,8 +1,9 @@
 import { revalidatePath } from 'next/cache';
 
 import { createServerSupabaseClient } from '@/lib/supabase/server';
-import type { SupabaseClient } from '@supabase/supabase-js';
-import type { User } from '@supabase/supabase-js';
+
+import type { Tables } from '@/types/database.types';
+import type { SupabaseClient , User } from '@supabase/supabase-js';
 
 interface EntityInfo {
   id: string;
@@ -25,7 +26,7 @@ type AuthResult =
 type FollowCheckResult =
   | {
       success: true;
-      existingFollow: any;
+      existingFollow: Tables<'follows'> | null;
     }
   | {
       success: false;

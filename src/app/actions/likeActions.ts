@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 
-import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { requireUser, ERROR_MESSAGES } from '@/lib/utils/server-action-helpers';
 
 interface LikeActionResult {
   success: boolean;
@@ -16,16 +16,13 @@ export async function togglePostLike(
   collectiveSlug: string | null | undefined
 ): Promise<LikeActionResult> {
   try {
-    const supabase = await createServerSupabaseClient();
-
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-
-    if (authError || !user) {
-      return { success: false, message: "User not authenticated." };
+    // Unified authentication
+    const authResult = await requireUser();
+    if (!authResult.success) {
+      return { success: false, message: authResult.error };
     }
+
+    const { user, supabase } = authResult;
 
     // First get the post to retrieve tenant_id
     const { data: post, error: postError } = await supabase
@@ -36,7 +33,7 @@ export async function togglePostLike(
 
     if (postError || post === null) {
       console.error("Error fetching post:", postError);
-      return { success: false, message: "Post not found." };
+      return { success: false, message: ERROR_MESSAGES.NOT_FOUND };
     }
 
     // Check if the user has already liked the post
@@ -107,8 +104,6 @@ export async function togglePostLike(
       // It's an individual post, revalidate the generic post page
       revalidatePath(`/posts/${postId}`);
     }
-    // Also revalidate any other relevant general feeds if applicable
-    // revalidatePath('/'); // Example: if home page is a feed
 
     return {
       success: true,
@@ -122,7 +117,7 @@ export async function togglePostLike(
     console.error("Unexpected error in togglePostLike:", error);
     return {
       success: false,
-      message: "An unexpected error occurred.",
+      message: ERROR_MESSAGES.INTERNAL_ERROR,
     };
   }
 }

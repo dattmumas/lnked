@@ -1,7 +1,6 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { z } from 'zod';
 
 import {
   CollectiveSettingsServerSchema,
@@ -10,9 +9,7 @@ import {
 import { getStripe } from '@/lib/stripe';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 
-import type { Enums, TablesInsert, TablesUpdate } from '@/lib/database.types';
-
-const emailSchema = z.string().email({ message: 'Invalid email address.' });
+import type { Enums, TablesUpdate } from '@/lib/database.types';
 
 interface CollectiveActionError {
   error: string;
@@ -33,127 +30,7 @@ type MemberRecordWithCollective = {
   collective: { owner_id: string };
 };
 
-// --- Invite User to Collective ---
-export async function inviteUserToCollective(
-  collectiveId: string,
-  inviteeEmail: string,
-  role: Enums<'collective_member_role'>,
-): Promise<CollectiveActionResult> {
-  const supabase = await createServerSupabaseClient();
-
-  const {
-    data: { user: currentUser },
-    error: authError,
-  } = await supabase.auth.getUser();
-  if (authError !== null || currentUser === null) {
-    return { success: false, error: 'User not authenticated.' };
-  }
-
-  // Validate email
-  const emailValidation = emailSchema.safeParse(inviteeEmail);
-  if (!emailValidation.success) {
-    return { success: false, fieldErrors: { email: 'Invalid email address.' } };
-  }
-
-  // 1. Verify current user owns the collective
-  const { data: collective, error: collectiveFetchError } = await supabase
-    .from('collectives')
-    .select('owner_id')
-    .eq('id', collectiveId)
-    .eq('owner_id', currentUser.id)
-    .single();
-
-  if (collectiveFetchError !== null || collective === null) {
-    return {
-      success: false,
-      error: 'Collective not found or you are not the owner.',
-    };
-  }
-
-  // 2. Find the user to invite by email (from public.users table)
-  // Ensure your public.users table has an email column that is synced or populated
-  const { data: inviteeUser, error: inviteeFetchError } = await supabase
-    .from('users') // Assuming email is in public.users and is unique
-    .select('id')
-    .eq('email', inviteeEmail)
-    .single();
-
-  if (inviteeFetchError !== null && inviteeFetchError.code !== 'PGRST116') {
-    // PGRST116 means no rows, which is fine before checking inviteeUser
-    console.error(
-      'Error fetching invitee by email:',
-      inviteeFetchError.message,
-    );
-    return { success: false, error: 'Error finding user by email.' };
-  }
-
-  if (inviteeUser === null) {
-    return {
-      success: false,
-      error: `User with email ${inviteeEmail} not found.`,
-      fieldErrors: { email: 'User not found.' },
-    };
-  }
-
-  if (inviteeUser.id === currentUser.id) {
-    return {
-      success: false,
-      error: 'You cannot invite yourself to the collective.',
-      fieldErrors: { email: 'You are already the owner.' },
-    };
-  }
-
-  // 3. Check if user is already a member
-  const { data: existingMember, error: memberCheckError } = await supabase
-    .from('collective_members')
-    .select('id')
-    .eq('collective_id', collectiveId)
-    .eq('user_id', inviteeUser.id)
-    .maybeSingle();
-
-  if (memberCheckError !== null) {
-    return { success: false, error: 'Error checking existing membership.' };
-  }
-  if (existingMember !== null) {
-    return {
-      success: false,
-      error: 'This user is already a member of the collective.',
-      fieldErrors: { email: 'User is already a member.' },
-    };
-  }
-
-  // 4. Add user to collective_members
-  const memberData: TablesInsert<'collective_members'> = {
-    collective_id: collectiveId,
-    member_id: inviteeUser.id,
-    role,
-  };
-
-  const { error: insertError } = await supabase
-    .from('collective_members')
-    .insert(memberData);
-
-  if (insertError !== null) {
-    console.error('Error adding member to collective:', insertError.message);
-    if (insertError.code === '23503') {
-      // Foreign key violation
-      return {
-        success: false,
-        error: 'Invalid user or collective ID provided.',
-      };
-    }
-    return {
-      success: false,
-      error: `Failed to add member: ${insertError.message}`,
-    };
-  }
-
-  revalidatePath(`/dashboard/collectives/${collectiveId}/manage/members`); // Assuming this will be the path
-  return {
-    success: true,
-    message: `${inviteeEmail} has been added as a ${role}.`,
-  };
-}
+// Note: Use inviteMemberToCollective from memberActions.ts for invitation functionality
 
 // --- Remove User from Collective ---
 export async function removeUserFromCollective(
@@ -485,12 +362,12 @@ export async function getCollectiveStripeStatus(collectiveId: string): Promise<{
     return { status: 'not_connected' };
   }
   const stripe = getStripe();
-  if (stripe === null) {
+  if (stripe === undefined) {
     return { error: 'Stripe not configured' };
   }
+  
   try {
-    // TypeScript now knows stripe is not null after the check above
-    const account = await stripe!.accounts.retrieve(
+    const account = await stripe.accounts.retrieve(
       collective.stripe_account_id,
     );
     return {
