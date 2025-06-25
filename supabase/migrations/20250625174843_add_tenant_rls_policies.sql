@@ -319,13 +319,13 @@ USING (
 -- =============================================================================
 
 -- Check if video_assets table has tenant_id column before applying policies
-DO $$ 
+DO $$
 BEGIN
   IF EXISTS (
-    SELECT 1 
-    FROM information_schema.columns 
-    WHERE table_schema = 'public' 
-      AND table_name = 'video_assets' 
+    SELECT 1
+    FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name = 'video_assets'
       AND column_name = 'tenant_id'
   ) THEN
     -- Enable RLS on video_assets table
@@ -347,7 +347,7 @@ BEGIN
     FOR INSERT
     TO authenticated
     WITH CHECK (
-      uploaded_by = auth.uid()
+      created_by = auth.uid()
       AND (
         tenant_id IS NULL -- User's personal uploads
         OR public.user_is_tenant_member(tenant_id)
@@ -360,14 +360,14 @@ BEGIN
     FOR UPDATE
     TO authenticated
     USING (
-      uploaded_by = auth.uid()
+      created_by = auth.uid()
       AND (
         tenant_id IS NULL
         OR public.user_is_tenant_member(tenant_id)
       )
     )
     WITH CHECK (
-      uploaded_by = auth.uid()
+      created_by = auth.uid()
       AND (
         tenant_id IS NULL
         OR public.user_is_tenant_member(tenant_id)
@@ -380,7 +380,7 @@ BEGIN
     FOR DELETE
     TO authenticated
     USING (
-      uploaded_by = auth.uid()
+      created_by = auth.uid()
       AND (
         tenant_id IS NULL
         OR public.user_is_tenant_member(tenant_id)
@@ -395,29 +395,29 @@ BEGIN
     ON public.video_assets
     FOR SELECT
     TO authenticated
-    USING (uploaded_by = auth.uid());
+    USING (created_by = auth.uid());
 
     -- Policy: Users can create their own video assets
     CREATE POLICY "Users can create video assets"
     ON public.video_assets
     FOR INSERT
     TO authenticated
-    WITH CHECK (uploaded_by = auth.uid());
+    WITH CHECK (created_by = auth.uid());
 
     -- Policy: Users can update their own video assets
     CREATE POLICY "Users can update their own video assets"
     ON public.video_assets
     FOR UPDATE
     TO authenticated
-    USING (uploaded_by = auth.uid())
-    WITH CHECK (uploaded_by = auth.uid());
+    USING (created_by = auth.uid())
+    WITH CHECK (created_by = auth.uid());
 
     -- Policy: Users can delete their own video assets
     CREATE POLICY "Users can delete their own video assets"
     ON public.video_assets
     FOR DELETE
     TO authenticated
-    USING (uploaded_by = auth.uid());
+    USING (created_by = auth.uid());
   END IF;
 END $$;
 
@@ -426,13 +426,13 @@ END $$;
 -- =============================================================================
 
 -- Check if chains table has tenant_id column before applying policies
-DO $$ 
+DO $$
 BEGIN
   IF EXISTS (
-    SELECT 1 
-    FROM information_schema.columns 
-    WHERE table_schema = 'public' 
-      AND table_name = 'chains' 
+    SELECT 1
+    FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name = 'chains'
       AND column_name = 'tenant_id'
   ) THEN
     -- Enable RLS on chains table
@@ -454,7 +454,7 @@ BEGIN
     FOR INSERT
     TO authenticated
     WITH CHECK (
-      created_by = auth.uid()
+      author_id = auth.uid()
       AND (
         tenant_id IS NULL -- Personal chains
         OR public.user_is_tenant_member(tenant_id)
@@ -467,14 +467,14 @@ BEGIN
     FOR UPDATE
     TO authenticated
     USING (
-      created_by = auth.uid()
+      author_id = auth.uid()
       AND (
         tenant_id IS NULL
         OR public.user_is_tenant_member(tenant_id)
       )
     )
     WITH CHECK (
-      created_by = auth.uid()
+      author_id = auth.uid()
       AND (
         tenant_id IS NULL
         OR public.user_is_tenant_member(tenant_id)
@@ -487,7 +487,7 @@ BEGIN
     FOR DELETE
     TO authenticated
     USING (
-      created_by = auth.uid()
+      author_id = auth.uid()
       AND (
         tenant_id IS NULL
         OR public.user_is_tenant_member(tenant_id)
@@ -502,29 +502,29 @@ BEGIN
     ON public.chains
     FOR SELECT
     TO authenticated
-    USING (created_by = auth.uid());
+    USING (author_id = auth.uid());
 
     -- Policy: Users can create chains
     CREATE POLICY "Users can create chains"
     ON public.chains
     FOR INSERT
     TO authenticated
-    WITH CHECK (created_by = auth.uid());
+    WITH CHECK (author_id = auth.uid());
 
     -- Policy: Users can update their own chains
     CREATE POLICY "Users can update their own chains"
     ON public.chains
     FOR UPDATE
     TO authenticated
-    USING (created_by = auth.uid())
-    WITH CHECK (created_by = auth.uid());
+    USING (author_id = auth.uid())
+    WITH CHECK (author_id = auth.uid());
 
     -- Policy: Users can delete their own chains
     CREATE POLICY "Users can delete their own chains"
     ON public.chains
     FOR DELETE
     TO authenticated
-    USING (created_by = auth.uid());
+    USING (author_id = auth.uid());
   END IF;
 END $$;
 
@@ -536,37 +536,41 @@ END $$;
 ALTER TABLE public.notifications ENABLE ROW LEVEL SECURITY;
 
 -- Policy: Users can view their own notifications
+DROP POLICY IF EXISTS "Users can view their own notifications" ON public.notifications;
 CREATE POLICY "Users can view their own notifications"
 ON public.notifications
 FOR SELECT
 TO authenticated
 USING (
-  user_id = auth.uid()
+  recipient_id = auth.uid()
 );
 
 -- Policy: System can create notifications for users
+DROP POLICY IF EXISTS "System can create notifications" ON public.notifications;
 CREATE POLICY "System can create notifications"
 ON public.notifications
 FOR INSERT
 TO authenticated
 WITH CHECK (
-  user_id IS NOT NULL
+  recipient_id IS NOT NULL
 );
 
 -- Policy: Users can update their own notifications (mark as read, etc.)
+DROP POLICY IF EXISTS "Users can update their own notifications" ON public.notifications;
 CREATE POLICY "Users can update their own notifications"
 ON public.notifications
 FOR UPDATE
 TO authenticated
-USING (user_id = auth.uid())
-WITH CHECK (user_id = auth.uid());
+USING (recipient_id = auth.uid())
+WITH CHECK (recipient_id = auth.uid());
 
 -- Policy: Users can delete their own notifications
+DROP POLICY IF EXISTS "Users can delete their own notifications" ON public.notifications;
 CREATE POLICY "Users can delete their own notifications"
 ON public.notifications
 FOR DELETE
 TO authenticated
-USING (user_id = auth.uid());
+USING (recipient_id = auth.uid());
 
 -- =============================================================================
 -- Tenant Members Table RLS Policies
