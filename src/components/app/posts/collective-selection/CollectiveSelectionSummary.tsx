@@ -1,385 +1,233 @@
 'use client';
 
-import { Plus, Users, Crown, Shield, Edit3, PenTool, X } from 'lucide-react';
-import Image from 'next/image';
-import React, { useCallback, useState } from 'react';
+import React, { useMemo } from 'react';
+import {
+  Users,
+  Settings,
+  Eye,
+  EyeOff,
+  Calendar,
+  CheckCircle,
+} from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
-import { useCollectiveMemberships } from '@/hooks/posts/useCollectiveMemberships';
-import { cn } from '@/lib/utils';
-import { CollectiveWithPermission } from '@/types/enhanced-database.types';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { cn } from '@/lib/utils/cn';
 
-import { CollectiveSelectionModal } from './CollectiveSelectionModal';
-
-// Constants
-const DEFAULT_SKELETON_COUNT = 2;
-const AVATAR_SIZE_COMPACT = 24;
-const AVATAR_SIZE_NORMAL = 32;
+import type {
+  CollectiveWithPermission,
+  CollectiveSharingSettings,
+} from '@/lib/stores/enhanced-post-editor-store';
 
 interface CollectiveSelectionSummaryProps {
-  selectedCollectiveIds: string[];
-  onSelectionChange: (collectiveIds: string[]) => void;
-  disabled?: boolean;
-  maxSelections?: number;
-  placeholder?: string;
-  showRoles?: boolean;
-  compact?: boolean;
+  selectedCollectives: CollectiveWithPermission[];
+  sharingSettings: Record<string, CollectiveSharingSettings>;
+  onEditSettings?: (collectiveId: string) => void;
+  onRemoveCollective?: (collectiveId: string) => void;
   className?: string;
 }
 
-// Role icon mapping
-const roleIcons = {
-  owner: Crown,
-  admin: Shield,
-  editor: Edit3,
-  author: PenTool,
-};
-
-const roleColors = {
-  owner: 'text-yellow-600 bg-yellow-50',
-  admin: 'text-blue-600 bg-blue-50',
-  editor: 'text-green-600 bg-green-50',
-  author: 'text-purple-600 bg-purple-50',
-};
-
 export function CollectiveSelectionSummary({
-  selectedCollectiveIds,
-  onSelectionChange,
-  disabled = false,
-  maxSelections,
-  placeholder = 'Select collectives to share with',
-  showRoles = true,
-  compact = false,
+  selectedCollectives,
+  sharingSettings,
+  onEditSettings,
+  onRemoveCollective,
   className,
-}: CollectiveSelectionSummaryProps): React.ReactElement {
-  const [isModalOpen, setIsModalOpen] = useState(false);
+}: CollectiveSelectionSummaryProps): React.JSX.Element {
+  const totalMembers = useMemo(() => {
+    return selectedCollectives.reduce((sum, collective) => {
+      return sum + (collective.member_count || 0);
+    }, 0);
+  }, [selectedCollectives]);
 
-  // Fetch collective data for selected IDs
-  const { data: allCollectives = [] } = useCollectiveMemberships(false);
+  const statusCounts = useMemo(() => {
+    const counts = {
+      published: 0,
+      draft: 0,
+      pending_approval: 0,
+      auto_publish: 0,
+    };
 
-  const selectedCollectives = allCollectives.filter((collective) =>
-    selectedCollectiveIds.includes(collective.id),
-  );
+    selectedCollectives.forEach((collective) => {
+      const settings = sharingSettings[collective.id];
+      if (settings) {
+        if (settings.status === 'published') {
+          counts.published++;
+        } else if (settings.status === 'draft') {
+          counts.draft++;
+        } else if (settings.status === 'pending_approval') {
+          counts.pending_approval++;
+        }
 
-  const handleOpenModal = useCallback((): void => {
-    if (!disabled) {
-      setIsModalOpen(true);
-    }
-  }, [disabled]);
-
-  const handleRemoveCollective = useCallback(
-    (collectiveId: string, event: React.MouseEvent): void => {
-      event.stopPropagation();
-      if (!disabled) {
-        onSelectionChange(
-          selectedCollectiveIds.filter((id) => id !== collectiveId),
-        );
+        if (settings.auto_publish) {
+          counts.auto_publish++;
+        }
       }
-    },
-    [disabled, onSelectionChange, selectedCollectiveIds],
-  );
+    });
 
-  const handleClearAll = useCallback((): void => {
-    onSelectionChange([]);
-  }, [onSelectionChange]);
+    return counts;
+  }, [selectedCollectives, sharingSettings]);
 
-  const handleCloseModal = useCallback((): void => {
-    setIsModalOpen(false);
-  }, []);
-
-  const canAddMore =
-    maxSelections === undefined ||
-    maxSelections === null ||
-    selectedCollectiveIds.length < maxSelections;
-
-  return (
-    <TooltipProvider>
-      <div className={cn('space-y-3', className)}>
-        {/* Selected Collectives Display */}
-        {selectedCollectives.length > 0 ? (
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <label className="text-sm font-medium text-gray-700">
-                Selected Collectives ({selectedCollectives.length}
-                {maxSelections !== undefined &&
-                  maxSelections !== null &&
-                  maxSelections > 0 &&
-                  `/${maxSelections}`}
-                )
-              </label>
-              {selectedCollectives.length > 0 && !disabled && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleClearAll}
-                  className="text-gray-500 hover:text-gray-700"
-                >
-                  Clear all
-                </Button>
-              )}
-            </div>
-
-            {/* Collective Cards */}
-            <div
-              className={cn(
-                'grid gap-2',
-                compact ? 'grid-cols-1' : 'grid-cols-1 sm:grid-cols-2',
-              )}
-            >
-              {selectedCollectives.map((collective) => (
-                <CollectiveCard
-                  key={collective.id}
-                  collective={collective}
-                  onRemove={handleRemoveCollective}
-                  disabled={disabled}
-                  showRole={showRoles}
-                  compact={compact}
-                />
-              ))}
-            </div>
-          </div>
-        ) : (
-          /* Empty State */
-          <div className="text-center py-6">
-            <Users className="w-8 h-8 text-gray-300 mx-auto mb-2" />
-            <p className="text-sm text-gray-500 mb-3">{placeholder}</p>
-          </div>
-        )}
-
-        {/* Add/Manage Button */}
-        <div className="flex justify-center">
-          <Button
-            onClick={handleOpenModal}
-            disabled={
-              disabled || (!canAddMore && selectedCollectives.length > 0)
-            }
-            variant={selectedCollectives.length > 0 ? 'outline' : 'default'}
-            className="w-full sm:w-auto"
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            {selectedCollectives.length > 0
-              ? canAddMore
-                ? 'Add More Collectives'
-                : 'Manage Selection'
-              : 'Select Collectives'}
-          </Button>
-        </div>
-
-        {/* Selection Modal */}
-        <CollectiveSelectionModal
-          isOpen={isModalOpen}
-          onClose={handleCloseModal}
-          selectedCollectiveIds={selectedCollectiveIds}
-          onSelectionChange={onSelectionChange}
-          maxSelections={maxSelections}
-          title={
-            selectedCollectives.length > 0
-              ? 'Manage Collective Selection'
-              : 'Select Collectives'
-          }
-          description={
-            maxSelections !== undefined &&
-            maxSelections !== null &&
-            maxSelections > 0
-              ? `Choose up to ${maxSelections} collectives to share this post with`
-              : 'Choose which collectives to share this post with'
-          }
-        />
-      </div>
-    </TooltipProvider>
-  );
-}
-
-// Individual collective card component
-interface CollectiveCardProps {
-  collective: CollectiveWithPermission;
-  onRemove: (id: string, event: React.MouseEvent) => void;
-  disabled: boolean;
-  showRole: boolean;
-  compact: boolean;
-}
-
-function CollectiveCard({
-  collective,
-  onRemove,
-  disabled,
-  showRole,
-  compact,
-}: CollectiveCardProps): React.ReactElement {
-  const RoleIcon = roleIcons[collective.user_role];
-  const roleColorClass = roleColors[collective.user_role];
-
-  const handleRemoveClick = useCallback(
-    (e: React.MouseEvent): void => {
-      onRemove(collective.id, e);
-    },
-    [onRemove, collective.id],
-  );
+  if (selectedCollectives.length === 0) {
+    return (
+      <Card className={cn('border-dashed border-2', className)}>
+        <CardContent className="flex flex-col items-center justify-center py-8 text-center">
+          <Users className="h-12 w-12 text-gray-400 mb-4" />
+          <h3 className="text-lg font-medium text-gray-900 mb-2">
+            No collectives selected
+          </h3>
+          <p className="text-sm text-gray-500">
+            Select collectives to share your post with their communities
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
-    <Card className="transition-all duration-200 hover:shadow-sm">
-      <CardContent className={cn('p-3', compact && 'p-2')}>
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2 flex-1 min-w-0">
-            {/* Collective Avatar */}
-            <div className="flex-shrink-0">
-              {collective.logo_url !== undefined &&
-              collective.logo_url !== null &&
-              collective.logo_url.length > 0 ? (
-                <Image
-                  src={collective.logo_url}
-                  alt={`${collective.name} logo`}
-                  width={compact ? AVATAR_SIZE_COMPACT : AVATAR_SIZE_NORMAL}
-                  height={compact ? AVATAR_SIZE_COMPACT : AVATAR_SIZE_NORMAL}
-                  className={cn(
-                    'rounded-full object-cover',
-                    compact ? 'w-6 h-6' : 'w-8 h-8',
-                  )}
-                />
-              ) : (
-                <div
-                  className={cn(
-                    'rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white font-semibold',
-                    compact ? 'w-6 h-6 text-xs' : 'w-8 h-8 text-sm',
-                  )}
-                >
-                  {collective.name.charAt(0).toUpperCase()}
-                </div>
-              )}
-            </div>
+    <Card className={className}>
+      <CardHeader>
+        <CardTitle className="flex items-center justify-between">
+          <span className="flex items-center gap-2">
+            <Users className="h-5 w-5" />
+            Selected Collectives ({selectedCollectives.length})
+          </span>
+          <Badge variant="outline" className="text-sm">
+            {totalMembers.toLocaleString()} total members
+          </Badge>
+        </CardTitle>
+      </CardHeader>
 
-            {/* Collective Info */}
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2">
-                <span
-                  className={cn(
-                    'font-medium text-gray-900 truncate',
-                    compact ? 'text-sm' : 'text-base',
-                  )}
-                >
-                  {collective.name}
-                </span>
-
-                {showRole && (
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Badge
-                        variant="secondary"
-                        className={cn(
-                          'flex items-center gap-1 text-xs',
-                          roleColorClass,
-                        )}
-                      >
-                        <RoleIcon className="w-3 h-3" />
-                        {collective.user_role}
-                      </Badge>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Your role in this collective</p>
-                    </TooltipContent>
-                  </Tooltip>
-                )}
-              </div>
-
-              {!compact &&
-                collective.description !== undefined &&
-                collective.description !== null &&
-                collective.description.length > 0 && (
-                  <p className="text-xs text-gray-500 truncate mt-1">
-                    {collective.description}
-                  </p>
-                )}
-            </div>
-          </div>
-
-          {/* Remove Button */}
-          {!disabled && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleRemoveClick}
-                  className="h-8 w-8 p-0 text-gray-400 hover:text-red-500 hover:bg-red-50"
-                >
-                  <X className="w-4 h-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Remove from selection</p>
-              </TooltipContent>
-            </Tooltip>
+      <CardContent className="space-y-4">
+        {/* Status Summary */}
+        <div className="flex flex-wrap gap-2">
+          {statusCounts.published > 0 && (
+            <Badge className="bg-green-100 text-green-800">
+              <CheckCircle className="h-3 w-3 mr-1" />
+              {statusCounts.published} Published
+            </Badge>
+          )}
+          {statusCounts.draft > 0 && (
+            <Badge className="bg-yellow-100 text-yellow-800">
+              <EyeOff className="h-3 w-3 mr-1" />
+              {statusCounts.draft} Draft
+            </Badge>
+          )}
+          {statusCounts.pending_approval > 0 && (
+            <Badge className="bg-orange-100 text-orange-800">
+              <Calendar className="h-3 w-3 mr-1" />
+              {statusCounts.pending_approval} Pending
+            </Badge>
+          )}
+          {statusCounts.auto_publish > 0 && (
+            <Badge className="bg-blue-100 text-blue-800">
+              <Eye className="h-3 w-3 mr-1" />
+              {statusCounts.auto_publish} Auto-publish
+            </Badge>
           )}
         </div>
+
+        {/* Collective List */}
+        <div className="space-y-2">
+          {selectedCollectives.map((collective) => {
+            const settings = sharingSettings[collective.id];
+
+            return (
+              <div
+                key={collective.id}
+                className="flex items-center justify-between p-3 border rounded-lg"
+              >
+                <div className="flex items-center space-x-3 flex-1 min-w-0">
+                  {collective.logo_url && (
+                    <img
+                      src={collective.logo_url}
+                      alt={`${collective.name} logo`}
+                      className="h-8 w-8 rounded-full flex-shrink-0"
+                    />
+                  )}
+
+                  <div className="flex-1 min-w-0">
+                    <h4 className="font-medium text-gray-900 truncate">
+                      {collective.name}
+                    </h4>
+                    <div className="flex items-center space-x-2 text-sm text-gray-500">
+                      <Users className="h-3 w-3" />
+                      <span>{collective.member_count || 0} members</span>
+                      <Badge variant="outline" className="text-xs">
+                        {collective.user_role}
+                      </Badge>
+                    </div>
+                  </div>
+
+                  {settings && (
+                    <div className="flex items-center space-x-2">
+                      <Badge
+                        variant="outline"
+                        className={cn(
+                          'text-xs',
+                          settings.status === 'published' &&
+                            'bg-green-100 text-green-800',
+                          settings.status === 'draft' &&
+                            'bg-yellow-100 text-yellow-800',
+                          settings.status === 'pending_approval' &&
+                            'bg-orange-100 text-orange-800',
+                        )}
+                      >
+                        {settings.status}
+                      </Badge>
+
+                      {settings.display_priority !== undefined &&
+                        settings.display_priority > 0 && (
+                          <Badge variant="outline" className="text-xs">
+                            Priority: {settings.display_priority}
+                          </Badge>
+                        )}
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex items-center space-x-2 flex-shrink-0">
+                  {onEditSettings && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => onEditSettings(collective.id)}
+                      className="h-8 w-8 p-0"
+                    >
+                      <Settings className="h-4 w-4" />
+                      <span className="sr-only">
+                        Edit settings for {collective.name}
+                      </span>
+                    </Button>
+                  )}
+
+                  {onRemoveCollective && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => onRemoveCollective(collective.id)}
+                      className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
+                    >
+                      ×<span className="sr-only">Remove {collective.name}</span>
+                    </Button>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Quick Actions */}
+        {selectedCollectives.length > 1 && (
+          <div className="pt-4 border-t">
+            <div className="flex items-center justify-between text-sm text-gray-600">
+              <span>Sharing with {selectedCollectives.length} collectives</span>
+              <span>Reaching {totalMembers.toLocaleString()} members</span>
+            </div>
+          </div>
+        )}
       </CardContent>
     </Card>
-  );
-}
-
-// Compact version for smaller spaces
-export function CompactCollectiveSelectionSummary(
-  props: CollectiveSelectionSummaryProps,
-): React.ReactElement {
-  return <CollectiveSelectionSummary {...props} compact />;
-}
-
-// Loading skeleton
-export function CollectiveSelectionSummarySkeleton({
-  compact = false,
-  count = DEFAULT_SKELETON_COUNT,
-}: {
-  compact?: boolean;
-  count?: number;
-}): React.ReactElement {
-  return (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <div className="h-4 bg-gray-200 rounded w-32" />
-        <div className="h-6 bg-gray-200 rounded w-16" />
-      </div>
-
-      <div
-        className={cn(
-          'grid gap-2',
-          compact ? 'grid-cols-1' : 'grid-cols-1 sm:grid-cols-2',
-        )}
-      >
-        {Array.from({ length: count }).map((_, i) => (
-          <Card key={i} className="animate-pulse">
-            <CardContent className={cn('p-3', compact && 'p-2')}>
-              <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2 flex-1">
-                  <div
-                    className={cn(
-                      'rounded-full bg-gray-200',
-                      compact ? 'w-6 h-6' : 'w-8 h-8',
-                    )}
-                  />
-                  <div className="flex-1">
-                    <div className="h-4 bg-gray-200 rounded w-3/4 mb-1" />
-                    {!compact && (
-                      <div className="h-3 bg-gray-200 rounded w-1/2" />
-                    )}
-                  </div>
-                </div>
-                <div className="w-8 h-8 bg-gray-200 rounded" />
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      <div className="flex justify-center">
-        <div className="h-10 bg-gray-200 rounded w-32" />
-      </div>
-    </div>
   );
 }

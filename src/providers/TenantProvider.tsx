@@ -3,53 +3,54 @@
 
 'use client';
 
-import {
+import React, {
   createContext,
   useContext,
   useEffect,
   useState,
   useCallback,
-  useMemo,
 } from 'react';
 
-import { useUserTenants } from '@/hooks/useUserTenants';
+import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
 
-import type { UserTenantsResponse } from '@/types/tenant.types';
+import type { Database } from '@/lib/database.types';
 
-// =============================================================================
-// CONTEXT TYPES
-// =============================================================================
+type TenantType = Database['public']['Tables']['tenants']['Row'];
+type UserRole = Database['public']['Enums']['member_role'];
 
-interface TenantContextValue {
-  // Current tenant state
-  currentTenant: UserTenantsResponse | null;
-  currentTenantId: string | null;
-
-  // All user tenants
-  userTenants: UserTenantsResponse[];
-  personalTenant: UserTenantsResponse | null;
-  collectiveTenants: UserTenantsResponse[];
-
-  // Actions
-  switchTenant: (tenantId: string) => void;
-  refreshTenants: () => Promise<void>;
-
-  // Loading states
-  isLoading: boolean;
-  error: string | null;
+interface TenantContext {
+  id: string;
+  name: string;
+  slug: string;
+  type: 'personal' | 'collective';
+  description?: string;
+  is_public: boolean;
+  user_role: UserRole;
+  member_count?: number;
 }
 
-// =============================================================================
-// CONTEXT CREATION
-// =============================================================================
+interface TenantContextType {
+  // Current tenant state
+  currentTenantId: string | null;
+  currentTenant: TenantContext | null;
 
-const TenantContext = createContext<TenantContextValue | null>(null);
+  // Available tenants
+  userTenants: TenantType[];
+  personalTenant: TenantType | null;
+  isLoading: boolean;
+  error: string | null;
 
-const STORAGE_KEY = 'lnked_current_tenant_id';
+  // Actions
+  switchTenant: (tenantId: string) => Promise<void>;
+  refreshTenants: () => Promise<void>;
+  refreshCurrentTenant: () => Promise<void>;
 
-// =============================================================================
-// PROVIDER COMPONENT
-// =============================================================================
+  // Utilities
+  canPerformAction: (action: 'read' | 'write' | 'admin' | 'manage') => boolean;
+  isPersonalTenant: boolean;
+}
+
+const TenantContext = createContext<TenantContextType | null>(null);
 
 interface TenantProviderProps {
   children: React.ReactNode;
@@ -60,216 +61,306 @@ export function TenantProvider({
   children,
   initialTenantId,
 }: TenantProviderProps): React.JSX.Element {
-  const {
-    tenants,
-    personalTenant,
-    collectiveTenants,
-    isLoading,
-    error,
-    refreshTenants,
-  } = useUserTenants();
   const [currentTenantId, setCurrentTenantId] = useState<string | null>(
-    initialTenantId !== null && initialTenantId !== undefined
-      ? initialTenantId
-      : null,
+    initialTenantId || null,
   );
+  const [currentTenant, setCurrentTenant] = useState<TenantContext | null>(
+    null,
+  );
+  const [userTenants, setUserTenants] = useState<TenantType[]>([]);
+  const [personalTenant, setPersonalTenant] = useState<TenantType | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Initialize current tenant from localStorage or default to personal tenant
-  useEffect(() => {
-    if (isLoading) return;
+  const supabase = createSupabaseBrowserClient();
 
-    // Check if user needs onboarding (no tenants available)
-    if (
-      tenants.length === 0 &&
-      personalTenant === null &&
-      personalTenant === undefined &&
-      !isLoading
-    ) {
-      // User might need onboarding - this will be handled by the auth system
-      // For now, we'll wait for tenants to be available
-      return;
-    }
+  // Fetch all user tenants
+  const refreshTenants = useCallback(async (): Promise<void> => {
+    try {
+      setError(null);
 
-    // If we already have a current tenant, don't change it
-    if (
-      currentTenantId !== null &&
-      currentTenantId !== undefined &&
-      tenants.find((t) => t.tenant_id === currentTenantId)
-    ) {
-      return;
-    }
+      // Get user's tenants using the RPC
+      const { data: tenants, error: tenantsError } =
+        await supabase.rpc('get_user_tenants');
 
-    let targetTenantId: string | null = null;
-
-    // 1. Try initial prop
-    if (
-      initialTenantId !== null &&
-      initialTenantId !== undefined &&
-      tenants.find((t) => t.tenant_id === initialTenantId)
-    ) {
-      targetTenantId = initialTenantId;
-    }
-    // 2. Try localStorage
-    else if (typeof window !== 'undefined') {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (
-        stored !== null &&
-        stored !== undefined &&
-        tenants.find((t) => t.tenant_id === stored)
-      ) {
-        targetTenantId = stored;
+      if (tenantsError) {
+        throw new Error(`Failed to fetch tenants: ${tenantsError.message}`);
       }
-    }
 
-    // 3. Default to personal tenant (this should be the fallback)
-    if (
-      (targetTenantId === null || targetTenantId === undefined) &&
-      personalTenant !== null &&
-      personalTenant !== undefined
-    ) {
-      targetTenantId = personalTenant.tenant_id;
-    }
-    // 4. Fallback to first available tenant
-    else if (
-      (targetTenantId === null || targetTenantId === undefined) &&
-      tenants.length > 0
-    ) {
-      targetTenantId = tenants[0].tenant_id;
-    }
-
-    if (
-      targetTenantId !== null &&
-      targetTenantId !== undefined &&
-      targetTenantId !== currentTenantId
-    ) {
-      setCurrentTenantId(targetTenantId);
-    }
-  }, [tenants, personalTenant, isLoading, currentTenantId, initialTenantId]);
-
-  // Switch tenant function
-  const switchTenant = useCallback(
-    (tenantId: string) => {
-      const tenant = tenants.find((t) => t.tenant_id === tenantId);
-      if (tenant === null || tenant === undefined) {
+      if (!tenants || tenants.length === 0) {
+        setError('No tenants found for user');
         return;
       }
 
-      setCurrentTenantId(tenantId);
+      // Transform RPC result to tenant format
+      const transformedTenants: TenantType[] = tenants.map((t: any) => ({
+        id: t.tenant_id,
+        name: t.tenant_name,
+        slug: t.tenant_slug,
+        type: t.tenant_type,
+        description: t.tenant_description,
+        is_public: t.is_public,
+        logo_url: t.logo_url,
+        cover_image_url: t.cover_image_url,
+        settings: t.settings || {},
+        created_at: t.created_at,
+        updated_at: t.updated_at,
+        deleted_at: null,
+        member_count: t.member_count || 0,
+      }));
 
-      // Persist to localStorage
-      if (typeof window !== 'undefined') {
-        localStorage.setItem(STORAGE_KEY, tenantId);
+      setUserTenants(transformedTenants);
+
+      // Find personal tenant
+      const personal = transformedTenants.find((t) => t.type === 'personal');
+      setPersonalTenant(personal || null);
+
+      // If no current tenant is set, default to personal tenant
+      if (!currentTenantId && personal) {
+        setCurrentTenantId(personal.id);
+      }
+    } catch (err) {
+      const errorMessage =
+        err instanceof Error ? err.message : 'Failed to fetch tenants';
+      setError(errorMessage);
+      console.error('Error fetching user tenants:', err);
+    }
+  }, [supabase, currentTenantId]);
+
+  // Fetch current tenant context and user role
+  const refreshCurrentTenant = useCallback(async (): Promise<void> => {
+    if (!currentTenantId) {
+      setCurrentTenant(null);
+      return;
+    }
+
+    try {
+      setError(null);
+
+      // Get tenant context using RPC
+      const { data: tenantContext, error: contextError } = await supabase.rpc(
+        'get_tenant_context',
+        {
+          target_tenant_id: currentTenantId,
+        },
+      );
+
+      if (contextError) {
+        throw new Error(
+          `Failed to fetch tenant context: ${contextError.message}`,
+        );
       }
 
-      // Optional: Navigate based on tenant type
-      // This could be customized based on your routing strategy
-      if (tenant.is_personal) {
-        // Stay on current page or navigate to personal dashboard
-      } else {
-        // Could navigate to collective dashboard
-        // router.push(`/collectives/${tenant.tenant_slug}`);
+      if (!tenantContext) {
+        throw new Error('No tenant context returned');
+      }
+
+      // Transform to our context format (cast to any for RPC response)
+      const tenantData = tenantContext as any;
+      const context: TenantContext = {
+        id: tenantData.id,
+        name: tenantData.name,
+        slug: tenantData.slug,
+        type: tenantData.type,
+        description: tenantData.description,
+        is_public: tenantData.is_public,
+        user_role: tenantData.user_role,
+        member_count: tenantData.member_count,
+      };
+
+      setCurrentTenant(context);
+    } catch (err) {
+      const errorMessage =
+        err instanceof Error ? err.message : 'Failed to fetch tenant context';
+      setError(errorMessage);
+      console.error('Error fetching tenant context:', err);
+
+      // If we can't access this tenant, fall back to personal tenant
+      if (personalTenant && currentTenantId !== personalTenant.id) {
+        setCurrentTenantId(personalTenant.id);
+      }
+    }
+  }, [currentTenantId, supabase, personalTenant]);
+
+  // Switch to a different tenant
+  const switchTenant = useCallback(
+    async (tenantId: string): Promise<void> => {
+      if (tenantId === currentTenantId) {
+        return; // Already on this tenant
+      }
+
+      // Verify user has access to this tenant
+      const targetTenant = userTenants.find((t) => t.id === tenantId);
+      if (!targetTenant) {
+        throw new Error('No access to this tenant');
+      }
+
+      setCurrentTenantId(tenantId);
+    },
+    [currentTenantId, userTenants],
+  );
+
+  // Check if user can perform an action in current tenant
+  const canPerformAction = useCallback(
+    (action: 'read' | 'write' | 'admin' | 'manage'): boolean => {
+      if (!currentTenant) {
+        return false;
+      }
+
+      const { user_role } = currentTenant;
+
+      switch (action) {
+        case 'read':
+          return ['member', 'editor', 'admin', 'owner'].includes(user_role);
+        case 'write':
+          return ['editor', 'admin', 'owner'].includes(user_role);
+        case 'admin':
+          return ['admin', 'owner'].includes(user_role);
+        case 'manage':
+          return user_role === 'owner';
+        default:
+          return false;
       }
     },
-    [tenants],
+    [currentTenant],
   );
 
-  // Get current tenant object
-  const currentTenant = useMemo(() => {
-    if (currentTenantId === null || currentTenantId === undefined) return null;
-    return tenants.find((t) => t.tenant_id === currentTenantId) || null;
-  }, [tenants, currentTenantId]);
-
-  // Context value
-  const contextValue = useMemo<TenantContextValue>(
-    () => ({
-      currentTenant,
-      currentTenantId,
-      userTenants: tenants,
-      personalTenant,
-      collectiveTenants,
-      switchTenant,
-      refreshTenants,
-      isLoading,
-      error,
-    }),
-    [
-      currentTenant,
-      currentTenantId,
-      tenants,
-      personalTenant,
-      collectiveTenants,
-      switchTenant,
-      refreshTenants,
-      isLoading,
-      error,
-    ],
+  // Check if current tenant is personal
+  const isPersonalTenant = Boolean(
+    currentTenant && personalTenant && currentTenant.id === personalTenant.id,
   );
+
+  // Initialize tenants on mount
+  useEffect(() => {
+    const initializeTenants = async (): Promise<void> => {
+      setIsLoading(true);
+      try {
+        await refreshTenants();
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    void initializeTenants();
+  }, [refreshTenants]);
+
+  // Refresh current tenant when currentTenantId changes
+  useEffect(() => {
+    if (currentTenantId && userTenants.length > 0) {
+      void refreshCurrentTenant();
+    }
+  }, [currentTenantId, refreshCurrentTenant, userTenants.length]);
+
+  const value: TenantContextType = {
+    currentTenantId,
+    currentTenant,
+    userTenants,
+    personalTenant,
+    isLoading,
+    error,
+    switchTenant,
+    refreshTenants,
+    refreshCurrentTenant,
+    canPerformAction,
+    isPersonalTenant,
+  };
 
   return (
-    <TenantContext.Provider value={contextValue}>
-      {children}
-    </TenantContext.Provider>
+    <TenantContext.Provider value={value}>{children}</TenantContext.Provider>
   );
 }
 
-// =============================================================================
-// HOOK FOR CONSUMING CONTEXT
-// =============================================================================
-
-export function useTenantContext(): TenantContextValue {
+// Hook to use tenant context
+export function useTenant(): TenantContextType {
   const context = useContext(TenantContext);
-  if (context === null || context === undefined) {
-    throw new Error('useTenantContext must be used within a TenantProvider');
+  if (!context) {
+    throw new Error('useTenant must be used within a TenantProvider');
   }
   return context;
 }
 
-// =============================================================================
-// CONVENIENCE HOOKS
-// =============================================================================
+// Hook for tenant switching with error handling
+export function useTenantSwitcher() {
+  const { switchTenant, userTenants, currentTenantId, personalTenant } =
+    useTenant();
+  const [isSwitching, setIsSwitching] = useState(false);
+  const [switchError, setSwitchError] = useState<string | null>(null);
 
-/**
- * Hook to get just the current tenant
- */
-export function useCurrentTenant(): UserTenantsResponse | null {
-  const { currentTenant } = useTenantContext();
-  return currentTenant;
-}
+  const handleSwitchTenant = useCallback(
+    async (tenantId: string): Promise<void> => {
+      if (isSwitching) {
+        return;
+      }
 
-/**
- * Hook to check if user is in a specific tenant
- */
-export function useIsInTenant(tenantId: string): boolean {
-  const { currentTenantId } = useTenantContext();
-  return currentTenantId === tenantId;
-}
+      setIsSwitching(true);
+      setSwitchError(null);
 
-/**
- * Hook to check if current tenant is personal
- */
-export function useIsPersonalTenant(): boolean {
-  const { currentTenant } = useTenantContext();
-  return currentTenant?.is_personal ?? false;
-}
+      try {
+        await switchTenant(tenantId);
+      } catch (err) {
+        const errorMessage =
+          err instanceof Error ? err.message : 'Failed to switch tenant';
+        setSwitchError(errorMessage);
+        console.error('Error switching tenant:', err);
+      } finally {
+        setIsSwitching(false);
+      }
+    },
+    [switchTenant, isSwitching],
+  );
 
-/**
- * Hook to get tenant switching function
- */
-export function useTenantSwitcher(): {
-  switchTenant: (tenantId: string) => void;
-  availableTenants: UserTenantsResponse[];
-  currentTenantId: string | null;
-  isLoading: boolean;
-} {
-  const { switchTenant, userTenants, currentTenantId, isLoading } =
-    useTenantContext();
+  const switchToPersonal = useCallback(async (): Promise<void> => {
+    if (personalTenant) {
+      await handleSwitchTenant(personalTenant.id);
+    }
+  }, [personalTenant, handleSwitchTenant]);
+
   return {
-    switchTenant,
+    switchTenant: handleSwitchTenant,
+    switchToPersonal,
     availableTenants: userTenants,
     currentTenantId,
-    isLoading,
+    isSwitching,
+    switchError,
   };
 }
 
-// Export types for external use
-export type { TenantContextValue };
+// Hook for tenant access validation
+export function useTenantAccess(requiredRole?: UserRole) {
+  const { currentTenant, canPerformAction } = useTenant();
+
+  const hasAccess = useCallback(
+    (role?: UserRole): boolean => {
+      if (!currentTenant) {
+        return false;
+      }
+
+      if (!role) {
+        return canPerformAction('read');
+      }
+
+      const roleHierarchy: UserRole[] = ['member', 'editor', 'admin', 'owner'];
+      const currentRoleIndex = roleHierarchy.indexOf(currentTenant.user_role);
+      const requiredRoleIndex = roleHierarchy.indexOf(role);
+
+      return currentRoleIndex >= requiredRoleIndex;
+    },
+    [currentTenant, canPerformAction],
+  );
+
+  const accessLevel = currentTenant?.user_role || null;
+  const canRead = canPerformAction('read');
+  const canWrite = canPerformAction('write');
+  const canAdmin = canPerformAction('admin');
+  const canManage = canPerformAction('manage');
+
+  return {
+    hasAccess: hasAccess(requiredRole),
+    accessLevel,
+    canRead,
+    canWrite,
+    canAdmin,
+    canManage,
+    tenant: currentTenant,
+  };
+}

@@ -1,15 +1,26 @@
+// Tenant-Scoped Conversations API Route
+// Provides tenant-isolated conversation management with proper access control
+
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
 import { withTenantAccess, createTenantErrorResponse, createTenantSuccessResponse } from '@/lib/api/tenant-helpers';
 
-// Schema for creating tenant conversations/channels
-const createConversationSchema = z.object({
-  title: z.string().min(1, 'Title is required').max(100, 'Title must be less than 100 characters'),
-  description: z.string().optional(),
-  type: z.enum(['channel', 'group']).default('channel'),
+// =============================================================================
+// VALIDATION SCHEMAS
+// =============================================================================
+
+const CreateConversationSchema = z.object({
+  title: z.string().min(1).max(100).optional(),
+  type: z.enum(['direct', 'group', 'channel']).default('group'),
+  description: z.string().max(500).optional(),
   is_private: z.boolean().default(false),
+  participant_ids: z.array(z.string().uuid()).default([]),
 });
+
+// =============================================================================
+// GET TENANT CONVERSATIONS
+// =============================================================================
 
 export async function GET(
   request: NextRequest,
@@ -18,61 +29,128 @@ export async function GET(
   try {
     const { tenantId } = await params;
 
-    const result = await withTenantAccess(tenantId, 'member', async (supabase, userRole) => {
-      // Fetch tenant conversations/channels
-      const { data: conversations, error } = await supabase
-        .from('conversations')
-        .select(`
-          id,
-          title,
-          description,
-          type,
-          is_private,
-          created_at,
-          created_by,
-          tenant_id,
-          collective_id,
-          participants:conversation_participants(
+    // Execute with tenant access validation
+    const result = await withTenantAccess(
+      tenantId,
+      'member', // Any member can view conversations
+      async (supabase, userRole) => {
+        // Use the new RPC to get tenant-scoped conversations
+        const { data: conversations, error } = await supabase.rpc('get_tenant_conversations', {
+          target_tenant_id: tenantId,
+        });
+
+        if (error) {
+          throw new Error(`Failed to fetch conversations: ${error.message}`);
+        }
+
+        // Get detailed participant information for each conversation
+        const conversationIds = conversations?.map((c: any) => c.id) || [];
+        
+        if (conversationIds.length === 0) {
+          return {
+            conversations: [],
+            meta: {
+              tenant_id: tenantId,
+              user_role: userRole,
+              total: 0,
+            },
+          };
+        }
+
+        // Fetch participants for all conversations
+        const { data: participants } = await supabase
+          .from('conversation_participants')
+          .select(`
+            conversation_id,
             user_id,
             role,
-            user:users(
+            user:users!conversation_participants_user_id_fkey(
               id,
               username,
               full_name,
               avatar_url
             )
-          )
-        `)
-        .eq('tenant_id', tenantId)
-        .order('created_at', { ascending: false });
+          `)
+          .in('conversation_id', conversationIds)
+          .is('deleted_at', null);
 
-      if (error) {
-        console.error('Error fetching tenant conversations:', error);
-        throw new Error('Failed to fetch conversations');
+        // Fetch last messages for all conversations
+        const { data: lastMessages } = await supabase
+          .from('messages')
+          .select(`
+            id,
+            conversation_id,
+            content,
+            created_at,
+            sender:users!messages_sender_id_fkey(
+              id,
+              username,
+              full_name,
+              avatar_url
+            )
+          `)
+          .in('conversation_id', conversationIds)
+          .is('deleted_at', null)
+          .order('created_at', { ascending: false });
+
+        // Group participants and messages by conversation
+        const participantsMap = new Map();
+        participants?.forEach(p => {
+          if (!participantsMap.has(p.conversation_id)) {
+            participantsMap.set(p.conversation_id, []);
+          }
+          participantsMap.get(p.conversation_id).push({
+            user_id: p.user_id,
+            role: p.role,
+            user: p.user,
+          });
+        });
+
+        const lastMessagesMap = new Map();
+        lastMessages?.forEach(msg => {
+          if (!lastMessagesMap.has(msg.conversation_id)) {
+            lastMessagesMap.set(msg.conversation_id, {
+              id: msg.id,
+              content: msg.content,
+              created_at: msg.created_at,
+              sender: msg.sender,
+            });
+          }
+        });
+
+        // Enhance conversations with participant and message data
+        const enhancedConversations = conversations?.map((conv: any) => ({
+          ...conv,
+          participants: participantsMap.get(conv.id) || [],
+          last_message: lastMessagesMap.get(conv.id) || null,
+        }));
+
+        return {
+          conversations: enhancedConversations,
+          meta: {
+            tenant_id: tenantId,
+            user_role: userRole,
+            total: conversations?.length || 0,
+          },
+        };
       }
-
-      // Filter conversations to only show channels/groups (not direct messages)
-      const channels = conversations?.filter(c => c.type === 'channel' || c.type === 'group') || [];
-
-      return {
-        channels,
-        count: channels.length,
-      };
-    });
+    );
 
     if (result.error) {
       return createTenantErrorResponse(result.error, result.status);
     }
 
     return createTenantSuccessResponse(result.data);
+
   } catch (error) {
-    console.error('Error in tenant conversations GET:', error);
-    return createTenantErrorResponse(
-      error instanceof Error ? error.message : 'Internal server error',
-      500
-    );
+    console.error('Error fetching tenant conversations:', error);
+    return createTenantErrorResponse('Internal server error', 500);
   }
 }
+
+// =============================================================================
+// CREATE TENANT CONVERSATION
+// =============================================================================
 
 export async function POST(
   request: NextRequest,
@@ -81,80 +159,94 @@ export async function POST(
   try {
     const { tenantId } = await params;
     const body = await request.json();
-
+    
     // Validate request body
-    const validationResult = createConversationSchema.safeParse(body);
+    const validationResult = CreateConversationSchema.safeParse(body);
     if (!validationResult.success) {
-      return createTenantErrorResponse('Invalid request data', 400);
+      return createTenantErrorResponse(
+        `Invalid request data: ${validationResult.error.message}`,
+        400
+      );
     }
 
-    const { title, description, type, is_private } = validationResult.data;
+    const { title, type, description, is_private, participant_ids } = validationResult.data;
 
-    const result = await withTenantAccess(tenantId, 'editor', async (supabase, userRole) => {
-      // Get current user
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
-      if (authError || !user) {
-        throw new Error('Authentication required');
-      }
+    // Validate participants for conversation type
+    if (type === 'direct' && participant_ids.length !== 1) {
+      return createTenantErrorResponse(
+        'Direct conversations must have exactly one other participant',
+        400
+      );
+    }
 
-      // Create the conversation
-      const { data: conversation, error: conversationError } = await supabase
-        .from('conversations')
-        .insert({
-          title,
-          description,
-          type,
-          is_private,
-          tenant_id: tenantId,
-          created_by: user.id,
-        })
-        .select(`
-          id,
-          title,
-          description,
-          type,
-          is_private,
-          created_at,
-          created_by,
-          tenant_id,
-          collective_id
-        `)
-        .single();
+    if (type === 'group' && participant_ids.length < 1) {
+      return createTenantErrorResponse(
+        'Group conversations must have at least one other participant',
+        400
+      );
+    }
 
-      if (conversationError) {
-        console.error('Error creating conversation:', conversationError);
-        throw new Error('Failed to create conversation');
-      }
+    // Execute with tenant access validation
+    const result = await withTenantAccess(
+      tenantId,
+      'member', // Any member can create conversations
+      async (supabase, userRole) => {
+        // Check for existing direct conversation if type is direct
+        if (type === 'direct') {
+          const { data: existingConversations } = await supabase.rpc('get_tenant_conversations', {
+            target_tenant_id: tenantId,
+          });
 
-      // Add the creator as a participant with admin role
-      const { error: participantError } = await supabase
-        .from('conversation_participants')
-        .insert({
-          conversation_id: conversation.id,
-          user_id: user.id,
-          role: 'admin',
+                     const existingDirectConv = existingConversations?.find((conv: any) => {
+             return conv.type === 'direct' && 
+                    conv.participant_count === 2; // Direct convs should have exactly 2 participants
+           });
+
+          if (existingDirectConv) {
+            return {
+              conversation: existingDirectConv,
+              existing: true,
+              message: 'Direct conversation already exists',
+            };
+          }
+        }
+
+        // Create conversation using RPC
+        const { data: newConversation, error } = await supabase.rpc('create_tenant_conversation', {
+          target_tenant_id: tenantId,
+          conversation_title: title || null,
+          conversation_type: type,
+          conversation_description: description || null,
+          is_private_conversation: is_private,
+          participant_user_ids: participant_ids,
         });
 
-      if (participantError) {
-        console.error('Error adding creator as participant:', participantError);
-        // Clean up the conversation if participant creation fails
-        await supabase.from('conversations').delete().eq('id', conversation.id);
-        throw new Error('Failed to set up conversation permissions');
-      }
+        if (error) {
+          throw new Error(`Failed to create conversation: ${error.message}`);
+        }
 
-      return conversation;
-    });
+        if (!newConversation || newConversation.length === 0) {
+          throw new Error('No conversation returned from creation');
+        }
+
+        const conversation = newConversation[0];
+
+        return {
+          conversation,
+          existing: false,
+          message: 'Conversation created successfully',
+        };
+      }
+    );
 
     if (result.error) {
       return createTenantErrorResponse(result.error, result.status);
     }
 
     return createTenantSuccessResponse(result.data, 201);
+
   } catch (error) {
-    console.error('Error in tenant conversations POST:', error);
-    return createTenantErrorResponse(
-      error instanceof Error ? error.message : 'Internal server error',
-      500
-    );
+    console.error('Error creating tenant conversation:', error);
+    return createTenantErrorResponse('Internal server error', 500);
   }
 } 

@@ -1,8 +1,11 @@
 'use client';
 
+import React, { useCallback, useMemo } from 'react';
 import {
-  CheckCircle2,
+  Check,
+  Settings,
   Users,
+  CheckCircle2,
   Crown,
   Shield,
   Edit3,
@@ -11,10 +14,10 @@ import {
   Info,
 } from 'lucide-react';
 import Image from 'next/image';
-import React, { useCallback, useState } from 'react';
 
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import {
   Tooltip,
   TooltipContent,
@@ -22,7 +25,11 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
-import { CollectiveWithPermission } from '@/types/enhanced-database.types';
+
+import type {
+  CollectiveWithPermission,
+  CollectiveSharingSettings,
+} from '@/lib/stores/enhanced-post-editor-store';
 
 // Constants
 const AVATAR_SIZE_COMPACT = 32;
@@ -31,10 +38,12 @@ const AVATAR_SIZE_NORMAL = 40;
 interface CollectiveSelectionCardProps {
   collective: CollectiveWithPermission;
   isSelected: boolean;
-  onToggleSelection: (collectiveId: string) => void;
+  sharingSettings?: CollectiveSharingSettings;
+  onToggle: (collectiveId: string) => void;
+  onSettingsClick?: (collectiveId: string) => void;
   disabled?: boolean;
-  showMemberCount?: boolean;
-  compact?: boolean;
+  showSettings?: boolean;
+  className?: string;
 }
 
 // Role icon mapping with colors
@@ -72,196 +81,190 @@ const roleConfig = {
 export function CollectiveSelectionCard({
   collective,
   isSelected,
-  onToggleSelection,
+  sharingSettings,
+  onToggle,
+  onSettingsClick,
   disabled = false,
-  showMemberCount = true,
-  compact = false,
-}: CollectiveSelectionCardProps): React.ReactElement {
-  const [isHovered, setIsHovered] = useState(false);
-
-  const roleInfo = roleConfig[collective.user_role];
-  const RoleIcon = roleInfo.icon;
-
-  const handleClick = useCallback((): void => {
-    if (!disabled && collective.can_post) {
-      onToggleSelection(collective.id);
+  showSettings = true,
+  className,
+}: CollectiveSelectionCardProps): React.JSX.Element {
+  const handleToggle = useCallback(() => {
+    if (!disabled) {
+      onToggle(collective.id);
     }
-  }, [disabled, collective.can_post, collective.id, onToggleSelection]);
+  }, [collective.id, disabled, onToggle]);
 
-  const handleMouseEnter = useCallback((): void => {
-    setIsHovered(true);
-  }, []);
+  const handleSettingsClick = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation();
+      if (onSettingsClick && isSelected) {
+        onSettingsClick(collective.id);
+      }
+    },
+    [collective.id, isSelected, onSettingsClick],
+  );
 
-  const handleMouseLeave = useCallback((): void => {
-    setIsHovered(false);
-  }, []);
+  // Determine if user can post to this collective
+  const canPost = useMemo(() => {
+    return (
+      collective.can_post &&
+      ['editor', 'admin', 'owner'].includes(collective.user_role)
+    );
+  }, [collective.can_post, collective.user_role]);
 
-  const canPost = collective.can_post;
-  const isInteractive = canPost && !disabled;
+  // Get role badge color
+  const roleColor = useMemo(() => {
+    switch (collective.user_role) {
+      case 'owner':
+        return 'bg-purple-100 text-purple-800';
+      case 'admin':
+        return 'bg-blue-100 text-blue-800';
+      case 'editor':
+        return 'bg-green-100 text-green-800';
+      case 'member':
+        return 'bg-gray-100 text-gray-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  }, [collective.user_role]);
+
+  // Get status indicator
+  const statusInfo = useMemo(() => {
+    if (!isSelected || !sharingSettings) {
+      return null;
+    }
+
+    const { status, auto_publish, require_approval } = sharingSettings;
+
+    if (status === 'published') {
+      return { label: 'Published', color: 'bg-green-100 text-green-800' };
+    }
+    if (status === 'draft') {
+      return { label: 'Draft', color: 'bg-yellow-100 text-yellow-800' };
+    }
+    if (status === 'pending_approval') {
+      return { label: 'Pending', color: 'bg-orange-100 text-orange-800' };
+    }
+    if (require_approval) {
+      return {
+        label: 'Needs Approval',
+        color: 'bg-orange-100 text-orange-800',
+      };
+    }
+    if (auto_publish) {
+      return { label: 'Auto Publish', color: 'bg-blue-100 text-blue-800' };
+    }
+
+    return null;
+  }, [isSelected, sharingSettings]);
 
   return (
-    <TooltipProvider>
-      <Card
-        className={cn(
-          'relative cursor-pointer transition-all duration-200 border-2',
-          compact ? 'p-2' : 'p-1',
-          isSelected && canPost
-            ? 'border-blue-500 bg-blue-50 shadow-md'
-            : 'border-gray-200 hover:border-gray-300',
-          !canPost
-            ? 'opacity-60 cursor-not-allowed bg-gray-50'
-            : isInteractive
-              ? 'hover:shadow-lg hover:border-blue-300'
-              : 'cursor-not-allowed',
-          disabled && 'opacity-50 cursor-not-allowed',
-        )}
-        onClick={handleClick}
-        onMouseEnter={handleMouseEnter}
-        onMouseLeave={handleMouseLeave}
-      >
-        <CardContent className={cn('p-3', compact && 'p-2')}>
-          <div className="flex items-start justify-between gap-3">
-            {/* Collective Info */}
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-2">
-                {/* Collective Avatar/Logo */}
-                <div className="flex-shrink-0">
-                  {collective.logo_url !== undefined &&
-                  collective.logo_url !== null &&
-                  collective.logo_url.length > 0 ? (
-                    <Image
-                      src={collective.logo_url}
-                      alt={`${collective.name} logo`}
-                      width={compact ? AVATAR_SIZE_COMPACT : AVATAR_SIZE_NORMAL}
-                      height={
-                        compact ? AVATAR_SIZE_COMPACT : AVATAR_SIZE_NORMAL
-                      }
-                      className={cn(
-                        'rounded-full object-cover',
-                        compact ? 'w-8 h-8' : 'w-10 h-10',
-                      )}
-                    />
-                  ) : (
-                    <div
-                      className={cn(
-                        'rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white font-semibold',
-                        compact ? 'w-8 h-8 text-sm' : 'w-10 h-10 text-lg',
-                      )}
-                    >
-                      {collective.name.charAt(0).toUpperCase()}
-                    </div>
-                  )}
-                </div>
-
-                {/* Collective Name */}
-                <div className="flex-1 min-w-0">
-                  <h3
-                    className={cn(
-                      'font-semibold text-gray-900 truncate',
-                      compact ? 'text-sm' : 'text-base',
-                    )}
-                  >
-                    {collective.name}
-                  </h3>
-                  {!compact &&
-                    collective.description !== undefined &&
-                    collective.description !== null &&
-                    collective.description.length > 0 && (
-                      <p className="text-sm text-gray-600 truncate mt-1">
-                        {collective.description}
-                      </p>
-                    )}
-                </div>
-              </div>
-
-              {/* Role and Member Count */}
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  {/* Role Badge */}
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Badge
-                        variant="secondary"
-                        className={cn(
-                          'flex items-center gap-1 text-xs',
-                          roleInfo.bgColor,
-                          roleInfo.color,
-                        )}
-                      >
-                        <RoleIcon className="w-3 h-3" />
-                        {roleInfo.label}
-                      </Badge>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>{roleInfo.description}</p>
-                    </TooltipContent>
-                  </Tooltip>
-
-                  {/* Posting Permission Indicator */}
-                  {!canPost && (
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <AlertCircle className="w-4 h-4 text-amber-500" />
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Insufficient permissions to post</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  )}
-                </div>
-
-                {/* Member Count */}
-                {showMemberCount &&
-                  collective.member_count !== undefined &&
-                  collective.member_count !== null &&
-                  collective.member_count > 0 && (
-                    <div className="flex items-center gap-1 text-xs text-gray-500">
-                      <Users className="w-3 h-3" />
-                      <span>{collective.member_count}</span>
-                    </div>
-                  )}
+    <Card
+      className={cn(
+        'relative cursor-pointer transition-all duration-200 hover:shadow-md',
+        isSelected && 'ring-2 ring-blue-500 shadow-md',
+        disabled && 'opacity-50 cursor-not-allowed',
+        !canPost && 'border-red-200 bg-red-50',
+        className,
+      )}
+      onClick={handleToggle}
+      role="button"
+      tabIndex={disabled ? -1 : 0}
+      onKeyDown={(e) => {
+        if ((e.key === 'Enter' || e.key === ' ') && !disabled) {
+          e.preventDefault();
+          handleToggle();
+        }
+      }}
+    >
+      <CardHeader className="pb-3">
+        <div className="flex items-start justify-between">
+          <div className="flex items-start space-x-3">
+            <div className="relative">
+              <div
+                className={cn(
+                  'w-5 h-5 rounded border-2 flex items-center justify-center mt-1',
+                  isSelected
+                    ? 'bg-blue-600 border-blue-600'
+                    : 'border-gray-300',
+                  (disabled || !canPost) && 'opacity-50',
+                )}
+              >
+                {isSelected && <Check className="h-3 w-3 text-white" />}
               </div>
             </div>
 
-            {/* Selection Indicator */}
-            <div className="flex-shrink-0">
-              {canPost ? (
-                <div
-                  className={cn(
-                    'rounded-full transition-all duration-200',
-                    isSelected
-                      ? 'text-blue-600 bg-blue-100'
-                      : isHovered
-                        ? 'text-gray-400 bg-gray-100'
-                        : 'text-gray-300',
-                  )}
-                >
-                  <CheckCircle2
-                    className={cn(compact ? 'w-5 h-5' : 'w-6 h-6')}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center space-x-2 mb-1">
+                <h3 className="font-medium text-gray-900 truncate">
+                  {collective.name}
+                </h3>
+                {collective.logo_url && (
+                  <img
+                    src={collective.logo_url}
+                    alt={`${collective.name} logo`}
+                    className="h-4 w-4 rounded-full flex-shrink-0"
                   />
-                </div>
-              ) : (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <div className="text-gray-400">
-                      <Info className={cn(compact ? 'w-5 h-5' : 'w-6 h-6')} />
-                    </div>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>You need author, editor, admin, or owner role to post</p>
-                  </TooltipContent>
-                </Tooltip>
-              )}
+                )}
+              </div>
+
+              <div className="flex items-center space-x-2 text-sm text-gray-500">
+                <Users className="h-3 w-3" />
+                <span>{collective.member_count || 0} members</span>
+                <Badge variant="outline" className={cn('text-xs', roleColor)}>
+                  {collective.user_role}
+                </Badge>
+              </div>
             </div>
           </div>
 
-          {/* Selected State Overlay */}
-          {isSelected && canPost && (
-            <div className="absolute inset-0 bg-blue-500 opacity-5 rounded-lg pointer-events-none" />
+          {showSettings && isSelected && onSettingsClick && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleSettingsClick}
+              className="h-8 w-8 p-0 flex-shrink-0"
+              disabled={disabled}
+            >
+              <Settings className="h-4 w-4" />
+              <span className="sr-only">
+                Sharing settings for {collective.name}
+              </span>
+            </Button>
           )}
-        </CardContent>
-      </Card>
-    </TooltipProvider>
+        </div>
+      </CardHeader>
+
+      <CardContent className="pt-0">
+        {collective.description && (
+          <p className="text-sm text-gray-600 mb-3 line-clamp-2">
+            {collective.description}
+          </p>
+        )}
+
+        <div className="flex flex-wrap gap-2">
+          {!canPost && (
+            <Badge variant="destructive" className="text-xs">
+              Cannot Post
+            </Badge>
+          )}
+
+          {statusInfo && (
+            <Badge className={cn('text-xs', statusInfo.color)}>
+              {statusInfo.label}
+            </Badge>
+          )}
+
+          {isSelected &&
+            sharingSettings?.display_priority !== undefined &&
+            sharingSettings.display_priority > 0 && (
+              <Badge variant="outline" className="text-xs">
+                Priority: {sharingSettings.display_priority}
+              </Badge>
+            )}
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -269,7 +272,7 @@ export function CollectiveSelectionCard({
 export function CompactCollectiveSelectionCard(
   props: CollectiveSelectionCardProps,
 ): React.ReactElement {
-  return <CollectiveSelectionCard {...props} compact />;
+  return <CollectiveSelectionCard {...props} />;
 }
 
 // Loading skeleton

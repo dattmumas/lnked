@@ -1,21 +1,67 @@
 import { create } from 'zustand';
 
-import { 
-  EnhancedPostFormData,
-  CollectiveSharingSettings 
-} from '@/types/enhanced-database.types';
+import type { Database } from '@/lib/database.types';
 
-// Enhanced PostFormData interface with multi-collective support
-export interface EnhancedPostEditorFormData extends Omit<EnhancedPostFormData, 'metadata'> {
-  // Type-safe metadata field
-  metadata: Record<string, unknown>;
+// Type aliases from generated database types
+type PostRow = Database['public']['Tables']['posts']['Row'];
+type PostInsert = Database['public']['Tables']['posts']['Insert'];
+type PostCollectiveRow = Database['public']['Tables']['post_collectives']['Row'];
+type PostCollectiveInsert = Database['public']['Tables']['post_collectives']['Insert'];
+
+// Collective sharing settings for multi-collective posts
+export interface CollectiveSharingSettings {
+  status: 'draft' | 'published' | 'pending_approval' | 'rejected';
+  metadata?: Record<string, unknown>;
+  display_order?: number;
+  auto_publish?: boolean;
+  require_approval?: boolean;
+  display_priority?: number;
 }
 
-// Store interface for enhanced post editor
-interface EnhancedPostEditorStore {
+// Collective with user permission information
+export interface CollectiveWithPermission {
+  id: string;
+  name: string;
+  slug: string;
+  logo_url: string | null;
+  description: string | null;
+  user_role: Database['public']['Enums']['member_role'];
+  can_post: boolean;
+  member_count?: number;
+}
+
+// Post form data interface using generated types
+export interface PostEditorFormData {
+  // Core post fields from database
+  id?: string;
+  title: string;
+  content: string;
+  subtitle?: string;
+  author_id?: string;
+  seo_title?: string;
+  meta_description?: string;
+  thumbnail_url?: string;
+  post_type: Database['public']['Enums']['post_type_enum'];
+  metadata: Record<string, unknown>;
+  is_public: boolean;
+  status: Database['public']['Enums']['post_status_type'];
+  
+  // Legacy field for backward compatibility
+  collective_id?: string;
+  
+  // New multi-collective fields
+  selected_collectives: string[];
+  collective_sharing_settings?: Record<string, CollectiveSharingSettings>;
+  
+  // Optional timestamp
+  published_at?: string;
+}
+
+// Store interface for post editor
+interface PostEditorStore {
   // Form data
-  formData: EnhancedPostEditorFormData;
-  originalData: EnhancedPostEditorFormData | undefined;
+  formData: PostEditorFormData;
+  originalData: PostEditorFormData | undefined;
 
   // UI state
   currentPage: 'editor' | 'details';
@@ -29,14 +75,14 @@ interface EnhancedPostEditorStore {
   collectiveSharingSettings: Record<string, CollectiveSharingSettings>;
 
   // Actions
-  updateFormData: (_updates: Partial<EnhancedPostEditorFormData>) => void;
+  updateFormData: (_updates: Partial<PostEditorFormData>) => void;
   setCurrentPage: (_page: 'editor' | 'details') => void;
   markClean: () => void;
   markSaving: () => void;
   markSaved: () => void;
   markError: () => void;
   resetForm: () => void;
-  initializeForm: (_data: EnhancedPostEditorFormData) => void;
+  initializeForm: (_data: PostEditorFormData) => void;
   setLoading: (_loading: boolean) => void;
 
   // Multi-collective actions
@@ -50,15 +96,15 @@ interface EnhancedPostEditorStore {
   // Backward compatibility helpers
   getLegacyCollectiveId: () => string | undefined;
   setLegacyCollectiveId: (_collectiveId: string | undefined) => void;
-  migrateFromLegacyData: (_legacyData: EnhancedPostEditorFormData) => void;
+  migrateFromLegacyData: (_legacyData: PostEditorFormData) => void;
 }
 
 // Default form data with multi-collective support
-const defaultEnhancedFormData: EnhancedPostEditorFormData = {
+const defaultFormData: PostEditorFormData = {
   title: '',
   content: '',
   subtitle: undefined,
-  author: undefined,
+  author_id: undefined,
   seo_title: undefined,
   meta_description: undefined,
   thumbnail_url: undefined,
@@ -88,10 +134,10 @@ const defaultSharingSettings: CollectiveSharingSettings = {
   display_priority: 0,
 };
 
-// Create the enhanced store
-export const useEnhancedPostEditorStore = create<EnhancedPostEditorStore>((set, get) => ({
+// Create the store (renamed from enhanced to just post editor)
+export const usePostEditorStore = create<PostEditorStore>((set, get) => ({
   // Initial state
-  formData: defaultEnhancedFormData,
+  formData: defaultFormData,
   originalData: undefined,
   currentPage: 'editor',
   autoSaveStatus: 'idle',
@@ -136,7 +182,7 @@ export const useEnhancedPostEditorStore = create<EnhancedPostEditorStore>((set, 
 
   resetForm: () =>
     set((_state) => ({
-      formData: _state.originalData ?? defaultEnhancedFormData,
+      formData: _state.originalData ?? defaultFormData,
       selectedCollectives: _state.originalData?.selected_collectives ?? [],
       collectiveSharingSettings:
         _state.originalData?.collective_sharing_settings ?? {},
@@ -282,7 +328,7 @@ export const useEnhancedPostEditorStore = create<EnhancedPostEditorStore>((set, 
       isDirty: true,
     })),
 
-  migrateFromLegacyData: (legacyData: EnhancedPostEditorFormData) =>
+  migrateFromLegacyData: (legacyData: PostEditorFormData) =>
     set(() => {
       // Convert legacy single collective_id to multi-collective format
       const selectedCollectives =
@@ -297,7 +343,7 @@ export const useEnhancedPostEditorStore = create<EnhancedPostEditorStore>((set, 
             }
           : {};
 
-      const enhancedData: EnhancedPostEditorFormData = {
+      const enhancedData: PostEditorFormData = {
         ...legacyData,
         selected_collectives: selectedCollectives,
         collective_sharing_settings: collectiveSharingSettings,
@@ -327,7 +373,7 @@ export const useCollectiveSelection = (): {
   setSelected: (_ids: string[]) => void;
   clear: () => void;
 } => {
-  const store = useEnhancedPostEditorStore();
+  const store = usePostEditorStore();
   return {
     selectedCollectives: store.selectedCollectives,
     collectiveSharingSettings: store.collectiveSharingSettings,
@@ -342,16 +388,16 @@ export const useCollectiveSelection = (): {
 };
 
 export const usePostFormData = (): {
-  formData: EnhancedPostEditorFormData;
-  originalData: EnhancedPostEditorFormData | undefined;
+  formData: PostEditorFormData;
+  originalData: PostEditorFormData | undefined;
   isDirty: boolean;
   isLoading: boolean;
   autoSaveStatus: 'idle' | 'saving' | 'saved' | 'error';
-  updateFormData: EnhancedPostEditorStore['updateFormData'];
+  updateFormData: PostEditorStore['updateFormData'];
   resetForm: () => void;
-  initializeForm: (_data: EnhancedPostEditorFormData) => void;
+  initializeForm: (_data: PostEditorFormData) => void;
 } => {
-  const store = useEnhancedPostEditorStore();
+  const store = usePostEditorStore();
   return {
     formData: store.formData,
     originalData: store.originalData,
@@ -373,7 +419,7 @@ export const usePostEditor = (): {
   markError: () => void;
   setLoading: (_l: boolean) => void;
 } => {
-  const store = useEnhancedPostEditorStore();
+  const store = usePostEditorStore();
   return {
     currentPage: store.currentPage,
     setCurrentPage: store.setCurrentPage,
@@ -384,3 +430,6 @@ export const usePostEditor = (): {
     setLoading: store.setLoading,
   };
 };
+
+// Backward compatibility: export the store with the old name temporarily
+export const useEnhancedPostEditorStore = usePostEditorStore;

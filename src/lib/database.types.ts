@@ -2451,6 +2451,23 @@ export type Database = {
         }
         Returns: string
       }
+      create_tenant_conversation: {
+        Args: {
+          target_tenant_id: string
+          conversation_title?: string
+          conversation_type?: Database["public"]["Enums"]["conversation_type"]
+          conversation_description?: string
+          is_private_conversation?: boolean
+          participant_user_ids?: string[]
+        }
+        Returns: {
+          id: string
+          title: string
+          type: Database["public"]["Enums"]["conversation_type"]
+          created_at: string
+          tenant_id: string
+        }[]
+      }
       find_video_by_mux_id: {
         Args: { p_mux_id: string }
         Returns: {
@@ -2600,6 +2617,23 @@ export type Database = {
       get_tenant_context: {
         Args: { target_tenant_id: string }
         Returns: Json
+      }
+      get_tenant_conversations: {
+        Args: { target_tenant_id: string }
+        Returns: {
+          id: string
+          title: string
+          type: Database["public"]["Enums"]["conversation_type"]
+          description: string
+          is_private: boolean
+          last_message_at: string
+          created_at: string
+          created_by: string
+          tenant_id: string
+          collective_id: string
+          unread_count: number
+          participant_count: number
+        }[]
       }
       get_unread_message_count: {
         Args: { p_user_id: string; p_conversation_id: string }

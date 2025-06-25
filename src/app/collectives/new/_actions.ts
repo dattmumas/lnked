@@ -4,7 +4,6 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { createServerSupabaseClient } from "@/lib/supabase/server";
-import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 // Constants for validation
 const MIN_NAME_LENGTH = 3;
@@ -69,6 +68,7 @@ export async function createCollective(
 
   const { name, slug, description } = validatedFields.data;
 
+  // Check slug uniqueness across both collectives and tenants
   const { data: existingSlug, error: slugCheckError } = await supabase
     .from("collectives")
     .select("slug")
@@ -87,21 +87,40 @@ export async function createCollective(
     };
   }
 
-  const { data: newCollective, error: insertError } = await supabase
-    .from("collectives")
-    .insert({
-      name,
-      slug,
-      description: (description ?? '').trim().length > 0 ? description : undefined,
-      owner_id: user.id,
-    })
-    .select("id, slug") // Select some data to return
-    .single(); // Expect a single record back
+  // Also check tenant slug uniqueness
+  const { data: existingTenantSlug, error: tenantSlugCheckError } = await supabase
+    .from("tenants")
+    .select("slug")
+    .eq("slug", slug)
+    .maybeSingle();
 
-  if (insertError) {
-    console.error("Error inserting collective:", insertError);
-    // More specific error mapping could be done here (e.g. unique constraint violation on slug if not caught above)
-    if (insertError.code === "23505") {
+  if (tenantSlugCheckError && tenantSlugCheckError.code !== "PGRST116") {
+    console.error("Error checking tenant slug uniqueness:", tenantSlugCheckError);
+    return { error: "Database error while checking tenant slug uniqueness." };
+  }
+  if ((existingTenantSlug?.slug ?? '').trim().length > 0) {
+    return {
+      error: "This slug is already taken. Please choose another one.",
+      fieldErrors: { slug: ["This slug is already taken."] },
+    };
+  }
+
+  // Use the create_collective_tenant RPC to create both tenant and collective atomically
+  const { data: tenantId, error: createTenantError } = await supabase.rpc(
+    "create_collective_tenant",
+    {
+      tenant_name: name,
+      tenant_slug: slug,
+      tenant_description: (description ?? '').trim().length > 0 ? description : undefined,
+      is_public: false, // Default to private collectives
+    }
+  );
+
+  if (createTenantError) {
+    console.error("Error creating collective tenant:", createTenantError);
+    
+    // Handle specific error codes
+    if (createTenantError.code === "23505") {
       // Unique violation
       return {
         error: "A collective with this name or slug might already exist.",
@@ -111,42 +130,28 @@ export async function createCollective(
         },
       };
     }
-    return { error: `Failed to create collective: ${insertError.message}` };
+    
+    return { error: `Failed to create collective: ${createTenantError.message}` };
   }
 
-  if (newCollective === null || newCollective === undefined) {
+  if (!tenantId) {
     return { error: "Failed to create collective for an unknown reason." };
   }
 
-  // Automatically add the owner as an admin member of the new collective
-  // using the service role client to bypass RLS
-  const { error: addOwnerAsMemberError } = await supabaseAdmin
-    .from("collective_members")
-    .insert({
-      collective_id: newCollective.id,
-      member_id: user.id, // The user who created the collective (owner)
-      role: "admin", // Assign 'admin' role
-    });
+  // The RPC should have created both the tenant and collective, and added the owner to tenant_members
+  // Let's verify the collective was created and get its details
+  const { data: newCollective, error: collectiveError } = await supabase
+    .from("collectives")
+    .select("id, slug")
+    .eq("slug", slug)
+    .single();
 
-  if (addOwnerAsMemberError) {
-    console.error(
-      "Error adding owner as admin member:",
-      addOwnerAsMemberError.message
-    );
-    // This is a critical follow-up step. If it fails, the collective is created
-    // but the owner isn't an admin member, which might cause issues later.
-    // For simplicity now, we'll log the error and return success for collective creation,
-    // but in a production scenario, you might want to handle this more robustly
-    // (e.g., attempt to delete the collective if this step fails, or alert admins).
-    // Or, ideally, use a transaction (e.g., via a Supabase Edge Function or RPC).
-    return {
-      error: `Collective created, but failed to add owner as admin member: ${addOwnerAsMemberError.message}`,
-    };
-    // Or, if you want to proceed despite this error:
-    // console.warn(`Collective ${newCollective.id} created, but failed to add owner as admin member.`);
+  if (collectiveError || !newCollective) {
+    console.error("Error fetching created collective:", collectiveError);
+    return { error: "Collective creation may have failed - please try again." };
   }
 
-  // Revalidate paths if needed to show new data immediately
+  // Revalidate paths to show new data immediately
   revalidatePath("/dashboard"); // Revalidate the main dashboard page
   revalidatePath("/dashboard/collectives/new");
 
