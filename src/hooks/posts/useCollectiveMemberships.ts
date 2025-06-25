@@ -3,10 +3,6 @@ import { useQuery } from '@tanstack/react-query';
 import { useUser } from '@/hooks/useUser';
 import { Database } from '@/lib/database.types';
 import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
-import { 
-  CollectiveWithPermission, 
-  canUserPostToCollective 
-} from '@/types/enhanced-database.types';
 
 import type { UseQueryResult } from '@tanstack/react-query';
 
@@ -36,6 +32,24 @@ interface MembershipRow {
     logo_url: string | null;
     description: string | null;
   };
+}
+
+// Local type definitions using proper generated database types
+interface CollectiveWithPermission {
+  id: string;
+  name: string;
+  slug: string;
+  logo_url: string | null;
+  description: string | null;
+  user_role: Database['public']['Enums']['collective_member_role'];
+  can_post: boolean;
+  member_count?: number;
+}
+
+// Helper function to determine if user can post to collective based on role
+function canUserPostToCollective(role: Database['public']['Enums']['collective_member_role']): boolean {
+  // Only editors, admins, and owners can post
+  return ['editor', 'admin', 'owner'].includes(role);
 }
 
 // Hook to get user's collective memberships with posting permissions
