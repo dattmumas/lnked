@@ -12,8 +12,7 @@ import {
 import { SocialSidebar } from '@/components/app/profile/social/SocialSidebar';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 
-import type { MicroPost } from '@/components/app/profile/MicrothreadPanel';
-import type { Database } from '@/lib/database.types';
+import type { Database } from '@/types/database.types';
 
 type PostRow = Database['public']['Tables']['posts']['Row'];
 
@@ -30,7 +29,7 @@ export default async function ProfilePage({
 }): Promise<React.JSX.Element> {
   const { username } = await params;
   const { q } = await searchParams;
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
 
   // Server-side user verification for basic access control
   const {
@@ -186,13 +185,6 @@ export default async function ProfilePage({
       published_at: pinnedPost.published_at ?? undefined,
       current_user_has_liked: undefined,
     };
-
-  const _microPosts: MicroPost[] = [
-    // eslint-disable-line no-underscore-dangle, @typescript-eslint/no-unused-vars
-    { id: 'u1', content: 'Thanks for checking out my work!' },
-    { id: 'u2', content: 'New article coming soon.' },
-    { id: 'u3', content: 'Follow me for updates!' },
-  ];
 
   type SubscriptionTier = Database['public']['Tables']['prices']['Row'];
   let _tiers: SubscriptionTier[] = []; // eslint-disable-line no-underscore-dangle

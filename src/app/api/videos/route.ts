@@ -53,7 +53,7 @@ const LIST_VIEW_FIELDS = `
 export async function GET(request: NextRequest): Promise<NextResponse> {
   try {
     // Create Supabase client with proper auth context for edge runtime
-    const supabase = createServerSupabaseClient();
+    const supabase = await createServerSupabaseClient();
     
     const { data: { user }, error: authError } = await supabase.auth.getUser();
 
@@ -71,7 +71,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       params = VideoListParamsSchema.parse(searchParamsObj);
     } catch (error: unknown) {
       console.error('Invalid query parameters:', { 
-        error: error instanceof z.ZodError ? error.errors : 'Unknown validation error',
+        error: error instanceof z.ZodError ? error.errors : String(error),
         user_id: user.id 
       });
       return NextResponse.json(
@@ -114,6 +114,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     if (fetchError !== null) {
       console.error('Database error:', { 
         code: fetchError.code, 
+        message: fetchError.message,
         user_id: user.id,
         operation: 'fetch_videos'
       });
@@ -174,7 +175,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     });
   } catch (error: unknown) {
     console.error('Videos API error:', { 
-      message: error instanceof Error ? error.message : 'Unknown error',
+      message: error instanceof Error ? error.message : String(error),
       operation: 'get_videos'
     });
     return NextResponse.json(

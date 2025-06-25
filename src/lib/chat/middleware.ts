@@ -42,7 +42,7 @@ type AuthHandlerContext = AuthResult & {
  * Middleware to check if user is authenticated
  */
 export async function requireAuth(_request: NextRequest): Promise<NextResponse | AuthResult> {
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
   
   const {
     data: { user },

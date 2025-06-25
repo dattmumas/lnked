@@ -6,7 +6,7 @@ import { createServerSupabaseClient } from '@/lib/supabase/server';
 import NewCollectiveForm from './NewCollectiveForm';
 
 export default async function NewCollectivePage(): Promise<React.ReactElement> {
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
   const {
     data: { user },
     error,

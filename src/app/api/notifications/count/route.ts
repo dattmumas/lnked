@@ -1,29 +1,56 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 
-import { createNotificationService } from '@/lib/notifications/service';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 
-export async function GET(): Promise<Response> {
+
+// Constants for HTTP status codes
+const HTTP_OK = 200;
+const HTTP_UNAUTHORIZED = 401;
+const HTTP_INTERNAL_SERVER_ERROR = 500;
+
+export async function GET(request: NextRequest): Promise<NextResponse> {
   try {
-    const supabase = createServerSupabaseClient();
+    const supabase = await createServerSupabaseClient();
+
+    // Get the current user
     const {
       data: { user },
       error: authError,
     } = await supabase.auth.getUser();
 
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (authError !== null || user === null) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: HTTP_UNAUTHORIZED }
+      );
     }
 
-    const notificationService = createNotificationService();
-    const count = await notificationService.getUnreadCount();
+    // Count unread notifications
+    const { count, error: countError } = await supabase
+      .from('notifications')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', user.id)
+      .eq('read', false);
 
-    return NextResponse.json({ count });
+    if (countError !== null) {
+      console.error('Error counting notifications:', countError);
+      return NextResponse.json(
+        { error: 'Failed to count notifications' },
+        { status: HTTP_INTERNAL_SERVER_ERROR }
+      );
+    }
+
+    return NextResponse.json(
+      { 
+        unreadCount: count || 0
+      },
+      { status: HTTP_OK }
+    );
   } catch (error: unknown) {
-    console.error('Error fetching notification count:', error);
+    console.error('Error in GET /api/notifications/count:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
-      { status: 500 }
+      { status: HTTP_INTERNAL_SERVER_ERROR }
     );
   }
 } 

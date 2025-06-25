@@ -23,8 +23,46 @@ import { calculateReadingTime, formatDate } from '@/lib/utils';
 import type { Database } from '@/lib/database.types';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
+// Constants
+const MAX_AUTHOR_INITIALS = 2;
+
+type PostWithAuthorAndCollective = {
+  id: string;
+  title: string | null;
+  content: string | null;
+  subtitle: string | null;
+  author_id: string;
+  collective_id: string | null;
+  thumbnail_url: string | null;
+  is_public: boolean | null;
+  published_at: string | null;
+  created_at: string | null;
+  view_count: number | null;
+  author: {
+    id: string;
+    full_name: string | null;
+    username: string | null;
+    avatar_url: string | null;
+    bio: string | null;
+  } | null;
+  collective: {
+    id: string;
+    name: string;
+    slug: string;
+  } | null;
+  user_reaction?: {
+    reaction_type: string;
+  };
+  user_bookmark?: {
+    id: string;
+  };
+  real_like_count: number;
+  real_dislike_count: number;
+};
+
 const formatPostDate = (dateString: string | null): string => {
-  if (!dateString) return 'Date not available';
+  if (dateString === null || dateString === undefined)
+    return 'Date not available';
   return formatDate(dateString);
 };
 
@@ -32,7 +70,7 @@ async function getPostBySlugOrId(
   supabase: SupabaseClient<Database>,
   slugOrId: string,
   userId?: string,
-) {
+): Promise<{ data: PostWithAuthorAndCollective | undefined; error?: string }> {
   try {
     // Try by ID first (UUID format)
     const isUUID =
@@ -58,7 +96,7 @@ async function getPostBySlugOrId(
         return { data: undefined, error: postError.message };
       }
 
-      if (!postData) {
+      if (postData === null || postData === undefined) {
         return { data: undefined, error: 'Post not found' };
       }
 
@@ -82,7 +120,7 @@ async function getPostBySlugOrId(
       let bookmarkData = undefined;
 
       // If we have a user, fetch their specific reaction and bookmark data
-      if (userId) {
+      if (userId !== null && userId !== undefined) {
         // Fetch user reaction
         const { data: userReaction } = await supabase
           .from('post_reactions' as const)
@@ -139,7 +177,7 @@ async function getPostBySlugOrId(
       return { data: undefined, error: postError.message };
     }
 
-    if (!postData) {
+    if (postData === null || postData === undefined) {
       return { data: undefined, error: 'Post not found' };
     }
 
@@ -161,7 +199,7 @@ async function getPostBySlugOrId(
     let bookmarkData = undefined;
 
     // If we have a user, fetch their specific reaction and bookmark data
-    if (userId) {
+    if (userId !== null && userId !== undefined) {
       // Fetch user reaction
       const { data: userReaction } = await supabase
         .from('post_reactions' as const)
@@ -208,9 +246,9 @@ export default async function PostBySlugPage({
   params,
 }: {
   params: Promise<{ slug: string }>;
-}) {
+}): Promise<React.ReactElement> {
   const { slug: slugOrId } = await params;
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
 
   try {
     const {
@@ -234,36 +272,61 @@ export default async function PostBySlugPage({
     const isOwner =
       user?.id === post.author_id || user?.id === post.collective?.id;
     const isPublished =
-      post.is_public &&
-      post.published_at &&
+      post.is_public === true &&
+      post.published_at !== null &&
+      post.published_at !== undefined &&
       new Date(post.published_at) <= new Date();
 
-    if (!isPublished && !isOwner) {
+    if (isPublished !== true && isOwner !== true) {
       notFound();
     }
 
     // Safe fallbacks for data
-    const authorName = post.author?.full_name || 'Anonymous';
+    const authorName =
+      post.author?.full_name !== null && post.author?.full_name !== undefined
+        ? post.author.full_name
+        : 'Anonymous';
     const authorUsername =
-      post.author?.username || post.author?.id || 'unknown';
+      post.author?.username !== null && post.author?.username !== undefined
+        ? post.author.username
+        : post.author?.id !== null && post.author?.id !== undefined
+          ? post.author.id
+          : 'unknown';
     const authorInitials =
       authorName
         .split(' ')
-        .map((n) => n[0])
+        .map((n: string) => n[0])
         .join('')
         .toUpperCase()
-        .slice(0, 2) || 'A';
+        .slice(0, MAX_AUTHOR_INITIALS) !== ''
+        ? authorName
+            .split(' ')
+            .map((n: string) => n[0])
+            .join('')
+            .toUpperCase()
+            .slice(0, MAX_AUTHOR_INITIALS)
+        : 'A';
 
-    const readingTime = calculateReadingTime(post.content);
-    const viewCount = post.view_count || 0;
-    const initialLikeCount = post.real_like_count || 0;
-    const initialDislikeCount = post.real_dislike_count || 0;
+    const readingTime = calculateReadingTime(post.content ?? '');
+    const viewCount =
+      post.view_count !== null && post.view_count !== undefined
+        ? post.view_count
+        : 0;
+    const initialLikeCount =
+      post.real_like_count !== null && post.real_like_count !== undefined
+        ? post.real_like_count
+        : 0;
+    const initialDislikeCount =
+      post.real_dislike_count !== null && post.real_dislike_count !== undefined
+        ? post.real_dislike_count
+        : 0;
     const initialUserReaction =
       post.user_reaction?.reaction_type === 'like' ||
       post.user_reaction?.reaction_type === 'dislike'
         ? post.user_reaction.reaction_type
         : undefined;
-    const initialBookmarked = Boolean(post.user_bookmark?.id);
+    const initialBookmarked =
+      post.user_bookmark?.id !== null && post.user_bookmark?.id !== undefined;
 
     // Fetch comment count via RPC for this post
     const { data: rpcCommentCount, error: commentCountError } =
@@ -276,7 +339,10 @@ export default async function PostBySlugPage({
       console.error('Error fetching comment count:', commentCountError);
     }
 
-    const initialCommentCount = rpcCommentCount ?? 0;
+    const initialCommentCount =
+      rpcCommentCount !== null && rpcCommentCount !== undefined
+        ? rpcCommentCount
+        : 0;
 
     return (
       <>
@@ -327,26 +393,33 @@ export default async function PostBySlugPage({
         <article className="min-h-screen bg-background">
           <div className="max-w-4xl mx-auto px-6 py-12">
             {/* Thumbnail Hero */}
-            {post.thumbnail_url && (
-              <div className="relative aspect-video w-full mb-12 overflow-hidden rounded-lg bg-muted">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={post.thumbnail_url}
-                  alt={post.title || 'Post thumbnail'}
-                  className="w-full h-full object-cover transition-transform duration-200 hover:scale-105"
-                  loading="lazy"
-                />
-              </div>
-            )}
+            {post.thumbnail_url !== null &&
+              post.thumbnail_url !== undefined && (
+                <div className="relative aspect-video w-full mb-12 overflow-hidden rounded-lg bg-muted">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={post.thumbnail_url}
+                    alt={
+                      post.title !== null && post.title !== undefined
+                        ? post.title
+                        : 'Post thumbnail'
+                    }
+                    className="w-full h-full object-cover transition-transform duration-200 hover:scale-105"
+                    loading="lazy"
+                  />
+                </div>
+              )}
 
             {/* Title Section */}
             <header className="mb-12">
               <h1 className="text-5xl font-bold leading-tight mb-6 text-foreground">
-                {post.title || 'Untitled Post'}
+                {post.title !== null && post.title !== undefined
+                  ? post.title
+                  : 'Untitled Post'}
               </h1>
 
               {/* Subtitle */}
-              {post.subtitle && (
+              {post.subtitle !== null && post.subtitle !== undefined && (
                 <p className="text-2xl text-muted-foreground mb-8 leading-relaxed">
                   {post.subtitle}
                 </p>
@@ -366,17 +439,18 @@ export default async function PostBySlugPage({
                     >
                       {authorName}
                     </Link>
-                    {post.collective && (
-                      <>
-                        <span className="text-muted-foreground">in</span>
-                        <Link
-                          href={`/collectives/${post.collective.slug}`}
-                          className="font-medium text-foreground hover:underline"
-                        >
-                          {post.collective.name}
-                        </Link>
-                      </>
-                    )}
+                    {post.collective !== null &&
+                      post.collective !== undefined && (
+                        <>
+                          <span className="text-muted-foreground">in</span>
+                          <Link
+                            href={`/collectives/${post.collective.slug}`}
+                            className="font-medium text-foreground hover:underline"
+                          >
+                            {post.collective.name}
+                          </Link>
+                        </>
+                      )}
                   </div>
                   <div className="flex items-center gap-3 text-sm text-muted-foreground">
                     <span>
@@ -388,11 +462,13 @@ export default async function PostBySlugPage({
                     <span>{viewCount.toLocaleString()} views</span>
                   </div>
                 </div>
-                {user?.id && user.id !== post.author_id && (
-                  <Button variant="outline" size="sm">
-                    Follow
-                  </Button>
-                )}
+                {user?.id !== null &&
+                  user?.id !== undefined &&
+                  user.id !== post.author_id && (
+                    <Button variant="outline" size="sm">
+                      Follow
+                    </Button>
+                  )}
               </div>
 
               {/* Reaction Bar */}
@@ -442,7 +518,7 @@ export default async function PostBySlugPage({
             {/* Post Footer */}
             <footer className="mt-16 pt-8 border-t">
               {/* Author Bio */}
-              {post.author?.bio && (
+              {post.author?.bio !== null && post.author?.bio !== undefined && (
                 <div className="mb-12 p-6 bg-muted/30 rounded-lg">
                   <div className="flex items-start gap-4">
                     <Avatar className="h-16 w-16">

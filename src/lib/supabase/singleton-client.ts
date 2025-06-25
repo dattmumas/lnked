@@ -1,4 +1,4 @@
-/* eslint-disable no-underscore-dangle, @typescript-eslint/no-unsafe-assignment */
+/* eslint-disable no-underscore-dangle */
 
 import { createServerClient } from '@supabase/ssr';
 

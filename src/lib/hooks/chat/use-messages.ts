@@ -5,15 +5,20 @@ import { useMemo, useEffect } from 'react';
 
 import { chatApiClient } from '@/lib/chat/api-client';
 import { selectAdapter } from '@/lib/chat/realtime-adapter';
+import {
+  DEFAULT_MESSAGE_LIMIT,
+  MESSAGE_STALE_TIME_MS,
+  SEARCH_STALE_TIME_MS,
+} from '@/lib/constants/chat';
 import { useChatUIStore } from '@/lib/stores/chat-ui-store';
 
 import { conversationKeys } from './use-conversations';
 
 import type { MessageWithSender } from '@/lib/chat/types';
 
-const MESSAGES_PER_PAGE = 50;
-const MESSAGES_STALE_TIME = 5 * 60 * 1000; // 5 minutes
-const SEARCH_STALE_TIME = 30 * 1000; // 30 seconds
+const MESSAGES_PER_PAGE = DEFAULT_MESSAGE_LIMIT;
+const MESSAGES_STALE_TIME = MESSAGE_STALE_TIME_MS;
+const SEARCH_STALE_TIME = SEARCH_STALE_TIME_MS;
 
 // Query keys
 export const messageKeys = {
@@ -48,7 +53,7 @@ export function useMessages(conversationId: string | null): UseMessagesReturn {
       }
       
       const oldestMessage = pageParam ? { created_at: pageParam } : undefined;
-      return chatApiClient.getMessages(conversationId, {
+      return await chatApiClient.getMessages(conversationId, {
         before: oldestMessage?.created_at || undefined,
         limit: MESSAGES_PER_PAGE,
       });
@@ -176,9 +181,8 @@ export function useAddReaction(): {
   const { activeConversationId } = useChatUIStore();
 
   return useMutation({
-    mutationFn: async (params: { messageId: string; emoji: string }): Promise<void> => {
-      return chatApiClient.addReaction(params.messageId, params.emoji);
-    },
+    mutationFn: (params: { messageId: string; emoji: string }): Promise<void> =>
+      chatApiClient.addReaction(params.messageId, params.emoji),
     onSuccess: () => {
       if (!activeConversationId) return;
       
@@ -198,9 +202,8 @@ export function useRemoveReaction(): {
   const { activeConversationId } = useChatUIStore();
 
   return useMutation({
-    mutationFn: async (params: { messageId: string; emoji: string }): Promise<void> => {
-      return chatApiClient.removeReaction(params.messageId, params.emoji);
-    },
+    mutationFn: (params: { messageId: string; emoji: string }): Promise<void> =>
+      chatApiClient.removeReaction(params.messageId, params.emoji),
     onSuccess: () => {
       if (!activeConversationId) return;
       
@@ -240,9 +243,8 @@ export function useDeleteMessage(): { mutate: (params: { messageId: string; conv
   const { activeConversationId } = useChatUIStore();
 
   return useMutation({
-    mutationFn: async ({ messageId, conversationId }: { messageId: string; conversationId: string }): Promise<void> => {
-      return chatApiClient.deleteMessage(messageId, conversationId);
-    },
+    mutationFn: ({ messageId, conversationId }: { messageId: string; conversationId: string }): Promise<void> =>
+      chatApiClient.deleteMessage(messageId, conversationId),
     onMutate: async ({ messageId, conversationId }) => {
       // Cancel any outgoing refetches
       await queryClient.cancelQueries({ queryKey: messageKeys.conversation(conversationId) });

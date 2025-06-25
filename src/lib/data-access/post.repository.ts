@@ -14,6 +14,7 @@ import {
   type PostReaction,
   type PostBookmark
 } from './schemas/post.schema';
+import { createTenantAwareRepository, getCurrentTenantId } from './tenant-aware';
 
 /**
  * Post Repository
@@ -110,14 +111,11 @@ export class PostRepository {
   async create(post: PostInsert): Promise<Post | undefined> {
     const dbPost = PostInsertSchema.parse(post);
     
-    const { data, error } = await this.supabase
-      .from('posts')
-      .insert(dbPost)
-      .select()
-      .single();
+    const tenantRepo = await createTenantAwareRepository();
+    const { data, error } = await tenantRepo.insertPost(dbPost);
 
-    if (error || !data) {
-      return undefined;
+    if (error !== null) {
+      throw error;
     }
 
     return parsePost(data);
@@ -159,14 +157,13 @@ export class PostRepository {
    * Add a reaction to a post
    */
   async addReaction(postId: string, userId: string, type = 'like'): Promise<boolean> {
-    const { error } = await this.supabase
-      .from('post_reactions')
-      .upsert({
-        post_id: postId,
-        user_id: userId,
-        type,
-        created_at: new Date().toISOString()
-      });
+    const tenantRepo = await createTenantAwareRepository();
+    const { error } = await tenantRepo.upsertPostReaction({
+      post_id: postId,
+      user_id: userId,
+      type,
+      created_at: new Date().toISOString()
+    });
 
     return !error;
   }

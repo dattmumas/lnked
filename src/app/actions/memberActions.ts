@@ -39,7 +39,7 @@ function hasMessage(e: unknown): e is { message: string } {
 export async function inviteMemberToCollective(
   formData: InviteMemberServerValues,
 ): Promise<ActionResult> {
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
 
   const {
     data: { user: currentUser },
@@ -207,7 +207,7 @@ export async function changeMemberRole({
   memberId: string;
   newRole: string;
 }): Promise<ActionResult> {
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
   const {
     data: { user: currentUser },
   } = await supabase.auth.getUser();
@@ -262,7 +262,7 @@ export async function removeMemberFromCollective({
   collectiveId: string;
   memberId: string;
 }): Promise<ActionResult> {
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
   const {
     data: { user: currentUser },
   } = await supabase.auth.getUser();
@@ -317,7 +317,7 @@ export async function resendCollectiveInvite({
   collectiveId: string;
   inviteId: string;
 }): Promise<ActionResult> {
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
   const {
     data: { user: currentUser },
   } = await supabase.auth.getUser();
@@ -388,7 +388,7 @@ export async function cancelCollectiveInvite({
   collectiveId: string;
   inviteId: string;
 }): Promise<ActionResult> {
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
   const {
     data: { user: currentUser },
   } = await supabase.auth.getUser();
@@ -430,7 +430,7 @@ export async function acceptCollectiveInvite({
 }: {
   inviteCode: string;
 }): Promise<ActionResult> {
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
   const {
     data: { user: currentUser },
   } = await supabase.auth.getUser();

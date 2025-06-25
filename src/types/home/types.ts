@@ -35,11 +35,17 @@ export interface FeedItem {
     disliked: boolean;
     bookmarked: boolean;
   };
-  thumbnail_url?: string;
+  thumbnail_url?: string | null;
   duration?: string;
   collective?: {
     name: string;
     slug: string;
+  };
+  // Tenant information for multi-tenant support
+  tenant?: {
+    id: string;
+    name: string;
+    type: 'personal' | 'collective';
   };
 }
 

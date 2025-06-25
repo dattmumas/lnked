@@ -47,7 +47,7 @@ type SubscriptionRow = {
 };
 
 export default async function MyNewsletterSubscribersPage(): Promise<React.ReactElement> {
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
 
   const {
     data: { user: currentUser },

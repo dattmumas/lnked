@@ -1,51 +1,30 @@
-import Image from 'next/image';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 
-export default async function Page({
+export default async function UserFollowersPage({
   params,
 }: {
   params: Promise<{ username: string }>;
-}) {
+}): Promise<React.ReactElement> {
   const { username } = await params;
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
 
-  // First try to find user by username, if not found try by ID (for backward compatibility)
-  let profile;
-  let profileError;
+  // Get user by username
+  const { data: userData, error: userError } = await supabase
+    .from('users')
+    .select('id, username, full_name')
+    .eq('username', username)
+    .single();
 
-  if (username) {
-    const { data: profileData } = await supabase
-      .from('users')
-      .select('id, username, full_name')
-      .eq('username', username)
-      .single();
-
-    if (profileData) {
-      profile = profileData;
-      profileError = undefined;
-    } else {
-      // If username lookup failed, try by ID (backward compatibility)
-      const { data: idProfileData, error: idError } = await supabase
-        .from('users')
-        .select('id, username, full_name')
-        .eq('id', username)
-        .single();
-
-      profile = idProfileData;
-      profileError = idError;
-    }
-  }
-
-  if (profileError || !profile) {
-    console.error('Error fetching user', username, profileError);
+  if (userError !== null || userData === null) {
     notFound();
   }
 
-  // Fetch followers using the updated table structure
+  // Get followers for this user
   const { data: followersData, error: followersError } = await supabase
     .from('follows')
     .select(
@@ -60,86 +39,109 @@ export default async function Page({
       )
     `,
     )
-    .eq('following_id', profile.id)
+    .eq('following_id', userData.id)
     .eq('following_type', 'user')
     .order('created_at', { ascending: false });
 
-  if (followersError) {
+  if (followersError !== null) {
     console.error('Error fetching followers:', followersError);
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <p className="text-red-500">Error loading followers</p>
+      </div>
+    );
   }
 
-  const followers = followersData ?? [];
+  type FollowerData = {
+    follower_id: string;
+    created_at: string;
+    follower: {
+      id: string;
+      username: string | null;
+      full_name: string | null;
+      avatar_url: string | null;
+    };
+  };
+
+  type ProfileData = {
+    id: string;
+    username: string | null;
+    full_name: string | null;
+    avatar_url: string | null;
+  };
+
+  // Get user profile data for the followed users
+  const { data: profilesData, error: profilesError } = await supabase
+    .from('users')
+    .select('id, username, full_name, avatar_url')
+    .in(
+      'id',
+      (followersData ?? []).map((f: FollowerData) => f.follower_id),
+    );
+
+  if (profilesError !== null) {
+    console.error('Error fetching user profiles:', profilesError);
+  }
+
+  // Combine follower data with profile data
+  const followers = (followersData ?? []).map((f: FollowerData) => {
+    const profile = (profilesData ?? []).find(
+      (p: ProfileData) => p.id === f.follower_id,
+    );
+    return {
+      id: f.follower_id,
+      username: profile?.username ?? 'unknown',
+      full_name: profile?.full_name ?? profile?.username ?? 'Unknown User',
+      avatar_url: profile?.avatar_url,
+      followed_at: f.created_at,
+    };
+  });
 
   return (
-    <div className="container mx-auto p-4 md:p-6">
-      <div className="flex items-center gap-4 mb-6">
-        <Button asChild variant="outline" size="sm">
-          <Link href={`/profile/${profile.username || profile.id}`}>
-            ← Back to Profile
-          </Link>
-        </Button>
-        <h1 className="text-3xl font-bold">
-          Followers of {profile.full_name ?? 'User'}
+    <div className="container mx-auto px-4 py-8">
+      <div className="mb-8">
+        <h1 className="text-2xl font-bold mb-2">
+          {userData.full_name ?? userData.username} Followers
         </h1>
+        <p className="text-muted-foreground">
+          {followers.length} {followers.length === 1 ? 'follower' : 'followers'}
+        </p>
       </div>
 
-      {followers.length === 0 ? (
-        <div className="text-center py-10">
-          <p className="text-muted-foreground text-lg mb-2">
-            No followers yet.
-          </p>
-          <p className="text-sm text-muted-foreground">
-            Be the first to follow {profile.full_name ?? 'this user'}!
-          </p>
-        </div>
-      ) : (
-        <div className="space-y-4">
-          <p className="text-muted-foreground mb-4">
-            {followers.length} follower{followers.length === 1 ? '' : 's'}
-          </p>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {followers.map((f) =>
-              f.follower ? (
-                <div
-                  key={f.follower.id}
-                  className="flex items-center gap-3 p-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors"
-                >
-                  {f.follower.avatar_url ? (
-                    <Image
-                      src={f.follower.avatar_url}
-                      alt={`${f.follower.full_name ?? 'Follower'} avatar`}
-                      width={48}
-                      height={48}
-                      className="rounded-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center">
-                      <span className="text-lg font-semibold">
-                        {(f.follower.full_name ??
-                          f.follower.username ??
-                          'U')[0].toUpperCase()}
-                      </span>
-                    </div>
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <Link
-                      href={`/profile/${f.follower.username || f.follower.id}`}
-                      className="block"
-                    >
-                      <p className="font-medium truncate hover:underline">
-                        {f.follower.full_name ?? 'User'}
-                      </p>
-                      {f.follower.username && (
-                        <p className="text-sm text-muted-foreground truncate">
-                          @{f.follower.username}
-                        </p>
-                      )}
-                    </Link>
-                  </div>
-                </div>
-              ) : undefined,
-            )}
+      <div className="grid gap-4">
+        {followers.map((f) => (
+          <div
+            key={f.id}
+            className="flex items-center justify-between p-4 border rounded-lg"
+          >
+            <div className="flex items-center gap-4">
+              <Avatar>
+                <AvatarImage src={f.avatar_url || undefined} />
+                <AvatarFallback>
+                  {f.full_name !== null && f.full_name !== undefined
+                    ? f.full_name.charAt(0)
+                    : f.username !== null && f.username !== undefined
+                      ? f.username.charAt(0)
+                      : '?'}
+                </AvatarFallback>
+              </Avatar>
+              <div>
+                <h3 className="font-medium">{f.full_name}</h3>
+                {f.username !== null && f.username !== undefined ? (
+                  <p className="text-sm text-muted-foreground">@{f.username}</p>
+                ) : null}
+              </div>
+            </div>
+            <Button variant="outline" size="sm" asChild>
+              <Link href={`/profile/${f.username}`}>View Profile</Link>
+            </Button>
           </div>
+        ))}
+      </div>
+
+      {followers.length === 0 && (
+        <div className="text-center py-12">
+          <p className="text-muted-foreground">No followers yet</p>
         </div>
       )}
     </div>

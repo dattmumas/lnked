@@ -28,7 +28,7 @@ export async function PUT(
 ): Promise<NextResponse> {
   const { conversationId, messageId } = await context.params;
   
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
   const {
     data: { user },
     error: authError,
@@ -101,7 +101,7 @@ export async function DELETE(
 ): Promise<NextResponse> {
   const { conversationId, messageId } = await context.params;
   
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
   const {
     data: { user },
     error: authError,

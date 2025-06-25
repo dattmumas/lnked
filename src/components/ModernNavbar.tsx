@@ -17,6 +17,7 @@ import React, { useEffect, useState, useMemo, useCallback } from 'react';
 
 import ModeToggle from '@/components/app/nav/ModeToggle';
 import SearchBar from '@/components/app/nav/SearchBar';
+import TenantSwitcher from '@/components/app/tenant/TenantSwitcher';
 import { NotificationDropdown } from '@/components/notifications/NotificationDropdown';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
@@ -140,6 +141,10 @@ export default function ModernNavbar({
     void handleSignOut();
   }, [handleSignOut]);
 
+  const handleCreateCollective = useCallback((): void => {
+    void router.push('/collectives/new');
+  }, [router]);
+
   const getUserInitials = useCallback((): string => {
     const name =
       userMetadata.full_name !== undefined &&
@@ -187,14 +192,14 @@ export default function ModernNavbar({
     <nav className="w-full">
       <div className="w-full px-4 md:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
-          <div className="flex items-center gap-8">
-            <Link
-              href="/"
-              className="text-2xl font-extrabold-serif tracking-tight flex items-center gap-0.5 select-none hover:opacity-80 transition-opacity"
-              style={{ letterSpacing: '-0.04em' }}
-            >
-              Lnked<span className="text-accent text-2xl leading-none">.</span>
-            </Link>
+          <div className="flex items-center gap-4">
+            {user !== undefined && user !== null && (
+              <TenantSwitcher
+                // @ts-expect-error tenant-migration: TenantSwitcher props will be updated to include onCreateCollective
+                onCreateCollective={handleCreateCollective}
+                className="max-w-[200px]"
+              />
+            )}
           </div>
 
           {user !== undefined && user !== null && (

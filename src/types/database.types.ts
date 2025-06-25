@@ -51,6 +51,24 @@ export type Database = {
         }
         Relationships: []
       }
+      api_cache: {
+        Row: {
+          cache_key: string
+          created_at: string
+          data: Json
+        }
+        Insert: {
+          cache_key: string
+          created_at?: string
+          data: Json
+        }
+        Update: {
+          cache_key?: string
+          created_at?: string
+          data?: Json
+        }
+        Relationships: []
+      }
       chain_bookmarks: {
         Row: {
           chain_id: string
@@ -189,6 +207,53 @@ export type Database = {
             columns: ["parent_chain_id"]
             isOneToOne: false
             referencedRelation: "chains"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      checkout_sessions: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          id: string
+          status: string
+          stripe_session_id: string
+          stripe_subscription_id: string | null
+          target_entity_id: string
+          target_entity_type: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          status?: string
+          stripe_session_id: string
+          stripe_subscription_id?: string | null
+          target_entity_id: string
+          target_entity_type: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          status?: string
+          stripe_session_id?: string
+          stripe_subscription_id?: string | null
+          target_entity_id?: string
+          target_entity_type?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "checkout_sessions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
         ]
@@ -403,17 +468,17 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "comment_pins_pinned_by_fkey"
+            columns: ["pinned_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "comment_pins_v2_comment_id_fkey"
             columns: ["comment_id"]
             isOneToOne: false
             referencedRelation: "comments"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "comment_pins_v2_pinned_by_fkey"
-            columns: ["pinned_by"]
-            isOneToOne: false
-            referencedRelation: "users"
             referencedColumns: ["id"]
           },
         ]
@@ -442,17 +507,17 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "comment_reactions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "comment_reactions_v2_comment_id_fkey"
             columns: ["comment_id"]
             isOneToOne: false
             referencedRelation: "comments"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "comment_reactions_v2_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
             referencedColumns: ["id"]
           },
         ]
@@ -493,84 +558,97 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "comment_reports_v2_comment_id_fkey"
-            columns: ["comment_id"]
-            isOneToOne: false
-            referencedRelation: "comments"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "comment_reports_v2_moderator_id_fkey"
+            foreignKeyName: "comment_reports_moderator_id_fkey"
             columns: ["moderator_id"]
             isOneToOne: false
             referencedRelation: "users"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "comment_reports_v2_reporter_id_fkey"
+            foreignKeyName: "comment_reports_reporter_id_fkey"
             columns: ["reporter_id"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comment_reports_v2_comment_id_fkey"
+            columns: ["comment_id"]
+            isOneToOne: false
+            referencedRelation: "comments"
             referencedColumns: ["id"]
           },
         ]
       }
       comments: {
         Row: {
+          author_id: string
           content: string
           created_at: string | null
           deleted_at: string | null
           entity_id: string
           entity_type: Database["public"]["Enums"]["comment_entity_type"]
           id: string
+          is_pinned: boolean | null
           metadata: Json | null
           parent_id: string | null
           reply_count: number | null
+          tenant_id: string
           thread_depth: number | null
           updated_at: string | null
-          user_id: string
         }
         Insert: {
+          author_id: string
           content: string
           created_at?: string | null
           deleted_at?: string | null
           entity_id: string
           entity_type: Database["public"]["Enums"]["comment_entity_type"]
           id?: string
+          is_pinned?: boolean | null
           metadata?: Json | null
           parent_id?: string | null
           reply_count?: number | null
+          tenant_id: string
           thread_depth?: number | null
           updated_at?: string | null
-          user_id: string
         }
         Update: {
+          author_id?: string
           content?: string
           created_at?: string | null
           deleted_at?: string | null
           entity_id?: string
           entity_type?: Database["public"]["Enums"]["comment_entity_type"]
           id?: string
+          is_pinned?: boolean | null
           metadata?: Json | null
           parent_id?: string | null
           reply_count?: number | null
+          tenant_id?: string
           thread_depth?: number | null
           updated_at?: string | null
-          user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "comments_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comments_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "comments_v2_parent_id_fkey"
             columns: ["parent_id"]
             isOneToOne: false
             referencedRelation: "comments"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "comments_v2_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
             referencedColumns: ["id"]
           },
         ]
@@ -635,6 +713,7 @@ export type Database = {
       conversation_participants: {
         Row: {
           conversation_id: string | null
+          deleted_at: string | null
           id: string
           is_muted: boolean | null
           is_pinned: boolean | null
@@ -645,6 +724,7 @@ export type Database = {
         }
         Insert: {
           conversation_id?: string | null
+          deleted_at?: string | null
           id?: string
           is_muted?: boolean | null
           is_pinned?: boolean | null
@@ -655,6 +735,7 @@ export type Database = {
         }
         Update: {
           conversation_id?: string | null
+          deleted_at?: string | null
           id?: string
           is_muted?: boolean | null
           is_pinned?: boolean | null
@@ -664,6 +745,13 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "conversation_participants_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "channels"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "conversation_participants_conversation_id_fkey"
             columns: ["conversation_id"]
@@ -683,46 +771,69 @@ export type Database = {
       conversations: {
         Row: {
           archived: boolean | null
+          collective_id: string | null
           created_at: string | null
           created_by: string | null
           description: string | null
           id: string
           is_private: boolean | null
           last_message_at: string | null
+          tenant_id: string | null
           title: string | null
           type: string
+          unique_group_hash: string | null
           updated_at: string | null
         }
         Insert: {
           archived?: boolean | null
+          collective_id?: string | null
           created_at?: string | null
           created_by?: string | null
           description?: string | null
           id?: string
           is_private?: boolean | null
           last_message_at?: string | null
+          tenant_id?: string | null
           title?: string | null
           type?: string
+          unique_group_hash?: string | null
           updated_at?: string | null
         }
         Update: {
           archived?: boolean | null
+          collective_id?: string | null
           created_at?: string | null
           created_by?: string | null
           description?: string | null
           id?: string
           is_private?: boolean | null
           last_message_at?: string | null
+          tenant_id?: string | null
           title?: string | null
           type?: string
+          unique_group_hash?: string | null
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "conversations_collective_id_fkey"
+            columns: ["collective_id"]
+            isOneToOne: false
+            referencedRelation: "collectives"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "conversations_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conversations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
         ]
@@ -995,6 +1106,7 @@ export type Database = {
           metadata: Json | null
           reply_to_id: string | null
           sender_id: string | null
+          tenant_id: string | null
           updated_at: string | null
         }
         Insert: {
@@ -1008,6 +1120,7 @@ export type Database = {
           metadata?: Json | null
           reply_to_id?: string | null
           sender_id?: string | null
+          tenant_id?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -1021,9 +1134,17 @@ export type Database = {
           metadata?: Json | null
           reply_to_id?: string | null
           sender_id?: string | null
+          tenant_id?: string | null
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "channels"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "messages_conversation_id_fkey"
             columns: ["conversation_id"]
@@ -1043,6 +1164,13 @@ export type Database = {
             columns: ["sender_id"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messages_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
         ]
@@ -1132,6 +1260,7 @@ export type Database = {
           metadata: Json | null
           read_at: string | null
           recipient_id: string
+          tenant_id: string
           title: string
           type: Database["public"]["Enums"]["notification_type"]
           updated_at: string | null
@@ -1146,6 +1275,7 @@ export type Database = {
           metadata?: Json | null
           read_at?: string | null
           recipient_id: string
+          tenant_id: string
           title: string
           type: Database["public"]["Enums"]["notification_type"]
           updated_at?: string | null
@@ -1160,6 +1290,7 @@ export type Database = {
           metadata?: Json | null
           read_at?: string | null
           recipient_id?: string
+          tenant_id?: string
           title?: string
           type?: Database["public"]["Enums"]["notification_type"]
           updated_at?: string | null
@@ -1177,6 +1308,13 @@ export type Database = {
             columns: ["recipient_id"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
         ]
@@ -1273,18 +1411,21 @@ export type Database = {
         Row: {
           created_at: string
           post_id: string
+          tenant_id: string
           type: string
           user_id: string
         }
         Insert: {
           created_at?: string
           post_id: string
+          tenant_id: string
           type?: string
           user_id: string
         }
         Update: {
           created_at?: string
           post_id?: string
+          tenant_id?: string
           type?: string
           user_id?: string
         }
@@ -1301,6 +1442,13 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "post_reactions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
         ]
@@ -1360,6 +1508,7 @@ export type Database = {
           sharing_settings: Json | null
           status: Database["public"]["Enums"]["post_status_type"]
           subtitle: string | null
+          tenant_id: string
           thumbnail_url: string | null
           title: string
           tsv: unknown | null
@@ -1384,6 +1533,7 @@ export type Database = {
           sharing_settings?: Json | null
           status?: Database["public"]["Enums"]["post_status_type"]
           subtitle?: string | null
+          tenant_id: string
           thumbnail_url?: string | null
           title: string
           tsv?: unknown | null
@@ -1408,6 +1558,7 @@ export type Database = {
           sharing_settings?: Json | null
           status?: Database["public"]["Enums"]["post_status_type"]
           subtitle?: string | null
+          tenant_id?: string
           thumbnail_url?: string | null
           title?: string
           tsv?: unknown | null
@@ -1427,6 +1578,13 @@ export type Database = {
             columns: ["collective_id"]
             isOneToOne: false
             referencedRelation: "collectives"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "posts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
         ]
@@ -1714,6 +1872,74 @@ export type Database = {
           },
         ]
       }
+      tenant_members: {
+        Row: {
+          id: string
+          joined_at: string | null
+          role: Database["public"]["Enums"]["member_role"]
+          tenant_id: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          joined_at?: string | null
+          role?: Database["public"]["Enums"]["member_role"]
+          tenant_id: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          joined_at?: string | null
+          role?: Database["public"]["Enums"]["member_role"]
+          tenant_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_members_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tenants: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          is_public: boolean | null
+          member_count: number | null
+          name: string
+          slug: string
+          type: Database["public"]["Enums"]["tenant_type"]
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_public?: boolean | null
+          member_count?: number | null
+          name: string
+          slug: string
+          type?: Database["public"]["Enums"]["tenant_type"]
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_public?: boolean | null
+          member_count?: number | null
+          name?: string
+          slug?: string
+          type?: Database["public"]["Enums"]["tenant_type"]
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       user_preferences: {
         Row: {
           autoplay_videos: boolean | null
@@ -1933,6 +2159,7 @@ export type Database = {
           comment_count: number
           created_at: string | null
           created_by: string | null
+          deleted_at: string | null
           description: string | null
           duration: number | null
           encoding_tier: string | null
@@ -1954,6 +2181,7 @@ export type Database = {
           comment_count?: number
           created_at?: string | null
           created_by?: string | null
+          deleted_at?: string | null
           description?: string | null
           duration?: number | null
           encoding_tier?: string | null
@@ -1975,6 +2203,7 @@ export type Database = {
           comment_count?: number
           created_at?: string | null
           created_by?: string | null
+          deleted_at?: string | null
           description?: string | null
           duration?: number | null
           encoding_tier?: string | null
@@ -2016,19 +2245,76 @@ export type Database = {
       }
     }
     Views: {
-      collective_followers: {
+      channels: {
         Row: {
+          archived: boolean | null
           collective_id: string | null
           created_at: string | null
-          follower_avatar: string | null
-          follower_id: string | null
-          follower_name: string | null
-          follower_username: string | null
+          created_by: string | null
+          description: string | null
+          id: string | null
+          is_private: boolean | null
+          last_message_at: string | null
+          title: string | null
+          type: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          archived?: boolean | null
+          collective_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          id?: string | null
+          is_private?: boolean | null
+          last_message_at?: string | null
+          title?: string | null
+          type?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          archived?: boolean | null
+          collective_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          id?: string | null
+          is_private?: boolean | null
+          last_message_at?: string | null
+          title?: string | null
+          type?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversations_collective_id_fkey"
+            columns: ["collective_id"]
+            isOneToOne: false
+            referencedRelation: "collectives"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conversations_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      collective_followers: {
+        Row: {
+          avatar_url: string | null
+          collective_id: string | null
+          created_at: string | null
+          full_name: string | null
+          user_id: string | null
+          username: string | null
         }
         Relationships: [
           {
             foreignKeyName: "follows_follower_id_fkey"
-            columns: ["follower_id"]
+            columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "users"
             referencedColumns: ["id"]
@@ -2037,11 +2323,15 @@ export type Database = {
       }
       search_documents: {
         Row: {
-          content_preview: string | null
-          document_id: string | null
-          document_type: string | null
+          author_id: string | null
+          author_name: string | null
+          author_username: string | null
+          content: string | null
+          created_at: string | null
+          id: string | null
           title: string | null
-          tsv_document: unknown | null
+          tsv: unknown | null
+          type: string | null
         }
         Relationships: []
       }
@@ -2067,8 +2357,8 @@ export type Database = {
       user_following: {
         Row: {
           created_at: string | null
+          following_avatar: string | null
           following_id: string | null
-          following_identifier: string | null
           following_name: string | null
           following_type: string | null
           user_id: string | null
@@ -2089,7 +2379,7 @@ export type Database = {
         Args: {
           p_entity_type: Database["public"]["Enums"]["comment_entity_type"]
           p_entity_id: string
-          p_user_id: string
+          p_author_id: string
           p_content: string
           p_parent_id?: string
         }
@@ -2098,9 +2388,15 @@ export type Database = {
           thread_depth: number
         }[]
       }
-      binary_quantize: {
-        Args: { "": string } | { "": unknown }
-        Returns: unknown
+      check_collective_subscription_permission: {
+        Args: { p_user_id: string; p_collective_id: string }
+        Returns: {
+          has_permission: boolean
+        }[]
+      }
+      check_username_available: {
+        Args: { p_username: string; p_user_id?: string }
+        Returns: boolean
       }
       cleanup_expired_cache: {
         Args: Record<PropertyKey, never>
@@ -2110,12 +2406,37 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: number
       }
+      create_collective_tenant: {
+        Args: {
+          tenant_name: string
+          tenant_slug: string
+          tenant_description?: string
+          is_public?: boolean
+        }
+        Returns: string
+      }
       create_default_notification_preferences: {
         Args: {
           p_user_id: string
           p_notification_type: Database["public"]["Enums"]["notification_type"]
         }
         Returns: undefined
+      }
+      create_direct_conversation_atomic: {
+        Args: { sender_id: string; recipient_id: string }
+        Returns: {
+          conversation_id: string
+          is_existing: boolean
+        }[]
+      }
+      create_group_conversation_atomic: {
+        Args: {
+          creator_id: string
+          participant_ids: string[]
+          group_title?: string
+          check_participants?: boolean
+        }
+        Returns: Json
       }
       create_notification: {
         Args: {
@@ -2138,6 +2459,7 @@ export type Database = {
           comment_count: number
           created_at: string | null
           created_by: string | null
+          deleted_at: string | null
           description: string | null
           duration: number | null
           encoding_tier: string | null
@@ -2153,6 +2475,14 @@ export type Database = {
           title: string | null
           updated_at: string | null
         }[]
+      }
+      generate_group_hash: {
+        Args: {
+          creator_id: string
+          participant_ids: string[]
+          group_title?: string
+        }
+        Returns: string
       }
       get_cached_recommendations: {
         Args: {
@@ -2179,6 +2509,31 @@ export type Database = {
           comment_data: Json
         }[]
       }
+      get_comment_replies_with_reactions: {
+        Args: {
+          p_parent_id: string
+          p_limit?: number
+          p_cursor?: string
+          p_user_id?: string
+        }
+        Returns: {
+          id: string
+          entity_type: string
+          entity_id: string
+          user_id: string
+          content: string
+          parent_id: string
+          thread_depth: number
+          reply_count: number
+          metadata: Json
+          created_at: string
+          updated_at: string
+          deleted_at: string
+          author: Json
+          reaction_counts: Json
+          user_reactions: string[]
+        }[]
+      }
       get_comment_thread: {
         Args: {
           p_entity_type: Database["public"]["Enums"]["comment_entity_type"]
@@ -2188,6 +2543,46 @@ export type Database = {
         }
         Returns: {
           comment_data: Json
+        }[]
+      }
+      get_direct_conversations_with_participants: {
+        Args: { p_user_id: string; limit_count?: number }
+        Returns: {
+          conversation_id: string
+          last_message_at: string
+          created_at: string
+          other_user_id: string
+          other_user_username: string
+          other_user_full_name: string
+          other_user_avatar_url: string
+        }[]
+      }
+      get_entity_comments_with_reactions: {
+        Args: {
+          p_entity_type: string
+          p_entity_id: string
+          p_limit?: number
+          p_cursor?: string
+          p_created_before?: string
+          p_user_id?: string
+          p_include_reactions?: boolean
+        }
+        Returns: {
+          id: string
+          entity_type: string
+          entity_id: string
+          user_id: string
+          content: string
+          parent_id: string
+          thread_depth: number
+          reply_count: number
+          metadata: Json
+          created_at: string
+          updated_at: string
+          deleted_at: string
+          author: Json
+          reaction_counts: Json
+          user_reactions: string[]
         }[]
       }
       get_follower_count: {
@@ -2201,6 +2596,10 @@ export type Database = {
       get_subscriber_count: {
         Args: { entity_id: string; entity_type: string }
         Returns: number
+      }
+      get_tenant_context: {
+        Args: { target_tenant_id: string }
+        Returns: Json
       }
       get_unread_message_count: {
         Args: { p_user_id: string; p_conversation_id: string }
@@ -2255,6 +2654,10 @@ export type Database = {
           like_count: number
         }[]
       }
+      get_user_personal_tenant: {
+        Args: { target_user_id?: string }
+        Returns: string
+      }
       get_user_preference_weights: {
         Args: { p_user_id: string }
         Returns: {
@@ -2262,37 +2665,22 @@ export type Database = {
           weight: number
         }[]
       }
-      halfvec_avg: {
-        Args: { "": number[] }
-        Returns: unknown
+      get_user_tenant_role: {
+        Args: { target_tenant_id: string; target_user_id?: string }
+        Returns: Database["public"]["Enums"]["member_role"]
       }
-      halfvec_out: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
-      halfvec_send: {
-        Args: { "": unknown }
-        Returns: string
-      }
-      halfvec_typmod_in: {
-        Args: { "": unknown[] }
-        Returns: number
-      }
-      hnsw_bit_support: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
-      hnsw_halfvec_support: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
-      hnsw_sparsevec_support: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
-      hnswhandler: {
-        Args: { "": unknown }
-        Returns: unknown
+      get_user_tenants: {
+        Args: { target_user_id?: string }
+        Returns: {
+          tenant_id: string
+          tenant_type: Database["public"]["Enums"]["tenant_type"]
+          tenant_name: string
+          tenant_slug: string
+          user_role: Database["public"]["Enums"]["member_role"]
+          is_personal: boolean
+          member_count: number
+          is_public: boolean
+        }[]
       }
       increment_view_count: {
         Args: { post_id_to_increment: string }
@@ -2316,6 +2704,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_conversation_participant: {
+        Args: { p_conversation_id: string; p_user_id: string }
+        Returns: boolean
+      }
       is_following: {
         Args: {
           follower_user_id: string
@@ -2324,25 +2716,9 @@ export type Database = {
         }
         Returns: boolean
       }
-      ivfflat_bit_support: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
-      ivfflat_halfvec_support: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
-      ivfflathandler: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
-      l2_norm: {
-        Args: { "": unknown } | { "": unknown }
-        Returns: number
-      }
-      l2_normalize: {
-        Args: { "": string } | { "": unknown } | { "": unknown }
-        Returns: unknown
+      is_participant_of: {
+        Args: { p_conversation_id: string; p_user_id: string }
+        Returns: boolean
       }
       mark_messages_as_read: {
         Args: { p_user_id: string; p_conversation_id: string }
@@ -2350,18 +2726,6 @@ export type Database = {
       }
       mark_notifications_as_read: {
         Args: { p_user_id: string; p_notification_ids?: string[] }
-        Returns: number
-      }
-      sparsevec_out: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
-      sparsevec_send: {
-        Args: { "": unknown }
-        Returns: string
-      }
-      sparsevec_typmod_in: {
-        Args: { "": unknown[] }
         Returns: number
       }
       toggle_comment_reaction: {
@@ -2375,29 +2739,12 @@ export type Database = {
           reaction_counts: Json
         }[]
       }
-      vector_avg: {
-        Args: { "": number[] }
-        Returns: string
-      }
-      vector_dims: {
-        Args: { "": string } | { "": unknown }
-        Returns: number
-      }
-      vector_norm: {
-        Args: { "": string }
-        Returns: number
-      }
-      vector_out: {
-        Args: { "": string }
-        Returns: unknown
-      }
-      vector_send: {
-        Args: { "": string }
-        Returns: string
-      }
-      vector_typmod_in: {
-        Args: { "": unknown[] }
-        Returns: number
+      user_has_tenant_access: {
+        Args: {
+          target_tenant_id: string
+          required_role?: Database["public"]["Enums"]["member_role"]
+        }
+        Returns: boolean
       }
     }
     Enums: {
@@ -2413,6 +2760,7 @@ export type Database = {
       chain_visibility: "public" | "followers" | "private" | "unlisted"
       collective_member_role: "admin" | "editor" | "author" | "owner"
       comment_entity_type: "video" | "post" | "collective" | "profile"
+      conversation_type: "channel" | "group" | "direct"
       interaction_entity_type: "collective" | "post" | "user" | "chain"
       interaction_type:
         | "like"
@@ -2422,6 +2770,7 @@ export type Database = {
         | "view"
         | "chain_view"
       member_entity_type: "user" | "collective"
+      member_role: "owner" | "admin" | "editor" | "member"
       notification_type:
         | "follow"
         | "unfollow"
@@ -2461,6 +2810,7 @@ export type Database = {
         | "unpaid"
         | "paused"
       subscription_target_type: "user" | "collective"
+      tenant_type: "personal" | "collective"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -2589,6 +2939,7 @@ export const Constants = {
       chain_visibility: ["public", "followers", "private", "unlisted"],
       collective_member_role: ["admin", "editor", "author", "owner"],
       comment_entity_type: ["video", "post", "collective", "profile"],
+      conversation_type: ["channel", "group", "direct"],
       interaction_entity_type: ["collective", "post", "user", "chain"],
       interaction_type: [
         "like",
@@ -2599,6 +2950,7 @@ export const Constants = {
         "chain_view",
       ],
       member_entity_type: ["user", "collective"],
+      member_role: ["owner", "admin", "editor", "member"],
       notification_type: [
         "follow",
         "unfollow",
@@ -2641,6 +2993,7 @@ export const Constants = {
         "paused",
       ],
       subscription_target_type: ["user", "collective"],
+      tenant_type: ["personal", "collective"],
     },
   },
 } as const

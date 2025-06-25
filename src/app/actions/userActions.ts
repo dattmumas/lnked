@@ -242,7 +242,7 @@ export async function updateUserProfile(
   formData: RawUserProfileFormInput,
 ): Promise<UpdateUserProfileResult> {
   const startTime = Date.now();
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
 
   try {
     const {
@@ -356,7 +356,7 @@ export async function updateUserProfile(
 export async function uploadAvatar(
   formData: FormData
 ): Promise<{ success: boolean; avatarUrl?: string; error?: string }> {
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
 
   const {
     data: { user },
@@ -521,7 +521,7 @@ export async function deleteUserAccount(): Promise<{
   success: boolean;
   error?: string;
 }> {
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
   const {
     data: { user },
     error: authError,
@@ -529,93 +529,73 @@ export async function deleteUserAccount(): Promise<{
   
   if (authError !== null || user === null) {
     metrics.userAccountDeleteTotal('error');
-    return { success: false, error: 'Not authenticated.' };
+    return {
+      success: false,
+      error: 'You must be logged in to delete your account.',
+    };
   }
   
-  const userId = user.id;
-
   try {
-    // 1. Check if user is owner of any collectives (prevent orphaned collectives)
-    const { data: ownedCollectives } = await supabaseAdmin
-      .from('collectives')
-      .select('id, name')
-      .eq('owner_id', userId);
+    const { success, error: cleanupError } = await cleanupExternalServices(user.id);
+
+    if (!success) {
+      metrics.userAccountDeleteTotal('error');
+      return {
+        success: false,
+        error: `Failed to clean up external services: ${cleanupError ?? 'Unknown error'}`
+      };
+    }
     
-    if (ownedCollectives !== null && ownedCollectives !== undefined && ownedCollectives.length > 0) {
+    // Get Stripe Customer ID from Supabase
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('stripe_customer_id')
+      .eq('id', user.id)
+      .single();
+
+    if (userError !== null || userData === null) {
+      console.error('Error fetching user for cleanup:', userError);
+      // Don't block account deletion if user not found or error
+      return { success: true }; 
+    }
+
+    // If user has a Stripe Customer ID, delete it in Stripe
+    if (userData.stripe_customer_id !== null && userData.stripe_customer_id !== undefined) {
+      try {
+        const stripe = getStripe();
+        if (stripe !== null && stripe !== undefined) {
+          await stripe.customers.del(userData.stripe_customer_id);
+        } else {
+          console.error('Stripe SDK not initialized.');
+        }
+      } catch (error) {
+        // Log error but don't block deletion
+        console.error('Error deleting Stripe customer:', error);
+      }
+    }
+
+    // Use Supabase Admin client to delete user account
+    const { error: deleteError } = await supabase.auth.admin.deleteUser(
+      user.id,
+    );
+
+    if (deleteError !== null) {
+      console.error('Error deleting user account:', deleteError);
       metrics.userAccountDeleteTotal('error');
       return {
         success: false,
-        error: 'You must transfer or delete all collectives you own before deleting your account.',
+        error: `Failed to delete account: ${deleteError.message}`,
       };
     }
-
-    // 2. Disable user in Auth first (prevents login during deletion)
-    await supabaseAdmin.auth.admin.updateUserById(userId, { 
-      user_metadata: { account_disabled: true },
-      email_confirm: false 
-    });
-
-    // 3. Clean up external services (Stripe) with proper error handling
-    const stripeCleanupResult = await cleanupExternalServices(userId);
-    if (!stripeCleanupResult.success) {
-      metrics.userAccountDeleteTotal('error');
-      return {
-        success: false,
-        error: `Failed to clean up billing: ${stripeCleanupResult.error ?? 'Unknown error'}`,
-      };
-    }
-
-    // 4. Soft delete user content (preserve relationships)
-    await Promise.all([
-      // Soft delete posts (set deleted_at instead of hard delete)
-      supabaseAdmin
-        .from('posts')
-        .update({ 
-          deleted_at: new Date().toISOString(),
-          title: '[Deleted]',
-          content: null 
-        })
-        .eq('author_id', userId)
-        .is('deleted_at', null),
-      
-      // Soft delete comments
-      supabaseAdmin
-        .from('comments')
-        .update({ 
-          deleted_at: new Date().toISOString(),
-          content: '[Deleted]' 
-        })
-        .eq('user_id', userId)
-        .is('deleted_at', null),
-    ]);
-
-    // 5. Remove memberships and relationships
-    await Promise.all([
-      supabaseAdmin.from('collective_members').delete().eq('user_id', userId),
-      supabaseAdmin.from('user_followers').delete().eq('follower_id', userId),
-      supabaseAdmin.from('user_followers').delete().eq('following_id', userId),
-    ]);
-
-    // 6. Delete user profile data
-    await Promise.all([
-      supabaseAdmin.from('customers').delete().eq('id', userId),
-      supabaseAdmin.from('users').delete().eq('id', userId),
-    ]);
-
-    // 7. Finally delete from Supabase Auth
-    await supabaseAdmin.auth.admin.deleteUser(userId);
 
     metrics.userAccountDeleteTotal('success');
     return { success: true };
-
   } catch (error) {
-    console.error('Error in deleteUserAccount:', error);
+    console.error('Unexpected error deleting user account:', error);
     metrics.userAccountDeleteTotal('error');
-    
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
     return {
       success: false,
-      error: `Account deletion failed: ${errorMessage}`,
+      error: 'An unexpected error occurred. Please try again.',
     };
   }
 }
@@ -624,75 +604,37 @@ export async function deleteUserAccount(): Promise<{
  * Clean up external services (Stripe) with proper error handling
  */
 async function cleanupExternalServices(userId: string): Promise<{ success: boolean; error?: string }> {
-  const stripe = getStripe();
-  if (stripe === null || stripe === undefined) {
-    return { success: true }; // No Stripe to clean up
+  const supabase = await createServerSupabaseClient();
+  
+  // Get Stripe Customer ID from Supabase
+  const { data: userData, error: userError } = await supabase
+    .from('users')
+    .select('stripe_customer_id')
+    .eq('id', userId)
+    .single();
+
+  if (userError !== null || userData === null) {
+    console.error('Error fetching user for cleanup:', userError);
+    // Don't block account deletion if user not found or error
+    return { success: true }; 
   }
 
-  try {
-    // Cancel Stripe subscriptions with proper error handling
-    const { data: subscriptions } = await supabaseAdmin
-      .from('subscriptions')
-      .select('id, status')
-      .eq('user_id', userId)
-      .in('status', ['active', 'trialing']);
-
-    if (subscriptions !== null && subscriptions !== undefined && subscriptions.length > 0) {
-      const cancellationResults = await Promise.allSettled(
-        subscriptions.map((sub) => {
-          return stripe.subscriptions.cancel(sub.id);
-        })
-      );
-
-      // Check if any critical cancellations failed
-      const failedCancellations = cancellationResults.filter(result => result.status === 'rejected');
-      if (failedCancellations.length > 0) {
-        console.error('Failed subscription cancellations:', failedCancellations);
-        return {
-          success: false,
-          error: 'Failed to cancel active subscriptions. Please contact support.',
-        };
+  // If user has a Stripe Customer ID, delete it in Stripe
+  if (userData.stripe_customer_id !== null && userData.stripe_customer_id !== undefined) {
+    try {
+      const stripe = getStripe();
+      if (stripe !== null && stripe !== undefined) {
+        await stripe.customers.del(userData.stripe_customer_id);
+      } else {
+        console.error('Stripe SDK not initialized.');
       }
+    } catch (error) {
+      // Log error but don't block deletion
+      console.error('Error deleting Stripe customer:', error);
     }
-
-    // Delete Stripe customer (optional - can fail without blocking)
-    const { data: customer } = await supabaseAdmin
-      .from('customers')
-      .select('stripe_customer_id')
-      .eq('id', userId)
-      .maybeSingle();
-
-    if (customer?.stripe_customer_id !== null && customer?.stripe_customer_id !== undefined) {
-      try {
-        await stripe.customers.del(customer.stripe_customer_id);
-      } catch (error) {
-        console.warn('Failed to delete Stripe customer (non-critical):', error);
-      }
-    }
-
-    // Delete Stripe Connect account (optional - can fail without blocking)
-    const { data: userRow } = await supabaseAdmin
-      .from('users')
-      .select('stripe_account_id')
-      .eq('id', userId)
-      .maybeSingle();
-
-    if (userRow?.stripe_account_id !== null && userRow?.stripe_account_id !== undefined) {
-      try {
-        await stripe.accounts.del(userRow.stripe_account_id);
-      } catch (error) {
-        console.warn('Failed to delete Stripe Connect account (non-critical):', error);
-      }
-    }
-
-    return { success: true };
-
-  } catch (error) {
-    console.error('Critical error in Stripe cleanup:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Unknown Stripe error';
-    return {
-      success: false,
-      error: `Stripe cleanup failed: ${errorMessage}`,
-    };
   }
+
+  // ... (add other cleanup tasks here, e.g., Mux, etc.)
+
+  return { success: true };
 }

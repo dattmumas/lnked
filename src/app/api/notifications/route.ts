@@ -34,7 +34,7 @@ export async function GET(request: NextRequest): Promise<Response> {
   let userId: string | undefined;
 
   try {
-    const supabase = createServerSupabaseClient();
+    const supabase = await createServerSupabaseClient();
     const {
       data: { user },
       error: authError,
@@ -191,7 +191,7 @@ export async function PATCH(request: NextRequest): Promise<Response> {
   let userId: string | undefined;
 
   try {
-    const supabase = createServerSupabaseClient();
+    const supabase = await createServerSupabaseClient();
     const {
       data: { user },
       error: authError,
@@ -362,7 +362,7 @@ export async function DELETE(request: NextRequest): Promise<Response> {
   let userId: string | undefined;
 
   try {
-    const supabase = createServerSupabaseClient();
+    const supabase = await createServerSupabaseClient();
     const {
       data: { user },
       error: authError,

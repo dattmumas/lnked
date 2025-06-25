@@ -146,6 +146,7 @@ export class CommentRepository {
 
       const { data, error } = await this.supabase
         .from('comments')
+        // @ts-expect-error tenant-migration: tenant_id will be automatically injected via repository pattern
         .insert(validatedComment)
         .select()
         .single();

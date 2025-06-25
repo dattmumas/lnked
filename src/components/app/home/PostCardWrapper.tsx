@@ -37,12 +37,21 @@ export function PostCardWrapper({
     slug: null,
     created_at: item.published_at,
     post_type: item.type === 'video' ? ('video' as const) : ('text' as const),
-    metadata:
-      item.duration !== undefined &&
+    metadata: {
+      ...(item.duration !== undefined &&
       item.duration !== null &&
       item.duration.length > 0
         ? { duration: item.duration }
-        : null,
+        : {}),
+      // Add tenant information to metadata for access in components
+      ...(item.tenant && {
+        tenant: {
+          id: item.tenant.id,
+          name: item.tenant.name,
+          type: item.tenant.type,
+        },
+      }),
+    },
     author: {
       id: '',
       username: item.author.username,

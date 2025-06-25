@@ -52,7 +52,8 @@ export async function GET(
     });
 
   } catch (error: unknown) {
-    console.error('Error in GET /api/comments-v2:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error('Error in GET /api/comments-v2:', errorMessage);
     if (error instanceof CommentValidationError) {
       return NextResponse.json({ error: error.message }, { status: 400 });
     }
@@ -68,7 +69,7 @@ export async function POST(
     const { entityType, entityId } = await params;
     
     // Get authenticated user
-    const supabase = createServerSupabaseClient();
+    const supabase = await createServerSupabaseClient();
     const {
       data: { user },
       error: authError,

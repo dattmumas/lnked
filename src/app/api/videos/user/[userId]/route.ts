@@ -11,7 +11,7 @@ export async function GET(
   context: { params: Promise<{ userId: string }> }
 ): Promise<NextResponse> {
   try {
-    const supabase = createServerSupabaseClient();
+    const supabase = await createServerSupabaseClient();
     const { userId } = await context.params;
 
     // Parse query parameters

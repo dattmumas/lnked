@@ -9,7 +9,13 @@ type MockSupabaseClient = {
   rpc: jest.Mock;
 };
 
-type MockSupabaseResponse = Record<string, unknown>;
+type MockSupabaseResponse = {
+  data: unknown;
+  error: unknown;
+  count: number | undefined;
+  status: number;
+  statusText: string;
+}
 
 const mockUser = {
   id: 'test-user-id',
@@ -28,8 +34,6 @@ const mockSession = {
   token_type: 'bearer',
   user: mockUser,
 }
-
-const EXPIRES_AT_OFFSET = 3600000;
 
 const createMockResponse = (data: unknown = undefined, error: unknown = undefined): MockSupabaseResponse => ({
   data,
@@ -157,13 +161,13 @@ export const createAuthenticatedMockClient = (userId = 'test-user-123') => {
 }
 
 // Helper to mock successful data responses
-export const mockSupabaseResponse = <T>(data: T, error = null) => ({
+export const mockSupabaseResponse = <T>(data: T, error = null): { data: T, error: unknown } => ({
   data,
   error,
 })
 
 // Helper to mock error responses
-export const mockSupabaseError = (message = 'Database error') => ({
+export const mockSupabaseError = (message = 'Database error'): { data: null, error: { message: string, code: string, details: null, hint: null } } => ({
   data: null,
   error: {
     message,

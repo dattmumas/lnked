@@ -1,9 +1,26 @@
 "use server";
 
+import { revalidatePath } from 'next/cache';
 import { z } from "zod";
 
 import { createServerSupabaseClient } from "@/lib/supabase/server";
-// import { revalidatePath } from "next/cache"; // Removed as it's not used
+
+import type { Database } from '@/types/database.types';
+
+// Constants
+const DEFAULT_COLLECTIVES_LIMIT = 10;
+
+type Collective = Database['public']['Tables']['collectives']['Row'];
+
+interface CollectiveWithFollowStatus extends Collective {
+  is_following: boolean;
+  follower_count: number;
+}
+
+interface DiscoverResult {
+  collectives: CollectiveWithFollowStatus[];
+  hasMore: boolean;
+}
 
 // Define Zod schema for input validation
 const FeedbackSchema = z.object({
@@ -30,7 +47,7 @@ export async function logRecommendationFeedback(
   prevState: ActionResult | undefined,
   formData: FormData
 ): Promise<ActionResult> {
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
 
   const {
     data: { user },
@@ -82,7 +99,7 @@ export async function logRecommendationFeedback(
 
     // Optionally revalidate the path if the UI should change based on this feedback immediately
     // For simple feedback logging, this might not be strictly necessary
-    // revalidatePath('/discover');
+    revalidatePath('/discover');
 
     return { success: true, message: "Feedback recorded successfully." };
   } catch (e: unknown) {
@@ -91,4 +108,128 @@ export async function logRecommendationFeedback(
       e instanceof Error ? e.message : "An unexpected error occurred.";
     return { success: false, error: errorMessage };
   }
+}
+
+export async function getCollectives(
+  limit: number = DEFAULT_COLLECTIVES_LIMIT,
+  offset: number = 0,
+  searchTerm?: string
+): Promise<DiscoverResult> {
+  const supabase = await createServerSupabaseClient();
+
+  // Get current user to check follow status
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  let query = supabase
+    .from('collectives')
+    .select(`
+      *,
+      follower_count:follows(count)
+    `)
+    .eq('is_public', true)
+    .order('created_at', { ascending: false })
+    .range(offset, offset + limit);
+
+  // Add search filter if provided
+  if (searchTerm !== undefined && searchTerm !== null && searchTerm.trim() !== '') {
+    query = query.or(`name.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%`);
+  }
+
+  const { data: collectives, error } = await query;
+
+  if (error !== null) {
+    console.error('Error fetching collectives:', error);
+    return { collectives: [], hasMore: false };
+  }
+
+  // Check follow status for each collective if user is authenticated
+  let collectivesWithFollowStatus: CollectiveWithFollowStatus[] = [];
+
+  if (user !== null && collectives !== null) {
+    const collectiveIds = collectives.map((c: Collective) => c.id);
+    
+    const { data: follows } = await supabase
+      .from('follows')
+      .select('following_id')
+      .eq('follower_id', user.id)
+      .in('following_id', collectiveIds);
+
+    const followingIds = new Set(follows?.map(f => f.following_id) || []);
+
+    collectivesWithFollowStatus = collectives.map((collective: Collective & { follower_count: { count: number }[] }) => ({
+      ...collective,
+      is_following: followingIds.has(collective.id),
+      follower_count: collective.follower_count?.[0]?.count || 0,
+    }));
+  } else {
+    collectivesWithFollowStatus = (collectives || []).map((collective: Collective & { follower_count: { count: number }[] }) => ({
+      ...collective,
+      is_following: false,
+      follower_count: collective.follower_count?.[0]?.count || 0,
+    }));
+  }
+
+  return {
+    collectives: collectivesWithFollowStatus,
+    hasMore: collectives?.length === limit + 1,
+  };
+}
+
+export async function followCollective(collectiveId: string): Promise<{ success: boolean; error?: string }> {
+  const supabase = await createServerSupabaseClient();
+
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+
+  if (authError !== null || user === null) {
+    return { success: false, error: 'Authentication required' };
+  }
+
+  const { error } = await supabase
+    .from('follows')
+    .insert({
+      follower_id: user.id,
+      following_id: collectiveId,
+      following_type: 'collective',
+    });
+
+  if (error !== null) {
+    console.error('Error following collective:', error);
+    return { success: false, error: 'Failed to follow collective' };
+  }
+
+  revalidatePath('/discover');
+  return { success: true };
+}
+
+export async function unfollowCollective(collectiveId: string): Promise<{ success: boolean; error?: string }> {
+  const supabase = await createServerSupabaseClient();
+
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+
+  if (authError !== null || user === null) {
+    return { success: false, error: 'Authentication required' };
+  }
+
+  const { error } = await supabase
+    .from('follows')
+    .delete()
+    .eq('follower_id', user.id)
+    .eq('following_id', collectiveId)
+    .eq('following_type', 'collective');
+
+  if (error !== null) {
+    console.error('Error unfollowing collective:', error);
+    return { success: false, error: 'Failed to unfollow collective' };
+  }
+
+  revalidatePath('/discover');
+  return { success: true };
 }

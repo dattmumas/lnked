@@ -13,7 +13,7 @@ export async function POST(
   { params }: { params: Promise<{ commentId: string }> },
 ): Promise<NextResponse> {
   const { commentId } = await params;
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
 
   const {
     data: { user },

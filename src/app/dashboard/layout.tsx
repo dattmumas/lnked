@@ -15,7 +15,7 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode;
 }): Promise<React.ReactElement> {
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
 
   const {
     data: { session },

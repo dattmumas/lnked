@@ -18,7 +18,7 @@ interface VideoPlayerPageProps {
 }
 
 async function getVideoData(videoId: string): Promise<VideoAsset | undefined> {
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
 
   const { data: video, error } = await supabase
     .from('video_assets')
@@ -61,7 +61,7 @@ export default async function VideoPlayerPage({
   const videoAsset = video;
 
   // Fetch user and profile for RightSidebar
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();

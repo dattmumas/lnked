@@ -59,7 +59,7 @@ type DashboardContent = {
 export const dynamic = 'force-dynamic';
 
 export default async function DashboardManagementPage(): Promise<React.ReactElement> {
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
 
   // Get session to retrieve user reliably
   const {

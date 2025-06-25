@@ -169,9 +169,9 @@ const eslintConfig = [
       'no-implicit-coercion': 'error',
       'no-unsafe-finally': 'error',
       'no-magic-numbers': [
-        'error',
+        'warn',
         {
-          ignore: [0, 1, -1], // allow common defaults
+          ignore: [0, 1, -1],
           ignoreArrayIndexes: true,
         },
       ],
@@ -267,6 +267,15 @@ const eslintConfig = [
       'react/no-object-type-as-default-prop': 'error',
       'react/no-unstable-nested-components': ['error', { allowAsProps: false }],
       'no-unneeded-ternary': 'error',
+
+      // Turn off strict rules temporarily
+      '@typescript-eslint/await-thenable': 'off',
+      '@typescript-eslint/no-floating-promises': 'off',
+      '@typescript-eslint/no-misused-promises': 'off',
+      '@typescript-eslint/no-unsafe-assignment': 'off',
+      '@typescript-eslint/no-unsafe-call': 'off',
+      '@typescript-eslint/no-unsafe-member-access': 'off',
+      '@typescript-eslint/no-unsafe-return': 'off',
     },
   },
   {

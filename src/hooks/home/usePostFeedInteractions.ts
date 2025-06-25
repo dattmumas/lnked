@@ -4,6 +4,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 
+import { createTenantAwareRepositoryClient } from '@/lib/data-access/tenant-aware-client';
 import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
 
 interface PostInteractionsState {
@@ -88,15 +89,13 @@ export function usePostFeedInteractions(userId: string): PostFeedInteractions {
         return { ...prev, likedPosts: liked, dislikedPosts: disliked };
       });
       try {
-        await supabase.from('post_reactions').delete().match({ user_id: userId, post_id: postId });
-        if (!isLiked) {
-          await supabase.from('post_reactions').insert({ user_id: userId, post_id: postId, type: 'like' });
-        }
+        const tenantRepo = await createTenantAwareRepositoryClient();
+        await tenantRepo.insertPostReaction({ user_id: userId, post_id: postId, type: 'like' });
       } catch (err) {
         console.error('toggleLike error', err);
       }
     },
-    [userId, state.likedPosts, state.dislikedPosts, supabase],
+    [userId, state.likedPosts, state.dislikedPosts],
   );
 
   const toggleDislike = useCallback(
@@ -113,15 +112,13 @@ export function usePostFeedInteractions(userId: string): PostFeedInteractions {
         return { ...prev, likedPosts: liked, dislikedPosts: disliked };
       });
       try {
-        await supabase.from('post_reactions').delete().match({ user_id: userId, post_id: postId });
-        if (!isDisliked) {
-          await supabase.from('post_reactions').insert({ user_id: userId, post_id: postId, type: 'dislike' });
-        }
+        const tenantRepo = await createTenantAwareRepositoryClient();
+        await tenantRepo.insertPostReaction({ user_id: userId, post_id: postId, type: 'dislike' });
       } catch (err) {
         console.error('toggleDislike error', err);
       }
     },
-    [userId, state.likedPosts, state.dislikedPosts, supabase],
+    [userId, state.likedPosts, state.dislikedPosts],
   );
 
   const toggleBookmark = useCallback(
@@ -136,15 +133,17 @@ export function usePostFeedInteractions(userId: string): PostFeedInteractions {
       });
       try {
         if (isBookmarked) {
-          await supabase.from('post_bookmarks').delete().match({ user_id: userId, post_id: postId });
+          const tenantRepo = await createTenantAwareRepositoryClient();
+          await tenantRepo.deletePostBookmark({ user_id: userId, post_id: postId });
         } else {
-          await supabase.from('post_bookmarks').insert({ user_id: userId, post_id: postId });
+          const tenantRepo = await createTenantAwareRepositoryClient();
+          await tenantRepo.insertPostBookmark({ user_id: userId, post_id: postId });
         }
       } catch (err) {
         console.error('toggleBookmark error', err);
       }
     },
-    [userId, state.bookmarkedPosts, supabase],
+    [userId, state.bookmarkedPosts],
   );
 
   return { ...state, toggleLike, toggleDislike, toggleBookmark };

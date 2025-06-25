@@ -57,11 +57,11 @@ interface EnhancedPostEditorStore {
 const defaultEnhancedFormData: EnhancedPostEditorFormData = {
   title: '',
   content: '',
-  subtitle: '',
-  author: '',
-  seo_title: '',
-  meta_description: '',
-  thumbnail_url: '',
+  subtitle: undefined,
+  author: undefined,
+  seo_title: undefined,
+  meta_description: undefined,
+  thumbnail_url: undefined,
   post_type: 'text',
   metadata: {},
   is_public: false,
@@ -73,6 +73,9 @@ const defaultEnhancedFormData: EnhancedPostEditorFormData = {
   // New multi-collective fields
   selected_collectives: [],
   collective_sharing_settings: {},
+  
+  // Optional timestamp
+  published_at: undefined,
 };
 
 // Default sharing settings

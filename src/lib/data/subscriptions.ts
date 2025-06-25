@@ -1,10 +1,10 @@
-import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { createServerSupabaseClient } from '@/lib/supabase/server';
 
 export async function getUserSubscription(
   userId: string,
   collectiveId: string
-): Promise<boolean> {
-  const supabase = createServerSupabaseClient();
+): Promise<unknown> {
+  const supabase = await createServerSupabaseClient();
   const { data, error } = await supabase
     .from("subscriptions")
     .select("*")
@@ -14,5 +14,5 @@ export async function getUserSubscription(
     .eq("status", "active")
     .maybeSingle();
   if (error) throw error;
-  return Boolean(data);
+  return data;
 }

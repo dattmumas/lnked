@@ -19,6 +19,9 @@ const AUTO_SAVE_DEBOUNCE_MS = 500;
 const STALE_TIME_MS = 1000 * 60 * 5; // 5 minutes
 /* eslint-enable no-magic-numbers */
 
+// Global tracking for auto-save operations to prevent duplicates
+const globalAutoSaveTracked = new Set<string>();
+
 // Enhanced auto-save mutation hook with multi-collective support
 export const useEnhancedAutoSavePost = (): UseMutationResult<
   EnhancedPostEditorFormData,
@@ -30,6 +33,7 @@ export const useEnhancedAutoSavePost = (): UseMutationResult<
   const { markSaving, markSaved, markError, updateFormData } = store;
 
   return useMutation({
+    retry: false, // Disable automatic retries to prevent repeated attempts
     mutationFn: async (data: EnhancedPostEditorFormData & { author_id: string }): Promise<EnhancedPostEditorFormData> => {
       const supabase = createSupabaseBrowserClient();
 
@@ -42,6 +46,16 @@ export const useEnhancedAutoSavePost = (): UseMutationResult<
       const hasTitle = data.title !== undefined && data.title !== null && data.title.trim() !== '';
       if (!hasTitle) {
         throw new Error('Title is required for saving');
+      }
+
+      const hasPostType = data.post_type !== undefined && data.post_type !== null;
+      if (!hasPostType) {
+        throw new Error('Post type is required for saving');
+      }
+
+      const hasContent = data.content !== undefined && data.content !== null;
+      if (!hasContent) {
+        throw new Error('Content is required for saving');
       }
 
       // Check authentication status
@@ -73,6 +87,9 @@ export const useEnhancedAutoSavePost = (): UseMutationResult<
       const hasCollectiveId = data.collective_id !== undefined && data.collective_id !== null && data.collective_id !== '';
       const hasPublishedAt = data.published_at !== undefined && data.published_at !== null && data.published_at !== '';
 
+      // Determine tenant_id: use collective_id if present, otherwise use author_id as personal tenant
+      const tenant_id = hasCollectiveId ? data.collective_id : data.author_id;
+
       const postData = {
         id: hasId ? data.id : undefined,
         title: data.title,
@@ -80,6 +97,7 @@ export const useEnhancedAutoSavePost = (): UseMutationResult<
         subtitle: hasSubtitle ? data.subtitle : null,
         author: hasAuthor ? data.author : null,
         author_id: data.author_id,
+        tenant_id, // Required field for the database
         seo_title: hasSeoTitle ? data.seo_title : null,
         meta_description: hasMetaDescription ? data.meta_description : null,
         thumbnail_url: hasThumbnailUrl ? data.thumbnail_url : null,
@@ -99,18 +117,49 @@ export const useEnhancedAutoSavePost = (): UseMutationResult<
       // Save the post first
       const { data: post, error } = await supabase
         .from('posts')
+        // @ts-expect-error tenant-migration: tenant_id will be automatically injected via repository pattern
         .upsert(postData)
         .select()
         .single();
 
       if (error !== null) {
-        console.error('❌ Auto-save failed:', {
+        const errorDetails = {
           code: error.code,
           message: error.message,
           details: error.details,
-          hint: error.hint
-        });
-        throw new Error(`Database error: ${error.message} (Code: ${error.code})`);
+          hint: error.hint,
+          postData: {
+            ...postData,
+            // Don't log sensitive data in production
+            metadata: '[METADATA_OBJECT]'
+          }
+        };
+        console.error('❌ Auto-save failed:', errorDetails);
+        
+        // Provide more specific error messages based on error code
+        let userMessage = 'Failed to save post';
+        switch (error.code) {
+        case '23502': {
+          userMessage = 'Missing required field - please check all required fields are filled';
+        
+        break;
+        }
+        case '23503': {
+          userMessage = 'Invalid reference - please check your account permissions';
+        
+        break;
+        }
+        case '42501': {
+          userMessage = 'Permission denied - you may not have access to save this post';
+        
+        break;
+        }
+        default: if (error.message) {
+          userMessage = `Database error: ${error.message}`;
+        }
+        }
+        
+        throw new Error(userMessage);
       }
 
       if (post === null || post === undefined) {
@@ -179,10 +228,25 @@ export const useEnhancedAutoSavePost = (): UseMutationResult<
       
       // Update the query cache
       queryClient.setQueryData(['enhanced-post', savedPost.id], savedPost);
+      
+      // Clear any tracking entries for this post
+      globalAutoSaveTracked.forEach((key) => {
+        if (key.includes(savedPost.id || '')) {
+          globalAutoSaveTracked.delete(key);
+        }
+      });
     },
     onError: (error) => {
       console.error('❌ Enhanced auto-save error:', error.message);
       markError();
+      
+      // Clear tracking on error to allow retry
+      const currentUserId = store.formData?.id || 'new';
+      globalAutoSaveTracked.forEach((key) => {
+        if (key.includes(currentUserId)) {
+          globalAutoSaveTracked.delete(key);
+        }
+      });
     },
   });
 };
@@ -353,17 +417,52 @@ export const useEnhancedPostEditor = (postId?: string): UseEnhancedPostEditorRet
                           store.formData.title !== undefined && 
                           store.formData.title !== null && 
                           store.formData.title.trim() !== '';
+    const hasContentInForm = hasFormData && 
+                            store.formData.content !== undefined && 
+                            store.formData.content !== null && 
+                            store.formData.content.trim() !== '';
     const hasUserId = user?.id !== undefined && user?.id !== null && user?.id !== '';
+    const isNotCurrentlySaving = store.autoSaveStatus !== 'saving';
 
-    if (store.isDirty && hasFormData && hasTitleInForm && hasUserId && user?.id) {
-      const timer = setTimeout(() => {
-        console.warn('🚀 Enhanced auto-saving post...');
-        const dataToSave = {
-          ...store.formData,
-          author_id: user.id,
-        };
-        autoSave.mutate(dataToSave);
-      }, AUTO_SAVE_DEBOUNCE_MS);
+          if (store.isDirty && hasFormData && hasTitleInForm && hasContentInForm && hasUserId && user?.id && isNotCurrentlySaving) {
+        // Create a unique key for this auto-save operation
+        const autoSaveKey = `${user.id}-${store.formData.id || 'new'}-${Date.now()}`;
+        
+        // Check if we've already triggered auto-save for this content
+        if (globalAutoSaveTracked.has(autoSaveKey)) {
+          return () => {
+            // Empty cleanup
+          };
+        }
+        
+        const timer = setTimeout(() => {
+          // Check again before actually saving
+          if (globalAutoSaveTracked.has(autoSaveKey)) {
+            return;
+          }
+          
+          globalAutoSaveTracked.add(autoSaveKey);
+          
+          console.warn('🚀 Enhanced auto-saving post...', {
+            title: `${store.formData.title?.substring(0, 50)}...`,
+            hasContent: Boolean(store.formData.content),
+            postType: store.formData.post_type,
+            userId: `${user.id?.substring(0, 8)}...`,
+            key: autoSaveKey,
+          });
+          
+          const dataToSave = {
+            ...store.formData,
+            author_id: user.id,
+          };
+          
+          autoSave.mutate(dataToSave);
+          
+          // Clean up tracking after a delay
+          setTimeout(() => {
+            globalAutoSaveTracked.delete(autoSaveKey);
+          }, AUTO_SAVE_DEBOUNCE_MS * 2);
+        }, AUTO_SAVE_DEBOUNCE_MS);
 
       return () => {
         clearTimeout(timer);

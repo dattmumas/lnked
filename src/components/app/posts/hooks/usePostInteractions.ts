@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 
+import { createTenantAwareRepositoryClient } from '@/lib/data-access/tenant-aware-client';
 import supabase from '@/lib/supabase/browser';
 
 interface PostInteractions {
@@ -148,13 +149,12 @@ export function usePostInteractions({
 
       // Add new reaction if not removing a like
       if (!wasLiked) {
-        await client
-          .from('post_reactions')
-          .insert({
-            user_id: userId,
-            post_id: postId,
-            type: 'like',
-          });
+        const tenantRepo = await createTenantAwareRepositoryClient();
+        await tenantRepo.insertPostReaction({
+          user_id: userId,
+          post_id: postId,
+          type: 'like',
+        });
       }
     } catch (err: unknown) {
       console.error('Error toggling like:', err);
@@ -201,13 +201,12 @@ export function usePostInteractions({
 
       // Add new reaction if not removing a dislike
       if (!wasDisliked) {
-        await client
-          .from('post_reactions')
-          .insert({
-            user_id: userId,
-            post_id: postId,
-            type: 'dislike',
-          });
+        const tenantRepo = await createTenantAwareRepositoryClient();
+        await tenantRepo.insertPostReaction({
+          user_id: userId,
+          post_id: postId,
+          type: 'dislike',
+        });
       }
     } catch (err: unknown) {
       console.error('Error toggling dislike:', err);

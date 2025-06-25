@@ -1,54 +1,100 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 
-enum HttpStatus {
-  OK = 200,
-  UNAUTHORIZED = 401,
-  NOT_FOUND = 404,
-  FORBIDDEN = 403,
-  INTERNAL = 500,
-}
 
-// POST /api/chat/[conversationId]/delete
-export async function POST(
-  _request: Request,
-  context: { params: Promise<{ conversationId: string }> },
+// Constants for HTTP status codes
+const HTTP_OK = 200;
+const HTTP_UNAUTHORIZED = 401;
+const HTTP_FORBIDDEN = 403;
+const HTTP_NOT_FOUND = 404;
+const HTTP_INTERNAL_SERVER_ERROR = 500;
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ conversationId: string }> }
 ): Promise<NextResponse> {
-  const { conversationId } = await context.params;
+  try {
+    const { conversationId } = await params;
+    const supabase = await createServerSupabaseClient();
 
-  const supabase = createServerSupabaseClient();
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser();
+    // Get the current user
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
 
-  if (authError !== null || user === null) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: HttpStatus.UNAUTHORIZED });
+    if (authError !== null || user === null) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: HTTP_UNAUTHORIZED }
+      );
+    }
+
+    // Check if user is a participant in the conversation
+    const { data: participantData, error: participantError } = await supabase
+      .from('conversation_participants')
+      .select('role')
+      .eq('conversation_id', conversationId)
+      .eq('user_id', user.id)
+      .single();
+
+    if (participantError !== null || participantData === null) {
+      return NextResponse.json(
+        { error: 'You are not a participant in this conversation' },
+        { status: HTTP_FORBIDDEN }
+      );
+    }
+
+    // Get conversation details to check ownership
+    const { data: conversationData, error: conversationError } = await supabase
+      .from('conversations')
+      .select('created_by, type')
+      .eq('id', conversationId)
+      .single();
+
+    if (conversationError !== null || conversationData === null) {
+      return NextResponse.json(
+        { error: 'Conversation not found' },
+        { status: HTTP_NOT_FOUND }
+      );
+    }
+
+    // Only allow deletion by conversation creator or admin participants
+    const canDelete = 
+      conversationData.created_by === user.id || 
+      participantData.role === 'admin';
+
+    if (!canDelete) {
+      return NextResponse.json(
+        { error: 'You do not have permission to delete this conversation' },
+        { status: HTTP_FORBIDDEN }
+      );
+    }
+
+    // Delete the conversation (this will cascade to participants and messages)
+    const { error: deleteError } = await supabase
+      .from('conversations')
+      .delete()
+      .eq('id', conversationId);
+
+    if (deleteError !== null) {
+      console.error('Error deleting conversation:', deleteError);
+      return NextResponse.json(
+        { error: 'Failed to delete conversation' },
+        { status: HTTP_INTERNAL_SERVER_ERROR }
+      );
+    }
+
+    return NextResponse.json(
+      { message: 'Conversation deleted successfully' },
+      { status: HTTP_OK }
+    );
+  } catch (error: unknown) {
+    console.error('Error in DELETE /api/chat/[conversationId]/delete:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: HTTP_INTERNAL_SERVER_ERROR }
+    );
   }
-
-  // Ensure the participant row exists
-  const { data: participant } = await supabase
-    .from('conversation_participants')
-    .select('id')
-    .eq('conversation_id', conversationId)
-    .eq('user_id', user.id)
-    .single();
-
-  if (participant === null) {
-    return NextResponse.json({ error: 'Conversation not found' }, { status: HttpStatus.NOT_FOUND });
-  }
-
-  const { error } = await supabase
-    .from('conversation_participants')
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    .update({ deleted_at: new Date().toISOString() } as any)
-    .eq('conversation_id', conversationId)
-    .eq('user_id', user.id);
-
-  if (error !== null) {
-    return NextResponse.json({ error: 'Failed to delete conversation' }, { status: HttpStatus.INTERNAL });
-  }
-
-  return NextResponse.json({ success: true }, { status: HttpStatus.OK });
 } 

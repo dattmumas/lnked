@@ -9,7 +9,7 @@ export async function POST(
   { params }: { params: Promise<{ slug: string }> },
 ): Promise<NextResponse> {
   const { slug: postId } = await params;
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
 
   // Validate that postId is a valid UUID
   const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(postId);

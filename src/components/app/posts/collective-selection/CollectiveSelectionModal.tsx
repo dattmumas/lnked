@@ -223,8 +223,8 @@ export function CollectiveSelectionModal({
     [],
   );
 
-  const handleSortChange = useCallback((value: SortOption): void => {
-    setSortBy(value);
+  const handleSortChange = useCallback((value: string): void => {
+    setSortBy(value as SortOption);
   }, []);
 
   const handleSortDirectionToggle = useCallback((): void => {

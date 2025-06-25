@@ -25,7 +25,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 
 export default async function UserSettingsPage(): Promise<React.ReactElement> {
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
   const {
     data: { user: authUser },
   } = await supabase.auth.getUser();

@@ -9,10 +9,15 @@
 import { createHash } from 'crypto';
 
 import Mux from '@mux/mux-node';
-import { NextRequest, NextResponse } from 'next/server';
+import { type SupabaseClient } from '@supabase/supabase-js';
+import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
-import { VideoAssetSchema, VideoAsset } from '@/lib/data-access/schemas/video.schema';
+import {
+  VideoAssetSchema,
+  type VideoAsset,
+} from '@/lib/data-access/schemas/video.schema';
+import { type Database } from '@/lib/database.types';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -227,7 +232,7 @@ function generateETag(video: VideoAsset): string {
 
 // Fix #14: Ownership validation with RLS compliance - excludes deleted videos
 async function assertOwnership(
-  supabase: ReturnType<typeof createServerSupabaseClient>,
+  supabase: SupabaseClient<Database>,
   userId: string,
   videoId: string,
 ): Promise<VideoAsset> {
@@ -346,7 +351,7 @@ async function cleanupMuxResources(video: VideoAsset): Promise<void> {
 async function updatePlaybackPolicy(
   video: VideoAsset, 
   newIsPublic: boolean,
-  supabase: ReturnType<typeof createServerSupabaseClient>, // Fix #2: Inject client
+  supabase: SupabaseClient<Database>, // Fix #2: Inject client
 ): Promise<void> {
   // Skip if no Mux asset ID yet (video still uploading/processing) or no change needed
   if (video.mux_asset_id === null || video.mux_asset_id === undefined || video.mux_asset_id.trim() === '' || video.is_public === newIsPublic) {
@@ -409,12 +414,12 @@ async function updatePlaybackPolicy(
 // ─────────────────────────────────────────────────────────────────────────────
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }, // Fixed: params IS a Promise in Next.js 15
+  { params }: { params: Promise<{ id: string }> },
 ): Promise<NextResponse> {
-  const { id } = await params; // Fixed: Await params in Next.js 15
+  const { id } = await params;
   
   try {
-    const supabase = createServerSupabaseClient();
+    const supabase = await createServerSupabaseClient();
     
     const {
       data: { user },
@@ -459,7 +464,7 @@ export async function GET(
       );
     }
     
-    logError('GET_video_error', error, { video_id: id });
+    logError('GET_video_error', error instanceof Error ? error.message : String(error), { video_id: id });
     return NextResponse.json({ error: 'Internal server error' }, { status: HTTP_STATUS_INTERNAL_SERVER_ERROR });
   }
 }
@@ -479,12 +484,12 @@ const UpdateSchema = z.object({
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }, // Fix #3: Remove Promise wrapper
+  { params }: { params: Promise<{ id: string }> },
 ): Promise<NextResponse> {
-  const { id } = await params; // Fix #3: No await needed
+  const { id } = await params;
   
   try {
-    const supabase = createServerSupabaseClient();
+    const supabase = await createServerSupabaseClient();
     
     const {
       data: { user },
@@ -573,7 +578,7 @@ export async function PATCH(
       );
     }
     
-    logError('PATCH_video_error', error, { video_id: id });
+    logError('PATCH_video_error', error instanceof Error ? error.message : String(error), { video_id: id });
     return NextResponse.json({ error: 'Internal server error' }, { status: HTTP_STATUS_INTERNAL_SERVER_ERROR });
   }
 }
@@ -583,12 +588,12 @@ export async function PATCH(
 // ─────────────────────────────────────────────────────────────────────────────
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }, // Fix #3: Remove Promise wrapper
+  { params }: { params: Promise<{ id: string }> },
 ): Promise<NextResponse> {
-  const { id } = await params; // Fix #3: No await needed
+  const { id } = await params;
   
   try {
-    const supabase = createServerSupabaseClient();
+    const supabase = await createServerSupabaseClient();
     
     const {
       data: { user },
@@ -656,7 +661,7 @@ export async function DELETE(
       );
     }
     
-    logError('DELETE_video_error', error, { video_id: id });
+    logError('DELETE_video_error', error instanceof Error ? error.message : String(error), { video_id: id });
     return NextResponse.json({ error: 'Internal server error' }, { status: HTTP_STATUS_INTERNAL_SERVER_ERROR });
   }
 }

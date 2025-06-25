@@ -63,7 +63,7 @@ export async function POST(request: Request, context: { params: Promise<{ conver
   const { conversationId } = await context.params;
 
   // 1. Auth
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
   const {
     data: { user },
     error: authError,

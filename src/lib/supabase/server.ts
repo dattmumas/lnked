@@ -1,58 +1,91 @@
 import { createServerClient } from "@supabase/ssr";
-import { SupabaseClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
+import { cache } from "react";
 
-import type { Database } from "../database.types";
+import type { Database } from "@/types/database.types";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 type CookieOptions = Partial<{
+  domain: string;
+  expires: Date;
+  httpOnly: boolean;
   maxAge: number;
   path: string;
-  domain: string;
+  priority: 'low' | 'medium' | 'high';
+  sameSite: 'strict' | 'lax' | 'none';
   secure: boolean;
-  httpOnly: boolean;
-  sameSite: "lax" | "strict" | "none" | boolean;
-  expires: Date;
 }>;
 
-export function createServerSupabaseClient(): SupabaseClient<Database> {
-  const cookieStorePromise = cookies();
+/**
+ * Create a request-scoped Supabase client using React's cache function
+ * This ensures we only create one client per request, improving performance
+ * while maintaining proper session context through cookies
+ */
+export const createServerSupabaseClient = cache(async (): Promise<SupabaseClient<Database>> => {
+  const cookieStore = await cookies();
 
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  if (url === undefined || url === "" || anonKey === undefined || anonKey === "") {
-    throw new Error("Supabase environment variables are missing");
-  }
-
-  const supabase = createServerClient<Database>(
-    url,
-    anonKey,
+  return createServerClient<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        get: async (name) => {
-          const cookieStore = await cookieStorePromise;
+        get(name: string) {
           return cookieStore.get(name)?.value;
         },
-        set: async (name: string, value: string, options?: CookieOptions) => {
-          const cookieStore = await cookieStorePromise;
+        set(name: string, value: string, options?: CookieOptions) {
           try {
             cookieStore.set(name, value, options);
           } catch {
-            // Server Component may be trying to set cookies - this is expected in some cases
-            console.warn('Warning: Cannot set cookies in Server Component context');
+            // The `set` method was called from a Server Component.
+            // This can be ignored if you have middleware refreshing
+            // user sessions.
           }
         },
-        remove: async (name: string, options?: CookieOptions) => {
-          const cookieStore = await cookieStorePromise;
+        remove(name: string, options?: CookieOptions) {
           try {
             cookieStore.set(name, '', { ...options, maxAge: 0 });
           } catch {
-            // Server Component may be trying to remove cookies - this is expected in some cases
-            console.warn('Warning: Cannot remove cookies in Server Component context');
+            // The `remove` method was called from a Server Component.
+            // This can be ignored if you have middleware refreshing
+            // user sessions.
           }
         },
       },
-    }
+    },
   );
+});
 
-  return supabase;
-}
+// Create a service role client for admin operations
+export const createServerSupabaseAdminClient = cache(async (): Promise<SupabaseClient<Database>> => {
+  const cookieStore = await cookies();
+
+  return createServerClient<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    {
+      cookies: {
+        get(name: string) {
+          return cookieStore.get(name)?.value;
+        },
+        set(name: string, value: string, options?: CookieOptions) {
+          try {
+            cookieStore.set(name, value, options);
+          } catch {
+            // The `set` method was called from a Server Component.
+            // This can be ignored if you have middleware refreshing
+            // user sessions.
+          }
+        },
+        remove(name: string, options?: CookieOptions) {
+          try {
+            cookieStore.set(name, '', { ...options, maxAge: 0 });
+          } catch {
+            // The `remove` method was called from a Server Component.
+            // This can be ignored if you have middleware refreshing
+            // user sessions.
+          }
+        },
+      },
+    },
+  );
+});

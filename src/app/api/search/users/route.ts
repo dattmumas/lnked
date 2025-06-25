@@ -1,43 +1,78 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { z } from 'zod';
 
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 
-// Constants for validation and limits
-const MAX_QUERY_LENGTH = 100;
-const DEFAULT_SEARCH_LIMIT = 10;
-const MAX_SEARCH_LIMIT = 25;
 
-const QuerySchema = z.object({
-  q: z.string().trim().min(1).max(MAX_QUERY_LENGTH),
-  limit: z.coerce.number().optional(),
-});
+// Constants for HTTP status codes
+const HTTP_OK = 200;
+const HTTP_BAD_REQUEST = 400;
+const HTTP_UNAUTHORIZED = 401;
+const HTTP_INTERNAL_SERVER_ERROR = 500;
+const DEFAULT_LIMIT = 20;
+const MIN_QUERY_LENGTH = 2;
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
-  const { searchParams } = new URL(request.url);
-  const parsed = QuerySchema.safeParse({
-    q: searchParams.get('q') ?? '',
-    limit: searchParams.get('limit') ?? undefined,
-  });
+  try {
+    const supabase = await createServerSupabaseClient();
 
-  if (!parsed.success) {
-    return NextResponse.json({ error: 'Invalid query' }, { status: 400 });
+    // Get the current user
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError !== null || user === null) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: HTTP_UNAUTHORIZED }
+      );
+    }
+
+    // Get search params
+    const { searchParams } = new URL(request.url);
+    const query = searchParams.get('q')?.trim() || '';
+    const limit = parseInt(searchParams.get('limit') || String(DEFAULT_LIMIT), 10);
+
+    if (query.length < MIN_QUERY_LENGTH) {
+      return NextResponse.json(
+        { error: 'Query must be at least 2 characters long' },
+        { status: HTTP_BAD_REQUEST }
+      );
+    }
+
+    // Search for users by username, full_name, or bio
+    const { data: usersData, error: usersError } = await supabase
+      .from('users')
+      .select('id, username, full_name, bio, avatar_url')
+      .or(`username.ilike.%${query}%,full_name.ilike.%${query}%,bio.ilike.%${query}%`)
+      .neq('id', user.id) // Exclude current user from results
+      .not('username', 'is', null)
+      .order('username', { ascending: true })
+      .limit(limit);
+
+    if (usersError !== null) {
+      console.error('Error searching users:', usersError);
+      return NextResponse.json(
+        { error: 'Failed to search users' },
+        { status: HTTP_INTERNAL_SERVER_ERROR }
+      );
+    }
+
+    return NextResponse.json(
+      { 
+        users: usersData || [],
+        query,
+        count: (usersData || []).length
+      },
+      { status: HTTP_OK }
+    );
+  } catch (error: unknown) {
+    console.error('Error in GET /api/search/users:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: HTTP_INTERNAL_SERVER_ERROR }
+    );
   }
-
-  const { q, limit = DEFAULT_SEARCH_LIMIT } = parsed.data;
-  const supabase = createServerSupabaseClient();
-
-  const { data, error } = await supabase
-    .from('users')
-    .select('id, username, full_name, avatar_url')
-    .ilike('username', `%${q}%`)
-    .limit(Math.min(limit, MAX_SEARCH_LIMIT));
-
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
-
-  return NextResponse.json(data, { status: 200 });
 }
 
 export const runtime = 'nodejs'; 

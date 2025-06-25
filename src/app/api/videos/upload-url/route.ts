@@ -71,7 +71,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     });
 
     // Create Supabase client with proper auth context
-    const supabase = createServerSupabaseClient();
+    const supabase = await createServerSupabaseClient();
 
     // Get current user with proper error handling
     const {

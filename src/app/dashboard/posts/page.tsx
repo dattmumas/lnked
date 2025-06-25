@@ -25,7 +25,7 @@ type PublishingTargetCollective = Pick<
 >;
 
 export default async function MyPostsPage(): Promise<React.ReactElement> {
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
 
   const {
     data: { session },
@@ -88,9 +88,9 @@ export default async function MyPostsPage(): Promise<React.ReactElement> {
 
   if (postsError !== null || ownedError !== null || memberError !== null) {
     console.error('Error fetching data for My Posts page:', {
-      postsError: JSON.stringify(postsError),
-      ownedError: JSON.stringify(ownedError),
-      memberError: JSON.stringify(memberError),
+      postsError: JSON.stringify(postsError, null, 2),
+      ownedError: JSON.stringify(ownedError, null, 2),
+      memberError: JSON.stringify(memberError, null, 2),
     });
     return <div className="p-4">Failed to load page data.</div>;
   }

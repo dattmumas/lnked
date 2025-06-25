@@ -2,30 +2,28 @@ import { redirect } from 'next/navigation';
 
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 
-export default async function ProfileRedirectPage(): Promise<never> {
-  const supabase = createServerSupabaseClient();
+export default async function ProfilePage(): Promise<never> {
+  const supabase = await createServerSupabaseClient();
 
   const {
     data: { user },
+    error: authError,
   } = await supabase.auth.getUser();
 
-  if (!user) {
-    // If not authenticated, redirect to sign-in
-    redirect('/sign-in?redirect=/profile');
+  if (authError !== null || user === null) {
+    redirect('/auth/login');
   }
 
-  // Get the user's username from the database
-  const { data: userData } = await supabase
+  const { data: profile } = await supabase
     .from('users')
-    .select('username')
+    .select('*')
     .eq('id', user.id)
     .single();
 
-  if (userData?.username === null || userData?.username === undefined) {
-    // If no username found, redirect to profile edit to set one up
-    redirect('/dashboard/profile/edit');
+  if (profile?.username !== null && profile?.username !== undefined) {
+    redirect(`/profile/${profile.username}`);
   }
 
-  // Redirect to the user's profile page
-  redirect(`/profile/${userData.username}`);
+  // If no username, redirect to onboarding
+  redirect('/onboarding');
 }

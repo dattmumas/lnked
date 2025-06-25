@@ -353,6 +353,7 @@ const MessageRow = React.memo(
       <>
         <div
           ref={measureElement}
+          data-index={virtualItem.index}
           data-message-id={message.id}
           style={{
             position: 'absolute',

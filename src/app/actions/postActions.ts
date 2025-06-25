@@ -18,7 +18,7 @@ import {
   isSupabaseStorageUrl 
 } from '@/lib/utils/thumbnail';
 
-import type { TablesInsert, TablesUpdate } from '@/lib/database.types';
+import type { TablesInsert, TablesUpdate } from '@/types/database.types';
 
 // Constants for configuration
 const MAX_SLUG_LENGTH = 75;
@@ -110,7 +110,7 @@ const batchRevalidatePaths = async (paths: string[]): Promise<void> => {
 
 // Optimized collective permission checking with single query
 const validateCollectivePermissions = async (
-  supabase: ReturnType<typeof createServerSupabaseClient>,
+  supabase: Awaited<ReturnType<typeof createServerSupabaseClient>>,
   userId: string,
   collectiveIds: string[]
 ): Promise<{ valid: Array<{ id: string; slug: string; canPost: boolean }>; error?: string }> => {
@@ -140,7 +140,7 @@ const validateCollectivePermissions = async (
     }
 
     const validCollectives = collectivesData
-      .filter(collective => {
+      .filter((collective: { owner_id: string; collective_members: Array<{ member_id: string; role: string }> | null }) => {
         // User is owner
         if (collective.owner_id === userId) return true;
         
@@ -150,7 +150,7 @@ const validateCollectivePermissions = async (
         );
         return userMembership !== null && userMembership !== undefined && ['admin', 'editor', 'author'].includes(userMembership.role);
       })
-      .map(collective => ({
+      .map((collective: { id: string; slug: string }) => ({
         id: collective.id,
         slug: collective.slug,
         canPost: true
@@ -194,7 +194,7 @@ interface CreatePostResult {
 export async function createPost(
   formData: CreatePostFormValues,
 ): Promise<CreatePostResult> {
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
 
   const {
     data: { user },
@@ -260,6 +260,10 @@ export async function createPost(
   const postSlug = resolveSlugConflict(baseSlug);
   const dbStatus = derivePostStatus(is_public, published_at);
 
+  // Determine tenant_id: use collective_id if present, otherwise use user_id as personal tenant
+  // TODO: Replace with proper tenant lookup once database types are updated
+  const tenant_id = collectiveId ?? user.id;
+
   const postToInsert: TablesInsert<'posts'> = {
     author_id: user.id,
     title,
@@ -267,6 +271,7 @@ export async function createPost(
     content,
     is_public,
     collective_id: collectiveId ?? null,
+    tenant_id,
     published_at,
     status: dbStatus,
     view_count: 0,
@@ -367,7 +372,7 @@ export async function updatePost(
   postId: string,
   formData: UpdatePostClientValues,
 ): Promise<UpdatePostResult> {
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
 
   const {
     data: { user },
@@ -552,7 +557,7 @@ interface DeletePostResult {
 }
 
 export async function deletePost(postId: string): Promise<DeletePostResult> {
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
 
   const {
     data: { user },
@@ -612,7 +617,7 @@ export async function incrementPostViewCount(
   }
   
   try {
-    const supabase = createServerSupabaseClient();
+    const supabase = await createServerSupabaseClient();
     
     // Use the existing RPC function (rate limiting would need to be implemented in the RPC function itself)
     const { error } = await supabase.rpc('increment_view_count', {
@@ -642,7 +647,7 @@ export async function featurePost(
   postId: string,
   feature: boolean,
 ): Promise<FeaturePostResult> {
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
 
   const {
     data: { user },
@@ -697,7 +702,7 @@ export async function uploadThumbnail(
   formData: FormData,
   postId?: string
 ): Promise<{ success: boolean; thumbnailUrl?: string; error?: string }> {
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
 
   const {
     data: { user },

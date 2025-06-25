@@ -18,7 +18,7 @@ export async function GET(request: NextRequest, context: { params: Promise<{ con
   const limitParam = searchParams.get('limit');
   const limit = Math.min(Math.max(parseInt(limitParam ?? '50', 10) || 50, 1), 100);
 
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
   const {
     data: { user },
     error: authError,

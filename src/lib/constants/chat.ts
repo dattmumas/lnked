@@ -5,3 +5,7 @@ export const MAX_TITLE_LENGTH = 255;
 // Design tokens
 export const CHAT_HEADER_HEIGHT = 'h-16';
 export const CHAT_HEADER_HEIGHT_PX = 64;    
+
+// Data fetching
+export const MESSAGE_STALE_TIME_MS = 5 * 60 * 1000; // 5 minutes
+export const SEARCH_STALE_TIME_MS = 30 * 1000; // 30 seconds 

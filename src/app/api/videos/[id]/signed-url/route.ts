@@ -86,7 +86,7 @@ export async function GET(
       );
     }
 
-    const supabase = createServerSupabaseClient();
+    const supabase = await createServerSupabaseClient();
     
     // Get the authenticated user
     const {

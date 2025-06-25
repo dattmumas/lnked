@@ -325,7 +325,7 @@ export class ClientNotificationService {
           table: 'notifications',
           filter: `recipient_id=eq.${userId}`,
         },
-        (payload: { new: Record<string, unknown> }) => {
+        (payload: { new: Notification }) => {
           void (async () => {
             // Fetch the full notification with actor data
             const { data: notification } = await this.supabase

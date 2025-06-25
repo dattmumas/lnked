@@ -366,7 +366,7 @@ export async function POST(
   
   try {
     // Session-aware Supabase client (already handles session context internally)
-    const supabase = createServerSupabaseClient();
+    const supabase = await createServerSupabaseClient();
 
     // Get current user
     const {

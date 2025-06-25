@@ -31,7 +31,7 @@ type ConversationWithDetails = Database['public']['Tables']['conversations']['Ro
 
 export async function GET(): Promise<NextResponse> {
   try {
-    const supabase = createServerSupabaseClient();
+    const supabase = await createServerSupabaseClient();
     
     // Get current user
     const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -39,39 +39,44 @@ export async function GET(): Promise<NextResponse> {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Fetch conversations with participants
-    const { data: participantData, error: participantError } = await supabase
-      .from('conversation_participants')
+    // Fetch conversations user participates in directly via join to avoid recursion error
+    const { data: conversationsWithRead, error: convErr } = await supabase
+      .from('conversations')
       .select(`
-        conversation_id,
-        last_read_at,
-        conversations!inner(
-          id,
-          title,
-          type,
-          description,
-          is_private,
-          last_message_at,
-          created_at,
-          created_by
-        )
+        id,
+        title,
+        type,
+        description,
+        is_private,
+        last_message_at,
+        created_at,
+        created_by,
+        conversation_participants:conversation_participants!inner(user_id,last_read_at)
       `)
-      .eq('user_id', user.id)
-      .is('deleted_at', null)
-      .order('conversations(last_message_at)', { ascending: false });
+      .eq('conversation_participants.user_id', user.id)
+      .is('conversation_participants.deleted_at', null)
+      .order('last_message_at', { ascending: false });
 
-    if (participantError !== null) {
-      console.error('Error fetching conversations:', participantError);
+    if (convErr !== null) {
+      console.error('Error fetching conversations:', convErr);
       return NextResponse.json({ error: 'Failed to fetch conversations' }, { status: 500 });
     }
 
-    if (participantData === null || participantData.length === 0) {
+    if (!conversationsWithRead || conversationsWithRead.length === 0) {
       return NextResponse.json({ conversations: [] });
     }
 
-    // Filter out null conversation IDs and get valid IDs
-    const validParticipantData = participantData.filter(p => p.conversation_id !== null);
-    const conversationIds = validParticipantData.map(p => p.conversation_id as string);
+    // conversationIds and participantData derive from fetched data
+    const validParticipantData = conversationsWithRead.flatMap((conv) =>
+      (conv.conversation_participants as Array<{ user_id: string; last_read_at: string | null }>).map((p) => ({
+        conversation_id: conv.id,
+        last_read_at: p.last_read_at,
+      })),
+    );
+
+    const conversationIds = conversationsWithRead.map((c) => c.id);
+
+    const conversationsMeta = conversationsWithRead;
 
     // Fetch last messages for all conversations
     const { data: lastMessages } = await supabase
@@ -103,7 +108,7 @@ export async function GET(): Promise<NextResponse> {
 
     // Fetch unread counts for each conversation
     const unreadCountPromises = validParticipantData.map(async (participant) => {
-      const conversationId = participant.conversation_id as string;
+      const conversationId = participant.conversation_id;
       const lastReadAt = participant.last_read_at !== null && participant.last_read_at !== undefined 
         ? participant.last_read_at 
         : '1970-01-01T00:00:00Z';
@@ -151,14 +156,23 @@ export async function GET(): Promise<NextResponse> {
     });
 
     // Transform data to include all details
+    const conversationsMetaMap = new Map<string, NonNullable<typeof conversationsMeta>[0]>();
+    conversationsMeta?.forEach((c) => conversationsMetaMap.set(c.id, c));
+
     const conversations: ConversationWithDetails[] = validParticipantData.map(p => {
-      const conv = p.conversations as Database['public']['Tables']['conversations']['Row'];
-      const conversationId = p.conversation_id as string;
+      const conversationId = p.conversation_id;
+      const conv = conversationsMetaMap.get(conversationId) as NonNullable<typeof conversationsMeta>[0];
       const lastMessage = lastMessageMap.get(conversationId);
       const participants = participantsMap.get(conversationId) ?? [];
       
       return {
         ...conv,
+        // Add missing required fields with default values
+        archived: null,
+        collective_id: null,
+        tenant_id: null,
+        unique_group_hash: null,
+        updated_at: null,
         unread_count: unreadCountMap.get(conversationId) ?? 0,
         last_message: lastMessage !== undefined && 
                      lastMessage !== null && 
@@ -194,7 +208,7 @@ export async function GET(): Promise<NextResponse> {
 
 export async function POST(request: Request): Promise<NextResponse> {
   try {
-    const supabase = createServerSupabaseClient();
+    const supabase = await createServerSupabaseClient();
     
     // Get current user
     const { data: { user }, error: authError } = await supabase.auth.getUser();

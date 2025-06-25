@@ -9,17 +9,20 @@ import { createServerSupabaseClient } from '@/lib/supabase/server';
 export const revalidate = 300;
 
 export default async function LandingPage(): Promise<React.JSX.Element> {
-  // Check if user is already logged in for smart redirect
-  const supabase = createServerSupabaseClient();
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
+  const supabase = await createServerSupabaseClient();
 
-  // If user is logged in, redirect to dashboard
-  if (session?.user !== null && session?.user !== undefined) {
+  // Check if user is authenticated
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+
+  // If authenticated, redirect to dashboard
+  if (authError === null && user !== null) {
     redirect('/dashboard');
   }
 
+  // If not authenticated, show landing page
   return (
     <>
       {/* Server-rendered static content for SEO */}

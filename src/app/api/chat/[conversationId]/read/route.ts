@@ -8,7 +8,7 @@ export async function PATCH(
 ): Promise<NextResponse> {
   try {
     const { conversationId } = await context.params;
-    const supabase = createServerSupabaseClient();
+    const supabase = await createServerSupabaseClient();
     
     // Get current user
     const { data: { user }, error: authError } = await supabase.auth.getUser();

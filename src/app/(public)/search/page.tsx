@@ -17,7 +17,7 @@ export default async function Page({
 }: {
   searchParams: Promise<{ q?: string }>;
 }): Promise<React.JSX.Element> {
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
   const { q: queryParam } = await searchParams;
   const rawQ = queryParam?.trim() ?? '';
   const q = rawQ;

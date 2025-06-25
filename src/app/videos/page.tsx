@@ -5,7 +5,7 @@ import VideoManagementDashboard from '@/components/app/video/manage/VideoManagem
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 
 export default async function VideosPage(): Promise<React.ReactElement> {
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
 
   // Check authentication
   const {

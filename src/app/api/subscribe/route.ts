@@ -5,6 +5,12 @@ import { z } from 'zod';
 import { getStripe } from '@/lib/stripe';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 
+import type { Database } from '@/lib/database.types';
+import type { SupabaseClient } from '@supabase/supabase-js';
+
+// Convenience alias for a resolved Supabase client instance
+type SBClient = SupabaseClient<Database>;
+
 // Environment-based configuration with sane defaults
 const INTERNAL_SERVER_ERROR_STATUS = 500;
 const TOO_MANY_REQUESTS_STATUS = 429;
@@ -95,7 +101,7 @@ function logSubscriptionAction(
 // Enhanced price validation with caching using api_cache table
 async function validatePriceId(
   priceId: string,
-  supabase: ReturnType<typeof createServerSupabaseClient>
+  supabase: SBClient
 ): Promise<{ isValid: boolean; error?: string }> {
   try {
     // Check cache first
@@ -160,7 +166,7 @@ async function validatePriceId(
 // Database-based rate limiting using api_cache table
 async function checkRateLimit(
   userId: string,
-  supabase: ReturnType<typeof createServerSupabaseClient>
+  supabase: SBClient
 ): Promise<{ allowed: boolean; retryAfter?: number }> {
   try {
     const windowStart = new Date(Date.now() - RATE_LIMIT_WINDOW_MS).toISOString();
@@ -185,8 +191,11 @@ async function checkRateLimit(
     if (attemptCount >= RATE_LIMIT_MAX_REQUESTS) {
       // Calculate retry after from oldest attempt
       const oldestAttempt = data?.[data.length - 1]?.created_at;
-      const retryAfter = (oldestAttempt !== null && oldestAttempt !== undefined)
-        ? Math.ceil((new Date(oldestAttempt).getTime() + RATE_LIMIT_WINDOW_MS - Date.now()) / MS_PER_SECOND_CONVERSION)
+      const retryAfter = (typeof oldestAttempt === 'string')
+        ? Math.ceil(
+            (new Date(oldestAttempt).getTime() + RATE_LIMIT_WINDOW_MS - Date.now()) /
+              MS_PER_SECOND_CONVERSION,
+          )
         : MINUTES_PER_HOUR * SECONDS_PER_MINUTE;
       return { allowed: false, retryAfter: Math.max(retryAfter, 1) };
     }
@@ -213,7 +222,7 @@ async function checkIdempotency(
   userId: string,
   targetEntityType: string,
   targetEntityId: string,
-  supabase: ReturnType<typeof createServerSupabaseClient>
+  supabase: SBClient
 ): Promise<{ isDuplicate: boolean; existingUrl?: string }> {
   try {
     const windowStart = new Date(Date.now() - IDEMPOTENCY_WINDOW_MS).toISOString();
@@ -251,7 +260,7 @@ async function storeIdempotencyRecord(
   targetEntityType: string,
   targetEntityId: string,
   sessionUrl: string,
-  supabase: ReturnType<typeof createServerSupabaseClient>
+  supabase: SBClient
 ): Promise<void> {
   try {
     const cacheKey = `idempotency_${userId}_${targetEntityType}_${targetEntityId}`;
@@ -303,7 +312,7 @@ function validateRedirectPath(redirectPath: string, siteUrl: string): string {
 async function checkCollectiveAuthorization(
   userId: string,
   collectiveId: string,
-  supabase: ReturnType<typeof createServerSupabaseClient>
+  supabase: SBClient
 ): Promise<{ authorized: boolean; error?: string }> {
   try {
     // Use RPC function that enforces RLS policies
@@ -339,7 +348,7 @@ async function checkCollectiveAuthorization(
 // Enhanced customer creation with proper upsert logic and Stripe idempotency
 async function getOrCreateStripeCustomer(
   user: { id: string; email: string; user_metadata?: { full_name?: string; preferred_locales?: string[] } },
-  supabase: ReturnType<typeof createServerSupabaseClient>
+  supabase: SBClient
 ): Promise<{ success: boolean; customerId?: string; error?: string }> {
   try {
     const stripe = getStripe();
@@ -414,7 +423,7 @@ async function storeCheckoutSession(
   userId: string,
   targetEntityType: string,
   targetEntityId: string,
-  supabase: ReturnType<typeof createServerSupabaseClient>
+  supabase: SBClient
 ): Promise<void> {
   try {
     await supabase
@@ -478,7 +487,7 @@ function handleStripeError(error: unknown): { status: number; message: string } 
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
   // Create session-aware Supabase client with proper context
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
 
   const stripe = getStripe();
   if (stripe === null) {

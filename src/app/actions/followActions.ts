@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 
+
 interface FollowActionResult {
   success: boolean;
   error?: string;
@@ -12,14 +13,14 @@ interface FollowActionResult {
 export async function followUser(
   userIdToFollow: string,
 ): Promise<FollowActionResult> {
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
 
   const {
     data: { user },
     error: authError,
   } = await supabase.auth.getUser();
 
-  if (authError || !user) {
+  if (authError !== null || user === null) {
     return { success: false, error: 'User not authenticated.' };
   }
 
@@ -96,14 +97,14 @@ export async function followUser(
 export async function unfollowUser(
   userIdToUnfollow: string,
 ): Promise<FollowActionResult> {
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
 
   const {
     data: { user },
     error: authError,
   } = await supabase.auth.getUser();
 
-  if (authError || !user) {
+  if (authError !== null || user === null) {
     return { success: false, error: 'User not authenticated.' };
   }
 
@@ -172,14 +173,14 @@ export async function unfollowUser(
 export async function followCollective(
   collectiveId: string,
 ): Promise<FollowActionResult> {
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
 
   const {
     data: { user },
     error: authError,
   } = await supabase.auth.getUser();
 
-  if (authError || !user) {
+  if (authError !== null || user === null) {
     return { success: false, error: 'User not authenticated.' };
   }
 
@@ -226,14 +227,14 @@ export async function followCollective(
 export async function unfollowCollective(
   collectiveId: string,
 ): Promise<FollowActionResult> {
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
 
   const {
     data: { user },
     error: authError,
   } = await supabase.auth.getUser();
 
-  if (authError || !user) {
+  if (authError !== null || user === null) {
     return { success: false, error: 'User not authenticated.' };
   }
 

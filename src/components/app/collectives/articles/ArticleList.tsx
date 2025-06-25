@@ -116,8 +116,8 @@ export function ArticleList({
     }
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
-  const handleFilterChange = useCallback((value: FilterType): void => {
-    setFilter(value);
+  const handleFilterChange = useCallback((value: string): void => {
+    setFilter(value as FilterType);
   }, []);
 
   if (isLoading) {

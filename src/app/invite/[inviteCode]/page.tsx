@@ -10,7 +10,7 @@ export default async function InviteAcceptPage({
 }: {
   params: Promise<{ inviteCode: string }>;
 }): Promise<React.ReactElement> {
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
   const { inviteCode } = await params;
   const {
     data: { user },

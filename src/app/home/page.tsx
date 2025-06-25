@@ -7,14 +7,14 @@ import HomePageClient from './HomePageClient';
 
 export default async function HomePage(): Promise<React.ReactElement> {
   // Server-side authentication check
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
   const {
     data: { user },
     error: authError,
   } = await supabase.auth.getUser();
 
   // If there's an auth error or no user, redirect to sign-in
-  if (authError || !user) {
+  if (authError !== null || user === null) {
     redirect('/sign-in?redirect=/home');
   }
 

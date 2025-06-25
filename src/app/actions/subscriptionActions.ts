@@ -21,7 +21,7 @@ export async function getSubscriptionStatus(
   targetEntityType: Enums<"subscription_target_type">,
   targetEntityId: string
 ): Promise<SubscriptionStatusResult | undefined> {
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
 
   const {
     data: { user },
@@ -66,7 +66,7 @@ export async function unsubscribeFromEntity(
   dbSubscriptionId: string, // ID from your public.subscriptions table
   stripeSubscriptionId: string
 ): Promise<UnsubscribeResult> {
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
   const {
     data: { user },
     error: authError,
@@ -159,7 +159,7 @@ export async function createPriceTier({
   interval: 'month' | 'year';
   tierName?: string;
 }): Promise<TierResult> {
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
   const {
     data: { user },
     error: authError,
@@ -237,7 +237,7 @@ export async function deactivatePriceTier({
   collectiveId: string;
   priceId: string;
 }): Promise<TierResult> {
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
   const {
     data: { user },
     error: authError,
