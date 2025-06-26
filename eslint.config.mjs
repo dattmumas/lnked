@@ -32,6 +32,8 @@ const eslintConfig = [
 
       // Generated files
       'src/types/database.types.ts',
+      'src/lib/database.types.ts',
+      '**/database.types.ts',
 
       // Data access layer
       'src/lib/data-access/**/*',
@@ -79,7 +81,7 @@ const eslintConfig = [
       '.vscode/**',
       '.cursor/**',
       'cursor-memory-bank/**',
-      '/src/components/ui',
+      'src/components/ui/**/*',
 
       // Scripts and database
       '**/*.sh',
@@ -117,6 +119,9 @@ const eslintConfig = [
       '**/*.eot',
       '**/*.ttf',
       '**/*.otf',
+
+      // Deprecated files
+      'src/app/api/chat/conversations/route.ts',
     ],
   },
   {

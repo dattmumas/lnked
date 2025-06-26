@@ -18,10 +18,12 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useTenant } from '@/providers/TenantProvider';
 
-import type { UserTenantsResponse } from '@/types/tenant.types';
+import type { Database } from '@/lib/database.types';
 
 // Constants
 const AVATAR_FALLBACK_LENGTH = 2;
+
+type TenantType = Database['public']['Tables']['tenants']['Row'];
 
 interface TenantSwitcherProps {
   compact?: boolean;
@@ -30,26 +32,18 @@ interface TenantSwitcherProps {
 function TenantSwitcher({
   compact = false,
 }: TenantSwitcherProps): React.JSX.Element {
-  const {
-    currentTenant,
-    userTenants,
-    personalTenant,
-    collectiveTenants,
-    switchTenant,
-  } = useTenant();
+  const { currentTenant, personalTenant, collectiveTenants, switchTenant } =
+    useTenant();
 
-  const getDisplayName = React.useCallback(
-    (tenant: UserTenantsResponse): string => {
-      if (tenant.is_personal) {
-        return tenant.tenant_slug;
-      }
-      return tenant.tenant_name;
-    },
-    [],
-  );
+  const getDisplayName = React.useCallback((tenant: TenantType): string => {
+    if (tenant.type === 'personal') {
+      return tenant.slug;
+    }
+    return tenant.name;
+  }, []);
 
   const getAvatarFallback = React.useCallback(
-    (tenant: UserTenantsResponse): string => {
+    (tenant: TenantType): string => {
       const displayName = getDisplayName(tenant);
       return displayName.slice(0, AVATAR_FALLBACK_LENGTH).toUpperCase();
     },
@@ -64,7 +58,7 @@ function TenantSwitcher({
     );
   }
 
-  const displayName = getDisplayName(currentTenant);
+  const displayName = currentTenant.name;
   const initials = displayName.slice(0, AVATAR_FALLBACK_LENGTH).toUpperCase();
 
   return (
@@ -95,30 +89,30 @@ function TenantSwitcher({
       <DropdownMenuContent align="start" className="w-64">
         {personalTenant && (
           <DropdownMenuItem
-              className="flex items-center space-x-2 cursor-pointer"
-              onClick={() => {
-                switchTenant(personalTenant.tenant_id);
-              }}
-            >
-              <Avatar className="h-6 w-6">
-                <AvatarFallback className="text-xs">
-                  {getAvatarFallback(personalTenant)}
-                </AvatarFallback>
-              </Avatar>
-              <div className="flex flex-col flex-1 min-w-0">
-                <span className="text-sm font-medium truncate">
-                  {getDisplayName(personalTenant)}
-                </span>
-                <span className="text-xs text-muted-foreground">
-                  Personal Space
-                </span>
-              </div>
-              {currentTenant.tenant_id === personalTenant.tenant_id && (
-                <Badge variant="default" className="text-xs">
-                  Current
-                </Badge>
-              )}
-            </DropdownMenuItem>
+            className="flex items-center space-x-2 cursor-pointer"
+            onClick={() => {
+              void switchTenant(personalTenant.id);
+            }}
+          >
+            <Avatar className="h-6 w-6">
+              <AvatarFallback className="text-xs">
+                {getAvatarFallback(personalTenant)}
+              </AvatarFallback>
+            </Avatar>
+            <div className="flex flex-col flex-1 min-w-0">
+              <span className="text-sm font-medium truncate">
+                {getDisplayName(personalTenant)}
+              </span>
+              <span className="text-xs text-muted-foreground">
+                Personal Space
+              </span>
+            </div>
+            {currentTenant.id === personalTenant.id && (
+              <Badge variant="default" className="text-xs">
+                Current
+              </Badge>
+            )}
+          </DropdownMenuItem>
         )}
 
         {collectiveTenants.length > 0 && (
@@ -126,10 +120,10 @@ function TenantSwitcher({
             <DropdownMenuSeparator />
             {collectiveTenants.map((tenant) => (
               <DropdownMenuItem
-                key={tenant.tenant_id}
+                key={tenant.id}
                 className="flex items-center space-x-2 cursor-pointer"
                 onClick={() => {
-                  switchTenant(tenant.tenant_id);
+                  void switchTenant(tenant.id);
                 }}
               >
                 <Avatar className="h-6 w-6">
@@ -142,10 +136,10 @@ function TenantSwitcher({
                     {getDisplayName(tenant)}
                   </span>
                   <span className="text-xs text-muted-foreground">
-                    {tenant.user_role}
+                    Collective
                   </span>
                 </div>
-                {currentTenant.tenant_id === tenant.tenant_id && (
+                {currentTenant.id === tenant.id && (
                   <Badge variant="default" className="text-xs">
                     Current
                   </Badge>

@@ -438,13 +438,13 @@ export function CollectiveSelectionModal({
                     key={collective.id}
                     collective={collective}
                     isSelected={localSelectedIds.includes(collective.id)}
-                    onToggleSelection={handleToggleSelection}
+                    onToggle={handleToggleSelection}
                     disabled={
                       !collective.can_post ||
                       (isAtMaxSelections === true &&
                         !localSelectedIds.includes(collective.id))
                     }
-                    showMemberCount
+                    showSettings={false}
                   />
                 ))}
               </div>

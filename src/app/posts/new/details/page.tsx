@@ -256,10 +256,8 @@ export default function NewPostDetailsPage(): React.ReactElement {
             </CardHeader>
             <CardContent>
               <CollectiveSelectionSummary
-                selectedCollectiveIds={selectedCollectives}
-                onSelectionChange={handleCollectiveSelectionChange}
-                placeholder="Select collectives to share your post with"
-                showRoles
+                selectedCollectives={[]}
+                sharingSettings={{}}
               />
 
               {/* Real-time validation feedback */}

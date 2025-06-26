@@ -8,6 +8,7 @@ interface User {
 }
 
 const STALE_TIME_MS = 30 * 1000; // 30 seconds
+const MIN_QUERY_LENGTH = 2; // Minimum query length for API calls
 
 export function useUserSearch(query: string, enabled = true): {
   data: User[] | undefined;
@@ -17,7 +18,7 @@ export function useUserSearch(query: string, enabled = true): {
   return useQuery({
     queryKey: ['user-search', query],
     queryFn: async (): Promise<User[]> => {
-      if (query.trim() === '') return [];
+      if (query.trim().length < MIN_QUERY_LENGTH) return [];
       
       const params = new URLSearchParams({ q: query.trim() });
       const response = await fetch(`/api/search/users?${params.toString()}`);
@@ -26,9 +27,10 @@ export function useUserSearch(query: string, enabled = true): {
         throw new Error('Failed to search users');
       }
       
-      return response.json() as Promise<User[]>;
+      const data = await response.json() as { users: User[]; query: string; count: number };
+      return data.users;
     },
-    enabled: enabled && query.trim().length > 0,
+    enabled: enabled && query.trim().length >= MIN_QUERY_LENGTH,
     staleTime: STALE_TIME_MS,
   });
 } 

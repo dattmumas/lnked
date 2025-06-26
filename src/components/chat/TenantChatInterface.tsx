@@ -14,9 +14,8 @@ import { useTenantChannels } from '@/hooks/chat/useTenantChannels';
 import { useToast } from '@/hooks/useToast';
 import { useUser } from '@/hooks/useUser';
 import { CHAT_HEADER_HEIGHT } from '@/lib/constants/chat';
-import {
-  useDeleteConversation,
-} from '@/lib/hooks/chat/use-conversations';
+import { useDeleteConversation } from '@/lib/hooks/chat/use-conversations';
+import { useRealtimeMessagesForConversations } from '@/lib/hooks/chat/use-messages';
 import { useChatUIStore } from '@/lib/stores/chat-ui-store';
 import { useTenant } from '@/providers/TenantProvider';
 
@@ -53,6 +52,7 @@ export default function TenantChatInterface({
     isLoading: dmsLoading,
     error: dmsError,
   } = useDirectMessages();
+
   const isLoading = channelsLoading || dmsLoading;
   const error = channelsError || dmsError;
 
@@ -62,6 +62,15 @@ export default function TenantChatInterface({
 
   // Get chat state for typing indicators
   const typingUsers = useChatUIStore((state) => state.typingUsers);
+
+  // Subscribe to real-time updates for ALL user conversations
+  // This ensures users receive messages even when not viewing the specific conversation
+  const allConversationIds = useMemo(() => {
+    const conversationIds = conversations.map((c) => c.id);
+    const channelIds = channels.map((c) => c.id);
+    return [...conversationIds, ...channelIds];
+  }, [conversations, channels]);
+  useRealtimeMessagesForConversations(allConversationIds);
 
   // Handle errors with toast notifications
   useEffect(() => {

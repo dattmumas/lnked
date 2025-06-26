@@ -98,7 +98,7 @@ export function CollectiveSelectionCard({
   const canPost = useMemo(() => {
     return (
       collective.can_post &&
-      ['editor', 'admin', 'owner'].includes(collective.user_role)
+      ['author', 'editor', 'admin', 'owner'].includes(collective.user_role)
     );
   }, [collective.can_post, collective.user_role]);
 
@@ -111,7 +111,7 @@ export function CollectiveSelectionCard({
         return 'bg-blue-100 text-blue-800';
       case 'editor':
         return 'bg-green-100 text-green-800';
-      case 'member':
+      case 'author':
         return 'bg-gray-100 text-gray-800';
       default:
         return 'bg-gray-100 text-gray-800';

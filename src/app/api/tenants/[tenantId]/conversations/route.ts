@@ -7,6 +7,46 @@ import { z } from 'zod';
 import { withTenantAccess, createTenantErrorResponse, createTenantSuccessResponse } from '@/lib/api/tenant-helpers';
 
 // =============================================================================
+// TYPE DEFINITIONS
+// =============================================================================
+
+interface TenantConversation {
+  id: string;
+  title: string | null;
+  type: 'direct' | 'group' | 'channel';
+  description: string | null;
+  is_private: boolean;
+  participant_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
+interface ConversationParticipant {
+  conversation_id: string;
+  user_id: string;
+  role: string;
+  user: {
+    id: string;
+    username: string | null;
+    full_name: string | null;
+    avatar_url: string | null;
+  };
+}
+
+interface LastMessage {
+  id: string;
+  conversation_id: string;
+  content: string;
+  created_at: string;
+  sender: {
+    id: string;
+    username: string | null;
+    full_name: string | null;
+    avatar_url: string | null;
+  };
+}
+
+// =============================================================================
 // VALIDATION SCHEMAS
 // =============================================================================
 
@@ -43,8 +83,10 @@ export async function GET(
           throw new Error(`Failed to fetch conversations: ${error.message}`);
         }
 
+        const typedConversations = conversations as TenantConversation[] | null;
+
         // Get detailed participant information for each conversation
-        const conversationIds = conversations?.map((c: any) => c.id) || [];
+        const conversationIds = typedConversations?.map((c) => c.id) || [];
         
         if (conversationIds.length === 0) {
           return {
@@ -60,7 +102,7 @@ export async function GET(
         // Fetch participants for all conversations
         const { data: participants } = await supabase
           .from('conversation_participants')
-          .select(`
+        .select(`
             conversation_id,
             user_id,
             role,
@@ -87,27 +129,30 @@ export async function GET(
               username,
               full_name,
               avatar_url
-            )
-          `)
+          )
+        `)
           .in('conversation_id', conversationIds)
           .is('deleted_at', null)
-          .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false });
+
+        const typedParticipants = participants as ConversationParticipant[] | null;
+        const typedLastMessages = lastMessages as LastMessage[] | null;
 
         // Group participants and messages by conversation
-        const participantsMap = new Map();
-        participants?.forEach(p => {
+        const participantsMap = new Map<string, Omit<ConversationParticipant, 'conversation_id'>[]>();
+        typedParticipants?.forEach(p => {
           if (!participantsMap.has(p.conversation_id)) {
             participantsMap.set(p.conversation_id, []);
           }
-          participantsMap.get(p.conversation_id).push({
+          participantsMap.get(p.conversation_id)?.push({
             user_id: p.user_id,
             role: p.role,
             user: p.user,
           });
         });
 
-        const lastMessagesMap = new Map();
-        lastMessages?.forEach(msg => {
+        const lastMessagesMap = new Map<string, Omit<LastMessage, 'conversation_id'>>();
+        typedLastMessages?.forEach(msg => {
           if (!lastMessagesMap.has(msg.conversation_id)) {
             lastMessagesMap.set(msg.conversation_id, {
               id: msg.id,
@@ -119,20 +164,20 @@ export async function GET(
         });
 
         // Enhance conversations with participant and message data
-        const enhancedConversations = conversations?.map((conv: any) => ({
+        const enhancedConversations = typedConversations?.map((conv) => ({
           ...conv,
           participants: participantsMap.get(conv.id) || [],
           last_message: lastMessagesMap.get(conv.id) || null,
         }));
 
-        return {
+      return {
           conversations: enhancedConversations,
           meta: {
             tenant_id: tenantId,
             user_role: userRole,
-            total: conversations?.length || 0,
+            total: typedConversations?.length || 0,
           },
-        };
+      };
       }
     );
 
@@ -159,7 +204,7 @@ export async function POST(
   try {
     const { tenantId } = await params;
     const body = await request.json();
-    
+
     // Validate request body
     const validationResult = CreateConversationSchema.safeParse(body);
     if (!validationResult.success) {
@@ -184,7 +229,7 @@ export async function POST(
         'Group conversations must have at least one other participant',
         400
       );
-    }
+      }
 
     // Execute with tenant access validation
     const result = await withTenantAccess(
@@ -193,25 +238,71 @@ export async function POST(
       async (supabase, userRole) => {
         // Check for existing direct conversation if type is direct
         if (type === 'direct') {
-          const { data: existingConversations } = await supabase.rpc('get_tenant_conversations', {
+          const currentUserId = (await supabase.auth.getUser()).data.user?.id;
+          if (!currentUserId) {
+            throw new Error('User not authenticated');
+          }
+
+          const otherUserId = participant_ids[0]; // Direct conversations have exactly 1 other participant
+
+          // Use the safe function to find or create direct conversation
+          const { data: conversationId, error: findError } = await supabase.rpc('find_or_create_direct_conversation', {
+            user1_id: currentUserId,
+            user2_id: otherUserId,
             target_tenant_id: tenantId,
           });
 
-                     const existingDirectConv = existingConversations?.find((conv: any) => {
-             return conv.type === 'direct' && 
-                    conv.participant_count === 2; // Direct convs should have exactly 2 participants
-           });
+          if (findError) {
+            throw new Error(`Failed to find/create direct conversation: ${findError.message}`);
+          }
 
-          if (existingDirectConv) {
+          // Fetch the conversation details
+          const { data: fullConversation } = await supabase.rpc('get_tenant_conversations', {
+            target_tenant_id: tenantId,
+          });
+
+          const typedConversations = fullConversation as TenantConversation[] | null;
+          const conversation = typedConversations?.find(conv => conv.id === conversationId);
+
+          if (conversation) {
+            // Fetch participants for the conversation
+            const { data: rawParticipants } = await supabase
+              .from('conversation_participants')
+              .select(`
+                user_id,
+                role,
+                user:users!conversation_participants_user_id_fkey(
+                  id,
+                  username,
+                  full_name,
+                  avatar_url
+                )
+              `)
+              .eq('conversation_id', conversation.id)
+              .is('deleted_at', null);
+
+            const participants = (rawParticipants ?? []).map((p) => ({
+              user_id: p.user_id,
+              role: p.role,
+              user: p.user,
+            }));
+
             return {
-              conversation: existingDirectConv,
-              existing: true,
-              message: 'Direct conversation already exists',
+              conversation: {
+                ...conversation,
+                participants,
+                last_message: null,
+              },
+              existing: true, // Could be existing or newly created
+              message: 'Direct conversation ready',
             };
           }
+          
+          // If we reach here, something went wrong with direct conversation creation
+          throw new Error('Failed to create or find direct conversation');
         }
 
-        // Create conversation using RPC
+        // For non-direct conversations (groups, channels), use the RPC
         const { data: newConversation, error } = await supabase.rpc('create_tenant_conversation', {
           target_tenant_id: tenantId,
           conversation_title: title || null,
@@ -225,14 +316,45 @@ export async function POST(
           throw new Error(`Failed to create conversation: ${error.message}`);
         }
 
-        if (!newConversation || newConversation.length === 0) {
+        const typedNewConversation = newConversation as TenantConversation[] | null;
+
+        if (!typedNewConversation || typedNewConversation.length === 0) {
           throw new Error('No conversation returned from creation');
         }
 
-        const conversation = newConversation[0];
+        const conversation = typedNewConversation[0];
+
+        /* ------------------------------------------------------------------
+         * Fetch participants so the client immediately receives a hydrated
+         * conversation object (id, title, participants, etc.).
+         * ------------------------------------------------------------------ */
+        const { data: rawParticipants } = await supabase
+          .from('conversation_participants')
+          .select(`
+            user_id,
+            role,
+            user:users!conversation_participants_user_id_fkey(
+              id,
+              username,
+              full_name,
+              avatar_url
+            )
+          `)
+          .eq('conversation_id', conversation.id)
+          .is('deleted_at', null);
+
+        const participants = (rawParticipants ?? []).map((p) => ({
+          user_id: p.user_id,
+          role: p.role,
+          user: p.user,
+        }));
 
         return {
-          conversation,
+          conversation: {
+            ...conversation,
+            participants,
+            last_message: null,
+          },
           existing: false,
           message: 'Conversation created successfully',
         };

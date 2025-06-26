@@ -169,6 +169,7 @@ interface UsePostEditorReturn {
   setCurrentPage: (page: 'editor' | 'details') => void;
   resetForm: () => void;
   savePost: () => Promise<PostEditorFormData | undefined>;
+  publishPost: () => Promise<PostEditorFormData | undefined>;
   
   // Collective management
   addCollective: (collectiveId: string) => void;
@@ -215,6 +216,22 @@ export const usePostEditor = (postId?: string): UsePostEditorReturn => {
     return Promise.resolve(undefined);
   }, [store.formData, autoSave, user?.id, store.selectedCollectives, store.collectiveSharingSettings]);
 
+  // Publish post function (save + set status to published)
+  const publishPost = useCallback((): Promise<PostEditorFormData | undefined> => {
+    if (store.formData && user?.id) {
+      const dataToSave = {
+        ...store.formData,
+        author_id: user.id,
+        status: 'active' as const,
+        published_at: new Date().toISOString(),
+        selected_collectives: store.selectedCollectives,
+        collective_sharing_settings: store.collectiveSharingSettings,
+      };
+      return autoSave.mutateAsync(dataToSave);
+    }
+    return Promise.resolve(undefined);
+  }, [store.formData, autoSave, user?.id, store.selectedCollectives, store.collectiveSharingSettings]);
+
   return {
     // Form data and state
     formData: store.formData,
@@ -237,6 +254,7 @@ export const usePostEditor = (postId?: string): UsePostEditorReturn => {
     setCurrentPage: store.setCurrentPage,
     resetForm: store.resetForm,
     savePost,
+    publishPost,
     
     // Collective management
     addCollective: store.addCollective,

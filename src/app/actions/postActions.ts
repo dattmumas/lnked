@@ -271,7 +271,7 @@ export async function createPost(
     content,
     is_public,
     collective_id: collectiveId || null,
-    tenant_id: tenant_id,
+    tenant_id,
     published_at: published_at || null,
     status: dbStatus,
     post_type: 'text',

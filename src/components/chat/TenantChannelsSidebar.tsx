@@ -1,6 +1,7 @@
 'use client';
 
 import { Plus, Hash, MessageCircle } from 'lucide-react';
+import Image from 'next/image';
 import React, { useState, useMemo, useCallback } from 'react';
 
 import { Button } from '@/components/ui/button';
@@ -13,12 +14,15 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { useDirectMessages } from '@/hooks/chat/useDirectMessages';
-import { useCreateTenantChannel , useTenantChannels } from '@/hooks/chat/useTenantChannels';
+import {
+  useCreateTenantChannel,
+  useTenantChannels,
+} from '@/hooks/chat/useTenantChannels';
 import { useDebounce } from '@/hooks/useDebounce';
+import { useUser } from '@/hooks/useUser';
 import { useTenant } from '@/providers/TenantProvider';
 
 import { UserSearchDialog } from './UserSearchDialog';
-
 
 import type { TenantChannel } from '@/hooks/chat/useTenantChannels';
 import type { ConversationWithParticipants } from '@/lib/chat/types';
@@ -38,6 +42,7 @@ export function TenantChannelsSidebar({
   onSelectChannel,
 }: TenantChannelsSidebarProps): React.JSX.Element {
   const { currentTenant } = useTenant();
+  const { user } = useUser();
   const { data: channels = [], isLoading: channelsLoading } =
     useTenantChannels();
   const { data: conversations = [], isLoading: dmsLoading } =
@@ -161,6 +166,50 @@ export function TenantChannelsSidebar({
     return name.charAt(0).toUpperCase();
   };
 
+  // Get the other participant in a direct conversation
+  const getOtherParticipant = (conversation: ConversationWithParticipants) => {
+    if (conversation.type !== 'direct' || !conversation.participants || !user) {
+      return null;
+    }
+
+    // Find the participant who is not the current user
+    const otherParticipant = conversation.participants.find(
+      (p) => p.user_id !== user.id && p.user,
+    );
+
+    return otherParticipant?.user || null;
+  };
+
+  // Get display information for a conversation
+  const getConversationDisplay = (
+    conversation: ConversationWithParticipants,
+  ) => {
+    if (conversation.type === 'direct') {
+      const otherParticipant = getOtherParticipant(conversation);
+
+      if (otherParticipant) {
+        return {
+          title: getDisplayName(otherParticipant),
+          avatar_url: otherParticipant.avatar_url,
+          fallback: getAvatarFallback(otherParticipant),
+        };
+      }
+    }
+
+    // For group/channel conversations allow empty titles (can display placeholder)
+    return {
+      title:
+        conversation.title !== null && conversation.title.trim() !== ''
+          ? conversation.title
+          : 'Untitled',
+      avatar_url: null,
+      fallback:
+        conversation.title && conversation.title.trim() !== ''
+          ? conversation.title.charAt(0).toUpperCase()
+          : 'G',
+    };
+  };
+
   // Return a loading or placeholder state if the tenant is not yet available
   if (!currentTenant) {
     return (
@@ -227,39 +276,53 @@ export function TenantChannelsSidebar({
 
             {filteredConversations.length > 0 ? (
               <div className="space-y-0.5">
-                {filteredConversations.map((conversation) => (
-                  <button
-                    key={conversation.id}
-                    onClick={handleConversationClick(conversation)}
-                    className={`w-full flex items-center gap-3 px-2 py-2 rounded text-sm transition-colors ${
-                      selectedChannelId === conversation.id
-                        ? 'bg-muted text-foreground'
-                        : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
-                    }`}
-                  >
-                    <div className="w-8 h-8 rounded-full overflow-hidden bg-muted flex-shrink-0">
-                      <div className="w-full h-full bg-gradient-to-br from-green-500 to-blue-500 flex items-center justify-center text-white font-semibold text-xs">
-                        <MessageCircle className="w-4 h-4" />
-                      </div>
-                    </div>
-                    <div className="flex-1 min-w-0 text-left">
-                      <p className="truncate font-medium">
-                        {conversation.title !== null &&
-                        conversation.title !== undefined
-                          ? conversation.title
-                          : 'Unnamed Conversation'}
-                      </p>
-                      {conversation.created_at !== null &&
-                        conversation.created_at !== undefined && (
-                          <p className="text-xs text-muted-foreground truncate">
-                            {new Date(
-                              conversation.created_at,
-                            ).toLocaleDateString()}
-                          </p>
+                {filteredConversations.map((conversation) => {
+                  const displayInfo = getConversationDisplay(conversation);
+                  return (
+                    <button
+                      key={conversation.id}
+                      onClick={handleConversationClick(conversation)}
+                      className={`w-full flex items-center gap-3 px-2 py-2 rounded text-sm transition-colors ${
+                        selectedChannelId === conversation.id
+                          ? 'bg-muted text-foreground'
+                          : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+                      }`}
+                    >
+                      <div className="w-8 h-8 rounded-full overflow-hidden bg-muted flex-shrink-0">
+                        {displayInfo.avatar_url ? (
+                          <Image
+                            src={displayInfo.avatar_url}
+                            alt={displayInfo.title}
+                            width={32}
+                            height={32}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full bg-gradient-to-br from-green-500 to-blue-500 flex items-center justify-center text-white font-semibold text-xs">
+                            {conversation.type === 'direct' ? (
+                              displayInfo.fallback
+                            ) : (
+                              <MessageCircle className="w-4 h-4" />
+                            )}
+                          </div>
                         )}
-                    </div>
-                  </button>
-                ))}
+                      </div>
+                      <div className="flex-1 min-w-0 text-left">
+                        <p className="truncate font-medium">
+                          {displayInfo.title}
+                        </p>
+                        {conversation.created_at !== null &&
+                          conversation.created_at !== undefined && (
+                            <p className="text-xs text-muted-foreground truncate">
+                              {new Date(
+                                conversation.created_at,
+                              ).toLocaleDateString()}
+                            </p>
+                          )}
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
             ) : (
               <div className="px-2 py-8 text-center">

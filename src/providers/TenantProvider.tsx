@@ -43,6 +43,7 @@ interface TenantContextType {
   // Available tenants
   userTenants: TenantType[];
   personalTenant: TenantType | null;
+  collectiveTenants: TenantType[];
   isLoading: boolean;
   error: string | null;
 
@@ -181,7 +182,7 @@ export function TenantProvider({
 
       // Transform to our context format (cast to any for RPC response)
       const tenantData = tenantContext as {
-        id: string;
+        tenant_id: string; // RPC returns tenant_id, not id
         name: string;
         slug: string;
         type: 'personal' | 'collective';
@@ -191,8 +192,8 @@ export function TenantProvider({
         member_count?: number;
       };
       const context: TenantContext = {
-        id: tenantData.id,
-        tenant_id: tenantData.id,
+        id: tenantData.tenant_id, // Map tenant_id to id
+        tenant_id: tenantData.tenant_id,
         name: tenantData.name,
         tenant_name: tenantData.name,
         slug: tenantData.slug,
@@ -222,18 +223,19 @@ export function TenantProvider({
 
   // Switch to a different tenant
   const switchTenant = useCallback(
-    async (tenantId: string): Promise<void> => {
+    (tenantId: string): Promise<void> => {
       if (tenantId === currentTenantId) {
-        return; // Already on this tenant
+        return Promise.resolve(); // Already on this tenant
       }
 
       // Verify user has access to this tenant
       const targetTenant = userTenants.find((t) => t.id === tenantId);
       if (!targetTenant) {
-        throw new Error('No access to this tenant');
+        return Promise.reject(new Error('No access to this tenant'));
       }
 
       setCurrentTenantId(tenantId);
+      return Promise.resolve();
     },
     [currentTenantId, userTenants],
   );
@@ -275,6 +277,9 @@ export function TenantProvider({
     currentTenant && personalTenant && currentTenant.id === personalTenant.id,
   );
 
+  // Compute collective tenants (non-personal tenants)
+  const collectiveTenants = userTenants.filter((t) => t.type === 'collective');
+
   // Initialize tenants on mount
   useEffect(() => {
     const initializeTenants = async (): Promise<void> => {
@@ -296,15 +301,26 @@ export function TenantProvider({
     }
   }, [currentTenantId, refreshCurrentTenant, userTenants.length]);
 
-  // Memoize the context value to prevent unnecessary re-renders
+  // Auto-switch to first available tenant if none selected
+  useEffect(() => {
+    if (!currentTenantId && userTenants.length > 0) {
+      const firstTenant = userTenants[0];
+      if (firstTenant) {
+        void switchTenant(firstTenant.id);
+      }
+    }
+  }, [currentTenantId, userTenants, switchTenant]);
+
+  // Memoize context value to prevent unnecessary re-renders
   const contextValue = useMemo(
     () => ({
-      userTenants,
       currentTenantId,
       currentTenant,
+      userTenants,
       personalTenant,
-      isLoading: isLoading,
-      error: error,
+      collectiveTenants,
+      isLoading,
+      error,
       switchTenant,
       switchToPersonal,
       refreshTenants,
@@ -313,10 +329,11 @@ export function TenantProvider({
       isPersonalTenant,
     }),
     [
-      userTenants,
       currentTenantId,
       currentTenant,
+      userTenants,
       personalTenant,
+      collectiveTenants,
       isLoading,
       error,
       switchTenant,

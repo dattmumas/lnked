@@ -30,7 +30,7 @@ type ConversationWithDetails = Database['public']['Tables']['conversations']['Ro
       username: string | null;
       full_name: string | null;
       avatar_url: string | null;
-    };
+    } | null;
   }>;
 };
 
@@ -67,18 +67,121 @@ export async function GET(): Promise<NextResponse> {
       return await getLegacyConversations(supabase, user.id);
     }
 
+    // Get conversation IDs for fetching participants and last messages
+    const conversationIds = (conversations as unknown[])?.map((conv: unknown) => {
+      const typedConv = conv as { id: string };
+      return typedConv.id;
+    }) || [];
+
+    // Fetch participants for all conversations
+    const { data: allParticipants } = await supabase
+      .from('conversation_participants')
+      .select(`
+        conversation_id,
+        user_id,
+        role,
+        user:users!conversation_participants_user_id_fkey(
+          id,
+          username,
+          full_name,
+          avatar_url
+        )
+      `)
+      .in('conversation_id', conversationIds)
+      .is('deleted_at', null);
+
+    // Fetch last messages for all conversations
+    const { data: lastMessages } = await supabase
+      .from('messages')
+      .select(`
+        id,
+        conversation_id,
+        content,
+        created_at,
+        sender:users!messages_sender_id_fkey(
+          id,
+          username,
+          full_name,
+          avatar_url
+        )
+      `)
+      .in('conversation_id', conversationIds)
+      .is('deleted_at', null)
+      .order('created_at', { ascending: false });
+
+    // Group participants by conversation
+    const participantsMap = new Map<string, Array<NonNullable<typeof allParticipants>[0]>>();
+    allParticipants?.forEach((p: any) => {
+      if (p.conversation_id !== null && p.conversation_id !== undefined) {
+        const existing = participantsMap.get(p.conversation_id) || [];
+        participantsMap.set(p.conversation_id, [...existing, p]);
+      }
+    });
+
+    // Group last messages by conversation
+    type LastMessage = NonNullable<typeof lastMessages>[0];
+    const lastMessageMap = new Map<string, LastMessage>();
+    lastMessages?.forEach((msg: any) => {
+      if (msg.conversation_id !== null && msg.conversation_id !== undefined && !lastMessageMap.has(msg.conversation_id)) {
+        lastMessageMap.set(msg.conversation_id, msg);
+      }
+    });
+
     // Transform to match legacy format
-    const legacyFormattedConversations = conversations?.map((conv: any) => ({
-      ...conv,
-      // Add missing fields for backward compatibility
-      archived: null,
-      unique_group_hash: null,
-      updated_at: null,
-      // Keep existing fields
-      unread_count: conv.unread_count || 0,
-      last_message: null, // Would need additional query for full compatibility
-      participants: [], // Would need additional query for full compatibility
-    })) || [];
+    const legacyFormattedConversations: ConversationWithDetails[] = (conversations as unknown[])?.map((conv: unknown) => {
+      const typedConv = conv as {
+        id: string;
+        title: string | null;
+        type: string;
+        description: string | null;
+        is_private: boolean;
+        created_at: string | null;
+        unread_count?: number;
+      };
+      
+      const participants = participantsMap.get(typedConv.id) ?? [];
+      const lastMessage = lastMessageMap.get(typedConv.id);
+      
+      return {
+        // Database fields
+        id: typedConv.id,
+        title: typedConv.title,
+        type: typedConv.type,
+        description: typedConv.description,
+        is_private: typedConv.is_private,
+        created_at: typedConv.created_at ?? null,
+        created_by: null, // Not available in tenant-scoped function
+        last_message_at: null, // Not available in tenant-scoped function
+        // Add missing fields for backward compatibility
+        archived: null,
+        collective_id: null,
+        tenant_id: null,
+        unique_group_hash: null,
+        updated_at: null,
+        // Keep existing fields
+        unread_count: typedConv.unread_count || 0,
+        last_message: lastMessage !== undefined && 
+                     lastMessage !== null && 
+                     lastMessage.created_at !== null && 
+                     lastMessage.created_at !== undefined &&
+                     lastMessage.sender !== null ? {
+          id: lastMessage.id,
+          content: lastMessage.content,
+          created_at: lastMessage.created_at,
+          sender: lastMessage.sender
+        } : null,
+        participants: participants
+          .filter(p => p.user_id !== null && 
+                      p.user_id !== undefined && 
+                      p.role !== null && 
+                      p.role !== undefined)
+          .map(p => ({
+            user_id: p.user_id as string,
+            role: p.role as string,
+            user: p.user
+          }))
+      };
+    }) || [];
 
     return NextResponse.json({ 
       conversations: legacyFormattedConversations,
@@ -94,165 +197,168 @@ export async function GET(): Promise<NextResponse> {
 /**
  * Legacy conversation fetching for fallback compatibility
  */
-async function getLegacyConversations(supabase: any, userId: string): Promise<NextResponse> {
-  // Fetch conversations user participates in directly via join to avoid recursion error
-  const { data: conversationsWithRead, error: convErr } = await supabase
-    .from('conversations')
-    .select(`
-      id,
-      title,
-      type,
-      description,
-      is_private,
-      last_message_at,
-      created_at,
-      created_by,
-      conversation_participants:conversation_participants!inner(user_id,last_read_at)
-    `)
+async function getLegacyConversations(supabase: Awaited<ReturnType<typeof createServerSupabaseClient>>, userId: string): Promise<NextResponse> {
+    // Fetch conversations user participates in directly via join to avoid recursion error
+    const { data: conversationsWithRead, error: convErr } = await supabase
+      .from('conversations')
+      .select(`
+        id,
+        title,
+        type,
+        description,
+        is_private,
+        last_message_at,
+        created_at,
+        created_by,
+        conversation_participants:conversation_participants!inner(user_id,last_read_at)
+      `)
     .eq('conversation_participants.user_id', userId)
-    .is('conversation_participants.deleted_at', null)
-    .order('last_message_at', { ascending: false });
+      .is('conversation_participants.deleted_at', null)
+      .order('last_message_at', { ascending: false });
 
-  if (convErr !== null) {
-    console.error('Error fetching conversations:', convErr);
-    return NextResponse.json({ error: 'Failed to fetch conversations' }, { status: 500 });
-  }
+    if (convErr !== null) {
+      console.error('Error fetching conversations:', convErr);
+      return NextResponse.json({ error: 'Failed to fetch conversations' }, { status: 500 });
+    }
 
-  if (!conversationsWithRead || conversationsWithRead.length === 0) {
-    return NextResponse.json({ conversations: [] });
-  }
+    if (!conversationsWithRead || conversationsWithRead.length === 0) {
+      return NextResponse.json({ conversations: [] });
+    }
 
-  // conversationIds and participantData derive from fetched data
+    // conversationIds and participantData derive from fetched data
   const validParticipantData = conversationsWithRead.flatMap((conv: any) =>
     (conv.conversation_participants as Array<{ user_id: string; last_read_at: string | null }>).map((p: any) => ({
-      conversation_id: conv.id,
-      last_read_at: p.last_read_at,
-    })),
-  );
+        conversation_id: conv.id,
+        last_read_at: p.last_read_at,
+      })),
+    );
 
   const conversationIds = conversationsWithRead.map((c: any) => c.id);
 
-  const conversationsMeta = conversationsWithRead;
+    const conversationsMeta = conversationsWithRead;
 
-  // Fetch last messages for all conversations
-  const { data: lastMessages } = await supabase
-    .from('messages')
-    .select(`
-      id,
-      conversation_id,
-      content,
-      created_at,
-      sender:users!messages_sender_id_fkey(
-        id,
-        username,
-        full_name,
-        avatar_url
-      )
-    `)
-    .in('conversation_id', conversationIds)
-    .is('deleted_at', null)
-    .order('created_at', { ascending: false });
-
-  // Group last messages by conversation
-  type LastMessage = NonNullable<typeof lastMessages>[0];
-  const lastMessageMap = new Map<string, LastMessage>();
-  lastMessages?.forEach((msg: any) => {
-    if (msg.conversation_id !== null && msg.conversation_id !== undefined && !lastMessageMap.has(msg.conversation_id)) {
-      lastMessageMap.set(msg.conversation_id, msg);
-    }
-  });
-
-  // Fetch unread counts for each conversation
-  const unreadCountPromises = validParticipantData.map(async (participant: any) => {
-    const conversationId = participant.conversation_id;
-    const lastReadAt = participant.last_read_at !== null && participant.last_read_at !== undefined 
-      ? participant.last_read_at 
-      : '1970-01-01T00:00:00Z';
-    
-    const { count } = await supabase
+    // Fetch last messages for all conversations
+    const { data: lastMessages } = await supabase
       .from('messages')
-      .select('*', { count: 'exact', head: true })
-      .eq('conversation_id', conversationId)
-      .gt('created_at', lastReadAt)
-      .neq('sender_id', userId)
-      .is('deleted_at', null);
-
-    return {
-      conversation_id: conversationId,
-      unread_count: count !== null && count !== undefined ? count : 0
-    };
-  });
-
-  const unreadCounts = await Promise.all(unreadCountPromises);
-  const unreadCountMap = new Map(unreadCounts.map(uc => [uc.conversation_id, uc.unread_count]));
-
-  // Fetch all participants for conversations
-  const { data: allParticipants } = await supabase
-    .from('conversation_participants')
-    .select(`
-      conversation_id,
-      user_id,
-      role,
-      user:users!conversation_participants_user_id_fkey(
+      .select(`
         id,
-        username,
-        full_name,
-        avatar_url
-      )
-    `)
-    .in('conversation_id', conversationIds);
+        conversation_id,
+        content,
+        created_at,
+        sender:users!messages_sender_id_fkey(
+          id,
+          username,
+          full_name,
+          avatar_url
+        )
+      `)
+      .in('conversation_id', conversationIds)
+      .is('deleted_at', null)
+      .order('created_at', { ascending: false });
 
-  // Group participants by conversation
-  const participantsMap = new Map<string, Array<NonNullable<typeof allParticipants>[0]>>();
+    // Group last messages by conversation
+    type LastMessage = NonNullable<typeof lastMessages>[0];
+    const lastMessageMap = new Map<string, LastMessage>();
+  lastMessages?.forEach((msg: any) => {
+      if (msg.conversation_id !== null && msg.conversation_id !== undefined && !lastMessageMap.has(msg.conversation_id)) {
+        lastMessageMap.set(msg.conversation_id, msg);
+      }
+    });
+
+    // Fetch unread counts for each conversation
+  const unreadCountPromises = validParticipantData.map(async (participant: any) => {
+      const conversationId = participant.conversation_id;
+      const lastReadAt = participant.last_read_at !== null && participant.last_read_at !== undefined 
+        ? participant.last_read_at 
+        : '1970-01-01T00:00:00Z';
+      
+      const { count } = await supabase
+        .from('messages')
+        .select('*', { count: 'exact', head: true })
+        .eq('conversation_id', conversationId)
+        .gt('created_at', lastReadAt)
+      .neq('sender_id', userId)
+        .is('deleted_at', null);
+
+      return {
+        conversation_id: conversationId,
+        unread_count: count !== null && count !== undefined ? count : 0
+      };
+    });
+
+    const unreadCounts = await Promise.all(unreadCountPromises);
+    const unreadCountMap = new Map(unreadCounts.map(uc => [uc.conversation_id, uc.unread_count]));
+
+    // Fetch all participants for conversations
+    const { data: allParticipants } = await supabase
+      .from('conversation_participants')
+      .select(`
+        conversation_id,
+        user_id,
+        role,
+        user:users!conversation_participants_user_id_fkey(
+          id,
+          username,
+          full_name,
+          avatar_url
+        )
+      `)
+      .in('conversation_id', conversationIds);
+
+    // Group participants by conversation
+    const participantsMap = new Map<string, Array<NonNullable<typeof allParticipants>[0]>>();
   allParticipants?.forEach((p: any) => {
-    if (p.conversation_id !== null && p.conversation_id !== undefined) {
-      const existing = participantsMap.get(p.conversation_id) || [];
-      participantsMap.set(p.conversation_id, [...existing, p]);
-    }
-  });
+      if (p.conversation_id !== null && p.conversation_id !== undefined) {
+        const existing = participantsMap.get(p.conversation_id) || [];
+        participantsMap.set(p.conversation_id, [...existing, p]);
+      }
+    });
 
-  // Transform data to include all details
-  const conversationsMetaMap = new Map<string, NonNullable<typeof conversationsMeta>[0]>();
+    // Transform data to include all details
+    const conversationsMetaMap = new Map<string, NonNullable<typeof conversationsMeta>[0]>();
   conversationsMeta?.forEach((c: any) => conversationsMetaMap.set(c.id, c));
 
   const conversations: ConversationWithDetails[] = validParticipantData.map((p: any) => {
-    const conversationId = p.conversation_id;
+      const conversationId = p.conversation_id;
     const conv = conversationsMetaMap.get(conversationId);
-    const lastMessage = lastMessageMap.get(conversationId);
-    const participants = participantsMap.get(conversationId) ?? [];
-    
-    return {
-      ...conv,
-      // Add missing required fields with default values
-      archived: null,
-      collective_id: null,
-      tenant_id: null,
-      unique_group_hash: null,
-      updated_at: null,
-      unread_count: unreadCountMap.get(conversationId) ?? 0,
-      last_message: lastMessage !== undefined && 
-                   lastMessage !== null && 
-                   lastMessage.created_at !== null && 
-                   lastMessage.created_at !== undefined ? {
-        id: lastMessage.id,
-        content: lastMessage.content,
-        created_at: lastMessage.created_at,
+      const lastMessage = lastMessageMap.get(conversationId);
+      const participants = participantsMap.get(conversationId) ?? [];
+      
+      return {
+        ...conv,
+        // Ensure required fields are properly typed
+        created_at: conv?.created_at ?? null,
+        created_by: conv?.created_by ?? null,
+        // Add missing required fields with default values
+        archived: null,
+        collective_id: null,
+        tenant_id: null,
+        unique_group_hash: null,
+        updated_at: null,
+        unread_count: unreadCountMap.get(conversationId) ?? 0,
+        last_message: lastMessage !== undefined && 
+                     lastMessage !== null && 
+                     lastMessage.created_at !== null && 
+                     lastMessage.created_at !== undefined ? {
+          id: lastMessage.id,
+          content: lastMessage.content,
+          created_at: lastMessage.created_at,
         sender: lastMessage.sender
-      } : null,
-      participants: participants
-        .filter(p => p.user_id !== null && 
-                    p.user_id !== undefined && 
-                    p.role !== null && 
-                    p.role !== undefined && 
-                    p.user !== null && 
-                    p.user !== undefined)
-        .map(p => ({
-          user_id: p.user_id as string,
-          role: p.role as string,
+        } : null,
+        participants: participants
+          .filter(p => p.user_id !== null && 
+                      p.user_id !== undefined && 
+                      p.role !== null && 
+                      p.role !== undefined && 
+                      p.user !== null && 
+                      p.user !== undefined)
+          .map(p => ({
+            user_id: p.user_id as string,
+            role: p.role as string,
           user: p.user
-        }))
-    };
-  });
+          }))
+      };
+    });
 
   return NextResponse.json({ 
     conversations,

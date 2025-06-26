@@ -1,7 +1,10 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useEffect } from 'react';
 
 import { chatApiClient } from '@/lib/chat/api-client';
+import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
 import { useTenant } from '@/providers/TenantProvider';
+import { useUser } from '@/hooks/useUser';
 
 import type { ConversationWithParticipants } from '@/lib/chat/types';
 
@@ -14,16 +17,91 @@ export const directMessageKeys = {
 
 export function useDirectMessages() {
   const { currentTenant } = useTenant();
+  const { user } = useUser();
+  const queryClient = useQueryClient();
   const isPersonal = currentTenant?.is_personal === true;
   const tenantId = currentTenant?.tenant_id;
+
+  // Real-time subscription for conversation list updates
+  useEffect(() => {
+    if (!user?.id || !tenantId || !isPersonal) return;
+
+    const supabase = createSupabaseBrowserClient();
+    
+    // Subscribe to conversation changes that affect this user
+    const conversationSubscription = supabase
+      .channel(`conversations-${user.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'conversations',
+          filter: `type=eq.direct`,
+        },
+        (payload) => {
+          console.log('🔔 Conversation change detected:', payload);
+          
+          // Invalidate and refetch conversation list
+          void queryClient.invalidateQueries({
+            queryKey: directMessageKeys.byTenant(tenantId),
+          });
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'conversation_participants',
+          filter: `user_id=eq.${user.id}`,
+        },
+        (payload) => {
+          console.log('🔔 Conversation participant change detected:', payload);
+          
+          // Invalidate and refetch conversation list when user is added/removed
+          void queryClient.invalidateQueries({
+            queryKey: directMessageKeys.byTenant(tenantId),
+          });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(conversationSubscription);
+    };
+  }, [user?.id, tenantId, isPersonal, queryClient]);
 
   return useQuery({
     queryKey: directMessageKeys.byTenant(tenantId ?? 'personal'),
     queryFn: async (): Promise<ConversationWithParticipants[]> => {
-      const result = await chatApiClient.getConversations();
-      return result.conversations.filter((c) => c.type === 'direct');
+      if (!tenantId) {
+        return [];
+      }
+
+      const response = await fetch(`/api/tenants/${tenantId}/conversations`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      if (!response.ok) {
+        const errorData: unknown = await response.json().catch(() => ({}));
+        const message = (errorData as { error?: string }).error ?? 'Failed to load conversations';
+        throw new Error(message);
+      }
+
+      // Handle wrapped response from createTenantSuccessResponse
+      const body = (await response.json()) as unknown as {
+        data?: { conversations: ConversationWithParticipants[] };
+        conversations?: ConversationWithParticipants[];
+      };
+
+      const conversations =
+        body.data?.conversations ?? body.conversations ?? [];
+
+      return conversations.filter((c) => c.type === 'direct');
     },
-    enabled: isPersonal,
+    enabled: isPersonal && !!tenantId,
     staleTime: DIRECT_MESSAGES_STALE_TIME,
   });
 } 

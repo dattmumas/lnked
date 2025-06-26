@@ -278,7 +278,7 @@ export class ChatApiClient {
   /** Delete chat for me */
   async deleteConversationForMe(conversationId: string): Promise<void> {
     const response = await fetch(API_ROUTES.CHAT_CONVERSATION_DELETE_FOR_ME(conversationId), {
-      method: 'POST',
+      method: 'DELETE',
       headers: { 'Content-Type': 'application/json' },
     });
 

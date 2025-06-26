@@ -311,6 +311,7 @@ export function useRealtimeMessages(conversationId: string | null): void {
     const setupSubscription = async (): Promise<void> => {
       const unsub = await adapter.subscribe(conversationId, {
         onMessage: (message) => {
+          
           // Add new message to cache
           queryClient.setQueryData(
             messageKeys.conversation(conversationId),
@@ -392,4 +393,114 @@ export function useRealtimeMessages(conversationId: string | null): void {
       }
     };
   }, [conversationId, queryClient]);
+}
+
+// Hook to subscribe to realtime message updates for multiple conversations
+export function useRealtimeMessagesForConversations(conversationIds: string[]): void {
+  const queryClient = useQueryClient();
+  
+  useEffect(() => {
+    if (conversationIds.length === 0) {
+      return;
+    }
+    
+    const adapter = selectAdapter('supabase');
+    const unsubscribeFunctions: (() => void | Promise<void>)[] = [];
+    
+    const setupSubscriptions = async (): Promise<void> => {
+      for (const conversationId of conversationIds) {
+        const unsub = await adapter.subscribe(conversationId, {
+          onMessage: (message) => {
+            
+            // Add new message to cache for this conversation
+            queryClient.setQueryData(
+              messageKeys.conversation(conversationId),
+              (oldData: { pages: MessageWithSender[][]; pageParams: unknown[] } | undefined) => {
+                if (!oldData) return oldData;
+                
+                const newPages = [...oldData.pages];
+                if (newPages.length > 0) {
+                  // Check if message already exists
+                  const exists = newPages[0].some(m => m.id === (message as MessageWithSender).id);
+                  if (!exists) {
+                    newPages[0] = [message as MessageWithSender, ...newPages[0]];
+                  }
+                }
+                
+                return {
+                  ...oldData,
+                  pages: newPages,
+                };
+              }
+            );
+
+            // Also invalidate conversation list to update unread counts, last message, etc.
+            void queryClient.invalidateQueries({
+              queryKey: ['direct-messages'],
+            });
+            void queryClient.invalidateQueries({
+              queryKey: ['conversations'],
+            });
+          },
+          onMessageUpdate: (message) => {
+            // Update existing message in cache
+            queryClient.setQueryData(
+              messageKeys.conversation(conversationId),
+              (oldData: { pages: MessageWithSender[][]; pageParams: unknown[] } | undefined) => {
+                if (!oldData) return oldData;
+                
+                const newPages = oldData.pages.map(page =>
+                  page.map(m =>
+                    m.id === (message as MessageWithSender).id ? message as MessageWithSender : m
+                  )
+                );
+                
+                return {
+                  ...oldData,
+                  pages: newPages,
+                };
+              }
+            );
+          },
+          onMessageDelete: (messageId) => {
+            // Mark message as deleted in cache
+            queryClient.setQueryData(
+              messageKeys.conversation(conversationId),
+              (oldData: { pages: MessageWithSender[][]; pageParams: unknown[] } | undefined) => {
+                if (!oldData) return oldData;
+                
+                const newPages = oldData.pages.map(page =>
+                  page.map(m =>
+                    m.id === messageId
+                      ? { ...m, deleted_at: new Date().toISOString() }
+                      : m
+                  )
+                );
+                
+                return {
+                  ...oldData,
+                  pages: newPages,
+                };
+              }
+            );
+          },
+        });
+        
+        if (unsub) {
+          unsubscribeFunctions.push(unsub);
+        }
+      }
+    };
+    
+    void setupSubscriptions();
+    
+    return () => {
+      unsubscribeFunctions.forEach((unsub) => {
+        const cleanup = unsub();
+        if (cleanup instanceof Promise) {
+          void cleanup;
+        }
+      });
+    };
+  }, [conversationIds.join(','), queryClient]); // Use join to create stable dependency
 } 

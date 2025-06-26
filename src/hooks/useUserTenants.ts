@@ -38,7 +38,7 @@ export function useUserTenants(): {
         throw new Error('Authentication required');
       }
 
-      console.log('🔍 Fetching tenants for user:', user.id);
+  
 
       // Use the RPC function to get user tenants (this bypasses RLS issues)
       const { data: tenantData, error: tenantError } = await supabase

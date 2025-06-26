@@ -15,7 +15,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { useDebounce } from '@/hooks/useDebounce';
 import { useUserSearch } from '@/hooks/useUserSearch';
-import { chatApiClient } from '@/lib/chat/api-client';
+import { useTenant } from '@/providers/TenantProvider';
 
 interface User {
   id: string;
@@ -41,31 +41,94 @@ export function UserSearchDialog({
   const debouncedQuery = useDebounce(searchQuery, DEBOUNCE_MS);
   const queryClient = useQueryClient();
 
-  const { data: users = [], isLoading } = useUserSearch(debouncedQuery, open);
+  const { data: usersData, isLoading } = useUserSearch(debouncedQuery, open);
+  const { currentTenantId } = useTenant();
+
+  // Ensure users is always an array
+  const users = Array.isArray(usersData) ? usersData : [];
 
   const createConversationMutation = useMutation({
     mutationFn: async (userId: string) => {
-      return chatApiClient.createConversation({
-        type: 'direct',
-        participant_ids: [userId],
-      });
-    },
-    onSuccess: (data) => {
-      // Invalidate conversations to refresh the list
-      void queryClient.invalidateQueries({
-        queryKey: ['direct-conversations'],
-      });
+      if (!currentTenantId) {
+        throw new Error('No tenant selected');
+      }
 
-      // Close dialog and navigate to conversation
+      const response = await fetch(
+        `/api/tenants/${currentTenantId}/conversations`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            type: 'direct',
+            participant_ids: [userId],
+          }),
+        },
+      );
+
+      if (!response.ok) {
+        const errorData = await response
+          .json()
+          .catch(() => ({ error: 'Unknown error' }));
+        throw new Error(errorData.error || 'Failed to create conversation');
+      }
+
+      const responseData = await response.json();
+
+      // Handle the wrapped response structure from createTenantSuccessResponse
+      const data = responseData.data || responseData;
+
+      // Ensure we have a valid conversation object
+      if (!data.conversation || !data.conversation.id) {
+        console.error('Invalid conversation data:', data);
+        throw new Error('Invalid conversation data received');
+      }
+
+      return data.conversation;
+    },
+    onMutate: async (userId: string) => {
+      // Close dialog immediately for responsive UX
       onOpenChange(false);
       setSearchQuery('');
 
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ['direct-messages'] });
+
+      // Return context for rollback if needed
+      return { userId };
+    },
+    onSuccess: (data) => {
+      // Ensure data has an id before proceeding
+      if (!data || !data.id) {
+        console.error('Invalid conversation data in onSuccess:', data);
+        return;
+      }
+
+      // Invalidate ALL conversation-related caches for immediate UI updates
+      void queryClient.invalidateQueries({
+        queryKey: ['direct-messages'],
+      });
+      void queryClient.invalidateQueries({
+        queryKey: ['tenant-channels'],
+      });
+      void queryClient.invalidateQueries({
+        queryKey: ['conversations'],
+      });
+      void queryClient.invalidateQueries({
+        queryKey: ['chat'],
+      });
+
+      // Navigate to the new conversation
       if (onConversationCreated !== undefined) {
         onConversationCreated(data.id);
       }
     },
-    onError: (error) => {
+    onError: (error, variables, context) => {
       console.error('Failed to create conversation:', error);
+
+      // Reopen dialog on error so user can try again
+      onOpenChange(true);
     },
   });
 

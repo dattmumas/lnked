@@ -120,9 +120,13 @@ export class RealtimeService {
         },
         (payload: RealtimePostgresChangesPayload<Record<string, unknown>>) => {
           void (async () => {
+            console.log(`🔔 RealtimeService: Received postgres_changes INSERT for conversation ${conversationId}:`, payload);
+            
             if (payload.new !== undefined && typeof callbacks.onMessage === 'function') {
               // Fetch full message with sender info
               const newMessage = payload.new as { id: string };
+      
+              
               const { data: message } = await this.supabase
                 .from('messages')
                 .select(`
@@ -137,7 +141,10 @@ export class RealtimeService {
                 .single();
 
               if (message !== null && message !== undefined) {
+                console.log(`✅ RealtimeService: Calling onMessage callback for conversation ${conversationId} with message:`, message);
                 callbacks.onMessage(message as unknown as MessageWithSender);
+              } else {
+                console.log(`❌ RealtimeService: Failed to fetch message data for message ${newMessage.id}`);
               }
             }
           })().catch(console.error);

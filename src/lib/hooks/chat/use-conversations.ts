@@ -205,14 +205,18 @@ export function useDeleteConversation(): { mutate: (conversationId: string)=>voi
       }
     },
     onSuccess: (_data, conversationId) => {
-      // Invalidate to ensure consistency
+      // Invalidate ALL conversation-related caches for immediate UI updates
       void queryClient.invalidateQueries({
         queryKey: conversationKeys.lists(),
       });
-      
-      // Also invalidate direct conversations cache
       void queryClient.invalidateQueries({
-        queryKey: ['chat', 'direct'],
+        queryKey: ['direct-messages'],
+      });
+      void queryClient.invalidateQueries({
+        queryKey: ['tenant-channels'],
+      });
+      void queryClient.invalidateQueries({
+        queryKey: ['chat'],
       });
     },
   });

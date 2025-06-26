@@ -25,7 +25,7 @@ export interface CollectiveWithPermission {
   slug: string;
   logo_url: string | null;
   description: string | null;
-  user_role: Database['public']['Enums']['member_role'];
+  user_role: Database['public']['Enums']['collective_member_role'];
   can_post: boolean;
   member_count?: number;
 }
@@ -38,6 +38,7 @@ export interface PostEditorFormData {
   content: string;
   subtitle?: string;
   author_id?: string;
+  author?: string; // Custom author byline field
   seo_title?: string;
   meta_description?: string;
   thumbnail_url?: string;

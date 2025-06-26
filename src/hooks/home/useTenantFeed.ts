@@ -109,15 +109,15 @@ export function useTenantFeed(options: TenantFeedOptions = {}): UseTenantFeedRet
   // Determine which tenants to fetch from
   const targetTenants = useMemo(() => {
     if (!includeCollectives || !currentTenant) {
-      return currentTenant ? [currentTenant.tenant_id] : [];
+      return currentTenant ? [currentTenant.id] : [];
     }
     
     // Include current tenant + user's collective tenants
-    const tenantIds = new Set([currentTenant.tenant_id]);
+    const tenantIds = new Set([currentTenant.id]);
     
     userTenants
-      .filter(t => !t.is_personal) // Only include collectives
-      .forEach(t => tenantIds.add(t.tenant_id));
+      .filter(t => t.type !== 'personal') // Only include collectives
+      .forEach(t => tenantIds.add(t.id));
     
     return Array.from(tenantIds);
   }, [currentTenant, userTenants, includeCollectives]);
@@ -130,7 +130,7 @@ export function useTenantFeed(options: TenantFeedOptions = {}): UseTenantFeedRet
     error: currentError,
     refetch: refetchCurrent,
   } = useQuery({
-    queryKey: ['tenant-feed', currentTenant?.tenant_id, { limit, offset, status, author_id }],
+    queryKey: ['tenant-feed', currentTenant?.id, { limit, offset, status, author_id }],
     queryFn: async (): Promise<TenantFeedResponse | null> => {
       if (!currentTenant) return null;
       
@@ -141,7 +141,7 @@ export function useTenantFeed(options: TenantFeedOptions = {}): UseTenantFeedRet
         ...(author_id && { author_id }),
       });
 
-      const response = await fetch(`/api/tenants/${currentTenant.tenant_id}/posts?${params}`);
+      const response = await fetch(`/api/tenants/${currentTenant.id}/posts?${params}`);
       
       if (!response.ok) {
         throw new Error('Failed to fetch tenant feed');
@@ -169,7 +169,7 @@ export function useTenantFeed(options: TenantFeedOptions = {}): UseTenantFeedRet
       
       // Fetch from collective tenants (excluding personal tenant)
       const collectiveTenants = targetTenants.filter(id => 
-        id !== currentTenant?.tenant_id
+        id !== currentTenant?.id
       );
       
       if (collectiveTenants.length === 0) return [];
@@ -272,7 +272,7 @@ export function useTenantFeed(options: TenantFeedOptions = {}): UseTenantFeedRet
   useEffect(() => {
     setOffset(0);
     setAllPosts([]);
-  }, [currentTenant?.tenant_id]);
+  }, [currentTenant?.id]);
 
   return {
     // Data
@@ -295,8 +295,8 @@ export function useTenantFeed(options: TenantFeedOptions = {}): UseTenantFeedRet
     
     // Current context
     currentTenant: currentTenant ? {
-      id: currentTenant.tenant_id,
-      name: currentTenant.tenant_name,
+      id: currentTenant.id,
+      name: currentTenant.name,
       type: currentTenant.is_personal ? 'personal' : 'collective',
     } : null,
   };
