@@ -1,9 +1,9 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 
+import { useUser } from '@/hooks/useUser';
 import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
 import { useTenant } from '@/providers/TenantProvider';
-import { useUser } from '@/hooks/useUser';
 
 const TENANT_CHANNELS_STALE_TIME = 5 * 60 * 1000; // 5 minutes
 

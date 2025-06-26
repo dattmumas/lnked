@@ -1,7 +1,8 @@
 'use client';
 
-import { MoreVertical } from 'lucide-react';
 import React, { useCallback, useEffect, useState, useMemo } from 'react';
+import { MoreVertical } from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
 
 import {
   DropdownMenu,
@@ -9,17 +10,22 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from '@/components/ui/dropdown-menu';
+import { CenteredSpinner } from '@/components/ui/CenteredSpinner';
 import { useDirectMessages } from '@/hooks/chat/useDirectMessages';
 import { useTenantChannels } from '@/hooks/chat/useTenantChannels';
 import { useToast } from '@/hooks/useToast';
 import { useUser } from '@/hooks/useUser';
 import { CHAT_HEADER_HEIGHT } from '@/lib/constants/chat';
-import { useDeleteConversation } from '@/lib/hooks/chat/use-conversations';
-import { useRealtimeMessagesForConversations } from '@/lib/hooks/chat/use-messages';
+import {
+  conversationKeys,
+  useDeleteConversation,
+} from '@/lib/hooks/chat/use-conversations';
+import { messageKeys } from '@/lib/hooks/chat/use-messages';
 import { useChatUIStore } from '@/lib/stores/chat-ui-store';
 import { useTenant } from '@/providers/TenantProvider';
+import { selectAdapter } from '@/lib/chat/realtime-adapter';
 
-import { CenteredSpinner } from '../ui/CenteredSpinner';
+import type { MessageWithSender } from '@/lib/chat/types';
 
 import { ChannelIcon } from './ChannelIcon';
 import { ChatPanel } from './chat-panel';
@@ -41,7 +47,7 @@ export default function TenantChatInterface({
 }: TenantChatInterfaceProps): React.JSX.Element {
   const { user } = useUser();
   const { toast } = useToast();
-  const { currentTenant, userTenants } = useTenant();
+  const { currentTenant } = useTenant();
   const {
     data: channels = [],
     isLoading: channelsLoading,
@@ -63,18 +69,8 @@ export default function TenantChatInterface({
   // Get chat state for typing indicators
   const typingUsers = useChatUIStore((state) => state.typingUsers);
 
-  // Subscribe to real-time updates for ALL user conversations EXCEPT the active one
-  // This ensures users receive messages even when not viewing the specific conversation
-  // The active conversation is handled by ChatPanel's useRealtimeMessages hook
-  const backgroundConversationIds = useMemo(() => {
-    const conversationIds = conversations.map((c) => c.id);
-    const channelIds = channels.map((c) => c.id);
-    const allIds = [...conversationIds, ...channelIds];
-
-    // Exclude the active conversation to prevent duplicate subscriptions
-    return allIds.filter((id) => id !== activeChannel?.id);
-  }, [conversations, channels, activeChannel?.id]);
-  useRealtimeMessagesForConversations(backgroundConversationIds);
+  // Real-time subscriptions are now handled by the RealtimeService
+  // via the adapter pattern in the chat hooks
 
   // Handle errors with toast notifications
   useEffect(() => {

@@ -34,6 +34,9 @@ const CHANNEL_STATES = {
   CLOSED_LOWERCASE: 'closed',
 } as const;
 
+// Treat these as "alive" – never call .subscribe() again on them
+const GOOD_STATES = new Set(['joining', 'joined', 'leaving'] as const);
+
 /**
  * Real-time service following Supabase's official patterns with enhanced security
  * Based on: https://supabase.com/docs/guides/realtime/broadcast
@@ -48,7 +51,67 @@ export class RealtimeService {
   private typingTimeout: Map<string, NodeJS.Timeout> = new Map();
   private subscriptionDebounce: Map<string, NodeJS.Timeout> = new Map();
   private pendingSubscriptions: Set<string> = new Set();
-  private recentlyUnsubscribed: Map<string, number> = new Map();
+  private activeSubscriptionAttempts: Set<string> = new Set();
+  private authRefreshInProgress = false;
+
+  constructor() {
+    this.setupAuthRefreshHandler();
+  }
+
+  /**
+   * Set up auth state change handler to refresh channels on token refresh
+   */
+  private setupAuthRefreshHandler(): void {
+    this.supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'TOKEN_REFRESHED' && session) {
+        console.warn('🔄 RealtimeService: Auth token refreshed, refreshing channels...');
+        await this.refreshAllChannels();
+      } else if (event === 'SIGNED_OUT') {
+        console.warn('🚪 RealtimeService: User signed out, cleaning up all channels');
+        this.unsubscribeFromAll();
+      }
+    });
+  }
+
+  /**
+   * Refresh all active channels after auth token refresh
+   */
+  private async refreshAllChannels(): Promise<void> {
+    if (this.authRefreshInProgress) return;
+    
+    this.authRefreshInProgress = true;
+    
+    try {
+      const activeConversations = Array.from(this.channels.keys());
+      const handlers = new Map();
+      
+      // Store current handlers
+      for (const conversationId of activeConversations) {
+        handlers.set(conversationId, {
+          onMessage: this.messageHandlers.get(conversationId),
+          onTyping: this.typingHandlers.get(conversationId),
+        });
+      }
+      
+      // Unsubscribe from all
+      this.unsubscribeFromAll();
+      
+      // Wait a bit for cleanup
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Re-subscribe with fresh tokens
+      for (const [conversationId, handler] of handlers) {
+        if (handler.onMessage || handler.onTyping) {
+          await this.subscribeToConversation(conversationId, {
+            onMessage: handler.onMessage,
+            onTyping: handler.onTyping,
+          });
+        }
+      }
+    } finally {
+      this.authRefreshInProgress = false;
+    }
+  }
 
   /**
    * Subscribe to a conversation channel following Supabase broadcast patterns with security checks
@@ -66,294 +129,335 @@ export class RealtimeService {
   ): Promise<RealtimeChannel | undefined> {
     const channelName = `conversation:${conversationId}`;
     
+    console.log(`🔍 RealtimeService: subscribeToConversation called for ${conversationId}`);
+    
     // Prevent multiple simultaneous subscriptions to the same conversation
-    if (this.pendingSubscriptions.has(conversationId)) {
+    if (this.pendingSubscriptions.has(conversationId) || this.activeSubscriptionAttempts.has(conversationId)) {
+      console.log(`⏳ RealtimeService: Subscription already pending or in progress for ${conversationId}`);
       return this.channels.get(conversationId);
     }
     
-    // Check if this conversation was recently unsubscribed (React StrictMode protection)
-    const lastUnsubscribe = this.recentlyUnsubscribed.get(conversationId);
-    if (lastUnsubscribe && Date.now() - lastUnsubscribe < 100) {
-      // Wait a bit before allowing re-subscription
-      return new Promise((resolve) => {
-        setTimeout(() => {
-          void this.subscribeToConversation(conversationId, callbacks).then(resolve);
-        }, 100);
-      });
-    }
+    // Mark this subscription attempt as active
+    this.activeSubscriptionAttempts.add(conversationId);
     
-    // Debounce rapid subscription attempts
-    const existingDebounce = this.subscriptionDebounce.get(conversationId);
-    if (existingDebounce) {
-      clearTimeout(existingDebounce);
-    }
-
-    // If there's already an active channel, reuse it if it's in a good state
-    const existingChannel = this.channels.get(conversationId);
-    if (existingChannel) {
-      const state = String(existingChannel.state);
-      if (state === CHANNEL_STATES.JOINED || state === CHANNEL_STATES.SUBSCRIBED) {
-        return existingChannel;
+    try {
+      // Debounce rapid subscription attempts
+      const existingDebounce = this.subscriptionDebounce.get(conversationId);
+      if (existingDebounce) {
+        clearTimeout(existingDebounce);
       }
-    }
-    
-    // Security check: Verify user can access this conversation
-    const user = await this.getCurrentUser();
-    if (!user) {
-      console.error('User not authenticated for real-time subscription');
-      return undefined;
-    }
 
-    const canView = await chatSecurity.canViewConversation(conversationId, user.id);
-    if (!canView) {
-      chatSecurity.logSecurityEvent({
-        action: 'realtime_subscription_denied',
-        userId: user.id,
-        conversationId,
-        success: false,
-        details: { reason: 'User not authorized to subscribe to this conversation' },
-      });
-      console.error('User not authorized to subscribe to conversation:', conversationId);
-      return undefined;
-    }
-    
-    // Remove existing channel if it exists
-    this.unsubscribeFromConversation(conversationId);
-
-    // Mark subscription as pending
-    this.pendingSubscriptions.add(conversationId);
-
-    // Create new channel following Supabase patterns
-    const channel = this.supabase
-      .channel(channelName, {
-        config: {
-          broadcast: { self: false }, // Don't broadcast to self
-          presence: { key: conversationId }, // Track presence in this conversation
-        },
-      })
+      // If there's already an active channel, reuse it if it's in a good state
+      const existingChannel = this.channels.get(conversationId);
+      if (existingChannel) {
+        const s = String(existingChannel.state);
+        console.log(`🔍 RealtimeService: Found existing channel for ${conversationId} in state: ${s}`);
+        if (GOOD_STATES.has(s as never)) {
+          // channel already live (or closing) → reuse, don't resubscribe
+          // refresh handler references
+          console.log(`♻️ RealtimeService: Reusing existing channel for ${conversationId}`);
+          if (callbacks.onMessage) this.messageHandlers.set(conversationId, callbacks.onMessage);
+          if (callbacks.onTyping)  this.typingHandlers.set(conversationId, callbacks.onTyping);
+          return existingChannel;
+        }
+        // if it's fully closed we can drop it
+        if (s === CHANNEL_STATES.CLOSED || s === CHANNEL_STATES.CLOSED_LOWERCASE) {
+          console.log(`🗑️ RealtimeService: Removing closed channel for ${conversationId}`);
+          this.channels.delete(conversationId);
+        }
+      }
       
-      // Listen for new messages via Postgres Changes
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'messages',
-          filter: `conversation_id=eq.${conversationId}`,
-        },
-        (payload: RealtimePostgresChangesPayload<Record<string, unknown>>) => {
-          void (async () => {
-            if (payload.new !== undefined && typeof callbacks.onMessage === 'function') {
-              // Fetch full message with sender info
-              const newMessage = payload.new as { id: string };
+      // Security check: Verify user can access this conversation
+      const user = await this.getCurrentUser();
+      if (!user) {
+        console.error('User not authenticated for real-time subscription');
+        return undefined;
+      }
+
+      const canView = await chatSecurity.canViewConversation(conversationId, user.id);
+      if (!canView) {
+        chatSecurity.logSecurityEvent({
+          action: 'realtime_subscription_denied',
+          userId: user.id,
+          conversationId,
+          success: false,
+          details: { reason: 'User not authorized to subscribe to this conversation' },
+        });
+        console.error('User not authorized to subscribe to conversation:', conversationId);
+        return undefined;
+      }
       
-              const { data: message } = await this.supabase
-                .from('messages')
-                .select(`
-                  *,
-                  sender:users!messages_sender_id_fkey(id, full_name, username, avatar_url),
-                  reply_to:messages(
+      // Remove existing channel if it exists
+      this.unsubscribeFromConversation(conversationId);
+
+      // Mark subscription as pending
+      this.pendingSubscriptions.add(conversationId);
+      console.log(`📝 RealtimeService: Marked ${conversationId} as pending subscription`);
+
+      // Create new channel following Supabase patterns
+      console.log(`🆕 RealtimeService: Creating new channel for ${conversationId}`);
+      const channel = this.supabase
+        .channel(channelName, {
+          config: {
+            broadcast: { self: false }, // Don't broadcast to self
+            presence: { key: conversationId }, // Track presence in this conversation
+          },
+        })
+        
+        // Listen for new messages via Postgres Changes
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'messages',
+            filter: `conversation_id=eq.${conversationId}`,
+          },
+          (payload: RealtimePostgresChangesPayload<Record<string, unknown>>) => {
+            void (async () => {
+              if (payload.new !== undefined && typeof callbacks.onMessage === 'function') {
+                // Fetch full message with sender info
+                const newMessage = payload.new as { id: string };
+        
+                const { data: message } = await this.supabase
+                  .from('messages')
+                  .select(`
                     *,
-                    sender:users!messages_sender_id_fkey(id, full_name, username, avatar_url)
-                  )
-                `)
-                .eq('id', newMessage.id)
-                .single();
+                    sender:users!messages_sender_id_fkey(id, full_name, username, avatar_url),
+                    reply_to:messages(
+                      *,
+                      sender:users!messages_sender_id_fkey(id, full_name, username, avatar_url)
+                    )
+                  `)
+                  .eq('id', newMessage.id)
+                  .single();
 
-              if (message !== null && message !== undefined) {
-                callbacks.onMessage(message as unknown as MessageWithSender);
+                if (message !== null && message !== undefined) {
+                  callbacks.onMessage(message as unknown as MessageWithSender);
+                }
+              }
+            })().catch(console.error);
+          }
+        )
+        
+        // Listen for message updates via Postgres Changes
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'messages',
+            filter: `conversation_id=eq.${conversationId}`,
+          },
+          (payload: RealtimePostgresChangesPayload<Record<string, unknown>>) => {
+            void (async () => {
+              if (payload.new !== undefined && typeof callbacks.onMessageUpdate === 'function') {
+                // Fetch updated message with sender info
+                const updatedMessage = payload.new as { id: string };
+                const { data: message } = await this.supabase
+                  .from('messages')
+                  .select(`
+                    *,
+                    sender:users!messages_sender_id_fkey(id, full_name, username, avatar_url),
+                    reply_to:messages(
+                      *,
+                      sender:users!messages_sender_id_fkey(id, full_name, username, avatar_url)
+                    )
+                  `)
+                  .eq('id', updatedMessage.id)
+                  .single();
+
+                if (message !== null && message !== undefined) {
+                  callbacks.onMessageUpdate(message as unknown as MessageWithSender);
+                }
+              }
+            })().catch(console.error);
+          }
+        )
+        
+        // Listen for message deletions via Postgres Changes
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'messages',
+            filter: `conversation_id=eq.${conversationId}`,
+          },
+          (payload: RealtimePostgresChangesPayload<Record<string, unknown>>) => {
+            if (payload.new !== undefined && typeof callbacks.onMessageDelete === 'function') {
+              const deletedMessage = payload.new as { id: string; deleted_at?: string | null | undefined };
+              if (typeof deletedMessage.deleted_at === 'string' && deletedMessage.deleted_at.length > 0) {
+                callbacks.onMessageDelete(deletedMessage.id);
               }
             }
-          })().catch(console.error);
-        }
-      )
-      
-      // Listen for message updates via Postgres Changes
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'messages',
-          filter: `conversation_id=eq.${conversationId}`,
-        },
-        (payload: RealtimePostgresChangesPayload<Record<string, unknown>>) => {
-          void (async () => {
-            if (payload.new !== undefined && typeof callbacks.onMessageUpdate === 'function') {
-              // Fetch updated message with sender info
-              const updatedMessage = payload.new as { id: string };
-              const { data: message } = await this.supabase
-                .from('messages')
-                .select(`
-                  *,
-                  sender:users!messages_sender_id_fkey(id, full_name, username, avatar_url),
-                  reply_to:messages(
-                    *,
-                    sender:users!messages_sender_id_fkey(id, full_name, username, avatar_url)
-                  )
-                `)
-                .eq('id', updatedMessage.id)
-                .single();
-
-              if (message !== null && message !== undefined) {
-                callbacks.onMessageUpdate(message as unknown as MessageWithSender);
-              }
-            }
-          })().catch(console.error);
-        }
-      )
-      
-      // Listen for message deletions via Postgres Changes
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'messages',
-          filter: `conversation_id=eq.${conversationId}`,
-        },
-        (payload: RealtimePostgresChangesPayload<Record<string, unknown>>) => {
-          if (payload.new !== undefined && typeof callbacks.onMessageDelete === 'function') {
-            const deletedMessage = payload.new as { id: string; deleted_at?: string | null | undefined };
-            if (typeof deletedMessage.deleted_at === 'string' && deletedMessage.deleted_at.length > 0) {
-              callbacks.onMessageDelete(deletedMessage.id);
+          }
+        )
+        
+        // Listen for typing indicators via Broadcast
+        .on(
+          'broadcast',
+          { event: 'typing_start' },
+          (payload: BroadcastMessage) => {
+            if (typeof payload.payload.user_id === 'string' && payload.payload.user_id !== '' && typeof callbacks.onTyping === 'function') {
+              this.handleTypingStart(conversationId, payload.payload, callbacks.onTyping);
             }
           }
-        }
-      )
-      
-      // Listen for typing indicators via Broadcast
-      .on(
-        'broadcast',
-        { event: 'typing_start' },
-        (payload: BroadcastMessage) => {
-          if (typeof payload.payload.user_id === 'string' && payload.payload.user_id !== '' && typeof callbacks.onTyping === 'function') {
-            this.handleTypingStart(conversationId, payload.payload, callbacks.onTyping);
+        )
+        
+        .on(
+          'broadcast',
+          { event: 'typing_stop' },
+          (payload: BroadcastMessage) => {
+            if (typeof payload.payload.user_id === 'string' && payload.payload.user_id !== '' && typeof callbacks.onTyping === 'function') {
+              this.handleTypingStop(conversationId, payload.payload, callbacks.onTyping);
+            }
           }
-        }
-      )
-      
-      .on(
-        'broadcast',
-        { event: 'typing_stop' },
-        (payload: BroadcastMessage) => {
-          if (typeof payload.payload.user_id === 'string' && payload.payload.user_id !== '' && typeof callbacks.onTyping === 'function') {
-            this.handleTypingStop(conversationId, payload.payload, callbacks.onTyping);
+        )
+        
+        // Listen for user presence changes
+        .on(
+          'broadcast',
+          { event: 'user_join' },
+          (payload: BroadcastMessage) => {
+            if (typeof payload.payload.user_id === 'string' && payload.payload.user_id !== '' && typeof callbacks.onUserJoin === 'function') {
+              callbacks.onUserJoin(payload.payload.user_id);
+            }
           }
-        }
-      )
-      
-      // Listen for user presence changes
-      .on(
-        'broadcast',
-        { event: 'user_join' },
-        (payload: BroadcastMessage) => {
-          if (typeof payload.payload.user_id === 'string' && payload.payload.user_id !== '' && typeof callbacks.onUserJoin === 'function') {
-            callbacks.onUserJoin(payload.payload.user_id);
+        )
+        
+        .on(
+          'broadcast',
+          { event: 'user_leave' },
+          (payload: BroadcastMessage) => {
+            if (typeof payload.payload.user_id === 'string' && payload.payload.user_id !== '' && typeof callbacks.onUserLeave === 'function') {
+              callbacks.onUserLeave(payload.payload.user_id);
+            }
           }
-        }
-      )
-      
-      .on(
-        'broadcast',
-        { event: 'user_leave' },
-        (payload: BroadcastMessage) => {
-          if (typeof payload.payload.user_id === 'string' && payload.payload.user_id !== '' && typeof callbacks.onUserLeave === 'function') {
-            callbacks.onUserLeave(payload.payload.user_id);
-          }
-        }
-      );
-
-    // Subscribe to the channel with enhanced error handling
-    channel.subscribe((status) => {
-      // Type-safe status checking
-      const statusString = String(status);
-      
-      switch (statusString) {
-        case CHANNEL_STATES.SUBSCRIBED:
+        )
+        
+        // Enhanced error handling
+        .on('system', { event: 'error' }, (error: unknown) => {
+          console.error(`❌ RealtimeService: Channel error for ${conversationId}:`, error);
           this.pendingSubscriptions.delete(conversationId);
-          if (typeof callbacks.onUserJoin === 'function') {
-            void this.broadcastUserJoin(conversationId);
-          }
-          break;
-        case CHANNEL_STATES.CHANNEL_ERROR:
-          console.error(`❌ Channel error for conversation ${conversationId}`);
-          this.pendingSubscriptions.delete(conversationId);
-          // Auto-retry after a delay to prevent infinite retry loops
+          
+          // Auto-retry with exponential backoff
           setTimeout(() => {
             if (this.channels.has(conversationId)) {
-              console.warn(`🔄 Retrying subscription to conversation ${conversationId}`);
+              console.warn(`🔄 RealtimeService: Retrying subscription to ${conversationId} after error`);
               void this.subscribeToConversation(conversationId, callbacks);
             }
           }, CHANNEL_RETRY_DELAY_MS);
-          break;
-        case CHANNEL_STATES.TIMED_OUT:
-          console.error(`⏰ Subscription timeout for conversation ${conversationId}`);
-          this.pendingSubscriptions.delete(conversationId);
-          // Clean up and retry
-          this.channels.delete(conversationId);
-          setTimeout(() => {
-            console.warn(`🔄 Retrying subscription after timeout: ${conversationId}`);
-            void this.subscribeToConversation(conversationId, callbacks);
-          }, TIMEOUT_RETRY_DELAY_MS);
-          break;
-        case CHANNEL_STATES.CLOSED:
+        })
+        
+        .on('system', { event: 'close' }, () => {
+          console.warn(`🔒 RealtimeService: Channel closed for ${conversationId}`);
           this.pendingSubscriptions.delete(conversationId);
           this.channels.delete(conversationId);
-          break;
-        default:
-          console.error(`❓ Unknown subscription status for conversation ${conversationId}:`, status);
-          this.pendingSubscriptions.delete(conversationId);
+          this.messageHandlers.delete(conversationId);
+          this.typingHandlers.delete(conversationId);
+        });
+
+      // Subscribe to the channel with enhanced error handling
+      try {
+        await channel.subscribe((status) => {
+          // Type-safe status checking
+          const statusString = String(status);
+          console.log(`📡 RealtimeService: Subscription status for ${conversationId}: ${statusString}`);
+          
+          switch (statusString) {
+            case CHANNEL_STATES.SUBSCRIBED:
+              console.log(`✅ RealtimeService: Successfully subscribed to ${conversationId}`);
+              this.pendingSubscriptions.delete(conversationId);
+              if (typeof callbacks.onUserJoin === 'function') {
+                void this.broadcastUserJoin(conversationId);
+              }
+              break;
+            case CHANNEL_STATES.CHANNEL_ERROR:
+              console.error(`❌ Channel error for conversation ${conversationId}`);
+              this.pendingSubscriptions.delete(conversationId);
+              // Auto-retry after a delay to prevent infinite retry loops
+              setTimeout(() => {
+                if (this.channels.has(conversationId)) {
+                  console.warn(`🔄 Retrying subscription to conversation ${conversationId}`);
+                  void this.subscribeToConversation(conversationId, callbacks);
+                }
+              }, CHANNEL_RETRY_DELAY_MS);
+              break;
+            case CHANNEL_STATES.TIMED_OUT:
+              console.error(`⏰ Subscription timeout for conversation ${conversationId}`);
+              this.pendingSubscriptions.delete(conversationId);
+              // Clean up and retry
+              this.channels.delete(conversationId);
+              setTimeout(() => {
+                console.warn(`🔄 Retrying subscription after timeout: ${conversationId}`);
+                void this.subscribeToConversation(conversationId, callbacks);
+              }, TIMEOUT_RETRY_DELAY_MS);
+              break;
+            case CHANNEL_STATES.CLOSED:
+            case CHANNEL_STATES.CLOSED_LOWERCASE:
+              console.log(`🔒 RealtimeService: Channel closed for ${conversationId}`);
+              this.pendingSubscriptions.delete(conversationId);
+              this.channels.delete(conversationId);
+              this.messageHandlers.delete(conversationId);
+              this.typingHandlers.delete(conversationId);
+              break;
+            default:
+              console.error(`❓ Unknown subscription status for conversation ${conversationId}:`, status);
+              this.pendingSubscriptions.delete(conversationId);
+          }
+        });
+      } catch (error) {
+        console.error(`❌ RealtimeService: Failed to subscribe to ${conversationId}:`, error);
+        this.pendingSubscriptions.delete(conversationId);
+        throw error;
       }
-    });
 
-    this.channels.set(conversationId, channel);
-    
-    // Store callbacks for cleanup
-    if (callbacks.onMessage) {
-      this.messageHandlers.set(conversationId, callbacks.onMessage);
-    }
-    if (callbacks.onTyping) {
-      this.typingHandlers.set(conversationId, callbacks.onTyping);
-    }
+      this.channels.set(conversationId, channel);
+      console.log(`💾 RealtimeService: Stored channel for ${conversationId}`);
+      
+      // Store callbacks for cleanup
+      if (callbacks.onMessage) {
+        this.messageHandlers.set(conversationId, callbacks.onMessage);
+      }
+      if (callbacks.onTyping) {
+        this.typingHandlers.set(conversationId, callbacks.onTyping);
+      }
 
-    return channel;
+      return channel;
+    } finally {
+      this.activeSubscriptionAttempts.delete(conversationId);
+    }
   }
 
   /**
    * Unsubscribe from a conversation
    */
   unsubscribeFromConversation(conversationId: string): void {
+    console.log(`🔌 RealtimeService: unsubscribeFromConversation called for ${conversationId}`);
+    
+    // Clear any active subscription attempts
+    this.activeSubscriptionAttempts.delete(conversationId);
+    
     const channel = this.channels.get(conversationId);
     if (channel) {
-      // Immediately remove from channels map to prevent reuse
-      this.channels.delete(conversationId);
-      
-      // Mark as recently unsubscribed for StrictMode protection
-      this.recentlyUnsubscribed.set(conversationId, Date.now());
-      
-      // Clean up old entries (older than 1 second)
-      const now = Date.now();
-      for (const [id, time] of this.recentlyUnsubscribed.entries()) {
-        if (now - time > 1000) {
-          this.recentlyUnsubscribed.delete(id);
-        }
-      }
+      console.log(`📤 RealtimeService: Found channel to unsubscribe for ${conversationId}`);
+      // mark as leaving; actual removal happens in CLOSED status handler
       
       // Announce user leaving before unsubscribing (only if channel is active)
       const channelState = String(channel.state);
+      console.log(`🔍 RealtimeService: Channel state for ${conversationId}: ${channelState}`);
       if (channelState === CHANNEL_STATES.JOINED) {
         void this.broadcastUserLeave(conversationId);
       }
       
       // Only unsubscribe if channel is not already closed
       if (channelState !== CHANNEL_STATES.CLOSED_LOWERCASE) {
+        console.log(`📤 RealtimeService: Calling unsubscribe for ${conversationId}`);
         void channel.unsubscribe();
+      } else {
+        console.log(`⏭️ RealtimeService: Skipping unsubscribe for already closed channel ${conversationId}`);
       }
-      
-      this.messageHandlers.delete(conversationId);
-      this.typingHandlers.delete(conversationId);
-      this.pendingSubscriptions.delete(conversationId);
       
       // Clear typing timeout
       const timeout = this.typingTimeout.get(conversationId);
@@ -369,6 +473,7 @@ export class RealtimeService {
         this.subscriptionDebounce.delete(conversationId);
       }
     } else {
+      console.log(`❌ RealtimeService: No channel found to unsubscribe for ${conversationId}`);
       // Still clean up pending state even if no channel exists
       this.pendingSubscriptions.delete(conversationId);
     }

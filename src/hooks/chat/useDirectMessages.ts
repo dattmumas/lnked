@@ -1,10 +1,9 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 
-import { chatApiClient } from '@/lib/chat/api-client';
+import { useUser } from '@/hooks/useUser';
 import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
 import { useTenant } from '@/providers/TenantProvider';
-import { useUser } from '@/hooks/useUser';
 
 import type { ConversationWithParticipants } from '@/lib/chat/types';
 
@@ -97,7 +96,7 @@ export function useDirectMessages() {
 
       return conversations.filter((c) => c.type === 'direct');
     },
-    enabled: isPersonal && !!tenantId,
+    enabled: isPersonal && Boolean(tenantId),
     staleTime: DIRECT_MESSAGES_STALE_TIME,
   });
 } 

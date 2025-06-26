@@ -1,4 +1,4 @@
-import { RealtimeService } from '@/lib/chat/realtime-service';
+import { realtimeService } from '@/lib/chat/realtime-service';
 
 export type Handlers = {
   onMessage?: (_msg: unknown) => void;
@@ -17,31 +17,32 @@ export interface RealTimeAdapter {
 }
 
 class SupabaseAdapter implements RealTimeAdapter {
-  private service = new RealtimeService();
 
   async subscribe(conversationId: string, handlers: Handlers): Promise<Unsub> {
-    const channel = await this.service.subscribeToConversation(conversationId, handlers);
+    const channel = await realtimeService.subscribeToConversation(conversationId, handlers);
     if (!channel) {
       return () => {};
     }
     return () => {
-      this.service.unsubscribeFromConversation(conversationId);
+      realtimeService.unsubscribeFromConversation(conversationId);
     };
   }
 
   async broadcastTyping(conversationId: string, isTyping: boolean): Promise<void> {
     if (isTyping) {
-      await this.service.broadcastTypingStart(conversationId);
+      await realtimeService.broadcastTypingStart(conversationId);
     } else {
-      await this.service.broadcastTypingStop(conversationId);
+      await realtimeService.broadcastTypingStop(conversationId);
     }
   }
 }
 
+const supabaseAdapterInstance = new SupabaseAdapter();
+
 // Placeholder for future Ably adapter
- 
+
 const adapters: Record<string, RealTimeAdapter> = {
-  supabase: new SupabaseAdapter(),
+  supabase: supabaseAdapterInstance,
 };
 
 export function selectAdapter(name: 'supabase' | 'ably' = 'supabase'): RealTimeAdapter {

@@ -147,7 +147,7 @@ export async function GET(): Promise<NextResponse> {
         id: typedConv.id,
         title: typedConv.title,
         type: typedConv.type,
-        description: typedConv.description,
+        description: typedConv.description ?? null,
         is_private: typedConv.is_private,
         created_at: typedConv.created_at ?? null,
         created_by: null, // Not available in tenant-scoped function
@@ -325,8 +325,13 @@ async function getLegacyConversations(supabase: Awaited<ReturnType<typeof create
       const participants = participantsMap.get(conversationId) ?? [];
       
       return {
-        ...conv,
-        // Ensure required fields are properly typed
+        // Explicitly map database fields to avoid type conflicts
+        id: conv?.id ?? '',
+        title: conv?.title ?? null,
+        type: conv?.type ?? 'direct',
+        description: conv?.description ?? null,
+        is_private: conv?.is_private ?? false,
+        last_message_at: conv?.last_message_at ?? null,
         created_at: conv?.created_at ?? null,
         created_by: conv?.created_by ?? null,
         // Add missing required fields with default values
@@ -339,11 +344,12 @@ async function getLegacyConversations(supabase: Awaited<ReturnType<typeof create
         last_message: lastMessage !== undefined && 
                      lastMessage !== null && 
                      lastMessage.created_at !== null && 
-                     lastMessage.created_at !== undefined ? {
+                     lastMessage.created_at !== undefined &&
+                     lastMessage.sender !== null ? {
           id: lastMessage.id,
           content: lastMessage.content,
           created_at: lastMessage.created_at,
-        sender: lastMessage.sender
+          sender: lastMessage.sender
         } : null,
         participants: participants
           .filter(p => p.user_id !== null && 
