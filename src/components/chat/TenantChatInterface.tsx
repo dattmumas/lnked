@@ -1,35 +1,35 @@
 'use client';
 
-import React, { useCallback, useEffect, useState, useMemo } from 'react';
 import { MoreVertical } from 'lucide-react';
-import { useQueryClient } from '@tanstack/react-query';
+import React, { useCallback, useEffect, useState, useMemo } from 'react';
 
+import { CenteredSpinner } from '@/components/ui/CenteredSpinner';
 import {
   DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
 } from '@/components/ui/dropdown-menu';
-import { CenteredSpinner } from '@/components/ui/CenteredSpinner';
 import { useDirectMessages } from '@/hooks/chat/useDirectMessages';
 import { useTenantChannels } from '@/hooks/chat/useTenantChannels';
 import { useToast } from '@/hooks/useToast';
 import { useUser } from '@/hooks/useUser';
+import { selectAdapter } from '@/lib/chat/realtime-adapter';
 import { CHAT_HEADER_HEIGHT } from '@/lib/constants/chat';
-import {
-  conversationKeys,
-  useDeleteConversation,
+import { useDeleteConversation ,
+  useConversation,
+  useMarkAsRead,
 } from '@/lib/hooks/chat/use-conversations';
-import { messageKeys } from '@/lib/hooks/chat/use-messages';
+import { useMessages, useSendMessage } from '@/lib/hooks/chat/use-messages';
 import { useChatUIStore } from '@/lib/stores/chat-ui-store';
 import { useTenant } from '@/providers/TenantProvider';
-import { selectAdapter } from '@/lib/chat/realtime-adapter';
-
-import type { MessageWithSender } from '@/lib/chat/types';
 
 import { ChannelIcon } from './ChannelIcon';
 import { ChatPanel } from './chat-panel';
 import { TenantChannelsSidebar } from './TenantChannelsSidebar';
+
+import type { MessageWithSender } from '@/lib/chat/types';
+
 
 interface TenantChatInterfaceProps {
   userId: string;
@@ -65,12 +65,79 @@ export default function TenantChatInterface({
   const [activeChannel, setActiveChannel] = useState<ActiveChannel | null>(
     null,
   );
+  const [replyTarget, setReplyTarget] = useState<MessageWithSender | null>(
+    null,
+  );
+
+  // Chat data for active conversation
+  const conversation = useConversation(activeChannel?.id || '');
+  const {
+    messages,
+    isLoading: messagesLoading,
+    hasNextPage,
+    fetchNextPage,
+    isFetchingNextPage,
+  } = useMessages(activeChannel?.id || '');
+  const sendMessage = useSendMessage();
+  const markAsRead = useMarkAsRead();
 
   // Get chat state for typing indicators
   const typingUsers = useChatUIStore((state) => state.typingUsers);
 
-  // Real-time subscriptions are now handled by the RealtimeService
-  // via the adapter pattern in the chat hooks
+  // SINGLE REALTIME SUBSCRIPTION - The only place in the entire app
+  useEffect(() => {
+    if (!activeChannel?.id) return;
+
+    const setupSubscription = async () => {
+      try {
+        const adapter = selectAdapter('supabase');
+        const unsub = await adapter.subscribe(activeChannel.id, {});
+        return unsub;
+      } catch (error) {
+        console.error('Failed to set up realtime subscription:', error);
+        return () => {};
+      }
+    };
+
+    let unsubscribe: (() => void) | null = null;
+    setupSubscription().then((unsub) => {
+      unsubscribe = unsub;
+    });
+
+    return () => {
+      if (unsubscribe) {
+        void unsubscribe();
+      }
+    };
+  }, [activeChannel?.id]);
+
+  // Mark conversation as read when viewing
+  useEffect(() => {
+    if (activeChannel?.id && conversation) {
+      markAsRead.mutate(activeChannel.id);
+    }
+  }, [activeChannel?.id, conversation, markAsRead]);
+
+  // Message handlers
+  const handleSendMessage = useCallback(
+    async (content: string, replyToId?: string) => {
+      if (!activeChannel?.id) return;
+
+      await sendMessage.mutateAsync({
+        content,
+        message_type: 'text',
+        ...(replyToId ? { reply_to_id: replyToId } : {}),
+      });
+
+      // Clear reply on success
+      setReplyTarget(null);
+    },
+    [activeChannel?.id, sendMessage],
+  );
+
+  const handleReplyCancel = useCallback(() => {
+    setReplyTarget(null);
+  }, []);
 
   // Handle errors with toast notifications
   useEffect(() => {
@@ -256,7 +323,19 @@ export default function TenantChatInterface({
             </header>
 
             {/* Chat Panel */}
-            <ChatPanel conversationId={activeChannel.id} className="flex-1" />
+            <ChatPanel
+              conversationId={activeChannel.id}
+              messages={messages}
+              isLoading={messagesLoading}
+              hasNextPage={hasNextPage}
+              fetchNextPage={fetchNextPage}
+              isFetchingNextPage={isFetchingNextPage}
+              onSendMessage={handleSendMessage}
+              replyTarget={replyTarget}
+              onReplyCancel={handleReplyCancel}
+              currentUserId={user?.id ?? ''}
+              className="flex-1"
+            />
           </>
         ) : (
           <div className="flex flex-1 items-center justify-center text-muted-foreground">

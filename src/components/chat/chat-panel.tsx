@@ -1,97 +1,46 @@
 'use client';
 
-import { Loader2, Send, X } from 'lucide-react';
-import React, {
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useRef,
-  useState,
-} from 'react';
+import React, { useCallback, useLayoutEffect, useRef, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
-import { useUser } from '@/hooks/useUser';
-import {
-  useConversation,
-  useMarkAsRead,
-} from '@/lib/hooks/chat/use-conversations';
-import { useMessages, useSendMessage } from '@/lib/hooks/chat/use-messages';
-import { useChatUIStore } from '@/lib/stores/chat-ui-store';
 
 import { VirtualMessageList } from './virtual-message-list';
 
+import type { MessageWithSender } from '@/lib/chat/types';
+
 interface ChatPanelProps {
   conversationId: string;
+  messages: MessageWithSender[];
+  isLoading: boolean;
+  hasNextPage: boolean;
+  fetchNextPage: () => void;
+  isFetchingNextPage: boolean;
+  onSendMessage: (content: string, replyToId?: string) => Promise<void>;
+  replyTarget?: MessageWithSender | null;
+  onReplyCancel?: () => void;
+  currentUserId: string;
   className?: string;
 }
 
-// Constants
 const MAX_TEXTAREA_HEIGHT = 120;
-
-// Track which conversations have been marked as read globally
-const markedAsReadConversations = new Set<string>();
 
 export function ChatPanel({
   conversationId,
+  messages,
+  isLoading,
+  hasNextPage,
+  fetchNextPage,
+  isFetchingNextPage,
+  onSendMessage,
+  replyTarget,
+  onReplyCancel,
+  currentUserId,
   className,
 }: ChatPanelProps): React.ReactElement {
-  const { user } = useUser();
   const [message, setMessage] = useState('');
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const didSendRef = useRef(false);
 
-  // UI State from Zustand
-  const { setActiveConversation, getReplyTarget, setReplyTarget } =
-    useChatUIStore();
-
-  // Server state from React Query
-  const conversation = useConversation(conversationId);
-  const {
-    messages,
-    isLoading,
-    hasNextPage,
-    fetchNextPage,
-    isFetchingNextPage,
-  } = useMessages(conversationId);
-
-  const sendMessage = useSendMessage();
-  const markAsRead = useMarkAsRead();
-
-  // Get reply target from UI store
-  const replyTargetId = getReplyTarget(conversationId);
-  const replyTarget = messages.find((m) => m.id === replyTargetId) ?? undefined;
-
-  // Set active conversation when component mounts or conversationId changes
-  useEffect(() => {
-    setActiveConversation(conversationId);
-    return () => {
-      // Don't clear active conversation on unmount to prevent flicker
-    };
-  }, [conversationId, setActiveConversation]);
-
-  // Mark conversation as read when first viewing
-  useEffect(() => {
-    if (
-      conversationId === null ||
-      conversationId === undefined ||
-      conversation === null ||
-      conversation === undefined
-    )
-      return;
-
-    // Check if we've already marked this conversation globally
-    if (markedAsReadConversations.has(conversationId)) {
-      return;
-    }
-
-    markedAsReadConversations.add(conversationId);
-
-    // Call the mutation directly without timeout
-    markAsRead.mutate(conversationId);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [conversationId]); // Only depend on conversationId, not the mutation object
-
-  // Handle focus management after message sends
   useLayoutEffect(() => {
     if (didSendRef.current) {
       inputRef.current?.focus();
@@ -99,106 +48,41 @@ export function ChatPanel({
     }
   });
 
-  const handleSendMessage = useCallback(async (): Promise<void> => {
-    if (
-      message.trim().length === 0 ||
-      conversation === null ||
-      conversation === undefined
-    )
-      return;
-
-    const trimmedMessage = message.trim();
+  const handleSendMessage = useCallback(async () => {
+    const trimmed = message.trim();
+    if (!trimmed) return;
     setMessage('');
     didSendRef.current = true;
-
-    try {
-      await sendMessage.mutateAsync({
-        content: trimmedMessage,
-        message_type: 'text',
-        ...(replyTargetId !== null && replyTargetId !== undefined
-          ? { reply_to_id: replyTargetId }
-          : {}),
-      });
-
-      // Clear reply target on success
-      setReplyTarget(conversationId, undefined);
-    } catch (error) {
-      // Restore message on error
-      setMessage(trimmedMessage);
-      // Error already handled by mutation
-    }
-  }, [
-    message,
-    conversation,
-    conversationId,
-    replyTargetId,
-    sendMessage,
-    setReplyTarget,
-  ]);
+    await onSendMessage(trimmed, replyTarget?.id);
+  }, [message, onSendMessage, replyTarget?.id]);
 
   const handleKeyPress = useCallback(
-    (e: React.KeyboardEvent): void => {
+    (e: React.KeyboardEvent) => {
       if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
         void handleSendMessage();
-      } else if (
-        e.key === 'Escape' &&
-        replyTargetId !== null &&
-        replyTargetId !== undefined
-      ) {
-        setReplyTarget(conversationId, undefined);
+      } else if (e.key === 'Escape' && replyTarget && onReplyCancel) {
+        onReplyCancel();
       }
     },
-    [handleSendMessage, replyTargetId, conversationId, setReplyTarget],
+    [handleSendMessage, replyTarget, onReplyCancel],
   );
 
   const handleInputChange = useCallback(
-    (e: React.ChangeEvent<HTMLTextAreaElement>): void => {
+    (e: React.ChangeEvent<HTMLTextAreaElement>) => {
       setMessage(e.target.value);
     },
     [],
   );
 
-  const handleLoadMore = useCallback((): void => {
-    if (hasNextPage && !isFetchingNextPage) {
-      void fetchNextPage();
-    }
-  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
-
-  const handleMessageInView = useCallback((messageId: string): void => {
-    // This could be used for read receipts
-    void messageId;
-  }, []);
-
-  const clearReply = useCallback((): void => {
-    setReplyTarget(conversationId, undefined);
-    didSendRef.current = true;
-  }, [conversationId, setReplyTarget]);
-
-  // Loading state
-  if ((conversation === null || conversation === undefined) && isLoading) {
+  if (isLoading) {
     return (
       <div
         className={`flex items-center justify-center h-full ${className ?? ''}`}
       >
-        <div className="flex items-center gap-2">
-          <Loader2 className="h-4 w-4 animate-spin" />
+        <div className="flex items-center gap-2 text-muted-foreground">
+          <span className="animate-spin h-4 w-4 border-2 border-t-transparent border-gray-400 rounded-full" />
           Loading...
-        </div>
-      </div>
-    );
-  }
-
-  if (conversation === null || conversation === undefined) {
-    return (
-      <div
-        className={`flex items-center justify-center h-full ${className ?? ''}`}
-      >
-        <div className="text-center">
-          <p className="text-lg font-medium mb-2">No conversation selected</p>
-          <p className="text-sm text-muted-foreground">
-            Choose a conversation to start messaging
-          </p>
         </div>
       </div>
     );
@@ -208,28 +92,27 @@ export function ChatPanel({
     <div className={`flex flex-col h-full min-h-0 ${className ?? ''}`}>
       {/* Messages - Virtual List */}
       <VirtualMessageList
-        messages={messages}
-        currentUserId={user?.id ?? ''}
         conversationId={conversationId}
-        onLoadMore={handleLoadMore}
+        messages={messages}
+        currentUserId={currentUserId}
+        onLoadMore={fetchNextPage}
         hasMore={hasNextPage}
         isLoading={isFetchingNextPage}
-        onMessageInView={handleMessageInView}
       />
 
       {/* Input */}
       <div className="shrink-0 border-t bg-background/95 backdrop-blur-sm">
         {/* Reply preview */}
-        {replyTarget !== null && replyTarget !== undefined && (
+        {replyTarget && (
           <div
             className="px-4 py-2 bg-muted/50 border-b flex items-center justify-between cursor-pointer hover:bg-muted/70 transition-colors"
-            onClick={clearReply}
+            onClick={onReplyCancel}
             role="button"
             tabIndex={0}
             onKeyDown={(e) => {
               if (e.key === 'Enter' || e.key === ' ') {
                 e.preventDefault();
-                clearReply();
+                onReplyCancel?.();
               }
             }}
             aria-label="Reply preview. Click to cancel or press Escape"
@@ -249,13 +132,13 @@ export function ChatPanel({
               size="sm"
               onClick={(e) => {
                 e.stopPropagation();
-                clearReply();
+                onReplyCancel?.();
               }}
               className="h-8 w-8 p-0 hover:bg-muted-foreground/20"
               aria-label="Cancel reply"
               title="Cancel reply (Esc)"
             >
-              <X className="h-4 w-4" />
+              <span className="text-lg">×</span>
             </Button>
           </div>
         )}
@@ -270,12 +153,11 @@ export function ChatPanel({
                 onChange={handleInputChange}
                 onKeyDown={handleKeyPress}
                 placeholder={
-                  replyTarget !== null && replyTarget !== undefined
+                  replyTarget
                     ? `Reply to ${replyTarget.sender?.username ?? 'message'}...`
                     : 'Type a message...'
                 }
                 className="w-full min-h-[48px] max-h-[120px] resize-none rounded-2xl bg-background px-4 py-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary disabled:cursor-not-allowed disabled:opacity-50"
-                disabled={sendMessage.isPending}
                 aria-label="Message input"
                 rows={1}
                 style={{
@@ -288,7 +170,6 @@ export function ChatPanel({
                   target.style.height = `${Math.min(target.scrollHeight, MAX_TEXTAREA_HEIGHT)}px`;
                 }}
               />
-
               {/* Emoji picker button */}
               <button
                 type="button"
@@ -298,19 +179,14 @@ export function ChatPanel({
                 😊
               </button>
             </div>
-
             <Button
               onClick={() => void handleSendMessage()}
-              disabled={message.trim().length === 0 || sendMessage.isPending}
+              disabled={message.trim().length === 0}
               size="icon"
               className="h-12 w-12 rounded-full"
               aria-label="Send message"
             >
-              {sendMessage.isPending ? (
-                <Loader2 className="h-5 w-5 animate-spin" />
-              ) : (
-                <Send className="h-5 w-5" />
-              )}
+              <span className="text-lg">➤</span>
             </Button>
           </div>
         </div>

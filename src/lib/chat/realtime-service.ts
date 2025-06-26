@@ -53,6 +53,8 @@ export class RealtimeService {
   private pendingSubscriptions: Set<string> = new Set();
   private activeSubscriptionAttempts: Set<string> = new Set();
   private authRefreshInProgress = false;
+  
+
 
   constructor() {
     this.setupAuthRefreshHandler();
@@ -129,40 +131,83 @@ export class RealtimeService {
   ): Promise<RealtimeChannel | undefined> {
     const channelName = `conversation:${conversationId}`;
     
-    console.log(`🔍 RealtimeService: subscribeToConversation called for ${conversationId}`);
+    console.log(`🔍 [ENTER] subscribeToConversation(${conversationId})`);
+    console.log('  pendingSubscriptions:', Array.from(this.pendingSubscriptions));
+    console.log('  activeSubscriptionAttempts:', Array.from(this.activeSubscriptionAttempts));
+    console.log('  channels:', Array.from(this.channels.keys()));
+    
+
     
     // Prevent multiple simultaneous subscriptions to the same conversation
     if (this.pendingSubscriptions.has(conversationId) || this.activeSubscriptionAttempts.has(conversationId)) {
-      console.log(`⏳ RealtimeService: Subscription already pending or in progress for ${conversationId}`);
+      console.log(`⏳ [GUARD] Subscription already pending or in progress for ${conversationId}`);
       return this.channels.get(conversationId);
     }
     
     // Mark this subscription attempt as active
     this.activeSubscriptionAttempts.add(conversationId);
     
+    // Create the subscription
+    const subscriptionPromise = this.performSubscription(conversationId, callbacks);
+    
     try {
-      // Debounce rapid subscription attempts
+      const result = await subscriptionPromise;
+      return result;
+    } finally {
+      // Note: We DON'T delete the singleton here - it stays until explicitly cleared
+      this.activeSubscriptionAttempts.delete(conversationId);
+      console.log(`🔚 [EXIT] subscribeToConversation(${conversationId})`);
+      console.log('  pendingSubscriptions:', Array.from(this.pendingSubscriptions));
+      console.log('  activeSubscriptionAttempts:', Array.from(this.activeSubscriptionAttempts));
+      console.log('  channels:', Array.from(this.channels.keys()));
+    }
+  }
+
+  private async performSubscription(
+    conversationId: string,
+    callbacks: {
+      onMessage?: (_message: MessageWithSender) => void;
+      onTyping?: (_typing: TypingIndicator[]) => void;
+      onMessageUpdate?: (_message: MessageWithSender) => void;
+      onMessageDelete?: (_messageId: string) => void;
+      onUserJoin?: (_userId: string) => void;
+      onUserLeave?: (_userId: string) => void;
+    }
+  ): Promise<RealtimeChannel | undefined> {
+    const channelName = `conversation:${conversationId}`;
+    
+    try {
+      // Debounce rapid subscription attempts (especially during Fast Refresh in development)
       const existingDebounce = this.subscriptionDebounce.get(conversationId);
       if (existingDebounce) {
         clearTimeout(existingDebounce);
+      }
+
+      // In development, add a small delay to prevent race conditions during Fast Refresh
+      if (process.env.NODE_ENV === 'development') {
+        await new Promise(resolve => {
+          const timeout = setTimeout(resolve, 100);
+          this.subscriptionDebounce.set(conversationId, timeout);
+        });
+        this.subscriptionDebounce.delete(conversationId);
       }
 
       // If there's already an active channel, reuse it if it's in a good state
       const existingChannel = this.channels.get(conversationId);
       if (existingChannel) {
         const s = String(existingChannel.state);
-        console.log(`🔍 RealtimeService: Found existing channel for ${conversationId} in state: ${s}`);
+        console.log(`🔍 [REUSE] Found existing channel for ${conversationId} in state: ${s}`);
         if (GOOD_STATES.has(s as never)) {
           // channel already live (or closing) → reuse, don't resubscribe
           // refresh handler references
-          console.log(`♻️ RealtimeService: Reusing existing channel for ${conversationId}`);
+          console.log(`♻️ [REUSE] Reusing existing channel for ${conversationId}`);
           if (callbacks.onMessage) this.messageHandlers.set(conversationId, callbacks.onMessage);
           if (callbacks.onTyping)  this.typingHandlers.set(conversationId, callbacks.onTyping);
           return existingChannel;
         }
         // if it's fully closed we can drop it
         if (s === CHANNEL_STATES.CLOSED || s === CHANNEL_STATES.CLOSED_LOWERCASE) {
-          console.log(`🗑️ RealtimeService: Removing closed channel for ${conversationId}`);
+          console.log(`🗑️ [DROP] Removing closed channel for ${conversationId}`);
           this.channels.delete(conversationId);
         }
       }
@@ -170,7 +215,7 @@ export class RealtimeService {
       // Security check: Verify user can access this conversation
       const user = await this.getCurrentUser();
       if (!user) {
-        console.error('User not authenticated for real-time subscription');
+        console.error('[ERROR] User not authenticated for real-time subscription');
         return undefined;
       }
 
@@ -183,24 +228,21 @@ export class RealtimeService {
           success: false,
           details: { reason: 'User not authorized to subscribe to this conversation' },
         });
-        console.error('User not authorized to subscribe to conversation:', conversationId);
+        console.error('[ERROR] User not authorized to subscribe to conversation:', conversationId);
         return undefined;
       }
       
-      // Remove existing channel if it exists
-      this.unsubscribeFromConversation(conversationId);
-
       // Mark subscription as pending
       this.pendingSubscriptions.add(conversationId);
-      console.log(`📝 RealtimeService: Marked ${conversationId} as pending subscription`);
+      console.log(`📝 [PENDING] Marked ${conversationId} as pending subscription`);
 
       // Create new channel following Supabase patterns
-      console.log(`🆕 RealtimeService: Creating new channel for ${conversationId}`);
+      console.log(`🆕 [CREATE] Creating new channel for ${conversationId}`);
       const channel = this.supabase
         .channel(channelName, {
           config: {
             broadcast: { self: false }, // Don't broadcast to self
-            presence: { key: conversationId }, // Track presence in this conversation
+            presence: { key: user.id }, // Track presence using user ID for accurate presence tracking
           },
         })
         
@@ -360,10 +402,11 @@ export class RealtimeService {
 
       // Subscribe to the channel with enhanced error handling
       try {
+        console.log(`[CALL] channel.subscribe() for ${conversationId}`);
         await channel.subscribe((status) => {
           // Type-safe status checking
           const statusString = String(status);
-          console.log(`📡 RealtimeService: Subscription status for ${conversationId}: ${statusString}`);
+          console.log(`📡 [STATUS] Subscription status for ${conversationId}: ${statusString}`);
           
           switch (statusString) {
             case CHANNEL_STATES.SUBSCRIBED:
@@ -408,13 +451,13 @@ export class RealtimeService {
           }
         });
       } catch (error) {
-        console.error(`❌ RealtimeService: Failed to subscribe to ${conversationId}:`, error);
+        console.error(`[ERROR] Failed to subscribe to ${conversationId}:`, error);
         this.pendingSubscriptions.delete(conversationId);
         throw error;
       }
 
       this.channels.set(conversationId, channel);
-      console.log(`💾 RealtimeService: Stored channel for ${conversationId}`);
+      console.log(`💾 [STORE] Stored channel for ${conversationId}`);
       
       // Store callbacks for cleanup
       if (callbacks.onMessage) {
@@ -425,38 +468,40 @@ export class RealtimeService {
       }
 
       return channel;
-    } finally {
-      this.activeSubscriptionAttempts.delete(conversationId);
+    } catch (error) {
+      console.error(`[ERROR] Failed to perform subscription to ${conversationId}:`, error);
+      this.pendingSubscriptions.delete(conversationId);
+      throw error;
     }
   }
 
   /**
    * Unsubscribe from a conversation
    */
-  unsubscribeFromConversation(conversationId: string): void {
-    console.log(`🔌 RealtimeService: unsubscribeFromConversation called for ${conversationId}`);
-    
+  async unsubscribeFromConversation(conversationId: string): Promise<void> {
+    console.log(`🔌 [ENTER] unsubscribeFromConversation(${conversationId})`);
     // Clear any active subscription attempts
     this.activeSubscriptionAttempts.delete(conversationId);
     
     const channel = this.channels.get(conversationId);
     if (channel) {
-      console.log(`📤 RealtimeService: Found channel to unsubscribe for ${conversationId}`);
+      console.log(`📤 [FOUND] Found channel to unsubscribe for ${conversationId}`);
       // mark as leaving; actual removal happens in CLOSED status handler
       
       // Announce user leaving before unsubscribing (only if channel is active)
       const channelState = String(channel.state);
-      console.log(`🔍 RealtimeService: Channel state for ${conversationId}: ${channelState}`);
+      console.log(`🔍 [STATE] Channel state for ${conversationId}: ${channelState}`);
       if (channelState === CHANNEL_STATES.JOINED) {
-        void this.broadcastUserLeave(conversationId);
+        await this.broadcastUserLeave(conversationId);
       }
       
       // Only unsubscribe if channel is not already closed
       if (channelState !== CHANNEL_STATES.CLOSED_LOWERCASE) {
-        console.log(`📤 RealtimeService: Calling unsubscribe for ${conversationId}`);
-        void channel.unsubscribe();
+        console.log(`📤 [CALL] Calling unsubscribe for ${conversationId}`);
+        // CRITICAL FIX: Await the unsubscribe to prevent race conditions
+        await channel.unsubscribe();
       } else {
-        console.log(`⏭️ RealtimeService: Skipping unsubscribe for already closed channel ${conversationId}`);
+        console.log(`⏭️ [SKIP] Skipping unsubscribe for already closed channel ${conversationId}`);
       }
       
       // Clear typing timeout
@@ -472,11 +517,18 @@ export class RealtimeService {
         clearTimeout(debounceTimeout);
         this.subscriptionDebounce.delete(conversationId);
       }
+
+      // Clean up localStorage typing data to prevent accumulation
+      localStorage.removeItem(`typing:${conversationId}`);
     } else {
-      console.log(`❌ RealtimeService: No channel found to unsubscribe for ${conversationId}`);
+      console.log(`❌ [NOTFOUND] No channel found to unsubscribe for ${conversationId}`);
       // Still clean up pending state even if no channel exists
       this.pendingSubscriptions.delete(conversationId);
     }
+    console.log(`🔚 [EXIT] unsubscribeFromConversation(${conversationId})`);
+    console.log('  pendingSubscriptions:', Array.from(this.pendingSubscriptions));
+    console.log('  activeSubscriptionAttempts:', Array.from(this.activeSubscriptionAttempts));
+    console.log('  channels:', Array.from(this.channels.keys()));
   }
 
   /**

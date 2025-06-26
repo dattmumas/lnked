@@ -23,8 +23,8 @@ class SupabaseAdapter implements RealTimeAdapter {
     if (!channel) {
       return () => {};
     }
-    return () => {
-      realtimeService.unsubscribeFromConversation(conversationId);
+    return async () => {
+      await realtimeService.unsubscribeFromConversation(conversationId);
     };
   }
 
