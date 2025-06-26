@@ -63,14 +63,18 @@ export default function TenantChatInterface({
   // Get chat state for typing indicators
   const typingUsers = useChatUIStore((state) => state.typingUsers);
 
-  // Subscribe to real-time updates for ALL user conversations
+  // Subscribe to real-time updates for ALL user conversations EXCEPT the active one
   // This ensures users receive messages even when not viewing the specific conversation
-  const allConversationIds = useMemo(() => {
+  // The active conversation is handled by ChatPanel's useRealtimeMessages hook
+  const backgroundConversationIds = useMemo(() => {
     const conversationIds = conversations.map((c) => c.id);
     const channelIds = channels.map((c) => c.id);
-    return [...conversationIds, ...channelIds];
-  }, [conversations, channels]);
-  useRealtimeMessagesForConversations(allConversationIds);
+    const allIds = [...conversationIds, ...channelIds];
+
+    // Exclude the active conversation to prevent duplicate subscriptions
+    return allIds.filter((id) => id !== activeChannel?.id);
+  }, [conversations, channels, activeChannel?.id]);
+  useRealtimeMessagesForConversations(backgroundConversationIds);
 
   // Handle errors with toast notifications
   useEffect(() => {
