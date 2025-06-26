@@ -47,6 +47,7 @@ export class RealtimeService {
   private typingHandlers: Map<string, (_typing: TypingIndicator[]) => void> = new Map();
   private typingTimeout: Map<string, NodeJS.Timeout> = new Map();
   private subscriptionDebounce: Map<string, NodeJS.Timeout> = new Map();
+  private pendingSubscriptions: Set<string> = new Set();
 
   /**
    * Subscribe to a conversation channel following Supabase broadcast patterns with security checks
@@ -64,17 +65,26 @@ export class RealtimeService {
   ): Promise<RealtimeChannel | undefined> {
     const channelName = `conversation:${conversationId}`;
     
+    // Prevent multiple simultaneous subscriptions to the same conversation
+    if (this.pendingSubscriptions.has(conversationId)) {
+      console.warn(`⚠️ Subscription already in progress for conversation ${conversationId}, skipping`);
+      return this.channels.get(conversationId);
+    }
+    
     // Debounce rapid subscription attempts
     const existingDebounce = this.subscriptionDebounce.get(conversationId);
     if (existingDebounce) {
       clearTimeout(existingDebounce);
     }
 
-    // If there's already an active, healthy channel, reuse it
+    // If there's already an active channel, reuse it if it's in a good state
     const existingChannel = this.channels.get(conversationId);
-    if (existingChannel && String(existingChannel.state) === CHANNEL_STATES.JOINED) {
-      console.warn(`♻️ Reusing existing healthy channel for conversation ${conversationId}`);
-      return existingChannel;
+    if (existingChannel) {
+      const state = String(existingChannel.state);
+      if (state === CHANNEL_STATES.JOINED || state === CHANNEL_STATES.SUBSCRIBED) {
+        console.warn(`♻️ Reusing existing channel (${state}) for conversation ${conversationId}`);
+        return existingChannel;
+      }
     }
     
     // Security check: Verify user can access this conversation
@@ -99,6 +109,9 @@ export class RealtimeService {
     
     // Remove existing channel if it exists
     this.unsubscribeFromConversation(conversationId);
+
+    // Mark subscription as pending
+    this.pendingSubscriptions.add(conversationId);
 
     // Create new channel following Supabase patterns
     const channel = this.supabase
@@ -256,12 +269,14 @@ export class RealtimeService {
         case CHANNEL_STATES.SUBSCRIBED:
           // Use console.warn for info messages per ESLint rules
           console.warn(`✅ Successfully subscribed to conversation ${conversationId}`);
+          this.pendingSubscriptions.delete(conversationId);
           if (typeof callbacks.onUserJoin === 'function') {
             void this.broadcastUserJoin(conversationId);
           }
           break;
         case CHANNEL_STATES.CHANNEL_ERROR:
           console.error(`❌ Channel error for conversation ${conversationId}`);
+          this.pendingSubscriptions.delete(conversationId);
           // Auto-retry after a delay to prevent infinite retry loops
           setTimeout(() => {
             if (this.channels.has(conversationId)) {
@@ -272,6 +287,7 @@ export class RealtimeService {
           break;
         case CHANNEL_STATES.TIMED_OUT:
           console.error(`⏰ Subscription timeout for conversation ${conversationId}`);
+          this.pendingSubscriptions.delete(conversationId);
           // Clean up and retry
           this.channels.delete(conversationId);
           setTimeout(() => {
@@ -281,10 +297,12 @@ export class RealtimeService {
           break;
         case CHANNEL_STATES.CLOSED:
           console.warn(`🔒 Channel closed for conversation ${conversationId}`);
+          this.pendingSubscriptions.delete(conversationId);
           this.channels.delete(conversationId);
           break;
         default:
           console.error(`❓ Unknown subscription status for conversation ${conversationId}:`, status);
+          this.pendingSubscriptions.delete(conversationId);
       }
     });
 
@@ -321,6 +339,7 @@ export class RealtimeService {
       this.channels.delete(conversationId);
       this.messageHandlers.delete(conversationId);
       this.typingHandlers.delete(conversationId);
+      this.pendingSubscriptions.delete(conversationId);
       
       // Clear typing timeout
       const timeout = this.typingTimeout.get(conversationId);

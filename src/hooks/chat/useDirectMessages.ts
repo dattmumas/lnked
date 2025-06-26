@@ -40,8 +40,6 @@ export function useDirectMessages() {
           filter: `type=eq.direct`,
         },
         (payload) => {
-          console.log('🔔 Conversation change detected:', payload);
-          
           // Invalidate and refetch conversation list
           void queryClient.invalidateQueries({
             queryKey: directMessageKeys.byTenant(tenantId),
@@ -57,8 +55,6 @@ export function useDirectMessages() {
           filter: `user_id=eq.${user.id}`,
         },
         (payload) => {
-          console.log('🔔 Conversation participant change detected:', payload);
-          
           // Invalidate and refetch conversation list when user is added/removed
           void queryClient.invalidateQueries({
             queryKey: directMessageKeys.byTenant(tenantId),

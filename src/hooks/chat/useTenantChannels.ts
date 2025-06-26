@@ -52,8 +52,6 @@ export function useTenantChannels() {
           filter: `tenant_id=eq.${tenantId}`,
         },
         (payload) => {
-          console.log('🔔 Tenant channel change detected:', payload);
-          
           // Invalidate and refetch channel list
           void queryClient.invalidateQueries({
             queryKey: tenantChannelKeys.tenant(tenantId),
