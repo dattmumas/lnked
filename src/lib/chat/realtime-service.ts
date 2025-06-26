@@ -48,6 +48,7 @@ export class RealtimeService {
   private typingTimeout: Map<string, NodeJS.Timeout> = new Map();
   private subscriptionDebounce: Map<string, NodeJS.Timeout> = new Map();
   private pendingSubscriptions: Set<string> = new Set();
+  private recentlyUnsubscribed: Map<string, number> = new Map();
 
   /**
    * Subscribe to a conversation channel following Supabase broadcast patterns with security checks
@@ -67,8 +68,18 @@ export class RealtimeService {
     
     // Prevent multiple simultaneous subscriptions to the same conversation
     if (this.pendingSubscriptions.has(conversationId)) {
-      console.warn(`⚠️ Subscription already in progress for conversation ${conversationId}, skipping`);
       return this.channels.get(conversationId);
+    }
+    
+    // Check if this conversation was recently unsubscribed (React StrictMode protection)
+    const lastUnsubscribe = this.recentlyUnsubscribed.get(conversationId);
+    if (lastUnsubscribe && Date.now() - lastUnsubscribe < 100) {
+      // Wait a bit before allowing re-subscription
+      return new Promise((resolve) => {
+        setTimeout(() => {
+          void this.subscribeToConversation(conversationId, callbacks).then(resolve);
+        }, 100);
+      });
     }
     
     // Debounce rapid subscription attempts
@@ -82,7 +93,6 @@ export class RealtimeService {
     if (existingChannel) {
       const state = String(existingChannel.state);
       if (state === CHANNEL_STATES.JOINED || state === CHANNEL_STATES.SUBSCRIBED) {
-        console.warn(`♻️ Reusing existing channel (${state}) for conversation ${conversationId}`);
         return existingChannel;
       }
     }
@@ -133,13 +143,10 @@ export class RealtimeService {
         },
         (payload: RealtimePostgresChangesPayload<Record<string, unknown>>) => {
           void (async () => {
-            console.log(`🔔 RealtimeService: Received postgres_changes INSERT for conversation ${conversationId}:`, payload);
-            
             if (payload.new !== undefined && typeof callbacks.onMessage === 'function') {
               // Fetch full message with sender info
               const newMessage = payload.new as { id: string };
       
-              
               const { data: message } = await this.supabase
                 .from('messages')
                 .select(`
@@ -154,10 +161,7 @@ export class RealtimeService {
                 .single();
 
               if (message !== null && message !== undefined) {
-                console.log(`✅ RealtimeService: Calling onMessage callback for conversation ${conversationId} with message:`, message);
                 callbacks.onMessage(message as unknown as MessageWithSender);
-              } else {
-                console.log(`❌ RealtimeService: Failed to fetch message data for message ${newMessage.id}`);
               }
             }
           })().catch(console.error);
@@ -267,8 +271,6 @@ export class RealtimeService {
       
       switch (statusString) {
         case CHANNEL_STATES.SUBSCRIBED:
-          // Use console.warn for info messages per ESLint rules
-          console.warn(`✅ Successfully subscribed to conversation ${conversationId}`);
           this.pendingSubscriptions.delete(conversationId);
           if (typeof callbacks.onUserJoin === 'function') {
             void this.broadcastUserJoin(conversationId);
@@ -296,7 +298,6 @@ export class RealtimeService {
           }, TIMEOUT_RETRY_DELAY_MS);
           break;
         case CHANNEL_STATES.CLOSED:
-          console.warn(`🔒 Channel closed for conversation ${conversationId}`);
           this.pendingSubscriptions.delete(conversationId);
           this.channels.delete(conversationId);
           break;
@@ -325,6 +326,20 @@ export class RealtimeService {
   unsubscribeFromConversation(conversationId: string): void {
     const channel = this.channels.get(conversationId);
     if (channel) {
+      // Immediately remove from channels map to prevent reuse
+      this.channels.delete(conversationId);
+      
+      // Mark as recently unsubscribed for StrictMode protection
+      this.recentlyUnsubscribed.set(conversationId, Date.now());
+      
+      // Clean up old entries (older than 1 second)
+      const now = Date.now();
+      for (const [id, time] of this.recentlyUnsubscribed.entries()) {
+        if (now - time > 1000) {
+          this.recentlyUnsubscribed.delete(id);
+        }
+      }
+      
       // Announce user leaving before unsubscribing (only if channel is active)
       const channelState = String(channel.state);
       if (channelState === CHANNEL_STATES.JOINED) {
@@ -336,7 +351,6 @@ export class RealtimeService {
         void channel.unsubscribe();
       }
       
-      this.channels.delete(conversationId);
       this.messageHandlers.delete(conversationId);
       this.typingHandlers.delete(conversationId);
       this.pendingSubscriptions.delete(conversationId);
@@ -354,6 +368,9 @@ export class RealtimeService {
         clearTimeout(debounceTimeout);
         this.subscriptionDebounce.delete(conversationId);
       }
+    } else {
+      // Still clean up pending state even if no channel exists
+      this.pendingSubscriptions.delete(conversationId);
     }
   }
 

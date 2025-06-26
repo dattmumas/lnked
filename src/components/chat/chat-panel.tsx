@@ -64,18 +64,7 @@ export function ChatPanel({
   // Subscribe to realtime message updates
   useRealtimeMessages(conversationId);
 
-  // Add debugging for real-time subscription
-  useEffect(() => {
-    console.log(
-      `🔌 ChatPanel: Setting up real-time subscription for conversation ${conversationId}`,
-    );
-
-    return () => {
-      console.log(
-        `🔌 ChatPanel: Cleaning up real-time subscription for conversation ${conversationId}`,
-      );
-    };
-  }, [conversationId]);
+  // Subscribe to realtime message updates (handled by useRealtimeMessages hook)
 
   // Get reply target from UI store
   const replyTargetId = getReplyTarget(conversationId);

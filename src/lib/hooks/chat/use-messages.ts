@@ -502,5 +502,6 @@ export function useRealtimeMessagesForConversations(conversationIds: string[]): 
         }
       });
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [conversationIds.join(','), queryClient]); // Use join to create stable dependency
 } 

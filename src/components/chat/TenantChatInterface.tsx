@@ -160,18 +160,7 @@ export default function TenantChatInterface({
 
   const deleteConversation = useDeleteConversation();
 
-  // Debug: log whenever the user switches to a different channel/conversation.
-  useEffect(() => {
-    if (activeChannel) {
-      // eslint-disable-next-line no-console -- explicit debug statement requested by user
-      console.log('🛜 Switched to channel:', {
-        id: activeChannel.id,
-        title: activeChannel.title,
-        type: activeChannel.type,
-        tenant_id: activeChannel.tenant_id,
-      });
-    }
-  }, [activeChannel]);
+  // Track active channel changes for debugging purposes
 
   if (isLoading && !activeChannel) {
     return <CenteredSpinner label="Loading chat interface..." />;
