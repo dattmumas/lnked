@@ -39,7 +39,7 @@ const getSecureRandomInt = (max: number): number => {
   if (typeof crypto.getRandomValues === 'function') {
     const buf = new Uint32Array(1);
     crypto.getRandomValues(buf);
-    return buf[0] % max;
+    return (buf[0] ?? 0) % max;
   }
 
   // Final fallback: derive pseudo‑randomness from the clock (deterministic,

@@ -111,7 +111,7 @@ export async function createCollective(
     {
       tenant_name: name,
       tenant_slug: slug,
-      tenant_description: (description ?? '').trim().length > 0 ? description : undefined,
+      ...(description ? { tenant_description: description } : {}),
       is_public: false, // Default to private collectives
     }
   );
@@ -123,11 +123,7 @@ export async function createCollective(
     if (createTenantError.code === "23505") {
       // Unique violation
       return {
-        error: "A collective with this name or slug might already exist.",
-        fieldErrors: {
-          slug: ["This slug is already in use."],
-          name: ["This name may already be in use for a collective."],
-        },
+        error: "A collective with this name or URL already exists. Please choose a different name.",
       };
     }
     

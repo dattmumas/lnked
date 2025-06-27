@@ -25,7 +25,8 @@ export async function middleware(request: NextRequest) {
 
   /* ---------- Vanity @username rewrite (sanitised) ---------- */
   if (pathname.startsWith("/@")) {
-    const username = pathname.slice(2).split("/")[0];
+    const usernameSegment = pathname.slice(2).split("/")[0] ?? "";
+    const username: string = usernameSegment;
     if (!USER_SLUG.test(username))
       return NextResponse.redirect(new URL("/404", request.url));
     const rest = pathname.slice(2 + username.length);
@@ -46,15 +47,15 @@ export async function middleware(request: NextRequest) {
 
   /* ---------- Supabase client ---------- */
   if (
-    !process.env.NEXT_PUBLIC_SUPABASE_URL ||
-    !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    !process.env['NEXT_PUBLIC_SUPABASE_URL'] ||
+    !process.env['NEXT_PUBLIC_SUPABASE_ANON_KEY']
   )
     return NextResponse.error(); // env mis-config
 
   const response = NextResponse.next();
   const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+    process.env['NEXT_PUBLIC_SUPABASE_URL'],
+    process.env['NEXT_PUBLIC_SUPABASE_ANON_KEY'],
     {
       cookies: {
         get: (name) => request.cookies.get(name)?.value,

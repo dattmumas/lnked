@@ -145,17 +145,16 @@ async function getPostBySlugOrId(
       return {
         data: {
           ...postData,
-          user_reaction: reactionData
-            ? { reaction_type: reactionData.type }
-            : undefined,
-          user_bookmark: bookmarkData
-            ? { id: bookmarkData.post_id }
-            : undefined,
+          ...(reactionData
+            ? { user_reaction: { reaction_type: reactionData.type } }
+            : {}),
+          ...(bookmarkData
+            ? { user_bookmark: { id: bookmarkData.post_id } }
+            : {}),
           // Use real counts from post_reactions table
           real_like_count: likeCount ?? 0,
           real_dislike_count: dislikeCount ?? 0,
         },
-        error: undefined,
       };
     }
 
@@ -223,15 +222,16 @@ async function getPostBySlugOrId(
     return {
       data: {
         ...postData,
-        user_reaction: reactionData
-          ? { reaction_type: reactionData.type }
-          : undefined,
-        user_bookmark: bookmarkData ? { id: bookmarkData.post_id } : undefined,
+        ...(reactionData
+          ? { user_reaction: { reaction_type: reactionData.type } }
+          : {}),
+        ...(bookmarkData
+          ? { user_bookmark: { id: bookmarkData.post_id } }
+          : {}),
         // Use real counts from post_reactions table
         real_like_count: likeCount ?? 0,
         real_dislike_count: dislikeCount ?? 0,
       },
-      error: undefined,
     };
   } catch (error: unknown) {
     console.error('Unexpected error in getPostBySlugOrId:', error);

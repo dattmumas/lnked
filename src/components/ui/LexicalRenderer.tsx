@@ -182,10 +182,18 @@ export function LexicalRenderer({
         case 'horizontalrule':
           return <hr className="my-8 border-t border-muted-foreground/20" />;
         case 'text': {
-          let text: React.ReactNode =
-            'text' in node && typeof node.text === 'string' ? node.text : '';
-          if ('format' in node && typeof node.format === 'number') {
-            const formatFlags = node.format;
+          const nodeText =
+            'text' in node &&
+            typeof (node as Record<string, unknown>)['text'] === 'string'
+              ? (node as Record<string, string>)['text']
+              : '';
+          let text: React.ReactNode = nodeText;
+          if (
+            'format' in node &&
+            typeof (node as Record<string, unknown>)['format'] === 'number'
+          ) {
+            const formatFlags: number =
+              (node as Record<string, number>)['format'] ?? 0;
             const FORMAT_CODE = 16;
             const FORMAT_STRIKETHROUGH = 8;
             const FORMAT_UNDERLINE = 4;
@@ -207,8 +215,10 @@ export function LexicalRenderer({
         }
         case 'link': {
           const url =
-            'url' in node && typeof node.url === 'string' && node.url
-              ? node.url
+            'url' in node &&
+            typeof (node as Record<string, unknown>)['url'] === 'string' &&
+            (node as Record<string, string>)['url']
+              ? (node as Record<string, string>)['url']
               : '#';
           return (
             <a
@@ -223,8 +233,10 @@ export function LexicalRenderer({
         }
         case 'autolink': {
           const url =
-            'url' in node && typeof node.url === 'string' && node.url
-              ? node.url
+            'url' in node &&
+            typeof (node as Record<string, unknown>)['url'] === 'string' &&
+            (node as Record<string, string>)['url']
+              ? (node as Record<string, string>)['url']
               : '#';
           return (
             <a
@@ -267,13 +279,16 @@ export function LexicalRenderer({
         }
         case 'image': {
           const src =
-            'src' in node && typeof node.src === 'string' && node.src
-              ? node.src
+            'src' in node &&
+            typeof (node as Record<string, unknown>)['src'] === 'string' &&
+            (node as Record<string, string>)['src']
+              ? (node as Record<string, string>)['src']
               : '';
           const alt =
-            'alt' in node && typeof node.alt === 'string' && node.alt
-              ? node.alt
-              : 'image';
+            ('alt' in node &&
+              typeof (node as Record<string, unknown>)['alt'] === 'string' &&
+              (node as Record<string, string>)['alt']) ||
+            'image';
 
           if (!src || src === '') {
             return (
@@ -302,13 +317,16 @@ export function LexicalRenderer({
         }
         case 'inlineimage': {
           const src =
-            'src' in node && typeof node.src === 'string' && node.src
-              ? node.src
+            'src' in node &&
+            typeof (node as Record<string, unknown>)['src'] === 'string' &&
+            (node as Record<string, string>)['src']
+              ? (node as Record<string, string>)['src']
               : '';
           const alt =
-            'alt' in node && typeof node.alt === 'string' && node.alt
-              ? node.alt
-              : 'image';
+            ('alt' in node &&
+              typeof (node as Record<string, unknown>)['alt'] === 'string' &&
+              (node as Record<string, string>)['alt']) ||
+            'image';
 
           if (!src || src === '')
             return <span className="text-muted-foreground">[Image]</span>;
@@ -328,13 +346,16 @@ export function LexicalRenderer({
         }
         case 'gif': {
           const src =
-            'url' in node && typeof node.url === 'string' && node.url
-              ? node.url
+            'url' in node &&
+            typeof (node as Record<string, unknown>)['url'] === 'string' &&
+            (node as Record<string, string>)['url']
+              ? (node as Record<string, string>)['url']
               : '';
           const alt =
-            'alt' in node && typeof node.alt === 'string' && node.alt
-              ? node.alt
-              : 'gif';
+            ('alt' in node &&
+              typeof (node as Record<string, unknown>)['alt'] === 'string' &&
+              (node as Record<string, string>)['alt']) ||
+            'gif';
 
           if (!src || src === '') {
             return (
@@ -361,20 +382,11 @@ export function LexicalRenderer({
           );
         }
         case 'tweet': {
-          const tweetUrl =
-            'tweetUrl' in node &&
-            typeof node.tweetUrl === 'string' &&
-            node.tweetUrl
-              ? node.tweetUrl
-              : '';
+          const tweetUrlRaw = (node as Record<string, unknown>)['tweetUrl'];
+          const tweetUrl: string =
+            typeof tweetUrlRaw === 'string' ? tweetUrlRaw : '';
           const match = tweetUrl.match(/status\/(\d+)/);
-          if (
-            match === null ||
-            match === undefined ||
-            tweetUrl === '' ||
-            tweetUrl === undefined ||
-            tweetUrl === null
-          ) {
+          if (!match || tweetUrl === '') {
             return (
               <div className="my-8 p-6 border border-border rounded-lg bg-muted/10">
                 <p className="text-muted-foreground">Tweet URL not available</p>
@@ -397,23 +409,14 @@ export function LexicalRenderer({
           );
         }
         case 'youtube': {
-          const videoUrl =
-            'videoUrl' in node &&
-            typeof node.videoUrl === 'string' &&
-            node.videoUrl
-              ? node.videoUrl
-              : '';
+          const videoUrlRaw = (node as Record<string, unknown>)['videoUrl'];
+          const videoUrl: string =
+            typeof videoUrlRaw === 'string' ? videoUrlRaw : '';
           const match = videoUrl.match(
             /(?:youtube\.com\/(?:.*v=|.*\/)|youtu\.be\/)([A-Za-z0-9_-]{11})/,
           );
           const videoId = match?.[1];
-          if (
-            videoId === undefined ||
-            videoId === null ||
-            videoUrl === '' ||
-            videoUrl === undefined ||
-            videoUrl === null
-          ) {
+          if (!videoId || videoUrl === '') {
             return (
               <div className="my-8 p-6 border border-border rounded-lg bg-muted/10 text-center">
                 <p className="text-muted-foreground">Invalid YouTube URL</p>

@@ -67,10 +67,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
     // Prepare user profile
     const profile: UserProfile = {
-      username,
-      full_name,
-      avatar_url,
-      bio,
+      ...(username ? { username } : {}),
+      ...(full_name ? { full_name } : {}),
+      ...(avatar_url ? { avatar_url } : {}),
+      ...(bio ? { bio } : {}),
     };
 
     // Complete onboarding with tenant creation
@@ -131,14 +131,14 @@ export async function GET(_request: NextRequest): Promise<NextResponse> {
 
     // Determine onboarding status
     const hasPersonalTenant = Boolean(tenantContext.personalTenant);
-    const hasProfile = Boolean((user.user_metadata?.full_name as unknown) !== undefined || user.email !== null);
+    const hasProfile = Boolean((user.user_metadata?.['full_name'] as unknown) !== undefined || user.email !== null);
     const isOnboardingComplete = hasPersonalTenant;
 
     return NextResponse.json({
       user: {
         id: user.id,
         email: user.email,
-        full_name: user.user_metadata?.full_name,
+        full_name: user.user_metadata?.['full_name'],
         created_at: user.created_at,
       },
       tenant_context: tenantContext,

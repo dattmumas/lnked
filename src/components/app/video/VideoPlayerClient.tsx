@@ -45,8 +45,8 @@ export default function VideoPlayerClient({
               ? video.title
               : 'Untitled Video'
           }
-          viewerId={currentUser?.id}
-          viewerEmail={currentUser?.email}
+          {...(currentUser?.id ? { viewerId: currentUser.id } : {})}
+          {...(currentUser?.email ? { viewerEmail: currentUser.email } : {})}
           className="w-full h-full rounded-lg"
           isPrivate={
             video.is_public === false || video.playback_policy === 'signed'

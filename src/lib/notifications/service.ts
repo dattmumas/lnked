@@ -60,7 +60,7 @@ export class NotificationService {
 
     let query = supabase
       .from('notifications')
-      .select(`*, actor:users!notifications_actor_id_fkey(id, full_name, username, avatar_url)`, { count: 'exact' })
+      .select(`*`, { count: 'exact' })
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1);
 
@@ -81,14 +81,13 @@ export class NotificationService {
     const unreadCount = await this.getUnreadCount();
 
     const transformed: Notification[] = (data ?? []).map((n) => {
-      const { created_at, updated_at, entity_type, metadata, actor, ...rest } = n;
+      const { created_at, updated_at, entity_type, metadata, ...rest } = n;
       return {
         ...rest,
         created_at: created_at ?? nowIso(),
         updated_at: updated_at ?? nowIso(),
         entity_type: (entity_type ?? null) as EntityType | null,
         metadata: (metadata as Record<string, Json>) ?? {},
-        actor: actor ?? undefined,
       } as Notification;
     });
 
@@ -174,13 +173,13 @@ export class NotificationService {
     const supabase = await this.client();
     const { error } = await supabase.rpc('create_notification', {
       p_recipient_id: params.recipient_id,
-      p_actor_id: params.actor_id ?? '',
+      ...(params.actor_id !== null ? { p_actor_id: params.actor_id } : { p_actor_id: '' }),
       p_type: params.type,
       p_title: params.title,
       p_message: params.message,
-      p_entity_type: params.entity_type ?? undefined,
-      p_entity_id: params.entity_id ?? undefined,
-      p_metadata: (params.metadata as Json) ?? undefined,
+      ...(params.entity_type ? { p_entity_type: params.entity_type } : {}),
+      ...(params.entity_id ? { p_entity_id: params.entity_id } : {}),
+      ...(params.metadata ? { p_metadata: params.metadata as Json } : {}),
     });
 
     if (isDefined(error)) {
@@ -258,20 +257,21 @@ export class NotificationService {
       }, async (payload) => {
         const { data } = await supabase
           .from('notifications')
-          .select(`*, actor:users!notifications_actor_id_fkey(id, full_name, username, avatar_url)`)  
+          .select(`*`)  
           .eq('id', String((payload.new as { id: string }).id))
           .single();
 
         if (data !== null) {
-          const { created_at, updated_at, entity_type, metadata, actor, ...rest } = data;
-          handler({
+          const { created_at, updated_at, entity_type, metadata, ...rest } = data;
+          const notification: Notification = {
             ...rest,
             created_at: created_at ?? nowIso(),
             updated_at: updated_at ?? nowIso(),
             entity_type: (entity_type ?? null) as EntityType | null,
             metadata: (metadata as Record<string, Json>) ?? {},
-            actor: actor ?? undefined,
-          });
+          };
+          
+          handler(notification);
         }
       })
       .subscribe();
@@ -355,4 +355,42 @@ export function createCommentNotification(
     entity_id: commentId,
     metadata: { postId },
   });
+}
+
+export async function getNotificationsForUser(
+  userId: string,
+  limit = 10,
+): Promise<Notification[]> {
+  const supabase = await createServerSupabaseClient();
+  const { data, error } = await supabase
+    .from('notifications')
+    .select('*')
+    .eq('recipient_id', userId)
+    .order('created_at', { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    console.error('Error fetching notifications:', error);
+    return [];
+  }
+
+  return data as Notification[];
+}
+
+export async function getUnreadNotificationCount(
+  userId: string,
+): Promise<number> {
+  const supabase = await createServerSupabaseClient();
+  const { count, error } = await supabase
+    .from('notifications')
+    .select('*', { count: 'exact', head: true })
+    .eq('recipient_id', userId)
+    .is('read_at', null);
+
+  if (error) {
+    console.error('Error fetching unread notification count:', error);
+    return 0;
+  }
+
+  return count ?? 0;
 } 

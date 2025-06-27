@@ -53,22 +53,6 @@ export default async function UserSettingsPage(): Promise<React.ReactElement> {
     redirect('/error');
   }
 
-  // Get subscription and follower counts for display
-  const [{ count: subscriberCount }, { count: followerCount }] =
-    await Promise.all([
-      supabase
-        .from('subscriptions')
-        .select('*', { count: 'exact', head: true })
-        .eq('target_entity_type', 'user')
-        .eq('target_entity_id', authUser.id)
-        .eq('status', 'active'),
-      supabase
-        .from('follows')
-        .select('*', { count: 'exact', head: true })
-        .eq('following_id', authUser.id)
-        .eq('following_type', 'user'),
-    ]);
-
   const defaultValues = {
     full_name:
       (userProfile.full_name ?? '').length > 0
@@ -251,15 +235,11 @@ export default async function UserSettingsPage(): Promise<React.ReactElement> {
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="text-center p-4 rounded-lg border">
-                  <div className="text-2xl font-bold">
-                    {(followerCount ?? 0) > 0 ? followerCount : 0}
-                  </div>
+                  <div className="text-2xl font-bold">0</div>
                   <div className="text-sm text-muted-foreground">Followers</div>
                 </div>
                 <div className="text-center p-4 rounded-lg border">
-                  <div className="text-2xl font-bold">
-                    {(subscriberCount ?? 0) > 0 ? subscriberCount : 0}
-                  </div>
+                  <div className="text-2xl font-bold">0</div>
                   <div className="text-sm text-muted-foreground">
                     Subscribers
                   </div>

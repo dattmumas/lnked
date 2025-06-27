@@ -138,7 +138,6 @@ export default async function Page({
         like_count: p.like_count ?? 0,
         dislike_count: p.dislike_count ?? 0,
         collective_slug: p.collective?.slug ?? null,
-        current_user_has_liked: undefined,
         author: {
           id:
             p.author?.id !== null && p.author?.id !== undefined
@@ -233,7 +232,9 @@ export default async function Page({
                   content: post.content,
                   meta_description: post.meta_description,
                   thumbnail_url: post.thumbnail_url,
-                  slug: post.slug ?? undefined,
+                  ...(post.slug !== null && post.slug !== undefined
+                    ? { slug: post.slug }
+                    : {}),
                   created_at: post.created_at,
                   post_type:
                     post.post_type !== null && post.post_type !== undefined

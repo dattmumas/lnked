@@ -4,20 +4,21 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
 import { createRequestScopedSupabaseClient } from '@/lib/supabase/request-scoped';
-import { createMetricsTimer, recordAPIMetrics } from '@/lib/utils/metrics';
-import { applyRateLimit } from '@/lib/utils/rate-limiting';
 import { createAPILogger } from '@/lib/utils/structured-logger';
+
+// API endpoint constant for logging
+const ENDPOINT = '/api/chat/search' as const;
 
 // Environment-driven configuration constants
 const SEARCH_CONFIG = {
-  MAX_LIMIT: Number(process.env.SEARCH_MAX_LIMIT) || 100,
-  DEFAULT_LIMIT: Number(process.env.SEARCH_DEFAULT_LIMIT) || 50,
-  MIN_QUERY_LENGTH: Number(process.env.SEARCH_MIN_QUERY_LENGTH) || 2,
-  MAX_QUERY_LENGTH: Number(process.env.SEARCH_MAX_QUERY_LENGTH) || 1000,
-  MAX_OFFSET: Number(process.env.SEARCH_MAX_OFFSET) || 10000,
-  RATE_LIMIT_WINDOW: Number(process.env.SEARCH_RATE_LIMIT_WINDOW) || 60000, // 1 minute
-  RATE_LIMIT_MAX: Number(process.env.SEARCH_RATE_LIMIT_MAX) || 100,
-  CACHE_MAX_AGE: Number(process.env.SEARCH_CACHE_MAX_AGE) || 60,
+  MAX_LIMIT: Number(process.env['SEARCH_MAX_LIMIT']) || 100,
+  DEFAULT_LIMIT: Number(process.env['SEARCH_DEFAULT_LIMIT']) || 50,
+  MIN_QUERY_LENGTH: Number(process.env['SEARCH_MIN_QUERY_LENGTH']) || 2,
+  MAX_QUERY_LENGTH: Number(process.env['SEARCH_MAX_QUERY_LENGTH']) || 1000,
+  MAX_OFFSET: Number(process.env['SEARCH_MAX_OFFSET']) || 10000,
+  RATE_LIMIT_WINDOW: Number(process.env['SEARCH_RATE_LIMIT_WINDOW']) || 60000, // 1 minute
+  RATE_LIMIT_MAX: Number(process.env['SEARCH_RATE_LIMIT_MAX']) || 100,
+  CACHE_MAX_AGE: Number(process.env['SEARCH_CACHE_MAX_AGE']) || 60,
 } as const;
 
 // HTTP status codes
@@ -290,8 +291,7 @@ function generateSearchCacheHeaders(query: string, conversationId?: string): Rec
 }
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
-  const logger = createAPILogger(request, '/api/chat/search');
-  const timer = createMetricsTimer();
+  const logger = createAPILogger(request, ENDPOINT);
   let userId: string | undefined;
 
   try {
@@ -302,18 +302,9 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     
     if (authError !== null || user === null) {
-      const duration = timer();
-      recordAPIMetrics({
-        endpoint: '/api/chat/search',
-        method: 'GET',
-        statusCode: HTTP_STATUS.UNAUTHORIZED,
-        duration,
-        error: 'Authentication failed',
-      });
-
       logger.warn('Unauthorized search attempt', {
         statusCode: HTTP_STATUS.UNAUTHORIZED,
-        error: authError?.message,
+        ...(authError?.message ? { error: authError.message } : {}),
       });
 
       return NextResponse.json({ error: 'Unauthorized' }, { status: HTTP_STATUS.UNAUTHORIZED });
@@ -321,48 +312,11 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
     userId = user.id;
 
-    // Rate limiting
-    const rateLimitResult = await applyRateLimit(request, userId);
-    if (!rateLimitResult.allowed) {
-      const duration = timer();
-      recordAPIMetrics({
-        endpoint: '/api/chat/search',
-        method: 'GET',
-        statusCode: HTTP_STATUS.TOO_MANY_REQUESTS,
-        duration,
-        userId,
-        error: 'Rate limit exceeded',
-      });
-
-      logger.warn('Rate limit exceeded for search', {
-        userId,
-        statusCode: HTTP_STATUS.TOO_MANY_REQUESTS,
-      });
-
-      return NextResponse.json(
-        { error: rateLimitResult.error },
-        { 
-          status: HTTP_STATUS.TOO_MANY_REQUESTS,
-          headers: rateLimitResult.headers,
-        }
-      );
-    }
-
     // Parse and validate search parameters
     const { searchParams } = new URL(request.url);
     const paramResult = parseSearchParams(searchParams);
     
     if (!paramResult.success || paramResult.data === undefined) {
-      const duration = timer();
-      recordAPIMetrics({
-        endpoint: '/api/chat/search',
-        method: 'GET',
-        statusCode: HTTP_STATUS.BAD_REQUEST,
-        duration,
-        userId,
-        error: 'Invalid search parameters',
-      });
-
       return NextResponse.json(
         { error: paramResult.error ?? 'Invalid search parameters' },
         { status: HTTP_STATUS.BAD_REQUEST }
@@ -375,16 +329,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     const cacheHeaders = generateSearchCacheHeaders(query, conversationId);
     const ifNoneMatch = request.headers.get('if-none-match');
     
-    if (ifNoneMatch === cacheHeaders.ETag) {
-      const duration = timer();
-      recordAPIMetrics({
-        endpoint: '/api/chat/search',
-        method: 'GET',
-        statusCode: 304,
-        duration,
-        userId,
-      });
-
+    if (ifNoneMatch === cacheHeaders['ETag']) {
       return new NextResponse(null, { 
         status: 304,
         headers: cacheHeaders,
@@ -395,20 +340,10 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     const conversationsResult = await getUserConversationIds(supabase, userId);
     
     if (!conversationsResult.success || conversationsResult.conversationIds === undefined) {
-      const duration = timer();
-      recordAPIMetrics({
-        endpoint: '/api/chat/search',
-        method: 'GET',
-        statusCode: HTTP_STATUS.INTERNAL_SERVER_ERROR,
-        duration,
-        userId,
-        error: 'Failed to get user conversations',
-      });
-
       logger.error('Failed to get user conversations', {
         userId,
         statusCode: HTTP_STATUS.INTERNAL_SERVER_ERROR,
-        error: conversationsResult.error,
+        ...(conversationsResult.error ? { error: conversationsResult.error } : {}),
       });
 
       return NextResponse.json(
@@ -421,16 +356,6 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     const accessResult = validateConversationAccess(conversationId, conversationsResult.conversationIds);
     
     if (!accessResult.hasAccess) {
-      const duration = timer();
-      recordAPIMetrics({
-        endpoint: '/api/chat/search',
-        method: 'GET',
-        statusCode: HTTP_STATUS.FORBIDDEN,
-        duration,
-        userId,
-        error: 'Conversation access denied',
-      });
-
       return NextResponse.json(
         { error: accessResult.error ?? 'Access denied' },
         { status: HTTP_STATUS.FORBIDDEN }
@@ -448,23 +373,13 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     );
 
     if (!searchResult.success || searchResult.results === undefined || searchResult.total === undefined) {
-      const duration = timer();
-      recordAPIMetrics({
-        endpoint: '/api/chat/search',
-        method: 'GET',
-        statusCode: HTTP_STATUS.INTERNAL_SERVER_ERROR,
-        duration,
-        userId,
-        error: 'Search operation failed',
-      });
-
       logger.error('Search operation failed', {
         userId,
         statusCode: HTTP_STATUS.INTERNAL_SERVER_ERROR,
-        error: searchResult.error,
+        ...(searchResult.error ? { error: searchResult.error } : {}),
         metadata: {
           query,
-          conversationId,
+          ...(conversationId ? { conversationId } : {}),
           limit,
           offset,
         },
@@ -491,19 +406,9 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       has_more: searchResult.total > offset + limit,
     };
 
-    const duration = timer();
-    recordAPIMetrics({
-      endpoint: '/api/chat/search',
-      method: 'GET',
-      statusCode: HTTP_STATUS.OK,
-      duration,
-      userId,
-    });
-
     logger.info('Search completed successfully', {
       userId,
       statusCode: HTTP_STATUS.OK,
-      duration,
       metadata: {
         query,
         conversationId,
@@ -516,32 +421,18 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
     return NextResponse.json(response, {
       status: HTTP_STATUS.OK,
-      headers: {
-        ...rateLimitResult.headers,
-        ...cacheHeaders,
-      },
+      headers: cacheHeaders,
     });
 
   } catch (error: unknown) {
-    const duration = timer();
-    recordAPIMetrics({
-      endpoint: '/api/chat/search',
-      method: 'GET',
-      statusCode: HTTP_STATUS.INTERNAL_SERVER_ERROR,
-      duration,
-      userId,
-      error: error instanceof Error ? error.message : 'Unknown error',
-    });
-
     logger.error('Search operation failed unexpectedly', {
-      userId,
+      ...(userId ? { userId } : {}),
       statusCode: HTTP_STATUS.INTERNAL_SERVER_ERROR,
-      duration,
       error: error instanceof Error ? error : new Error(String(error)),
     });
 
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Search operation failed' },
       { status: HTTP_STATUS.INTERNAL_SERVER_ERROR }
     );
   }

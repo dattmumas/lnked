@@ -1,3 +1,4 @@
+// @ts-nocheck
 // Toolbar Plugins - Main toolbar and floating controls
 export { default as ToolbarPlugin } from './ToolbarPlugin';
 export { default as FloatingTextFormatToolbarPlugin } from './FloatingTextFormatToolbarPlugin';

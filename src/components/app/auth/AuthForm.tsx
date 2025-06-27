@@ -226,8 +226,8 @@ export default function AuthForm({
       event.preventDefault();
       const formData: Record<string, string> = { email, password };
       if (mode === 'signUp') {
-        formData.fullName = fullName;
-        formData.username = username;
+        formData['fullName'] = fullName;
+        formData['username'] = username;
       }
       await onSubmit(formData);
     },
@@ -274,10 +274,10 @@ export default function AuthForm({
               onEmailChange={setEmail}
               password={password}
               onPasswordChange={setPassword}
-              username={mode === 'signUp' ? username : undefined}
-              onUsernameChange={mode === 'signUp' ? setUsername : undefined}
-              fullName={mode === 'signUp' ? fullName : undefined}
-              onFullNameChange={mode === 'signUp' ? setFullName : undefined}
+              {...(mode === 'signUp' ? { username } : {})}
+              {...(mode === 'signUp' ? { onUsernameChange: setUsername } : {})}
+              {...(mode === 'signUp' ? { fullName } : {})}
+              {...(mode === 'signUp' ? { onFullNameChange: setFullName } : {})}
             />
             {error !== undefined && error !== '' && (
               <Alert variant="destructive" className="mt-4">

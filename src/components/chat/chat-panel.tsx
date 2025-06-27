@@ -1,8 +1,12 @@
 'use client';
 
+import { Send, Smile, X } from 'lucide-react';
 import React, { useCallback, useLayoutEffect, useRef, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
+import { useToast } from '@/hooks/useToast';
+import { cn } from '@/lib/utils/cn';
 
 import { VirtualMessageList } from './virtual-message-list';
 
@@ -22,8 +26,6 @@ interface ChatPanelProps {
   className?: string;
 }
 
-const MAX_TEXTAREA_HEIGHT = 120;
-
 export function ChatPanel({
   conversationId,
   messages,
@@ -36,157 +38,106 @@ export function ChatPanel({
   onReplyCancel,
   currentUserId,
   className,
-}: ChatPanelProps): React.ReactElement {
+}: ChatPanelProps): React.JSX.Element {
   const [message, setMessage] = useState('');
-  const inputRef = useRef<HTMLTextAreaElement>(null);
-  const didSendRef = useRef(false);
-
-  useLayoutEffect(() => {
-    if (didSendRef.current) {
-      inputRef.current?.focus();
-      didSendRef.current = false;
-    }
-  });
+  const [isSending, setIsSending] = useState(false);
+  const { toast } = useToast();
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const handleSendMessage = useCallback(async () => {
-    const trimmed = message.trim();
-    if (!trimmed) return;
-    setMessage('');
-    didSendRef.current = true;
-    await onSendMessage(trimmed, replyTarget?.id);
-  }, [message, onSendMessage, replyTarget?.id]);
+    const trimmedMessage = message.trim();
+    if (!trimmedMessage || isSending) return;
 
-  const handleKeyPress = useCallback(
-    (e: React.KeyboardEvent) => {
+    setIsSending(true);
+    const originalMessage = message;
+    setMessage('');
+
+    try {
+      await onSendMessage(trimmedMessage, replyTarget?.id);
+    } catch (error) {
+      toast('Failed to send message. Please try again.');
+      setMessage(originalMessage);
+    } finally {
+      setIsSending(false);
+      textareaRef.current?.focus();
+    }
+  }, [message, isSending, onSendMessage, replyTarget?.id, toast]);
+
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
       if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
         void handleSendMessage();
-      } else if (e.key === 'Escape' && replyTarget && onReplyCancel) {
-        onReplyCancel();
       }
     },
-    [handleSendMessage, replyTarget, onReplyCancel],
+    [handleSendMessage],
   );
 
-  const handleInputChange = useCallback(
-    (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-      setMessage(e.target.value);
-    },
-    [],
-  );
-
-  if (isLoading) {
-    return (
-      <div
-        className={`flex items-center justify-center h-full ${className ?? ''}`}
-      >
-        <div className="flex items-center gap-2 text-muted-foreground">
-          <span className="animate-spin h-4 w-4 border-2 border-t-transparent border-gray-400 rounded-full" />
-          Loading...
-        </div>
-      </div>
-    );
-  }
+  useLayoutEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
+    }
+  }, [message]);
 
   return (
-    <div className={`flex flex-col h-full min-h-0 ${className ?? ''}`}>
-      {/* Messages - Virtual List */}
-      <VirtualMessageList
-        conversationId={conversationId}
-        messages={messages}
-        currentUserId={currentUserId}
-        onLoadMore={fetchNextPage}
-        hasMore={hasNextPage}
-        isLoading={isFetchingNextPage}
-      />
+    <div className={cn('flex flex-col h-full min-h-0', className)}>
+      <div className="flex-1 relative">
+        <VirtualMessageList
+          messages={messages}
+          currentUserId={currentUserId}
+          conversationId={conversationId}
+          onLoadMore={fetchNextPage}
+          hasMore={hasNextPage}
+          isLoading={isFetchingNextPage}
+        />
+      </div>
 
-      {/* Input */}
-      <div className="shrink-0 border-t bg-background/95 backdrop-blur-sm">
-        {/* Reply preview */}
+      <div className="p-4 border-t border-border bg-background/80 backdrop-blur-sm">
         {replyTarget && (
-          <div
-            className="px-4 py-2 bg-muted/50 border-b flex items-center justify-between cursor-pointer hover:bg-muted/70 transition-colors"
-            onClick={onReplyCancel}
-            role="button"
-            tabIndex={0}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                onReplyCancel?.();
-              }
-            }}
-            aria-label="Reply preview. Click to cancel or press Escape"
-          >
-            <div className="flex-1 min-w-0 pointer-events-none">
-              <p className="text-xs text-muted-foreground">
-                Replying to{' '}
-                <span className="font-medium">
-                  {replyTarget.sender?.username ?? 'Unknown'}
-                </span>
-                <span className="ml-2 text-xs opacity-60">(Esc to cancel)</span>
-              </p>
-              <p className="text-sm truncate">{replyTarget.content}</p>
-            </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={(e) => {
-                e.stopPropagation();
-                onReplyCancel?.();
-              }}
-              className="h-8 w-8 p-0 hover:bg-muted-foreground/20"
-              aria-label="Cancel reply"
-              title="Cancel reply (Esc)"
+          <div className="relative mb-2 rounded-md bg-muted p-2 text-sm">
+            <p className="text-muted-foreground">
+              Replying to{' '}
+              <strong className="text-foreground">
+                {replyTarget.sender?.username ?? '...'}
+              </strong>
+            </p>
+            <p className="truncate italic text-muted-foreground/80">
+              {replyTarget.content}
+            </p>
+            <button
+              type="button"
+              onClick={onReplyCancel}
+              className="absolute top-1 right-1 p-1 rounded-full hover:bg-muted-foreground/20"
             >
-              <span className="text-lg">×</span>
-            </Button>
+              <X className="h-4 w-4" />
+            </button>
           </div>
         )}
-
-        {/* Message input */}
-        <div className="p-4">
-          <div className="flex gap-3 items-end">
-            <div className="flex-1 relative">
-              <textarea
-                ref={inputRef}
-                value={message}
-                onChange={handleInputChange}
-                onKeyDown={handleKeyPress}
-                placeholder={
-                  replyTarget
-                    ? `Reply to ${replyTarget.sender?.username ?? 'message'}...`
-                    : 'Type a message...'
-                }
-                className="w-full min-h-[48px] max-h-[120px] resize-none rounded-2xl bg-background px-4 py-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary disabled:cursor-not-allowed disabled:opacity-50"
-                aria-label="Message input"
-                rows={1}
-                style={{
-                  height: 'auto',
-                  minHeight: '48px',
-                }}
-                onInput={(e) => {
-                  const target = e.target as HTMLTextAreaElement;
-                  target.style.height = 'auto';
-                  target.style.height = `${Math.min(target.scrollHeight, MAX_TEXTAREA_HEIGHT)}px`;
-                }}
-              />
-              {/* Emoji picker button */}
-              <button
-                type="button"
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                title="Add emoji"
-              >
-                😊
-              </button>
-            </div>
+        <div className="relative flex items-end gap-2">
+          <Textarea
+            ref={textareaRef}
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="Type a message..."
+            rows={1}
+            className="flex-1 resize-none bg-muted/50 border-border pr-20"
+          />
+          <div className="absolute right-2 bottom-2 flex items-center gap-1">
             <Button
-              onClick={() => void handleSendMessage()}
-              disabled={message.trim().length === 0}
+              variant="ghost"
               size="icon"
-              className="h-12 w-12 rounded-full"
-              aria-label="Send message"
+              className="text-muted-foreground"
             >
-              <span className="text-lg">➤</span>
+              <Smile className="h-5 w-5" />
+            </Button>
+            <Button
+              size="icon"
+              onClick={handleSendMessage}
+              disabled={!message.trim() || isSending}
+            >
+              <Send className="h-5 w-5" />
             </Button>
           </div>
         </div>

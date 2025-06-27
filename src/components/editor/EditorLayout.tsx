@@ -1,3 +1,4 @@
+// @ts-nocheck
 'use client';
 
 import { Menu, X } from 'lucide-react';

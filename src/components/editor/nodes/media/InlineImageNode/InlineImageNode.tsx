@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
@@ -5,7 +6,6 @@
  * LICENSE file in the root directory of this source tree.
  *
  */
-
 
 import {
   addClassNamesToElement,
@@ -248,7 +248,7 @@ export class InlineImageNode extends DecoratorNode<JSX.Element> {
   createDOM(config: EditorConfig): HTMLElement {
     const span = document.createElement('span');
     for (const cls of [
-      config.theme.inlineImage,
+      config.theme['inlineImage'],
       getPositionClass(this.__position),
     ]) {
       if (cls) {

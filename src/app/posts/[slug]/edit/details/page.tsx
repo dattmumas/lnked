@@ -44,7 +44,7 @@ const THUMBNAIL_ASPECT_RATIO = 1.91;
 export default function EditPostDetailsPage(): React.ReactElement {
   const router = useRouter();
   const params = useParams();
-  const postId = params.slug as string;
+  const postId = params['slug'] as string;
 
   const {
     formData,

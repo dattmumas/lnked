@@ -2,13 +2,12 @@
 
 import { randomBytes } from 'crypto';
 
-import { z } from 'zod';
+import { revalidatePath } from 'next/cache';
 
 import { sendInviteEmail } from '@/lib/email';
 import {
   InviteMemberServerSchema,
   type InviteMemberServerValues,
-  InviteMemberClientSchema,
 } from '@/lib/schemas/memberSchemas';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
@@ -18,13 +17,14 @@ import type { Enums } from '@/lib/database.types';
 // Constants for configuration
 const INVITE_CODE_BYTES = 16;
 
-interface ActionResult<T = null> {
+// Shared result type for actions
+export interface ActionResult {
   success: boolean;
-  data?: T;
-  error?: string | null;
-  fieldErrors?: Partial<
-    Record<keyof z.infer<typeof InviteMemberClientSchema>, string[]>
-  >;
+  error?: string;
+  fieldErrors?: Record<string, string[]>;
+  data?: {
+    slug?: string | null;
+  } | null;
 }
 
 function hasMessage(e: unknown): e is { message: string } {
@@ -36,11 +36,13 @@ function hasMessage(e: unknown): e is { message: string } {
   );
 }
 
+/**
+ * Invite a member to a collective by email.
+ */
 export async function inviteMemberToCollective(
   formData: InviteMemberServerValues,
 ): Promise<ActionResult> {
   const supabase = await createServerSupabaseClient();
-
   const {
     data: { user: currentUser },
   } = await supabase.auth.getUser();
@@ -49,150 +51,54 @@ export async function inviteMemberToCollective(
     return { success: false, error: 'Unauthorized: You must be logged in.' };
   }
 
-  const validationResult = InviteMemberServerSchema.safeParse(formData);
-  if (!validationResult.success) {
-    return {
-      success: false,
-      error: 'Invalid input.',
-      fieldErrors: validationResult.error.flatten().fieldErrors,
-    };
+  const validation = InviteMemberServerSchema.safeParse(formData);
+  if (!validation.success) {
+    return { success: false, error: 'Invalid form data.' };
   }
 
-  const { collectiveId, email, role } = validationResult.data;
+  const { collectiveId, email, role } = validation.data;
 
-  try {
-    // 1. Verify current user is the owner of the collective
-    const { data: collective, error: collectiveError } = await supabaseAdmin
-      .from('collectives')
-      .select('owner_id')
-      .eq('id', collectiveId)
-      .single();
+  // Verify current user is an owner or admin of the collective
+  const { data: memberData, error: memberError } = await supabase
+    .from('collective_members')
+    .select('role')
+    .eq('collective_id', collectiveId)
+    .eq('member_id', currentUser.id)
+    .single();
 
-    if (collectiveError !== null || collective === null) {
-      return { success: false, error: 'Collective not found.' };
-    }
-    if (collective.owner_id !== currentUser.id) {
-      return {
-        success: false,
-        error: 'Only the collective owner can invite members.',
-      };
-    }
-
-    // 2. Find the user ID for the provided email
-    const {
-      data: invitedUser,
-      error: userLookupError,
-    }: { data: { id: string } | null; error: unknown } = await supabaseAdmin
-      .from('users')
-      .select('id')
-      .eq('email', email)
-      .single();
-
-    if (invitedUser === null) {
-      // Pending invite: check for existing invite
-      const { data: existingInvite } = await supabaseAdmin
-        .from('collective_invites')
-        .select('id')
-        .eq('collective_id', collectiveId)
-        .eq('email', email)
-        .eq('status', 'pending')
-        .maybeSingle();
-      if (existingInvite !== null) {
-        return {
-          success: false,
-          error: `An invite for ${email} is already pending.`,
-        };
-      }
-      // Generate unique invite code
-      const invite_code = randomBytes(INVITE_CODE_BYTES).toString('hex');
-      const { error: inviteError } = await supabaseAdmin
-        .from('collective_invites')
-        .insert({
-          collective_id: collectiveId,
-          email,
-          role,
-          status: 'pending',
-          invite_code,
-          invited_by_user_id: currentUser.id,
-        });
-      if (inviteError !== null) {
-        return {
-          success: false,
-          error: `Failed to create invite: ${inviteError.message}`,
-        };
-      }
-      // Fetch collective name for email
-      const { data: collectiveDetails } = await supabaseAdmin
-        .from('collectives')
-        .select('name')
-        .eq('id', collectiveId)
-        .single();
-      const siteUrl =
-        process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000';
-      const inviteLink = `${siteUrl}/invite/${invite_code}`;
-      await sendInviteEmail({
-        to: email,
-        inviteLink,
-        collectiveName: collectiveDetails?.name !== null && collectiveDetails?.name !== undefined ? collectiveDetails.name : 'a collective',
-        role,
-      });
-      return { success: true };
-    }
-
-    if (userLookupError !== null) {
-      return {
-        success: false,
-        error: `User lookup error: ${hasMessage(userLookupError) ? userLookupError.message : 'Unknown error'}`,
-      };
-    }
-
-    if (invitedUser.id === currentUser.id) {
-      return { success: false, error: 'You cannot invite yourself.' };
-    }
-
-    // 3. Check if the user is already a member
-    const { data: existingMember, error: memberCheckError } =
-      await supabaseAdmin
-        .from('collective_members')
-        .select('id')
-        .eq('collective_id', collectiveId)
-        .eq('member_id', invitedUser.id)
-        .maybeSingle();
-
-    if (memberCheckError !== null) {
-      console.error('Error checking existing member:', memberCheckError);
-      return { success: false, error: 'Database error checking membership.' };
-    }
-    if (existingMember !== null) {
-      return {
-        success: false,
-        error: 'This user is already a member of the collective.',
-      };
-    }
-
-    // 4. Add the user to the collective
-    const { error: insertError } = await supabaseAdmin
-      .from('collective_members')
-      .insert({
-        collective_id: collectiveId,
-        member_id: invitedUser.id,
-        member_type: 'user',
-        role: role as Enums<'collective_member_role'>,
-      });
-
-    if (insertError !== null) {
-      console.error('Error inviting member:', insertError);
-      return {
-        success: false,
-        error: `Failed to invite member. ${insertError.message}`,
-      };
-    }
-
-    return { success: true };
-  } catch (e: unknown) {
-    console.error('Unexpected error inviting member:', e);
-    return { success: false, error: 'An unexpected error occurred.' };
+  if (memberError || !['owner', 'admin'].includes(memberData?.role)) {
+    return { success: false, error: 'You do not have permission to invite members.' };
   }
+
+  // Generate a unique invite code
+  const inviteCode = randomBytes(16).toString('hex');
+
+  // Insert the invite into the database
+  const { error: inviteError } = await supabase
+    .from('collective_invites')
+    .insert({
+      collective_id: collectiveId,
+      invited_by_user_id: currentUser.id,
+      email,
+      role,
+      invite_code: inviteCode,
+    });
+
+  if (inviteError) {
+    console.error('Error creating invite:', inviteError);
+    if (inviteError.code === '23505') { // unique constraint violation
+      return { success: false, error: 'An invite for this email already exists.' };
+    }
+    return { success: false, error: 'Failed to create invite.' };
+  }
+
+  // Here you would typically send an email with the invite link:
+  // const inviteLink = `${process.env.NEXT_PUBLIC_BASE_URL}/invite/${inviteCode}`;
+  // await sendEmail({ to: email, subject: "You're invited!", body: `Join here: ${inviteLink}` });
+
+  revalidatePath(`/collectives/${collectiveId}/members`);
+
+  return { success: true };
 }
 
 /**
@@ -365,7 +271,7 @@ export async function resendCollectiveInvite({
     .select('name')
     .eq('id', collectiveId)
     .single();
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000';
+  const siteUrl = process.env['NEXT_PUBLIC_SITE_URL'] ?? 'http://localhost:3000';
   const inviteLink = `${siteUrl}/invite/${invite_code}`;
   if (invite?.email !== null && invite?.email !== undefined && invite?.role !== null && invite?.role !== undefined) {
     await sendInviteEmail({
@@ -423,7 +329,7 @@ export async function cancelCollectiveInvite({
 }
 
 /**
- * Accept a pending invite for the current user (by email).
+ * Accept a collective invite using an invite code.
  */
 export async function acceptCollectiveInvite({
   inviteCode,
@@ -432,69 +338,40 @@ export async function acceptCollectiveInvite({
 }): Promise<ActionResult> {
   const supabase = await createServerSupabaseClient();
   const {
-    data: { user: currentUser },
+    data: { user },
+    error: authError,
   } = await supabase.auth.getUser();
-  if (currentUser === null || currentUser.email === null || currentUser.email === undefined) {
-    return {
-      success: false,
-      error: 'Unauthorized: You must be logged in with a valid email.',
-    };
+
+  if (authError || !user) {
+    return { success: false, error: 'User not authenticated.' };
   }
-  // Find pending invite for this code and email
-  const { data: invite, error: inviteError } = await supabaseAdmin
-    .from('collective_invites')
-    .select('id, collective_id, email, role, status')
-    .eq('invite_code', inviteCode)
-    .eq('status', 'pending')
-    .maybeSingle();
-  if (inviteError !== null || invite === null) {
-    return {
-      success: false,
-      error: 'Invite not found or already accepted/cancelled.',
-    };
+
+  const { data, error } = await supabase.rpc('accept_collective_invite', {
+    p_invite_code: inviteCode,
+    p_user_id: user.id,
+  });
+
+  if (error) {
+    console.error('Error accepting invite:', error);
+    return { success: false, error: error.message };
   }
-  if (invite.email.toLowerCase() !== currentUser.email.toLowerCase()) {
-    return {
-      success: false,
-      error: 'This invite is not for your email address.',
-    };
+
+  // The RPC returns an array with one object
+  const result = Array.isArray(data) ? data[0] : data;
+
+  if (!result || !result.success) {
+    return { success: false, error: result?.message ?? 'Failed to accept invite.' };
   }
-  // Check if already a member
-  const { data: existingMember } = await supabaseAdmin
-    .from('collective_members')
-    .select('id')
-    .eq('collective_id', invite.collective_id)
-    .eq('member_id', currentUser.id)
-    .maybeSingle();
-  if (existingMember !== null) {
-    // Mark invite as accepted anyway
-    await supabaseAdmin
-      .from('collective_invites')
-      .update({ status: 'accepted', accepted_at: new Date().toISOString() })
-      .eq('id', invite.id);
-    return {
-      success: false,
-      error: 'You are already a member of this collective.',
-    };
+  
+  if (result.collective_slug) {
+    revalidatePath(`/collectives/${result.collective_slug}`);
   }
-  // Accept invite: add to members and update invite
-  const { error: addError } = await supabaseAdmin
-    .from('collective_members')
-    .insert({
-      collective_id: invite.collective_id,
-      member_id: currentUser.id,
-      member_type: 'user',
-      role: invite.role as Enums<'collective_member_role'>,
-    });
-  if (addError !== null) {
-    return {
-      success: false,
-      error: `Failed to add you as a member: ${addError.message}`,
-    };
-  }
-  await supabaseAdmin
-    .from('collective_invites')
-    .update({ status: 'accepted', accepted_at: new Date().toISOString() })
-    .eq('id', invite.id);
-  return { success: true };
+  revalidatePath('/dashboard');
+
+  return { 
+    success: true, 
+    data: {
+      slug: result.collective_slug
+    }
+  };
 }

@@ -74,7 +74,9 @@ export function PostCardWrapper({
         likeCount: item.stats.likes,
         dislikeCount: item.stats.dislikes,
         commentCount: item.stats.comments,
-        viewCount: item.stats.views,
+        ...(item.stats.views !== undefined
+          ? { viewCount: item.stats.views }
+          : {}),
       }}
       onToggleLike={handleLike}
       onToggleDislike={handleDislike}

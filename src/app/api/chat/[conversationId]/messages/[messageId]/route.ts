@@ -49,7 +49,7 @@ export async function PUT(
   const parseResult = UpdateMessageSchema.safeParse(body);
   if (!parseResult.success) {
     return NextResponse.json(
-      { error: parseResult.error.errors[0].message },
+      { error: parseResult.error.errors[0]?.message || 'Validation error' },
       { status: HttpStatus.BAD_REQUEST }
     );
   }

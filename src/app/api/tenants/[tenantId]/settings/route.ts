@@ -137,9 +137,13 @@ export async function PATCH(
           throw new Error('Authentication required');
         }
 
-        // Prepare update data
+        // Prepare update data - filter out undefined values
+        const filteredUpdates = Object.fromEntries(
+          Object.entries(updates).filter(([, value]) => value !== undefined)
+        );
+        
         const updateData: Partial<Database['public']['Tables']['tenants']['Row']> = {
-          ...updates,
+          ...filteredUpdates,
           updated_at: new Date().toISOString(),
         };
 

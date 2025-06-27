@@ -21,6 +21,23 @@ type PendingInvite = {
   invite_code: string;
 };
 
+async function getPendingInvites(collectiveId: string) {
+  const supabase = await createServerSupabaseClient();
+  const { data, error } = await supabase.rpc(
+    'get_collective_invites_with_user_details',
+    { p_collective_id: collectiveId },
+  );
+
+  if (error) {
+    console.error(
+      `Error fetching pending invites for collective ${collectiveId}:`,
+      error.message,
+    );
+    return [];
+  }
+  return data ?? [];
+}
+
 export default async function ManageCollectiveMembersPage({
   params,
 }: {
@@ -82,19 +99,7 @@ export default async function ManageCollectiveMembersPage({
     // Handle error, maybe show empty list with an error message
   }
 
-  const { data: pendingInvites, error: invitesError } = await supabase
-    .from('collective_invites')
-    .select('id, email, role, status, created_at, invite_code')
-    .eq('collective_id', collective.id)
-    .eq('status', 'pending')
-    .order('created_at', { ascending: true });
-
-  if (invitesError !== null) {
-    console.error(
-      `Error fetching pending invites for collective ${collective.id}:`,
-      invitesError.message,
-    );
-  }
+  const pendingInvites = await getPendingInvites(collective.id);
 
   return (
     <div className="container mx-auto p-4 md:p-6">
@@ -114,12 +119,7 @@ export default async function ManageCollectiveMembersPage({
             ? (members as unknown as MemberWithDetails[])
             : []
         }
-        pendingInvites={
-          (pendingInvites as PendingInvite[]) !== null &&
-          (pendingInvites as PendingInvite[]) !== undefined
-            ? (pendingInvites as PendingInvite[])
-            : []
-        }
+        pendingInvites={pendingInvites as PendingInvite[]}
         isOwner={currentUser.id === collective.owner_id}
       />
     </div>

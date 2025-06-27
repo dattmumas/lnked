@@ -25,7 +25,7 @@ const RATE_LIMIT_UPLOADS_PER_HOUR = 10;
 const RATE_LIMIT_PROFILE_UPDATES_PER_HOUR = 20;
 
 // Environment configuration with validation
-const AVATAR_MAX_SIZE_MB = parseInt(process.env.AVATAR_MAX_SIZE_MB ?? '10', 10);
+const AVATAR_MAX_SIZE_MB = parseInt(process.env['AVATAR_MAX_SIZE_MB'] ?? '10', 10);
 const BYTES_PER_KB = 1024;
 const KB_PER_MB = 1024;
 const AVATAR_MAX_SIZE_BYTES = AVATAR_MAX_SIZE_MB * KB_PER_MB * BYTES_PER_KB;

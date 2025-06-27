@@ -111,13 +111,32 @@ export class PostRepository {
   async create(postData: PostInsert): Promise<Post | undefined> {
     const tenantRepo = await createTenantAwareRepository();
     
-    // Ensure slug is included
-    const postWithSlug = {
+    // Ensure slug is included and transform for database
+    const postWithSlug = PostInsertSchema.parse({
       ...postData,
       slug: postData.slug || `${postData.title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${Date.now()}`,
+    });
+
+    // Build clean object omitting null enum values
+    const { status, post_type, author, subtitle, seo_title, meta_description, thumbnail_url, published_at, metadata, sharing_settings, is_public, collective_id, content, ...requiredFields } = postWithSlug;
+    const cleanedPost = {
+      ...requiredFields,
+      ...(status !== null ? { status } : {}),
+      ...(post_type !== null ? { post_type } : {}),
+      ...(author !== null ? { author } : {}),
+      ...(subtitle !== null ? { subtitle } : {}),
+      ...(seo_title !== null ? { seo_title } : {}),
+      ...(meta_description !== null ? { meta_description } : {}),
+      ...(thumbnail_url !== null ? { thumbnail_url } : {}),
+      ...(published_at !== null ? { published_at } : {}),
+      ...(metadata !== null ? { metadata } : {}),
+      ...(sharing_settings !== null ? { sharing_settings } : {}),
+      ...(is_public !== null ? { is_public } : {}),
+      ...(collective_id !== null ? { collective_id } : {}),
+      ...(content !== null ? { content } : {}),
     };
     
-    const { data, error } = await tenantRepo.insertPost(postWithSlug);
+    const { data, error } = await tenantRepo.insertPost(cleanedPost);
 
     if (error !== null) {
       throw error;
@@ -132,9 +151,14 @@ export class PostRepository {
   async update(id: string, updates: PostUpdate): Promise<Post | undefined> {
     const dbUpdates = PostUpdateSchema.parse(updates);
     
+    // Build clean object omitting null/undefined values
+    const cleanedUpdates = Object.fromEntries(
+      Object.entries(dbUpdates).filter(([, v]) => v !== null && v !== undefined)
+    );
+    
     const { data, error } = await this.supabase
       .from('posts')
-      .update(dbUpdates)
+      .update(cleanedUpdates)
       .eq('id', id)
       .select()
       .single();

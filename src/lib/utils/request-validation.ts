@@ -6,10 +6,10 @@ import { z } from 'zod';
  */
 
 // Environment-driven constants with safe defaults
-const MAX_NOTIFICATION_LIMIT = parseInt(process.env.NOTIF_PAGE_LIMIT_MAX ?? '100', 10);
-const MAX_NOTIFICATION_OFFSET = parseInt(process.env.NOTIF_PAGE_OFFSET_MAX ?? '10000', 10);
-const MAX_NOTIFICATION_IDS = parseInt(process.env.NOTIF_MAX_IDS_PER_REQUEST ?? '100', 10);
-const MAX_REQUEST_BODY_SIZE = parseInt(process.env.MAX_REQUEST_BODY_SIZE ?? '102400', 10); // 100KB
+const NOTIFICATION_PAGE_LIMIT_MAX = parseInt(process.env['NOTIF_PAGE_LIMIT_MAX'] || '100', 10);
+const NOTIFICATION_PAGE_OFFSET_MAX = parseInt(process.env['NOTIF_PAGE_OFFSET_MAX'] || '10000', 10);
+const NOTIFICATION_MAX_IDS_PER_REQUEST = parseInt(process.env['NOTIF_MAX_IDS_PER_REQUEST'] || '50', 10);
+const MAX_REQUEST_BODY_SIZE = parseInt(process.env['MAX_REQUEST_BODY_SIZE'] || '1048576', 10); // 1MB
 const DEFAULT_NOTIFICATION_LIMIT = 20;
 
 // Notification type enum (should match database enum)
@@ -41,7 +41,7 @@ export const notificationQuerySchema = z.object({
       });
       return z.NEVER;
     }
-    return Math.max(1, Math.min(parsed, MAX_NOTIFICATION_LIMIT));
+    return Math.max(1, Math.min(parsed, NOTIFICATION_PAGE_LIMIT_MAX));
   }),
   offset: z.string().optional().transform((val, ctx) => {
     if (val === undefined || val === null) return 0; // Default
@@ -53,7 +53,7 @@ export const notificationQuerySchema = z.object({
       });
       return z.NEVER;
     }
-    return Math.max(0, Math.min(parsed, MAX_NOTIFICATION_OFFSET));
+    return Math.max(0, Math.min(parsed, NOTIFICATION_PAGE_OFFSET_MAX));
   }),
 });
 
@@ -63,7 +63,7 @@ export const notificationQuerySchema = z.object({
 export const notificationActionSchema = z.object({
   notification_ids: z.array(z.string().uuid('Invalid notification ID format'))
     .min(1, 'At least one notification ID is required')
-    .max(MAX_NOTIFICATION_IDS, `Maximum ${MAX_NOTIFICATION_IDS} notification IDs allowed per request`)
+    .max(NOTIFICATION_MAX_IDS_PER_REQUEST, `Maximum ${NOTIFICATION_MAX_IDS_PER_REQUEST} notification IDs allowed per request`)
     .refine(
       (ids) => new Set(ids).size === ids.length,
       'Duplicate notification IDs are not allowed'
@@ -140,8 +140,8 @@ export async function safeParseJson<T>(
  * Constants for external use
  */
 export const VALIDATION_CONSTANTS = {
-  MAX_NOTIFICATION_LIMIT,
-  MAX_NOTIFICATION_OFFSET,
-  MAX_NOTIFICATION_IDS,
+  NOTIFICATION_PAGE_LIMIT_MAX,
+  NOTIFICATION_PAGE_OFFSET_MAX,
+  NOTIFICATION_MAX_IDS_PER_REQUEST,
   MAX_REQUEST_BODY_SIZE,
 } as const; 

@@ -7,30 +7,29 @@ import type { NextRequest } from 'next/server';
 const ALLOWED_CONTENT_TYPE = 'application/json';
 const MAX_BODY_SIZE_KB = 100;
 const MAX_BODY_SIZE_BYTES = MAX_BODY_SIZE_KB * 1024;
-const CSRF_SECRET = process.env.AUTH_CSRF_SECRET !== null && process.env.AUTH_CSRF_SECRET !== undefined 
-  ? process.env.AUTH_CSRF_SECRET 
-  : 'fallback-dev-secret-change-in-prod';
+const CSRF_SECRET = process.env['AUTH_CSRF_SECRET'] || 'fallback-dev-secret-change-in-prod';
 const COOKIE_MAX_AGE_DAYS = 7;
 const COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * COOKIE_MAX_AGE_DAYS;
 
 // Environment-driven origins configuration
 const getAppOrigins = (): readonly string[] => {
   const origins = [
-    process.env.NEXT_PUBLIC_APP_URL,
-    process.env.VERCEL_URL !== null && process.env.VERCEL_URL !== undefined 
-      ? `https://${process.env.VERCEL_URL}` 
+    process.env['NEXT_PUBLIC_APP_URL'],
+    process.env['VERCEL_URL'] !== null && process.env['VERCEL_URL'] !== undefined 
+      ? `https://${process.env['VERCEL_URL']}` 
       : undefined,
   ].filter(Boolean) as string[];
 
   // Add development origins from environment or default pattern
   if (process.env.NODE_ENV === 'development') {
-    const devOrigins = process.env.DEV_ORIGINS !== null && process.env.DEV_ORIGINS !== undefined 
-      ? process.env.DEV_ORIGINS.split(',') 
-      : [
-        'http://localhost:3000',
-        'https://localhost:3000',
-      ];
-    origins.push(...devOrigins);
+    const devOriginsEnv = process.env['DEV_ORIGINS'];
+    if (devOriginsEnv) {
+      const devOrigins = devOriginsEnv.split(',');
+      origins.push(...devOrigins);
+    } else {
+      // Default development origins
+      origins.push('http://localhost:3000', 'https://localhost:3000');
+    }
     
     // Support localhost with any port pattern
     for (let port = 3000; port <= 3010; port++) {
@@ -83,7 +82,7 @@ const verifyCSRFToken = async (token: string): Promise<boolean> => {
     }
 
     // Verify timestamp is within last hour
-    const tokenTime = parseInt(timestamp, 10);
+    const tokenTime = parseInt(timestamp || '0', 10);
     const now = Date.now();
     const maxAge = 60 * 60 * 1000; // 1 hour
 
@@ -94,13 +93,15 @@ const verifyCSRFToken = async (token: string): Promise<boolean> => {
     // In production, verify HMAC signature
     if (process.env.NODE_ENV === 'production') {
       const encoder = new TextEncoder();
-      await crypto.subtle.importKey(
-        'raw',
-        encoder.encode(CSRF_SECRET),
-        { name: 'HMAC', hash: 'SHA-256' },
-        false,
-        ['verify']
-      );
+      if (CSRF_SECRET) {
+        await crypto.subtle.importKey(
+          'raw',
+          encoder.encode(CSRF_SECRET),
+          { name: 'HMAC', hash: 'SHA-256' },
+          false,
+          ['verify']
+        );
+      }
       
       // For production, implement proper HMAC verification
       // This is a simplified version - implement full HMAC in production
@@ -408,7 +409,8 @@ export class CookieSecurityManager {
 
       // Process each Set-Cookie header
       setCookieHeaders.forEach((cookieHeader) => {
-        const cookieName = cookieHeader.split('=')[0];
+        const cookieParts = cookieHeader.split('=');
+        const cookieName = cookieParts[0] ?? '';
         
         if (this.SUPABASE_COOKIE_NAMES.some(name => cookieName.includes(name))) {
           const updatedCookie = this.addSecurityFlags(cookieHeader);

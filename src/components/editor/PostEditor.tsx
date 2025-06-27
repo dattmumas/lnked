@@ -1,7 +1,8 @@
 'use client';
 
-import dynamic from 'next/dynamic';
-import { memo } from 'react';
+import React, { memo } from 'react';
+
+import LexicalOptimizedEditor from '@/components/editor/LexicalOptimizedEditor';
 
 import './styles/PlaygroundBase.css';
 import './styles/EditorLayout.css';
@@ -15,41 +16,8 @@ interface PostEditorProps {
   onChange?: (json: string) => void;
 }
 
-// Dynamically import the optimized editor to avoid SSR issues
-const LexicalOptimizedEditorComponent = dynamic(
-  () => import('./LexicalOptimizedEditor'),
-  {
-    ssr: false,
-    loading: () => (
-      <div className="lexical-playground">
-        <div className="editor-shell" style={{ minHeight: 250 }}>
-          <div
-            className="toolbar"
-            style={{
-              height: 48,
-              minHeight: 48,
-              display: 'flex',
-              alignItems: 'center',
-              padding: '8px 12px',
-              borderBottom: '1px solid hsl(var(--border))',
-              background: 'var(--background)',
-            }}
-          >
-            {/* Toolbar placeholder: keep height and flex structure */}
-          </div>
-          <div className="editor-container">
-            <div className="editor-scroller" style={{ minHeight: 150 }}>
-              <div className="editor" />
-            </div>
-          </div>
-        </div>
-      </div>
-    ),
-  },
-);
-
-function PostEditor(props: PostEditorProps) {
-  return <LexicalOptimizedEditorComponent {...props} />;
+function PostEditor(props: PostEditorProps): React.JSX.Element {
+  return <LexicalOptimizedEditor {...props} />;
 }
 
 export default memo(PostEditor);

@@ -83,7 +83,7 @@ function validatePlanRequest(body: PlanRequestBody): { isValid: boolean; data?: 
       currency: currency.toLowerCase(),
       interval,
       trial_period_days: validTrialDays,
-      description: validDescription,
+      ...(validDescription ? { description: validDescription } : {}),
     },
   };
 }
@@ -183,7 +183,7 @@ export async function POST(
 
       logger.warn('Unauthorized plan creation attempt', {
         statusCode: HTTP_STATUS.UNAUTHORIZED,
-        error: authError?.message,
+        ...(authError?.message ? { error: authError.message } : {}),
         metadata: {
           collectiveId,
         },
@@ -328,7 +328,7 @@ export async function POST(
     } else {
       product = await stripe.products.create({
         name: validatedData.name,
-        description: validatedData.description,
+        ...(validatedData.description ? { description: validatedData.description } : {}),
         metadata: { collectiveId },
       });
 
@@ -383,7 +383,7 @@ export async function POST(
       product_id: product.id,
       unit_amount: price.unit_amount,
       currency: price.currency,
-      interval: price.recurring?.interval,
+      ...(price.recurring?.interval ? { interval: price.recurring.interval } : {}),
       trial_period_days: validatedData.trial_period_days,
       active: true,
     });
@@ -448,12 +448,12 @@ export async function POST(
       method: 'POST',
       statusCode: HTTP_STATUS.INTERNAL_SERVER_ERROR,
       duration,
-      userId,
+      ...(userId ? { userId } : {}),
       error: error instanceof Error ? error.message : 'Unknown error',
     });
 
     logger.error('Plan creation failed', {
-      userId,
+      ...(userId ? { userId } : {}),
       statusCode: HTTP_STATUS.INTERNAL_SERVER_ERROR,
       duration,
       error: error instanceof Error ? error : new Error(String(error)),

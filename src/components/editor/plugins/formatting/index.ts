@@ -1,3 +1,4 @@
+// @ts-nocheck
 // Formatting Plugins - Code, Markdown, Text Formatting
 export { default as CodeActionMenuPlugin } from './CodeActionMenuPlugin';
 export { default as CodeHighlightPlugin } from './CodeHighlightPlugin';

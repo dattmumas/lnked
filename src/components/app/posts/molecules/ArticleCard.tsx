@@ -166,10 +166,10 @@ export default function ArticleCard({
         <PostCardHeader
           author={post.author}
           timestamp={post.created_at}
-          collective={post.collective}
+          {...(post.collective ? { collective: post.collective } : {})}
           showFollowButton={showFollowButton}
-          currentUserId={currentUserId}
-          onFollow={onFollow}
+          {...(currentUserId ? { currentUserId } : {})}
+          {...(onFollow ? { onFollow } : {})}
           isFollowing={isFollowing}
         />
 
@@ -210,18 +210,16 @@ export default function ArticleCard({
 
         <PostCardFooter
           postId={post.id}
-          postSlug={
-            post.slug !== undefined &&
-            post.slug !== null &&
-            post.slug.length > 0
-              ? post.slug
-              : undefined
-          }
+          {...(post.slug !== undefined &&
+          post.slug !== null &&
+          post.slug.length > 0
+            ? { postSlug: post.slug }
+            : {})}
           postTitle={post.title}
           interactions={interactions}
-          onToggleLike={onToggleLike}
-          onToggleDislike={onToggleDislike}
-          onToggleBookmark={onToggleBookmark}
+          {...(onToggleLike ? { onToggleLike } : {})}
+          {...(onToggleDislike ? { onToggleDislike } : {})}
+          {...(onToggleBookmark ? { onToggleBookmark } : {})}
           showViewCount
         />
       </CardContent>

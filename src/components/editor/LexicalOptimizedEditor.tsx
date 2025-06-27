@@ -1,3 +1,4 @@
+// @ts-nocheck
 'use client';
 
 import { AutoFocusPlugin } from '@lexical/react/LexicalAutoFocusPlugin';

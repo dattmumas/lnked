@@ -89,9 +89,9 @@ class ProductionLogger implements StructuredLogger {
     const sanitized = { ...context };
     
     // Redact sensitive fields
-    if ('user_id' in sanitized) sanitized.user_id = '[REDACTED]';
-    if ('access_token' in sanitized) sanitized.access_token = '[REDACTED]';
-    if ('refresh_token' in sanitized) sanitized.refresh_token = '[REDACTED]';
+    if ('user_id' in sanitized) sanitized['user_id'] = '[REDACTED]';
+    if ('access_token' in sanitized) sanitized['access_token'] = '[REDACTED]';
+    if ('refresh_token' in sanitized) sanitized['refresh_token'] = '[REDACTED]';
     
     return sanitized;
   }
@@ -174,8 +174,8 @@ function scheduleBackgroundPoll(
   const job: PollJob = {
     videoId,
     userId,
-    uploadId,
-    assetId,
+    ...(uploadId ? { uploadId } : {}),
+    ...(assetId ? { assetId } : {}),
     attempts: 0,
     nextPollAt: new Date(Date.now() + BACKGROUND_POLL_INTERVAL_MS),
     createdAt: new Date(),
@@ -322,7 +322,7 @@ function findPlaybackIdByPolicy(
       desired_policy: desiredPolicy,
       available_policies: playbackIds.map(p => p.policy),
     });
-    return playbackIds[0].id;
+    return playbackIds[0]?.id;
   }
   
   return playbackId;
@@ -464,8 +464,12 @@ export async function POST(
             ) as MuxAsset;
             
             updateData.status = asset.status;
-            updateData.duration = asset.duration;
-            updateData.aspect_ratio = asset.aspect_ratio;
+            if (asset.duration !== undefined) {
+              updateData.duration = asset.duration;
+            }
+            if (asset.aspect_ratio !== undefined) {
+              updateData.aspect_ratio = asset.aspect_ratio;
+            }
             
             // Fix #6: Policy-aware playback ID selection
             const currentPolicy = videoAsset.is_public === true ? 'public' : 'signed';
@@ -559,8 +563,8 @@ export async function POST(
         
         updateData = {
           status: asset.status,
-          duration: asset.duration,
-          aspect_ratio: asset.aspect_ratio,
+          ...(asset.duration !== undefined ? { duration: asset.duration } : {}),
+          ...(asset.aspect_ratio !== undefined ? { aspect_ratio: asset.aspect_ratio } : {}),
           updated_at: new Date().toISOString(),
         };
 

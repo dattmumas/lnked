@@ -21,15 +21,15 @@ const RATE_LIMIT_DEFAULTS = {
 // Enhanced rate limiting configuration
 const RATE_LIMIT_CONFIG = {
   // User-based limits
-  USER_REQUESTS_PER_HOUR: Number(process.env.RATE_LIMIT_USER_REQUESTS_PER_HOUR) || RATE_LIMIT_DEFAULTS.USER_REQUESTS_PER_HOUR,
-  USER_WINDOW_HOURS: Number(process.env.RATE_LIMIT_USER_WINDOW_HOURS) || RATE_LIMIT_DEFAULTS.USER_WINDOW_HOURS,
+  USER_REQUESTS_PER_HOUR: parseInt(process.env['RATE_LIMIT_USER_REQUESTS_PER_HOUR'] || '100', 10),
+  USER_WINDOW_HOURS: parseInt(process.env['RATE_LIMIT_USER_WINDOW_HOURS'] || '1', 10),
   
   // IP-based limits (global protection)
-  IP_REQUESTS_PER_HOUR: Number(process.env.RATE_LIMIT_IP_REQUESTS_PER_HOUR) || RATE_LIMIT_DEFAULTS.IP_REQUESTS_PER_HOUR,
-  IP_WINDOW_HOURS: Number(process.env.RATE_LIMIT_IP_WINDOW_HOURS) || RATE_LIMIT_DEFAULTS.IP_WINDOW_HOURS,
+  IP_REQUESTS_PER_HOUR: parseInt(process.env['RATE_LIMIT_IP_REQUESTS_PER_HOUR'] || '200', 10),
+  IP_WINDOW_HOURS: parseInt(process.env['RATE_LIMIT_IP_WINDOW_HOURS'] || '1', 10),
   
   // Cache TTL (24 hours in milliseconds)
-  CACHE_TTL_MS: Number(process.env.RATE_LIMIT_CACHE_TTL_MS) || (RATE_LIMIT_DEFAULTS.CACHE_TTL_HOURS * RATE_LIMIT_DEFAULTS.MS_PER_HOUR),
+  CACHE_TTL_MS: parseInt(process.env['RATE_LIMIT_CACHE_TTL_MS'] || '60000', 10),
 } as const;
 
 interface RateLimitResult {

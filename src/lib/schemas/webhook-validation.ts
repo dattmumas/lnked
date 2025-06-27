@@ -46,12 +46,12 @@ export const parseStripeSignature = (signature: string): { t?: number; v1?: stri
   
   for (const part of parts) {
     const [key, value] = part.split('=');
-    if (key === 't') {
+    if (key === 't' && value) {
       const timestamp = Number.parseInt(value, 10);
       if (!Number.isNaN(timestamp)) {
         parsedSig.t = timestamp;
       }
-    } else if (key === 'v1') {
+    } else if (key === 'v1' && value) {
       parsedSig.v1 = value;
     }
   }

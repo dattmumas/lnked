@@ -176,7 +176,7 @@ export async function POST(
 
       logger.warn('Unauthorized auto-join channels attempt', {
         statusCode: HTTP_STATUS.UNAUTHORIZED,
-        error: authError?.message,
+        ...(authError?.message ? { error: authError.message } : {}),
         metadata: {
           collectiveId,
         },
@@ -458,12 +458,12 @@ export async function POST(
       method: 'POST',
       statusCode: HTTP_STATUS.INTERNAL_SERVER_ERROR,
       duration,
-      userId,
+      ...(userId ? { userId } : {}),
       error: error instanceof Error ? error.message : 'Unknown error',
     });
 
     logger.error('Auto-join channels operation failed', {
-      userId,
+      ...(userId ? { userId } : {}),
       statusCode: HTTP_STATUS.INTERNAL_SERVER_ERROR,
       duration,
       error: error instanceof Error ? error : new Error(String(error)),

@@ -3,7 +3,7 @@ import Stripe from 'stripe';
 let stripeClient: Stripe | undefined;
 
 export function getStripe(): Stripe | undefined {
-  const key = process.env.STRIPE_SECRET_KEY;
+  const key = process.env['STRIPE_SECRET_KEY'];
 
   const hasValidKey = typeof key === 'string' && key !== '';
   if (!hasValidKey) {

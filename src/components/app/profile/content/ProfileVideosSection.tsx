@@ -209,19 +209,12 @@ function VideoCard({ video }: { video: VideoAsset }): React.ReactElement {
     >
       <div className="relative aspect-video bg-muted">
         <VideoThumbnail
-          playbackId={
-            video.mux_playback_id !== undefined &&
-            video.mux_playback_id !== null
-              ? video.mux_playback_id
-              : undefined
-          }
-          duration={
-            video.duration !== undefined &&
-            video.duration !== null &&
-            video.duration > 0
-              ? video.duration
-              : undefined
-          }
+          {...(video.mux_playback_id
+            ? { playbackId: video.mux_playback_id }
+            : {})}
+          {...(video.duration && video.duration > 0
+            ? { duration: video.duration }
+            : {})}
           isProcessing={video.status === 'preparing'}
           className="w-full h-full"
         />

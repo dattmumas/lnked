@@ -78,7 +78,7 @@ export const useSimplifiedVideoUpload = (
   // Form state
   const [formData, setFormData] = useState<VideoFormData>({
     ...initialFormData,
-    collectiveId,
+    ...(collectiveId ? { collectiveId } : {}),
   });
 
   // Upload state
@@ -297,7 +297,7 @@ export const useSimplifiedVideoUpload = (
 
   // Reset all state
   const reset = useCallback(() => {
-    setFormData({ ...initialFormData, collectiveId });
+    setFormData({ ...initialFormData, ...(collectiveId ? { collectiveId } : {}) });
     setSelectedFile(null);
     setUploadState('idle');
     setUploadProgress(0);
@@ -328,9 +328,9 @@ export const useSimplifiedVideoUpload = (
     videoAsset,
 
     // Retry state
-    retryAttempt,
-    maxRetries,
-    isRetryable,
+    ...(retryAttempt !== undefined ? { retryAttempt } : {}),
+    ...(maxRetries !== undefined ? { maxRetries } : {}),
+    ...(isRetryable !== undefined ? { isRetryable } : {}),
 
     // Operations
     selectFile,

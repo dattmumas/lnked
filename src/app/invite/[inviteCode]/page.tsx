@@ -1,50 +1,89 @@
-import Link from 'next/link';
-import { redirect } from 'next/navigation';
+import { notFound } from 'next/navigation';
 import React from 'react';
 
-import { acceptCollectiveInvite } from '@/app/actions/memberActions';
+import { InvitePageClient } from '@/app/invite/[inviteCode]/InvitePageClient';
+import { Database } from '@/lib/database.types';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 
-export default async function InviteAcceptPage({
-  params,
-}: {
-  params: Promise<{ inviteCode: string }>;
-}): Promise<React.ReactElement> {
-  const supabase = await createServerSupabaseClient();
-  const { inviteCode } = await params;
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser();
+type Collective = Database['public']['Tables']['collectives']['Row'];
+type CollectiveInvite =
+  Database['public']['Tables']['collective_invites']['Row'] & {
+    collective: Collective;
+    inviter:
+      | {
+          full_name: string | null;
+          avatar_url: string | null;
+        }
+      | { [key: string]: unknown }
+      | null;
+  };
 
-  if (authError || !user) {
-    // Redirect to sign-in, then back to this page
-    redirect(`/sign-in?next=/invite/${inviteCode}`);
+interface InvitePageProps {
+  params: Promise<{
+    inviteCode: string;
+  }>;
+}
+
+// Fetch invite details with collective and inviter info
+async function getInviteDetails(inviteCode: string): Promise<{
+  invite: CollectiveInvite;
+  collective: Collective;
+  inviter: { fullName: string | null; avatarUrl: string | null };
+} | null> {
+  const supabase = await createServerSupabaseClient();
+  const { data: invite, error } = await supabase
+    .from('collective_invites')
+    .select(
+      `
+      *,
+      collective:collectives(*),
+      inviter:users!invited_by_user_id(full_name, avatar_url)
+    `,
+    )
+    .eq('invite_code', inviteCode)
+    .maybeSingle();
+
+  if (error || !invite || !invite.collective) {
+    if (error) console.error('Error fetching invite:', error);
+    return null;
   }
 
-  const result = await acceptCollectiveInvite({
-    inviteCode,
-  });
+  // Handle cases where inviter might be null
+  const inviter =
+    invite.inviter && 'full_name' in invite.inviter
+      ? {
+          fullName: invite.inviter.full_name,
+          avatarUrl:
+            'avatar_url' in invite.inviter ? invite.inviter.avatar_url : null,
+        }
+      : { fullName: 'A collective owner', avatarUrl: null };
+
+  return {
+    invite: invite as CollectiveInvite,
+    collective: invite.collective as Collective,
+    inviter,
+  };
+}
+
+export default async function InvitePage({
+  params,
+}: InvitePageProps): Promise<React.ReactElement> {
+  const { inviteCode } = await params;
+  const inviteDetails = await getInviteDetails(inviteCode);
+
+  if (!inviteDetails) {
+    return notFound();
+  }
+
+  const supabase = await createServerSupabaseClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
   return (
-    <div className="container mx-auto max-w-lg p-8 text-center">
-      <h1 className="text-2xl font-bold mb-4">Collective Invite</h1>
-      {result.success ? (
-        <div className="text-success bg-success/10 p-4 rounded mb-4">
-          <p>Invite accepted! You are now a member of the collective.</p>
-        </div>
-      ) : (
-        <div className="text-destructive bg-destructive/10 p-4 rounded mb-4">
-          <p>
-            {(result.error ?? '').length > 0
-              ? result.error
-              : 'Failed to accept invite.'}
-          </p>
-        </div>
-      )}
-      <Link href="/dashboard" className="text-accent underline">
-        Go to Dashboard
-      </Link>
-    </div>
+    <InvitePageClient
+      inviteDetails={inviteDetails}
+      {...(user ? { currentUser: user } : {})}
+    />
   );
 }

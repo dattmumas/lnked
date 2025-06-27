@@ -107,7 +107,7 @@ export async function togglePostLike(
 
     return {
       success: true,
-      newLikeCount: count ?? undefined,
+      ...(count !== null ? { newLikeCount: count } : {}),
       userHadLiked: userHadLikedInitially,
       message: existingLike
         ? "Post unliked successfully."

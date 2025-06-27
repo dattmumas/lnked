@@ -28,8 +28,8 @@ export interface CreateCollectiveFormState {
 const MAX_SLUG_LENGTH = 50;
 
 const siteUrl =
-  (process.env.NEXT_PUBLIC_SITE_URL ?? '').trim().length > 0
-    ? (process.env.NEXT_PUBLIC_SITE_URL ?? '')
+  (process.env['NEXT_PUBLIC_SITE_URL'] ?? '').trim().length > 0
+    ? (process.env['NEXT_PUBLIC_SITE_URL'] ?? '')
     : '';
 
 export default function NewCollectivePage(): React.ReactElement {

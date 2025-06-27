@@ -107,7 +107,7 @@ export function withConversationAccess(
   ) => Promise<NextResponse>
 ) {
   return async (request: NextRequest, { params }: { params: Record<string, string> }) => {
-    const conversationId = params.conversationId || params.id;
+    const conversationId = params['conversationId'] || params['id'];
     
     if (!conversationId) {
       return NextResponse.json(

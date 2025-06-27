@@ -33,7 +33,7 @@ export default function MuxVideoPlayerEnhanced({
   const [isLoading, setIsLoading] = useState(isPrivate);
 
   // Get Mux Data environment key from environment variable
-  const muxDataEnvKey = process.env.NEXT_PUBLIC_MUX_DATA_ENV_KEY;
+  const muxDataEnvKey = process.env['NEXT_PUBLIC_MUX_DATA_ENV_KEY'];
 
   // Fetch signed URL for private videos
   useEffect(() => {
@@ -111,24 +111,16 @@ export default function MuxVideoPlayerEnhanced({
 
   return (
     <MuxPlayer
-      playbackId={isPrivate ? undefined : playbackId}
-      src={
-        isPrivate && signedUrl !== undefined && signedUrl !== ''
-          ? signedUrl
-          : undefined
-      }
+      {...(isPrivate ? {} : { playbackId })}
+      {...(isPrivate && signedUrl ? { src: signedUrl } : {})}
       metadata={{
-        video_title: title,
+        ...(title ? { video_title: title } : {}),
         // Add viewer metadata if provided
-        ...(viewerId !== undefined &&
-          viewerId !== null &&
-          viewerId.length > 0 && { viewer_user_id: viewerId }),
-        ...(viewerEmail !== undefined &&
-          viewerEmail !== null &&
-          viewerEmail.length > 0 && { viewer_user_email: viewerEmail }),
+        ...(viewerId ? { viewer_user_id: viewerId } : {}),
+        ...(viewerEmail ? { viewer_user_email: viewerEmail } : {}),
       }}
       // Enable Mux Data analytics if environment key is configured
-      envKey={muxDataEnvKey}
+      {...(muxDataEnvKey ? { envKey: muxDataEnvKey } : {})}
       className={className}
       // Additional props for better UX
       streamType="on-demand"

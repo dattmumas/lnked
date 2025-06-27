@@ -63,7 +63,11 @@ export function createActionResult<T = void>(
   data?: T,
   error?: string
 ): ActionResult<T> {
-  return { success, data, error };
+  return { 
+    success, 
+    ...(data !== undefined ? { data } : {}),
+    ...(error !== undefined ? { error } : {}),
+  };
 }
 
 /**
@@ -154,7 +158,7 @@ export async function toggleReaction(
       };
 
       if (tenantId !== null && tenantId !== undefined) {
-        insertData.tenant_id = tenantId;
+        insertData['tenant_id'] = tenantId;
       }
 
       if (entityId === null || entityId === undefined) {
@@ -205,4 +209,6 @@ export async function toggleReaction(
     console.error(`Error toggling ${reactionType}:`, error);
     return { success: false, error: ERROR_MESSAGES.INTERNAL_ERROR };
   }
-} 
+}
+
+ 

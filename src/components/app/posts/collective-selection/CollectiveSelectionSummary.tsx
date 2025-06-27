@@ -13,12 +13,12 @@ import React, { useMemo } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  type CollectiveWithPermission,
+  type CollectiveSharingSettings,
+} from '@/lib/stores/post-editor-v2-store';
 import { cn } from '@/lib/utils/cn';
 
-import type {
-  CollectiveWithPermission,
-  CollectiveSharingSettings,
-} from '@/lib/stores/enhanced-post-editor-store';
 
 interface CollectiveSelectionSummaryProps {
   selectedCollectives: CollectiveWithPermission[];
@@ -53,22 +53,22 @@ export function CollectiveSelectionSummary({
       const settings = sharingSettings[collective.id];
       if (settings) {
         switch (settings.status) {
-        case 'published': {
-          counts.published++;
-        
-        break;
-        }
-        case 'draft': {
-          counts.draft++;
-        
-        break;
-        }
-        case 'pending_approval': {
-          counts.pending_approval++;
-        
-        break;
-        }
-        // No default
+          case 'published': {
+            counts.published++;
+
+            break;
+          }
+          case 'draft': {
+            counts.draft++;
+
+            break;
+          }
+          case 'pending_approval': {
+            counts.pending_approval++;
+
+            break;
+          }
+          // No default
         }
 
         if (settings.auto_publish) {

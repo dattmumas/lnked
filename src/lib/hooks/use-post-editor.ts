@@ -109,7 +109,32 @@ export const useAutoSavePost = (): UseMutationResult<
         throw new Error('Post was not returned from database after save');
       }
 
-      return { ...validated, id: post.id };
+      const validatedPost = PostFormSchema.parse({
+        ...post,
+        metadata: post.metadata || {},
+      });
+      
+      // Build result object with proper handling of optional properties
+      const result: PostFormData = {
+        title: validatedPost.title,
+        content: validatedPost.content,
+        post_type: validatedPost.post_type,
+        status: validatedPost.status,
+        metadata: validatedPost.metadata,
+        is_public: validatedPost.is_public,
+      };
+      
+      // Add optional properties
+      if (post.id) result.id = post.id;
+      if (validatedPost.subtitle) result.subtitle = validatedPost.subtitle;
+      if (validatedPost.author) result.author = validatedPost.author;
+      if (validatedPost.seo_title) result.seo_title = validatedPost.seo_title;
+      if (validatedPost.meta_description) result.meta_description = validatedPost.meta_description;
+      if (validatedPost.thumbnail_url) result.thumbnail_url = validatedPost.thumbnail_url;
+      if (validatedPost.collective_id) result.collective_id = validatedPost.collective_id;
+      if (validatedPost.published_at) result.published_at = validatedPost.published_at;
+      
+      return result;
     },
     onMutate: () => {
       markSaving();
@@ -156,7 +181,7 @@ export const usePostData = (
       if (data === null || data === undefined) return undefined;
 
       // Cast through Zod to normalise defaults
-      return PostFormSchema.partial({ author_id: true }).parse({
+      const parsed = PostFormSchema.partial({ author_id: true }).parse({
         ...data,
         subtitle: data.subtitle ?? undefined,
         author: data.author ?? undefined,
@@ -166,6 +191,28 @@ export const usePostData = (
         collective_id: data.collective_id ?? undefined,
         published_at: data.published_at ?? undefined,
       });
+      
+      // Build result with proper handling of optional properties
+      const result: PostFormData = {
+        title: parsed.title,
+        content: parsed.content,
+        post_type: parsed.post_type,
+        status: parsed.status,
+        metadata: parsed.metadata,
+        is_public: parsed.is_public,
+      };
+      
+      // Add optional properties
+      if (parsed.id) result.id = parsed.id;
+      if (parsed.subtitle) result.subtitle = parsed.subtitle;
+      if (parsed.author) result.author = parsed.author;
+      if (parsed.seo_title) result.seo_title = parsed.seo_title;
+      if (parsed.meta_description) result.meta_description = parsed.meta_description;
+      if (parsed.thumbnail_url) result.thumbnail_url = parsed.thumbnail_url;
+      if (parsed.collective_id) result.collective_id = parsed.collective_id;
+      if (parsed.published_at) result.published_at = parsed.published_at;
+      
+      return result;
     },
     enabled: Boolean(postId),
     staleTime: POST_STALE_TIME_MS,

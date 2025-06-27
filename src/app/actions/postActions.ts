@@ -68,11 +68,11 @@ const logPostAction = (
   const sanitizedContext = {
     ...context,
     // Remove PII and sensitive data
-    user: context.user !== null && context.user !== undefined ? '[REDACTED]' : undefined,
-    content: context.content !== null && context.content !== undefined 
-      ? `[${typeof context.content} length: ${typeof context.content === 'string' 
-          ? context.content.length 
-          : typeof context.content === 'object' 
+    user: context['user'] !== null && context['user'] !== undefined ? '[REDACTED]' : undefined,
+    content: context['content'] !== null && context['content'] !== undefined 
+      ? `[${typeof context['content']} length: ${typeof context['content'] === 'string' 
+          ? String(context['content']).length 
+          : typeof context['content'] === 'object' 
             ? 'object' 
             : 'unknown'}]` 
       : undefined,
@@ -348,7 +348,7 @@ export async function createPost(
       data: {
         postId: newPost.id,
         postSlug,
-        collectiveSlug: validCollectives.length > 0 ? validCollectives[0].slug : null,
+        collectiveSlug: validCollectives.length > 0 ? validCollectives[0]?.slug || null : null,
       },
     };
   } catch (error) {
@@ -544,7 +544,7 @@ export async function updatePost(
     data: {
       postId: updatedPost.id,
       postSlug,
-      collectiveSlug: existingPost.collective?.slug,
+      ...(existingPost.collective?.slug ? { collectiveSlug: existingPost.collective.slug } : {}),
     },
   };
 }

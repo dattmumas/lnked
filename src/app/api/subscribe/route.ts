@@ -26,11 +26,11 @@ const MAX_REDIRECT_PATH_LENGTH = 256;
 const MAX_PRICE_ID_LENGTH = 128;
 
 // Environment-based constants
-const RATE_LIMIT_MAX_REQUESTS = parseInt(process.env.SUBSCRIBE_RATE_LIMIT_MAX ?? DEFAULT_RATE_LIMIT_MAX.toString(), 10);
+const RATE_LIMIT_MAX_REQUESTS = parseInt(process.env['SUBSCRIBE_RATE_LIMIT_MAX'] ?? DEFAULT_RATE_LIMIT_MAX.toString(), 10);
 const RATE_LIMIT_WINDOW_MS = MINUTES_PER_HOUR * SECONDS_PER_MINUTE * MS_PER_SECOND;
-const IDEMPOTENCY_WINDOW_MINUTES = parseInt(process.env.SUBSCRIBE_IDEMPOTENCY_WINDOW_MINUTES ?? DEFAULT_IDEMPOTENCY_WINDOW_MINUTES.toString(), 10);
+const IDEMPOTENCY_WINDOW_MINUTES = parseInt(process.env['SUBSCRIBE_IDEMPOTENCY_WINDOW_MINUTES'] ?? DEFAULT_IDEMPOTENCY_WINDOW_MINUTES.toString(), 10);
 const IDEMPOTENCY_WINDOW_MS = IDEMPOTENCY_WINDOW_MINUTES * SECONDS_PER_MINUTE * MS_PER_SECOND;
-const PRICE_CACHE_MINUTES = parseInt(process.env.SUBSCRIBE_PRICE_CACHE_MINUTES ?? DEFAULT_PRICE_CACHE_MINUTES.toString(), 10);
+const PRICE_CACHE_MINUTES = parseInt(process.env['SUBSCRIBE_PRICE_CACHE_MINUTES'] ?? DEFAULT_PRICE_CACHE_MINUTES.toString(), 10);
 const PRICE_CACHE_MS = PRICE_CACHE_MINUTES * SECONDS_PER_MINUTE * MS_PER_SECOND;
 const MS_PER_SECOND_CONVERSION = 1000;
 
@@ -42,7 +42,7 @@ const SUPPORTED_PAYMENT_METHODS = new Set([
 
 // Get validated payment methods from environment or use auto
 const getAllowedPaymentMethods = (): Stripe.Checkout.SessionCreateParams.PaymentMethodType[] | undefined => {
-  const envMethods = process.env.STRIPE_PAYMENT_METHODS;
+  const envMethods = process.env['STRIPE_PAYMENT_METHODS'];
   if (envMethods !== null && envMethods !== undefined && envMethods.length > 0) {
     const methods = envMethods.split(',').map(m => m.trim()).filter(m => SUPPORTED_PAYMENT_METHODS.has(m as never));
     return methods.length > 0 ? methods as Stripe.Checkout.SessionCreateParams.PaymentMethodType[] : undefined;
@@ -82,9 +82,9 @@ function logSubscriptionAction(
   const sanitized = {
     ...context,
     // Never log full email, just domain
-    email: (typeof context.email === 'string') ? `***@${context.email.split('@')[1] || 'unknown'}` : undefined,
+    email: (typeof context['email'] === 'string') ? `***@${context['email'].split('@')[1] || 'unknown'}` : undefined,
     // Remove any other sensitive fields
-    stripCustomerId: (typeof context.stripCustomerId === 'string') ? 'cus_***' : undefined,
+    stripCustomerId: (typeof context['stripCustomerId'] === 'string') ? 'cus_***' : undefined,
   };
   
   // Use proper log levels - info for success, warn for recoverable issues, error for failures
@@ -119,7 +119,7 @@ async function validatePriceId(
     }
 
     // First check environment variables for allowed prices
-    const allowedPricesEnv = process.env.STRIPE_ALLOWED_PRICE_IDS;
+    const allowedPricesEnv = process.env['STRIPE_ALLOWED_PRICE_IDS'];
     const allowedPrices = (allowedPricesEnv !== null && allowedPricesEnv !== undefined) ? allowedPricesEnv.split(',').map(p => p.trim()) : [];
     if (allowedPrices.length > 0 && !allowedPrices.includes(priceId)) {
       const result = { isValid: false, error: 'Price ID not in allowed list' };
@@ -243,7 +243,7 @@ async function checkIdempotency(
     if (data?.data !== null && data?.data !== undefined && typeof data.data === 'object' && 'sessionUrl' in data.data) {
       return { 
         isDuplicate: true, 
-        existingUrl: data.data.sessionUrl as string 
+        existingUrl: data.data['sessionUrl'] as string 
       };
     }
 
@@ -376,7 +376,7 @@ async function getOrCreateStripeCustomer(
     // Create new Stripe customer with idempotency key
     const customer = await validatedStripe.customers.create({
       email: user.email,
-      name: user.user_metadata?.full_name,
+      ...(user.user_metadata?.full_name ? { name: user.user_metadata.full_name } : {}),
       preferred_locales: user.user_metadata?.preferred_locales || ['en'],
       metadata: {
         userId: user.id,
@@ -532,9 +532,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         },
         { 
           status: TOO_MANY_REQUESTS_STATUS,
-          headers: (rateLimitResult.retryAfter !== null && rateLimitResult.retryAfter !== undefined)
-            ? { 'Retry-After': rateLimitResult.retryAfter.toString() }
-            : undefined,
+          ...(rateLimitResult.retryAfter !== null && rateLimitResult.retryAfter !== undefined
+            ? { headers: { 'Retry-After': rateLimitResult.retryAfter.toString() } }
+            : {}),
         },
       );
     }
@@ -604,7 +604,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     }
 
     // Enhanced redirect path validation
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000';
+    const siteUrl = process.env['NEXT_PUBLIC_SITE_URL'] ?? 'http://localhost:3000';
     const secureRedirectPath = validateRedirectPath(redirectPath, siteUrl);
     const successUrl = `${siteUrl}${secureRedirectPath}?stripe_session_id={CHECKOUT_SESSION_ID}`;
     const cancelUrl = `${siteUrl}${secureRedirectPath}`;
@@ -630,7 +630,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       }
 
       // Enhanced platform-only price checking with exact matching
-      const platformOnlyPricesEnv = process.env.STRIPE_PLATFORM_ONLY_PRICES;
+      const platformOnlyPricesEnv = process.env['STRIPE_PLATFORM_ONLY_PRICES'];
       if (platformOnlyPricesEnv !== null && platformOnlyPricesEnv !== undefined) {
         const platformOnlyPrices = new Set(platformOnlyPricesEnv.split(',').map(p => p.trim()));
         const shouldTransfer = !platformOnlyPrices.has(priceId);
@@ -647,9 +647,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     const idempotencyKey = `checkout_${user.id}_${targetEntityType}_${targetEntityId}_${priceId}`;
 
     // Create Stripe Checkout Session with enhanced configuration
+    const allowedPaymentMethods = getAllowedPaymentMethods();
     const checkoutSessionParams: Stripe.Checkout.SessionCreateParams = {
       customer: customerResult.customerId,
-      payment_method_types: getAllowedPaymentMethods(), // Can be undefined for auto
+      ...(allowedPaymentMethods ? { payment_method_types: allowedPaymentMethods } : {}),
       mode: 'subscription',
       line_items: [
         {
@@ -675,7 +676,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       },
       // Add automatic tax collection for international sales
       automatic_tax: {
-        enabled: process.env.STRIPE_AUTOMATIC_TAX_ENABLED === 'true',
+        enabled: process.env['STRIPE_AUTOMATIC_TAX_ENABLED'] === 'true',
       },
       // Enhanced session metadata for webhook reconciliation
       metadata: {
@@ -687,11 +688,6 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         timestamp: Date.now().toString(),
       },
     };
-
-    // Remove undefined payment_method_types to let Stripe auto-detect
-    if (checkoutSessionParams.payment_method_types === undefined) {
-      delete checkoutSessionParams.payment_method_types;
-    }
 
     const checkoutSession = await validatedStripe.checkout.sessions.create(
       checkoutSessionParams,

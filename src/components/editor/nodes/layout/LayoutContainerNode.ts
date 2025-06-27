@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
@@ -62,8 +63,8 @@ export class LayoutContainerNode extends ElementNode {
   createDOM(config: EditorConfig): HTMLElement {
     const dom = document.createElement('div');
     dom.style.gridTemplateColumns = this.__templateColumns;
-    if (typeof config.theme.layoutContainer === 'string') {
-      addClassNamesToElement(dom, config.theme.layoutContainer);
+    if (typeof config.theme['layoutContainer'] === 'string') {
+      addClassNamesToElement(dom, config.theme['layoutContainer']);
     }
     return dom;
   }

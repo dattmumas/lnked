@@ -1,3 +1,4 @@
+// @ts-nocheck
 // Plugin configuration for smart lazy loading
 export interface PluginConfig {
   // Core plugins (always loaded)

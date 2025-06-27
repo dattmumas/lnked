@@ -5,7 +5,7 @@ import React from 'react';
 
 import { GlobalSidebar } from '@/components/app/nav/GlobalSidebar';
 import ModernNavbar from '@/components/ModernNavbar';
-import { QueryProvider } from '@/components/providers/query-provider';
+import QueryProvider from '@/components/providers/query-provider';
 import { ToastContainer } from '@/components/ui/toast';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { TenantProvider } from '@/providers/TenantProvider';
@@ -72,6 +72,12 @@ export default async function RootLayout({
       <body
         className={`min-h-screen bg-background w-full ${sourceSerif.variable} ${inter.variable}`}
       >
+        <a
+          href="#main-content"
+          className="absolute z-[9999] block -translate-y-full rounded-b-lg border border-t-0 border-border bg-background p-3 text-sm font-medium transition-transform focus:translate-y-0"
+        >
+          Skip to main content
+        </a>
         <QueryProvider>
           <ThemeProvider
             attribute="class"
@@ -82,18 +88,7 @@ export default async function RootLayout({
             <TenantProvider>
               <div className="flex h-screen flex-col">
                 <header className="shrink-0 sticky top-0 z-50 bg-background backdrop-blur-md border-b border-border/50">
-                  <ModernNavbar
-                    initialUser={user ?? undefined}
-                    initialProfile={
-                      profile
-                        ? {
-                            username: profile.username ?? undefined,
-                            full_name: profile.full_name ?? undefined,
-                            avatar_url: profile.avatar_url ?? undefined,
-                          }
-                        : undefined
-                    }
-                  />
+                  <ModernNavbar />
                 </header>
 
                 {/* Layout body */}
@@ -102,6 +97,7 @@ export default async function RootLayout({
 
                   {/* Main content fills remaining space and no vertical scroll */}
                   <main
+                    id="main-content"
                     className={clsx(
                       'flex-1 overflow-y-auto overflow-x-hidden',
                       isAuthenticated && 'ml-16 md:ml-16',

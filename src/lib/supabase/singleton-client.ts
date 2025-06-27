@@ -10,15 +10,15 @@ let clientPromise: Promise<ReturnType<typeof createServerClient<Database>>> | nu
 
 // Client configuration with safer environment handling
 const CLIENT_CONFIG = {
-  url: (process.env.SUPABASE_URL !== null && process.env.SUPABASE_URL !== undefined && process.env.SUPABASE_URL !== '') 
-    ? process.env.SUPABASE_URL 
-    : (process.env.NEXT_PUBLIC_SUPABASE_URL !== null && process.env.NEXT_PUBLIC_SUPABASE_URL !== undefined && process.env.NEXT_PUBLIC_SUPABASE_URL !== '') 
-      ? process.env.NEXT_PUBLIC_SUPABASE_URL 
+  url: (process.env['SUPABASE_URL'] !== null && process.env['SUPABASE_URL'] !== undefined && process.env['SUPABASE_URL'] !== '') 
+    ? process.env['SUPABASE_URL'] 
+    : (process.env['NEXT_PUBLIC_SUPABASE_URL'] !== null && process.env['NEXT_PUBLIC_SUPABASE_URL'] !== undefined && process.env['NEXT_PUBLIC_SUPABASE_URL'] !== '') 
+      ? process.env['NEXT_PUBLIC_SUPABASE_URL'] 
       : '',
-  anonKey: (process.env.SUPABASE_ANON_KEY !== null && process.env.SUPABASE_ANON_KEY !== undefined && process.env.SUPABASE_ANON_KEY !== '') 
-    ? process.env.SUPABASE_ANON_KEY 
-    : (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY !== null && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY !== undefined && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY !== '') 
-      ? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY 
+  anonKey: (process.env['SUPABASE_ANON_KEY'] !== null && process.env['SUPABASE_ANON_KEY'] !== undefined && process.env['SUPABASE_ANON_KEY'] !== '') 
+    ? process.env['SUPABASE_ANON_KEY'] 
+    : (process.env['NEXT_PUBLIC_SUPABASE_ANON_KEY'] !== null && process.env['NEXT_PUBLIC_SUPABASE_ANON_KEY'] !== undefined && process.env['NEXT_PUBLIC_SUPABASE_ANON_KEY'] !== '') 
+      ? process.env['NEXT_PUBLIC_SUPABASE_ANON_KEY'] 
       : '',
 } as const;
 

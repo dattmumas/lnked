@@ -65,14 +65,14 @@ export async function GET(request: NextRequest, context: { params: Promise<{ con
     .order('created_at', { ascending: false })
     .limit(limit);
 
-  // Then reverse to oldest-first for display
-  const messages = messagesDesc?.reverse() ?? [];
-
   if (msgErr !== null) {
     return NextResponse.json({ error: msgErr.message }, { status: HttpStatus.INTERNAL_SERVER_ERROR });
   }
 
-  return NextResponse.json(messages ?? [], { status: HttpStatus.OK });
+  // No longer reversing here. The client will handle display order.
+  const messages = messagesDesc ?? [];
+
+  return NextResponse.json(messages, { status: HttpStatus.OK });
 }
 
 export const runtime = 'nodejs'; 

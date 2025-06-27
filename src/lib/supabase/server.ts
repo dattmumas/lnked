@@ -24,9 +24,12 @@ type CookieOptions = Partial<{
 export const createServerSupabaseClient = cache(async (): Promise<SupabaseClient<Database>> => {
   const cookieStore = await cookies();
 
+  const url = process.env['NEXT_PUBLIC_SUPABASE_URL']!;
+  const key = process.env['NEXT_PUBLIC_SUPABASE_ANON_KEY']!;
+
   return createServerClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    url,
+    key,
     {
       cookies: {
         get(name: string) {
@@ -34,7 +37,7 @@ export const createServerSupabaseClient = cache(async (): Promise<SupabaseClient
         },
         set(name: string, value: string, options?: CookieOptions) {
           try {
-            cookieStore.set(name, value, options);
+            cookieStore.set(name, value, options ?? {});
           } catch {
             // The `set` method was called from a Server Component.
             // This can be ignored if you have middleware refreshing
@@ -59,9 +62,12 @@ export const createServerSupabaseClient = cache(async (): Promise<SupabaseClient
 export const createServerSupabaseAdminClient = cache(async (): Promise<SupabaseClient<Database>> => {
   const cookieStore = await cookies();
 
+  const url = process.env['NEXT_PUBLIC_SUPABASE_URL']!;
+  const key = process.env['SUPABASE_SERVICE_ROLE_KEY']!;
+
   return createServerClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    url,
+    key,
     {
       cookies: {
         get(name: string) {
@@ -69,7 +75,7 @@ export const createServerSupabaseAdminClient = cache(async (): Promise<SupabaseC
         },
         set(name: string, value: string, options?: CookieOptions) {
           try {
-            cookieStore.set(name, value, options);
+            cookieStore.set(name, value, options ?? {});
           } catch {
             // The `set` method was called from a Server Component.
             // This can be ignored if you have middleware refreshing

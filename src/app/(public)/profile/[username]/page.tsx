@@ -188,7 +188,7 @@ export default async function ProfilePage({
 
   type SubscriptionTier = Database['public']['Tables']['prices']['Row'];
   let _tiers: SubscriptionTier[] = []; // eslint-disable-line no-underscore-dangle
-  const defaultPriceId = process.env.NEXT_PUBLIC_STRIPE_DEFAULT_PRICE_ID;
+  const defaultPriceId = process.env['NEXT_PUBLIC_STRIPE_DEFAULT_PRICE_ID'];
   if (defaultPriceId !== null && defaultPriceId !== undefined) {
     const { data: price } = (await supabase
       .from('prices')

@@ -53,8 +53,8 @@ export const ChainInsertSchema = z.object({
   content: z.string(),
   collective_id: z.string().optional().transform(val => val ?? null),
   parent_chain_id: z.string().optional().transform(val => val ?? null),
-  status: ChainStatusEnum.optional(),
-  visibility: ChainVisibilityEnum.optional(),
+  status: ChainStatusEnum.optional().transform(val => val ?? null),
+  visibility: ChainVisibilityEnum.optional().transform(val => val ?? null),
   attachments: z.any().optional().transform(val => val ?? null),
   meta: z.any().optional().transform(val => val ?? null),
 });

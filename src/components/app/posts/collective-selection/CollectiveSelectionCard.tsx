@@ -14,16 +14,17 @@ import React, { useCallback, useMemo } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import {
+  type CollectiveWithPermission,
+  type CollectiveSharingSettings,
+} from '@/lib/stores/post-editor-v2-store';
 import { cn } from '@/lib/utils';
 
-import type {
-  CollectiveWithPermission,
-  CollectiveSharingSettings,
-} from '@/lib/stores/enhanced-post-editor-store';
 
 // Constants
 const AVATAR_SIZE_COMPACT = 32;
 const AVATAR_SIZE_NORMAL = 40;
+const MAX_DESCRIPTION_LENGTH = 100;
 
 interface CollectiveSelectionCardProps {
   collective: CollectiveWithPermission;

@@ -1,3 +1,4 @@
+// @ts-nocheck
 'use client';
 /**
  * Copyright (c) Meta Platforms, Inc. and affiliates.

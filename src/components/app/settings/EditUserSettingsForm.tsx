@@ -252,10 +252,14 @@ export default function EditUserSettingsForm({
       // Convert to the expected server action type
       const serverData: RawUserProfileFormInput = {
         full_name: data.full_name,
-        username: data.username,
-        bio: data.bio,
-        avatar_url: data.avatar_url,
-        tags_string: data.tags_string,
+        ...(data.username !== undefined ? { username: data.username } : {}),
+        ...(data.bio !== undefined ? { bio: data.bio } : {}),
+        ...(data.avatar_url !== undefined
+          ? { avatar_url: data.avatar_url }
+          : {}),
+        ...(data.tags_string !== undefined
+          ? { tags_string: data.tags_string }
+          : {}),
       };
 
       const result = await updateUserProfile(serverData);

@@ -64,7 +64,7 @@ export const VideoInsertSchema = z.object({
   mux_asset_id: z.string().optional().transform(val => val ?? null),
   mux_playback_id: z.string().optional().transform(val => val ?? null),
   mux_upload_id: z.string().optional().transform(val => val ?? null),
-  status: VideoStatusEnum.optional(),
+  status: VideoStatusEnum.optional().transform(val => val ?? null),
   duration: z.number().optional().transform(val => val ?? null),
   aspect_ratio: z.string().optional().transform(val => val ?? null),
   is_public: z.boolean().optional().transform(val => val ?? null),
@@ -82,7 +82,7 @@ export type VideoInsert = z.input<typeof VideoInsertSchema>;
 export const VideoUpdateSchema = z.object({
   title: z.string().optional().transform(val => val ?? null),
   description: z.string().optional().transform(val => val ?? null),
-  status: VideoStatusEnum.optional(),
+  status: VideoStatusEnum.optional().transform(val => val ?? null),
   aspect_ratio: z.string().optional().transform(val => val ?? null),
   is_public: z.boolean().optional().transform(val => val ?? null),
   playback_policy: z.string().optional().transform(val => val ?? null),

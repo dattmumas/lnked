@@ -360,7 +360,7 @@ export default function EditCollectiveSettingsForm({
           collectiveId,
           amount,
           interval: newInterval,
-          tierName: (newName ?? '').trim().length > 0 ? newName : undefined,
+          ...(newName ? { tierName: newName } : {}),
         })) as ActionResult;
         if (result.success === true) {
           void router.refresh();
@@ -572,7 +572,7 @@ export default function EditCollectiveSettingsForm({
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {stripeStatus?.status !== 'active' ? (
+              {stripeStatus?.['status'] !== 'active' ? (
                 <p className="text-muted-foreground">
                   Connect Stripe to manage tiers.
                 </p>
@@ -693,12 +693,12 @@ export default function EditCollectiveSettingsForm({
                 stripeError !== null &&
                 stripeError.trim().length > 0 ? (
                 <p className="text-destructive">{stripeError}</p>
-              ) : stripeStatus?.status === 'active' ? (
+              ) : stripeStatus?.['status'] === 'active' ? (
                 <p className="text-success">
                   Stripe Connected: Account is active and ready to receive
                   payouts.
                 </p>
-              ) : stripeStatus?.status === 'pending' ? (
+              ) : stripeStatus?.['status'] === 'pending' ? (
                 <p className="text-warning">
                   Stripe Connected: Onboarding incomplete or pending
                   verification.

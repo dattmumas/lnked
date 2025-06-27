@@ -1,39 +1,32 @@
 'use client';
 
-import { MoreVertical } from 'lucide-react';
-import React, { useCallback, useEffect, useState, useMemo } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import React, {
+  useState,
+  useCallback,
+  useEffect,
+  useRef,
+  useMemo,
+} from 'react';
 
 import { CenteredSpinner } from '@/components/ui/CenteredSpinner';
-import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuItem,
-} from '@/components/ui/dropdown-menu';
-import { useDirectMessages } from '@/hooks/chat/useDirectMessages';
-import { useTenantChannels } from '@/hooks/chat/useTenantChannels';
+import { useTenantConversations } from '@/hooks/chat/useTenantConversations';
 import { useToast } from '@/hooks/useToast';
 import { useUser } from '@/hooks/useUser';
 import { selectAdapter } from '@/lib/chat/realtime-adapter';
-import { CHAT_HEADER_HEIGHT } from '@/lib/constants/chat';
-import { useDeleteConversation ,
-  useConversation,
-  useMarkAsRead,
-} from '@/lib/hooks/chat/use-conversations';
-import { useMessages, useSendMessage } from '@/lib/hooks/chat/use-messages';
+import { useMarkAsRead } from '@/lib/hooks/chat/use-conversations';
+import {
+  useMessages,
+  useSendMessage,
+  messageKeys,
+} from '@/lib/hooks/chat/use-messages';
 import { useChatUIStore } from '@/lib/stores/chat-ui-store';
 import { useTenant } from '@/providers/TenantProvider';
 
-import { ChannelIcon } from './ChannelIcon';
 import { ChatPanel } from './chat-panel';
 import { TenantChannelsSidebar } from './TenantChannelsSidebar';
 
 import type { MessageWithSender } from '@/lib/chat/types';
-
-
-interface TenantChatInterfaceProps {
-  userId: string;
-}
 
 type ActiveChannel = {
   id: string;
@@ -42,25 +35,38 @@ type ActiveChannel = {
   tenant_id: string | null;
 };
 
-export default function TenantChatInterface({
-  userId: _userId,
-}: TenantChatInterfaceProps): React.JSX.Element {
+export default function TenantChatInterface(): React.JSX.Element {
   const { user } = useUser();
   const { toast } = useToast();
   const { currentTenant } = useTenant();
   const {
-    data: channels = [],
-    isLoading: channelsLoading,
-    error: channelsError,
-  } = useTenantChannels();
-  const {
-    data: conversations = [],
-    isLoading: dmsLoading,
-    error: dmsError,
-  } = useDirectMessages();
+    data: allConversations = [],
+    isLoading: conversationsLoading,
+    error: conversationsError,
+  } = useTenantConversations();
 
-  const isLoading = channelsLoading || dmsLoading;
-  const error = channelsError || dmsError;
+  // Derive and sort channels and direct messages from the single source
+  const { channels, directMessages } = useMemo(() => {
+    // Ensure allConversations is an array before spreading
+    if (!Array.isArray(allConversations)) {
+      return { channels: [], directMessages: [] };
+    }
+
+    const allSorted = [...allConversations].sort((a, b) => {
+      const dateA = new Date(a.updated_at ?? 0).getTime();
+      const dateB = new Date(b.updated_at ?? 0).getTime();
+      return dateB - dateA; // Sort descending (most recent first)
+    });
+
+    const channels = allSorted.filter(
+      (c) => c.type === 'channel' || c.type === 'group',
+    );
+    const directMessages = allSorted.filter((c) => c.type === 'direct');
+    return { channels, directMessages };
+  }, [allConversations]);
+
+  const isLoading = conversationsLoading;
+  const error = conversationsError;
 
   const [activeChannel, setActiveChannel] = useState<ActiveChannel | null>(
     null,
@@ -69,8 +75,30 @@ export default function TenantChatInterface({
     null,
   );
 
+  // Get the setter for the global store
+  const setActiveConversation = useChatUIStore(
+    (state) => state.setActiveConversation,
+  );
+
+  // Ref to track subscription state and prevent multiple subscriptions
+  const subscriptionRef = useRef<{
+    conversationId: string | null;
+    unsubscribe: (() => void) | null;
+    isSubscribing: boolean; // Track if subscription is in progress
+  }>({ conversationId: null, unsubscribe: null, isSubscribing: false });
+
+  // Get active conversation from the cached list
+  const conversation = useMemo(
+    () => allConversations.find((c) => c.id === activeChannel?.id),
+    [allConversations, activeChannel?.id],
+  );
+
+  // Sync local active channel with the global store
+  useEffect(() => {
+    setActiveConversation(activeChannel?.id);
+  }, [activeChannel, setActiveConversation]);
+
   // Chat data for active conversation
-  const conversation = useConversation(activeChannel?.id || '');
   const {
     messages,
     isLoading: messagesLoading,
@@ -80,43 +108,133 @@ export default function TenantChatInterface({
   } = useMessages(activeChannel?.id || '');
   const sendMessage = useSendMessage();
   const markAsRead = useMarkAsRead();
+  const queryClient = useQueryClient();
 
   // Get chat state for typing indicators
   const typingUsers = useChatUIStore((state) => state.typingUsers);
 
-  // SINGLE REALTIME SUBSCRIPTION - The only place in the entire app
+  // SINGLE REALTIME SUBSCRIPTION
   useEffect(() => {
-    if (!activeChannel?.id) return;
+    if (!activeChannel?.id) {
+      // Clean up any existing subscription when no active channel
+      if (subscriptionRef.current.unsubscribe) {
+        subscriptionRef.current.unsubscribe();
+        subscriptionRef.current = {
+          conversationId: null,
+          unsubscribe: null,
+          isSubscribing: false,
+        };
+      }
+      return;
+    }
+
+    // Prevent duplicate subscriptions to the same conversation
+    if (
+      subscriptionRef.current.conversationId === activeChannel.id ||
+      subscriptionRef.current.isSubscribing
+    ) {
+      console.log(
+        `🔄 Already subscribed/subscribing to ${activeChannel.id}, skipping`,
+      );
+      return;
+    }
+
+    // Clean up previous subscription if switching channels
+    if (subscriptionRef.current.unsubscribe) {
+      console.log(
+        `🧹 Cleaning up previous subscription for ${subscriptionRef.current.conversationId}`,
+      );
+      subscriptionRef.current.unsubscribe();
+    }
 
     const setupSubscription = async () => {
       try {
+        console.log(`🎯 Setting up new subscription for ${activeChannel.id}`);
+
+        subscriptionRef.current = {
+          conversationId: activeChannel.id,
+          unsubscribe: null,
+          isSubscribing: true,
+        };
+
         const adapter = selectAdapter('supabase');
-        const unsub = await adapter.subscribe(activeChannel.id, {});
+        const unsub = await adapter.subscribe(activeChannel.id, {
+          onMessage: (newMessage: unknown) => {
+            const message = newMessage as MessageWithSender;
+            queryClient.setQueryData(
+              messageKeys.conversation(activeChannel.id),
+              (
+                oldData:
+                  | { pages: MessageWithSender[][]; pageParams: unknown[] }
+                  | undefined,
+              ) => {
+                if (!oldData) {
+                  return { pages: [[message]], pageParams: [undefined] };
+                }
+                const newPages = [...oldData.pages];
+                if (newPages[0]?.some((m) => m.id === message.id)) {
+                  return oldData;
+                }
+                newPages[0] = [message, ...(newPages[0] || [])];
+                return {
+                  ...oldData,
+                  pages: newPages,
+                };
+              },
+            );
+          },
+        });
+
+        // Store the subscription details
+        subscriptionRef.current = {
+          conversationId: activeChannel.id,
+          unsubscribe: unsub,
+          isSubscribing: false,
+        };
+
         return unsub;
       } catch (error) {
         console.error('Failed to set up realtime subscription:', error);
+        subscriptionRef.current = {
+          conversationId: null,
+          unsubscribe: null,
+          isSubscribing: false,
+        };
         return () => {};
       }
     };
 
-    let unsubscribe: (() => void) | null = null;
-    setupSubscription().then((unsub) => {
-      unsubscribe = unsub;
-    });
+    void setupSubscription();
 
     return () => {
-      if (unsubscribe) {
-        void unsubscribe();
+      // Note: We don't clean up here to prevent race conditions during Fast Refresh
+      // Cleanup happens when switching channels or component unmount
+    };
+  }, [activeChannel?.id, queryClient]);
+
+  // Cleanup subscription on component unmount
+  useEffect(() => {
+    return () => {
+      if (subscriptionRef.current.unsubscribe) {
+        console.log(
+          `🧹 Component unmount: cleaning up subscription for ${subscriptionRef.current.conversationId}`,
+        );
+        subscriptionRef.current.unsubscribe();
+        subscriptionRef.current = {
+          conversationId: null,
+          unsubscribe: null,
+          isSubscribing: false,
+        };
       }
     };
-  }, [activeChannel?.id]);
+  }, []);
 
   // Mark conversation as read when viewing
   useEffect(() => {
-    if (activeChannel?.id && conversation) {
+    if (activeChannel?.id) {
       markAsRead.mutate(activeChannel.id);
     }
-  }, [activeChannel?.id, conversation, markAsRead]);
+  }, [activeChannel?.id]);
 
   // Message handlers
   const handleSendMessage = useCallback(
@@ -158,30 +276,34 @@ export default function TenantChatInterface({
     // For personal tenant, prefer direct conversations
     if (
       currentTenant?.is_personal &&
-      conversations &&
-      conversations.length > 0
+      directMessages &&
+      directMessages.length > 0
     ) {
-      const firstConversation = conversations[0];
-      setActiveChannel({
-        id: firstConversation.id,
-        title: firstConversation.title,
-        type: firstConversation.type,
-        tenant_id: null, // Direct messages don't have tenant_id
-      });
-      return;
+      const firstConversation = directMessages[0];
+      if (firstConversation) {
+        setActiveChannel({
+          id: firstConversation.id,
+          title: firstConversation.title,
+          type: firstConversation.type,
+          tenant_id: null, // Direct messages don't have tenant_id
+        });
+        return;
+      }
     }
 
     // For collective tenant, prefer channels
     if (!currentTenant?.is_personal && channels && channels.length > 0) {
       const firstChannel = channels[0];
-      setActiveChannel({
-        id: firstChannel.id,
-        title: firstChannel.title,
-        type: firstChannel.type,
-        tenant_id: firstChannel.tenant_id,
-      });
+      if (firstChannel) {
+        setActiveChannel({
+          id: firstChannel.id,
+          title: firstChannel.title,
+          type: firstChannel.type,
+          tenant_id: firstChannel.tenant_id,
+        });
+      }
     }
-  }, [currentTenant, conversations, channels, activeChannel, isLoading]);
+  }, [currentTenant, directMessages, channels, activeChannel, isLoading]);
 
   // Memoize typing indicator text
   const typingIndicatorText = useMemo(() => {
@@ -221,9 +343,10 @@ export default function TenantChatInterface({
     [],
   );
 
-  const deleteConversation = useDeleteConversation();
-
-  // Track active channel changes for debugging purposes
+  // Show a loading spinner if the user is not yet available
+  if (!user) {
+    return <CenteredSpinner label="Loading user..." />;
+  }
 
   if (isLoading && !activeChannel) {
     return <CenteredSpinner label="Loading chat interface..." />;
@@ -243,100 +366,27 @@ export default function TenantChatInterface({
   }
 
   return (
-    <div className="flex w-full h-full">
-      {/* Center-Left: Channels/Conversations Sidebar */}
+    <div className="flex flex-1 w-full h-full bg-background text-foreground min-h-0">
       <TenantChannelsSidebar
-        selectedChannelId={activeChannel?.id}
+        selectedChannelId={activeChannel?.id || ''}
         onSelectChannel={handleChannelSelect}
+        currentUserId={user.id}
       />
-
-      {/* Right: Main Chat Area */}
       <div className="flex flex-1 flex-col bg-background min-h-0">
         {activeChannel ? (
-          <>
-            {/* Channel Header */}
-            <header
-              className={`${CHAT_HEADER_HEIGHT} px-4 flex items-center justify-between border-b border-border/40 bg-background/95 backdrop-blur-sm`}
-            >
-              <div className="flex items-center gap-3">
-                <div className="flex-1 min-w-0">
-                  <h2 className="text-lg font-semibold">
-                    <span className="flex items-center gap-2">
-                      <ChannelIcon type={activeChannel.type} />
-                      {activeChannel.title}
-                    </span>
-                  </h2>
-
-                  {/* Typing indicator */}
-                  {typingIndicatorText && (
-                    <p
-                      className="text-sm text-muted-foreground mt-1"
-                      aria-live="polite"
-                    >
-                      {typingIndicatorText}
-                    </p>
-                  )}
-                </div>
-
-                {/* Channel type and tenant info */}
-                <div className="flex items-center gap-2">
-                  <span className="text-xs px-2 py-1 bg-muted rounded-full text-muted-foreground">
-                    {activeChannel.type}
-                  </span>
-                  {currentTenant.tenant_type === 'collective' && (
-                    <span className="text-xs px-2 py-1 bg-blue-100 dark:bg-blue-900 rounded-full text-blue-700 dark:text-blue-300">
-                      {currentTenant.tenant_name}
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              {/* Channel actions */}
-              <div className="flex items-center gap-2">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <button
-                      className="p-2 rounded-md hover:bg-muted transition-colors"
-                      aria-label="Channel options"
-                    >
-                      <MoreVertical className="w-4 h-4" />
-                    </button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent
-                    align="end"
-                    sideOffset={4}
-                    className="p-1 bg-white dark:bg-gray-900 rounded-md border shadow-md"
-                  >
-                    <DropdownMenuItem
-                      onSelect={() =>
-                        deleteConversation.mutate(activeChannel.id)
-                      }
-                      className="text-red-600 focus:bg-red-50 dark:focus:bg-red-600/20"
-                    >
-                      {activeChannel.type === 'direct'
-                        ? 'Delete conversation'
-                        : 'Leave channel'}
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-            </header>
-
-            {/* Chat Panel */}
-            <ChatPanel
-              conversationId={activeChannel.id}
-              messages={messages}
-              isLoading={messagesLoading}
-              hasNextPage={hasNextPage}
-              fetchNextPage={fetchNextPage}
-              isFetchingNextPage={isFetchingNextPage}
-              onSendMessage={handleSendMessage}
-              replyTarget={replyTarget}
-              onReplyCancel={handleReplyCancel}
-              currentUserId={user?.id ?? ''}
-              className="flex-1"
-            />
-          </>
+          <ChatPanel
+            conversationId={activeChannel.id}
+            messages={messages}
+            isLoading={messagesLoading}
+            hasNextPage={hasNextPage}
+            fetchNextPage={fetchNextPage}
+            isFetchingNextPage={isFetchingNextPage}
+            onSendMessage={handleSendMessage}
+            replyTarget={replyTarget}
+            onReplyCancel={handleReplyCancel}
+            currentUserId={user?.id ?? ''}
+            className="flex-1 min-h-0"
+          />
         ) : (
           <div className="flex flex-1 items-center justify-center text-muted-foreground">
             <div className="text-center">

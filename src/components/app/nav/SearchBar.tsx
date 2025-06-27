@@ -83,12 +83,9 @@ export default function SearchBar({
               id: post.id,
               title: post.title,
               type: 'post',
-              description:
-                post.subtitle !== undefined &&
-                post.subtitle !== null &&
-                post.subtitle.length > 0
-                  ? post.subtitle
-                  : undefined,
+              ...(post.subtitle && post.subtitle.length > 0
+                ? { description: post.subtitle }
+                : {}),
               href: `/posts/${post.id}`,
             });
           });
@@ -113,25 +110,17 @@ export default function SearchBar({
               searchResults.push({
                 id: user.id,
                 title:
-                  user.full_name !== undefined &&
-                  user.full_name !== null &&
-                  user.full_name.length > 0
+                  user.full_name && user.full_name.length > 0
                     ? user.full_name
                     : user.username,
                 type: 'user',
-                description:
-                  user.bio !== undefined &&
-                  user.bio !== null &&
-                  user.bio.length > 0
-                    ? user.bio
-                    : undefined,
+                ...(user.bio && user.bio.length > 0
+                  ? { description: user.bio }
+                  : {}),
                 href: `/profile/${user.username}`,
-                avatarUrl:
-                  user.avatar_url !== undefined &&
-                  user.avatar_url !== null &&
-                  user.avatar_url.length > 0
-                    ? user.avatar_url
-                    : undefined,
+                ...(user.avatar_url && user.avatar_url.length > 0
+                  ? { avatarUrl: user.avatar_url }
+                  : {}),
               });
             }
           });
@@ -150,12 +139,9 @@ export default function SearchBar({
               id: collective.id,
               title: collective.name,
               type: 'collective',
-              description:
-                collective.description !== undefined &&
-                collective.description !== null &&
-                collective.description.length > 0
-                  ? collective.description
-                  : undefined,
+              ...(collective.description && collective.description.length > 0
+                ? { description: collective.description }
+                : {}),
               href: `/collectives/${collective.slug}`,
               slug: collective.slug,
             });
@@ -287,7 +273,7 @@ export default function SearchBar({
         <input
           ref={inputRef}
           type="search"
-          placeholder="Search posts, authors, collectives..."
+          placeholder="Search... ( / )"
           value={query}
           onChange={handleInputChange}
           onFocus={handleInputFocus}

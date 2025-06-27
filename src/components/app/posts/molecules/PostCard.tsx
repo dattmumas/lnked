@@ -78,14 +78,14 @@ export default function PostCard({
       <VideoCard
         post={post as Parameters<typeof VideoCard>[0]['post']}
         interactions={interactions}
-        onToggleLike={onToggleLike}
-        onToggleDislike={onToggleDislike}
-        onToggleBookmark={onToggleBookmark}
-        onFollow={onFollow}
+        {...(onToggleLike ? { onToggleLike } : {})}
+        {...(onToggleDislike ? { onToggleDislike } : {})}
+        {...(onToggleBookmark ? { onToggleBookmark } : {})}
+        {...(onFollow ? { onFollow } : {})}
         isFollowing={isFollowing}
-        currentUserId={currentUserId}
+        {...(currentUserId ? { currentUserId } : {})}
         showFollowButton={showFollowButton}
-        className={className}
+        {...(className ? { className } : {})}
       />
     );
   }
@@ -95,14 +95,14 @@ export default function PostCard({
     <ArticleCard
       post={post}
       interactions={interactions}
-      onToggleLike={onToggleLike}
-      onToggleDislike={onToggleDislike}
-      onToggleBookmark={onToggleBookmark}
-      onFollow={onFollow}
+      {...(onToggleLike ? { onToggleLike } : {})}
+      {...(onToggleDislike ? { onToggleDislike } : {})}
+      {...(onToggleBookmark ? { onToggleBookmark } : {})}
+      {...(onFollow ? { onFollow } : {})}
       isFollowing={isFollowing}
-      currentUserId={currentUserId}
+      {...(currentUserId ? { currentUserId } : {})}
       showFollowButton={showFollowButton}
-      className={className}
+      {...(className ? { className } : {})}
     />
   );
 }

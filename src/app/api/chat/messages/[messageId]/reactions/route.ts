@@ -14,10 +14,10 @@ const ENDPOINT = '/api/chat/messages/[messageId]/reactions' as const;
 
 // Environment-driven configuration constants
 const REACTION_CONFIG = {
-  MAX_EMOJI_LENGTH: Number(process.env.REACTION_MAX_EMOJI_LENGTH) || 10,
-  RATE_LIMIT_WINDOW: Number(process.env.REACTION_RATE_LIMIT_WINDOW) || 60000, // 1 minute
-  RATE_LIMIT_MAX: Number(process.env.REACTION_RATE_LIMIT_MAX) || 50,
-  CACHE_MAX_AGE: Number(process.env.REACTION_CACHE_MAX_AGE) || 300, // 5 minutes
+  MAX_EMOJI_LENGTH: Number(process.env['REACTION_MAX_EMOJI_LENGTH']) || 10,
+  RATE_LIMIT_WINDOW: Number(process.env['REACTION_RATE_LIMIT_WINDOW']) || 60000, // 1 minute
+  RATE_LIMIT_MAX: Number(process.env['REACTION_RATE_LIMIT_MAX']) || 50,
+  CACHE_MAX_AGE: Number(process.env['REACTION_CACHE_MAX_AGE']) || 300, // 5 minutes
 } as const;
 
 // HTTP status codes
@@ -98,8 +98,8 @@ function recordReactionMetrics(
     method,
     statusCode,
     duration,
-    userId,
-    error,
+    ...(userId ? { userId } : {}),
+    ...(error ? { error } : {}),
   });
 }
 
@@ -129,13 +129,13 @@ async function validateMessageAccess(
       return { hasAccess: false, error: 'Message not found or access denied' };
     }
 
-    // Safe type casting with proper validation
+    // Safe type casting with proper validation - fix optional property assignment
     const messageData: MessageRow = {
       id: message.id,
       conversation_id: message.conversation_id, // Now properly typed as string | null
-      conversation_participants: Array.isArray(message.conversation_participants) 
-        ? message.conversation_participants as Array<{ user_id: string }> 
-        : undefined,
+      ...(Array.isArray(message.conversation_participants) ? {
+        conversation_participants: message.conversation_participants as Array<{ user_id: string }>
+      } : {}),
     };
 
     return { hasAccess: true, messageData };
@@ -318,7 +318,7 @@ export async function POST(
 
       logger.warn('Unauthorized reaction attempt', {
         statusCode: HTTP_STATUS.UNAUTHORIZED,
-        error: authError?.message,
+        ...(authError?.message ? { error: authError.message } : {}),
         metadata: { messageId },
       });
 
@@ -490,7 +490,7 @@ export async function POST(
       logger.error('Failed to add reaction', {
         userId,
         statusCode: HTTP_STATUS.INTERNAL_SERVER_ERROR,
-        error: addResult.error,
+        ...(addResult.error ? { error: addResult.error } : {}),
         metadata: { messageId, emoji },
       });
 
@@ -518,7 +518,7 @@ export async function POST(
       logger.error('Failed to get reaction counts', {
         userId,
         statusCode: HTTP_STATUS.INTERNAL_SERVER_ERROR,
-        error: countsResult.error,
+        ...(countsResult.error ? { error: countsResult.error } : {}),
         metadata: { messageId, emoji },
       });
 
@@ -528,8 +528,9 @@ export async function POST(
       );
     }
 
+    // Fix optional property assignment using conditional spread
     const responseData: ReactionResponse = {
-      reaction: addResult.reactionData,
+      ...(addResult.reactionData ? { reaction: addResult.reactionData } : {}),
       counts: countsResult.counts ?? {},
     };
 
@@ -578,7 +579,7 @@ export async function POST(
     );
 
     logger.error('Reaction creation failed unexpectedly', {
-      userId,
+      ...(userId ? { userId } : {}),
       statusCode: HTTP_STATUS.INTERNAL_SERVER_ERROR,
       error: error instanceof Error ? error : new Error(String(error)),
     });
@@ -621,7 +622,7 @@ export async function DELETE(
 
       logger.warn('Unauthorized reaction removal attempt', {
         statusCode: HTTP_STATUS.UNAUTHORIZED,
-        error: authError?.message,
+        ...(authError?.message ? { error: authError.message } : {}),
         metadata: { messageId },
       });
 
@@ -728,7 +729,7 @@ export async function DELETE(
       logger.error('Failed to remove reaction', {
         userId,
         statusCode: HTTP_STATUS.INTERNAL_SERVER_ERROR,
-        error: removeResult.error,
+        ...(removeResult.error ? { error: removeResult.error } : {}),
         metadata: { messageId, emoji },
       });
 
@@ -756,7 +757,7 @@ export async function DELETE(
       logger.error('Failed to get reaction counts', {
         userId,
         statusCode: HTTP_STATUS.INTERNAL_SERVER_ERROR,
-        error: countsResult.error,
+        ...(countsResult.error ? { error: countsResult.error } : {}),
         metadata: { messageId, emoji },
       });
 
@@ -813,7 +814,7 @@ export async function DELETE(
     );
 
     logger.error('Reaction removal failed unexpectedly', {
-      userId,
+      ...(userId ? { userId } : {}),
       statusCode: HTTP_STATUS.INTERNAL_SERVER_ERROR,
       error: error instanceof Error ? error : new Error(String(error)),
     });

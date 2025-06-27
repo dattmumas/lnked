@@ -7,7 +7,6 @@ import { ChevronDown } from 'lucide-react';
 import React from 'react';
 
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -58,7 +57,9 @@ function TenantSwitcher({
     );
   }
 
-  const displayName = currentTenant.name;
+  // For currentTenant (TenantContext), use the appropriate display logic
+  const displayName =
+    currentTenant.type === 'personal' ? currentTenant.slug : currentTenant.name;
   const initials = displayName.slice(0, AVATAR_FALLBACK_LENGTH).toUpperCase();
 
   return (
@@ -66,23 +67,14 @@ function TenantSwitcher({
       <DropdownMenuTrigger asChild>
         <Button
           variant="ghost"
-          className="h-auto p-2 justify-start space-x-2 hover:bg-accent/50"
+          className="h-auto p-3 justify-start space-x-3 hover:bg-accent/50"
         >
-          <Avatar className="h-6 w-6">
-            <AvatarFallback className="text-xs font-medium">
-              {initials}
-            </AvatarFallback>
-          </Avatar>
-          <div className="flex flex-col items-start min-w-0">
-            <span className="text-sm font-medium truncate max-w-[120px]">
-              {displayName}
-            </span>
-            {!currentTenant.is_personal && (
-              <Badge variant="secondary" className="text-xs px-1 py-0">
-                Collective
-              </Badge>
-            )}
+          <div className="h-8 w-8 rounded-md bg-muted flex items-center justify-center">
+            <span className="text-sm font-medium">{initials}</span>
           </div>
+          <span className="text-sm font-medium truncate max-w-[120px]">
+            {displayName}
+          </span>
           <ChevronDown className="h-4 w-4 opacity-50" />
         </Button>
       </DropdownMenuTrigger>
@@ -107,11 +99,6 @@ function TenantSwitcher({
                 Personal Space
               </span>
             </div>
-            {currentTenant.id === personalTenant.id && (
-              <Badge variant="default" className="text-xs">
-                Current
-              </Badge>
-            )}
           </DropdownMenuItem>
         )}
 
@@ -126,11 +113,11 @@ function TenantSwitcher({
                   void switchTenant(tenant.id);
                 }}
               >
-                <Avatar className="h-6 w-6">
-                  <AvatarFallback className="text-xs">
+                <div className="h-6 w-6 rounded-md bg-muted flex items-center justify-center">
+                  <span className="text-xs font-medium">
                     {getAvatarFallback(tenant)}
-                  </AvatarFallback>
-                </Avatar>
+                  </span>
+                </div>
                 <div className="flex flex-col flex-1 min-w-0">
                   <span className="text-sm font-medium truncate">
                     {getDisplayName(tenant)}
@@ -139,11 +126,6 @@ function TenantSwitcher({
                     Collective
                   </span>
                 </div>
-                {currentTenant.id === tenant.id && (
-                  <Badge variant="default" className="text-xs">
-                    Current
-                  </Badge>
-                )}
               </DropdownMenuItem>
             ))}
           </>

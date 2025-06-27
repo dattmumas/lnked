@@ -11,7 +11,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
 import { createRequestScopedSupabaseClient } from '@/lib/supabase/request-scoped';
-import { createMetricsTimer, recordAPIMetrics } from '@/lib/utils/metrics';
 import { applyRateLimit } from '@/lib/utils/rate-limiting';
 import { createAPILogger } from '@/lib/utils/structured-logger';
 
@@ -20,17 +19,17 @@ const ENDPOINT = '/api/chat/link-preview' as const;
 
 // Environment-driven configuration constants
 const LINK_PREVIEW_CONFIG = {
-  FETCH_TIMEOUT_MS: Number(process.env.LINK_PREVIEW_TIMEOUT_MS) || 8000, // Configurable timeout
-  SLOW_DOWNLOAD_THRESHOLD_MS: Number(process.env.LINK_PREVIEW_SLOW_THRESHOLD_MS) || 1000, // Adaptive timeout
-  MIN_DOWNLOAD_SPEED_BYTES: Number(process.env.LINK_PREVIEW_MIN_SPEED_BYTES) || 1024, // 1 KiB/s minimum
-  MAX_HTML_SIZE_BYTES: Number(process.env.LINK_PREVIEW_MAX_HTML_SIZE) || 512000, // 500 KB limit
-  MAX_TITLE_LENGTH: Number(process.env.LINK_PREVIEW_MAX_TITLE_LENGTH) || 200,
-  MAX_DESCRIPTION_LENGTH: Number(process.env.LINK_PREVIEW_MAX_DESCRIPTION_LENGTH) || 300,
-  MAX_URL_LENGTH: Number(process.env.LINK_PREVIEW_MAX_URL_LENGTH) || 2048,
-  MAX_REDIRECTS: Number(process.env.LINK_PREVIEW_MAX_REDIRECTS) || 2,
-  CACHE_TTL_SECONDS: Number(process.env.LINK_PREVIEW_CACHE_TTL) || 86400, // 24 hours
-  MAX_IMAGE_SIZE_BYTES: Number(process.env.LINK_PREVIEW_MAX_IMAGE_SIZE) || 524288, // 512 KB
-  USER_AGENT: process.env.LINK_PREVIEW_USER_AGENT ?? 'Mozilla/5.0 (compatible; Lnked/1.0; +https://lnked.com/bot)',
+  FETCH_TIMEOUT_MS: Number(process.env['LINK_PREVIEW_TIMEOUT_MS']) || 8000, // Configurable timeout
+  SLOW_DOWNLOAD_THRESHOLD_MS: Number(process.env['LINK_PREVIEW_SLOW_THRESHOLD_MS']) || 1000, // Adaptive timeout
+  MIN_DOWNLOAD_SPEED_BYTES: Number(process.env['LINK_PREVIEW_MIN_SPEED_BYTES']) || 1024, // 1 KiB/s minimum
+  MAX_HTML_SIZE_BYTES: Number(process.env['LINK_PREVIEW_MAX_HTML_SIZE']) || 512000, // 500 KB limit
+  MAX_TITLE_LENGTH: Number(process.env['LINK_PREVIEW_MAX_TITLE_LENGTH']) || 200,
+  MAX_DESCRIPTION_LENGTH: Number(process.env['LINK_PREVIEW_MAX_DESCRIPTION_LENGTH']) || 300,
+  MAX_URL_LENGTH: Number(process.env['LINK_PREVIEW_MAX_URL_LENGTH']) || 2048,
+  MAX_REDIRECTS: Number(process.env['LINK_PREVIEW_MAX_REDIRECTS']) || 2,
+  CACHE_TTL_SECONDS: Number(process.env['LINK_PREVIEW_CACHE_TTL']) || 86400, // 24 hours
+  MAX_IMAGE_SIZE_BYTES: Number(process.env['LINK_PREVIEW_MAX_IMAGE_SIZE']) || 524288, // 512 KB
+  USER_AGENT: process.env['LINK_PREVIEW_USER_AGENT'] ?? 'Mozilla/5.0 (compatible; Lnked/1.0; +https://lnked.com/bot)',
 } as const;
 
 // HTTP status codes
@@ -66,38 +65,6 @@ interface LinkPreviewResponse {
 interface CachedPreview extends LinkPreviewResponse {
   cached_at: number;
   expires_at: number;
-}
-
-// Enhanced metrics with hostname tracking
-function recordLinkPreviewMetrics(
-  timer: () => number,
-  method: string,
-  statusCode: number,
-  result: 'success' | 'error',
-  userId?: string,
-  error?: string,
-  hostname?: string,
-  cacheHit?: boolean,
-): void {
-  const duration = timer();
-  
-  recordAPIMetrics({
-    endpoint: ENDPOINT,
-    method,
-    statusCode,
-    duration,
-    userId,
-    error,
-    // Note: In a real implementation, you might store these as separate metrics
-    // or use a metrics system that supports labels
-  });
-  
-  // Log additional context for observability (simplified logging)
-  if (hostname !== undefined) {
-    // Use simple console for metrics context (this is infrastructure logging)
-    // eslint-disable-next-line no-console
-    console.info(`[LINK_PREVIEW_METRICS] ${ENDPOINT} hostname=${hostname} cache_hit=${cacheHit ?? false} duration=${duration}ms result=${result}`);
-  }
 }
 
 // Comprehensive private IP range checking (IPv4 & IPv6)
@@ -174,7 +141,7 @@ async function validateHostnameAndResolveIPs(hostname: string): Promise<{ isVali
   } catch (error: unknown) {
     return { 
       isValid: false, 
-      error: error instanceof Error ? error.message : 'DNS resolution failed' 
+      ...(error instanceof Error ? { error: error.message } : { error: 'DNS resolution failed' })
     };
   }
 }
@@ -200,7 +167,10 @@ async function validateUrl(url: string): Promise<{ isValid: boolean; parsedUrl?:
       // Hostname - resolve DNS and check all IPs
       const dnsValidation = await validateHostnameAndResolveIPs(hostname);
       if (!dnsValidation.isValid) {
-        return { isValid: false, error: dnsValidation.error };
+        return { 
+          isValid: false, 
+          ...(dnsValidation.error ? { error: dnsValidation.error } : {})
+        };
       }
     }
     
@@ -540,9 +510,7 @@ async function applyEnhancedRateLimit(request: NextRequest, userId: string): Pro
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
   const logger = createAPILogger(request, ENDPOINT);
-  const timer = createMetricsTimer();
   let userId: string | undefined;
-  let hostname: string | undefined;
 
   try {
     // Session-aware Supabase client
@@ -552,18 +520,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     
     if (authError !== null || user === null) {
-      recordLinkPreviewMetrics(
-        timer,
-        'POST',
-        HTTP_STATUS.UNAUTHORIZED,
-        'error',
-        undefined,
-        'Authentication failed',
-      );
-
       logger.warn('Unauthorized link preview attempt', {
         statusCode: HTTP_STATUS.UNAUTHORIZED,
-        error: authError?.message,
+        ...(authError?.message ? { error: authError.message } : {}),
       });
 
       return NextResponse.json({ error: 'Unauthorized' }, { status: HTTP_STATUS.UNAUTHORIZED });
@@ -574,15 +533,6 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     // Enhanced rate limiting (user + IP)
     const rateLimitResult = await applyEnhancedRateLimit(request, userId);
     if (!rateLimitResult.allowed) {
-      recordLinkPreviewMetrics(
-        timer,
-        'POST',
-        HTTP_STATUS.TOO_MANY_REQUESTS,
-        'error',
-        userId,
-        'Rate limit exceeded',
-      );
-
       logger.warn('Rate limit exceeded for link preview', {
         userId,
         statusCode: HTTP_STATUS.TOO_MANY_REQUESTS,
@@ -602,29 +552,11 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     try {
       body = await request.json() as unknown;
     } catch {
-      recordLinkPreviewMetrics(
-        timer,
-        'POST',
-        HTTP_STATUS.BAD_REQUEST,
-        'error',
-        userId,
-        'Invalid JSON',
-      );
-
       return NextResponse.json({ error: 'Invalid JSON' }, { status: HTTP_STATUS.BAD_REQUEST });
     }
 
     const parsed = LinkPreviewRequestSchema.safeParse(body);
     if (!parsed.success) {
-      recordLinkPreviewMetrics(
-        timer,
-        'POST',
-        HTTP_STATUS.BAD_REQUEST,
-        'error',
-        userId,
-        'Invalid request body',
-      );
-
       return NextResponse.json(
         { error: 'Invalid body', details: parsed.error.flatten() },
         { status: HTTP_STATUS.BAD_REQUEST },
@@ -650,17 +582,6 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         },
       });
 
-      recordLinkPreviewMetrics(
-        timer,
-        'POST',
-        HTTP_STATUS.OK,
-        'success',
-        userId,
-        undefined,
-        new URL(url).hostname,
-        true,
-      );
-
       logger.info('Served cached link preview', {
         userId,
         statusCode: HTTP_STATUS.OK,
@@ -673,40 +594,21 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     // Enhanced URL validation with DNS resolution
     const urlValidation = await validateUrl(url);
     if (!urlValidation.isValid || urlValidation.parsedUrl === undefined) {
-      recordLinkPreviewMetrics(
-        timer,
-        'POST',
-        HTTP_STATUS.BAD_REQUEST,
-        'error',
-        userId,
-        'Invalid URL',
-      );
-
       return NextResponse.json(
         { error: urlValidation.error ?? 'Invalid URL' },
         { status: HTTP_STATUS.BAD_REQUEST }
       );
     }
 
-    ({ hostname } = urlValidation.parsedUrl);
+    const { hostname } = urlValidation.parsedUrl;
 
     // Fetch HTML content with streaming and size limits
     const fetchResult = await fetchHtmlContentWithLimits(url);
     if (!fetchResult.success || fetchResult.html === undefined) {
-      recordLinkPreviewMetrics(
-        timer,
-        'POST',
-        HTTP_STATUS.BAD_REQUEST,
-        'error',
-        userId,
-        'Failed to fetch URL',
-        hostname,
-      );
-
       logger.warn('Failed to fetch URL for preview', {
         userId,
         statusCode: HTTP_STATUS.BAD_REQUEST,
-        error: fetchResult.error,
+        ...(fetchResult.error ? { error: fetchResult.error } : {}),
         metadata: { url, hostname },
       });
 
@@ -731,17 +633,6 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       },
     });
 
-    recordLinkPreviewMetrics(
-      timer,
-      'POST',
-      HTTP_STATUS.OK,
-      'success',
-      userId,
-      undefined,
-      hostname,
-      false,
-    );
-
     logger.info('Successfully generated link preview', {
       userId,
       statusCode: HTTP_STATUS.OK,
@@ -758,18 +649,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     return response;
 
   } catch (error: unknown) {
-    recordLinkPreviewMetrics(
-      timer,
-      'POST',
-      HTTP_STATUS.INTERNAL_SERVER_ERROR,
-      'error',
-      userId,
-      error instanceof Error ? error.message : 'Unknown error',
-      hostname,
-    );
-
     logger.error('Link preview generation failed unexpectedly', {
-      userId,
+      ...(userId ? { userId } : {}),
       statusCode: HTTP_STATUS.INTERNAL_SERVER_ERROR,
       error: error instanceof Error ? error : new Error(String(error)),
     });
@@ -786,4 +667,4 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 // - DNS resolution and IP validation
 // - Streaming response parsing with cheerio
 // - Complex security validations and caching
-export const runtime = 'nodejs'; 
+export const runtime = 'nodejs';

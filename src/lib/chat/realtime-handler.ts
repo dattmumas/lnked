@@ -72,15 +72,16 @@ export class RealtimeHandler {
     const channel = this.supabase
       .channel(`chat:${userId}`)
       .on(
-        'postgres_changes',
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-explicit-any
+        'postgres_changes' as any,
         {
           event: '*',
           schema: 'public',
           table: 'messages',
           filter: conversationId !== undefined && conversationId !== null ? `conversation_id=eq.${conversationId}` : undefined,
         },
-        (payload) => {
-          this.handleMessageChange(userId, payload);
+        (payload: unknown) => {
+          this.handleMessageChange(userId, payload as Record<string, unknown>);
         }
       )
       .on(
@@ -91,7 +92,7 @@ export class RealtimeHandler {
           table: 'message_read_receipts',
         },
         (payload) => {
-          this.handleReadReceiptChange(userId, payload);
+          this.handleReadReceiptChange(userId, payload as Record<string, unknown>);
         }
       )
       .on(
@@ -102,7 +103,7 @@ export class RealtimeHandler {
           table: 'message_reactions',
         },
         (payload) => {
-          this.handleReactionChange(userId, payload);
+          this.handleReactionChange(userId, payload as Record<string, unknown>);
         }
       )
       .on('presence', { event: 'sync' }, () => {
@@ -110,7 +111,11 @@ export class RealtimeHandler {
       })
       .subscribe();
 
-    this.connections.set(userId, { userId, conversationId, channel });
+    this.connections.set(userId, { 
+      userId, 
+      ...(conversationId ? { conversationId } : {}), 
+      channel 
+    });
   }
 
   // Disconnect a user
@@ -125,16 +130,16 @@ export class RealtimeHandler {
 
   // Handle message changes with intelligent diffing
   private handleMessageChange(userId: string, payload: Record<string, unknown>): void {
-    const eventType = payload.eventType as string;
-    const newRecord = payload.new as Record<string, unknown> | null;
-    const oldRecord = payload.old as Record<string, unknown> | null;
+    const eventType = payload['eventType'] as string;
+    const newRecord = payload['new'] as Record<string, unknown> | null;
+    const oldRecord = payload['old'] as Record<string, unknown> | null;
     
     let event: RealtimeEvent;
     
     switch (eventType) {
       case 'INSERT': {
         if (!newRecord) return;
-        const conversationId = newRecord.conversation_id as string;
+        const conversationId = newRecord['conversation_id'] as string;
         if (!conversationId) return;
         
         event = {
@@ -150,8 +155,8 @@ export class RealtimeHandler {
         
       case 'UPDATE': {
         if (!newRecord || !oldRecord) return;
-        const conversationId = newRecord.conversation_id as string;
-        const messageId = newRecord.id as string;
+        const conversationId = newRecord['conversation_id'] as string;
+        const messageId = newRecord['id'] as string;
         if (!conversationId || !messageId) return;
         
         // Only send relevant fields that changed
@@ -170,8 +175,8 @@ export class RealtimeHandler {
         
       case 'DELETE': {
         if (!oldRecord) return;
-        const conversationId = oldRecord.conversation_id as string;
-        const messageId = oldRecord.id as string;
+        const conversationId = oldRecord['conversation_id'] as string;
+        const messageId = oldRecord['id'] as string;
         if (!conversationId || !messageId) return;
         
         event = {
@@ -194,13 +199,13 @@ export class RealtimeHandler {
 
   // Handle read receipt changes
   private handleReadReceiptChange(userId: string, payload: Record<string, unknown>): void {
-    const newRecord = payload.new as Record<string, unknown> | null;
+    const newRecord = payload['new'] as Record<string, unknown> | null;
     if (!newRecord) return;
     
-    const conversationId = newRecord.conversation_id as string;
-    const messageUserId = newRecord.user_id as string;
-    const messageId = newRecord.message_id as string;
-    const readAt = newRecord.read_at as string;
+    const conversationId = newRecord['conversation_id'] as string;
+    const messageUserId = newRecord['user_id'] as string;
+    const messageId = newRecord['message_id'] as string;
+    const readAt = newRecord['read_at'] as string;
     
     if (!conversationId || !messageUserId || !messageId || !readAt) return;
     
@@ -219,17 +224,17 @@ export class RealtimeHandler {
 
   // Handle reaction changes
   private handleReactionChange(userId: string, payload: Record<string, unknown>): void {
-    const eventType = payload.eventType as string;
-    const newRecord = payload.new as Record<string, unknown> | null;
-    const oldRecord = payload.old as Record<string, unknown> | null;
+    const eventType = payload['eventType'] as string;
+    const newRecord = payload['new'] as Record<string, unknown> | null;
+    const oldRecord = payload['old'] as Record<string, unknown> | null;
     
     const record = newRecord ?? oldRecord;
     if (!record) return;
     
-    const conversationId = record.conversation_id as string;
-    const messageId = record.message_id as string;
-    const reactionUserId = record.user_id as string;
-    const reactionType = record.reaction_type as string;
+    const conversationId = record['conversation_id'] as string;
+    const messageId = record['message_id'] as string;
+    const reactionUserId = record['user_id'] as string;
+    const reactionType = record['reaction_type'] as string;
     
     if (!conversationId || !messageId || !reactionUserId || !reactionType) return;
     
@@ -250,14 +255,19 @@ export class RealtimeHandler {
   // Handle presence sync for typing indicators
   private handlePresenceSync(userId: string, channel: RealtimeChannel): void {
     const presence = channel.presenceState();
-    const typingUsers = Object.values(presence)
-      .flat()
-      .filter((p: Record<string, unknown>) => Boolean(p.isTyping))
-      .map((p: Record<string, unknown>) => ({
-        userId: p.userId as string,
-        username: p.username as string,
+
+    // The presence state returned by Supabase can be `unknown`. To satisfy the
+    // `@typescript-eslint/no-unsafe-argument` rule we cast the flattened
+    // presence array to a safer structure before further transformations.
+    const presenceStates = Object.values(presence).flat() as Array<Record<string, unknown>>;
+
+    const typingUsers = presenceStates
+      .filter((p) => Boolean(p['isTyping']))
+      .map((p) => ({
+        userId: String(p['userId']),
+        username: String(p['username']),
       }))
-      .filter(user => Boolean(user.userId) && Boolean(user.username));
+      .filter((user) => Boolean(user.userId) && Boolean(user.username));
     
     const connection = this.connections.get(userId);
     if (connection?.conversationId !== undefined && connection?.conversationId !== null) {

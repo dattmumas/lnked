@@ -785,6 +785,7 @@ export type Database = {
           created_at: string | null
           created_by: string | null
           description: string | null
+          direct_conversation_hash: string | null
           id: string
           is_private: boolean | null
           last_message_at: string | null
@@ -800,6 +801,7 @@ export type Database = {
           created_at?: string | null
           created_by?: string | null
           description?: string | null
+          direct_conversation_hash?: string | null
           id?: string
           is_private?: boolean | null
           last_message_at?: string | null
@@ -815,6 +817,7 @@ export type Database = {
           created_at?: string | null
           created_by?: string | null
           description?: string | null
+          direct_conversation_hash?: string | null
           id?: string
           is_private?: boolean | null
           last_message_at?: string | null
@@ -2457,6 +2460,16 @@ export type Database = {
       }
     }
     Functions: {
+      accept_collective_invite: {
+        Args: { p_invite_code: string; p_user_id: string }
+        Returns: {
+          success: boolean
+          message: string
+          collective_slug: string
+          collective_name: string
+          role_granted: string
+        }[]
+      }
       add_comment: {
         Args: {
           p_entity_type: Database["public"]["Enums"]["comment_entity_type"]
@@ -2533,22 +2546,38 @@ export type Database = {
         }
         Returns: string
       }
+      create_personal_tenant_for_user: {
+        Args: { user_id: string }
+        Returns: undefined
+      }
       create_tenant_conversation: {
         Args: {
           target_tenant_id: string
-          conversation_title?: string
-          conversation_type?: Database["public"]["Enums"]["conversation_type"]
-          conversation_description?: string
-          is_private_conversation?: boolean
-          participant_user_ids?: string[]
+          conversation_title: string
+          conversation_type: string
+          conversation_description: string
+          is_private_conversation: boolean
+          participant_user_ids: string[]
         }
         Returns: {
           id: string
           title: string
-          type: Database["public"]["Enums"]["conversation_type"]
+          type: string
           created_at: string
           tenant_id: string
         }[]
+      }
+      find_existing_direct_conversation: {
+        Args: { target_tenant_id: string; user1_id: string; user2_id: string }
+        Returns: {
+          conversation_id: string
+          title: string
+          created_at: string
+        }[]
+      }
+      find_or_create_direct_conversation: {
+        Args: { user1_id: string; user2_id: string; target_tenant_id: string }
+        Returns: string
       }
       find_post_by_slug: {
         Args: { tenant_uuid: string; post_slug: string }
@@ -2587,6 +2616,10 @@ export type Database = {
           updated_at: string | null
         }[]
       }
+      generate_direct_conversation_hash: {
+        Args: { conversation_uuid: string }
+        Returns: string
+      }
       generate_group_hash: {
         Args: {
           creator_id: string
@@ -2606,6 +2639,22 @@ export type Database = {
           p_algorithm_version?: string
         }
         Returns: Json
+      }
+      get_collective_invites_with_user_details: {
+        Args: { p_collective_id: string }
+        Returns: {
+          id: string
+          collective_id: string
+          email: string
+          role: string
+          status: string
+          invite_code: string
+          created_at: string
+          accepted_at: string
+          invited_by_user_id: string
+          inviter_full_name: string
+          inviter_avatar_url: string
+        }[]
       }
       get_collective_stats: {
         Args: { collective_id: string }
@@ -2725,17 +2774,17 @@ export type Database = {
         Returns: {
           id: string
           title: string
-          type: Database["public"]["Enums"]["conversation_type"]
+          type: string
           description: string
           is_private: boolean
-          last_message_at: string
-          created_at: string
-          created_by: string
-          tenant_id: string
-          collective_id: string
-          unread_count: number
           participant_count: number
+          created_at: string
+          updated_at: string
         }[]
+      }
+      get_total_unread_message_count: {
+        Args: { p_user_id: string }
+        Returns: number
       }
       get_unread_message_count: {
         Args: { p_user_id: string; p_conversation_id: string }

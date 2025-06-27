@@ -32,6 +32,19 @@ interface UserSearchDialogProps {
 
 const DEBOUNCE_MS = 300;
 
+// Type guard utility functions
+const isNonEmptyString = (value: string | null): value is string => {
+  return value !== null && typeof value === 'string' && value.trim() !== '';
+};
+
+const isValidUrl = (value: string | null): value is string => {
+  return value !== null && typeof value === 'string';
+};
+
+const isStringValue = (value: unknown): value is string => {
+  return typeof value === 'string';
+};
+
 export function UserSearchDialog({
   open,
   onOpenChange,
@@ -68,20 +81,42 @@ export function UserSearchDialog({
       );
 
       if (!response.ok) {
-        const errorData = await response
+        const fallbackError = 'Unknown error';
+        // Parse error response safely
+        const errorPayload = (await response
           .json()
-          .catch(() => ({ error: 'Unknown error' }));
-        throw new Error(errorData.error || 'Failed to create conversation');
+          .catch(() => ({ error: fallbackError }))) as Partial<{
+          error: unknown;
+        }>;
+
+        const errorMessage = isStringValue(errorPayload.error)
+          ? errorPayload.error
+          : 'Failed to create conversation';
+        throw new Error(errorMessage);
       }
 
-      const responseData = await response.json();
+      // Explicitly type the (potentially) wrapped API response to avoid `any`.
+      type Conversation = {
+        id: string;
+        // Add other fields here if required in future.
+      };
 
-      // Handle the wrapped response structure from createTenantSuccessResponse
-      const data = responseData.data || responseData;
+      type ConversationResponse = {
+        conversation: Conversation;
+      };
+
+      type ApiResponse = ConversationResponse | { data: ConversationResponse };
+
+      const parsedResponse = (await response.json()) as ApiResponse;
+      const data: ConversationResponse =
+        'data' in parsedResponse ? parsedResponse.data : parsedResponse;
 
       // Ensure we have a valid conversation object
-      if (!data.conversation || !data.conversation.id) {
-        console.error('Invalid conversation data:', data);
+      if (!data.conversation || !isStringValue(data.conversation.id)) {
+        console.error(
+          'Invalid conversation data:',
+          JSON.stringify(data, null, 2),
+        );
         throw new Error('Invalid conversation data received');
       }
 
@@ -101,7 +136,10 @@ export function UserSearchDialog({
     onSuccess: (data) => {
       // Ensure data has an id before proceeding
       if (!data || !data.id) {
-        console.error('Invalid conversation data in onSuccess:', data);
+        console.error(
+          'Invalid conversation data in onSuccess:',
+          JSON.stringify(data, null, 2),
+        );
         return;
       }
 
@@ -120,7 +158,7 @@ export function UserSearchDialog({
       });
 
       // Navigate to the new conversation
-      if (onConversationCreated !== undefined) {
+      if (onConversationCreated !== undefined && isStringValue(data.id)) {
         onConversationCreated(data.id);
       }
     },
@@ -140,23 +178,21 @@ export function UserSearchDialog({
   );
 
   const getDisplayName = (user: User): string => {
-    if (user.full_name !== null && user.full_name.trim() !== '') {
+    if (isNonEmptyString(user.full_name)) {
       return user.full_name;
     }
-    if (user.username !== null && user.username.trim() !== '') {
+    if (isNonEmptyString(user.username)) {
       return user.username;
     }
     return 'Unknown User';
   };
 
   const getAvatarFallback = (user: User): string => {
-    if (user.username !== null && user.username.length > 0) {
-      return user.username[0].toUpperCase();
-    }
-    if (user.full_name !== null && user.full_name.length > 0) {
-      return user.full_name[0].toUpperCase();
-    }
-    return 'U';
+    const source =
+      (isNonEmptyString(user.username) && user.username) ||
+      (isNonEmptyString(user.full_name) && user.full_name);
+
+    return source ? source.charAt(0).toUpperCase() : 'U';
   };
 
   const handleClose = useCallback(() => {
@@ -207,7 +243,7 @@ export function UserSearchDialog({
                 className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-muted transition-colors disabled:opacity-50"
               >
                 <div className="w-10 h-10 rounded-full overflow-hidden bg-muted flex-shrink-0">
-                  {user.avatar_url !== null ? (
+                  {isValidUrl(user.avatar_url) ? (
                     <Image
                       src={user.avatar_url}
                       alt={getDisplayName(user)}
@@ -224,7 +260,7 @@ export function UserSearchDialog({
 
                 <div className="flex-1 text-left">
                   <div className="font-medium">{getDisplayName(user)}</div>
-                  {user.username !== null &&
+                  {isNonEmptyString(user.username) &&
                     user.username !== getDisplayName(user) && (
                       <div className="text-sm text-muted-foreground">
                         @{user.username}

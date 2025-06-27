@@ -142,10 +142,10 @@ export default function VideoCard({
         <PostCardHeader
           author={post.author}
           timestamp={post.created_at}
-          collective={post.collective}
+          {...(post.collective ? { collective: post.collective } : {})}
           showFollowButton={showFollowButton}
-          currentUserId={currentUserId}
-          onFollow={onFollow}
+          {...(currentUserId ? { currentUserId } : {})}
+          {...(onFollow ? { onFollow } : {})}
           isFollowing={isFollowing}
         />
 
@@ -181,9 +181,16 @@ export default function VideoCard({
               aria-label="Play video"
             >
               <VideoThumbnail
-                thumbnailUrl={post.thumbnail_url}
-                duration={post.metadata?.duration}
-                playbackId={post.metadata?.playbackId}
+                {...(post.thumbnail_url
+                  ? { thumbnailUrl: post.thumbnail_url }
+                  : {})}
+                {...(post.metadata?.duration !== undefined &&
+                post.metadata?.duration !== null
+                  ? { duration: post.metadata.duration }
+                  : {})}
+                {...(post.metadata?.playbackId
+                  ? { playbackId: post.metadata.playbackId }
+                  : {})}
                 isProcessing={isProcessing}
                 className="w-full"
               />
@@ -242,18 +249,14 @@ export default function VideoCard({
 
         <PostCardFooter
           postId={post.id}
-          postSlug={
-            post.slug !== undefined &&
-            post.slug !== null &&
-            post.slug.length > 0
-              ? post.slug
-              : undefined
-          }
+          {...(post.slug && post.slug.length > 0
+            ? { postSlug: post.slug }
+            : {})}
           postTitle={post.title}
           interactions={interactions}
-          onToggleLike={onToggleLike}
-          onToggleDislike={onToggleDislike}
-          onToggleBookmark={onToggleBookmark}
+          {...(onToggleLike ? { onToggleLike } : {})}
+          {...(onToggleDislike ? { onToggleDislike } : {})}
+          {...(onToggleBookmark ? { onToggleBookmark } : {})}
           showViewCount
         />
       </CardContent>

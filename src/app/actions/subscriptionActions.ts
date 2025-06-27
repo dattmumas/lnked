@@ -49,9 +49,9 @@ export async function getSubscriptionStatus(
       dbSubscriptionId: subscription.id, // id from table is the Stripe Subscription ID
       status: subscription.status,
       cancelAtPeriodEnd: subscription.cancel_at_period_end,
-      currentPeriodEnd: subscription.current_period_end
-        ? new Date(subscription.current_period_end).toLocaleDateString()
-        : undefined,
+      ...(subscription.current_period_end ? { 
+        currentPeriodEnd: new Date(subscription.current_period_end).toLocaleDateString() 
+      } : {}),
     };
   }
   return { isSubscribed: false };
@@ -211,7 +211,7 @@ export async function createPriceTier({
     product: productId,
     unit_amount: amount,
     currency: 'usd',
-    nickname: tierName,
+    ...(tierName ? { nickname: tierName } : {}),
     recurring: { interval },
     metadata: { collectiveId },
   });

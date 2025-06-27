@@ -52,7 +52,7 @@ export async function GET(request: NextRequest): Promise<Response> {
       
       logger.warn('Unauthorized notification access attempt', {
         statusCode: HttpStatusCode.Unauthorized,
-        error: authError?.message,
+        ...(authError?.message ? { error: authError.message } : {}),
       });
       
       return NextResponse.json(
@@ -163,12 +163,12 @@ export async function GET(request: NextRequest): Promise<Response> {
       method: 'GET',
       statusCode: HttpStatusCode.InternalServerError,
       duration,
-      userId,
+      ...(userId ? { userId } : {}),
       error: error instanceof Error ? error.message : 'Unknown error',
     });
 
     logger.error('Failed to fetch notifications', {
-      userId,
+      ...(userId ? { userId } : {}),
       statusCode: HttpStatusCode.InternalServerError,
       duration,
       error: error instanceof Error ? error : new Error(String(error)),
@@ -209,7 +209,7 @@ export async function PATCH(request: NextRequest): Promise<Response> {
 
       logger.warn('Unauthorized notification update attempt', {
         statusCode: HttpStatusCode.Unauthorized,
-        error: authError?.message,
+        ...(authError?.message ? { error: authError.message } : {}),
       });
 
       return NextResponse.json(
@@ -294,7 +294,7 @@ export async function PATCH(request: NextRequest): Promise<Response> {
       logger.warn('Failed to mark notifications as read', {
         userId,
         statusCode,
-        error: result.error,
+        ...(result.error ? { error: result.error } : {}),
         metadata: {
           requestedCount: notification_ids?.length ?? 0,
         },
@@ -334,12 +334,12 @@ export async function PATCH(request: NextRequest): Promise<Response> {
       method: 'PATCH',
       statusCode: HttpStatusCode.InternalServerError,
       duration,
-      userId,
+      ...(userId ? { userId } : {}),
       error: error instanceof Error ? error.message : 'Unknown error',
     });
 
     logger.error('Failed to mark notifications as read', {
-      userId,
+      ...(userId ? { userId } : {}),
       statusCode: HttpStatusCode.InternalServerError,
       duration,
       error: error instanceof Error ? error : new Error(String(error)),
@@ -488,12 +488,12 @@ export async function DELETE(request: NextRequest): Promise<Response> {
       method: 'DELETE',
       statusCode: HttpStatusCode.InternalServerError,
       duration,
-      userId,
+      ...(userId ? { userId } : {}),
       error: error instanceof Error ? error.message : 'Unknown error',
     });
 
     logger.error('Failed to delete notifications', {
-      userId,
+      ...(userId ? { userId } : {}),
       statusCode: HttpStatusCode.InternalServerError,
       duration,
       error: error instanceof Error ? error : new Error(String(error)),

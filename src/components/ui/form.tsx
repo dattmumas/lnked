@@ -80,7 +80,7 @@ const useFormField = (): UseFormFieldReturn => {
     formItemId: `${id}-form-item`,
     formDescriptionId: `${id}-form-item-description`,
     formMessageId: `${id}-form-item-message`,
-    error: fieldState.error,
+    ...(fieldState.error ? { error: fieldState.error } : {}),
     isDirty: fieldState.isDirty,
     isTouched: fieldState.isTouched,
     isValidating: fieldState.isValidating,

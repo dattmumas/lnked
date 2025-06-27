@@ -63,9 +63,11 @@ export function OnboardingFlow(): React.JSX.Element {
     e.preventDefault();
 
     const success = await completeOnboarding({
-      username: formData.username.length > 0 ? formData.username : undefined,
-      full_name: formData.full_name.length > 0 ? formData.full_name : undefined,
-      bio: formData.bio.length > 0 ? formData.bio : undefined,
+      ...(formData.username.length > 0 ? { username: formData.username } : {}),
+      ...(formData.full_name.length > 0
+        ? { full_name: formData.full_name }
+        : {}),
+      ...(formData.bio.length > 0 ? { bio: formData.bio } : {}),
     });
 
     if (success === true) {

@@ -30,13 +30,6 @@ export interface Notification {
   read_at: string | null;
   created_at: string;
   updated_at: string;
-  // Joined data
-  actor?: {
-    id: string;
-    full_name: string | null;
-    username: string | null;
-    avatar_url: string | null;
-  };
 }
 
 export interface NotificationPreferences {
@@ -243,12 +236,15 @@ export function groupNotifications(notifications: Notification[]): Notification[
   for (const notification of notifications) {
     if (groupableTypes.includes(notification.type)) {
       // Try to find an existing group for this type and entity
-      const existingGroup = groups.find(group => 
-        group.length > 0 &&
-        group[0].type === notification.type &&
-        group[0].entity_type === notification.entity_type &&
-        group[0].entity_id === notification.entity_id
-      );
+      const existingGroup = groups.find(group => {
+        if (group.length === 0) return false;
+        const first = group[0]!;
+        return (
+          first.type === notification.type &&
+          first.entity_type === notification.entity_type &&
+          first.entity_id === notification.entity_id
+        );
+      });
 
       if (existingGroup) {
         existingGroup.push(notification);

@@ -226,7 +226,7 @@ export async function POST(req: Request): Promise<NextResponse> {
   // Enhanced header retrieval with fallback
   const sig = getStripeSignatureHeader(req.headers);
   const rawBody = await req.text();
-  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+  const webhookSecret = process.env['STRIPE_WEBHOOK_SECRET'];
 
   if (sig === null || sig === undefined || webhookSecret === null || webhookSecret === undefined) {
     webhookLogger.error('Missing webhook signature or secret', undefined, {

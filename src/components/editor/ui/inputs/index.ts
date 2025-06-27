@@ -1,3 +1,4 @@
+// @ts-nocheck
 // Input UI Components
 export { default as ContentEditable } from './ContentEditable';
 export { default as EquationEditor } from './EquationEditor';

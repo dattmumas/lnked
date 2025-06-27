@@ -1,8 +1,8 @@
 'use client';
 
 import { ThumbsUp, ThumbsDown } from 'lucide-react';
-import { useEffect } from 'react';
-import { useFormState, useFormStatus } from 'react-dom';
+import { useEffect, useActionState } from 'react';
+import { useFormStatus } from 'react-dom';
 
 import { Button } from '@/components/ui/button';
 
@@ -12,11 +12,15 @@ interface RecommendationFeedbackButtonsProps {
   collectiveId: string;
 }
 
-const initialState = {
+interface ActionResult {
+  success: boolean;
+  message?: string;
+  error?: string;
+  fieldErrors?: Record<string, string[] | undefined>;
+}
+
+const initialState: ActionResult = {
   success: false,
-  message: undefined,
-  error: undefined,
-  fieldErrors: undefined,
 };
 
 function SubmitButton({
@@ -54,17 +58,13 @@ function SubmitButton({
 export default function RecommendationFeedbackButtons({
   collectiveId,
 }: RecommendationFeedbackButtonsProps): React.JSX.Element {
-  const [state, formAction] = useFormState(
+  const [state, formAction] = useActionState(
     logRecommendationFeedback,
     initialState,
   );
 
   useEffect((): void => {
-    if (
-      state.success &&
-      state.message !== null &&
-      state.message !== undefined
-    ) {
+    if (state.success && state.message) {
       // Potential future use: trigger a toast notification or more complex UI update
     }
   }, [state.success, state.message]);
@@ -73,8 +73,7 @@ export default function RecommendationFeedbackButtons({
   // display the message and prevent further button submissions for this instance.
   if (
     state.success &&
-    state.message !== null &&
-    state.message !== undefined &&
+    state.message &&
     (state.message === 'Feedback recorded successfully.' ||
       state.message === 'Feedback already recorded.')
   ) {
@@ -86,7 +85,7 @@ export default function RecommendationFeedbackButtons({
       <input type="hidden" name="collectiveId" value={collectiveId} />
       <SubmitButton feedbackType="recommended_interested" />
       <SubmitButton feedbackType="recommended_not_interested" />
-      {state.error !== null && state.error !== undefined && (
+      {state.error && (
         <p className="text-xs text-destructive mt-1">Error: {state.error}</p>
       )}
       {/* More specific field errors can be displayed if needed from state.fieldErrors */}

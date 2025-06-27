@@ -1,12 +1,14 @@
 'use client';
 
 
+import { useChatUIStore } from '@/lib/stores/chat-ui-store';
 import supabase from '@/lib/supabase/browser';
 
 import { chatSecurity } from './security';
 
 import type { MessageWithSender, BroadcastMessage, TypingIndicator } from './types';
 import type { RealtimeChannel, RealtimePostgresChangesPayload, User } from '@supabase/supabase-js';
+
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -65,12 +67,14 @@ export class RealtimeService {
    */
   private setupAuthRefreshHandler(): void {
     this.supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === 'TOKEN_REFRESHED' && session) {
-        console.warn('🔄 RealtimeService: Auth token refreshed, refreshing channels...');
-        await this.refreshAllChannels();
-      } else if (event === 'SIGNED_OUT') {
-        console.warn('🚪 RealtimeService: User signed out, cleaning up all channels');
+      if (event === 'SIGNED_OUT') {
+        console.log('🔒 User signed out, cleaning up all subscriptions');
         this.unsubscribeFromAll();
+        // Reset the chat UI store to clear all state
+        useChatUIStore.getState().reset();
+      } else if (event === 'TOKEN_REFRESHED') {
+        console.log('🔄 Token refreshed, re-subscribing to channels');
+        await this.refreshAllChannels();
       }
     });
   }
@@ -85,14 +89,24 @@ export class RealtimeService {
     
     try {
       const activeConversations = Array.from(this.channels.keys());
-      const handlers = new Map();
+      const handlers = new Map<string, { onMessage?: (_message: MessageWithSender) => void; onTyping?: (_typing: TypingIndicator[]) => void }>();
       
-      // Store current handlers
+      // Store current handlers without introducing undefined properties for
+      // `exactOptionalPropertyTypes` compatibility.
       for (const conversationId of activeConversations) {
-        handlers.set(conversationId, {
-          onMessage: this.messageHandlers.get(conversationId),
-          onTyping: this.typingHandlers.get(conversationId),
-        });
+        const handlerObj: { onMessage?: (_message: MessageWithSender) => void; onTyping?: (_typing: TypingIndicator[]) => void } = {};
+
+        const onMessageHandler = this.messageHandlers.get(conversationId);
+        if (onMessageHandler !== undefined) {
+          handlerObj.onMessage = onMessageHandler;
+        }
+
+        const onTypingHandler = this.typingHandlers.get(conversationId);
+        if (onTypingHandler !== undefined) {
+          handlerObj.onTyping = onTypingHandler;
+        }
+
+        handlers.set(conversationId, handlerObj);
       }
       
       // Unsubscribe from all
@@ -103,11 +117,8 @@ export class RealtimeService {
       
       // Re-subscribe with fresh tokens
       for (const [conversationId, handler] of handlers) {
-        if (handler.onMessage || handler.onTyping) {
-          await this.subscribeToConversation(conversationId, {
-            onMessage: handler.onMessage,
-            onTyping: handler.onTyping,
-          });
+        if (handler.onMessage !== undefined || handler.onTyping !== undefined) {
+          await this.subscribeToConversation(conversationId, handler);
         }
       }
     } finally {
@@ -378,18 +389,32 @@ export class RealtimeService {
           }
         )
         
-        // Enhanced error handling
+        // Enhanced error handling - ONLY handle actual errors, not success messages
         .on('system', { event: 'error' }, (error: unknown) => {
+          // Check if this is actually an error or a success message
+          const errorObj = error as { status?: string; message?: string };
+          
+          // Skip success messages (status: 'ok') - these are normal Supabase confirmations
+          if (errorObj.status === 'ok') {
+            console.log(`✅ RealtimeService: Success message for ${conversationId}:`, errorObj.message);
+            return;
+          }
+          
           console.error(`❌ RealtimeService: Channel error for ${conversationId}:`, error);
           this.pendingSubscriptions.delete(conversationId);
           
-          // Auto-retry with exponential backoff
-          setTimeout(() => {
-            if (this.channels.has(conversationId)) {
-              console.warn(`🔄 RealtimeService: Retrying subscription to ${conversationId} after error`);
-              void this.subscribeToConversation(conversationId, callbacks);
-            }
-          }, CHANNEL_RETRY_DELAY_MS);
+          // Disable auto-retry in development to prevent Fast Refresh issues
+          if (process.env.NODE_ENV !== 'development') {
+            // Auto-retry with exponential backoff (production only)
+            setTimeout(() => {
+              if (this.channels.has(conversationId)) {
+                console.warn(`🔄 RealtimeService: Retrying subscription to ${conversationId} after error`);
+                void this.subscribeToConversation(conversationId, callbacks);
+              }
+            }, CHANNEL_RETRY_DELAY_MS);
+          } else {
+            console.warn(`🚫 RealtimeService: Auto-retry disabled in development for ${conversationId}`);
+          }
         })
         
         .on('system', { event: 'close' }, () => {
@@ -419,23 +444,33 @@ export class RealtimeService {
             case CHANNEL_STATES.CHANNEL_ERROR:
               console.error(`❌ Channel error for conversation ${conversationId}`);
               this.pendingSubscriptions.delete(conversationId);
-              // Auto-retry after a delay to prevent infinite retry loops
-              setTimeout(() => {
-                if (this.channels.has(conversationId)) {
-                  console.warn(`🔄 Retrying subscription to conversation ${conversationId}`);
-                  void this.subscribeToConversation(conversationId, callbacks);
-                }
-              }, CHANNEL_RETRY_DELAY_MS);
+              // Disable auto-retry in development to prevent Fast Refresh issues
+              if (process.env.NODE_ENV !== 'development') {
+                // Auto-retry after a delay to prevent infinite retry loops (production only)
+                setTimeout(() => {
+                  if (this.channels.has(conversationId)) {
+                    console.warn(`🔄 Retrying subscription to conversation ${conversationId}`);
+                    void this.subscribeToConversation(conversationId, callbacks);
+                  }
+                }, CHANNEL_RETRY_DELAY_MS);
+              } else {
+                console.warn(`🚫 Auto-retry disabled in development for ${conversationId}`);
+              }
               break;
             case CHANNEL_STATES.TIMED_OUT:
               console.error(`⏰ Subscription timeout for conversation ${conversationId}`);
               this.pendingSubscriptions.delete(conversationId);
               // Clean up and retry
               this.channels.delete(conversationId);
-              setTimeout(() => {
-                console.warn(`🔄 Retrying subscription after timeout: ${conversationId}`);
-                void this.subscribeToConversation(conversationId, callbacks);
-              }, TIMEOUT_RETRY_DELAY_MS);
+              // Disable auto-retry in development to prevent Fast Refresh issues
+              if (process.env.NODE_ENV !== 'development') {
+                setTimeout(() => {
+                  console.warn(`🔄 Retrying subscription after timeout: ${conversationId}`);
+                  void this.subscribeToConversation(conversationId, callbacks);
+                }, TIMEOUT_RETRY_DELAY_MS);
+              } else {
+                console.warn(`🚫 Timeout auto-retry disabled in development for ${conversationId}`);
+              }
               break;
             case CHANNEL_STATES.CLOSED:
             case CHANNEL_STATES.CLOSED_LOWERCASE:
@@ -555,8 +590,8 @@ export class RealtimeService {
       event: 'typing_start',
       payload: {
         user_id: user.id,
-        username: (user.user_metadata as Record<string, unknown>)?.username as string | null ?? null,
-        full_name: (user.user_metadata as Record<string, unknown>)?.full_name as string | null ?? null,
+        username: (user.user_metadata as Record<string, unknown>)?.['username'] as string | null ?? null,
+        full_name: (user.user_metadata as Record<string, unknown>)?.['full_name'] as string | null ?? null,
         conversation_id: conversationId,
         timestamp: Date.now(),
       },
@@ -662,8 +697,8 @@ export class RealtimeService {
     const existingIndex = currentTyping.findIndex(t => t.user_id === payload.user_id);
     const typingIndicator: TypingIndicator = {
       user_id: payload.user_id,
-      username: (payload as Record<string, unknown>).username as string | null ?? null,
-      full_name: (payload as Record<string, unknown>).full_name as string | null ?? null,
+      username: (payload as Record<string, unknown>)['username'] as string | null ?? null,
+      full_name: (payload as Record<string, unknown>)['full_name'] as string | null ?? null,
       conversation_id: conversationId,
       timestamp: payload.timestamp ?? Date.now(),
     };

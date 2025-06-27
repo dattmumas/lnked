@@ -21,7 +21,7 @@ interface SanitizedContext {
   [key: string]: unknown;
 }
 
-const LOG_LEVEL = process.env.LOG_LEVEL ?? 'info';
+const LOG_LEVEL = process.env['LOG_LEVEL'] || 'info';
 const IS_PRODUCTION = process.env.NODE_ENV === 'production';
 
 /**

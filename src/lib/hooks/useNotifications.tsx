@@ -14,6 +14,10 @@ interface UseNotificationsOptions {
   autoFetch?: boolean;
   realtime?: boolean;
   filters?: NotificationFilters;
+  initialData?: {
+    notifications: Notification[];
+    unreadCount: number;
+  };
 }
 
 interface UseNotificationsReturn {
@@ -23,6 +27,7 @@ interface UseNotificationsReturn {
   error: string | null;
   fetchNotifications: (filters?: NotificationFilters) => Promise<void>;
   markAsRead: (notificationIds?: string[]) => Promise<void>;
+  markAllAsRead: () => Promise<void>;
   deleteNotifications: (notificationIds: string[]) => Promise<void>;
   refresh: () => Promise<void>;
 }
@@ -31,14 +36,23 @@ export function useNotifications(
   userId?: string,
   options: UseNotificationsOptions = {},
 ): UseNotificationsReturn {
-  const { autoFetch = true, realtime = true, filters = {} } = options;
+  const {
+    autoFetch = true,
+    realtime = true,
+    filters = {},
+    initialData,
+  } = options;
 
   // Memoize filters to prevent unnecessary re-renders
   const memoizedFilters = useMemo(() => filters, [filters]);
 
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [unreadCount, setUnreadCount] = useState(0);
-  const [isLoading, setIsLoading] = useState(false);
+  const [notifications, setNotifications] = useState<Notification[]>(
+    initialData?.notifications ?? [],
+  );
+  const [unreadCount, setUnreadCount] = useState<number>(
+    initialData?.unreadCount ?? 0,
+  );
+  const [isLoading, setIsLoading] = useState(!initialData && autoFetch);
   const [error, setError] = useState<string | null>(null);
 
   // Use ref to prevent multiple simultaneous requests
@@ -143,6 +157,26 @@ export function useNotifications(
     [], // Remove notifications dependency to prevent infinite loops
   );
 
+  const markAllAsRead = useCallback(async (): Promise<void> => {
+    // Optimistically update UI
+    setNotifications((prev) =>
+      prev.map((n) => ({ ...n, read_at: new Date().toISOString() })),
+    );
+    setUnreadCount(0);
+
+    try {
+      await clientNotificationService.markAsRead(); // No argument marks all
+    } catch (err: unknown) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'Failed to mark all notifications as read',
+      );
+      // Revert optimistic update on error if needed (or just refetch)
+      void fetchNotifications(undefined, true);
+    }
+  }, [fetchNotifications]);
+
   const deleteNotifications = useCallback(
     async (notificationIds: string[]): Promise<void> => {
       try {
@@ -207,7 +241,7 @@ export function useNotifications(
     // Can be overridden with NEXT_PUBLIC_ENABLE_REALTIME_DEV=true
     const isDevelopment = process.env.NODE_ENV === 'development';
     const enableRealtimeInDev =
-      process.env.NEXT_PUBLIC_ENABLE_REALTIME_DEV === 'true';
+      process.env['NEXT_PUBLIC_ENABLE_REALTIME_DEV'] === 'true';
     const subscriptionDelay = isDevelopment && !enableRealtimeInDev ? 200 : 0;
 
     subscriptionTimeout = setTimeout(() => {
@@ -262,6 +296,7 @@ export function useNotifications(
     error,
     fetchNotifications,
     markAsRead,
+    markAllAsRead,
     deleteNotifications,
     refresh,
   };

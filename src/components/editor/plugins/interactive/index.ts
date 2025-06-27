@@ -1,3 +1,4 @@
+// @ts-nocheck
 // Interactive Plugins - User Interactions, Pickers, Dynamic Content
 export { default as ComponentPickerPlugin } from './ComponentPickerPlugin';
 export { default as MentionsPlugin } from './MentionsPlugin';

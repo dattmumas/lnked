@@ -87,8 +87,8 @@ function recordGroupMetrics(
     method,
     statusCode,
     duration,
-    userId,
-    error,
+    ...(userId ? { userId } : {}),
+    ...(error ? { error } : {}),
   });
   
   // Track specific group creation metrics
@@ -98,7 +98,7 @@ function recordGroupMetrics(
       method,
       statusCode,
       duration,
-      userId,
+      ...(userId ? { userId } : {}),
     });
   }
   
@@ -230,7 +230,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
       logger.warn('Unauthorized group creation attempt', {
         statusCode: HTTP_STATUS.UNAUTHORIZED,
-        error: authError?.message,
+        ...(authError?.message ? { error: authError.message } : {}),
       });
 
       return NextResponse.json({ error: 'Unauthorized' }, { status: HTTP_STATUS.UNAUTHORIZED });
@@ -385,12 +385,12 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       logger.error('Atomic group creation failed', {
         userId,
         statusCode,
-        error: creationResult.error,
+        ...(creationResult.error ? { error: creationResult.error } : {}),
         metadata: {
           participantCount: uniqueIds.length + 1,
           hasTitle: title !== undefined,
-          errorCode: creationResult.error_code,
-          sqlstate: creationResult.sqlstate,
+          ...(creationResult.error_code ? { errorCode: creationResult.error_code } : {}),
+          ...(creationResult.sqlstate ? { sqlstate: creationResult.sqlstate } : {}),
         },
       });
 
@@ -464,7 +464,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     );
 
     logger.error('Group creation failed unexpectedly', {
-      userId,
+      ...(userId ? { userId } : {}),
       statusCode: HTTP_STATUS.INTERNAL_SERVER_ERROR,
       error: error instanceof Error ? error : new Error(String(error)),
     });

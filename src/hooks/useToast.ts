@@ -258,19 +258,19 @@ export function useToast(): {
   }, [manager]);
 
   const success = useCallback((message: string, duration?: number) => {
-    return toast(message, { type: 'success', duration });
+    return toast(message, { type: 'success', ...(duration !== undefined ? { duration } : {}) });
   }, [toast]);
 
   const error = useCallback((message: string, duration?: number) => {
-    return toast(message, { type: 'error', duration });
+    return toast(message, { type: 'error', ...(duration !== undefined ? { duration } : {}) });
   }, [toast]);
 
   const info = useCallback((message: string, duration?: number) => {
-    return toast(message, { type: 'info', duration });
+    return toast(message, { type: 'info', ...(duration !== undefined ? { duration } : {}) });
   }, [toast]);
 
   const warning = useCallback((message: string, duration?: number) => {
-    return toast(message, { type: 'warning', duration });
+    return toast(message, { type: 'warning', ...(duration !== undefined ? { duration } : {}) });
   }, [toast]);
 
   const dismiss = useCallback((id: string) => {

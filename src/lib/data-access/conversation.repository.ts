@@ -7,10 +7,12 @@ import {
   parseMessages,
   parseMessagesWithSender,
   ConversationInsertSchema,
+  ConversationUpdateSchema,
   MessageInsertSchema,
   ParticipantInsertSchema,
   type Conversation,
   type ConversationInsert,
+  type ConversationUpdate,
   type Message,
   type MessageInsert,
   type MessageWithSender,
@@ -304,12 +306,17 @@ export class ConversationRepository {
   /**
    * Update conversation settings
    */
-  async updateConversation(conversationId: string, updates: Partial<ConversationInsert>): Promise<Conversation | undefined> {
-    const dbUpdates = ConversationInsertSchema.partial().parse(updates);
-    
+  async updateConversation(conversationId: string, updates: ConversationUpdate): Promise<Conversation | undefined> {
+    const dbUpdates = ConversationUpdateSchema.parse(updates);
+
+    // Remove properties with null values to satisfy enum constraints
+    const cleanedUpdates = Object.fromEntries(
+      Object.entries(dbUpdates).filter(([, v]) => v !== null)
+    );
+
     const { data, error } = await this.supabase
       .from('conversations')
-      .update(dbUpdates)
+      .update(cleanedUpdates)
       .eq('id', conversationId)
       .select()
       .single();

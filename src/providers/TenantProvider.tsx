@@ -192,7 +192,7 @@ export function TenantProvider({
         member_count?: number;
       };
       const context: TenantContext = {
-        id: tenantData.tenant_id, // Map tenant_id to id
+        id: tenantData.tenant_id,
         tenant_id: tenantData.tenant_id,
         name: tenantData.name,
         tenant_name: tenantData.name,
@@ -200,11 +200,15 @@ export function TenantProvider({
         tenant_slug: tenantData.slug,
         type: tenantData.type,
         tenant_type: tenantData.type,
-        description: tenantData.description,
         is_public: tenantData.is_public,
         is_personal: tenantData.type === 'personal',
         user_role: tenantData.user_role,
-        member_count: tenantData.member_count,
+        ...(tenantData.member_count !== undefined
+          ? { member_count: tenantData.member_count }
+          : {}),
+        ...(tenantData.description
+          ? { description: tenantData.description }
+          : {}),
       };
 
       setCurrentTenant(context);
@@ -219,7 +223,7 @@ export function TenantProvider({
         setCurrentTenantId(personalTenant.id);
       }
     }
-  }, [currentTenantId, supabase, personalTenant]);
+  }, [currentTenantId, supabase, userTenants, personalTenant]);
 
   // Switch to a different tenant
   const switchTenant = useCallback(

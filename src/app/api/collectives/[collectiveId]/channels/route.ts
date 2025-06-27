@@ -5,18 +5,19 @@ import { z } from 'zod';
 
 import { createRequestScopedSupabaseClient } from '@/lib/supabase/request-scoped';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
-import { createMetricsTimer, recordAPIMetrics } from '@/lib/utils/metrics';
 import { applyRateLimit } from '@/lib/utils/rate-limiting';
 import { createAPILogger } from '@/lib/utils/structured-logger';
 
+const ENDPOINT = '/api/collectives/[collectiveId]/channels';
+
 // Environment-driven configuration constants
 const CHANNEL_CONFIG = {
-  PAGE_MAX: Number(process.env.CHANNEL_PAGE_MAX) || 200, // Increased default to handle client requests
-  PAGE_DEFAULT: Number(process.env.CHANNEL_PAGE_DEFAULT) || 50,
-  BATCH_SIZE: Number(process.env.CHANNEL_PARTICIPANT_BATCH_SIZE) || 1000,
-  CACHE_MAX_AGE: Number(process.env.CHANNEL_CACHE_MAX_AGE) || 30,
-  RATE_LIMIT_WINDOW: Number(process.env.CHANNEL_RATE_LIMIT_WINDOW) || 60000, // 1 minute
-  RATE_LIMIT_MAX: Number(process.env.CHANNEL_RATE_LIMIT_MAX) || 3,
+  PAGE_MAX: Number(process.env['CHANNEL_PAGE_MAX']) || 200, // Increased default to handle client requests
+  PAGE_DEFAULT: Number(process.env['CHANNEL_PAGE_DEFAULT']) || 50,
+  BATCH_SIZE: Number(process.env['CHANNEL_PARTICIPANT_BATCH_SIZE']) || 1000,
+  CACHE_MAX_AGE: Number(process.env['CHANNEL_CACHE_MAX_AGE']) || 30,
+  RATE_LIMIT_WINDOW: Number(process.env['CHANNEL_RATE_LIMIT_WINDOW']) || 60000, // 1 minute
+  RATE_LIMIT_MAX: Number(process.env['CHANNEL_RATE_LIMIT_MAX']) || 3,
 } as const;
 
 // HTTP status codes
@@ -235,7 +236,10 @@ async function createChannelWithManualTransaction(
     if (!participantResult.success) {
       // Rollback conversation
       await supabaseAdmin.from('conversations').delete().eq('id', conversationId);
-      return { success: false, error: participantResult.error };
+      return { 
+        success: false, 
+        ...(participantResult.error ? { error: participantResult.error } : {})
+      };
     }
 
     return {
@@ -280,8 +284,7 @@ export async function GET(
   request: NextRequest, 
   context: { params: Promise<{ collectiveId: string }> } // Fixed: params IS a Promise in Next.js 15
 ): Promise<NextResponse> {
-  const logger = createAPILogger(request, '/api/collectives/[collectiveId]/channels');
-  const timer = createMetricsTimer();
+  const logger = createAPILogger(request, ENDPOINT);
   let userId: string | undefined;
 
   try {
@@ -316,15 +319,6 @@ export async function GET(
     const paginationResult = PaginationSchema.safeParse(processedParams);
 
     if (!paginationResult.success) {
-      const duration = timer();
-      recordAPIMetrics({
-        endpoint: '/api/collectives/[collectiveId]/channels',
-        method: 'GET',
-        statusCode: HTTP_STATUS.BAD_REQUEST,
-        duration,
-        error: 'Invalid pagination parameters',
-      });
-
       logger.error('Pagination validation failed', {
         error: new Error('Pagination validation failed'),
         metadata: {
@@ -354,18 +348,9 @@ export async function GET(
     } = await supabase.auth.getUser();
 
     if (authError !== null || user === null) {
-      const duration = timer();
-      recordAPIMetrics({
-        endpoint: '/api/collectives/[collectiveId]/channels',
-        method: 'GET',
-        statusCode: HTTP_STATUS.UNAUTHORIZED,
-        duration,
-        error: 'Authentication failed',
-      });
-
       logger.warn('Unauthorized channels access attempt', {
         statusCode: HTTP_STATUS.UNAUTHORIZED,
-        error: authError?.message,
+        ...(authError?.message ? { error: authError.message } : {}),
         metadata: {
           collectiveId,
         },
@@ -384,16 +369,6 @@ export async function GET(
     );
 
     if (!isMember) {
-      const duration = timer();
-      recordAPIMetrics({
-        endpoint: '/api/collectives/[collectiveId]/channels',
-        method: 'GET',
-        statusCode: HTTP_STATUS.FORBIDDEN,
-        duration,
-        userId,
-        error: 'Not a collective member',
-      });
-
       return NextResponse.json({ error: 'Forbidden' }, { status: HTTP_STATUS.FORBIDDEN });
     }
 
@@ -419,16 +394,6 @@ export async function GET(
     const { data: channels, error: chanErr } = await chanQuery;
 
     if (chanErr !== null) {
-      const duration = timer();
-      recordAPIMetrics({
-        endpoint: '/api/collectives/[collectiveId]/channels',
-        method: 'GET',
-        statusCode: HTTP_STATUS.INTERNAL_SERVER_ERROR,
-        duration,
-        userId,
-        error: 'Database query failed',
-      });
-
       logger.error('Failed to fetch channels', {
         userId,
         statusCode: HTTP_STATUS.INTERNAL_SERVER_ERROR,
@@ -451,15 +416,6 @@ export async function GET(
     const ifNoneMatch = request.headers.get('if-none-match');
 
     if (ifNoneMatch === etag) {
-      const duration = timer();
-      recordAPIMetrics({
-        endpoint: '/api/collectives/[collectiveId]/channels',
-        method: 'GET',
-        statusCode: 304,
-        duration,
-        userId,
-      });
-
       return new NextResponse(null, { 
         status: 304,
         headers: {
@@ -469,19 +425,9 @@ export async function GET(
       });
     }
 
-    const duration = timer();
-    recordAPIMetrics({
-      endpoint: '/api/collectives/[collectiveId]/channels',
-      method: 'GET',
-      statusCode: HTTP_STATUS.OK,
-      duration,
-      userId,
-    });
-
     logger.info('Successfully fetched channels', {
       userId,
       statusCode: HTTP_STATUS.OK,
-      duration,
       metadata: {
         collectiveId,
         channelCount: channelData.length,
@@ -498,20 +444,9 @@ export async function GET(
     });
 
   } catch (error: unknown) {
-    const duration = timer();
-    recordAPIMetrics({
-      endpoint: '/api/collectives/[collectiveId]/channels',
-      method: 'GET',
-      statusCode: HTTP_STATUS.INTERNAL_SERVER_ERROR,
-      duration,
-      userId,
-      error: error instanceof Error ? error.message : 'Unknown error',
-    });
-
     logger.error('Channels fetch operation failed', {
-      userId,
+      ...(userId ? { userId } : {}),
       statusCode: HTTP_STATUS.INTERNAL_SERVER_ERROR,
-      duration,
       error: error instanceof Error ? error : new Error(String(error)),
     });
 
@@ -526,8 +461,7 @@ export async function POST(
   request: NextRequest, 
   context: { params: Promise<{ collectiveId: string }> } // Fixed: params IS a Promise in Next.js 15
 ): Promise<NextResponse> {
-  const logger = createAPILogger(request, '/api/collectives/[collectiveId]/channels');
-  const timer = createMetricsTimer();
+  const logger = createAPILogger(request, ENDPOINT);
   let userId: string | undefined;
 
   try {
@@ -543,18 +477,9 @@ export async function POST(
     } = await supabase.auth.getUser();
 
     if (authError !== null || user === null) {
-      const duration = timer();
-      recordAPIMetrics({
-        endpoint: '/api/collectives/[collectiveId]/channels',
-        method: 'POST',
-        statusCode: HTTP_STATUS.UNAUTHORIZED,
-        duration,
-        error: 'Authentication failed',
-      });
-
       logger.warn('Unauthorized channel creation attempt', {
         statusCode: HTTP_STATUS.UNAUTHORIZED,
-        error: authError?.message,
+        ...(authError?.message ? { error: authError.message } : {}),
         metadata: {
           collectiveId,
         },
@@ -568,16 +493,6 @@ export async function POST(
     // Rate limiting (issue #11)
     const rateLimitResult = await applyRateLimit(request, userId);
     if (!rateLimitResult.allowed) {
-      const duration = timer();
-      recordAPIMetrics({
-        endpoint: '/api/collectives/[collectiveId]/channels',
-        method: 'POST',
-        statusCode: HTTP_STATUS.TOO_MANY_REQUESTS,
-        duration,
-        userId,
-        error: 'Rate limit exceeded',
-      });
-
       logger.warn('Rate limit exceeded for channel creation', {
         userId,
         statusCode: HTTP_STATUS.TOO_MANY_REQUESTS,
@@ -603,16 +518,6 @@ export async function POST(
     );
 
     if (!hasAccess) {
-      const duration = timer();
-      recordAPIMetrics({
-        endpoint: '/api/collectives/[collectiveId]/channels',
-        method: 'POST',
-        statusCode: HTTP_STATUS.FORBIDDEN,
-        duration,
-        userId,
-        error: 'Insufficient permissions',
-      });
-
       return NextResponse.json({ error: 'Forbidden' }, { status: HTTP_STATUS.FORBIDDEN });
     }
 
@@ -621,31 +526,11 @@ export async function POST(
     try {
       body = await request.json() as unknown;
     } catch {
-      const duration = timer();
-      recordAPIMetrics({
-        endpoint: '/api/collectives/[collectiveId]/channels',
-        method: 'POST',
-        statusCode: HTTP_STATUS.BAD_REQUEST,
-        duration,
-        userId,
-        error: 'Invalid JSON',
-      });
-
       return NextResponse.json({ error: 'Invalid JSON' }, { status: HTTP_STATUS.BAD_REQUEST });
     }
 
     const parsed = ChannelBodySchema.safeParse(body);
     if (!parsed.success) {
-      const duration = timer();
-      recordAPIMetrics({
-        endpoint: '/api/collectives/[collectiveId]/channels',
-        method: 'POST',
-        statusCode: HTTP_STATUS.BAD_REQUEST,
-        duration,
-        userId,
-        error: 'Invalid request body',
-      });
-
       return NextResponse.json(
         { error: 'Invalid body', details: parsed.error.flatten() },
         { status: HTTP_STATUS.BAD_REQUEST },
@@ -662,16 +547,6 @@ export async function POST(
     );
 
     if (!isUnique) {
-      const duration = timer();
-      recordAPIMetrics({
-        endpoint: '/api/collectives/[collectiveId]/channels',
-        method: 'POST',
-        statusCode: HTTP_STATUS.CONFLICT,
-        duration,
-        userId,
-        error: 'Channel title already exists',
-      });
-
       return NextResponse.json(
         { error: 'A channel with this title already exists in this collective' },
         { status: HTTP_STATUS.CONFLICT }
@@ -686,20 +561,10 @@ export async function POST(
     );
 
     if (!result.success) {
-      const duration = timer();
-      recordAPIMetrics({
-        endpoint: '/api/collectives/[collectiveId]/channels',
-        method: 'POST',
-        statusCode: HTTP_STATUS.INTERNAL_SERVER_ERROR,
-        duration,
-        userId,
-        error: 'Channel creation failed',
-      });
-
       logger.error('Failed to create channel', {
         userId,
         statusCode: HTTP_STATUS.INTERNAL_SERVER_ERROR,
-        error: result.error,
+        ...(result.error ? { error: result.error } : {}),
         metadata: {
           collectiveId,
           title,
@@ -712,19 +577,9 @@ export async function POST(
       );
     }
 
-    const duration = timer();
-    recordAPIMetrics({
-      endpoint: '/api/collectives/[collectiveId]/channels',
-      method: 'POST',
-      statusCode: HTTP_STATUS.CREATED,
-      duration,
-      userId,
-    });
-
     logger.info('Successfully created channel', {
       userId,
       statusCode: HTTP_STATUS.CREATED,
-      duration,
       metadata: {
         collectiveId,
         conversationId: result.conversationId,
@@ -742,20 +597,9 @@ export async function POST(
     });
 
   } catch (error: unknown) {
-    const duration = timer();
-    recordAPIMetrics({
-      endpoint: '/api/collectives/[collectiveId]/channels',
-      method: 'POST',
-      statusCode: HTTP_STATUS.INTERNAL_SERVER_ERROR,
-      duration,
-      userId,
-      error: error instanceof Error ? error.message : 'Unknown error',
-    });
-
     logger.error('Channel creation operation failed', {
-      userId,
+      ...(userId ? { userId } : {}),
       statusCode: HTTP_STATUS.INTERNAL_SERVER_ERROR,
-      duration,
       error: error instanceof Error ? error : new Error(String(error)),
     });
 

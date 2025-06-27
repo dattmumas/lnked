@@ -170,7 +170,7 @@ export class VideoRepository {
     };
 
     if (duration !== undefined) {
-      updates.duration = duration;
+      updates['duration'] = duration;
     }
 
     const { data, error } = await this.supabase

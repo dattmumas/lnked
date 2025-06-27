@@ -3,84 +3,75 @@
 
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 
 import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
+import { UserTenantsResponse } from '@/types/tenant.types';
 
-import type { UserTenantsResponse } from '@/types/tenant.types';
-
-/**
- * Hook to get all tenants that the current user belongs to
- * @returns User tenants, loading state, and refresh function
- */
-export function useUserTenants(): {
+export interface UseUserTenantsReturn {
   tenants: UserTenantsResponse[];
+  currentTenant: UserTenantsResponse | null;
   personalTenant: UserTenantsResponse | null;
   collectiveTenants: UserTenantsResponse[];
   isLoading: boolean;
   error: string | null;
   refreshTenants: () => Promise<void>;
-} {
-  const [tenants, setTenants] = useState<UserTenantsResponse[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  setCurrentTenantId: (tenantId: string | null) => void;
+}
 
-  const fetchTenants = useCallback(async () => {
-    try {
-      setIsLoading(true);
-      setError(null);
+/**
+ * Hook to get all tenants that the current user belongs to
+ * @returns User tenants, loading state, and refresh function
+ */
+export function useUserTenants(userId?: string): UseUserTenantsReturn {
+  const [currentTenantId, setCurrentTenantId] = useState<string | null>(userId ?? null);
+  const queryClient = useQueryClient();
 
+  const {
+    data: tenants = [],
+    isLoading,
+    isError,
+    error,
+  } = useQuery<UserTenantsResponse[], Error>({
+    queryKey: ['user-tenants', userId],
+    queryFn: async () => {
+      if (!userId) return [];
       const supabase = createSupabaseBrowserClient();
+      const { data, error } = await supabase.rpc('get_user_tenants');
+      if (error) throw error;
+      // The RPC returns a different shape, let's map it to have an 'id' for consistency
+      return (data || []).map(t => ({ ...t, id: t.tenant_id }));
+    },
+    enabled: Boolean(userId),
+  });
 
-      // Get current user
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
-      if (authError || !user) {
-        throw new Error('Authentication required');
-      }
+  const { personalTenant, collectiveTenants } = useMemo(() => {
+    const personal = tenants.find(t => t.is_personal) ?? null;
+    const collectives = tenants.filter(t => !t.is_personal);
+    return { personalTenant: personal, collectiveTenants: collectives };
+  }, [tenants]);
 
-  
-
-      // Use the RPC function to get user tenants (this bypasses RLS issues)
-      const { data: tenantData, error: tenantError } = await supabase
-        .rpc('get_user_tenants');
-
-      console.log('📡 RPC response:', { tenantData, tenantError });
-
-      if (tenantError) {
-        console.error('❌ RPC error:', tenantError);
-        throw tenantError;
-      }
-
-      // The RPC function returns data in the correct format already
-      const transformedTenants: UserTenantsResponse[] = tenantData || [];
-
-      console.log('📋 Fetched tenants:', transformedTenants);
-      setTenants(transformedTenants);
-
-    } catch (err) {
-      console.error('Error fetching user tenants:', err);
-      setError(err instanceof Error ? err.message : 'Failed to fetch tenants');
-      setTenants([]);
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+  const currentTenant = useMemo(() => {
+    return tenants.find(t => t.tenant_id === currentTenantId) ?? personalTenant;
+  }, [tenants, currentTenantId, personalTenant]);
 
   useEffect(() => {
-    fetchTenants();
-  }, [fetchTenants]);
-
-  // Derived data
-  const personalTenant = tenants.find(t => t.is_personal) || null;
-  const collectiveTenants = tenants.filter(t => !t.is_personal);
+    if (!currentTenantId && personalTenant) {
+      setCurrentTenantId(personalTenant.tenant_id);
+    }
+  }, [personalTenant, currentTenantId]);
 
   return {
     tenants,
     personalTenant,
     collectiveTenants,
+    currentTenant,
     isLoading,
-    error,
-    refreshTenants: fetchTenants,
+    error: isError ? error.message : null,
+    refreshTenants: () =>
+      queryClient.invalidateQueries({ queryKey: ['user-tenants', userId] }),
+    setCurrentTenantId,
   };
 }
 

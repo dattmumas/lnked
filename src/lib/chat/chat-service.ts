@@ -1,5 +1,8 @@
 import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
 
+import { createServerSupabaseClient } from '../supabase/server';
+
+
 import type { MessageWithSender } from './types';
 import type { Database, Json } from '@/lib/database.types';
 import type { SupabaseClient } from '@supabase/supabase-js';
@@ -60,42 +63,22 @@ class ChatService {
   }
 
   async getMessages(
-    conversationId: string,
-    limit = DEFAULT_PAGE_SIZE,
-    offset = 0
-  ): ServiceResponse<MessageWithSender[]> {
-    
-    const { data, error } = await this.supabase
-      .from('messages')
-      .select(`
-        *,
-        sender:users(
-          id,
-          username,
-          full_name,
-          avatar_url
-        ),
-        reply_to:messages!reply_to_id(
-          id,
-          content,
-          deleted_at,
-          sender:users(
-            id,
-            username,
-            full_name,
-            avatar_url
-          )
-        )
-      `)
-      .eq('conversation_id', conversationId)
-      .order('created_at', { ascending: false })
-      .range(offset, offset + limit - 1);
+    conversationId: string
+  ): Promise<{ data: MessageWithSender[] | null; error: Error | null }> {
+    try {
+      const { data, error } = await this.supabase
+        .from('messages')
+        .select('*, sender:users(*)')
+        .eq('conversation_id', conversationId)
+        .order('created_at', { ascending: true });
 
-    if (error !== null) return { data: null, error };
-
-    // Reverse to show oldest first
-    const reversedData = data !== null ? data.reverse() : [];
-    return { data: reversedData as MessageWithSender[], error: null };
+      if (error) throw error;
+      
+      return { data: data as MessageWithSender[], error: null };
+    } catch (error) {
+      console.error('Error fetching messages:', error);
+      return { data: null, error: error as Error };
+    }
   }
 
   async sendMessage(params: {
@@ -160,9 +143,9 @@ class ChatService {
     const { data: conversation, error: convError } = await this.supabase
       .from('conversations')
       .insert({
-        title: params.title,
+        ...(params.title ? { title: params.title } : {}),
         type: params.type,
-        description: params.description,
+        ...(params.description ? { description: params.description } : {}),
         is_private: params.is_private ?? false,
         created_by: user.id
       })
@@ -271,4 +254,20 @@ class ChatService {
   }
 }
 
-export const chatService = new ChatService(createSupabaseBrowserClient()); 
+export const chatService = new ChatService(createSupabaseBrowserClient());
+
+export async function getUnreadMessageCountForUser(userId: string): Promise<number> {
+  const supabase = await createServerSupabaseClient();
+  const { data, error } = await supabase.rpc('get_total_unread_message_count', {
+    p_user_id: userId,
+  });
+
+  if (error) {
+    console.error('Error fetching unread message count:', error);
+    return 0;
+  }
+
+  return data ?? 0;
+}
+
+const BATCH_SIZE = 100; 

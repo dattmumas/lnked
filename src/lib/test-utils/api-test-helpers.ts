@@ -16,11 +16,9 @@ export const createTestRequest = (
 ): NextRequest => {
   const { method = 'GET', body, headers = {}, params = {} } = options
   
-  const requestBody = typeof body === 'object' ? JSON.stringify(body) : body
-  
   const request = new NextRequest(url, {
     method,
-    body: requestBody,
+    ...(body ? { body: JSON.stringify(body) } : {}),
     headers: {
       'Content-Type': 'application/json',
       ...headers,

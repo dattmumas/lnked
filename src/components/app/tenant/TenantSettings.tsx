@@ -51,6 +51,7 @@ import { useTenant } from '@/providers/TenantProvider';
 
 import { TenantPermissions, PermissionGate } from './TenantPermissions';
 
+import type { TenantSettingsFormData } from '@/types/tenant.types';
 
 // Form schemas
 const generalSettingsSchema = z.object({
@@ -168,7 +169,17 @@ export function TenantSettings({
 
   const handleGeneralSubmit = async (data: GeneralSettingsForm) => {
     try {
-      await updateSettings(data);
+      const updateData: Partial<TenantSettingsFormData> = {
+        name: data.name,
+        is_public: data.is_public,
+      };
+
+      // Only include description if it has a value
+      if (data.description && data.description.trim().length > 0) {
+        updateData.description = data.description;
+      }
+
+      await updateSettings(updateData);
       toast('Settings updated successfully', { type: 'success' });
     } catch (error) {
       toast(

@@ -61,7 +61,7 @@ const CACHE_MAX_AGE_SECONDS = 60;
 
 // Environment-based encoding tiers - Fix #13
 const getAllowedEncodingTiers = (): readonly string[] => {
-  const envTiers = process.env.MUX_ALLOWED_TIERS;
+  const envTiers = process.env['MUX_ALLOWED_TIERS'];
   if (envTiers !== undefined && envTiers.trim().length > 0) {
     return envTiers.split(',').map(tier => tier.trim()) as readonly string[];
   }
@@ -81,8 +81,8 @@ let muxClient: Mux | null = null;
 
 function getMuxClient(): Mux {
   if (muxClient === null) {
-    const id = process.env.MUX_TOKEN_ID;
-    const secret = process.env.MUX_TOKEN_SECRET;
+    const id = process.env['MUX_TOKEN_ID'];
+    const secret = process.env['MUX_TOKEN_SECRET'];
     
     if (id === undefined || id.trim().length === 0) {
       throw new Error('MUX_TOKEN_ID environment variable is required');
@@ -168,8 +168,8 @@ async function withMuxRetry<T>(
 }
 
 // Fix #12: Central logging with sampling and levels
-const LOG_LEVEL = process.env.LOG_LEVEL ?? 'error';
-const LOG_SAMPLING_RATE = parseFloat(process.env.LOG_SAMPLING_RATE ?? '1.0');
+const LOG_LEVEL = process.env['LOG_LEVEL'] ?? 'error';
+const LOG_SAMPLING_RATE = parseFloat(process.env['LOG_SAMPLING_RATE'] ?? '1.0');
 
 function shouldLog(): boolean {
   return Math.random() < LOG_SAMPLING_RATE;
@@ -181,8 +181,8 @@ function logError(context: string, error: unknown, metadata?: Record<string, unk
   const sanitizedMetadata = {
     ...metadata,
     // Redact sensitive fields
-    user_id: metadata?.user_id !== undefined ? '[REDACTED]' : undefined,
-    video_id: metadata?.video_id !== undefined ? metadata.video_id : undefined,
+    user_id: metadata?.['user_id'] !== undefined ? '[REDACTED]' : undefined,
+    video_id: metadata?.['video_id'] !== undefined ? metadata['video_id'] : undefined,
   };
   
   // In production, send to central logging service (Datadog, Loki, etc.)
@@ -507,13 +507,13 @@ export async function PATCH(
     const updateData: Record<string, unknown> = { ...body };
 
     // Handle privacy setting changes with proper Mux sync
-    if (body.privacy_setting !== undefined) {
-      const newIsPublic = body.privacy_setting === 'public';
+    if (body['privacy_setting'] !== undefined) {
+      const newIsPublic = body['privacy_setting'] === 'public';
       
       // Always update database fields
-      updateData.is_public = newIsPublic;
-      updateData.playback_policy = newIsPublic ? 'public' : 'signed';
-      delete updateData.privacy_setting;
+      updateData['is_public'] = newIsPublic;
+      updateData['playback_policy'] = newIsPublic ? 'public' : 'signed';
+      delete updateData['privacy_setting'];
       
       // Update playback policy in Mux if asset exists and is ready
       if (video.mux_asset_id !== null && video.mux_asset_id !== undefined && video.mux_asset_id.trim() !== '') {
@@ -533,7 +533,7 @@ export async function PATCH(
       return NextResponse.json({ data: { unchanged: true } });
     }
 
-    updateData.updated_at = new Date().toISOString();
+    updateData['updated_at'] = new Date().toISOString();
 
     // Fix #14: Use authenticated client to respect RLS
     const { data, error } = await supabase

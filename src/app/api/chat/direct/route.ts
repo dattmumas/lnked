@@ -11,9 +11,9 @@ import { createAPILogger } from '@/lib/utils/structured-logger';
 
 // Environment-driven constants with safe production defaults
 const CONVERSATION_CONFIG = {
-  DEFAULT_LIMIT: parseInt(process.env.DM_LIMIT_DEFAULT ?? '50', 10),
-  MAX_LIMIT: parseInt(process.env.DM_LIMIT_MAX ?? '100', 10),
-  MIN_LIMIT: parseInt(process.env.DM_LIMIT_MIN ?? '1', 10),
+  DEFAULT_LIMIT: parseInt(process.env['DM_LIMIT_DEFAULT'] ?? '50', 10),
+  MAX_LIMIT: parseInt(process.env['DM_LIMIT_MAX'] ?? '100', 10),
+  MIN_LIMIT: parseInt(process.env['DM_LIMIT_MIN'] ?? '1', 10),
 } as const;
 
 const HTTP_STATUS = {
@@ -83,7 +83,7 @@ function createErrorResponse(
   };
 
   if (details !== undefined && process.env.NODE_ENV === 'development') {
-    response.details = details;
+    response['details'] = details;
   }
 
   return NextResponse.json(response, { status });
@@ -280,7 +280,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       );
     }
 
-    const result = rpcResult[0];
+    const result = rpcResult[0]!; // Safe because we checked array length above
     const isExisting = result.is_existing;
 
     logger.info(`Direct conversation ${isExisting ? 'found' : 'created'}`, {

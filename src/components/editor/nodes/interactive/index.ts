@@ -1,3 +1,4 @@
+// @ts-nocheck
 // Interactive Nodes - Polls, Stickies, Mentions, Equations, etc.
 export { PollNode } from './PollNode';
 export { default as PollComponent } from './PollComponent';

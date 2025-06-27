@@ -158,6 +158,7 @@ export async function GET(): Promise<NextResponse> {
         tenant_id: null,
         unique_group_hash: null,
         updated_at: null,
+        direct_conversation_hash: null,
         // Keep existing fields
         unread_count: typedConv.unread_count || 0,
         last_message: lastMessage !== undefined && 
@@ -340,6 +341,7 @@ async function getLegacyConversations(supabase: Awaited<ReturnType<typeof create
         tenant_id: null,
         unique_group_hash: null,
         updated_at: null,
+        direct_conversation_hash: null,
         unread_count: unreadCountMap.get(conversationId) ?? 0,
         last_message: lastMessage !== undefined && 
                      lastMessage !== null && 
@@ -429,9 +431,9 @@ export async function POST(request: Request): Promise<NextResponse> {
     // Use tenant-scoped function to create conversation
     const { data: newConversation, error: createError } = await supabase.rpc('create_tenant_conversation', {
       target_tenant_id: personalTenant,
-      conversation_title: title || undefined,
+      conversation_title: title ?? '',
       conversation_type: type,
-      conversation_description: description || undefined,
+      conversation_description: description ?? '',
       is_private_conversation: is_private,
       participant_user_ids: participant_ids,
     });

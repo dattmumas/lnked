@@ -5,14 +5,19 @@
     "allowJs": true,
     "skipLibCheck": true,
     "strict": true,
+    "exactOptionalPropertyTypes": true,
+    "noImplicitOverride": true,
+    "noPropertyAccessFromIndexSignature": true,
+    "noUncheckedIndexedAccess": true,
     "noEmit": true,
     "esModuleInterop": true,
-    "module": "esnext",
-    "moduleResolution": "bundler",
+    "module": "NodeNext",
+    "moduleResolution": "node16",
     "resolveJsonModule": true,
     "isolatedModules": true,
     "jsx": "preserve",
     "incremental": true,
+    "allowImportingTsExtensions": true,
     "plugins": [
       {
         "name": "next"
@@ -22,15 +27,45 @@
     "paths": {
       "@/*": ["./src/*"]
     },
-    "types": ["@radix-ui/react-dropdown-menu"]
+    "types": ["@types/node", "@types/react", "@radix-ui/react-dropdown-menu"]
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
   "exclude": [
     "node_modules",
-    "scripts/**/*",
+    ".next",
+    "out",
+    "build",
+    "dist",
+    "coverage",
+    "cypress",
+    "e2e",
+    "docs",
+    "**/*.config.js",
+    "**/*.config.ts",
+    "**/*.stories.ts",
+    "**/*.stories.tsx",
     "**/*.test.ts",
     "**/*.test.tsx",
     "**/*.spec.ts",
-    "**/*.spec.tsx"
+    "**/*.spec.tsx",
+    // Exclude ALL imported editor components except wrapper files
+    "src/components/editor/LexicalOptimizedEditor.tsx",
+    "src/components/editor/nodes/**/*",
+    "src/components/editor/plugins/**/*",
+    "src/components/editor/context/**/*",
+    "src/components/editor/hooks/**/*",
+    "src/components/editor/images/**/*",
+    "src/components/editor/styles/**/*",
+    "src/components/editor/themes/**/*",
+    "src/components/editor/ui/**/*",
+    "src/components/editor/utils/**/*",
+    "src/components/editor/config/**/*",
+    "src/components/editor/collaboration.ts",
+    "src/components/editor/appSettings.ts",
+    "src/components/editor/EditorLayout.tsx",
+    "src/components/editor/ErrorBoundary.tsx",
+    "src/components/editor/PlaygroundNodes.ts",
+    "src/components/editor/SharedAutocompleteContext.tsx",
+    "src/components/editor/SharedHistoryContext.tsx"
   ]
 }

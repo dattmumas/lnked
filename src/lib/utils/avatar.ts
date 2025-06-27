@@ -138,21 +138,21 @@ export interface ImageTransformOptions {
  */
 export function extractSupabaseImagePath(url: string): { bucket: string; path: string } | undefined {
   try {
-    // Pattern: https://project.supabase.co/storage/v1/object/public/bucket/path/to/file.ext
-    const urlObj = new URL(url);
-    const pathParts = urlObj.pathname.split('/');
-    
-    // Find the bucket and path after /storage/v1/object/public/
-    const publicIndex = pathParts.findIndex(part => part === 'public');
-    if (publicIndex === -1 || publicIndex + 1 >= pathParts.length) {
-      return undefined;
+    // Extract bucket and path
+    const pathMatch = /^https?:\/\/[^/]+\/storage\/v1\/object\/public\/([^/]+)\/(.+)$/.exec(
+      url,
+    );
+    if (pathMatch === null || pathMatch === undefined) {
+      throw new Error('Invalid storage URL format');
     }
+
+    const bucket = pathMatch[1];
+    const path = pathMatch[2];
     
-    const bucket = pathParts[publicIndex + 1];
-    const path = pathParts
-      .slice(publicIndex + PATH_OFFSET_AFTER_PUBLIC)
-      .join('/');
-    
+    if (!bucket || !path) {
+      throw new Error('Could not extract bucket and path from URL');
+    }
+
     return { bucket, path };
   } catch {
     return undefined;
@@ -176,16 +176,26 @@ export function getOptimizedAvatarUrl(
   }
   
   try {
+    const transformOptions: {
+      quality: number;
+      resize: string;
+      width?: number;
+      height?: number;
+      format?: string;
+    } = {
+      quality: options.quality ?? QUALITY.MEDIUM,
+      resize: options.resize || 'cover',
+    };
+    
+    if (options.width !== undefined) transformOptions.width = options.width;
+    if (options.height !== undefined) transformOptions.height = options.height;
+    if (options.format) transformOptions.format = options.format;
+    
     const { data } = supabase.storage
       .from(pathInfo.bucket)
       .getPublicUrl(pathInfo.path, {
-        transform: {
-          width: options.width,
-          height: options.height,
-          quality: options.quality ?? QUALITY.MEDIUM,
-          resize: options.resize || 'cover',
-          ...(options.format && { format: options.format }),
-        },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        transform: transformOptions as any,
       });
     
     return data.publicUrl;

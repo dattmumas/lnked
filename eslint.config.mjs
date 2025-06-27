@@ -35,19 +35,13 @@ const eslintConfig = [
       'src/lib/database.types.ts',
       '**/database.types.ts',
 
+      // Type declaration files
+      'src/@types/**/*.d.ts',
+
       // Data access layer
       'src/lib/data-access/**/*',
 
       // Lexical editor files (third-party code)
-      'src/components/editor/nodes/**/*',
-      'src/components/editor/plugins/**/*',
-      'src/components/editor/themes/**/*',
-      'src/components/editor/ui/**/*',
-      'src/components/editor/utils/**/*',
-      'src/components/editor/hooks/**/*',
-      'src/components/editor/images/**/*',
-      'src/components/editor/context/**/*',
-      'src/components/editor/config/**/*',
       'src/components/editor/**/*',
 
       // Landing page files

@@ -23,7 +23,7 @@ const PostEditor = dynamic(() => import('@/components/editor/PostEditor'), {
 export default function EditPostEditorPage(): React.ReactElement {
   const router = useRouter();
   const params = useParams();
-  const postId = params.slug as string;
+  const postId = params['slug'] as string;
   const [showUnsavedWarning, setShowUnsavedWarning] = useState(false);
 
   const {

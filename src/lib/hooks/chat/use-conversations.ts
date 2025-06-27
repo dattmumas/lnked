@@ -45,36 +45,6 @@ export function useConversations(): {
   };
 }
 
-// Hook to fetch a single conversation
-export function useConversation(conversationId: string): {
-  conversation: ConversationWithParticipants | undefined;
-  isLoading: boolean;
-  error: Error | null;
-} {
-  const queryClient = useQueryClient();
-  
-  // Get conversation from the conversations list cache instead of a separate endpoint
-  const conversationsQuery = useQuery({
-    queryKey: conversationKeys.lists(),
-    queryFn: async () => {
-      const result = await chatApiClient.getConversations();
-      return result.conversations;
-    },
-    staleTime: CONVERSATION_STALE_TIME,
-    retry: 3,
-    retryDelay: CONVERSATION_RETRY_DELAY,
-  });
-
-  // Find the specific conversation in the list
-  const conversation = conversationsQuery.data?.find(c => c.id === conversationId);
-
-  return {
-    conversation,
-    isLoading: conversationsQuery.isLoading,
-    error: conversationsQuery.error,
-  };
-}
-
 // Hook to create a new conversation
 export function useCreateConversation(): {
   mutate: (params: {
@@ -100,9 +70,8 @@ export function useCreateConversation(): {
       // Map frontend parameter names to API parameter names
       return chatApiClient.createConversation({
         type: params.type,
-        title: params.title,
-        description: undefined, // Not used by frontend
-        is_private: params.isPrivate,
+        ...(params.title ? { title: params.title } : {}),
+        ...(params.isPrivate !== undefined ? { is_private: params.isPrivate } : {}),
         participant_ids: params.participantIds,
       });
     },
@@ -152,6 +121,20 @@ export function useMarkAsRead(): {
 
   return useMutation({
     mutationFn: async (conversationId: string): Promise<void> => {
+      // --- Guard Clause ---
+      // Get conversation from cache to check if it's already read
+      const conversations = queryClient.getQueryData<ConversationWithParticipants[]>(
+        conversationKeys.lists()
+      );
+      const targetConversation = conversations?.find(c => c.id === conversationId);
+      
+      // If we have the conversation and its unread count is 0, do nothing.
+      if (targetConversation && (targetConversation.unread_count ?? 0) === 0) {
+        console.log(`[useMarkAsRead] Skipping mutation for ${conversationId}, already marked as read.`);
+        return;
+      }
+      // --- End Guard ---
+      
       await chatApiClient.markAsRead(conversationId);
     },
     onSuccess: (_, conversationId) => {

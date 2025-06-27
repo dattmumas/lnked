@@ -11,9 +11,9 @@ import { createAPILogger } from '@/lib/utils/structured-logger';
 
 // Environment-driven configuration constants
 const JOIN_CONFIG = {
-  RATE_LIMIT_WINDOW: Number(process.env.JOIN_RATE_LIMIT_WINDOW) || 60000, // 1 minute
-  RATE_LIMIT_MAX: Number(process.env.JOIN_RATE_LIMIT_MAX) || 10,
-  CACHE_MAX_AGE: Number(process.env.JOIN_CACHE_MAX_AGE) || 30,
+  RATE_LIMIT_WINDOW: Number(process.env['JOIN_RATE_LIMIT_WINDOW']) || 60000, // 1 minute
+  RATE_LIMIT_MAX: Number(process.env['JOIN_RATE_LIMIT_MAX']) || 10,
+  CACHE_MAX_AGE: Number(process.env['JOIN_CACHE_MAX_AGE']) || 30,
 } as const;
 
 // HTTP status codes
@@ -252,7 +252,7 @@ export async function POST(
 
       logger.warn('Unauthorized channel join attempt', {
         statusCode: HTTP_STATUS.UNAUTHORIZED,
-        error: authError?.message,
+        ...(authError?.message ? { error: authError.message } : {}),
         metadata: { collectiveId, channelId },
       });
 
@@ -443,7 +443,7 @@ export async function POST(
       logger.error('Failed to join channel', {
         userId,
         statusCode: HTTP_STATUS.INTERNAL_SERVER_ERROR,
-        error: result.error,
+        ...(result.error ? { error: result.error } : {}),
         metadata: {
           collectiveId,
           channelId,
@@ -501,12 +501,12 @@ export async function POST(
       method: 'POST',
       statusCode: HTTP_STATUS.INTERNAL_SERVER_ERROR,
       duration,
-      userId,
+      ...(userId ? { userId } : {}),
       error: error instanceof Error ? error.message : 'Unknown error',
     });
 
     logger.error('Channel join operation failed', {
-      userId,
+      ...(userId ? { userId } : {}),
       statusCode: HTTP_STATUS.INTERNAL_SERVER_ERROR,
       duration,
       error: error instanceof Error ? error : new Error(String(error)),
@@ -551,7 +551,7 @@ export async function DELETE(
 
       logger.warn('Unauthorized channel leave attempt', {
         statusCode: HTTP_STATUS.UNAUTHORIZED,
-        error: authError?.message,
+        ...(authError?.message ? { error: authError.message } : {}),
         metadata: { collectiveId, channelId },
       });
 
@@ -647,7 +647,7 @@ export async function DELETE(
       logger.error('Failed to leave channel', {
         userId,
         statusCode: HTTP_STATUS.INTERNAL_SERVER_ERROR,
-        error: result.error,
+        ...(result.error ? { error: result.error } : {}),
         metadata: { collectiveId, channelId },
       });
 
@@ -692,12 +692,12 @@ export async function DELETE(
       method: 'DELETE',
       statusCode: HTTP_STATUS.INTERNAL_SERVER_ERROR,
       duration,
-      userId,
+      ...(userId ? { userId } : {}),
       error: error instanceof Error ? error.message : 'Unknown error',
     });
 
     logger.error('Channel leave operation failed', {
-      userId,
+      ...(userId ? { userId } : {}),
       statusCode: HTTP_STATUS.INTERNAL_SERVER_ERROR,
       duration,
       error: error instanceof Error ? error : new Error(String(error)),

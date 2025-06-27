@@ -114,22 +114,26 @@ export function useSupabaseRealtime<T extends Record<string, unknown>>(
   // Handle realtime payload with error boundary and debouncing
   const handleRealtimePayload = useCallback(
     (payload: RealtimePostgresChangesPayload<Record<string, unknown>>) => {
+      const validatedNew = payload.new
+        ? validator
+          ? validator(payload.new)
+            ? payload.new
+            : undefined
+          : (payload.new as T)
+        : undefined;
+
+      const validatedOld = payload.old
+        ? validator
+          ? validator(payload.old)
+            ? payload.old
+            : undefined
+          : (payload.old as T)
+        : undefined;
+
       const update: RealtimePayload<T> = {
         eventType: payload.eventType,
-        new: payload.new
-          ? validator
-            ? validator(payload.new)
-              ? payload.new
-              : undefined
-            : (payload.new as T)
-          : undefined,
-        old: payload.old
-          ? validator
-            ? validator(payload.old)
-              ? payload.old
-              : undefined
-            : (payload.old as T)
-          : undefined,
+        ...(validatedNew ? { new: validatedNew } : {}),
+        ...(validatedOld ? { old: validatedOld } : {}),
       };
 
       if (debounceMs > 0) {

@@ -29,7 +29,7 @@ export default function VideoUploadPageClient({
 
   return (
     <VideoUploadForm
-      collectiveId={collectiveId}
+      {...(collectiveId ? { collectiveId } : {})}
       onComplete={handleComplete}
       onCancel={handleCancel}
     />

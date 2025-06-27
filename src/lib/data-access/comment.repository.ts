@@ -221,10 +221,13 @@ export class CommentRepository {
       const hasMore = comments.length > clampedLimit;
       const resultComments = hasMore ? comments.slice(0, -1) : comments;
 
-      // Generate next cursor from last item
-      const nextCursor = hasMore && resultComments.length > 0 
-        ? Buffer.from(`${resultComments[resultComments.length - 1].created_at}:${resultComments[resultComments.length - 1].id}`).toString('base64')
-        : undefined;
+      let nextCursor: string | undefined;
+      if (hasMore && resultComments.length > 0) {
+        const last = resultComments[resultComments.length - 1];
+        if (last?.created_at && last?.id) {
+          nextCursor = Buffer.from(`${last.created_at}:${last.id}`).toString('base64');
+        }
+      }
 
       const parsedComments = parseCommentsWithAuthor(resultComments);
 
@@ -237,7 +240,7 @@ export class CommentRepository {
 
       return {
         data: parsedComments,
-        nextCursor,
+        ...(nextCursor ? { nextCursor } : {}),
         hasMore
       };
     } catch (error) {
@@ -277,9 +280,13 @@ export class CommentRepository {
       const hasMore = replies.length > clampedLimit;
       const resultReplies = hasMore ? replies.slice(0, -1) : replies;
 
-      const nextCursor = hasMore && resultReplies.length > 0
-        ? Buffer.from(`${resultReplies[resultReplies.length - 1].created_at}:${resultReplies[resultReplies.length - 1].id}`).toString('base64')
-        : undefined;
+      let nextCursor: string | undefined;
+      if (hasMore && resultReplies.length > 0) {
+        const lastR = resultReplies[resultReplies.length - 1];
+        if (lastR?.created_at && lastR?.id) {
+          nextCursor = Buffer.from(`${lastR.created_at}:${lastR.id}`).toString('base64');
+        }
+      }
 
       const parsedReplies = parseCommentsWithAuthor(resultReplies);
 
@@ -291,7 +298,7 @@ export class CommentRepository {
 
       return {
         data: parsedReplies,
-        nextCursor,
+        ...(nextCursor ? { nextCursor } : {}),
         hasMore
       };
     } catch (error) {
@@ -496,7 +503,7 @@ export class CommentRepository {
           reactionMap.set(commentId, new Set());
         }
         
-        reactionMap.get(commentId)!.add(type);
+        reactionMap.get(commentId)?.add(type);
       }
 
       return reactionMap;

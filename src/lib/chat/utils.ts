@@ -50,10 +50,13 @@ export function getDisplayName(user: {
   // Extract name from email if available
   if (typeof user.email === 'string' && user.email.trim().length > 0) {
     const emailName = user.email.split('@')[0];
-    // Convert email prefix to readable name (e.g., john.doe → John Doe)
+    if (!emailName) {
+      return 'Unknown User';
+    }
+    
     return emailName
       .split(/[._-]/)
-      .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+      .map(part => part.charAt(0).toUpperCase() + part.slice(1))
       .join(' ');
   }
   

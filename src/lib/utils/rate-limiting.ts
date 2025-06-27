@@ -17,13 +17,13 @@ interface RateLimitResult {
 
 const DEFAULT_CONFIGS = {
   notifications_per_user: {
-    maxRequests: parseInt(process.env.NOTIF_RATE_LIMIT_PER_USER ?? '60', 10), // 60 requests per hour
-    windowMs: parseInt(process.env.NOTIF_RATE_WINDOW_MS ?? '3600000', 10), // 1 hour
+    maxRequests: parseInt(process.env['NOTIF_RATE_LIMIT_PER_USER'] ?? '60', 10), // 60 requests per hour
+    windowMs: parseInt(process.env['NOTIF_RATE_WINDOW_MS'] ?? '3600000', 10), // 1 hour
     keyPrefix: 'notif_user',
   },
   notifications_per_ip: {
-    maxRequests: parseInt(process.env.NOTIF_RATE_LIMIT_PER_IP ?? '200', 10), // 200 requests per hour
-    windowMs: parseInt(process.env.NOTIF_RATE_WINDOW_MS ?? '3600000', 10), // 1 hour  
+    maxRequests: parseInt(process.env['NOTIF_RATE_LIMIT_PER_IP'] ?? '200', 10), // 200 requests per hour
+    windowMs: parseInt(process.env['NOTIF_RATE_WINDOW_MS'] ?? '3600000', 10), // 1 hour  
     keyPrefix: 'notif_ip',
   },
 } as const;
@@ -132,7 +132,7 @@ export function getClientIP(request: Request): string {
   if (forwardedFor !== null && forwardedFor !== undefined) {
     // x-forwarded-for can be a comma-separated list
     const ips = forwardedFor.split(',').map(ip => ip.trim());
-    return ips[0]; // First IP is usually the client
+    return ips[0] || 'unknown'; // First IP is usually the client
   }
   
   return 'unknown';
@@ -148,7 +148,7 @@ export async function applyRateLimit(
   const ip = getClientIP(request);
   const results = await Promise.all([
     // Check both user and IP limits
-    userId !== null && userId !== undefined ? checkRateLimit(userId, 'notifications_per_user') : undefined,
+    userId ? checkRateLimit(userId, 'notifications_per_user') : Promise.resolve(undefined),
     checkRateLimit(ip, 'notifications_per_ip'),
   ]);
 
@@ -171,6 +171,6 @@ export async function applyRateLimit(
   return {
     allowed,
     headers,
-    error: !allowed ? 'Rate limit exceeded' : undefined,
+    ...(allowed ? {} : { error: 'Rate limit exceeded' }),
   };
 } 

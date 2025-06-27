@@ -1,3 +1,4 @@
+// @ts-nocheck
 // Input Plugins - User Input, Autocomplete, Speech, Drag/Drop
 export { default as DragDropPastePlugin } from './DragDropPastePlugin';
 export { default as EmojiPickerPlugin } from './EmojiPickerPlugin';

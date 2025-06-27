@@ -264,42 +264,41 @@ export async function POST(
           const typedConversations = fullConversation as TenantConversation[] | null;
           const conversation = typedConversations?.find(conv => conv.id === conversationId);
 
-          if (conversation) {
-            // Fetch participants for the conversation
-            const { data: rawParticipants } = await supabase
-              .from('conversation_participants')
-              .select(`
-                user_id,
-                role,
-                user:users!conversation_participants_user_id_fkey(
-                  id,
-                  username,
-                  full_name,
-                  avatar_url
-                )
-              `)
-              .eq('conversation_id', conversation.id)
-              .is('deleted_at', null);
-
-            const participants = (rawParticipants ?? []).map((p) => ({
-              user_id: p.user_id,
-              role: p.role,
-              user: p.user,
-            }));
-
-            return {
-              conversation: {
-                ...conversation,
-                participants,
-                last_message: null,
-              },
-              existing: true, // Could be existing or newly created
-              message: 'Direct conversation ready',
-            };
+          if (!conversation) {
+            throw new Error('Conversation not found after creation');
           }
-          
-          // If we reach here, something went wrong with direct conversation creation
-          throw new Error('Failed to create or find direct conversation');
+
+          // Fetch participants for the conversation
+          const { data: rawParticipants } = await supabase
+            .from('conversation_participants')
+            .select(`
+              user_id,
+              role,
+              user:users!conversation_participants_user_id_fkey(
+                id,
+                username,
+                full_name,
+                avatar_url
+              )
+            `)
+            .eq('conversation_id', conversation.id)
+            .is('deleted_at', null);
+
+          const participants = (rawParticipants ?? []).map((p) => ({
+            user_id: p.user_id,
+            role: p.role,
+            user: p.user,
+          }));
+
+          return {
+            conversation: {
+              ...conversation,
+              participants,
+              last_message: null,
+            },
+            existing: true, // Could be existing or newly created
+            message: 'Direct conversation ready',
+          };
         }
 
         // For non-direct conversations (groups, channels), use the RPC
@@ -322,7 +321,7 @@ export async function POST(
           throw new Error('No conversation returned from creation');
         }
 
-        const conversation = typedNewConversation[0];
+        const newConv = typedNewConversation[0]!;
 
         /* ------------------------------------------------------------------
          * Fetch participants so the client immediately receives a hydrated
@@ -340,7 +339,7 @@ export async function POST(
               avatar_url
             )
           `)
-          .eq('conversation_id', conversation.id)
+          .eq('conversation_id', newConv.id)
           .is('deleted_at', null);
 
         const participants = (rawParticipants ?? []).map((p) => ({
@@ -351,7 +350,7 @@ export async function POST(
 
         return {
           conversation: {
-            ...conversation,
+            ...newConv,
             participants,
             last_message: null,
           },

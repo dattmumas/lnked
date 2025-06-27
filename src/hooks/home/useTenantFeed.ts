@@ -222,7 +222,7 @@ export function useTenantFeed(options: TenantFeedOptions = {}): UseTenantFeedRet
           post.author?.username ??
           'Unknown Author',
         username: post.author?.username ?? 'unknown',
-        avatar_url: post.author?.avatar_url ?? undefined,
+        ...(post.author?.avatar_url ? { avatar_url: post.author.avatar_url } : {}),
       },
       published_at: post.published_at || post.created_at,
       stats: {
@@ -232,10 +232,12 @@ export function useTenantFeed(options: TenantFeedOptions = {}): UseTenantFeedRet
         views: post.view_count,
       },
       thumbnail_url: post.thumbnail_url ?? null,
-      collective: post.tenant.type === 'collective' ? {
-        name: post.tenant.name,
-        slug: post.tenant.slug,
-      } : undefined,
+      ...(post.tenant.type === 'collective' ? {
+        collective: {
+          name: post.tenant.name,
+          slug: post.tenant.slug,
+        }
+      } : {}),
       // Add tenant information
       tenant: {
         id: post.tenant.id,

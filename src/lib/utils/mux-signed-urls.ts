@@ -95,8 +95,8 @@ export function validateVideoAccess(
  * @returns Mux signing configuration or undefined if not available
  */
 export function getMuxSigningConfig(): { keyId: string; keySecret: string } | undefined {
-  const keyId = process.env.MUX_SIGNING_KEY_ID;
-  const keySecret = process.env.MUX_SIGNING_SECRET;
+  const keyId = process.env['MUX_SIGNING_KEY_ID'];
+  const keySecret = process.env['MUX_SIGNING_SECRET'];
 
   if (!keyId || keyId.trim() === '' || !keySecret || keySecret.trim() === '') {
     return undefined;

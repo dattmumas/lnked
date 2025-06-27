@@ -151,7 +151,7 @@ export async function POST(request: Request, context: { params: Promise<{ conver
   // 6. Fetch link preview asynchronously after message is created
   if (message_type === 'text' && msg.id !== null && msg.id !== undefined) {
     const url = extractFirstUrl(content);
-    if (url !== null && url !== undefined && finalMetadata.embed === undefined) {
+    if (url !== null && url !== undefined && finalMetadata['embed'] === undefined) {
       try {
         // Fetch link preview in the background (don't block message sending)
         const origin = request.headers.get('origin');

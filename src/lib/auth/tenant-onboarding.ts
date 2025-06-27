@@ -113,10 +113,11 @@ export class TenantOnboardingService {
         await this.updateUserProfile(userId, profile);
       }
 
+      // Fix optional property assignment using conditional spread
       return {
         success: true,
         user,
-        personalTenant: personalTenant.personalTenant,
+        ...(personalTenant.personalTenant ? { personalTenant: personalTenant.personalTenant } : {}),
       };
 
     } catch (error) {
@@ -337,6 +338,10 @@ export class TenantOnboardingService {
         .filter(item => item.tenant)
         .map(item => {
           const tenant = Array.isArray(item.tenant) ? item.tenant[0] : item.tenant;
+          // Fix potential undefined tenant access
+          if (!tenant) {
+            throw new Error('Tenant data is missing');
+          }
           return {
             id: tenant.id,
             name: tenant.name,
@@ -346,10 +351,12 @@ export class TenantOnboardingService {
           };
         });
 
+      // Fix optional property assignment using conditional spread
       return {
-        personalTenant,
+        ...(personalTenant ? { personalTenant } : {}),
         allTenants: formattedTenants,
-        defaultTenantId: personalTenant?.id || formattedTenants[0]?.id,
+        ...(personalTenant?.id ? { defaultTenantId: personalTenant.id } : 
+            formattedTenants[0]?.id ? { defaultTenantId: formattedTenants[0].id } : {}),
       };
 
     } catch (error) {

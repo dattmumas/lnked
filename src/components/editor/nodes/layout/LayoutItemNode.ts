@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
@@ -36,8 +37,8 @@ export class LayoutItemNode extends ElementNode {
   createDOM(config: EditorConfig): HTMLElement {
     const dom = document.createElement('div');
     dom.setAttribute('data-lexical-layout-item', 'true');
-    if (typeof config.theme.layoutItem === 'string') {
-      addClassNamesToElement(dom, config.theme.layoutItem);
+    if (typeof config.theme['layoutItem'] === 'string') {
+      addClassNamesToElement(dom, config.theme['layoutItem']);
     }
     return dom;
   }

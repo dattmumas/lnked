@@ -15,9 +15,10 @@ export default async function ChatPage(): Promise<React.ReactElement> {
   }
 
   return (
-    <div className="fixed inset-0 top-16 flex h-[calc(100vh-4rem)] w-full">
-      {/* ChatInterface is a client component */}
-      <TenantChatInterface userId={user.id} />
+    <div className="flex flex-col h-full items-center">
+      <div className="w-full max-w-6xl h-full">
+        <TenantChatInterface />
+      </div>
     </div>
   );
 }

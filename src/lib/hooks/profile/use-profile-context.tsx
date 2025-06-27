@@ -127,7 +127,7 @@ export function ProfileContextProvider({
   }
 
   // Show error state if profile fetch failed
-  if (profileQuery.error || contextValue === undefined) {
+  if (profileQuery.error) {
     return <ProfileError error={profileQuery.error} />;
   }
 

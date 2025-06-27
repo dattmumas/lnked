@@ -63,6 +63,7 @@ interface ChainItem {
   };
   userInteraction?: {
     liked: boolean;
+    bookmarked: boolean;
   };
   showReplyForm?: boolean;
 }
@@ -228,42 +229,27 @@ function useChains(): {
       }
       const transformedChains: ChainItem[] = (
         (data as ChainDBRow[] | null) ?? []
-      ).map((chain) => {
-        const user = chain.users;
-        return {
-          id: chain.id,
-          author_id: chain.author_id,
-          user: {
-            name:
-              user?.full_name !== undefined &&
-              user?.full_name !== null &&
-              user.full_name.length > 0
-                ? user.full_name
-                : user?.username !== undefined &&
-                    user?.username !== null &&
-                    user.username.length > 0
-                  ? user.username
-                  : 'Anonymous',
-            username:
-              user?.username !== undefined &&
-              user?.username !== null &&
-              user.username.length > 0
-                ? user.username
-                : 'unknown',
-            avatar_url:
-              user?.avatar_url !== undefined &&
-              user?.avatar_url !== null &&
-              user.avatar_url.length > 0
-                ? user.avatar_url
-                : undefined,
-          },
-          content: chain.content,
-          timestamp: formatTimestamp(chain.created_at),
-          type: 'post',
-          stats: { likes: 0, replies: 0, shares: 0 },
-          userInteraction: { liked: false },
-        };
-      });
+      ).map((chain) => ({
+        id: chain.id,
+        author_id: chain.author_id,
+        user: {
+          name: chain.users?.full_name || chain.users?.username || 'Unknown',
+          username: chain.users?.username || 'unknown',
+          avatar_url: chain.users?.avatar_url || '',
+        },
+        content: chain.content,
+        timestamp: formatTimestamp(chain.created_at),
+        type: 'post' as const,
+        stats: {
+          likes: 0,
+          replies: 0,
+          shares: 0,
+        },
+        userInteraction: {
+          liked: false,
+          bookmarked: false,
+        },
+      }));
       setChains(transformedChains);
       setError(undefined);
     } catch {
@@ -371,7 +357,7 @@ function ChainPostForm({
   }, [profile, user.email]);
 
   return (
-    <div className="border-t border-gray-200 dark:border-gray-700 p-4">
+    <div className="border-t border-border p-4">
       <form onSubmit={handleFormSubmit} className="space-y-3">
         <div className="flex gap-3">
           <Avatar className="w-9 h-9 flex-shrink-0">
@@ -403,7 +389,7 @@ function ChainPostForm({
               value={content}
               onChange={handleContentChange}
               placeholder="What's happening?"
-              className="min-h-[90px] resize-none border-0 p-0 text-sm placeholder:text-gray-500 focus-visible:ring-0 focus-visible:ring-offset-0"
+              className="min-h-[90px] resize-none border-0 p-0 text-sm placeholder:text-muted-foreground focus-visible:ring-0 focus-visible:ring-offset-0"
               maxLength={CHARACTER_LIMIT}
               disabled={isPosting}
             />
@@ -411,7 +397,7 @@ function ChainPostForm({
               <div className="flex items-center gap-3">
                 <button
                   type="button"
-                  className="p-2 text-gray-500 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-full transition-colors"
+                  className="p-2 text-muted-foreground hover:text-accent hover:bg-accent/20 rounded-full transition-colors"
                   title="Add emoji"
                   disabled={isPosting}
                 >
@@ -419,7 +405,7 @@ function ChainPostForm({
                 </button>
                 <button
                   type="button"
-                  className="p-2 text-gray-500 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-full transition-colors"
+                  className="p-2 text-muted-foreground hover:text-accent hover:bg-accent/20 rounded-full transition-colors"
                   title="Add image"
                   disabled={isPosting}
                 >
@@ -432,8 +418,8 @@ function ChainPostForm({
                   className={cn(
                     'text-xs font-medium',
                     remainingChars < WARNING_THRESHOLD
-                      ? 'text-red-500'
-                      : 'text-gray-500',
+                      ? 'text-destructive'
+                      : 'text-muted-foreground',
                   )}
                 >
                   {remainingChars}
@@ -534,12 +520,12 @@ export function RightSidebar({
   );
 
   return (
-    <div className="fixed right-0 top-16 w-[28rem] h-[calc(100vh-4rem)] bg-white dark:bg-gray-900 border-l border-gray-200 dark:border-gray-700 hidden lg:block z-20">
+    <div className="fixed right-0 top-16 w-[28rem] h-[calc(100vh-4rem)] bg-background border-l border-border hidden lg:block z-20">
       <div className="h-full overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+        <div className="px-4 py-3 border-b border-border">
           <div className="flex items-center justify-between">
-            <h2 className="font-semibold text-lg">Chains</h2>
+            <h2 className="font-semibold text-lg text-foreground">Chains</h2>
             <div
               className="w-2 h-2 bg-green-500 rounded-full animate-pulse"
               title="Live activity"
@@ -550,17 +536,19 @@ export function RightSidebar({
         <div className="flex-1 overflow-y-auto px-4 py-3">
           {loading ? (
             <div className="flex items-center justify-center py-8">
-              <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
+              <Loader2 className="w-6 h-6 animate-spin text-accent" />
             </div>
-          ) : error !== undefined && error !== null && error.length > 0 ? (
+          ) : error ? (
             <div className="text-center py-8">
-              <p className="text-red-500 text-sm mb-2">Error loading chains</p>
+              <p className="text-destructive text-sm mb-2">
+                Error loading chains
+              </p>
               <Button size="sm" variant="outline" onClick={refetch}>
                 Retry
               </Button>
             </div>
           ) : chains.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
+            <div className="text-center py-8 text-muted-foreground">
               <p className="text-sm">No chains yet.</p>
               <p className="text-xs mt-1">Be the first to post!</p>
             </div>
@@ -569,7 +557,7 @@ export function RightSidebar({
               {chains.map((item) => (
                 <div
                   key={item.id}
-                  className="px-3 py-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+                  className="px-3 py-3 rounded-lg hover:bg-muted/50 transition-colors"
                 >
                   <div className="flex gap-3">
                     <Avatar className="w-9 h-9 flex-shrink-0">
@@ -592,18 +580,18 @@ export function RightSidebar({
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start justify-between mb-1">
                         <div className="flex items-baseline flex-wrap gap-x-1.5 min-w-0 pr-2">
-                          <span className="font-medium text-sm truncate max-w-[150px]">
+                          <span className="font-medium text-sm truncate max-w-[150px] text-foreground">
                             {item.user.name}
                           </span>
-                          <span className="text-gray-500 text-xs truncate max-w-[100px]">
+                          <span className="text-muted-foreground text-xs truncate max-w-[100px]">
                             @{item.user.username}
                           </span>
                         </div>
-                        <span className="text-gray-500 text-xs flex-shrink-0">
+                        <span className="text-muted-foreground text-xs flex-shrink-0">
                           {item.timestamp}
                         </span>
                       </div>
-                      <p className="text-sm text-gray-900 dark:text-gray-100 mb-2.5 leading-relaxed break-words">
+                      <p className="text-sm text-foreground mb-2.5 leading-relaxed break-words">
                         {item.content}
                       </p>
                       {/* Interactive Buttons */}
@@ -614,8 +602,8 @@ export function RightSidebar({
                           className={cn(
                             'flex items-center gap-1.5 text-xs transition-colors',
                             chainInteractions.likedChains.has(item.id)
-                              ? 'text-red-500'
-                              : 'text-gray-500 hover:text-red-500',
+                              ? 'text-destructive'
+                              : 'text-muted-foreground hover:text-destructive',
                           )}
                         >
                           <Heart
@@ -630,7 +618,7 @@ export function RightSidebar({
                         {/* Reply Button */}
                         <button
                           onClick={handleStartReply(item.id)}
-                          className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-blue-500 transition-colors"
+                          className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-accent transition-colors"
                         >
                           <Reply className="w-4 h-4" />
                           <span>{item.stats.replies}</span>
@@ -638,7 +626,7 @@ export function RightSidebar({
                         {/* Share Button */}
                         <button
                           onClick={handleShareChain(item.id, item.content)}
-                          className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-green-500 transition-colors"
+                          className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-accent transition-colors"
                         >
                           <Share2 className="w-4 h-4" />
                           <span>{item.stats.shares}</span>
@@ -648,7 +636,7 @@ export function RightSidebar({
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <button
-                                className="ml-auto text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
+                                className="ml-auto text-muted-foreground hover:text-accent transition-colors"
                                 aria-label="Chain options"
                               >
                                 <MoreHorizontal className="w-4 h-4" />
@@ -657,11 +645,11 @@ export function RightSidebar({
                             <DropdownMenuContent
                               sideOffset={4}
                               align="center"
-                              className="z-50 min-w-[120px] rounded-md border bg-white dark:bg-gray-900 p-1 shadow-md"
+                              className="z-50 min-w-[120px] rounded-md border bg-background p-1 shadow-md"
                             >
                               <DropdownMenuItem
                                 onSelect={handleDeleteChain(item.id)}
-                                className="flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm text-red-600 focus:bg-gray-100 dark:focus:bg-gray-700 outline-none"
+                                className="flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm text-destructive focus:bg-accent/10 dark:focus:bg-accent/20 outline-none"
                               >
                                 Delete
                               </DropdownMenuItem>
@@ -669,7 +657,7 @@ export function RightSidebar({
                           </DropdownMenu>
                         ) : (
                           <button
-                            className="ml-auto text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
+                            className="ml-auto text-muted-foreground hover:text-accent transition-colors"
                             aria-label="Chain options"
                           >
                             <MoreHorizontal className="w-4 h-4" />
@@ -687,7 +675,7 @@ export function RightSidebar({
                             maxLength={CHARACTER_LIMIT}
                           />
                           <div className="flex items-center justify-between">
-                            <span className="text-xs text-gray-500">
+                            <span className="text-xs text-muted-foreground">
                               {CHARACTER_LIMIT -
                                 chainInteractions.replyContent.length}{' '}
                               characters remaining

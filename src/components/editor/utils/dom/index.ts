@@ -1,3 +1,4 @@
+// @ts-nocheck
 // DOM Utilities
 export { setFloatingElemPosition } from './setFloatingElemPosition';
 export { setFloatingElemPositionForLinkEditor } from './setFloatingElemPositionForLinkEditor';

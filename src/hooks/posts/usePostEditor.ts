@@ -5,17 +5,18 @@ import { useUser } from '@/hooks/useUser';
 import { Database } from '@/lib/database.types';
 import { 
   usePostEditorStore, 
-  PostEditorFormData,
+  type PostEditorFormData,
   CollectiveSharingSettings 
-} from '@/lib/stores/enhanced-post-editor-store';
-import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
+} from '@/lib/stores/post-editor-v2-store';
+import createBrowserSupabaseClient from '@/lib/supabase/browser';
 
 import type { UseMutationResult, UseQueryResult } from '@tanstack/react-query';
 
-// Use proper generated database types
+// Type definitions
 type PostRow = Database['public']['Tables']['posts']['Row'];
 type PostInsert = Database['public']['Tables']['posts']['Insert'];
 type PostCollectiveRow = Database['public']['Tables']['post_collectives']['Row'];
+type PostCollectiveInsert = Database['public']['Tables']['post_collectives']['Insert'];
 
 // Auto-save mutation hook using proper database types
 export const useAutoSavePost = (): UseMutationResult<
@@ -30,10 +31,10 @@ export const useAutoSavePost = (): UseMutationResult<
   return useMutation({
     retry: false,
     mutationFn: async (data: PostEditorFormData & { author_id: string }): Promise<PostEditorFormData> => {
-      const supabase = createSupabaseBrowserClient();
+      const supabase = createBrowserSupabaseClient;
 
       // Validate required fields
-      if (!data.author_id || !data.title.trim() || !data.content) {
+      if (!data.author_id || (data.title?.trim() ?? '') === '' || (data.content ?? '') === '') {
         throw new Error('Missing required fields');
       }
 
@@ -41,7 +42,7 @@ export const useAutoSavePost = (): UseMutationResult<
       const tenant_id = data.collective_id || data.author_id;
 
       const postData: PostInsert = {
-        id: data.id,
+        ...(data.id ? { id: data.id } : {}),
         title: data.title,
         content: data.content,
         subtitle: data.subtitle || null,
@@ -54,8 +55,8 @@ export const useAutoSavePost = (): UseMutationResult<
         post_type: data.post_type,
         metadata: {
           ...data.metadata,
-          collective_sharing_settings: data.collective_sharing_settings ?? {},
-          selected_collectives: data.selected_collectives ?? [],
+          ...(data.collective_sharing_settings ? { collective_sharing_settings: data.collective_sharing_settings } : {}),
+          ...(data.selected_collectives ? { selected_collectives: data.selected_collectives } : {}),
         } as unknown as Database['public']['Tables']['posts']['Row']['metadata'],
         is_public: data.is_public,
         status: data.status,
@@ -105,7 +106,7 @@ export const usePostData = (postId?: string): UseQueryResult<PostEditorFormData 
     queryFn: async (): Promise<PostEditorFormData | null> => {
       if (!postId) return null;
 
-      const supabase = createSupabaseBrowserClient();
+      const supabase = createBrowserSupabaseClient;
       const { data, error } = await supabase
         .from('posts')
         .select('*')
@@ -119,25 +120,25 @@ export const usePostData = (postId?: string): UseQueryResult<PostEditorFormData 
 
       // Extract metadata
       const metadata = (data.metadata as Record<string, unknown>) ?? {};
-      const collectiveSharingSettings = (metadata.collective_sharing_settings ?? {}) as Record<string, CollectiveSharingSettings>;
-      const selectedCollectives = (metadata.selected_collectives as string[] | undefined) ?? [];
+      const collectiveSharingSettings = (metadata['collective_sharing_settings'] ?? {}) as Record<string, CollectiveSharingSettings>;
+      const selectedCollectives = (metadata['selected_collectives'] as string[] | undefined) ?? [];
 
       const postData: PostEditorFormData = {
         id: data.id,
         title: data.title ?? '',
         content: data.content ?? '',
-        subtitle: data.subtitle ?? undefined,
-        seo_title: data.seo_title ?? undefined,
-        meta_description: data.meta_description ?? undefined,
-        thumbnail_url: data.thumbnail_url ?? undefined,
+        ...(data.subtitle ? { subtitle: data.subtitle } : {}),
+        ...(data.seo_title ? { seo_title: data.seo_title } : {}),
+        ...(data.meta_description ? { meta_description: data.meta_description } : {}),
+        ...(data.thumbnail_url ? { thumbnail_url: data.thumbnail_url } : {}),
         post_type: data.post_type,
         metadata,
         is_public: data.is_public,
         status: data.status,
-        collective_id: data.collective_id ?? undefined,
+        ...(data.collective_id ? { collective_id: data.collective_id } : {}),
         selected_collectives: selectedCollectives,
         collective_sharing_settings: collectiveSharingSettings,
-        published_at: data.published_at ?? undefined,
+        ...(data.published_at ? { published_at: data.published_at } : {}),
       };
 
       return postData;

@@ -17,7 +17,6 @@ interface ChatUIState {
   
   // UI state
   scrollPositions: Map<string, number>; // conversationId -> scroll position
-  replyTargets: Map<string, string>; // conversationId -> messageId
   
   // Online users
   onlineUsers: Set<string>;
@@ -29,16 +28,14 @@ interface ChatUIState {
   clearTypingUsers: (conversationId: string) => void;
   
   setScrollPosition: (conversationId: string, position: number) => void;
-  getScrollPosition: (conversationId: string) => number;
+  getScrollPosition: (conversationId: string) => number | undefined;
   
+  // Reply state
+  replyTargets: Map<string, string>; // conversationId -> messageId
   setReplyTarget: (conversationId: string, messageId: string | undefined) => void;
   getReplyTarget: (conversationId: string) => string | undefined;
   
-  addOnlineUser: (userId: string) => void;
-  removeOnlineUser: (userId: string) => void;
-  isUserOnline: (userId: string) => boolean;
-  
-  // Reset
+  // General store reset
   reset: () => void;
 }
 
@@ -49,7 +46,6 @@ export const useChatUIStore = create<ChatUIState>()(
       activeConversationId: undefined,
       typingUsers: new Map(),
       scrollPositions: new Map(),
-      replyTargets: new Map(),
       onlineUsers: new Set(),
       
       // Actions
@@ -103,53 +99,33 @@ export const useChatUIStore = create<ChatUIState>()(
       
       getScrollPosition: (conversationId) => {
         const position = get().scrollPositions.get(conversationId);
-        return (position !== null && position !== undefined && !Number.isNaN(position)) ? position : 0;
+        return (position !== null && position !== undefined && !Number.isNaN(position)) ? position : undefined;
       },
       
+      // Reply state management
+      replyTargets: new Map(),
       setReplyTarget: (conversationId, messageId) => {
         set((state) => {
           const newReplyTargets = new Map(state.replyTargets);
-          if (messageId === undefined || messageId === '') {
-            newReplyTargets.delete(conversationId);
-          } else {
+          if (messageId) {
             newReplyTargets.set(conversationId, messageId);
+          } else {
+            newReplyTargets.delete(conversationId);
           }
           return { replyTargets: newReplyTargets };
         });
       },
-      
       getReplyTarget: (conversationId) => {
-        const target = get().replyTargets.get(conversationId);
-        return (target !== null && target !== undefined && target.trim().length > 0) ? target : undefined;
+        return get().replyTargets.get(conversationId);
       },
       
-      addOnlineUser: (userId) => {
-        set((state) => {
-          const newOnlineUsers = new Set(state.onlineUsers);
-          newOnlineUsers.add(userId);
-          return { onlineUsers: newOnlineUsers };
-        });
-      },
-      
-      removeOnlineUser: (userId) => {
-        set((state) => {
-          const newOnlineUsers = new Set(state.onlineUsers);
-          newOnlineUsers.delete(userId);
-          return { onlineUsers: newOnlineUsers };
-        });
-      },
-      
-      isUserOnline: (userId) => {
-        return get().onlineUsers.has(userId);
-      },
-      
+      // Reset all state to initial values
       reset: () => {
         set({
           activeConversationId: undefined,
           typingUsers: new Map(),
           scrollPositions: new Map(),
           replyTargets: new Map(),
-          onlineUsers: new Set(),
         });
       },
     }),

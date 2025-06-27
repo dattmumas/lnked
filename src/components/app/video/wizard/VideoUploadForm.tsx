@@ -18,6 +18,8 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useSimplifiedVideoUpload } from '@/hooks/video/useSimplifiedVideoUpload';
 
+import type { VideoFormData } from '@/hooks/video/useSimplifiedVideoUpload';
+
 // Constants
 const REDIRECT_DELAY_MS = 1500;
 const DRAFT_SAVE_DELAY_MS = 1000;
@@ -143,10 +145,22 @@ export default function VideoUploadForm({
           encodingTier?: 'baseline' | 'plus';
           collectiveId?: string;
         };
-        updateFormData({
-          ...draftData,
-          collectiveId: collectiveId ?? draftData.collectiveId,
-        });
+        // Apply draft data to form
+        if (
+          draftData !== null &&
+          draftData !== undefined &&
+          Object.keys(draftData).length > 0
+        ) {
+          const updates: Partial<VideoFormData> = {
+            ...draftData,
+          };
+
+          if (collectiveId) {
+            updates.collectiveId = collectiveId;
+          }
+
+          updateFormData(updates);
+        }
       } catch (error) {
         console.error('Failed to load draft:', error);
       }

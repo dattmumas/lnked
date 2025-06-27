@@ -297,44 +297,64 @@ async function fetchProfilePosts(
     throw new ProfileError(`Failed to fetch posts: ${error.message}`, error.code, HttpStatusCode.InternalServerError);
   }
 
-  const posts: ProfilePost[] = (Array.isArray(data) ? data : []).map(post => ({
-    id: post.id,
-    title: post.title,
-    content: post.content,
-    subtitle: post.subtitle,
-    thumbnailUrl: post.thumbnail_url,
-    postType: post.post_type,
-    status: post.status,
-    isPublic: post.is_public,
-    publishedAt: post.published_at,
-    createdAt: post.created_at,
-    updatedAt: post.updated_at,
-    viewCount: post.view_count,
-    likeCount: post.like_count,
-    readTime: exists(post.content) && typeof post.content === 'string' && post.content.length > 0 ? Math.ceil(post.content.length / SECOND_MS) : undefined,
-    author: {
-      id: post.author?.id ?? '',
-      username: post.author?.username ?? 'unknown',
-      fullName: post.author?.full_name ?? '',
-      avatarUrl: post.author?.avatar_url ?? '',
-    },
-    collective: post.collective
-      ? {
-          id: post.collective.id,
-          name: post.collective.name,
-          slug: post.collective.slug,
-        }
-      : undefined,
-  }));
+  const posts: ProfilePost[] = (Array.isArray(data) ? data : []).map(post => {
+    const readTime =
+      exists(post.content) && typeof post.content === 'string' && post.content.length > 0
+        ? Math.ceil(post.content.length / SECOND_MS)
+        : undefined;
 
-  return {
+    const base: Omit<ProfilePost, 'readTime' | 'collective'> & {
+      readTime?: number;
+      collective?: ProfilePost['collective'];
+    } = {
+      id: post.id,
+      title: post.title,
+      content: post.content,
+      subtitle: post.subtitle,
+      thumbnailUrl: post.thumbnail_url,
+      postType: post.post_type,
+      status: post.status,
+      isPublic: post.is_public,
+      publishedAt: post.published_at,
+      createdAt: post.created_at,
+      updatedAt: post.updated_at,
+      viewCount: post.view_count,
+      likeCount: post.like_count,
+      author: {
+        id: post.author?.id ?? '',
+        username: post.author?.username ?? 'unknown',
+        fullName: post.author?.full_name ?? '',
+        avatarUrl: post.author?.avatar_url ?? '',
+      },
+    };
+
+    if (readTime !== undefined) {
+      base.readTime = readTime;
+    }
+
+    if (post.collective) {
+      base.collective = {
+        id: post.collective.id,
+        name: post.collective.name,
+        slug: post.collective.slug,
+      };
+    }
+
+    return base as ProfilePost;
+  });
+
+  const hasMore = (count ?? 0) > offset + limit;
+
+  const response: PaginatedResponse<ProfilePost> = {
     data: posts,
     total: count ?? 0,
     limit,
     offset,
-    hasMore: (count ?? 0) > offset + limit,
-    nextCursor: (count ?? 0) > offset + limit ? (pageParam + 1).toString() : undefined,
+    hasMore,
+    ...(hasMore ? { nextCursor: (pageParam + 1).toString() } : {}),
   };
+
+  return response;
 }
 
 async function fetchSocialFeed(
@@ -389,14 +409,17 @@ async function fetchSocialFeed(
       followedAt: follow.created_at ?? '',
     }));
 
-    return {
+    const hasMore = (count ?? 0) > offset + limit;
+    const response: PaginatedResponse<UserConnection> = {
       data: connections,
       total: count ?? 0,
       limit,
       offset,
-      hasMore: (count ?? 0) > offset + limit,
-      nextCursor: (count ?? 0) > offset + limit ? (pageParam + 1).toString() : undefined,
+      hasMore,
+      ...(hasMore ? { nextCursor: (pageParam + 1).toString() } : {}),
     };
+
+    return response;
   }
 
   // For activity and likes, return empty for now (will implement with notifications system)
@@ -508,7 +531,15 @@ export function useSocialFeed(
   username: string,
   feedType: SocialFeedType
 ): UseSocialFeedReturn {
-  const query = useInfiniteQuery({
+  type SocialFeedQueryKey = ReturnType<typeof profileKeys.socialFeed>;
+
+  const query = useInfiniteQuery<
+    PaginatedResponse<ActivityFeedItem | UserConnection>,
+    Error,
+    import('@tanstack/react-query').InfiniteData<PaginatedResponse<ActivityFeedItem | UserConnection>, number>,
+    SocialFeedQueryKey,
+    number
+  >({
     queryKey: profileKeys.socialFeed(username, feedType),
     queryFn: ({ pageParam = 0 }) => fetchSocialFeed(username, feedType, pageParam),
     initialPageParam: 0,
@@ -517,11 +548,11 @@ export function useSocialFeed(
     },
     staleTime: SOCIAL_FEED_STALE_MS,
     gcTime: SOCIAL_FEED_GC_MS,
-    refetchInterval: feedType === 'activity' ? SOCIAL_FEED_REFRESH_MS : undefined,
+    refetchInterval: feedType === 'activity' ? SOCIAL_FEED_REFRESH_MS : false,
   });
 
   return {
-    data: query.data?.pages?.[0], // For now, return first page
+    data: query.data?.pages?.[0],
     fetchNextPage: () => {
       query.fetchNextPage().catch((error) => {
         console.error('Failed to fetch next page:', error);
@@ -643,10 +674,10 @@ export function useUpdateProfileMutation(): UseMutationResult<
       const { data, error } = await supabase
         .from('users')
         .update({
-          full_name: updates.fullName,
-          bio: updates.bio,
-          avatar_url: updates.avatarUrl,
-          social_links: updates.socialLinks as Json,
+          full_name: updates.fullName ?? null,
+          bio: updates.bio ?? null,
+          avatar_url: updates.avatarUrl ?? null,
+          social_links: (updates.socialLinks ?? null) as Json,
           updated_at: new Date().toISOString(),
         })
         .eq('id', user.id)

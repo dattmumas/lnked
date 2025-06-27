@@ -1,4 +1,4 @@
-const resendApiKey = process.env.RESEND_API_KEY;
+const resendApiKey = process.env['RESEND_API_KEY'];
 
 // Result shape for sendInviteEmail
 export interface SendEmailResult {

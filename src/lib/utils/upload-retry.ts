@@ -190,12 +190,14 @@ export function createRetryableFetch(config: RetryConfig = {}): (url: string, op
     url: string, 
     options: RequestInit = {}
   ): Promise<Response> {
+    const init: RequestInit = {
+      ...options,
+      ...(options.signal ? { signal: options.signal } : {}),
+    };
+    
     return withRetry(
       async () => {
-        const response = await fetch(url, {
-          ...options,
-          signal: options.signal, // Preserve abort signal
-        });
+        const response = await fetch(url, init);
         
         // Convert HTTP errors to retryable errors
         if (!response.ok) {

@@ -22,7 +22,7 @@ const RATE_LIMIT_CONFIG = {
 } as const;
 
 const LOG_CONFIG = {
-  verbose: process.env.VERBOSE_AUTH_CALLBACK === 'true',
+  verbose: process.env['VERBOSE_AUTH_CALLBACK'] === 'true',
   context: 'auth-callback',
 } as const;
 
@@ -55,7 +55,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     const securityValidation = await AuthSecurityValidator.validateRequest(request, logger);
     if (!securityValidation.valid) {
       logger.warn('CSRF/Origin validation failed', {
-        error: securityValidation.error,
+        ...(securityValidation.error ? { error: securityValidation.error } : {}),
         metadata: {
           clientIP,
           origin: request.headers.get('origin'),
@@ -113,7 +113,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     const bodyValidation = await AuthSecurityValidator.validateBody(request, logger);
     if (!bodyValidation.valid || !bodyValidation.body) {
       logger.warn('Body validation failed', {
-        error: bodyValidation.error,
+        ...(bodyValidation.error ? { error: bodyValidation.error } : {}),
         metadata: { clientIP },
       });
 
@@ -212,7 +212,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
       if (!sessionValidation.valid) {
         logger.error('Session validation failed after setting', {
-          error: sessionValidation.error,
+          ...(sessionValidation.error ? { error: sessionValidation.error } : {}),
           metadata: { event, clientIP },
         });
 
@@ -272,7 +272,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       method: 'POST',
       statusCode: 200,
       duration,
-      userId: sessionResult?.user?.id,
+      ...(sessionResult?.user?.id ? { userId: sessionResult.user.id } : {}),
     });
 
     if (LOG_CONFIG.verbose) {

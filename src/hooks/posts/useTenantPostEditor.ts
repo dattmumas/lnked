@@ -63,13 +63,13 @@ export function useTenantPostEditor(options: TenantPostEditorOptions = {}): UseT
   // Form state
   const [formData, setFormData] = useState<PostFormData>({
     title: initialData?.title || '',
-    subtitle: initialData?.subtitle || undefined,
+    ...(initialData?.subtitle ? { subtitle: initialData.subtitle } : {}),
     content: initialData?.content || '',
     is_public: initialData?.is_public ?? true,
-    published_at: initialData?.published_at || undefined,
-    seo_title: initialData?.seo_title || undefined,
-    meta_description: initialData?.meta_description || undefined,
-    author: initialData?.author || undefined,
+    ...(initialData?.published_at ? { published_at: initialData.published_at } : {}),
+    ...(initialData?.seo_title ? { seo_title: initialData.seo_title } : {}),
+    ...(initialData?.meta_description ? { meta_description: initialData.meta_description } : {}),
+    ...(initialData?.author ? { author: initialData.author } : {}),
   });
   
   // Loading states
@@ -81,28 +81,28 @@ export function useTenantPostEditor(options: TenantPostEditorOptions = {}): UseT
   const validateForm = useCallback((data: PostFormData): { isValid: boolean; errors: Record<string, string> } => {
     const errors: Record<string, string> = {};
     
-    if (!data.title.trim()) {
-      errors.title = 'Title is required';
+    if (!data['title'].trim()) {
+      errors['title'] = 'Title is required';
     }
     
-    if (!data.content.trim()) {
-      errors.content = 'Content is required';
+    if (!data['content'].trim()) {
+      errors['content'] = 'Content is required';
     }
     
-    if (data.title.length > 200) {
-      errors.title = 'Title must be 200 characters or less';
+    if (data['title'].length > 200) {
+      errors['title'] = 'Title must be 200 characters or less';
     }
     
-    if (data.content.length > 50000) {
-      errors.content = 'Content must be 50,000 characters or less';
+    if (data['content'].length > 50000) {
+      errors['content'] = 'Content must be 50,000 characters or less';
     }
     
-    if (data.seo_title && data.seo_title.length > 60) {
-      errors.seo_title = 'SEO title must be 60 characters or less';
+    if (data['seo_title'] && data['seo_title'].length > 60) {
+      errors['seo_title'] = 'SEO title must be 60 characters or less';
     }
     
-    if (data.meta_description && data.meta_description.length > 160) {
-      errors.meta_description = 'Meta description must be 160 characters or less';
+    if (data['meta_description'] && data['meta_description'].length > 160) {
+      errors['meta_description'] = 'Meta description must be 160 characters or less';
     }
     
     return {
@@ -120,7 +120,7 @@ export function useTenantPostEditor(options: TenantPostEditorOptions = {}): UseT
     const validation = validateForm(data);
     if (!validation.isValid) {
       const errorMessage = Object.values(validation.errors)[0];
-      return { success: false, error: errorMessage };
+      return { success: false, ...(errorMessage ? { error: errorMessage } : {}) };
     }
 
     setIsSaving(true);
@@ -149,7 +149,7 @@ export function useTenantPostEditor(options: TenantPostEditorOptions = {}): UseT
 
         return { 
           success: true, 
-          postId: result.data?.postId 
+          ...(result.data?.postId ? { postId: result.data.postId } : {}),
         };
       } else {
         // Create new post
@@ -176,7 +176,7 @@ export function useTenantPostEditor(options: TenantPostEditorOptions = {}): UseT
 
         return { 
           success: true, 
-          postId: result.data?.postId 
+          ...(result.data?.postId ? { postId: result.data.postId } : {}),
         };
       }
     } catch (err) {
@@ -190,10 +190,10 @@ export function useTenantPostEditor(options: TenantPostEditorOptions = {}): UseT
 
   // Save as draft
   const saveDraft = useCallback(async (data: PostFormData): Promise<{ success: boolean; error?: string; postId?: string }> => {
+    const { published_at, ...restData } = data;
     const draftData = {
-      ...data,
+      ...restData,
       is_public: false,
-      published_at: undefined,
     };
     
     return savePost(draftData);

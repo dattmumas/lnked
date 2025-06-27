@@ -9,6 +9,7 @@ import React, {
   useRef,
   useState,
   useLayoutEffect,
+  useMemo,
 } from 'react';
 
 import { Button } from '@/components/ui/button';
@@ -27,6 +28,8 @@ import {
   DropdownMenuItem,
 } from '@/components/ui/dropdown-menu';
 import { useDeleteMessage } from '@/lib/hooks/chat/use-messages';
+import { useChatUIStore } from '@/lib/stores/chat-ui-store';
+import { cn } from '@/lib/utils/cn';
 
 import type { MessageWithSender } from '@/lib/chat/types';
 
@@ -37,81 +40,76 @@ interface VirtualMessageListProps {
   onLoadMore?: () => void;
   hasMore?: boolean;
   isLoading?: boolean;
-  lastReadAt?: string | null;
-  onMessageInView?: (messageId: string) => void;
 }
 
-const LOAD_MORE_THRESHOLD = 200; // pixels from top to trigger load more
-const SCROLL_TO_BOTTOM_THRESHOLD = 600; // pixels from bottom to show scroll button
+const LOAD_MORE_THRESHOLD = 200;
+const SCROLL_TO_BOTTOM_THRESHOLD = 600;
+
+const isGroupedWith = (
+  currentMessage: MessageWithSender,
+  previousMessage: MessageWithSender | undefined,
+): boolean => {
+  if (
+    !previousMessage ||
+    previousMessage.sender?.id !== currentMessage.sender?.id ||
+    !currentMessage.created_at ||
+    !previousMessage.created_at
+  ) {
+    return false;
+  }
+  const timeDiff =
+    new Date(currentMessage.created_at).getTime() -
+    new Date(previousMessage.created_at).getTime();
+  return timeDiff < 2 * 60 * 1000; // 2 minutes
+};
 
 export function VirtualMessageList({
-  messages,
+  messages: newestToOldestMessages,
   currentUserId,
   conversationId,
   onLoadMore,
   hasMore = false,
   isLoading = false,
-  lastReadAt,
-  onMessageInView,
 }: VirtualMessageListProps): React.JSX.Element {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [showScrollButton, setShowScrollButton] = useState(false);
-  const isAutoScrolling = useRef(false);
+  const userScrolledUpRef = useRef(false);
   const loadMoreTriggeredRef = useRef(false);
 
-  // Virtual list setup with better size estimation
+  const setScrollPosition = useChatUIStore((state) => state.setScrollPosition);
+  const getScrollPosition = useChatUIStore((state) => state.getScrollPosition);
+
+  const messages = useMemo(
+    () => [...newestToOldestMessages].reverse(),
+    [newestToOldestMessages],
+  );
+
   const virtualizer = useVirtualizer({
     count: messages.length,
     getScrollElement: () => scrollContainerRef.current,
     estimateSize: useCallback(
-      (index: number) => {
-        // Estimate based on whether messages are grouped and have avatars
-        const message = messages[index];
-        const previousMessage = messages[index - 1];
-        const isGrouped =
-          previousMessage &&
-          previousMessage.sender?.id === message?.sender?.id &&
-          message?.created_at &&
-          previousMessage.created_at &&
-          new Date(message.created_at).getTime() -
-            new Date(previousMessage.created_at).getTime() <
-            2 * 60 * 1000;
-
-        // Base height + extra for ungrouped messages (avatar, username, spacing)
-        return isGrouped ? 50 : 90;
-      },
+      (index: number) =>
+        messages[index]
+          ? isGroupedWith(messages[index], messages[index - 1])
+            ? 36
+            : 72
+          : 72,
       [messages],
     ),
-    overscan: 5,
+    overscan: 10,
   });
 
   const virtualItems = virtualizer.getVirtualItems();
 
-  // Find first unread message index
-  const firstUnreadIndex = React.useMemo(() => {
-    if (!lastReadAt) return -1;
-    const lastReadTime = new Date(lastReadAt).getTime();
-    return messages.findIndex(
-      (msg) =>
-        msg.created_at && new Date(msg.created_at).getTime() > lastReadTime,
-    );
-  }, [messages, lastReadAt]);
-
-  const unreadCount =
-    firstUnreadIndex >= 0 ? messages.length - firstUnreadIndex : 0;
-
-  // Handle scroll events
   const handleScroll = useCallback(() => {
-    if (!scrollContainerRef.current || isAutoScrolling.current) return;
-
+    if (!scrollContainerRef.current) return;
     const { scrollTop, scrollHeight, clientHeight } =
       scrollContainerRef.current;
-    const scrollBottom = scrollHeight - scrollTop - clientHeight;
+    userScrolledUpRef.current = scrollHeight - scrollTop - clientHeight > 1;
+    setShowScrollButton(
+      scrollHeight - scrollTop - clientHeight > SCROLL_TO_BOTTOM_THRESHOLD,
+    );
 
-    // Show/hide scroll to bottom button
-    setShowScrollButton(scrollBottom > SCROLL_TO_BOTTOM_THRESHOLD);
-
-    // Trigger load more when near top
     if (
       scrollTop < LOAD_MORE_THRESHOLD &&
       hasMore &&
@@ -124,114 +122,68 @@ export function VirtualMessageList({
     }
   }, [hasMore, isLoading, onLoadMore]);
 
-  // Reset load more trigger when loading completes
   useEffect(() => {
     if (!isLoading) {
       loadMoreTriggeredRef.current = false;
     }
   }, [isLoading]);
 
-  // Scroll to bottom on initial load or conversation change
+  // Save and restore scroll position
   useLayoutEffect(() => {
-    if (messages.length > 0 && scrollContainerRef.current) {
-      isAutoScrolling.current = true;
-      scrollContainerRef.current.scrollTop =
-        scrollContainerRef.current.scrollHeight;
-      requestAnimationFrame(() => {
-        isAutoScrolling.current = false;
+    const scrollContainer = scrollContainerRef.current;
+    if (!scrollContainer) return;
+
+    const savedPosition = getScrollPosition(conversationId);
+    if (typeof savedPosition === 'number') {
+      scrollContainer.scrollTop = savedPosition;
+    } else {
+      virtualizer.scrollToIndex(messages.length - 1, { align: 'end' });
+    }
+
+    return () => {
+      setScrollPosition(conversationId, scrollContainer.scrollTop);
+    };
+  }, [
+    conversationId,
+    getScrollPosition,
+    setScrollPosition,
+    virtualizer,
+    messages.length,
+  ]);
+
+  // Auto-scroll on new messages
+  useLayoutEffect(() => {
+    if (messages.length > 0 && !userScrolledUpRef.current) {
+      virtualizer.scrollToIndex(messages.length - 1, {
+        align: 'end',
+        behavior: 'smooth',
       });
     }
-  }, [conversationId]);
-
-  // Auto-scroll when new messages arrive (only if already at bottom)
-  useLayoutEffect(() => {
-    if (!scrollContainerRef.current || messages.length === 0) return;
-
-    const { scrollTop, scrollHeight, clientHeight } =
-      scrollContainerRef.current;
-    const isNearBottom = scrollHeight - scrollTop - clientHeight < 100;
-
-    if (isNearBottom) {
-      isAutoScrolling.current = true;
-      scrollContainerRef.current.scrollTop =
-        scrollContainerRef.current.scrollHeight;
-      requestAnimationFrame(() => {
-        isAutoScrolling.current = false;
-      });
-    }
-  }, [messages.length]);
-
-  // Handle message visibility for read receipts
-  useEffect(() => {
-    if (!onMessageInView) return;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            const messageId = entry.target.getAttribute('data-message-id');
-            if (messageId) {
-              onMessageInView(messageId);
-            }
-          }
-        });
-      },
-      { threshold: 0.5 },
-    );
-
-    // Observe visible messages
-    virtualItems.forEach((virtualItem) => {
-      const element = document.querySelector(
-        `[data-message-id="${messages[virtualItem.index]?.id}"]`,
-      );
-      if (element) {
-        observer.observe(element);
-      }
-    });
-
-    return () => observer.disconnect();
-  }, [virtualItems, messages, onMessageInView]);
+  }, [messages.length, virtualizer]);
 
   const scrollToBottom = useCallback(() => {
-    if (scrollContainerRef.current) {
-      isAutoScrolling.current = true;
-      scrollContainerRef.current.scrollTo({
-        top: scrollContainerRef.current.scrollHeight,
-        behavior: 'smooth',
-      });
-      setTimeout(() => {
-        isAutoScrolling.current = false;
-      }, 500);
-    }
-  }, []);
-
-  const scrollToFirstUnread = useCallback(() => {
-    if (firstUnreadIndex >= 0) {
-      virtualizer.scrollToIndex(firstUnreadIndex, {
-        align: 'center',
-        behavior: 'smooth',
-      });
-    }
-  }, [firstUnreadIndex, virtualizer]);
+    virtualizer.scrollToIndex(messages.length - 1, {
+      align: 'end',
+      behavior: 'smooth',
+    });
+    userScrolledUpRef.current = false;
+  }, [virtualizer, messages.length]);
 
   return (
-    <div className="relative flex-1 overflow-hidden min-h-0">
+    <div className="absolute top-0 right-0 bottom-0 left-0">
       <div
         ref={scrollContainerRef}
-        className="h-full overflow-y-auto scroll-smooth bg-[#F7F7F9]"
+        className="h-full overflow-y-auto scroll-smooth"
         onScroll={handleScroll}
       >
-        {/* Loading indicator */}
         {isLoading && hasMore && (
-          <div className="sticky top-0 left-0 right-0 flex justify-center p-3 z-20 bg-gradient-to-b from-[#F7F7F9] to-transparent">
-            <div className="flex items-center gap-2 text-sm text-muted-foreground bg-background/95 backdrop-blur-md px-4 py-2 rounded-full shadow-sm border">
+          <div className="sticky top-0 left-0 right-0 flex justify-center p-3 z-20">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground bg-card px-4 py-2 rounded-full shadow-sm border">
               <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-              ••• Loading earlier messages
+              Loading messages...
             </div>
           </div>
         )}
-
-        {/* Virtual list container */}
         <div
           style={{
             height: `${virtualizer.getTotalSize()}px`,
@@ -243,36 +195,35 @@ export function VirtualMessageList({
             const message = messages[virtualItem.index];
             if (!message) return null;
 
+            const isGrouped = isGroupedWith(
+              message,
+              messages[virtualItem.index - 1],
+            );
             return (
-              <MessageRow
-                key={message.id}
-                message={message}
-                messages={messages}
-                virtualItem={virtualItem}
-                currentUserId={currentUserId}
-                firstUnreadIndex={firstUnreadIndex}
-                measureElement={virtualizer.measureElement}
-                conversationId={conversationId}
-              />
+              <div
+                key={virtualItem.key}
+                data-index={virtualItem.index}
+                ref={virtualizer.measureElement}
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  width: '100%',
+                  transform: `translateY(${virtualItem.start}px)`,
+                }}
+              >
+                <MessageRow
+                  message={message}
+                  isGrouped={isGrouped}
+                  currentUserId={currentUserId}
+                />
+              </div>
             );
           })}
         </div>
       </div>
-
-      {/* Scroll to bottom button */}
       {showScrollButton && (
-        <div className="absolute bottom-4 right-4 flex flex-col items-end gap-2">
-          {unreadCount > 0 && (
-            <Button
-              size="sm"
-              onClick={scrollToFirstUnread}
-              className="shadow-lg"
-            >
-              <MessageSquare className="h-4 w-4 mr-1" />
-              {unreadCount} new {unreadCount === 1 ? 'message' : 'messages'}
-            </Button>
-          )}
-
+        <div className="absolute bottom-4 right-4">
           <Button
             size="icon"
             variant="secondary"
@@ -287,254 +238,180 @@ export function VirtualMessageList({
   );
 }
 
-// Simplified message row component
 interface MessageRowProps {
   message: MessageWithSender;
-  messages: MessageWithSender[];
-  virtualItem: { index: number; start: number; size: number };
+  isGrouped: boolean;
   currentUserId: string;
-  firstUnreadIndex: number;
-  measureElement: (el: HTMLElement | null) => void;
-  conversationId: string;
 }
 
 const MessageRow = React.memo(
-  ({
-    message,
-    messages,
-    virtualItem,
-    currentUserId,
-    firstUnreadIndex,
-    measureElement,
-    conversationId,
-  }: MessageRowProps) => {
+  ({ message, isGrouped, currentUserId }: MessageRowProps) => {
     const isFromCurrentUser = message.sender?.id === currentUserId;
-    const previousMessage = messages[virtualItem.index - 1];
-    const showUnreadDivider = virtualItem.index === firstUnreadIndex;
-    const deleteMutation = useDeleteMessage();
-    const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
-    // Message grouping logic
-    const shouldGroup = React.useMemo(() => {
-      if (
-        !previousMessage ||
-        previousMessage.sender?.id !== message.sender?.id
-      ) {
-        return false;
-      }
-      const timeDiff =
-        message.created_at && previousMessage.created_at
-          ? new Date(message.created_at).getTime() -
-            new Date(previousMessage.created_at).getTime()
-          : Infinity;
-      return timeDiff < 2 * 60 * 1000; // 2 minutes
-    }, [message.sender?.id, message.created_at, previousMessage]);
+    const setReplyTarget = useChatUIStore((state) => state.setReplyTarget);
 
-    const showAvatar = !shouldGroup && !isFromCurrentUser;
-    const showUsername = !shouldGroup && !isFromCurrentUser;
+    const handleSetReply = useCallback(() => {
+      if (!message.conversation_id) return;
+      setReplyTarget(message.conversation_id, message.id);
+    }, [message.id, message.conversation_id, setReplyTarget]);
 
-    const handleDeleteClick = React.useCallback(() => {
-      setDeleteConfirmId(message.id);
-    }, [message.id]);
-
-    const handleConfirmDelete = React.useCallback(() => {
-      deleteMutation.mutate({
-        messageId: message.id,
-        conversationId,
-      });
-      setDeleteConfirmId(null);
-    }, [deleteMutation, message.id, conversationId]);
-
-    const handleCancelDelete = React.useCallback(() => {
-      setDeleteConfirmId(null);
-    }, []);
+    const timestamp = message.created_at
+      ? new Date(message.created_at).toLocaleTimeString([], {
+          hour: '2-digit',
+          minute: '2-digit',
+        })
+      : '';
 
     return (
-      <>
+      <div
+        className={cn(
+          'group relative flex items-start gap-3 px-4 transition-colors',
+          'py-1 hover:bg-muted/50', // Consistent padding
+          !isGrouped && 'pt-4', // Extra top padding for non-grouped
+          isFromCurrentUser && 'justify-end',
+        )}
+      >
+        {/* Timestamp - shows on hover */}
+        <div className="absolute left-4 top-1/2 -translate-y-1/2 text-xs text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">
+          {timestamp}
+        </div>
+
+        {/* Avatar (only for other users on non-grouped messages) */}
+        {!isFromCurrentUser && !isGrouped && (
+          <div className="w-10 h-10 flex-shrink-0 rounded-full overflow-hidden bg-muted">
+            {message.sender?.avatar_url ? (
+              <Image
+                src={message.sender.avatar_url}
+                alt={message.sender?.username || 'User'}
+                width={40}
+                height={40}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className="w-full h-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-semibold">
+                {(message.sender?.username?.[0] || 'U').toUpperCase()}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Spacer for grouped messages from other users */}
+        {!isFromCurrentUser && isGrouped && (
+          <div className="w-10 flex-shrink-0" />
+        )}
+
+        {/* Message Content */}
         <div
-          ref={measureElement}
-          data-index={virtualItem.index}
-          data-message-id={message.id}
-          style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            width: '100%',
-            transform: `translateY(${virtualItem.start}px)`,
-          }}
-          className="group px-4 py-1"
+          className={cn(
+            'flex flex-col max-w-[75%]',
+            isFromCurrentUser ? 'items-end' : 'items-start',
+          )}
         >
-          {showUnreadDivider && (
-            <div className="flex items-center gap-2 py-2">
-              <div className="h-px flex-1 bg-gradient-to-r from-transparent via-primary to-transparent" />
-              <span className="text-xs font-medium text-primary bg-primary/10 px-3 py-1 rounded-full">
-                New messages
-              </span>
-              <div className="h-px flex-1 bg-gradient-to-r from-transparent via-primary to-transparent" />
-            </div>
+          {!isGrouped && !isFromCurrentUser && (
+            <p className="text-sm font-semibold mb-1 text-foreground">
+              {message.sender?.username || 'Unknown User'}
+            </p>
           )}
 
-          {!shouldGroup && virtualItem.index > 0 && <div className="h-4" />}
-
           <div
-            className={`flex ${isFromCurrentUser ? 'justify-end' : 'justify-start'}`}
+            className={cn(
+              'px-4 py-2 rounded-2xl text-sm whitespace-pre-wrap break-words',
+              isFromCurrentUser
+                ? 'bg-accent text-accent-foreground rounded-br-lg' // User's messages are the accent color
+                : 'bg-muted rounded-bl-lg text-foreground', // Other's messages are a muted gray
+            )}
           >
-            <div
-              className={`flex gap-3 max-w-[75%] ${isFromCurrentUser ? 'flex-row-reverse' : 'flex-row'}`}
-            >
-              {/* Avatar */}
-              {!isFromCurrentUser && (
-                <div className="w-8 h-8 flex-shrink-0 self-end">
-                  {showAvatar && (
-                    <div className="w-8 h-8 rounded-full overflow-hidden bg-muted">
-                      {message.sender?.avatar_url ? (
-                        <Image
-                          src={message.sender.avatar_url}
-                          alt={message.sender?.username || 'User'}
-                          width={32}
-                          height={32}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-full h-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-semibold text-xs">
-                          {(message.sender?.username?.[0] || 'U').toUpperCase()}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Message content */}
-              <div className="flex flex-col min-w-0 flex-1">
-                {showUsername && (
-                  <div
-                    className={`flex items-center gap-2 mb-1 ${isFromCurrentUser ? 'justify-end' : 'justify-start'}`}
-                  >
-                    <span className="text-sm font-semibold text-foreground">
-                      {isFromCurrentUser
-                        ? 'You'
-                        : message.sender?.username || 'Unknown'}
-                    </span>
-                    <span className="text-xs text-muted-foreground">
-                      {message.created_at
-                        ? new Date(message.created_at).toLocaleTimeString([], {
-                            hour: '2-digit',
-                            minute: '2-digit',
-                          })
-                        : ''}
-                    </span>
-                  </div>
-                )}
-
-                <div
-                  className={`
-                  group-hover:shadow-sm transition-all duration-150 rounded-2xl px-4 py-2 relative
-                  ${
-                    isFromCurrentUser
-                      ? 'bg-primary/20 text-foreground rounded-br-md'
-                      : 'bg-muted/90 text-foreground rounded-bl-md'
-                  }
-                  ${shouldGroup ? 'mt-1' : 'mt-0'}
-                `}
-                >
-                  <div className="text-sm whitespace-pre-wrap break-words leading-relaxed">
-                    {message.deleted_at ? (
-                      <em className="italic text-muted-foreground">
-                        This message was deleted
-                      </em>
-                    ) : (
-                      message.content
-                    )}
-                  </div>
-
-                  {/* Hover actions */}
-                  {!message.deleted_at && (
-                    <div
-                      className={`
-                      absolute top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 
-                      transition-opacity duration-200 flex gap-1
-                      ${isFromCurrentUser ? '-left-16' : '-right-16'}
-                    `}
-                    >
-                      <button
-                        type="button"
-                        className="w-8 h-8 rounded-full bg-background/90 border shadow-sm hover:bg-muted/50 flex items-center justify-center text-xs"
-                        title="Reply"
-                      >
-                        ↩
-                      </button>
-                      {isFromCurrentUser ? (
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <button
-                              type="button"
-                              className="w-8 h-8 rounded-full bg-background/90 border shadow-sm hover:bg-muted/50 flex items-center justify-center text-xs"
-                              title="More"
-                            >
-                              <MoreHorizontal className="w-4 h-4" />
-                            </button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent
-                            align="center"
-                            sideOffset={4}
-                            className="p-1 bg-white dark:bg-gray-900 rounded-md border shadow-md"
-                          >
-                            <DropdownMenuItem
-                              onSelect={handleDeleteClick}
-                              className="text-red-600 focus:bg-red-50 dark:focus:bg-red-600/20"
-                            >
-                              Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      ) : (
-                        <button
-                          type="button"
-                          className="w-8 h-8 rounded-full bg-background/90 border shadow-sm hover:bg-muted/50 flex items-center justify-center text-xs"
-                          title="React"
-                        >
-                          😊
-                        </button>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
+            {message.deleted_at ? (
+              <em className="italic text-muted-foreground">
+                This message was deleted
+              </em>
+            ) : (
+              message.content
+            )}
           </div>
         </div>
 
-        {/* Delete Confirmation Dialog */}
-        <Dialog
-          open={deleteConfirmId === message.id}
-          onOpenChange={(open) => !open && handleCancelDelete()}
-        >
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Delete Message</DialogTitle>
-              <DialogDescription>
-                Are you sure you want to delete this message? This action cannot
-                be undone.
-              </DialogDescription>
-            </DialogHeader>
-            <DialogFooter>
-              <Button variant="outline" onClick={handleCancelDelete}>
-                Cancel
-              </Button>
-              <Button
-                variant="destructive"
-                onClick={handleConfirmDelete}
-                disabled={deleteMutation.isPending}
-              >
-                {deleteMutation.isPending ? 'Deleting...' : 'Delete'}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      </>
+        {/* Hover Actions */}
+        {!message.deleted_at && (
+          <div
+            className={cn(
+              'absolute top-1/2 -translate-y-1/2 flex items-center gap-1 bg-card border rounded-full p-1 shadow-sm opacity-0 group-hover:opacity-100 transition-opacity',
+              isFromCurrentUser ? 'left-4' : 'right-4',
+            )}
+          >
+            <button
+              type="button"
+              className="w-7 h-7 rounded-full hover:bg-muted flex items-center justify-center text-muted-foreground"
+              title="Reply"
+              onClick={handleSetReply}
+            >
+              <MessageSquare className="w-4 h-4" />
+            </button>
+            {isFromCurrentUser && <DeleteMessageButton message={message} />}
+          </div>
+        )}
+      </div>
     );
   },
 );
-
 MessageRow.displayName = 'MessageRow';
+
+// Extracted Delete Button to its own component to contain its state
+function DeleteMessageButton({ message }: { message: MessageWithSender }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const deleteMutation = useDeleteMessage();
+
+  const handleConfirmDelete = () => {
+    if (!message.conversation_id) return;
+    deleteMutation.mutate({
+      messageId: message.id,
+      conversationId: message.conversation_id,
+    });
+    setIsOpen(false);
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <button
+            type="button"
+            className="w-7 h-7 rounded-full hover:bg-muted flex items-center justify-center text-muted-foreground"
+            title="More"
+          >
+            <MoreHorizontal className="w-4 h-4" />
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" side="top" className="p-1">
+          <DropdownMenuItem
+            onSelect={() => setIsOpen(true)}
+            className="text-red-600 focus:bg-red-50 dark:focus:bg-red-600/20"
+          >
+            Delete
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Delete Message</DialogTitle>
+          <DialogDescription>
+            Are you sure you want to delete this message? This action cannot be
+            undone.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setIsOpen(false)}>
+            Cancel
+          </Button>
+          <Button
+            variant="destructive"
+            onClick={handleConfirmDelete}
+            disabled={deleteMutation.isPending}
+          >
+            {deleteMutation.isPending ? 'Deleting...' : 'Delete'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}

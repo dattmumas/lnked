@@ -44,9 +44,9 @@ const accountLinkCache = new Map<string, {
 // Environment validation
 function validateEnvironment(): void {
   if (process.env.NODE_ENV === 'production' && 
-      (process.env.NEXT_PUBLIC_SITE_URL === null || 
-       process.env.NEXT_PUBLIC_SITE_URL === undefined || 
-       process.env.NEXT_PUBLIC_SITE_URL === '')) {
+      (process.env['NEXT_PUBLIC_SITE_URL'] === null || 
+       process.env['NEXT_PUBLIC_SITE_URL'] === undefined || 
+       process.env['NEXT_PUBLIC_SITE_URL'] === '')) {
     throw new Error('NEXT_PUBLIC_SITE_URL is required in production');
   }
 }
@@ -259,15 +259,12 @@ export async function POST(
         method: 'POST',
         statusCode: HTTP_STATUS.UNAUTHORIZED,
         duration,
-        error: 'Authentication failed',
+        ...(authError?.message ? { error: authError.message } : {}),
       });
 
       logger.warn('Unauthorized Stripe onboarding attempt', {
         statusCode: HTTP_STATUS.UNAUTHORIZED,
-        error: authError?.message,
-        metadata: {
-          collectiveId,
-        },
+        ...(authError?.message ? { error: authError.message } : {}),
       });
 
       return NextResponse.json({ error: 'Unauthorized' }, { status: HTTP_STATUS.UNAUTHORIZED });
@@ -290,7 +287,7 @@ export async function POST(
         method: 'POST',
         statusCode,
         duration,
-        userId,
+        ...(userId ? { userId } : {}),
         error: collective === null ? 'Collective not found' : 'Access denied',
       });
 
@@ -310,16 +307,13 @@ export async function POST(
         method: 'POST',
         statusCode: HTTP_STATUS.INTERNAL_SERVER_ERROR,
         duration,
-        userId,
+        ...(userId ? { userId } : {}),
         error: 'Stripe not configured',
       });
 
       logger.error('Stripe not configured', {
-        userId,
+        ...(userId ? { userId } : {}),
         statusCode: HTTP_STATUS.INTERNAL_SERVER_ERROR,
-        metadata: {
-          collectiveId,
-        },
       });
 
       return NextResponse.json(
@@ -351,12 +345,12 @@ export async function POST(
             method: 'POST',
             statusCode: HTTP_STATUS.INTERNAL_SERVER_ERROR,
             duration,
-            userId,
+            ...(userId ? { userId } : {}),
             error: 'Database update failed',
           });
 
           logger.error('Failed to save Stripe account ID', {
-            userId,
+            ...(userId ? { userId } : {}),
             statusCode: HTTP_STATUS.INTERNAL_SERVER_ERROR,
             error: updateError,
             metadata: {
@@ -374,7 +368,7 @@ export async function POST(
     }
 
     // Get site URL with production validation
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000';
+    const siteUrl = process.env['NEXT_PUBLIC_SITE_URL'] ?? 'http://localhost:3000';
 
     // Create or reuse account link (prevents rate limiting)
     const onboardingUrl = await getOrCreateAccountLink(
@@ -390,11 +384,11 @@ export async function POST(
       method: 'POST',
       statusCode: 200,
       duration,
-      userId,
+      ...(userId ? { userId } : {}),
     });
 
     logger.info('Stripe onboarding link created successfully', {
-      userId,
+      ...(userId ? { userId } : {}),
       statusCode: 200,
       duration,
       metadata: {
@@ -417,12 +411,12 @@ export async function POST(
       method: 'POST',
       statusCode: status,
       duration,
-      userId,
+      ...(userId ? { userId } : {}),
       error: error instanceof Error ? error.message : 'Unknown error',
     });
 
     logger.error('Stripe onboarding failed', {
-      userId,
+      ...(userId ? { userId } : {}),
       statusCode: status,
       duration,
       error: error instanceof Error ? error : new Error(String(error)),

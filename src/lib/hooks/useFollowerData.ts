@@ -164,7 +164,7 @@ export function useRealtimeFollowerData({
             payload.new !== null &&
             payload.new !== undefined &&
             'following_type' in payload.new &&
-            payload.new.following_type === targetType
+            payload.new['following_type'] === targetType
           ) {
             // New follow
             if (payload.eventType === 'INSERT') {
@@ -173,7 +173,7 @@ export function useRealtimeFollowerData({
                 currentUserId !== null &&
                 currentUserId !== undefined &&
                 currentUserId !== '' &&
-                payload.new.follower_id === currentUserId
+                payload.new['follower_id'] === currentUserId
               ) {
                 setIsFollowing(true);
               }
@@ -189,7 +189,7 @@ export function useRealtimeFollowerData({
                 currentUserId !== null &&
                 currentUserId !== undefined &&
                 currentUserId !== '' &&
-                payload.old.follower_id === currentUserId
+                payload.old['follower_id'] === currentUserId
               ) {
                 setIsFollowing(false);
               }

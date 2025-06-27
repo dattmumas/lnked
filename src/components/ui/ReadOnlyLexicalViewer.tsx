@@ -29,8 +29,8 @@ export function ReadOnlyLexicalViewer({
       parsed === undefined ||
       parsed === null ||
       typeof parsed !== 'object' ||
-      (parsed as Record<string, unknown>).root === undefined ||
-      (parsed as Record<string, unknown>).root === null
+      (parsed as Record<string, unknown>)['root'] === undefined ||
+      (parsed as Record<string, unknown>)['root'] === null
     ) {
       // Not valid Lexical JSON, show as plain text
       return (

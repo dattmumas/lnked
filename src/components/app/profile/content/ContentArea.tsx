@@ -292,7 +292,7 @@ function ContentGrid({
           {(hasMore || isFetchingNextPage) && (
             <div className="load-more-section">
               <LoadMoreButton
-                onClick={onLoadMore}
+                {...(onLoadMore ? { onClick: onLoadMore } : {})}
                 loading={isFetchingNextPage}
                 hasMore={hasMore}
               />

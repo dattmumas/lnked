@@ -85,7 +85,7 @@ function PostCardWithInteractions({
 }): React.ReactElement {
   const interactions = usePostInteractions({
     postId: post.id,
-    userId: currentUserId,
+    ...(currentUserId ? { userId: currentUserId } : {}),
   });
 
   const handleToggleLike = useCallback((): void => {
@@ -107,7 +107,7 @@ function PostCardWithInteractions({
       onToggleLike={handleToggleLike}
       onToggleDislike={handleToggleDislike}
       onToggleBookmark={handleToggleBookmark}
-      currentUserId={currentUserId}
+      {...(currentUserId ? { currentUserId } : {})}
       showFollowButton={showFollowButtons}
       className="h-full"
     />
@@ -154,7 +154,7 @@ export default function PostFeed({
         <PostCardWithInteractions
           key={post.id}
           post={post}
-          currentUserId={currentUserId}
+          {...(currentUserId ? { currentUserId } : {})}
           showFollowButtons={showFollowButtons}
         />
       ))}
@@ -230,7 +230,7 @@ export function usePostFeed(_userId?: string): {
             post.post_type !== undefined && post.post_type !== null
               ? post.post_type
               : 'text',
-          metadata: post.metadata ?? undefined,
+          metadata: post.metadata ?? {},
           author: {
             id:
               post.author?.id !== undefined &&

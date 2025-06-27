@@ -383,7 +383,6 @@ export function NotificationList({
                       key={notification.id}
                       notification={notification}
                       onMarkAsRead={handleMarkAsReadWrapper}
-                      onDelete={handleDeleteWrapper}
                     />
                   ))}
                   {/* Load More */}

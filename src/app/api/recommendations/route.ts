@@ -52,7 +52,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
 
     if (cursor !== null && cursor !== undefined) {
       const [scoreStr, id] = cursor.split(",");
-      const score = parseFloat(scoreStr);
+      const score = parseFloat(scoreStr ?? '0');
       query = query.gte("score", score).gte("suggested_collective_id", id);
     }
 

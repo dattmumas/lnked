@@ -92,10 +92,10 @@ class WebhookLogger implements StructuredLogger {
     const sanitized = { ...context };
     
     // Redact sensitive fields - Fix #12
-    if ('webhook_secret' in sanitized) sanitized.webhook_secret = '[REDACTED]';
-    if ('signature' in sanitized) sanitized.signature = '[REDACTED]';
-    if ('video_records' in sanitized) sanitized.video_records = '[REDACTED]';
-    if ('raw_body' in sanitized) sanitized.raw_body = '[REDACTED]';
+    if ('webhook_secret' in sanitized) sanitized['webhook_secret'] = '[REDACTED]';
+    if ('signature' in sanitized) sanitized['signature'] = '[REDACTED]';
+    if ('video_records' in sanitized) sanitized['video_records'] = '[REDACTED]';
+    if ('raw_body' in sanitized) sanitized['raw_body'] = '[REDACTED]';
     
     return sanitized;
   }
@@ -280,7 +280,7 @@ function isValidMuxSignature(
     return {
       isValid,
       timestampAge,
-      reason: isValid ? undefined : 'Signature mismatch',
+      ...(isValid ? {} : { reason: 'Signature mismatch' }),
     };
   } catch (error: unknown) {
     logger.error('Signature verification error', {
@@ -479,12 +479,12 @@ async function handleAssetReady(data: {
     };
     
     // Only include fields that have actual values
-    if (data.status !== undefined) updateData.status = data.status;
-    if (data.duration !== undefined) updateData.duration = data.duration;
-    if (data.aspect_ratio !== undefined) updateData.aspect_ratio = data.aspect_ratio;
-    if (playbackId !== null) updateData.mux_playback_id = playbackId;
-    if (playbackPolicy !== undefined) updateData.playback_policy = playbackPolicy;
-    updateData.processed_at = timestamp;
+    if (data.status !== undefined) updateData['status'] = data.status;
+    if (data.duration !== undefined) updateData['duration'] = data.duration;
+    if (data.aspect_ratio !== undefined) updateData['aspect_ratio'] = data.aspect_ratio;
+    if (playbackId !== null) updateData['mux_playback_id'] = playbackId;
+    if (playbackPolicy !== undefined) updateData['playback_policy'] = playbackPolicy;
+    updateData['processed_at'] = timestamp;
 
     logger.debug('Update data prepared', {
       fields_to_update: Object.keys(updateData),

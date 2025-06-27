@@ -6,7 +6,6 @@ import { useTenant } from '@/providers/TenantProvider';
 
 import type { UserTenantsResponse } from '@/types/tenant.types';
 
-
 interface TenantSwitcherSidebarProps {
   tenants: UserTenantsResponse[];
   currentTenant: UserTenantsResponse | null;

@@ -46,14 +46,13 @@ export function useMessages(conversationId: string | null): UseMessagesReturn {
 
   const query = useInfiniteQuery({
     queryKey: enabledQuery ? messageKeys.conversation(safeConversationId) : ['messages', 'empty'],
-    queryFn: async ({ pageParam }: { pageParam?: string }) => {
+    queryFn: async ({ pageParam }) => {
       if (!conversationId) {
         return [];
       }
       
-      const oldestMessage = pageParam ? { created_at: pageParam } : undefined;
       return await chatApiClient.getMessages(conversationId, {
-        before: oldestMessage?.created_at || undefined,
+        ...(pageParam ? { before: pageParam } : {}),
         limit: MESSAGES_PER_PAGE,
       });
     },
@@ -67,7 +66,7 @@ export function useMessages(conversationId: string | null): UseMessagesReturn {
     staleTime: MESSAGES_STALE_TIME,
   });
 
-  // Flatten all pages into a single array
+  // Flatten all pages into a single array. The API returns newest-to-oldest.
   const messages = useMemo(() => {
     if (!query.data) return [];
     return query.data.pages.flat();
@@ -118,41 +117,35 @@ export function useSendMessage(): {
         conversation_id: activeConversationId,
         content: params.content,
         message_type: params.message_type || 'text',
-        reply_to_id: params.reply_to_id,
-        metadata: params.metadata,
+        ...(params.reply_to_id ? { reply_to_id: params.reply_to_id } : {}),
+        ...(params.metadata ? { metadata: params.metadata } : {}),
       });
     },
     onSuccess: (newMessage) => {
       if (!activeConversationId) return;
 
-      // Update the messages cache
-      void queryClient.invalidateQueries({
-        queryKey: messageKeys.conversation(activeConversationId)
-      });
-
-      // Update conversation list to show latest message
+      // Update conversation list to show latest message in the sidebar
       void queryClient.invalidateQueries({
         queryKey: conversationKeys.lists(),
       });
 
-      // Optimistically add the message to cache
-      const optimisticMessage: MessageWithSender = {
-        ...newMessage,
-        conversation_id: activeConversationId,
-      };
-
+      // Optimistically PREPEND the new message to the messages cache
       queryClient.setQueryData(
         messageKeys.conversation(activeConversationId),
         (oldData: { pages: MessageWithSender[][]; pageParams: unknown[] } | undefined) => {
-          if (!oldData) return oldData;
-          
-          const newPages = [...oldData.pages];
-          if (newPages.length > 0) {
-            newPages[0] = [optimisticMessage, ...newPages[0]];
-          } else {
-            newPages.push([optimisticMessage]);
+          if (!oldData) {
+            return { pages: [[newMessage]], pageParams: [undefined] };
           }
+
+          const newPages = [...oldData.pages];
           
+          if (newPages[0]?.some((m) => m.id === newMessage.id)) {
+            return oldData; // Prevent duplicates
+          }
+
+          // Prepend to the first page (which contains the newest messages)
+          newPages[0] = [newMessage, ...(newPages[0] || [])];
+
           return {
             ...oldData,
             pages: newPages,
@@ -164,48 +157,6 @@ export function useSendMessage(): {
       if (!activeConversationId) return;
       
       // Invalidate to refetch on error
-      void queryClient.invalidateQueries({
-        queryKey: messageKeys.conversation(activeConversationId)
-      });
-    },
-  });
-}
-
-// Hook to add reaction to a message
-export function useAddReaction(): {
-  mutate: (params: { messageId: string; emoji: string }) => void;
-  isPending: boolean;
-} {
-  const queryClient = useQueryClient();
-  const { activeConversationId } = useChatUIStore();
-
-  return useMutation({
-    mutationFn: (params: { messageId: string; emoji: string }): Promise<void> =>
-      chatApiClient.addReaction(params.messageId, params.emoji),
-    onSuccess: () => {
-      if (!activeConversationId) return;
-      
-      void queryClient.invalidateQueries({
-        queryKey: messageKeys.conversation(activeConversationId)
-      });
-    },
-  });
-}
-
-// Hook to remove reaction from a message
-export function useRemoveReaction(): {
-  mutate: (params: { messageId: string; emoji: string }) => void;
-  isPending: boolean;
-} {
-  const queryClient = useQueryClient();
-  const { activeConversationId } = useChatUIStore();
-
-  return useMutation({
-    mutationFn: (params: { messageId: string; emoji: string }): Promise<void> =>
-      chatApiClient.removeReaction(params.messageId, params.emoji),
-    onSuccess: () => {
-      if (!activeConversationId) return;
-      
       void queryClient.invalidateQueries({
         queryKey: messageKeys.conversation(activeConversationId)
       });

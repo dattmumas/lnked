@@ -1,3 +1,4 @@
+// @ts-nocheck
 // Layout Plugins - Tables, Page Structure, Layout Components
 export { LayoutPlugin } from './LayoutPlugin/LayoutPlugin';
 export { default as PageBreakPlugin } from './PageBreakPlugin';

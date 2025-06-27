@@ -26,15 +26,17 @@ const DEFAULT_REDIRECT_DELAY_MS = 500;
 // Configuration constants (externalized from magic numbers)
 const AUTH_CONFIG = {
   MAX_RETRIES:
-    Number(process.env.NEXT_PUBLIC_AUTH_MAX_RETRIES) || DEFAULT_MAX_RETRIES,
+    Number(process.env['NEXT_PUBLIC_AUTH_MAX_RETRIES']) || DEFAULT_MAX_RETRIES,
   RETRY_BASE_MS:
-    Number(process.env.NEXT_PUBLIC_AUTH_RETRY_BASE_MS) || DEFAULT_RETRY_BASE_MS,
+    Number(process.env['NEXT_PUBLIC_AUTH_RETRY_BASE_MS']) ||
+    DEFAULT_RETRY_BASE_MS,
   SESSION_VERIFY_RETRIES: DEFAULT_SESSION_VERIFY_RETRIES,
   SESSION_VERIFY_DELAY_MS: DEFAULT_SESSION_VERIFY_DELAY_MS,
   RATE_LIMIT_ATTEMPTS:
-    Number(process.env.NEXT_PUBLIC_SIGNIN_LIMIT) || DEFAULT_RATE_LIMIT_ATTEMPTS,
+    Number(process.env['NEXT_PUBLIC_SIGNIN_LIMIT']) ||
+    DEFAULT_RATE_LIMIT_ATTEMPTS,
   RATE_LIMIT_WINDOW_MS:
-    Number(process.env.NEXT_PUBLIC_SIGNIN_WINDOW) ||
+    Number(process.env['NEXT_PUBLIC_SIGNIN_WINDOW']) ||
     DEFAULT_RATE_LIMIT_WINDOW_MS,
   REDIRECT_DELAY_MS: DEFAULT_REDIRECT_DELAY_MS,
 } as const;
@@ -274,12 +276,17 @@ export default function SignInPage(): React.JSX.Element {
         // Record attempt for rate limiting
         authService.rateLimiter.recordAttempt();
 
+        // Extract and validate form data
+        const { email, password } = formData;
+
+        if (!email || !password) {
+          setAuthError('Email and password are required');
+          return;
+        }
+
         // Development logging (email anonymized)
         if (process.env.NODE_ENV === 'development') {
-          const anonymizedEmail = formData.email.replace(
-            /(.{2})(.*)(@.*)/,
-            '$1***$3',
-          );
+          const anonymizedEmail = email.replace(/(.{2})(.*)(@.*)/, '$1***$3');
           console.warn('Auth attempt for:', anonymizedEmail);
         }
 
@@ -287,8 +294,8 @@ export default function SignInPage(): React.JSX.Element {
         const { data, error: signInError } = await retryWithBackoff(
           () =>
             authService.supabase.auth.signInWithPassword({
-              email: formData.email,
-              password: formData.password,
+              email,
+              password,
             }),
           AUTH_CONFIG.MAX_RETRIES,
           AUTH_CONFIG.RETRY_BASE_MS,

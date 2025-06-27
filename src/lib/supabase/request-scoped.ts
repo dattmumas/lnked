@@ -15,8 +15,8 @@ let cachedRequestId: string | undefined;
  * Reuses the client within the same request for efficiency
  */
 export function createRequestScopedSupabaseClient(request: Request): ReturnType<typeof createServerClient<Database>> {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const supabaseUrl = process.env['NEXT_PUBLIC_SUPABASE_URL'];
+  const supabaseAnonKey = process.env['NEXT_PUBLIC_SUPABASE_ANON_KEY'];
 
   if (supabaseUrl === null || supabaseUrl === undefined || supabaseAnonKey === null || supabaseAnonKey === undefined) {
     throw new Error('Missing Supabase environment variables');
@@ -74,7 +74,7 @@ export function createRequestScopedSupabaseClient(request: Request): ReturnType<
         // Only add headers if they exist to avoid empty strings
         const authHeader = request.headers.get('Authorization');
         if (authHeader !== null && authHeader !== undefined && authHeader !== '') {
-          headers.Authorization = authHeader;
+          headers['Authorization'] = authHeader;
         }
         
         const clientInfo = request.headers.get('X-Client-Info');
@@ -109,16 +109,16 @@ export function createRequestScopedSupabaseClient(request: Request): ReturnType<
  * Use this for routes that have access to the cookies() function
  */
 export async function createServerSupabaseClientWithContext(): Promise<ReturnType<typeof createServerClient<Database>>> {
-  // Import next/headers only when needed to avoid client-side import issues
-  const { cookies } = await import('next/headers');
-  
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const supabaseUrl = process.env['NEXT_PUBLIC_SUPABASE_URL'];
+  const supabaseAnonKey = process.env['NEXT_PUBLIC_SUPABASE_ANON_KEY'];
 
   if (supabaseUrl === null || supabaseUrl === undefined || supabaseAnonKey === null || supabaseAnonKey === undefined) {
     throw new Error('Missing Supabase environment variables');
   }
 
+  // Import next/headers only when needed to avoid client-side import issues
+  // eslint-disable-next-line @typescript-eslint/no-var-requires, @typescript-eslint/no-require-imports
+  const { cookies } = require('next/headers') as typeof import('next/headers');
   const cookieStore = await cookies();
 
   return createServerClient<Database>(supabaseUrl, supabaseAnonKey, {

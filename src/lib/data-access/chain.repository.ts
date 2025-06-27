@@ -27,9 +27,20 @@ export class ChainRepository {
   async create(chain: ChainInsert): Promise<Chain | undefined> {
     const dbChain = ChainInsertSchema.parse(chain);
     
+    const { status, visibility, collective_id, parent_chain_id, attachments, meta, ...rest } = dbChain;
+    const cleanedChain = {
+      ...rest,
+      ...(status !== null ? { status } : {}),
+      ...(visibility !== null ? { visibility } : {}),
+      ...(collective_id !== null ? { collective_id } : {}),
+      ...(parent_chain_id !== null ? { parent_chain_id } : {}),
+      ...(attachments !== null ? { attachments } : {}),
+      ...(meta !== null ? { meta } : {}),
+    };
+
     const { data, error } = await this.supabase
       .from('chains')
-      .insert(dbChain)
+      .insert(cleanedChain)
       .select()
       .single();
 

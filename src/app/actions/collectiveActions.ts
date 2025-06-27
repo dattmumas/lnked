@@ -319,7 +319,7 @@ export async function updateCollectiveSettings(
   return {
     success: true,
     message: 'Collective settings updated successfully.',
-    updatedSlug: slug !== collective.slug ? slug : undefined,
+    ...(slug !== collective.slug ? { updatedSlug: slug } : {}),
   };
 }
 
@@ -380,7 +380,7 @@ export async function getCollectiveStripeStatus(collectiveId: string): Promise<{
       charges_enabled: account.charges_enabled,
       payouts_enabled: account.payouts_enabled,
       details_submitted: account.details_submitted,
-      requirements: account.requirements as Record<string, unknown> | undefined,
+      ...(account.requirements ? { requirements: account.requirements as unknown as Record<string, unknown> } : {}),
       email: account.email,
       type: account.type,
       id: account.id,

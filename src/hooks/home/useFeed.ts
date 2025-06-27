@@ -74,13 +74,16 @@ export function useFeed(): UseFeedReturn {
         .select('post_id, type')
         .in('post_id', postIds);
 
-      const reactionCounts: Record<string, { likes: number; dislikes: number }> = {};
+      const reactionCounts = new Map<string, { likes: number; dislikes: number }>();
       postIds.forEach((id) => {
-        reactionCounts[id] = { likes: 0, dislikes: 0 };
+        reactionCounts.set(id, { likes: 0, dislikes: 0 });
       });
       reactions?.forEach((r) => {
-        if (r.type === 'like') reactionCounts[r.post_id].likes += 1;
-        else if (r.type === 'dislike') reactionCounts[r.post_id].dislikes += 1;
+        const current = reactionCounts.get(r.post_id);
+        if (current) {
+          if (r.type === 'like') current.likes += 1;
+          else if (r.type === 'dislike') current.dislikes += 1;
+        }
       });
 
       // Comment counts
@@ -98,32 +101,58 @@ export function useFeed(): UseFeedReturn {
         commentCounts[c.entity_id] = (commentCounts[c.entity_id] ?? 0) + 1;
       });
 
-      const items: FeedItem[] = postRows.map((post) => ({
-        id: post.id,
-        type: post.post_type === 'video' ? 'video' : 'post',
-        title: post.title,
-        content: post.content ?? undefined,
-        author: {
-          name: post.users?.full_name ?? 'Unknown Author',
-          username: post.users?.username ?? 'unknown',
-          avatar_url: post.users?.avatar_url ?? undefined,
-        },
-        published_at: post.published_at ?? new Date().toISOString(),
-        stats: {
-          likes: reactionCounts[post.id]?.likes ?? 0,
-          dislikes: reactionCounts[post.id]?.dislikes ?? 0,
-          comments: commentCounts[post.id] ?? 0,
-          views: (post.metadata as Record<string, number> | undefined)?.views,
-        },
-        thumbnail_url: post.thumbnail_url ?? undefined,
-        duration:
-          post.post_type === 'video' && post.metadata
-            ? ((post.metadata as Record<string, string>).duration ?? undefined)
-            : undefined,
-        collective: post.collectives
-          ? { name: post.collectives.name ?? 'Unknown', slug: post.collectives.slug ?? 'unknown' }
-          : undefined,
-      }));
+      const items: FeedItem[] = postRows.map((post) => {
+        // Get reaction data from Map and destructure
+        const reactionEntry = reactionCounts.get(post.id) ?? { likes: 0, dislikes: 0 };
+        const { likes, dislikes } = reactionEntry;
+        const commentsCount = commentCounts[post.id] ?? 0;
+
+        const base: FeedItem = {
+          id: post.id,
+          type: post.post_type === 'video' ? 'video' : 'post',
+          title: post.title,
+          author: {
+            name: post.users?.full_name ?? 'Unknown Author',
+            username: post.users?.username ?? 'unknown',
+            ...(post.users?.avatar_url ? { avatar_url: post.users?.avatar_url } : {}),
+          },
+          published_at: post.published_at ?? new Date().toISOString(),
+          stats: {
+            likes,
+            dislikes,
+            comments: commentsCount,
+          },
+        };
+
+        if (post.content !== null && post.content !== undefined) {
+          base.content = post.content;
+        }
+
+        const views = (post.metadata as Record<string, number> | undefined)?.['views'];
+        if (views !== undefined) {
+          base.stats.views = views;
+        }
+
+        if (post.thumbnail_url) {
+          base.thumbnail_url = post.thumbnail_url;
+        }
+
+        if (post.post_type === 'video' && post.metadata) {
+          const { duration } = post.metadata as Record<string, string>;
+          if (duration !== undefined) {
+            base.duration = duration;
+          }
+        }
+
+        if (post.collectives) {
+          base.collective = {
+            name: post.collectives.name ?? 'Unknown',
+            slug: post.collectives.slug ?? 'unknown',
+          };
+        }
+
+        return base;
+      });
 
       setFeedItems(items);
       setError(undefined);

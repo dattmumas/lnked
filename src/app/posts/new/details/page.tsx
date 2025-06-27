@@ -138,7 +138,7 @@ export default function NewPostDetailsPage(): React.ReactElement {
 
   // Thumbnail upload functionality
   const thumbnailUpload = useThumbnailUpload({
-    postId: formData.id, // Will be undefined for new posts
+    ...(formData.id ? { postId: formData.id } : {}),
     onUploadSuccess: useCallback(
       (thumbnailUrl: string): void => {
         updateFormData({ thumbnail_url: thumbnailUrl });
@@ -406,13 +406,8 @@ export default function NewPostDetailsPage(): React.ReactElement {
                           ? 'Drop your image here'
                           : 'Drop an image here or click to browse'}
                       </p>
-                      <Button variant="outline" size="sm" type="button">
-                        Choose File
-                      </Button>
-                      <p className="text-xs text-muted-foreground mt-2">
-                        Recommended: {THUMBNAIL_RECOMMENDED_WIDTH}×
-                        {THUMBNAIL_RECOMMENDED_HEIGHT}px (
-                        {THUMBNAIL_ASPECT_RATIO}:1 ratio)
+                      <p className="text-xs text-muted-foreground">
+                        Supports: JPG, PNG, WebP (max 5MB)
                       </p>
                     </>
                   )}

@@ -39,7 +39,7 @@ export function PostMetadataBar({
             {...register('title')}
             placeholder="Title is Required"
             className="text-xl font-semibold px-3 py-2 border border-input rounded-md min-w-0"
-            aria-invalid={Boolean(errors.title)}
+            aria-invalid={Boolean(errors['title'])}
           />
         </div>
         {/* Status dropdown and date */}
@@ -72,9 +72,9 @@ export function PostMetadataBar({
             </>
           )}
         </div>
-        {errors.published_at && (
+        {errors['published_at'] && (
           <span className="text-xs text-destructive mt-1 ml-0 md:ml-4">
-            {errors.published_at.message as string}
+            {errors['published_at'].message as string}
           </span>
         )}
       </div>

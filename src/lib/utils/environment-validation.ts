@@ -95,7 +95,7 @@ export function validateEnvironmentConfig(): ValidationResult {
   // Group configuration validation
   const maxParticipants = validateNumber(
     'GROUP_MAX_PARTICIPANTS',
-    process.env.GROUP_MAX_PARTICIPANTS,
+    process.env['GROUP_MAX_PARTICIPANTS'],
     DEFAULT_CONFIG.GROUP_MAX_PARTICIPANTS,
     DEFAULT_CONFIG.GROUP_MAX_PARTICIPANTS_MIN, // Minimum 2 (creator + 1 other)
     DEFAULT_CONFIG.GROUP_MAX_PARTICIPANTS_MAX, // Reasonable upper limit
@@ -105,7 +105,7 @@ export function validateEnvironmentConfig(): ValidationResult {
   
   const maxTitleLength = validateNumber(
     'GROUP_MAX_TITLE_LENGTH',
-    process.env.GROUP_MAX_TITLE_LENGTH,
+    process.env['GROUP_MAX_TITLE_LENGTH'],
     DEFAULT_CONFIG.GROUP_MAX_TITLE_LENGTH,
     DEFAULT_CONFIG.GROUP_MAX_TITLE_LENGTH_MIN,
     DEFAULT_CONFIG.GROUP_MAX_TITLE_LENGTH_MAX,
@@ -115,7 +115,7 @@ export function validateEnvironmentConfig(): ValidationResult {
   
   const minParticipants = validateNumber(
     'GROUP_MIN_PARTICIPANTS',
-    process.env.GROUP_MIN_PARTICIPANTS,
+    process.env['GROUP_MIN_PARTICIPANTS'],
     DEFAULT_CONFIG.GROUP_MIN_PARTICIPANTS,
     0,
     maxParticipants.value - 1,
@@ -126,7 +126,7 @@ export function validateEnvironmentConfig(): ValidationResult {
   // Rate limiting validation
   const userRateLimit = validateNumber(
     'RATE_LIMIT_USER_REQUESTS_PER_HOUR',
-    process.env.RATE_LIMIT_USER_REQUESTS_PER_HOUR,
+    process.env['RATE_LIMIT_USER_REQUESTS_PER_HOUR'],
     DEFAULT_CONFIG.RATE_LIMIT_USER_REQUESTS_PER_HOUR,
     DEFAULT_CONFIG.RATE_LIMIT_USER_REQUESTS_MIN,
     DEFAULT_CONFIG.RATE_LIMIT_USER_REQUESTS_MAX,
@@ -136,7 +136,7 @@ export function validateEnvironmentConfig(): ValidationResult {
   
   const ipRateLimit = validateNumber(
     'RATE_LIMIT_IP_REQUESTS_PER_HOUR',
-    process.env.RATE_LIMIT_IP_REQUESTS_PER_HOUR,
+    process.env['RATE_LIMIT_IP_REQUESTS_PER_HOUR'],
     DEFAULT_CONFIG.RATE_LIMIT_IP_REQUESTS_PER_HOUR,
     DEFAULT_CONFIG.RATE_LIMIT_IP_REQUESTS_MIN,
     DEFAULT_CONFIG.RATE_LIMIT_IP_REQUESTS_MAX,
@@ -147,7 +147,7 @@ export function validateEnvironmentConfig(): ValidationResult {
   // Batch processing validation
   const batchSize = validateNumber(
     'PARTICIPANT_BATCH_SIZE',
-    process.env.PARTICIPANT_BATCH_SIZE,
+    process.env['PARTICIPANT_BATCH_SIZE'],
     DEFAULT_CONFIG.PARTICIPANT_BATCH_SIZE,
     DEFAULT_CONFIG.PARTICIPANT_BATCH_SIZE_MIN,
     DEFAULT_CONFIG.PARTICIPANT_BATCH_SIZE_MAX,
@@ -178,7 +178,7 @@ export function validateEnvironmentConfig(): ValidationResult {
     RATE_LIMIT_IP_REQUESTS_PER_HOUR: ipRateLimit.value,
     PARTICIPANT_BATCH_SIZE: batchSize.value,
     NODE_ENV: nodeEnv,
-    VERCEL_ENV: process.env.VERCEL_ENV,
+    VERCEL_ENV: process.env['VERCEL_ENV'] || 'development',
   };
   
   return {

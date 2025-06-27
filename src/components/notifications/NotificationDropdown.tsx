@@ -1,244 +1,25 @@
 'use client';
 
-import { Bell, CheckCheck, Settings, ExternalLink } from 'lucide-react';
-import Link from 'next/link';
-import { useState, useEffect, useCallback } from 'react';
+import React from 'react';
 
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { useUser } from '@/hooks/useUser';
 import { useNotifications } from '@/lib/hooks/useNotifications';
-import { cn } from '@/lib/utils';
 
-import { NotificationItem } from './NotificationItem';
+import { NotificationDropdownClient } from './NotificationDropdownClient';
 
-interface NotificationDropdownProps {
-  userId?: string;
-  className?: string;
-}
+export function NotificationDropdown(): React.ReactElement | null {
+  const { user } = useUser();
+  const { notifications, unreadCount } = useNotifications();
 
-// Constants for magic numbers
-const MARK_AS_READ_DELAY = 500;
-const MAX_RECENT_NOTIFICATIONS = 5;
-const MAX_UNREAD_COUNT_DISPLAY = 99;
-
-export function NotificationDropdown({
-  userId,
-  className,
-}: NotificationDropdownProps): React.JSX.Element {
-  const [isOpen, setIsOpen] = useState(false);
-  const [hasMarkedAsRead, setHasMarkedAsRead] = useState(false);
-
-  const {
-    notifications,
-    unreadCount,
-    isLoading,
-    markAsRead,
-    deleteNotifications,
-  } = useNotifications(userId, {
-    autoFetch: true,
-    realtime: true,
-    filters: {
-      limit: 10,
-      read: false, // Only fetch unread notifications
-    },
-  });
-
-  // Mark all notifications as read when dropdown opens
-  useEffect((): (() => void) | void => {
-    if (isOpen && notifications.length > 0 && !hasMarkedAsRead) {
-      const unreadNotificationIds = notifications
-        .filter((n) => n.read_at === null)
-        .map((n) => n.id);
-
-      if (unreadNotificationIds.length > 0) {
-        setHasMarkedAsRead(true);
-        // Use a timeout to prevent immediate re-fetching
-        const timeoutId = setTimeout(() => {
-          void markAsRead(unreadNotificationIds);
-        }, MARK_AS_READ_DELAY);
-
-        return (): void => clearTimeout(timeoutId);
-      }
-    }
-    return undefined;
-  }, [isOpen, notifications, hasMarkedAsRead, markAsRead]);
-
-  // Reset the flag when dropdown closes
-  useEffect((): void => {
-    if (!isOpen) {
-      setHasMarkedAsRead(false);
-    }
-  }, [isOpen]);
-
-  const handleMarkAllAsRead = useCallback(async (): Promise<void> => {
-    if (unreadCount > 0) {
-      await markAsRead();
-    }
-  }, [unreadCount, markAsRead]);
-
-  const handleNotificationAction = useCallback(
-    async (
-      notificationId: string,
-      action: 'read' | 'delete',
-    ): Promise<void> => {
-      if (action === 'read') {
-        await markAsRead([notificationId]);
-      } else {
-        await deleteNotifications([notificationId]);
-      }
-    },
-    [markAsRead, deleteNotifications],
-  );
-
-  const handleMarkAllClick = useCallback((): void => {
-    void handleMarkAllAsRead();
-  }, [handleMarkAllAsRead]);
-
-  const handleMarkAsReadCallback = useCallback(
-    (id: string): void => {
-      void handleNotificationAction(id, 'read');
-    },
-    [handleNotificationAction],
-  );
-
-  const handleDeleteCallback = useCallback(
-    (id: string): void => {
-      void handleNotificationAction(id, 'delete');
-    },
-    [handleNotificationAction],
-  );
-
-  const recentNotifications = notifications.slice(0, MAX_RECENT_NOTIFICATIONS);
+  if (!user) {
+    return null;
+  }
 
   return (
-    <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
-      <DropdownMenuTrigger asChild>
-        <Button
-          variant="ghost"
-          size="sm"
-          className={cn('relative h-9 w-9 p-0', className)}
-        >
-          <Bell className="h-4 w-4" />
-          {unreadCount > 0 && (
-            <Badge
-              variant="destructive"
-              className="absolute -top-1 -right-1 h-4 w-4 p-0 flex items-center justify-center text-[10px] font-medium"
-            >
-              {unreadCount > MAX_UNREAD_COUNT_DISPLAY ? '99+' : unreadCount}
-            </Badge>
-          )}
-          <span className="sr-only">Notifications</span>
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-96 shadow-lg p-0">
-        {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b">
-          <div className="flex items-center gap-2">
-            <h3 className="font-semibold text-base">Notifications</h3>
-            {unreadCount > 0 && (
-              <Badge variant="secondary" className="text-xs">
-                {unreadCount}
-              </Badge>
-            )}
-          </div>
-
-          <div className="flex items-center gap-1">
-            {unreadCount > 0 && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-xs h-auto p-1.5 hover:bg-accent"
-                onClick={handleMarkAllClick}
-              >
-                <CheckCheck className="h-3 w-3 mr-1" />
-                Mark all read
-              </Button>
-            )}
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-auto p-1.5 hover:bg-accent"
-              asChild
-            >
-              <Link href="/dashboard/notifications">
-                <Settings className="h-3 w-3" />
-                <span className="sr-only">Notification settings</span>
-              </Link>
-            </Button>
-          </div>
-        </div>
-
-        {/* Content */}
-        <div className="max-h-96">
-          {isLoading && notifications.length === 0 ? (
-            // Loading state
-            <div className="p-4 space-y-3">
-              {Array.from({ length: 3 }).map((_, i) => (
-                <div key={i} className="flex items-start gap-3 animate-pulse">
-                  <div className="w-8 h-8 bg-muted rounded-full" />
-                  <div className="w-8 h-8 bg-muted rounded-full" />
-                  <div className="flex-1 space-y-2">
-                    <div className="h-3 bg-muted rounded w-3/4" />
-                    <div className="h-3 bg-muted rounded w-1/2" />
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : recentNotifications.length === 0 ? (
-            // Empty state
-            <div className="p-8 text-center">
-              <Bell className="h-8 w-8 mx-auto mb-3 text-muted-foreground" />
-              <h4 className="font-medium mb-1">No new notifications</h4>
-              <p className="text-sm text-muted-foreground">
-                You&apos;re all caught up! Check back later for updates.
-              </p>
-            </div>
-          ) : (
-            // Notifications list
-            <ScrollArea className="max-h-80">
-              <div className="p-2 space-y-1">
-                {recentNotifications.map((notification) => (
-                  <DropdownMenuItem
-                    key={notification.id}
-                    className="p-0 cursor-pointer focus:bg-accent"
-                    asChild
-                  >
-                    <div className="w-full">
-                      <NotificationItem
-                        notification={notification}
-                        onMarkAsRead={handleMarkAsReadCallback}
-                        onDelete={handleDeleteCallback}
-                        className="border-0 rounded-md hover:bg-accent/50"
-                      />
-                    </div>
-                  </DropdownMenuItem>
-                ))}
-              </div>
-            </ScrollArea>
-          )}
-        </div>
-
-        {/* Footer - Always show link to all notifications */}
-        <div className="border-t p-3">
-          <Button
-            variant="ghost"
-            className="w-full justify-center gap-2 text-sm"
-            asChild
-          >
-            <Link href="/dashboard/notifications">
-              View all notifications
-              <ExternalLink className="h-3 w-3" />
-            </Link>
-          </Button>
-        </div>
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <NotificationDropdownClient
+      initialNotifications={notifications ?? []}
+      initialUnreadCount={unreadCount}
+      userId={user.id}
+    />
   );
 }

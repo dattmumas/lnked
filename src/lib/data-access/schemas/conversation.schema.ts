@@ -82,6 +82,17 @@ export const ConversationInsertSchema = z.object({
 
 export type ConversationInsert = z.input<typeof ConversationInsertSchema>;
 
+export const ConversationUpdateSchema = z.object({
+  type: z.string().optional().transform(val => val ?? null),
+  title: z.string().optional().transform(val => val ?? null),
+  description: z.string().optional().transform(val => val ?? null),
+  created_by: z.string().optional().transform(val => val ?? null),
+  is_private: z.boolean().optional().transform(val => val ?? null),
+  archived: z.boolean().optional().transform(val => val ?? null),
+});
+
+export type ConversationUpdate = z.input<typeof ConversationUpdateSchema>;
+
 export const MessageInsertSchema = z.object({
   conversation_id: z.string().optional().transform(val => val ?? null),
   sender_id: z.string().optional().transform(val => val ?? null),

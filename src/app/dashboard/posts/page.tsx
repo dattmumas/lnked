@@ -156,17 +156,15 @@ export default async function MyPostsPage(): Promise<React.ReactElement> {
   // Map posts to include likeCount and video information
   const postsWithLikeCount = (posts as DashboardPost[]).map(
     (post: DashboardPost) => {
-      const video = videoMap.get(post.title) || undefined;
-      return {
+      const video = videoMap.get(post.title);
+      const transformedPost: DashboardPost = {
         ...post,
-        likeCount: Array.isArray(post.post_reactions)
-          ? post.post_reactions.filter(
-              (r: { type?: string }) => r.type === 'like',
-            ).length
-          : 0,
+        likeCount: post.like_count || 0,
         isFeatured: featuredIds.has(post.id),
-        video,
+        ...(video ? { video } : { video: null }),
+        post_reactions: post.post_reactions || [],
       };
+      return transformedPost;
     },
   );
 

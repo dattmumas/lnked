@@ -821,7 +821,8 @@ export const MessageRowLegacy = memo<LegacyMessageRowProps>(
     } = data;
 
     const message = messages[index];
-    const previousMessage = index > 0 ? messages[index - 1] : null;
+    // Fix: ensure previousMessage is never undefined - only Message or null
+    const previousMessage = index > 0 ? (messages[index - 1] ?? null) : null;
 
     // Pre-compute reactions to avoid recalculation on every render
     // Must be called before early return to comply with hooks rules
@@ -853,9 +854,9 @@ export const MessageRowLegacy = memo<LegacyMessageRowProps>(
         onEmojiPicker={onEmojiPicker}
         onSaveEdit={onSaveEdit}
         onCancelEdit={onCancelEdit}
-        onRetryMessage={onRetryMessage}
         formatFileSize={formatFileSize}
-        setItemSize={setItemSize}
+        {...(onRetryMessage ? { onRetryMessage } : {})}
+        {...(setItemSize ? { setItemSize } : {})}
       />
     );
   },

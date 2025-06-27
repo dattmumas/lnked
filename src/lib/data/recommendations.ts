@@ -1,15 +1,7 @@
-import { cookies } from "next/headers"; 
-
 import { DEFAULT_RECOMMENDATION_LIMIT } from "@/lib/constants/recommendations";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
 
-// Needs cookies if it uses them directly
-// If fetchRecommendations needs to be called from client, it would be an API route call,
-// but here it's used by a Server Component, so it can be a server-side function.
-
-
-
-// Assuming Recommendation interface is defined elsewhere or can be imported/defined here
-// For now, let's redefine it or assume it will be imported from a types file.
+// Recommendation interface matching the database structure
 export interface Recommendation {
   score: number;
   created_at: string;
@@ -24,45 +16,81 @@ export interface Recommendation {
 }
 
 export async function fetchRecommendations(
-  // cookieHeader: string, // If called from server component, can use cookies() directly
   cursor?: string,
   limit: number = DEFAULT_RECOMMENDATION_LIMIT
 ): Promise<{ recommendations: Recommendation[]; nextCursor: string | null }> {
-  const cookieStore = await cookies();
-  const cookieHeader = cookieStore.toString(); // Construct header if needed by API
+  try {
+    const supabase = await createServerSupabaseClient();
 
-  const params = new URLSearchParams();
-  params.set("limit", limit.toString());
-  if (typeof cursor === "string" && cursor.length > 0) {
-    params.set("cursor", cursor);
-  }
+    // Get the current user
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
 
-  // Ensure NEXT_PUBLIC_SITE_URL is available or provide a default for server-side fetch
-  const siteUrl =
-    process.env.NEXT_PUBLIC_SITE_URL ?? process.env.VERCEL_URL ?? "http://localhost:3000";
-
-  const res = await fetch(
-    `${siteUrl}/api/recommendations?${params.toString()}`,
-    {
-      headers: { Cookie: cookieHeader }, // Pass cookies if your API route needs them for auth
-      next: { revalidate: 300 }, // Keep revalidation strategy
+    // If no user is authenticated, return empty recommendations
+    if (userError !== null || user === null) {
+      console.warn('No authenticated user for recommendations');
+      return { recommendations: [], nextCursor: null };
     }
-  );
-  if (!res.ok) {
-    const errorBody = await res.text();
-    console.error(
-      "Failed to fetch recommendations (from lib). Status:",
-      res.status,
-      "Body:",
-      errorBody
-    );
-    throw new Error(
-      `Failed to fetch recommendations (from lib). Status: ${res.status}`
-    );
+
+    // Build the query
+    let query = supabase
+      .from("recommendations")
+      .select(
+        `
+        score,
+        created_at,
+        suggested_collective_id,
+        collectives:collectives (
+          id, name, slug, description, tags
+        )
+        `
+      )
+      .eq("user_id", user.id)
+      .order("score", { ascending: true })
+      .order("suggested_collective_id", { ascending: true })
+      .limit(limit + 1); // Fetch one extra for next cursor
+
+    // Apply cursor-based pagination if provided
+    if (typeof cursor === 'string' && cursor.trim().length > 0) {
+      const parts = cursor.split(',');
+      if (parts.length === 2) {
+        const [scoreStr, id] = parts as [string, string];
+        const score = parseFloat(scoreStr);
+        if (!isNaN(score) && id.trim().length > 0) {
+          query = query
+            .gte('score', score)
+            .gte('suggested_collective_id', id.trim());
+        }
+      }
+    }
+
+    const { data, error } = await query;
+
+    if (error !== null) {
+      console.error("Error fetching recommendations from database:", error);
+      throw new Error(`Failed to fetch recommendations: ${error.message}`);
+    }
+
+    const results = data ?? [];
+    let nextCursor: string | null = null;
+
+    // If we got more results than requested, use the last one for pagination
+    if (results.length > limit) {
+      const next = results.pop();
+      if (next !== null && next !== undefined) {
+        nextCursor = `${next.score},${next.suggested_collective_id}`;
+      }
+    }
+
+    return {
+      recommendations: results as Recommendation[],
+      nextCursor,
+    };
+  } catch (error: unknown) {
+    console.error('Error in fetchRecommendations:', error);
+    // Return empty results instead of throwing to prevent page crashes
+    return { recommendations: [], nextCursor: null };
   }
-  const data = (await res.json()) as {
-    recommendations: Recommendation[];
-    nextCursor: string | null;
-  };
-  return data;
 }

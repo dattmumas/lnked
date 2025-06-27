@@ -51,7 +51,15 @@ export default function SignUpPage(): React.JSX.Element {
         return;
       }
 
-      const { fullName } = formData;
+      // Extract and validate form data
+      const { email, password, fullName, username } = formData;
+
+      if (!email || !password) {
+        setError('Email and password are required');
+        setIsLoading(false);
+        return;
+      }
+
       if (
         fullName === null ||
         fullName === undefined ||
@@ -66,7 +74,6 @@ export default function SignUpPage(): React.JSX.Element {
       }
 
       // Validate username format
-      const { username } = formData;
       if (
         username === null ||
         username === undefined ||
@@ -108,12 +115,12 @@ export default function SignUpPage(): React.JSX.Element {
         const { data, error: signUpError } = await retryWithBackoff(
           () =>
             supabase.auth.signUp({
-              email: formData.email,
-              password: formData.password,
+              email,
+              password,
               options: {
                 data: {
-                  username: formData.username,
-                  full_name: formData.fullName,
+                  username,
+                  full_name: fullName,
                 },
                 // emailRedirectTo: `${window.location.origin}/auth/callback`, // Uncomment if email confirmation is enabled
               },
