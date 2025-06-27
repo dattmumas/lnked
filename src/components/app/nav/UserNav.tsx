@@ -54,7 +54,7 @@ export function UserNav(): React.ReactElement {
   if (!user) {
     return (
       <Button asChild variant="ghost">
-        <Link href="/login">Sign In</Link>
+        <Link href="/sign-in">Sign In</Link>
       </Button>
     );
   }
