@@ -2,7 +2,6 @@
 
 import { revalidatePath } from 'next/cache';
 
-
 import {
   CreatePostServerSchema,
   UpdatePostServerSchema,
@@ -11,11 +10,11 @@ import {
 } from '@/lib/schemas/postSchemas';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
-import { 
-  THUMBNAIL_CONFIG, 
-  generateThumbnailFilename, 
-  extractThumbnailFilePathFromUrl, 
-  isSupabaseStorageUrl 
+import {
+  THUMBNAIL_CONFIG,
+  generateThumbnailFilename,
+  extractThumbnailFilePathFromUrl,
+  isSupabaseStorageUrl,
 } from '@/lib/utils/thumbnail';
 
 import type { TablesInsert, TablesUpdate } from '@/types/database.types';
@@ -31,6 +30,31 @@ const REVALIDATION_BATCH_SIZE = 10;
 const TIMESTAMP_BASE = 36;
 const CLEANUP_DELAY_MS = 5000;
 
+// Reserved URL segments that cannot be used as post slugs
+const RESERVED_SLUGS = new Set([
+  'admin',
+  'api',
+  'dashboard',
+  'videos',
+  'video',
+  'posts',
+  'post',
+  'collectives',
+  'collective',
+  'profile',
+  'profiles',
+  'auth',
+  'login',
+  'sign-in',
+  'sign-up',
+  'settings',
+  'search',
+  'home',
+  'notifications',
+]);
+
+const isReservedSlug = (slug: string): boolean => RESERVED_SLUGS.has(slug);
+
 // Memoized slug generation
 const slugCache = new Map<string, string>();
 const generateSlug = (title: string): string => {
@@ -38,7 +62,7 @@ const generateSlug = (title: string): string => {
   if (slugCache.has(cacheKey)) {
     return slugCache.get(cacheKey) ?? '';
   }
-  
+
   const slug = title
     .toLowerCase()
     .trim()
@@ -47,73 +71,139 @@ const generateSlug = (title: string): string => {
     .replace(/-+/g, '-')
     .replace(/^-+|-+$/g, '')
     .substring(0, MAX_SLUG_LENGTH);
-    
+
   slugCache.set(cacheKey, slug);
   return slug;
 };
 
 // Centralized post status derivation
-const derivePostStatus = (isPublic: boolean, publishedAt?: string | null): 'draft' | 'active' => {
+const derivePostStatus = (
+  isPublic: boolean,
+  publishedAt?: string | null,
+): 'draft' | 'active' => {
   if (!isPublic) return 'draft';
-  if (publishedAt !== null && publishedAt !== undefined && new Date(publishedAt) > new Date()) return 'draft';
+  if (
+    publishedAt !== null &&
+    publishedAt !== undefined &&
+    new Date(publishedAt) > new Date()
+  )
+    return 'draft';
   return 'active';
 };
 
-// Structured logging utility
+// -----------------------------------------------------------------------------
+// Structured logging utility with aggressive PII masking.
+// In production, only "warn" and "error" are emitted. All other levels are
+// discarded to avoid noisy logs. Potentially sensitive fields are always
+// redacted or summarised.
+// -----------------------------------------------------------------------------
+
+type LogLevel = 'debug' | 'info' | 'warn' | 'error';
+
+const SENSITIVE_KEYS = new Set([
+  'user',
+  'content',
+  'email',
+  'metadata',
+  'token',
+  'password',
+]);
+
+const summarizeValue = (value: unknown): string => {
+  if (typeof value === 'symbol') return '[symbol]';
+  if (
+    typeof value === 'number' ||
+    typeof value === 'boolean' ||
+    typeof value === 'bigint'
+  ) {
+    return value.toString();
+  }
+  // object, function, and unknown fallbacks
+  return `[${typeof value}]`;
+};
+
+const sanitizeContext = (
+  context: Record<string, unknown>,
+): Record<string, unknown> => {
+  const sanitized: Record<string, unknown> = {};
+  Object.entries(context).forEach(([key, value]) => {
+    if (SENSITIVE_KEYS.has(key)) {
+      sanitized[key] = '[REDACTED]';
+      return;
+    }
+    // Generic length summary for large strings
+    if (typeof value === 'string' && value.length > 256) {
+      sanitized[key] = summarizeValue(value);
+      return;
+    }
+    sanitized[key] = value;
+  });
+  return sanitized;
+};
+
 const logPostAction = (
   action: string,
   context: Record<string, unknown>,
-  level: 'info' | 'warn' | 'error' = 'info'
+  level: LogLevel = 'info',
 ): void => {
-  const sanitizedContext = {
-    ...context,
-    // Remove PII and sensitive data
-    user: context['user'] !== null && context['user'] !== undefined ? '[REDACTED]' : undefined,
-    content: context['content'] !== null && context['content'] !== undefined 
-      ? `[${typeof context['content']} length: ${typeof context['content'] === 'string' 
-          ? String(context['content']).length 
-          : typeof context['content'] === 'object' 
-            ? 'object' 
-            : 'unknown'}]` 
-      : undefined,
-  };
-  
+  // Silence non-critical logs in production
+  if (process.env.NODE_ENV === 'production' && level === 'debug') return;
+
   const logMessage = {
+    ts: new Date().toISOString(),
     action,
-    timestamp: new Date().toISOString(),
-    ...sanitizedContext,
+    ...sanitizeContext(context),
   };
-  
-  if (level === 'error') {
-    console.error(`[PostAction:${action}]`, logMessage);
-  } else if (level === 'warn') {
-    console.warn(`[PostAction:${action}]`, logMessage);
+
+  switch (level) {
+    case 'error':
+      console.error('[PostAction]', logMessage);
+      break;
+    case 'warn':
+      console.warn('[PostAction]', logMessage);
+      break;
+    case 'info':
+      console.log('[PostAction]', logMessage);
+      break;
+    default:
+      console.debug('[PostAction]', logMessage);
   }
-  // Remove console.info as it's not allowed by ESLint rules
 };
 
 // Batch revalidation utility
 const batchRevalidatePaths = async (paths: string[]): Promise<void> => {
   const uniquePaths = Array.from(new Set(paths));
-  const batches = [];
-  
+
+  const tasks: Promise<void>[] = [];
   for (let i = 0; i < uniquePaths.length; i += REVALIDATION_BATCH_SIZE) {
-    batches.push(uniquePaths.slice(i, i + REVALIDATION_BATCH_SIZE));
+    const batch = uniquePaths.slice(i, i + REVALIDATION_BATCH_SIZE);
+    batch.forEach((path) => {
+      tasks.push(
+        (async () => {
+          try {
+            // Next.js revalidatePath may return void; still await for consistency
+            await revalidatePath(path as unknown as string);
+          } catch (error) {
+            logPostAction('revalidatePath', { path, error }, 'warn');
+          }
+        })(),
+      );
+    });
   }
-  
-  await Promise.all(
-    batches.map(batch => 
-      Promise.all(batch.map(path => revalidatePath(path)))
-    )
-  );
+
+  // Run in the background; caller shouldn't await.
+  await Promise.allSettled(tasks);
 };
 
 // Optimized collective permission checking with single query
 const validateCollectivePermissions = async (
   supabase: Awaited<ReturnType<typeof createServerSupabaseClient>>,
   userId: string,
-  collectiveIds: string[]
-): Promise<{ valid: Array<{ id: string; slug: string; canPost: boolean }>; error?: string }> => {
+  collectiveIds: string[],
+): Promise<{
+  valid: Array<{ id: string; slug: string; canPost: boolean }>;
+  error?: string;
+}> => {
   if (collectiveIds.length === 0) {
     return { valid: [] };
   }
@@ -122,42 +212,64 @@ const validateCollectivePermissions = async (
     // Single query to get all collective data and memberships
     const { data: collectivesData, error: collectivesError } = await supabase
       .from('collectives')
-      .select(`
+      .select(
+        `
         id,
         slug,
         owner_id,
         collective_members!inner(member_id, role)
-      `)
+      `,
+      )
       .in('id', collectiveIds);
 
     if (collectivesError !== null) {
-      logPostAction('validateCollectivePermissions', { error: collectivesError }, 'error');
+      logPostAction(
+        'validateCollectivePermissions',
+        { error: collectivesError },
+        'error',
+      );
       return { valid: [], error: 'Error fetching collective permissions' };
     }
 
-    if (collectivesData === null || collectivesData.length !== collectiveIds.length) {
+    if (
+      collectivesData === null ||
+      collectivesData.length !== collectiveIds.length
+    ) {
       return { valid: [], error: 'One or more collectives not found' };
     }
 
     const validCollectives = collectivesData
-      .filter((collective: { owner_id: string; collective_members: Array<{ member_id: string; role: string }> | null }) => {
-        // User is owner
-        if (collective.owner_id === userId) return true;
-        
-        // User is member with posting permissions
-        const userMembership = collective.collective_members?.find(
-          (member: { member_id: string; role: string }) => member.member_id === userId
-        );
-        return userMembership !== null && userMembership !== undefined && ['admin', 'editor', 'author'].includes(userMembership.role);
-      })
+      .filter(
+        (collective: {
+          owner_id: string;
+          collective_members: Array<{ member_id: string; role: string }> | null;
+        }) => {
+          // User is owner
+          if (collective.owner_id === userId) return true;
+
+          // User is member with posting permissions
+          const userMembership = collective.collective_members?.find(
+            (member: { member_id: string; role: string }) =>
+              member.member_id === userId,
+          );
+          return (
+            userMembership !== null &&
+            userMembership !== undefined &&
+            ['admin', 'editor', 'author'].includes(userMembership.role)
+          );
+        },
+      )
       .map((collective: { id: string; slug: string }) => ({
         id: collective.id,
         slug: collective.slug,
-        canPost: true
+        canPost: true,
       }));
 
     if (validCollectives.length !== collectiveIds.length) {
-      return { valid: [], error: 'Insufficient permissions for one or more collectives' };
+      return {
+        valid: [],
+        error: 'Insufficient permissions for one or more collectives',
+      };
     }
 
     return { valid: validCollectives };
@@ -168,9 +280,7 @@ const validateCollectivePermissions = async (
 };
 
 // Slug conflict resolution - simplified since slug field doesn't exist in posts table
-const resolveSlugConflict = (
-  baseSlug: string
-): string => {
+const resolveSlugConflict = (baseSlug: string): string => {
   // For now, return the base slug with timestamp to avoid conflicts
   // TODO: Add slug field to posts table and implement proper conflict resolution
   const timestamp = Date.now().toString(TIMESTAMP_BASE);
@@ -202,16 +312,24 @@ export async function createPost(
   } = await supabase.auth.getUser();
 
   if (authError !== null || user === null) {
-    logPostAction('createPost', { error: 'Unauthenticated access attempt' }, 'warn');
+    logPostAction(
+      'createPost',
+      { error: 'Unauthenticated access attempt' },
+      'warn',
+    );
     return { error: 'You must be logged in to create a post.' };
   }
 
   const validatedFields = CreatePostServerSchema.safeParse(formData);
 
   if (!validatedFields.success) {
-    logPostAction('createPost', { 
-      validationErrors: validatedFields.error.flatten().fieldErrors 
-    }, 'warn');
+    logPostAction(
+      'createPost',
+      {
+        validationErrors: validatedFields.error.flatten().fieldErrors,
+      },
+      'warn',
+    );
     return {
       error: 'Invalid input. Please check the fields.',
       fieldErrors: validatedFields.error.flatten().fieldErrors,
@@ -232,22 +350,32 @@ export async function createPost(
   } = validatedFields.data;
 
   // Content length validation
-  if (content !== null && content !== undefined && content.length > MAX_CONTENT_LENGTH) {
+  if (
+    content !== null &&
+    content !== undefined &&
+    content.length > MAX_CONTENT_LENGTH
+  ) {
     return {
       error: `Content too long. Maximum ${MAX_CONTENT_LENGTH} characters allowed.`,
-      fieldErrors: { content: [`Content must be ${MAX_CONTENT_LENGTH} characters or less`] }
+      fieldErrors: {
+        content: [`Content must be ${MAX_CONTENT_LENGTH} characters or less`],
+      },
     };
   }
 
   // Handle legacy single collective or new multi-collective
-  const collectivesToValidate = collectiveId !== null && collectiveId !== undefined ? [collectiveId] : selected_collectives;
-  
+  const collectivesToValidate =
+    collectiveId !== null && collectiveId !== undefined
+      ? [collectiveId]
+      : selected_collectives;
+
   // Batch validate collective permissions
-  const { valid: validCollectives, error: permissionError } = await validateCollectivePermissions(
-    supabase,
-    user.id,
-    collectivesToValidate
-  );
+  const { valid: validCollectives, error: permissionError } =
+    await validateCollectivePermissions(
+      supabase,
+      user.id,
+      collectivesToValidate,
+    );
 
   if (permissionError !== null && permissionError !== undefined) {
     return {
@@ -257,6 +385,17 @@ export async function createPost(
   }
 
   const baseSlug = generateSlug(title);
+
+  // Reserved slug validation
+  if (isReservedSlug(baseSlug)) {
+    return {
+      error:
+        'The generated URL slug clashes with a reserved route. Please choose a different title.',
+      fieldErrors: {
+        title: ['Title results in a reserved URL. Try wording it differently.'],
+      },
+    };
+  }
   const postSlug = resolveSlugConflict(baseSlug);
   const dbStatus = derivePostStatus(is_public, published_at);
 
@@ -289,7 +428,11 @@ export async function createPost(
       .single();
 
     if (insertError !== null) {
-      logPostAction('createPost', { error: insertError, postData: postToInsert }, 'error');
+      logPostAction(
+        'createPost',
+        { error: insertError, postData: postToInsert },
+        'error',
+      );
       return { error: `Failed to create post: ${insertError.message}` };
     }
 
@@ -299,56 +442,72 @@ export async function createPost(
 
     // Create post-collective associations with conflict handling
     if (selected_collectives.length > 0) {
-      const postCollectiveInserts = selected_collectives.map(collectiveId => ({
-        post_id: newPost.id,
-        collective_id: collectiveId,
-        shared_by: user.id,
-        status: dbStatus === 'active' ? 'published' as const : 'draft' as const,
-        shared_at: new Date().toISOString(),
-        display_order: 0,
-        metadata: {}
-      }));
+      const postCollectiveInserts = selected_collectives.map(
+        (collectiveId) => ({
+          post_id: newPost.id,
+          collective_id: collectiveId,
+          shared_by: user.id,
+          status:
+            dbStatus === 'active' ? ('published' as const) : ('draft' as const),
+          shared_at: new Date().toISOString(),
+          display_order: 0,
+          metadata: {},
+        }),
+      );
 
       const { error: associationError } = await supabase
         .from('post_collectives')
-        .upsert(postCollectiveInserts, { 
+        .upsert(postCollectiveInserts, {
           onConflict: 'post_id,collective_id',
-          ignoreDuplicates: true 
+          ignoreDuplicates: true,
         });
 
       if (associationError !== null) {
-        logPostAction('createPost', { 
-          error: associationError, 
-          postId: newPost.id 
-        }, 'error');
+        logPostAction(
+          'createPost',
+          {
+            error: associationError,
+            postId: newPost.id,
+          },
+          'error',
+        );
         // Don't fail the entire operation, but log the error
-        logPostAction('createPost', { 
-          message: 'Post created successfully but collective associations failed',
-          postId: newPost.id 
-        }, 'warn');
+        logPostAction(
+          'createPost',
+          {
+            message:
+              'Post created successfully but collective associations failed',
+            postId: newPost.id,
+          },
+          'warn',
+        );
       }
     }
 
     // Batch revalidation
     const pathsToRevalidate = ['/dashboard', `/posts/${postSlug}`];
-    validCollectives.forEach(collective => {
+    validCollectives.forEach((collective) => {
       pathsToRevalidate.push(`/collectives/${collective.slug}`);
       pathsToRevalidate.push(`/collectives/${collective.slug}/${postSlug}`);
     });
-    
-    await batchRevalidatePaths(pathsToRevalidate);
 
-    logPostAction('createPost', { 
-      postId: newPost.id, 
+    // Trigger cache revalidation asynchronously; do not block response
+    void batchRevalidatePaths(pathsToRevalidate);
+
+    logPostAction('createPost', {
+      postId: newPost.id,
       slug: postSlug,
-      collectiveCount: validCollectives.length 
+      collectiveCount: validCollectives.length,
     });
 
     return {
       data: {
         postId: newPost.id,
         postSlug,
-        collectiveSlug: validCollectives.length > 0 ? validCollectives[0]?.slug || null : null,
+        collectiveSlug:
+          validCollectives.length > 0
+            ? validCollectives[0]?.slug || null
+            : null,
       },
     };
   } catch (error) {
@@ -388,15 +547,25 @@ export async function updatePost(
       'id, author_id, collective_id, published_at, is_public, status, title, collective:collectives!collective_id(slug, owner_id)',
     )
     .eq('id', postId)
+    .neq('status', 'removed') // Prevent editing soft-deleted posts
     .maybeSingle();
 
   if (fetchError !== null || existingPost === null) {
-    logPostAction('updatePost', {
-      postId,
-      error: fetchError,
-      existingPost: existingPost !== null,
-    }, 'error');
+    logPostAction(
+      'updatePost',
+      {
+        postId,
+        error: fetchError,
+        existingPost: existingPost !== null,
+      },
+      'error',
+    );
     return { error: 'Post not found or error fetching post data.' };
+  }
+
+  // Defensive check in case the query above changes
+  if (existingPost?.status === 'removed') {
+    return { error: 'Deleted posts cannot be edited.' };
   }
 
   const isAuthor = existingPost.author_id === user.id;
@@ -415,7 +584,8 @@ export async function updatePost(
       if (memberCheckError !== null)
         return { error: 'Error checking collective membership for edit.' };
       const canEditAsCollectiveMember =
-        membership !== null && ['admin', 'editor', 'author'].includes(membership.role);
+        membership !== null &&
+        ['admin', 'editor', 'author'].includes(membership.role);
       if (canEditAsCollectiveMember === true) {
         isCollectiveOwnerOrMember = true;
       }
@@ -447,10 +617,16 @@ export async function updatePost(
   } = validatedFields.data;
 
   // Content length validation
-  if (content !== null && content !== undefined && content.length > MAX_CONTENT_LENGTH) {
+  if (
+    content !== null &&
+    content !== undefined &&
+    content.length > MAX_CONTENT_LENGTH
+  ) {
     return {
       error: `Content too long. Maximum ${MAX_CONTENT_LENGTH} characters allowed.`,
-      fieldErrors: { content: [`Content must be ${MAX_CONTENT_LENGTH} characters or less`] }
+      fieldErrors: {
+        content: [`Content must be ${MAX_CONTENT_LENGTH} characters or less`],
+      },
     };
   }
 
@@ -489,20 +665,38 @@ export async function updatePost(
 
   // Generate slug from title (simplified since slug field doesn't exist in posts table)
   let postSlug = generateSlug(existingPost.title);
-  
+
   // Handle slug updates with conflict resolution (but keep old slug for redirects)
   if (title !== null && title !== undefined && title !== existingPost.title) {
     const newBaseSlug = generateSlug(title);
+
+    if (isReservedSlug(newBaseSlug)) {
+      return {
+        error:
+          'That title would create a reserved URL slug. Please choose a different title.',
+        fieldErrors: {
+          title: [
+            'Title results in a reserved URL. Try wording it differently.',
+          ],
+        },
+      };
+    }
     const newSlug = resolveSlugConflict(newBaseSlug);
     postSlug = newSlug;
-    
+    updateData.slug = newSlug;
+
     // TODO: Implement slug history table for redirects
-    logPostAction('updatePost', { 
-      postId, 
-      oldTitle: existingPost.title, 
-      newTitle: title,
-      message: 'Title changed - old links may break without redirect handling'
-    }, 'warn');
+    logPostAction(
+      'updatePost',
+      {
+        postId,
+        oldTitle: existingPost.title,
+        newTitle: title,
+        message:
+          'Title changed - old links may break without redirect handling',
+      },
+      'warn',
+    );
   }
 
   if (
@@ -533,18 +727,26 @@ export async function updatePost(
 
   // Batch revalidation
   const pathsToRevalidate = ['/dashboard', `/posts/${postSlug}`];
-  if (existingPost.collective?.slug !== null && existingPost.collective?.slug !== undefined) {
+  if (
+    existingPost.collective?.slug !== null &&
+    existingPost.collective?.slug !== undefined
+  ) {
     pathsToRevalidate.push(`/collectives/${existingPost.collective.slug}`);
-    pathsToRevalidate.push(`/collectives/${existingPost.collective.slug}/${postSlug}`);
+    pathsToRevalidate.push(
+      `/collectives/${existingPost.collective.slug}/${postSlug}`,
+    );
   }
-  
-  await batchRevalidatePaths(pathsToRevalidate);
+
+  // Trigger cache revalidation asynchronously; user update shouldn't fail on cache issues
+  void batchRevalidatePaths(pathsToRevalidate);
 
   return {
     data: {
       postId: updatedPost.id,
       postSlug,
-      ...(existingPost.collective?.slug ? { collectiveSlug: existingPost.collective.slug } : {}),
+      ...(existingPost.collective?.slug
+        ? { collectiveSlug: existingPost.collective.slug }
+        : {}),
     },
   };
 }
@@ -571,24 +773,27 @@ export async function deletePost(postId: string): Promise<DeletePostResult> {
     .select('collective:collectives!collective_id(slug), author_id')
     .eq('id', postId)
     .maybeSingle();
-    
+
   if (fetchErr !== null || existingPost === null) {
     return { success: false, error: 'Post not found.' };
   }
 
   // Permission check
   if (existingPost.author_id !== user.id) {
-    return { success: false, error: 'You do not have permission to delete this post.' };
+    return {
+      success: false,
+      error: 'You do not have permission to delete this post.',
+    };
   }
 
   // Use status update to soft delete (since deleted_at field doesn't exist)
   const { error: deleteErr } = await supabase
     .from('posts')
-    .update({ 
-      status: 'removed' as const // Use 'removed' status for soft delete
+    .update({
+      status: 'removed' as const, // Use 'removed' status for soft delete
     })
     .eq('id', postId);
-    
+
   if (deleteErr !== null) {
     logPostAction('deletePost', { error: deleteErr, postId }, 'error');
     return { success: false, error: deleteErr.message };
@@ -600,9 +805,9 @@ export async function deletePost(postId: string): Promise<DeletePostResult> {
     pathsToRevalidate.push(`/collectives/${existingPost.collective.slug}`);
     redirectPath = `/collectives/${existingPost.collective.slug}`;
   }
-  
+
   await batchRevalidatePaths(pathsToRevalidate);
-  
+
   logPostAction('deletePost', { postId, redirectPath });
   return { success: true, redirectPath };
 }
@@ -614,15 +819,15 @@ export async function incrementPostViewCount(
   if (postId === null || postId === undefined || postId === '') {
     return { success: false, error: 'Post ID is required.' };
   }
-  
+
   try {
     const supabase = await createServerSupabaseClient();
-    
+
     // Use the existing RPC function (rate limiting would need to be implemented in the RPC function itself)
     const { error } = await supabase.rpc('increment_view_count', {
       post_id_to_increment: postId,
     });
-    
+
     if (error !== null) {
       logPostAction('incrementPostViewCount', { error, postId }, 'error');
       return { success: false, error: error.message };
@@ -664,7 +869,11 @@ export async function featurePost(
     .neq('status', 'removed') // Only feature non-removed posts
     .maybeSingle();
 
-  if (postError !== null || postOwner === null || postOwner.author_id !== user.id) {
+  if (
+    postError !== null ||
+    postOwner === null ||
+    postOwner.author_id !== user.id
+  ) {
     return { success: false, error: 'Post not found or not owned by user.' };
   }
 
@@ -674,7 +883,7 @@ export async function featurePost(
       .from('featured_posts')
       .upsert(
         { owner_id: user.id, owner_type: 'user', post_id: postId },
-        { onConflict: 'owner_id,post_id', ignoreDuplicates: true }
+        { onConflict: 'owner_id,post_id', ignoreDuplicates: true },
       );
 
     if (insertError !== null) {
@@ -699,7 +908,7 @@ export async function featurePost(
 // Enhanced thumbnail upload with proper user-scoped storage
 export async function uploadThumbnail(
   formData: FormData,
-  postId?: string
+  postId?: string,
 ): Promise<{ success: boolean; thumbnailUrl?: string; error?: string }> {
   const supabase = await createServerSupabaseClient();
 
@@ -728,7 +937,9 @@ export async function uploadThumbnail(
     if (postId !== null && postId !== undefined) {
       const { data: post, error: postError } = await supabase
         .from('posts')
-        .select('author_id, collective_id, collective:collectives!collective_id(owner_id)')
+        .select(
+          'author_id, collective_id, collective:collectives!collective_id(owner_id)',
+        )
         .eq('id', postId)
         .neq('status', 'removed') // Only allow uploads for non-removed posts
         .maybeSingle();
@@ -744,7 +955,11 @@ export async function uploadThumbnail(
       let hasPermission = isAuthor;
 
       // Check collective permissions if post belongs to a collective
-      if (!isAuthor && post.collective_id !== null && post.collective !== null) {
+      if (
+        !isAuthor &&
+        post.collective_id !== null &&
+        post.collective !== null
+      ) {
         const isCollectiveOwner = post.collective.owner_id === user.id;
         if (isCollectiveOwner) {
           hasPermission = true;
@@ -757,7 +972,10 @@ export async function uploadThumbnail(
             .eq('member_id', user.id)
             .maybeSingle();
 
-          if (membership !== null && ['owner', 'admin', 'editor'].includes(membership.role)) {
+          if (
+            membership !== null &&
+            ['owner', 'admin', 'editor'].includes(membership.role)
+          ) {
             hasPermission = true;
           }
         }
@@ -799,7 +1017,11 @@ export async function uploadThumbnail(
       });
 
     if (uploadError !== null) {
-      logPostAction('uploadThumbnail', { error: uploadError, filePath }, 'error');
+      logPostAction(
+        'uploadThumbnail',
+        { error: uploadError, filePath },
+        'error',
+      );
       return {
         success: false,
         error: `Failed to upload thumbnail: ${uploadError.message}`,
@@ -811,7 +1033,10 @@ export async function uploadThumbnail(
       .from(THUMBNAIL_CONFIG.bucket)
       .getPublicUrl(filePath);
 
-    if (publicUrlData.publicUrl === null || publicUrlData.publicUrl === undefined) {
+    if (
+      publicUrlData.publicUrl === null ||
+      publicUrlData.publicUrl === undefined
+    ) {
       return {
         success: false,
         error: 'Failed to generate thumbnail URL.',
@@ -835,7 +1060,11 @@ export async function uploadThumbnail(
         .eq('id', postId);
 
       if (updateError !== null) {
-        logPostAction('uploadThumbnail', { error: updateError, postId }, 'error');
+        logPostAction(
+          'uploadThumbnail',
+          { error: updateError, postId },
+          'error',
+        );
         return {
           success: false,
           error: 'Failed to update thumbnail URL in database.',
@@ -843,10 +1072,16 @@ export async function uploadThumbnail(
       }
 
       // Queue old thumbnail deletion with retry mechanism
-      if (currentPost?.thumbnail_url !== null && currentPost?.thumbnail_url !== undefined && isSupabaseStorageUrl(currentPost.thumbnail_url)) {
+      if (
+        currentPost?.thumbnail_url !== null &&
+        currentPost?.thumbnail_url !== undefined &&
+        isSupabaseStorageUrl(currentPost.thumbnail_url)
+      ) {
         try {
-          const oldFilePath = extractThumbnailFilePathFromUrl(currentPost.thumbnail_url);
-          
+          const oldFilePath = extractThumbnailFilePathFromUrl(
+            currentPost.thumbnail_url,
+          );
+
           if (oldFilePath !== null && oldFilePath !== undefined) {
             // Queue deletion job (implement proper job queue in production)
             void setTimeout((): void => {
@@ -855,23 +1090,32 @@ export async function uploadThumbnail(
                   await supabaseAdmin.storage
                     .from(THUMBNAIL_CONFIG.bucket)
                     .remove([oldFilePath]);
-                  logPostAction('uploadThumbnail', { 
-                    message: 'Old thumbnail deleted', 
-                    oldFilePath 
+                  logPostAction('uploadThumbnail', {
+                    message: 'Old thumbnail deleted',
+                    oldFilePath,
                   });
                 } catch (error: unknown) {
-                  logPostAction('uploadThumbnail', { 
-                    error, 
-                    oldFilePath,
-                    message: 'Failed to delete old thumbnail - queuing for retry'
-                  }, 'warn');
+                  logPostAction(
+                    'uploadThumbnail',
+                    {
+                      error,
+                      oldFilePath,
+                      message:
+                        'Failed to delete old thumbnail - queuing for retry',
+                    },
+                    'warn',
+                  );
                   // TODO: Implement proper retry queue
                 }
               })();
             }, CLEANUP_DELAY_MS);
           }
         } catch (error: unknown) {
-          logPostAction('uploadThumbnail', { error, message: 'Error processing old thumbnail cleanup' }, 'warn');
+          logPostAction(
+            'uploadThumbnail',
+            { error, message: 'Error processing old thumbnail cleanup' },
+            'warn',
+          );
         }
       }
 
@@ -880,7 +1124,6 @@ export async function uploadThumbnail(
     }
 
     return { success: true, thumbnailUrl };
-
   } catch (error: unknown) {
     logPostAction('uploadThumbnail', { error }, 'error');
     return {

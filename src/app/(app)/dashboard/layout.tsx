@@ -36,18 +36,32 @@ export default async function DashboardLayout({
   const userId = session.user.id;
 
   // Fetch collectives the user owns
-  const { data: ownedCollectivesData } = await supabase
-    .from('collectives')
-    .select('id, name, slug')
-    .eq('owner_id', userId)
-    .order('name', { ascending: true });
+  const { data: ownedCollectivesData, error: ownedCollectivesError } =
+    await supabase
+      .from('collectives')
+      .select('id, name, slug')
+      .eq('owner_id', userId)
+      .order('name', { ascending: true });
+
+  if (ownedCollectivesError !== null) {
+    // Graceful degradation: show dashboard shell with no collectives and include children
+    // TODO: surface a global toast or UI message if desired.
+    return <DashboardShell userCollectives={[]}>{children}</DashboardShell>;
+  }
 
   // Fetch collectives the user is a member of (excluding owned)
-  const { data: joinedMembershipsData } = await supabase
-    .from('collective_members')
-    .select('collective:collectives!inner(id, name, slug, owner_id)')
-    .eq('user_id', userId)
-    .order('collective(name)', { ascending: true });
+  const { data: joinedMembershipsData, error: joinedMembershipsError } =
+    await supabase
+      .from('collective_members')
+      .select('collective:collectives!inner(id, name, slug, owner_id)')
+      .eq('user_id', userId)
+      .order('collective(name)', { ascending: true });
+
+  if (joinedMembershipsError !== null) {
+    // Graceful degradation: show dashboard shell with no collectives and include children
+    // TODO: surface a global toast or UI message if desired.
+    return <DashboardShell userCollectives={[]}>{children}</DashboardShell>;
+  }
 
   // Filter out collectives the user owns from joined
   const joinedCollectives = (

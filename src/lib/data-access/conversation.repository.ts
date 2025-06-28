@@ -1,6 +1,6 @@
 import { createBrowserClient, createServerClient } from '@supabase/ssr';
 
-import { 
+import {
   parseConversation,
   parseConversations,
   parseMessage,
@@ -18,7 +18,7 @@ import {
   type MessageWithSender,
   type ParticipantInsert,
   type ConversationParticipant,
-  type MessageReaction
+  type MessageReaction,
 } from './schemas/conversation.schema';
 
 import type { Database } from '@/lib/database.types';
@@ -43,18 +43,24 @@ type ConversationWithParticipantsRaw = {
 
 /**
  * Conversation Repository
- * 
+ *
  * Handles all conversation and message operations with automatic null/undefined conversion.
  */
 export class ConversationRepository {
-  constructor(private supabase: ReturnType<typeof createBrowserClient<Database>> | ReturnType<typeof createServerClient<Database>>) {}
+  constructor(
+    private supabase:
+      | ReturnType<typeof createBrowserClient<Database>>
+      | ReturnType<typeof createServerClient<Database>>,
+  ) {}
 
   /**
    * Create a new conversation
    */
-  async createConversation(conversation: ConversationInsert): Promise<Conversation | undefined> {
+  async createConversation(
+    conversation: ConversationInsert,
+  ): Promise<Conversation | undefined> {
     const dbConversation = ConversationInsertSchema.parse(conversation);
-    
+
     const { data, error } = await this.supabase
       .from('conversations')
       .insert(dbConversation)
@@ -92,12 +98,14 @@ export class ConversationRepository {
     // Query conversations directly with an inner join on participants
     const { data, error } = await this.supabase
       .from('conversations')
-      .select(`
+      .select(
+        `
         *,
         conversation_participants!inner (
           user_id
         )
-      `)
+      `,
+      )
       .eq('conversation_participants.user_id', userId)
       .order('last_message_at', { ascending: false });
 
@@ -121,8 +129,10 @@ export class ConversationRepository {
    * Add participants to a conversation
    */
   async addParticipants(participants: ParticipantInsert[]): Promise<boolean> {
-    const dbParticipants = participants.map(p => ParticipantInsertSchema.parse(p));
-    
+    const dbParticipants = participants.map((p) =>
+      ParticipantInsertSchema.parse(p),
+    );
+
     const { error } = await this.supabase
       .from('conversation_participants')
       .insert(dbParticipants);
@@ -133,13 +143,16 @@ export class ConversationRepository {
   /**
    * Remove a participant from a conversation
    */
-  async removeParticipant(conversationId: string, userId: string): Promise<boolean> {
+  async removeParticipant(
+    conversationId: string,
+    userId: string,
+  ): Promise<boolean> {
     const { error } = await this.supabase
       .from('conversation_participants')
       .delete()
       .match({
         conversation_id: conversationId,
-        user_id: userId
+        user_id: userId,
       });
 
     return error === undefined;
@@ -150,7 +163,7 @@ export class ConversationRepository {
    */
   async sendMessage(message: MessageInsert): Promise<Message | undefined> {
     const dbMessage = MessageInsertSchema.parse(message);
-    
+
     const { data, error } = await this.supabase
       .from('messages')
       .insert(dbMessage)
@@ -167,10 +180,14 @@ export class ConversationRepository {
   /**
    * Get messages for a conversation
    */
-  async getMessages(conversationId: string, limit = 50): Promise<MessageWithSender[]> {
+  async getMessages(
+    conversationId: string,
+    limit = 50,
+  ): Promise<MessageWithSender[]> {
     const { data, error } = await this.supabase
       .from('messages')
-      .select(`
+      .select(
+        `
         *,
         sender:users!sender_id (
           id,
@@ -178,7 +195,8 @@ export class ConversationRepository {
           full_name,
           avatar_url
         )
-      `)
+      `,
+      )
       .eq('conversation_id', conversationId)
       .is('deleted_at', null)
       .order('created_at', { ascending: false })
@@ -194,12 +212,15 @@ export class ConversationRepository {
   /**
    * Edit a message
    */
-  async editMessage(messageId: string, content: string): Promise<Message | undefined> {
+  async editMessage(
+    messageId: string,
+    content: string,
+  ): Promise<Message | undefined> {
     const { data, error } = await this.supabase
       .from('messages')
       .update({
         content,
-        edited_at: new Date().toISOString()
+        edited_at: new Date().toISOString(),
       })
       .eq('id', messageId)
       .select()
@@ -219,7 +240,7 @@ export class ConversationRepository {
     const { error } = await this.supabase
       .from('messages')
       .update({
-        deleted_at: new Date().toISOString()
+        deleted_at: new Date().toISOString(),
       })
       .eq('id', messageId);
 
@@ -241,15 +262,18 @@ export class ConversationRepository {
   /**
    * Mark messages as read
    */
-  async markMessagesAsRead(conversationId: string, userId: string): Promise<boolean> {
+  async markMessagesAsRead(
+    conversationId: string,
+    userId: string,
+  ): Promise<boolean> {
     const { error } = await this.supabase
       .from('conversation_participants')
       .update({
-        last_read_at: new Date().toISOString()
+        last_read_at: new Date().toISOString(),
       })
       .match({
         conversation_id: conversationId,
-        user_id: userId
+        user_id: userId,
       });
 
     return error === undefined;
@@ -258,14 +282,16 @@ export class ConversationRepository {
   /**
    * Add a reaction to a message
    */
-  async addMessageReaction(messageId: string, userId: string, emoji: string): Promise<boolean> {
-    const { error } = await this.supabase
-      .from('message_reactions')
-      .insert({
-        message_id: messageId,
-        user_id: userId,
-        emoji
-      });
+  async addMessageReaction(
+    messageId: string,
+    userId: string,
+    emoji: string,
+  ): Promise<boolean> {
+    const { error } = await this.supabase.from('message_reactions').insert({
+      message_id: messageId,
+      user_id: userId,
+      emoji,
+    });
 
     return error === undefined;
   }
@@ -273,14 +299,18 @@ export class ConversationRepository {
   /**
    * Remove a reaction from a message
    */
-  async removeMessageReaction(messageId: string, userId: string, emoji: string): Promise<boolean> {
+  async removeMessageReaction(
+    messageId: string,
+    userId: string,
+    emoji: string,
+  ): Promise<boolean> {
     const { error } = await this.supabase
       .from('message_reactions')
       .delete()
       .match({
         message_id: messageId,
         user_id: userId,
-        emoji
+        emoji,
       });
 
     return error === undefined;
@@ -289,12 +319,17 @@ export class ConversationRepository {
   /**
    * Get unread message count for a conversation
    */
-  async getUnreadCount(conversationId: string, userId: string): Promise<number> {
-    const { data, error } = await this.supabase
-      .rpc('get_unread_message_count', {
+  async getUnreadCount(
+    conversationId: string,
+    userId: string,
+  ): Promise<number> {
+    const { data, error } = await this.supabase.rpc(
+      'get_unread_message_count',
+      {
         p_conversation_id: conversationId,
-        p_user_id: userId
-      });
+        p_user_id: userId,
+      },
+    );
 
     if (error !== undefined || data === undefined) {
       return 0;
@@ -306,12 +341,15 @@ export class ConversationRepository {
   /**
    * Update conversation settings
    */
-  async updateConversation(conversationId: string, updates: ConversationUpdate): Promise<Conversation | undefined> {
+  async updateConversation(
+    conversationId: string,
+    updates: ConversationUpdate,
+  ): Promise<Conversation | undefined> {
     const dbUpdates = ConversationUpdateSchema.parse(updates);
 
     // Remove properties with null values to satisfy enum constraints
     const cleanedUpdates = Object.fromEntries(
-      Object.entries(dbUpdates).filter(([, v]) => v !== null)
+      Object.entries(dbUpdates).filter(([, v]) => v !== null),
     );
 
     const { data, error } = await this.supabase
@@ -331,16 +369,19 @@ export class ConversationRepository {
   /**
    * Check if user is participant in conversation
    */
-  async isParticipant(conversationId: string, userId: string): Promise<boolean> {
+  async isParticipant(
+    conversationId: string,
+    userId: string,
+  ): Promise<boolean> {
     const { data, error } = await this.supabase
       .from('conversation_participants')
       .select('id')
       .match({
         conversation_id: conversationId,
-        user_id: userId
+        user_id: userId,
       })
       .single();
 
     return error === undefined && data !== undefined;
   }
-} 
+}

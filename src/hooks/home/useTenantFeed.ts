@@ -186,41 +186,51 @@ export function useTenantFeed(
 
       if (collectiveTenants.length === 0) return [];
 
-      const fetchPromises = collectiveTenants.map(async (tenantId) => {
-        const params = new URLSearchParams({
-          limit: '5', // Fewer posts per collective
-          offset: '0',
-          status: 'published',
-        });
-
-        const response = await fetch(
-          `/api/tenants/${tenantId}/posts?${params}`,
-        );
-
-        if (!response.ok) {
-          console.warn(`Failed to fetch posts from tenant ${tenantId}`);
-          return [];
-        }
-
-        const result = await response.json();
-        return result.data?.posts || [];
+      // Use batch endpoint to minimize parallel network requests
+      const response = await fetch('/api/feed/collective-batch', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ tenantIds: collectiveTenants, limit: 5 }),
       });
 
-      const results = await Promise.all(fetchPromises);
-      return results.flat();
+      if (!response.ok) {
+        console.warn('Failed to fetch batch collective posts');
+        return [];
+      }
+
+      const result = (await response.json()) as { posts?: TenantFeedPost[] };
+      return result.posts ?? [];
     },
     enabled: Boolean(includeCollectives && targetTenants.length > 1),
     staleTime: 1000 * 60 * 10, // 10 minutes
     gcTime: 1000 * 60 * 60, // 1 hour
   });
 
+  // Accumulate paginated results for current tenant
+  useEffect(() => {
+    if (!currentTenantData?.posts) return;
+
+    setAllPosts((prev) => {
+      // If this is the first page (offset === 0), replace entirely
+      if (offset === 0) return currentTenantData.posts;
+
+      // Otherwise append unique posts to preserve earlier pages
+      const existingIds = new Set(prev.map((p) => p.id));
+      const newUnique = currentTenantData.posts.filter(
+        (p) => !existingIds.has(p.id),
+      );
+      return [...prev, ...newUnique];
+    });
+  }, [currentTenantData?.posts, offset]);
+
   // Combine and transform posts
   const feedItems = useMemo((): FeedItem[] => {
-    const currentPosts = currentTenantData?.posts || [];
     const collectivePosts = collectiveData || [];
 
-    // Combine posts and sort by published_at
-    const allCombinedPosts = [...currentPosts, ...collectivePosts].sort(
+    // Combine accumulated tenant posts with collective posts and sort
+    const allCombinedPosts = [...allPosts, ...collectivePosts].sort(
       (a, b) =>
         new Date(b.published_at || b.created_at).getTime() -
         new Date(a.published_at || a.created_at).getTime(),
@@ -265,7 +275,7 @@ export function useTenantFeed(
         },
       }),
     );
-  }, [currentTenantData, collectiveData]);
+  }, [allPosts, collectiveData]);
 
   // Loading and error states
   const isLoading = isLoadingCurrent || isLoadingCollectives;
