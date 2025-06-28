@@ -211,4 +211,4 @@ declare module '@/components/editor/PostEditor' {
 declare module '@/components/editor/*' {
   const anyExport: any;
   export = anyExport;
-} 
+}

@@ -1,3 +1,5 @@
+import { Suspense } from 'react';
+
 import SignInPageClient from './sign-in/SignInPageClient';
 import SignUpPageClient from './sign-up/SignUpPageClient';
 
@@ -6,5 +8,9 @@ interface AuthPageProps {
 }
 
 export default function AuthPage({ mode }: AuthPageProps): React.JSX.Element {
-  return mode === 'sign-in' ? <SignInPageClient /> : <SignUpPageClient />;
+  return (
+    <Suspense fallback={null}>
+      {mode === 'sign-in' ? <SignInPageClient /> : <SignUpPageClient />}
+    </Suspense>
+  );
 }

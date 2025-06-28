@@ -2,7 +2,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import React from 'react';
 
-import { Card, CardContent } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 
 import PostCardFooter from './PostCardFooter';
@@ -143,7 +143,8 @@ export default function ArticleCard({
       ? `/posts/${post.slug}`
       : `/posts/${post.id}`;
 
-  const excerpt = post.meta_description ?? extractTextFromContent(post.content);
+  const excerpt =
+    post.meta_description ?? extractTextFromContent(post.content ?? null);
 
   return (
     <Card
@@ -201,12 +202,12 @@ export default function ArticleCard({
 
       <PostCardFooter
         postId={post.id}
-        postSlug={post.slug}
+        postSlug={post.slug ?? null}
         postTitle={post.title}
         interactions={interactions}
-        onToggleLike={onToggleLike}
-        onToggleDislike={onToggleDislike}
-        onToggleBookmark={onToggleBookmark}
+        {...(onToggleLike ? { onToggleLike } : {})}
+        {...(onToggleDislike ? { onToggleDislike } : {})}
+        {...(onToggleBookmark ? { onToggleBookmark } : {})}
         showViewCount
       />
     </Card>

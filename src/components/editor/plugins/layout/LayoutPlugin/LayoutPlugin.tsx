@@ -56,7 +56,7 @@ export const UPDATE_LAYOUT_COMMAND: LexicalCommand<{
   nodeKey: NodeKey;
 }> = createCommand<{ template: string; nodeKey: NodeKey }>();
 
-export function LayoutPlugin(): null {
+export default function LayoutPlugin(): null {
   const [editor] = useLexicalComposerContext();
   useEffect(() => {
     if (!editor.hasNodes([LayoutContainerNode, LayoutItemNode])) {

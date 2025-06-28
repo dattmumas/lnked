@@ -1,4 +1,4 @@
-import { ChevronLeft, Edit, Share2, MoreHorizontal } from 'lucide-react';
+import { Edit, Share2, MoreHorizontal } from 'lucide-react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Suspense } from 'react';
@@ -8,6 +8,7 @@ import BookmarkButton from '@/components/app/posts/molecules/BookmarkButton';
 import PostReactionButtons from '@/components/app/posts/molecules/PostReactionButtons';
 import PostViewTracker from '@/components/app/posts/molecules/PostViewTracker';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import BackButton from '@/components/ui/BackButton';
 import { Button } from '@/components/ui/button';
 import { CommentsSkeleton } from '@/components/ui/CommentsSkeleton';
 import {
@@ -349,14 +350,9 @@ export default async function PostBySlugPage({
         <PostViewTracker postId={post.id} />
 
         {/* Header Bar */}
-        <div className="sticky top-16 z-40 bg-background/80 backdrop-blur-sm border-b">
-          <div className="max-w-4xl mx-auto px-6 py-3 flex items-center justify-between">
-            <Button variant="ghost" size="sm" asChild className="gap-2">
-              <Link href="/">
-                <ChevronLeft className="h-4 w-4" />
-                Back
-              </Link>
-            </Button>
+        <div className="sticky top-0 z-40 bg-background/80 backdrop-blur-sm border-b">
+          <div className="w-full mx-auto px-6 py-3 flex items-center justify-between">
+            <BackButton />
 
             <div className="flex items-center gap-2">
               <Button variant="ghost" size="icon">

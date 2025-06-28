@@ -1,7 +1,6 @@
 import { notFound } from 'next/navigation';
 import React, { Suspense } from 'react';
 
-import { RightSidebar } from '@/components/app/chains/RightSidebar';
 import { CommentSection } from '@/components/app/comments';
 import VideoDetailsServer from '@/components/app/video/VideoDetailsServer';
 import VideoPlayerClient from '@/components/app/video/VideoPlayerClient';
@@ -103,12 +102,6 @@ export default async function VideoPlayerPage({
           />
         </Suspense>
       </main>
-
-      {/* Right sidebar: chains (desktop only) */}
-      {user !== undefined &&
-        user !== null &&
-        profile !== undefined &&
-        profile !== null && <RightSidebar user={user} profile={profile} />}
     </div>
   );
 }

@@ -1,7 +1,6 @@
 import { redirect } from 'next/navigation';
 import React from 'react';
 
-import { RightSidebar } from '@/components/app/chains/RightSidebar';
 import TenantChatInterface from '@/components/chat/TenantChatInterface';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 
@@ -29,11 +28,6 @@ export default async function ChatPage(): Promise<React.ReactElement> {
         {/* Chat Interface - responsive width */}
         <div className="flex-1 min-w-0">
           <TenantChatInterface />
-        </div>
-
-        {/* Chains Sidebar - hidden on mobile, fixed width on desktop */}
-        <div className="hidden xl:block w-[28rem] flex-shrink-0">
-          <RightSidebar user={user} profile={profile} />
         </div>
       </div>
     </div>

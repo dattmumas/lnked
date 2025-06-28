@@ -14,12 +14,14 @@ export function FloatingCreateButton(): React.JSX.Element {
   }, [router]);
 
   return (
-    <Button
-      aria-label="Create new post"
-      className="fixed bottom-6 right-6 z-50 h-14 w-14 rounded-full bg-primary text-primary-foreground p-0 shadow-lg hover:bg-primary/90 focus-visible:ring-2 focus-visible:ring-offset-2 lg:hidden"
-      onClick={handleClick}
-    >
-      <Plus className="h-6 w-6" />
-    </Button>
+    <div className="fixed bottom-6 right-6 z-50 pointer-events-none lg:hidden">
+      <Button
+        aria-label="Create new post"
+        className="h-14 w-14 rounded-full bg-primary text-primary-foreground p-0 shadow-lg hover:bg-primary/90 focus-visible:ring-2 focus-visible:ring-offset-2 pointer-events-auto"
+        onClick={handleClick}
+      >
+        <Plus className="h-6 w-6" />
+      </Button>
+    </div>
   );
 }

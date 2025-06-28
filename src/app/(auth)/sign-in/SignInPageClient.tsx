@@ -347,7 +347,7 @@ export default function SignInPage(): React.JSX.Element {
         // Reduced delay with proper state management
         setTimeout(() => {
           if (!signal.aborted) {
-            void router.push('/dashboard');
+            void router.push('/home');
           }
         }, AUTH_CONFIG.REDIRECT_DELAY_MS);
       } catch (err: unknown) {

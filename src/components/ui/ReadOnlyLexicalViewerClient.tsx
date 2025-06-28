@@ -25,7 +25,6 @@ import EmojisPlugin from '@/components/editor/plugins/input/EmojisPlugin';
 import TabFocusPlugin from '@/components/editor/plugins/input/TabFocusPlugin';
 import CollapsiblePlugin from '@/components/editor/plugins/interactive/CollapsiblePlugin';
 import StickyPlugin from '@/components/editor/plugins/interactive/StickyPlugin';
-import TableOfContentsPlugin from '@/components/editor/plugins/layout/TableOfContentsPlugin';
 import FigmaPlugin from '@/components/editor/plugins/media/FigmaPlugin';
 import TwitterPlugin from '@/components/editor/plugins/media/TwitterPlugin';
 import YouTubePlugin from '@/components/editor/plugins/media/YouTubePlugin';
@@ -360,7 +359,6 @@ export function ReadOnlyLexicalViewerClient({
           <FigmaPlugin />
           <EmojisPlugin />
           <ComponentPickerPlugin />
-          <TableOfContentsPlugin />
           <CollapsiblePlugin />
           <EmojiPickerPlugin />
           <SpeechToTextPlugin />

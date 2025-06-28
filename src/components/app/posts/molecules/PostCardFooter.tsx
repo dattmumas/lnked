@@ -3,23 +3,12 @@
 import {
   ThumbsUp,
   ThumbsDown,
-  MessageCircle,
-  Bookmark,
   Share2,
-  ExternalLink,
   MessageSquare,
-  Repeat2,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import React, { useCallback, useState, useTransition } from 'react';
 
-import { Button } from '@/components/ui/button';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import BookmarkButton from '@/components/app/posts/molecules/BookmarkButton';
 import { CardFooter } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';

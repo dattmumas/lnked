@@ -20,7 +20,11 @@ import {
 } from 'lexical';
 import { useEffect } from 'react';
 
-export function MaxLengthPlugin({ maxLength }: { maxLength: number }): null {
+export default function MaxLengthPlugin({
+  maxLength,
+}: {
+  maxLength: number;
+}): null {
   const [editor] = useLexicalComposerContext();
 
   useEffect(() => {

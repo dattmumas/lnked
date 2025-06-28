@@ -117,7 +117,7 @@ export async function createServerSupabaseClientWithContext(): Promise<ReturnTyp
   }
 
   // Import next/headers only when needed to avoid client-side import issues
-  // eslint-disable-next-line @typescript-eslint/no-var-requires, @typescript-eslint/no-require-imports
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   const { cookies } = require('next/headers') as typeof import('next/headers');
   const cookieStore = await cookies();
 

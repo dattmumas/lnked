@@ -1,4 +1,8 @@
-import { RealtimeChannel, SupabaseClient, PostgrestError } from '@supabase/supabase-js';
+import {
+  RealtimeChannel,
+  SupabaseClient,
+  PostgrestError,
+} from '@supabase/supabase-js';
 
 import { CommentValidationError } from '@/lib/errors';
 import supabaseBrowser from '@/lib/supabase/browser';
@@ -29,7 +33,7 @@ export class CommentsV2Service {
         CommentEntityType,
         (entityId: string, userId?: string) => Promise<boolean>
       >
-    >
+    >,
   ) {
     this.supabase = supabase || supabaseBrowser;
 
@@ -47,11 +51,13 @@ export class CommentsV2Service {
   private validateEntity(
     entityType: CommentEntityType,
     entityId: string,
-    userId?: string
+    userId?: string,
   ): Promise<boolean> {
     const validator = this.entityValidators[entityType];
     if (validator === undefined) {
-      throw new CommentValidationError(`Unsupported entity type: ${entityType}`);
+      throw new CommentValidationError(
+        `Unsupported entity type: ${entityType}`,
+      );
     }
     return validator(entityId, userId);
   }
@@ -60,10 +66,10 @@ export class CommentsV2Service {
     entityType: CommentEntityType,
     entityId: string,
     page = 1,
-    limit = DEFAULT_PAGE_LIMIT
+    limit = DEFAULT_PAGE_LIMIT,
   ): Promise<CommentWithAuthor[]> {
     const offset = (page - 1) * limit;
-    
+
     if (process.env.NODE_ENV !== 'production') {
       // eslint-disable-next-line no-console
       console.debug('Calling get_comment_thread with params:', {
@@ -85,7 +91,9 @@ export class CommentsV2Service {
     });
 
     const { data, error } = threadResponse as {
-      data: Array<{ comment_data: CommentWithAuthor & { author?: unknown; user?: unknown } }> | null;
+      data: Array<{
+        comment_data: CommentWithAuthor & { author?: unknown; user?: unknown };
+      }> | null;
       error: PostgrestError | null;
     };
 
@@ -101,12 +109,16 @@ export class CommentsV2Service {
         details: error.details,
         hint: error.hint,
         code: error.code,
-        fullError: JSON.stringify(error)
+        fullError: JSON.stringify(error),
       });
-      throw new Error(`Failed to fetch comments: ${error.message || error.details || JSON.stringify(error)}`);
+      throw new Error(
+        `Failed to fetch comments: ${error.message || error.details || JSON.stringify(error)}`,
+      );
     }
 
-    type ThreadRow = { comment_data: CommentWithAuthor & { author?: unknown; user?: unknown } };
+    type ThreadRow = {
+      comment_data: CommentWithAuthor & { author?: unknown; user?: unknown };
+    };
     const rows = (data ?? []) as ThreadRow[];
     const mappedComments = rows.map((row) => {
       const comment = row.comment_data;
@@ -127,7 +139,7 @@ export class CommentsV2Service {
   async getCommentReplies(
     parentId: string,
     page = 1,
-    limit = DEFAULT_REPLY_LIMIT
+    limit = DEFAULT_REPLY_LIMIT,
   ): Promise<CommentWithAuthor[]> {
     const offset = (page - 1) * limit;
     const repliesResponse = await this.supabase.rpc<
@@ -146,7 +158,9 @@ export class CommentsV2Service {
 
     if (error !== null && error !== undefined) {
       console.error('Error fetching replies:', error);
-      throw new Error(`Failed to fetch replies: ${error.message || JSON.stringify(error)}`);
+      throw new Error(
+        `Failed to fetch replies: ${error.message || JSON.stringify(error)}`,
+      );
     }
 
     type ReplyRow = { comment_data: CommentWithAuthor };
@@ -159,28 +173,20 @@ export class CommentsV2Service {
     entityId: string,
     userId: string,
     content: string,
-    parentId?: string
+    parentId?: string,
   ): Promise<CommentWithAuthor | undefined> {
-    const addCommentResponse = await this.supabase.rpc<
-      'add_comment',
-      { comment_id: string }
-    >('add_comment', {
+    const { data, error } = await this.supabase.rpc('add_comment', {
       p_entity_type: entityType,
       p_entity_id: entityId,
       p_author_id: userId,
       p_content: content.trim(),
-      p_parent_id: parentId,
+      p_parent_id: parentId ?? null,
     });
-
-    const { data, error } = addCommentResponse as {
-      data: Array<{ comment_id: string }> | null;
-      error: PostgrestError | null;
-    };
 
     if (error !== null && error !== undefined) {
       console.error('Error adding comment:', error);
       throw new Error(
-        `Failed to add comment: ${error.message || error.details || JSON.stringify(error)}`
+        `Failed to add comment: ${error.message || error.details || JSON.stringify(error)}`,
       );
     }
 
@@ -206,7 +212,8 @@ export class CommentsV2Service {
     const {
       data: newComment,
       error: fetchError,
-    }: { data: CommentWithAuthor | null; error: PostgrestError | null } = newCommentResponse;
+    }: { data: CommentWithAuthor | null; error: PostgrestError | null } =
+      newCommentResponse;
 
     if (fetchError !== null && fetchError !== undefined) {
       console.error('Error fetching new comment:', fetchError);
@@ -227,7 +234,7 @@ export class CommentsV2Service {
   async toggleReaction(
     commentId: string,
     userId: string,
-    reactionType: ReactionType
+    reactionType: ReactionType,
   ): Promise<{ action_taken: string; reaction_counts: Reaction[] }> {
     const toggleResponse = await this.supabase.rpc<
       'toggle_comment_reaction',
@@ -239,7 +246,10 @@ export class CommentsV2Service {
     });
 
     const { data, error } = toggleResponse as {
-      data: { action_taken: string; reaction_counts?: Reaction[] | null } | null;
+      data: {
+        action_taken: string;
+        reaction_counts?: Reaction[] | null;
+      } | null;
       error: PostgrestError | null;
     };
 
@@ -254,10 +264,10 @@ export class CommentsV2Service {
       typeof data === 'object' &&
       'action_taken' in data
     ) {
-      const {
-        action_taken,
-        reaction_counts,
-      } = data as { action_taken: string; reaction_counts?: Reaction[] | null };
+      const { action_taken, reaction_counts } = data as {
+        action_taken: string;
+        reaction_counts?: Reaction[] | null;
+      };
 
       return {
         action_taken,
@@ -270,12 +280,15 @@ export class CommentsV2Service {
 
   async getCommentCount(
     entityType: CommentEntityType,
-    entityId: string
+    entityId: string,
   ): Promise<number> {
-    const countResponse = await this.supabase.rpc<'get_comment_count', number>('get_comment_count', {
+    const countResponse = await this.supabase.rpc<'get_comment_count', number>(
+      'get_comment_count',
+      {
         p_entity_type: entityType,
         p_entity_id: entityId,
-      });
+      },
+    );
 
     const { data, error } = countResponse as {
       data: number | null;
@@ -291,7 +304,7 @@ export class CommentsV2Service {
 
   async updateComment(
     commentId: string,
-    content: string
+    content: string,
   ): Promise<CommentWithAuthor | undefined> {
     const { data, error } = await this.supabase
       .from('comments')
@@ -325,7 +338,7 @@ export class CommentsV2Service {
     entityType: CommentEntityType,
     entityId: string,
     pinnedBy: string,
-    _pinOrder?: number // _pinOrder if unused
+    _pinOrder?: number, // _pinOrder if unused
   ): Promise<CommentPin | undefined> {
     const { data, error } = await this.supabase
       .from('comment_pins')
@@ -364,7 +377,7 @@ export class CommentsV2Service {
     entityId: string,
     onInsert: (comment: CommentWithAuthor) => void,
     onUpdate: (comment: CommentWithAuthor) => void,
-    onDelete: (commentId: string) => void
+    onDelete: (commentId: string) => void,
   ): RealtimeChannel {
     const channel = this.supabase.channel(`comments-for-${entityId}`);
 
@@ -377,9 +390,9 @@ export class CommentsV2Service {
           table: 'comments',
           filter: `entity_id=eq.${entityId}`,
         },
-        payload => {
+        (payload) => {
           onInsert(payload.new);
-        }
+        },
       )
       .on<CommentWithAuthor>(
         'postgres_changes',
@@ -389,9 +402,9 @@ export class CommentsV2Service {
           table: 'comments',
           filter: `entity_id=eq.${entityId}`,
         },
-        payload => {
+        (payload) => {
           onUpdate(payload.new);
-        }
+        },
       )
       .on<Comment>(
         'postgres_changes',
@@ -401,12 +414,12 @@ export class CommentsV2Service {
           table: 'comments',
           filter: `entity_id=eq.${entityId}`,
         },
-        payload => {
+        (payload) => {
           const oldId = payload.old?.id;
           if (oldId !== undefined) {
             onDelete(oldId);
           }
-        }
+        },
       )
       .subscribe();
 
@@ -415,7 +428,7 @@ export class CommentsV2Service {
 
   private _subscribeToReactionChanges(
     entityId: string,
-    onReactionUpdate: (reaction: CommentReaction) => void
+    onReactionUpdate: (reaction: CommentReaction) => void,
   ): RealtimeChannel {
     const channel = this.supabase.channel(`reactions-for-${entityId}`);
 
@@ -426,12 +439,16 @@ export class CommentsV2Service {
         schema: 'public',
         table: 'comment_reactions',
       },
-      payload => {
+      (payload) => {
         const newRow = payload.new as CommentReaction | undefined;
-        if (newRow !== undefined && typeof newRow.id === 'string' && newRow.id !== '') {
+        if (
+          newRow !== undefined &&
+          typeof newRow.id === 'string' &&
+          newRow.id !== ''
+        ) {
           onReactionUpdate(newRow);
         }
-      }
+      },
     );
 
     return channel;

@@ -1,13 +1,9 @@
-import clsx from 'clsx';
 import { Source_Serif_4, Inter } from 'next/font/google';
 import { ThemeProvider } from 'next-themes';
 import React from 'react';
 
-import { GlobalSidebar } from '@/components/app/nav/GlobalSidebar';
-import ModernNavbar from '@/components/ModernNavbar';
 import QueryProvider from '@/components/providers/query-provider';
 import { ToastContainer } from '@/components/ui/toast';
-import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { TenantProvider } from '@/providers/TenantProvider';
 
 import type { Metadata } from 'next';
@@ -33,44 +29,15 @@ export const metadata: Metadata = {
   description: 'Create, share, and subscribe to newsletters together.',
 };
 
-export default async function RootLayout({
+export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
-}>): Promise<React.ReactElement> {
-  const supabase = await createServerSupabaseClient();
-
-  // Get authentication state
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser();
-
-  // Only proceed with profile fetch if user exists and no auth error
-  let profile:
-    | {
-        username: string | null;
-        full_name: string | null;
-        avatar_url: string | null;
-      }
-    | undefined = undefined;
-
-  if (user && !authError) {
-    const { data: profileData } = await supabase
-      .from('users')
-      .select('username, full_name, avatar_url')
-      .eq('id', user.id)
-      .single();
-    profile = profileData ?? undefined;
-  }
-
-  // Determine if we should show authenticated layout
-  const isAuthenticated = Boolean(user && !authError);
-
+}>): React.ReactElement {
   return (
     <html lang="en" suppressHydrationWarning>
       <body
-        className={`h-screen overflow-hidden bg-background w-full ${sourceSerif.variable} ${inter.variable}`}
+        className={`min-h-screen bg-background w-full ${sourceSerif.variable} ${inter.variable}`}
       >
         <a
           href="#main-content"
@@ -86,27 +53,10 @@ export default async function RootLayout({
             disableTransitionOnChange
           >
             <TenantProvider>
-              <div className="flex h-screen flex-col overflow-hidden">
-                <header className="shrink-0 z-50 bg-background backdrop-blur-md border-b border-border/50">
-                  <ModernNavbar />
-                </header>
-
-                {/* Layout body */}
-                <div className="flex flex-1 overflow-hidden h-full">
-                  {isAuthenticated && <GlobalSidebar />}
-
-                  {/* Main content fills remaining space with no scroll */}
-                  <main
-                    id="main-content"
-                    className={clsx(
-                      'flex-1 overflow-hidden h-full',
-                      isAuthenticated && 'ml-16 md:ml-16',
-                    )}
-                  >
-                    {children}
-                  </main>
-                </div>
-              </div>
+              {/* Main application content (route-group layouts add chrome) */}
+              <main id="main-content" className="min-h-screen">
+                {children}
+              </main>
 
               {/* Global toast notifications */}
               <ToastContainer />

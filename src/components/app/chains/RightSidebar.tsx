@@ -10,7 +10,7 @@ import {
   Image,
   Send,
 } from 'lucide-react';
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 
 // internal ui components
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -97,10 +97,10 @@ function useChainInteractions(userId: string): {
   const [replyingTo, setReplyingTo] = useState<string | undefined>(undefined);
   const [replyContent, setReplyContent] = useState('');
   const [isPosting, setIsPosting] = useState(false);
-  const supabase = createSupabaseBrowserClient();
+  const supabase = useMemo(createSupabaseBrowserClient, []);
 
   const toggleLike = useCallback(
-    async (chainId: string): Promise<void> => {
+    (chainId: string): void => {
       const isCurrentlyLiked = likedChains.has(chainId);
       try {
         if (isCurrentlyLiked) {
@@ -109,23 +109,14 @@ function useChainInteractions(userId: string): {
             newSet.delete(chainId);
             return newSet;
           });
-          await supabase
-            .from('chain_reactions')
-            .delete()
-            .match({ user_id: userId, chain_id: chainId, reaction: 'like' });
         } else {
           setLikedChains((prev) => new Set(prev).add(chainId));
-          await supabase.from('chain_reactions').upsert({
-            user_id: userId,
-            chain_id: chainId,
-            reaction: 'like',
-          });
         }
       } catch (error: unknown) {
         console.error('Error toggling chain like:', error);
       }
     },
-    [likedChains, supabase, userId],
+    [likedChains],
   );
 
   const startReply = useCallback((chainId: string): void => {
@@ -191,7 +182,7 @@ function useChainInteractions(userId: string): {
   };
 }
 
-function useChains(): {
+function useChains(supabase: ReturnType<typeof createSupabaseBrowserClient>): {
   chains: ChainItem[];
   loading: boolean;
   error: string | undefined;
@@ -200,7 +191,6 @@ function useChains(): {
   const [chains, setChains] = useState<ChainItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | undefined>(undefined);
-  const supabase = createSupabaseBrowserClient();
 
   const fetchChains = useCallback(async (): Promise<void> => {
     try {
@@ -282,7 +272,7 @@ function ChainPostForm({
 }): React.ReactElement {
   const [content, setContent] = useState('');
   const [isPosting, setIsPosting] = useState(false);
-  const supabase = createSupabaseBrowserClient();
+  const supabase = useMemo(createSupabaseBrowserClient, []);
   const remainingChars = CHARACTER_LIMIT - content.length;
 
   const handleSubmit = useCallback(
@@ -357,7 +347,7 @@ function ChainPostForm({
   }, [profile, user.email]);
 
   return (
-    <div className="border-t border-border p-4">
+    <div className="p-4">
       <form onSubmit={handleFormSubmit} className="space-y-3">
         <div className="flex gap-3">
           <Avatar className="w-9 h-9 flex-shrink-0">
@@ -462,7 +452,8 @@ export function RightSidebar({
   user: User;
   profile: UserProfile | null;
 }): React.ReactElement {
-  const { chains, loading, error, refetch } = useChains();
+  const supabase = useMemo(createSupabaseBrowserClient, []);
+  const { chains, loading, error, refetch } = useChains(supabase);
   const chainInteractions = useChainInteractions(user.id);
 
   const handleToggleLike = useCallback(
@@ -504,7 +495,6 @@ export function RightSidebar({
     (itemId: string) => (): void => {
       void (async (): Promise<void> => {
         try {
-          const supabase = createSupabaseBrowserClient();
           await supabase
             .from('chains')
             .update({ status: 'deleted' })
@@ -522,17 +512,9 @@ export function RightSidebar({
   return (
     <div className="h-full bg-background z-20 flex flex-col min-h-0">
       {/* Header */}
-      <div className="px-4 py-3 border-b border-border flex-shrink-0">
-        <div className="flex items-center justify-between">
-          <h2 className="font-semibold text-lg text-foreground">Chains</h2>
-          <div
-            className="w-2 h-2 bg-green-500 rounded-full animate-pulse"
-            title="Live activity"
-          />
-        </div>
-      </div>
+
       {/* Chains Feed - Scrollable */}
-      <div className="flex-1 overflow-y-auto px-4 py-3 min-h-0">
+      <div className="flex-1 overflow-y-auto overscroll-contain px-4 py-3 min-h-0">
         {loading ? (
           <div className="flex items-center justify-center py-8">
             <Loader2 className="w-6 h-6 animate-spin text-accent" />
@@ -715,7 +697,7 @@ export function RightSidebar({
         )}
       </div>
       {/* Chain Post Form - Fixed at bottom */}
-      <div className="flex-shrink-0">
+      <div className="flex-shrink-0 border-t border-border bg-background">
         <ChainPostForm user={user} profile={profile} onPostSuccess={refetch} />
       </div>
     </div>
