@@ -34,7 +34,7 @@ const navigationItems = [
   { icon: FileText, label: 'Posts', href: '/dashboard/posts' },
   { icon: UserIcon, label: 'Profile', href: '/profile' },
   { icon: LayoutDashboard, label: 'Dashboard', href: '/dashboard' },
-  { icon: Settings, label: 'Settings', href: '/dashboard/settings' },
+  { icon: Settings, label: 'Settings', href: '/settings' },
 ];
 
 // Dual action buttons as per creative design
@@ -110,8 +110,8 @@ export function GlobalSidebar(): React.ReactElement | undefined {
       if (href === '/profile') {
         return pathname.startsWith('/profile');
       }
-      if (href === '/dashboard/settings') {
-        return pathname === '/dashboard/settings';
+      if (href === '/settings') {
+        return pathname.startsWith('/settings');
       }
       if (href === '/videos') {
         return pathname === '/videos' || pathname.startsWith('/videos/');

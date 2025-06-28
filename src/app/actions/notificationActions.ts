@@ -4,7 +4,10 @@ import { revalidatePath } from 'next/cache';
 
 import { NotificationService } from '@/lib/notifications/service';
 
-import type { NotificationActionResult, NotificationPreferencesUpdate } from '@/types/notifications';
+import type {
+  NotificationActionResult,
+  NotificationPreferencesUpdate,
+} from '@/types/notifications';
 
 /**
  * Get a NotificationService instance when needed (lazy initialization)
@@ -14,17 +17,17 @@ function getNotificationService(): NotificationService {
 }
 
 export async function markNotificationsAsRead(
-  notificationIds?: string[]
+  notificationIds?: string[],
 ): Promise<NotificationActionResult> {
   try {
     const notificationService = getNotificationService();
     const result = await notificationService.markAsRead(notificationIds);
-    
+
     if (result.success) {
       revalidatePath('/');
       revalidatePath('/dashboard');
     }
-    
+
     return result;
   } catch (error: unknown) {
     return {
@@ -35,17 +38,18 @@ export async function markNotificationsAsRead(
 }
 
 export async function deleteNotifications(
-  notificationIds: string[]
+  notificationIds: string[],
 ): Promise<NotificationActionResult> {
   try {
     const notificationService = getNotificationService();
-    const result = await notificationService.deleteNotifications(notificationIds);
-    
+    const result =
+      await notificationService.deleteNotifications(notificationIds);
+
     if (result.success) {
       revalidatePath('/');
       revalidatePath('/dashboard');
     }
-    
+
     return result;
   } catch (error: unknown) {
     return {
@@ -56,16 +60,16 @@ export async function deleteNotifications(
 }
 
 export async function updateNotificationPreferences(
-  preferences: NotificationPreferencesUpdate[]
+  preferences: NotificationPreferencesUpdate[],
 ): Promise<NotificationActionResult> {
   try {
     const notificationService = getNotificationService();
     const result = await notificationService.updatePreferences(preferences);
-    
+
     if (result.success) {
-      revalidatePath('/dashboard/settings');
+      revalidatePath('/settings/user/notifications');
     }
-    
+
     return result;
   } catch (error: unknown) {
     return {
@@ -73,4 +77,4 @@ export async function updateNotificationPreferences(
       error: error instanceof Error ? error.message : 'Unknown error',
     };
   }
-} 
+}

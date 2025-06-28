@@ -1,34 +1,34 @@
-import { NextResponse, type NextRequest } from "next/server";
-import { createServerClient } from "@supabase/ssr";
-import type { CookieOptions } from "@supabase/ssr";
+import { NextResponse, type NextRequest } from 'next/server';
+import { createServerClient } from '@supabase/ssr';
+import type { CookieOptions } from '@supabase/ssr';
 
 const AUTH_COOKIES = [
-  "sb-access-token",
-  "sb-refresh-token",
-  "supabase-auth-token",
+  'sb-access-token',
+  'sb-refresh-token',
+  'supabase-auth-token',
 ];
 const SECURE_OPTS: CookieOptions = {
   httpOnly: true,
   secure: true,
-  sameSite: "lax",
-  path: "/",
+  sameSite: 'lax',
+  path: '/',
 };
 const USER_SLUG = /^[A-Za-z0-9_-]{1,32}$/;
 
 const clearAuthCookies = (res: NextResponse) =>
   AUTH_COOKIES.forEach((c) =>
-    res.cookies.set(c, "", { ...SECURE_OPTS, maxAge: 0 }),
+    res.cookies.set(c, '', { ...SECURE_OPTS, maxAge: 0 }),
   );
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   /* ---------- Vanity @username rewrite (sanitised) ---------- */
-  if (pathname.startsWith("/@")) {
-    const usernameSegment = pathname.slice(2).split("/")[0] ?? "";
+  if (pathname.startsWith('/@')) {
+    const usernameSegment = pathname.slice(2).split('/')[0] ?? '';
     const username: string = usernameSegment;
     if (!USER_SLUG.test(username))
-      return NextResponse.redirect(new URL("/404", request.url));
+      return NextResponse.redirect(new URL('/404', request.url));
     const rest = pathname.slice(2 + username.length);
     const url = request.nextUrl.clone();
     url.pathname = `/profile/${username}${rest}`;
@@ -37,13 +37,20 @@ export async function middleware(request: NextRequest) {
 
   /* ---------- Route classification ---------- */
   const requiresAuth =
-    pathname.startsWith("/dashboard") ||
-    pathname === "/posts/new" ||
-    pathname === "/chat" ||
-    (pathname.startsWith("/posts/") && pathname.endsWith("/edit"));
+    pathname.startsWith('/dashboard') ||
+    pathname === '/posts/new' ||
+    pathname === '/chat' ||
+    (pathname.startsWith('/posts/') && pathname.endsWith('/edit'));
 
-  const isAuthPage = pathname === "/sign-in" || pathname === "/sign-up";
-  if (!requiresAuth && !isAuthPage) return NextResponse.next();
+  const isAuthPage = pathname === '/sign-in' || pathname === '/sign-up';
+  const isPostViewPage =
+    pathname.startsWith('/posts/') &&
+    !pathname.endsWith('/edit') &&
+    pathname !== '/posts/new';
+
+  // For non-auth pages that aren't posts, skip processing
+  if (!requiresAuth && !isAuthPage && !isPostViewPage)
+    return NextResponse.next();
 
   /* ---------- Supabase client ---------- */
   if (
@@ -63,7 +70,7 @@ export async function middleware(request: NextRequest) {
           response.cookies.set(n, v, { ...SECURE_OPTS, ...o });
         },
         remove: (n, o) => {
-          response.cookies.set(n, "", { ...SECURE_OPTS, maxAge: 0, ...o });
+          response.cookies.set(n, '', { ...SECURE_OPTS, maxAge: 0, ...o });
         },
       },
     },
@@ -79,38 +86,43 @@ export async function middleware(request: NextRequest) {
   // Protected route without session → purge + redirect
   if (requiresAuth && !session) {
     clearAuthCookies(response);
-    const url = new URL("/sign-in", request.url);
+    const url = new URL('/sign-in', request.url);
     url.searchParams.set(
-      "redirect",
-      pathname.startsWith("/") ? pathname : "/dashboard",
+      'redirect',
+      pathname.startsWith('/') ? pathname : '/dashboard',
     );
-    url.searchParams.set("purge", "1");
+    url.searchParams.set('purge', '1');
     return NextResponse.redirect(url, 307);
   }
 
   // Auth page with session → bounce to dashboard
   if (isAuthPage && session) {
-    return NextResponse.redirect(new URL("/dashboard", request.url), 302);
+    return NextResponse.redirect(new URL('/dashboard', request.url), 302);
+  }
+
+  /* ---------- Post view page handling ---------- */
+  if (isPostViewPage && session?.user?.id) {
+    // Propagate user ID for post view pages
+    response.headers.set('x-user-id', session.user.id);
   }
 
   /* ---------- Extra security headers ---------- */
   if (requiresAuth) {
-    response.headers.set("Content-Security-Policy", "default-src 'self'");
-    response.headers.set("X-Frame-Options", "DENY");
+    response.headers.set('Content-Security-Policy', "default-src 'self'");
+    response.headers.set('X-Frame-Options', 'DENY');
   }
 
   return response;
 }
 
 export const config = {
-  runtime: "edge",
+  runtime: 'edge',
   matcher: [
-    "/@:path*",
-    "/dashboard/:path*",
-    "/posts/:path*/edit",
-    "/posts/new",
-    "/chat",
-    "/sign-in",
-    "/sign-up",
+    '/@:path*',
+    '/dashboard/:path*',
+    '/posts/:path*',
+    '/chat',
+    '/sign-in',
+    '/sign-up',
   ],
 };

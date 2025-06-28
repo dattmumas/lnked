@@ -128,7 +128,7 @@ export function NotificationDropdownClient({
               </Button>
             )}
             <Button variant="ghost" size="sm" className="h-auto p-1.5" asChild>
-              <Link href="/dashboard/settings">
+              <Link href="/settings">
                 <Icon icon={Settings} />
                 <span className="sr-only">Notification settings</span>
               </Link>

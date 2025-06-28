@@ -6,10 +6,10 @@ import { z } from 'zod';
 import { getStripe } from '@/lib/stripe';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
-import { 
-  AVATAR_CONFIG, 
-  extractFilePathFromUrl, 
-  isSupabaseStorageUrl 
+import {
+  AVATAR_CONFIG,
+  extractFilePathFromUrl,
+  isSupabaseStorageUrl,
 } from '@/lib/utils/avatar';
 
 import type { TablesUpdate } from '@/lib/database.types';
@@ -25,7 +25,10 @@ const RATE_LIMIT_UPLOADS_PER_HOUR = 10;
 const RATE_LIMIT_PROFILE_UPDATES_PER_HOUR = 20;
 
 // Environment configuration with validation
-const AVATAR_MAX_SIZE_MB = parseInt(process.env['AVATAR_MAX_SIZE_MB'] ?? '10', 10);
+const AVATAR_MAX_SIZE_MB = parseInt(
+  process.env['AVATAR_MAX_SIZE_MB'] ?? '10',
+  10,
+);
 const BYTES_PER_KB = 1024;
 const KB_PER_MB = 1024;
 const AVATAR_MAX_SIZE_BYTES = AVATAR_MAX_SIZE_MB * KB_PER_MB * BYTES_PER_KB;
@@ -33,8 +36,8 @@ const AVATAR_MAX_SIZE_BYTES = AVATAR_MAX_SIZE_MB * KB_PER_MB * BYTES_PER_KB;
 // File type validation via magic number detection
 /* eslint-disable no-magic-numbers */
 const FILE_SIGNATURES = {
-  'image/jpeg': [0xFF, 0xD8, 0xFF],
-  'image/png': [0x89, 0x50, 0x4E, 0x47],
+  'image/jpeg': [0xff, 0xd8, 0xff],
+  'image/png': [0x89, 0x50, 0x4e, 0x47],
   'image/webp': [0x52, 0x49, 0x46, 0x46], // RIFF header for WebP
   'image/gif': [0x47, 0x49, 0x46],
 } as const;
@@ -74,7 +77,8 @@ const metrics: Metrics = {
  * Generate unique ID for collision prevention
  */
 function generateUniqueId(): string {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  const chars =
+    'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
   let result = '';
   // eslint-disable-next-line no-magic-numbers
   for (let i = 0; i < 8; i++) {
@@ -94,7 +98,11 @@ function stripHtmlTags(text: string): string {
  * Helper function to parse and normalize tags
  */
 function parseTags(tagsString: string | null | undefined): string[] {
-  if (tagsString === null || tagsString === undefined || tagsString.trim() === '') {
+  if (
+    tagsString === null ||
+    tagsString === undefined ||
+    tagsString.trim() === ''
+  ) {
     return [];
   }
 
@@ -111,7 +119,9 @@ function parseTags(tagsString: string | null | undefined): string[] {
 /**
  * Server-side MIME type validation using magic numbers
  */
-async function validateFileType(file: File): Promise<{ valid: boolean; error?: string }> {
+async function validateFileType(
+  file: File,
+): Promise<{ valid: boolean; error?: string }> {
   try {
     const arrayBuffer = await file.arrayBuffer();
     const bytes = new Uint8Array(arrayBuffer);
@@ -123,21 +133,22 @@ async function validateFileType(file: File): Promise<{ valid: boolean; error?: s
         if (file.type === mimeType) {
           return { valid: true };
         }
-        return { 
-          valid: false, 
-          error: `File type mismatch: declared ${file.type}, detected ${mimeType}` 
+        return {
+          valid: false,
+          error: `File type mismatch: declared ${file.type}, detected ${mimeType}`,
         };
       }
     }
 
-    return { 
-      valid: false, 
-      error: 'Unsupported file type. Only JPEG, PNG, WebP, and GIF images are allowed.' 
+    return {
+      valid: false,
+      error:
+        'Unsupported file type. Only JPEG, PNG, WebP, and GIF images are allowed.',
     };
   } catch {
-    return { 
-      valid: false, 
-      error: 'Failed to validate file type' 
+    return {
+      valid: false,
+      error: 'Failed to validate file type',
     };
   }
 }
@@ -145,37 +156,46 @@ async function validateFileType(file: File): Promise<{ valid: boolean; error?: s
 /**
  * Generate collision-proof avatar filename
  */
-function generateUniqueAvatarFilename(userId: string, fileType: string): string {
+function generateUniqueAvatarFilename(
+  userId: string,
+  fileType: string,
+): string {
   const now = new Date();
   const timestamp = now.toISOString().replace(/[:.]/g, '-');
   const uniqueId = generateUniqueId();
   const extension = fileType.split('/')[1] || 'jpg';
-  
+
   return `avatars/${userId}_${timestamp}_${uniqueId}.${extension}`;
 }
 
 /**
  * Rate limiting check
  */
-function checkRateLimit(userId: string, action: 'avatar' | 'profile'): { allowed: boolean; resetTime?: Date } {
+function checkRateLimit(
+  userId: string,
+  action: 'avatar' | 'profile',
+): { allowed: boolean; resetTime?: Date } {
   const key = `${userId}:${action}`;
   const now = Date.now();
   // eslint-disable-next-line no-magic-numbers
   const hourInMs = 60 * 60 * 1000;
-  
-  const limit = action === 'avatar' ? RATE_LIMIT_UPLOADS_PER_HOUR : RATE_LIMIT_PROFILE_UPDATES_PER_HOUR;
-  
+
+  const limit =
+    action === 'avatar'
+      ? RATE_LIMIT_UPLOADS_PER_HOUR
+      : RATE_LIMIT_PROFILE_UPDATES_PER_HOUR;
+
   let record = rateLimitStore.get(key);
-  
+
   if (record === null || record === undefined || now > record.resetTime) {
     record = { count: 0, resetTime: now + hourInMs };
     rateLimitStore.set(key, record);
   }
-  
+
   if (record.count >= limit) {
     return { allowed: false, resetTime: new Date(record.resetTime) };
   }
-  
+
   record.count++;
   return { allowed: true };
 }
@@ -187,7 +207,7 @@ function sanitizeText(text: string | null | undefined): string | null {
   if (text === null || text === undefined || text.trim() === '') {
     return null;
   }
-  
+
   return stripHtmlTags(text).trim();
 }
 
@@ -196,12 +216,21 @@ const UserProfileSchema = z.object({
   full_name: z
     .string()
     .min(1, 'Full name cannot be empty.')
-    .max(FULL_NAME_MAX_LENGTH, `Full name must be ${FULL_NAME_MAX_LENGTH} characters or less.`)
+    .max(
+      FULL_NAME_MAX_LENGTH,
+      `Full name must be ${FULL_NAME_MAX_LENGTH} characters or less.`,
+    )
     .transform(sanitizeText),
   username: z
     .string()
-    .min(USERNAME_MIN_LENGTH, `Username must be at least ${USERNAME_MIN_LENGTH} characters.`)
-    .max(USERNAME_MAX_LENGTH, `Username must be ${USERNAME_MAX_LENGTH} characters or less.`)
+    .min(
+      USERNAME_MIN_LENGTH,
+      `Username must be at least ${USERNAME_MIN_LENGTH} characters.`,
+    )
+    .max(
+      USERNAME_MAX_LENGTH,
+      `Username must be ${USERNAME_MAX_LENGTH} characters or less.`,
+    )
     .regex(
       /^[a-zA-Z0-9_-]+$/,
       'Username can only contain letters, numbers, underscores, and hyphens.',
@@ -215,11 +244,7 @@ const UserProfileSchema = z.object({
     .optional()
     .nullable(),
   avatar_url: z.string().optional().nullable(),
-  tags_string: z
-    .string()
-    .optional()
-    .nullable()
-    .transform(parseTags),
+  tags_string: z.string().optional().nullable().transform(parseTags),
 });
 
 export type ProcessedUserProfileFormValues = z.infer<typeof UserProfileSchema>;
@@ -306,14 +331,25 @@ export async function updateUserProfile(
       }
     }
 
-    const avatarUrlToSave: string | null = (avatar_url !== null && avatar_url !== undefined && avatar_url !== '') ? avatar_url : null;
+    const avatarUrlToSave: string | null =
+      avatar_url !== null && avatar_url !== undefined && avatar_url !== ''
+        ? avatar_url
+        : null;
 
     const profileUpdate: TablesUpdate<'users'> = {
       full_name,
-      username: (username !== null && username !== undefined && username !== '') ? username : null,
-      bio: (bio !== null && bio !== undefined && bio !== '') ? bio : null,
+      username:
+        username !== null && username !== undefined && username !== ''
+          ? username
+          : null,
+      bio: bio !== null && bio !== undefined && bio !== '' ? bio : null,
       avatar_url: avatarUrlToSave,
-      tags: (transformedTags !== null && transformedTags !== undefined && transformedTags.length > 0) ? transformedTags : null,
+      tags:
+        transformedTags !== null &&
+        transformedTags !== undefined &&
+        transformedTags.length > 0
+          ? transformedTags
+          : null,
     };
 
     const { error: updateError } = await supabase
@@ -332,8 +368,7 @@ export async function updateUserProfile(
 
     // Revalidate paths that display user profile information
     revalidatePath('/dashboard');
-    revalidatePath('/dashboard/profile/edit');
-    revalidatePath('/dashboard/settings');
+    revalidatePath('/settings/user');
 
     const duration = Date.now() - startTime;
     metrics.userProfileUpdateDuration(duration);
@@ -344,7 +379,7 @@ export async function updateUserProfile(
     const duration = Date.now() - startTime;
     metrics.userProfileUpdateDuration(duration);
     metrics.userProfileUpdateTotal('error');
-    
+
     console.error('Unexpected error in updateUserProfile:', error);
     return {
       success: false,
@@ -354,7 +389,7 @@ export async function updateUserProfile(
 }
 
 export async function uploadAvatar(
-  formData: FormData
+  formData: FormData,
 ): Promise<{ success: boolean; avatarUrl?: string; error?: string }> {
   const supabase = await createServerSupabaseClient();
 
@@ -443,7 +478,10 @@ export async function uploadAvatar(
       .from(AVATAR_CONFIG.bucket)
       .getPublicUrl(filePath);
 
-    if (publicUrlData.publicUrl === null || publicUrlData.publicUrl === undefined) {
+    if (
+      publicUrlData.publicUrl === null ||
+      publicUrlData.publicUrl === undefined
+    ) {
       metrics.avatarUploadTotal('error');
       return {
         success: false,
@@ -469,18 +507,20 @@ export async function uploadAvatar(
     }
 
     // Schedule old avatar cleanup with retry mechanism
-    if (currentUser?.avatar_url !== null && currentUser?.avatar_url !== undefined && isSupabaseStorageUrl(currentUser.avatar_url)) {
+    if (
+      currentUser?.avatar_url !== null &&
+      currentUser?.avatar_url !== undefined &&
+      isSupabaseStorageUrl(currentUser.avatar_url)
+    ) {
       void scheduleAvatarCleanup(currentUser.avatar_url);
     }
 
     // Revalidate paths that display user profile information
     revalidatePath('/dashboard');
-    revalidatePath('/dashboard/profile/edit');
-    revalidatePath('/dashboard/settings');
+    revalidatePath('/settings/user');
 
     metrics.avatarUploadTotal('success');
     return { success: true, avatarUrl };
-
   } catch (error) {
     console.error('Error processing avatar upload:', error);
     metrics.avatarUploadTotal('error');
@@ -497,7 +537,7 @@ export async function uploadAvatar(
 function scheduleAvatarCleanup(avatarUrl: string): void {
   try {
     const oldFilePath = extractFilePathFromUrl(avatarUrl, AVATAR_CONFIG.bucket);
-    
+
     if (oldFilePath !== null && oldFilePath !== undefined) {
       // For now, attempt immediate cleanup with fallback
       // In production, implement proper retry queue
@@ -526,7 +566,7 @@ export async function deleteUserAccount(): Promise<{
     data: { user },
     error: authError,
   } = await supabase.auth.getUser();
-  
+
   if (authError !== null || user === null) {
     metrics.userAccountDeleteTotal('error');
     return {
@@ -534,18 +574,20 @@ export async function deleteUserAccount(): Promise<{
       error: 'You must be logged in to delete your account.',
     };
   }
-  
+
   try {
-    const { success, error: cleanupError } = await cleanupExternalServices(user.id);
+    const { success, error: cleanupError } = await cleanupExternalServices(
+      user.id,
+    );
 
     if (!success) {
       metrics.userAccountDeleteTotal('error');
       return {
         success: false,
-        error: `Failed to clean up external services: ${cleanupError ?? 'Unknown error'}`
+        error: `Failed to clean up external services: ${cleanupError ?? 'Unknown error'}`,
       };
     }
-    
+
     // Get Stripe Customer ID from Supabase
     const { data: userData, error: userError } = await supabase
       .from('users')
@@ -556,11 +598,14 @@ export async function deleteUserAccount(): Promise<{
     if (userError !== null || userData === null) {
       console.error('Error fetching user for cleanup:', userError);
       // Don't block account deletion if user not found or error
-      return { success: true }; 
+      return { success: true };
     }
 
     // If user has a Stripe Customer ID, delete it in Stripe
-    if (userData.stripe_customer_id !== null && userData.stripe_customer_id !== undefined) {
+    if (
+      userData.stripe_customer_id !== null &&
+      userData.stripe_customer_id !== undefined
+    ) {
       try {
         const stripe = getStripe();
         if (stripe !== null && stripe !== undefined) {
@@ -603,9 +648,11 @@ export async function deleteUserAccount(): Promise<{
 /**
  * Clean up external services (Stripe) with proper error handling
  */
-async function cleanupExternalServices(userId: string): Promise<{ success: boolean; error?: string }> {
+async function cleanupExternalServices(
+  userId: string,
+): Promise<{ success: boolean; error?: string }> {
   const supabase = await createServerSupabaseClient();
-  
+
   // Get Stripe Customer ID from Supabase
   const { data: userData, error: userError } = await supabase
     .from('users')
@@ -616,11 +663,14 @@ async function cleanupExternalServices(userId: string): Promise<{ success: boole
   if (userError !== null || userData === null) {
     console.error('Error fetching user for cleanup:', userError);
     // Don't block account deletion if user not found or error
-    return { success: true }; 
+    return { success: true };
   }
 
   // If user has a Stripe Customer ID, delete it in Stripe
-  if (userData.stripe_customer_id !== null && userData.stripe_customer_id !== undefined) {
+  if (
+    userData.stripe_customer_id !== null &&
+    userData.stripe_customer_id !== undefined
+  ) {
     try {
       const stripe = getStripe();
       if (stripe !== null && stripe !== undefined) {
