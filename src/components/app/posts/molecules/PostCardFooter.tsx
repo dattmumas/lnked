@@ -7,6 +7,8 @@ import {
   Bookmark,
   Share2,
   ExternalLink,
+  MessageSquare,
+  Repeat2,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import React, { useCallback, useState, useTransition } from 'react';
@@ -18,6 +20,10 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import BookmarkButton from '@/components/app/posts/molecules/BookmarkButton';
+import { CardFooter } from '@/components/ui/card';
+import { Separator } from '@/components/ui/separator';
+import { cn } from '@/lib/utils';
 
 // Constants
 const MILLION = 1000000;
@@ -36,7 +42,7 @@ interface PostInteractions {
 
 interface PostCardFooterProps {
   postId: string;
-  postSlug?: string;
+  postSlug?: string | null;
   postTitle: string;
   interactions: PostInteractions;
   onToggleLike?: () => void;
@@ -55,7 +61,7 @@ export default function PostCardFooter({
   onToggleDislike,
   onToggleBookmark,
   disabled = false,
-  showViewCount = false,
+  showViewCount = true,
 }: PostCardFooterProps): React.ReactElement {
   const [isPending, startTransition] = useTransition();
   const [shareMenuOpen, setShareMenuOpen] = useState(false);
@@ -132,9 +138,9 @@ export default function PostCardFooter({
     void handleBookmark();
   }, [handleBookmark]);
 
-  const handleNativeShare = useCallback((): void => {
-    void handleShare('native');
-  }, [handleShare]);
+  const handleNativeShare = (): void => {
+    handleShare('native');
+  };
 
   const handleCopyShare = useCallback((): void => {
     void handleShare('copy');
@@ -150,124 +156,78 @@ export default function PostCardFooter({
     return num.toString();
   }, []);
 
+  const shareUrl =
+    postSlug !== undefined && postSlug !== null
+      ? `${window.location.origin}/posts/${postSlug}`
+      : `${window.location.origin}/posts/${postId}`;
+
   return (
-    <div className="flex items-center justify-between pt-4 border-t border-border">
-      {/* Reaction Buttons */}
-      <div className="flex items-center gap-1">
-        <Button
-          variant={interactions.isLiked ? 'default' : 'ghost'}
-          size="sm"
-          onClick={handleLikeClick}
-          disabled={disabled || isPending}
-          className="flex items-center gap-2 rounded-full"
-          aria-label={interactions.isLiked ? 'Unlike post' : 'Like post'}
-        >
-          <ThumbsUp
-            className={`h-4 w-4 ${
-              interactions.isLiked
-                ? 'text-accent-foreground'
-                : 'text-muted-foreground'
-            }`}
-          />
-          <span className="text-sm tabular-nums">
-            {formatCount(interactions.likeCount)}
-          </span>
-        </Button>
-
-        <Button
-          variant={interactions.isDisliked ? 'destructive' : 'ghost'}
-          size="sm"
-          onClick={handleDislikeClick}
-          disabled={disabled || isPending}
-          className="flex items-center gap-2 rounded-full"
-          aria-label={
-            interactions.isDisliked ? 'Remove dislike' : 'Dislike post'
-          }
-        >
-          <ThumbsDown
-            className={`h-4 w-4 ${
-              interactions.isDisliked
-                ? 'text-destructive-foreground'
-                : 'text-muted-foreground'
-            }`}
-          />
-          <span className="text-sm tabular-nums">
-            {formatCount(interactions.dislikeCount)}
-          </span>
-        </Button>
-      </div>
-
-      {/* Secondary Actions */}
-      <div className="flex items-center gap-1">
-        {/* Comments */}
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={handleCommentsClick}
-          className="flex items-center gap-2 rounded-full"
-          aria-label="View comments"
-        >
-          <MessageCircle className="h-4 w-4 text-muted-foreground" />
-          <span className="text-sm text-muted-foreground tabular-nums">
-            {formatCount(interactions.commentCount)}
-          </span>
-        </Button>
-
-        {/* Views (optional) */}
-        {showViewCount && interactions.viewCount !== undefined && (
-          <div className="flex items-center gap-1 px-2">
-            <span className="text-xs text-muted-foreground">
-              {formatCount(interactions.viewCount)} views
-            </span>
-          </div>
-        )}
-
-        {/* Bookmark */}
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={handleBookmarkClick}
-          disabled={disabled || isPending}
-          className="rounded-full"
-          aria-label={
-            interactions.isBookmarked ? 'Remove bookmark' : 'Bookmark post'
-          }
-        >
-          <Bookmark
-            className={`h-4 w-4 ${
-              interactions.isBookmarked
-                ? 'fill-accent text-accent'
-                : 'text-muted-foreground'
-            }`}
-          />
-        </Button>
-
-        {/* Share */}
-        <DropdownMenu open={shareMenuOpen} onOpenChange={setShareMenuOpen}>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="rounded-full"
-              aria-label="Share post"
-            >
-              <Share2 className="h-4 w-4 text-muted-foreground" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            {typeof navigator !== 'undefined' && 'share' in navigator && (
-              <DropdownMenuItem onClick={handleNativeShare}>
-                <Share2 className="h-4 w-4 mr-2" />
-                Share
-              </DropdownMenuItem>
+    <>
+      <Separator />
+      <CardFooter className="px-6 py-3 flex items-center justify-between text-muted-foreground text-sm">
+        <div className="flex items-center gap-6">
+          {/* Like Button */}
+          <button
+            type="button"
+            className={cn(
+              'flex items-center gap-1.5 hover:text-primary transition-colors',
+              interactions.isLiked && 'text-primary font-semibold',
             )}
-            <DropdownMenuItem onClick={handleCopyShare}>
-              <ExternalLink className="h-4 w-4 mr-2" />
-              Copy link
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
-    </div>
+            onClick={handleLikeClick}
+            aria-pressed={interactions.isLiked}
+          >
+            <ThumbsUp className="h-4 w-4" />
+            <span>{formatCount(interactions.likeCount)}</span>
+          </button>
+
+          {/* Dislike Button */}
+          <button
+            type="button"
+            className={cn(
+              'flex items-center gap-1.5 hover:text-destructive transition-colors',
+              interactions.isDisliked && 'text-destructive font-semibold',
+            )}
+            onClick={handleDislikeClick}
+            aria-pressed={interactions.isDisliked}
+          >
+            <ThumbsDown className="h-4 w-4" />
+            <span>{formatCount(interactions.dislikeCount)}</span>
+          </button>
+
+          {/* Comment Button */}
+          <button
+            type="button"
+            className="flex items-center gap-1.5 hover:text-primary transition-colors"
+            onClick={handleCommentsClick}
+          >
+            <MessageSquare className="h-4 w-4" />
+            <span>{formatCount(interactions.commentCount)}</span>
+          </button>
+        </div>
+
+        <div className="flex items-center gap-4">
+          {/* View Count */}
+          {showViewCount && interactions.viewCount !== undefined && (
+            <div className="flex items-center gap-1.5">
+              <span>{formatCount(interactions.viewCount)} views</span>
+            </div>
+          )}
+
+          {/* Bookmark and Share */}
+          <BookmarkButton
+            postId={postId}
+            initialBookmarked={interactions.isBookmarked}
+          />
+          <button
+            type="button"
+            className="p-2 hover:bg-muted rounded-full transition-colors"
+            onClick={handleNativeShare}
+          >
+            <Share2 className="h-4 w-4" />
+            <span className="sr-only">Share</span>
+          </button>
+        </div>
+      </CardFooter>
+    </>
   );
 }

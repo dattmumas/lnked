@@ -6,14 +6,16 @@ import { useTenant } from '@/providers/TenantProvider';
 
 import type { ConversationWithParticipants } from '@/lib/chat/types';
 
-// Cache durations
-const STALE_TIME = 5 * 60 * 1000; // 5 minutes
+// Constants
+const STALE_TIME_MS = 5 * 60 * 1000; // 5 minutes
 
 // Query keys factory
 export const conversationKeys = {
   all: ['conversations'] as const,
-  byTenant: (tenantId: string) => [...conversationKeys.all, 'tenant', tenantId] as const,
-  byUser: (userId: string) => [...conversationKeys.all, 'user', userId] as const,
+  byTenant: (tenantId: string) =>
+    [...conversationKeys.all, 'tenant', tenantId] as const,
+  byUser: (userId: string) =>
+    [...conversationKeys.all, 'user', userId] as const,
 };
 
 interface TenantConversationsResponse {
@@ -24,10 +26,12 @@ interface TenantConversationsResponse {
       user_role: string;
       total: number;
     };
-  }
+  };
 }
 
-const fetchTenantConversations = async (tenantId: string): Promise<ConversationWithParticipants[]> => {
+const fetchTenantConversations = async (
+  tenantId: string,
+): Promise<ConversationWithParticipants[]> => {
   if (!tenantId) {
     throw new Error('No tenant ID provided');
   }
@@ -38,34 +42,39 @@ const fetchTenantConversations = async (tenantId: string): Promise<ConversationW
       'Content-Type': 'application/json',
     },
   });
-  
+
   if (!response.ok) {
     const errorText = await response.text();
     console.error('API Error response body:', errorText);
     throw new Error(`Failed to fetch conversations: ${response.statusText}`);
   }
-  
-  const json = await response.json() as TenantConversationsResponse;
+
+  const json = (await response.json()) as TenantConversationsResponse;
   // Correctly parse the nested data structure
   return json.data.conversations || [];
 };
 
 // Subscription setup for real-time updates
 const setupConversationSubscription = (
-  tenantId: string | null, 
+  tenantId: string | null,
   userId: string,
-  queryClient: ReturnType<typeof useQueryClient>
+  queryClient: ReturnType<typeof useQueryClient>,
 ): (() => void) | undefined => {
   if (!tenantId) return;
 
   // We'll implement real-time subscription here when the infrastructure is ready
   // For now, we can use polling or manual invalidation
-  console.log('Setting up conversation subscription for tenant:', tenantId, 'user:', userId);
-  
+  console.log(
+    'Setting up conversation subscription for tenant:',
+    tenantId,
+    'user:',
+    userId,
+  );
+
   // Example of how we'd set up a Supabase subscription:
   // const subscription = supabase
   //   .channel('conversations')
-  //   .on('postgres_changes', 
+  //   .on('postgres_changes',
   //     { event: '*', schema: 'public', table: 'conversations' },
   //     () => {
   //       queryClient.invalidateQueries({
@@ -78,7 +87,7 @@ const setupConversationSubscription = (
   // return () => {
   //   subscription.unsubscribe();
   // };
-  
+
   return () => {
     // Placeholder cleanup function
   };
@@ -101,7 +110,7 @@ export function useTenantConversations() {
     queryKey: conversationKeys.byTenant(tenantId || ''),
     queryFn: () => fetchTenantConversations(tenantId!),
     enabled: Boolean(tenantId) && Boolean(userId),
-    staleTime: STALE_TIME,
+    staleTime: STALE_TIME_MS,
     retry: 2,
   });
 
@@ -109,7 +118,11 @@ export function useTenantConversations() {
   React.useEffect(() => {
     if (!tenantId || !userId) return;
 
-    const cleanup = setupConversationSubscription(tenantId, userId, queryClient);
+    const cleanup = setupConversationSubscription(
+      tenantId,
+      userId,
+      queryClient,
+    );
     return cleanup;
   }, [tenantId, userId, queryClient]);
 
@@ -119,4 +132,4 @@ export function useTenantConversations() {
     error: query.error,
     refetch: query.refetch,
   };
-} 
+}

@@ -143,26 +143,16 @@ export default function ArticleCard({
       ? `/posts/${post.slug}`
       : `/posts/${post.id}`;
 
-  // Use meta_description if available, otherwise extract from content
-  const excerpt =
-    post.meta_description !== undefined &&
-    post.meta_description !== null &&
-    post.meta_description.length > 0
-      ? post.meta_description
-      : extractTextFromContent(
-          post.content !== undefined && post.content !== null
-            ? post.content
-            : null,
-        );
+  const excerpt = post.meta_description ?? extractTextFromContent(post.content);
 
   return (
     <Card
       className={cn(
-        'overflow-hidden border border-border drop-shadow-sm hover:shadow-lg transition-all duration-200 hover:ring-2 hover:ring-primary/20 hover:scale-[1.02]',
+        'overflow-hidden rounded-xl border bg-card shadow-sm transition-all duration-300 ease-in-out hover:shadow-md',
         className,
       )}
     >
-      <CardContent className="p-6">
+      <div className="p-6">
         <PostCardHeader
           author={post.author}
           timestamp={post.created_at}
@@ -173,56 +163,52 @@ export default function ArticleCard({
           isFollowing={isFollowing}
         />
 
-        {/* Thumbnail (if available) */}
-        {post.thumbnail_url !== undefined &&
-          post.thumbnail_url !== null &&
-          post.thumbnail_url.length > 0 && (
-            <Link href={postUrl} className="block mb-4">
-              <div className="relative aspect-video overflow-hidden rounded-lg bg-muted group">
-                <Image
-                  src={post.thumbnail_url}
-                  alt={post.title}
-                  width={800}
-                  height={450}
-                  priority
-                  className="w-full h-full object-cover transition-transform duration-200 group-hover:scale-105"
-                />
-              </div>
-            </Link>
-          )}
+        {post.thumbnail_url && (
+          <Link href={postUrl} className="mt-4 block">
+            <div className="relative aspect-video w-full overflow-hidden rounded-lg bg-muted">
+              <Image
+                src={post.thumbnail_url}
+                alt={post.title}
+                fill
+                className="object-cover transition-transform duration-300 group-hover:scale-105"
+              />
+            </div>
+          </Link>
+        )}
 
-        {/* Content */}
-        <Link href={postUrl} className="group block">
-          <h2 className="text-xl font-semibold mb-3 group-hover:text-accent transition-colors line-clamp-2">
-            {post.title}
-          </h2>
+        <div className="mt-4">
+          <Link href={postUrl} className="group block">
+            <h2 className="text-xl font-bold leading-snug tracking-tight group-hover:text-primary transition-colors">
+              {post.title}
+            </h2>
+            {excerpt && (
+              <p className="mt-2 text-sm leading-relaxed text-muted-foreground line-clamp-3">
+                {excerpt}
+              </p>
+            )}
+          </Link>
+        </div>
 
-          {excerpt !== undefined && excerpt !== null && excerpt.length > 0 && (
-            <p className="text-sm text-muted-foreground mb-4 line-clamp-3 leading-relaxed">
-              {excerpt}
-            </p>
-          )}
-
-          <div className="text-sm font-medium text-accent hover:underline">
+        <div className="mt-4 flex items-center justify-between">
+          <Link
+            href={postUrl}
+            className="text-sm font-semibold text-primary hover:underline"
+          >
             Read more →
-          </div>
-        </Link>
+          </Link>
+        </div>
+      </div>
 
-        <PostCardFooter
-          postId={post.id}
-          {...(post.slug !== undefined &&
-          post.slug !== null &&
-          post.slug.length > 0
-            ? { postSlug: post.slug }
-            : {})}
-          postTitle={post.title}
-          interactions={interactions}
-          {...(onToggleLike ? { onToggleLike } : {})}
-          {...(onToggleDislike ? { onToggleDislike } : {})}
-          {...(onToggleBookmark ? { onToggleBookmark } : {})}
-          showViewCount
-        />
-      </CardContent>
+      <PostCardFooter
+        postId={post.id}
+        postSlug={post.slug}
+        postTitle={post.title}
+        interactions={interactions}
+        onToggleLike={onToggleLike}
+        onToggleDislike={onToggleDislike}
+        onToggleBookmark={onToggleBookmark}
+        showViewCount
+      />
     </Card>
   );
 }

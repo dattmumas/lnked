@@ -2,7 +2,7 @@
 
 import { Bell, CheckCheck, ExternalLink, Settings } from 'lucide-react';
 import Link from 'next/link';
-import { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -12,6 +12,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { Icon } from '@/components/ui/icon';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useNotifications } from '@/lib/hooks/useNotifications';
 import { cn } from '@/lib/utils';
@@ -69,6 +70,21 @@ export function NotificationDropdownClient({
 
   const recentNotifications = notifications.slice(0, MAX_RECENT_NOTIFICATIONS);
 
+  const getNotificationIcon = (type: string): React.ReactNode => {
+    switch (type) {
+      case 'follow':
+        return <Icon icon={Bell} className="h-4 w-4 text-blue-500" />;
+      case 'post_like':
+        return <Icon icon={Bell} className="h-4 w-4 text-red-500" />;
+      case 'post_comment':
+        return <Icon icon={Bell} className="h-4 w-4 text-green-500" />;
+      case 'comment_reply':
+        return <Icon icon={Bell} className="h-4 w-4 text-purple-500" />;
+      default:
+        return <Icon icon={Bell} className="h-4 w-4 text-gray-500" />;
+    }
+  };
+
   return (
     <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
       <DropdownMenuTrigger asChild>
@@ -77,7 +93,7 @@ export function NotificationDropdownClient({
           size="sm"
           className={cn('relative h-9 w-9 p-0', className)}
         >
-          <Bell className="h-4 w-4" />
+          <Icon icon={Bell} />
           {unreadCount > 0 && (
             <Badge
               variant="destructive"
@@ -107,13 +123,13 @@ export function NotificationDropdownClient({
                 className="text-xs h-auto p-1.5"
                 onClick={markAllAsRead}
               >
-                <CheckCheck className="h-3 w-3 mr-1" />
+                <Icon icon={CheckCheck} className="mr-1" />
                 Mark all read
               </Button>
             )}
             <Button variant="ghost" size="sm" className="h-auto p-1.5" asChild>
               <Link href="/dashboard/settings">
-                <Settings className="h-3 w-3" />
+                <Icon icon={Settings} />
                 <span className="sr-only">Notification settings</span>
               </Link>
             </Button>
@@ -136,7 +152,11 @@ export function NotificationDropdownClient({
             </div>
           ) : recentNotifications.length === 0 ? (
             <div className="p-8 text-center">
-              <Bell className="h-8 w-8 mx-auto mb-3 text-muted-foreground" />
+              <Icon
+                icon={Bell}
+                size="xl"
+                className="mx-auto mb-3 text-muted-foreground"
+              />
               <h4 className="font-medium mb-1">No new notifications</h4>
               <p className="text-sm text-muted-foreground">
                 You're all caught up!
@@ -170,7 +190,7 @@ export function NotificationDropdownClient({
           >
             <Link href="/dashboard/notifications">
               View all notifications
-              <ExternalLink className="h-3 w-3" />
+              <Icon icon={ExternalLink} />
             </Link>
           </Button>
         </div>

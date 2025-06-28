@@ -2,7 +2,7 @@
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Trash2, Save, Settings, Bell, Shield, Users } from 'lucide-react';
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 
@@ -47,21 +47,24 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { useTenantSettings } from '@/hooks/useTenantSettings';
 import { useToast } from '@/hooks/useToast';
-import { useTenant } from '@/providers/TenantProvider';
 
 import { TenantPermissions, PermissionGate } from './TenantPermissions';
 
 import type { TenantSettingsFormData } from '@/types/tenant.types';
+
+// Constants for magic numbers
+const MAX_NAME_LENGTH = 100;
+const MAX_DESCRIPTION_LENGTH = 500;
 
 // Form schemas
 const generalSettingsSchema = z.object({
   name: z
     .string()
     .min(1, 'Name is required')
-    .max(100, 'Name must be less than 100 characters'),
+    .max(MAX_NAME_LENGTH, 'Name must be less than 100 characters'),
   description: z
     .string()
-    .max(500, 'Description must be less than 500 characters')
+    .max(MAX_DESCRIPTION_LENGTH, 'Description must be less than 500 characters')
     .optional(),
   is_public: z.boolean(),
 });
@@ -96,7 +99,6 @@ export function TenantSettings({
   tenantId,
   className,
 }: TenantSettingsProps): React.JSX.Element {
-  const { currentTenant } = useTenant();
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState('general');
 
@@ -151,19 +153,40 @@ export function TenantSettings({
   });
 
   // Update form values when data loads
-  if (settings && !generalForm.formState.isDirty) {
+  if (
+    settings !== null &&
+    settings !== undefined &&
+    !generalForm.formState.isDirty
+  ) {
     generalForm.reset({
-      name: settings.name,
-      description: settings.description || '',
-      is_public: settings.is_public,
+      name:
+        settings.name !== null && settings.name !== undefined
+          ? settings.name
+          : '',
+      description:
+        settings.description !== null && settings.description !== undefined
+          ? settings.description
+          : '',
+      is_public:
+        settings.is_public !== null && settings.is_public !== undefined
+          ? settings.is_public
+          : false,
     });
   }
 
-  if (notificationSettings && !notificationForm.formState.isDirty) {
+  if (
+    notificationSettings !== null &&
+    notificationSettings !== undefined &&
+    !notificationForm.formState.isDirty
+  ) {
     notificationForm.reset(notificationSettings);
   }
 
-  if (privacySettings && !privacyForm.formState.isDirty) {
+  if (
+    privacySettings !== null &&
+    privacySettings !== undefined &&
+    !privacyForm.formState.isDirty
+  ) {
     privacyForm.reset(privacySettings);
   }
 

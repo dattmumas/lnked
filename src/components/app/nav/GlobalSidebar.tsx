@@ -1,7 +1,6 @@
 'use client';
 
 import {
-  Home,
   Compass,
   Video,
   User as UserIcon,
@@ -30,7 +29,6 @@ const TRANSITION_DELAY_MULTIPLIER = 50;
 
 // Enhanced main navigation with Videos moved up as per creative design
 const navigationItems = [
-  { icon: Home, label: 'Home', href: '/home' },
   { icon: Compass, label: 'Explore', href: '/discover' },
   { icon: Video, label: 'Videos', href: '/videos' },
   { icon: FileText, label: 'Posts', href: '/dashboard/posts' },
@@ -109,9 +107,6 @@ export function GlobalSidebar(): React.ReactElement | undefined {
 
   const isActiveRoute = useCallback(
     (href: string): boolean => {
-      if (href === '/home') {
-        return pathname === '/home' || pathname === '/';
-      }
       if (href === '/profile') {
         return pathname.startsWith('/profile');
       }

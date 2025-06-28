@@ -6,10 +6,10 @@ import Image from 'next/image';
 import React, {
   useCallback,
   useEffect,
-  useRef,
-  useState,
   useLayoutEffect,
   useMemo,
+  useRef,
+  useState,
 } from 'react';
 
 import { Button } from '@/components/ui/button';
@@ -33,6 +33,12 @@ import { cn } from '@/lib/utils/cn';
 
 import type { MessageWithSender } from '@/lib/chat/types';
 
+// Constants for magic numbers
+const DEBOUNCE_DELAY_MS = 2 * 60 * 1000; // 2 minutes
+const MESSAGE_HEIGHT_COMPACT = 36;
+const MESSAGE_HEIGHT_NORMAL = 72;
+const MESSAGE_HEIGHT_DEFAULT = 72;
+
 interface VirtualMessageListProps {
   messages: MessageWithSender[];
   currentUserId: string;
@@ -47,20 +53,31 @@ const SCROLL_TO_BOTTOM_THRESHOLD = 600;
 
 const isGroupedWith = (
   currentMessage: MessageWithSender,
-  previousMessage: MessageWithSender | undefined,
+  previousMessage: MessageWithSender,
 ): boolean => {
   if (
-    !previousMessage ||
-    previousMessage.sender?.id !== currentMessage.sender?.id ||
-    !currentMessage.created_at ||
-    !previousMessage.created_at
+    currentMessage.sender_id !== null &&
+    currentMessage.sender_id !== undefined &&
+    previousMessage.sender_id !== null &&
+    previousMessage.sender_id !== undefined &&
+    currentMessage.sender_id !== previousMessage.sender_id
   ) {
     return false;
   }
+
+  if (
+    currentMessage.created_at === null ||
+    currentMessage.created_at === undefined ||
+    previousMessage.created_at === null ||
+    previousMessage.created_at === undefined
+  ) {
+    return false;
+  }
+
   const timeDiff =
     new Date(currentMessage.created_at).getTime() -
     new Date(previousMessage.created_at).getTime();
-  return timeDiff < 2 * 60 * 1000; // 2 minutes
+  return timeDiff < DEBOUNCE_DELAY_MS;
 };
 
 export function VirtualMessageList({
@@ -88,12 +105,14 @@ export function VirtualMessageList({
     count: messages.length,
     getScrollElement: () => scrollContainerRef.current,
     estimateSize: useCallback(
-      (index: number) =>
-        messages[index]
-          ? isGroupedWith(messages[index], messages[index - 1])
-            ? 36
-            : 72
-          : 72,
+      (index: number) => {
+        const current = messages[index]!;
+        const grouped =
+          index > 0 && messages[index - 1] !== undefined
+            ? isGroupedWith(current, messages[index - 1]!)
+            : false;
+        return grouped ? MESSAGE_HEIGHT_COMPACT : MESSAGE_HEIGHT_NORMAL;
+      },
       [messages],
     ),
     overscan: 10,
@@ -195,10 +214,11 @@ export function VirtualMessageList({
             const message = messages[virtualItem.index];
             if (!message) return null;
 
-            const isGrouped = isGroupedWith(
-              message,
-              messages[virtualItem.index - 1],
-            );
+            const isGrouped =
+              virtualItem.index > 0 &&
+              messages[virtualItem.index - 1] !== undefined
+                ? isGroupedWith(message, messages[virtualItem.index - 1]!)
+                : false;
             return (
               <div
                 key={virtualItem.key}

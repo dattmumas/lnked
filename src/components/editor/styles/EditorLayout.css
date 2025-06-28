@@ -1,5 +1,6 @@
 .editor-shell {
-  @apply mx-auto my-10 text-foreground relative leading-[1.7] font-normal;
+  @apply mx-auto my-10 relative leading-[1.7] font-normal;
+  color: hsl(var(--foreground));
   max-width: 100%;
   padding: 0;
 }

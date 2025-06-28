@@ -70,7 +70,7 @@ export default async function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body
-        className={`min-h-screen bg-background w-full ${sourceSerif.variable} ${inter.variable}`}
+        className={`h-screen overflow-hidden bg-background w-full ${sourceSerif.variable} ${inter.variable}`}
       >
         <a
           href="#main-content"
@@ -86,20 +86,20 @@ export default async function RootLayout({
             disableTransitionOnChange
           >
             <TenantProvider>
-              <div className="flex h-screen flex-col">
-                <header className="shrink-0 sticky top-0 z-50 bg-background backdrop-blur-md border-b border-border/50">
+              <div className="flex h-screen flex-col overflow-hidden">
+                <header className="shrink-0 z-50 bg-background backdrop-blur-md border-b border-border/50">
                   <ModernNavbar />
                 </header>
 
                 {/* Layout body */}
-                <div className="flex flex-1 overflow-hidden">
+                <div className="flex flex-1 overflow-hidden h-full">
                   {isAuthenticated && <GlobalSidebar />}
 
-                  {/* Main content fills remaining space and no vertical scroll */}
+                  {/* Main content fills remaining space with no scroll */}
                   <main
                     id="main-content"
                     className={clsx(
-                      'flex-1 overflow-y-auto overflow-x-hidden',
+                      'flex-1 overflow-hidden h-full',
                       isAuthenticated && 'ml-16 md:ml-16',
                     )}
                   >

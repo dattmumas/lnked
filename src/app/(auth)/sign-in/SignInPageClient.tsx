@@ -338,6 +338,9 @@ export default function SignInPage(): React.JSX.Element {
           return;
         }
 
+        // Ensure personal tenant cookie
+        await fetch('/api/auth/ensure-tenant', { method: 'POST' });
+
         // Success: refresh router and redirect
         void router.refresh();
 

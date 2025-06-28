@@ -520,202 +520,202 @@ export function RightSidebar({
   );
 
   return (
-    <div className="fixed right-0 top-16 w-[28rem] h-[calc(100vh-4rem)] bg-background border-l border-border hidden lg:block z-20">
-      <div className="h-full overflow-hidden flex flex-col">
-        {/* Header */}
-        <div className="px-4 py-3 border-b border-border">
-          <div className="flex items-center justify-between">
-            <h2 className="font-semibold text-lg text-foreground">Chains</h2>
-            <div
-              className="w-2 h-2 bg-green-500 rounded-full animate-pulse"
-              title="Live activity"
-            />
-          </div>
+    <div className="h-full bg-background z-20 flex flex-col min-h-0">
+      {/* Header */}
+      <div className="px-4 py-3 border-b border-border flex-shrink-0">
+        <div className="flex items-center justify-between">
+          <h2 className="font-semibold text-lg text-foreground">Chains</h2>
+          <div
+            className="w-2 h-2 bg-green-500 rounded-full animate-pulse"
+            title="Live activity"
+          />
         </div>
-        {/* Chains Feed - Scrollable */}
-        <div className="flex-1 overflow-y-auto px-4 py-3">
-          {loading ? (
-            <div className="flex items-center justify-center py-8">
-              <Loader2 className="w-6 h-6 animate-spin text-accent" />
-            </div>
-          ) : error ? (
-            <div className="text-center py-8">
-              <p className="text-destructive text-sm mb-2">
-                Error loading chains
-              </p>
-              <Button size="sm" variant="outline" onClick={refetch}>
-                Retry
-              </Button>
-            </div>
-          ) : chains.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              <p className="text-sm">No chains yet.</p>
-              <p className="text-xs mt-1">Be the first to post!</p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {chains.map((item) => (
-                <div
-                  key={item.id}
-                  className="px-3 py-3 rounded-lg hover:bg-muted/50 transition-colors"
-                >
-                  <div className="flex gap-3">
-                    <Avatar className="w-9 h-9 flex-shrink-0">
-                      {item.user.avatar_url !== undefined &&
-                      item.user.avatar_url !== null &&
-                      item.user.avatar_url.length > 0 ? (
-                        <AvatarImage
-                          src={item.user.avatar_url}
-                          alt={item.user.name}
-                        />
-                      ) : (
-                        <AvatarFallback className="text-xs">
-                          {item.user.name
-                            .split(' ')
-                            .map((n) => n[0])
-                            .join('')}
-                        </AvatarFallback>
-                      )}
-                    </Avatar>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between mb-1">
-                        <div className="flex items-baseline flex-wrap gap-x-1.5 min-w-0 pr-2">
-                          <span className="font-medium text-sm truncate max-w-[150px] text-foreground">
-                            {item.user.name}
-                          </span>
-                          <span className="text-muted-foreground text-xs truncate max-w-[100px]">
-                            @{item.user.username}
-                          </span>
-                        </div>
-                        <span className="text-muted-foreground text-xs flex-shrink-0">
-                          {item.timestamp}
+      </div>
+      {/* Chains Feed - Scrollable */}
+      <div className="flex-1 overflow-y-auto px-4 py-3 min-h-0">
+        {loading ? (
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="w-6 h-6 animate-spin text-accent" />
+          </div>
+        ) : error ? (
+          <div className="text-center py-8">
+            <p className="text-destructive text-sm mb-2">
+              Error loading chains
+            </p>
+            <Button size="sm" variant="outline" onClick={refetch}>
+              Retry
+            </Button>
+          </div>
+        ) : chains.length === 0 ? (
+          <div className="text-center py-8 text-muted-foreground">
+            <p className="text-sm">No chains yet.</p>
+            <p className="text-xs mt-1">Be the first to post!</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {chains.map((item) => (
+              <div
+                key={item.id}
+                className="px-3 py-3 rounded-lg hover:bg-muted/50 transition-colors"
+              >
+                <div className="flex gap-3">
+                  <Avatar className="w-9 h-9 flex-shrink-0">
+                    {item.user.avatar_url !== undefined &&
+                    item.user.avatar_url !== null &&
+                    item.user.avatar_url.length > 0 ? (
+                      <AvatarImage
+                        src={item.user.avatar_url}
+                        alt={item.user.name}
+                      />
+                    ) : (
+                      <AvatarFallback className="text-xs">
+                        {item.user.name
+                          .split(' ')
+                          .map((n) => n[0])
+                          .join('')}
+                      </AvatarFallback>
+                    )}
+                  </Avatar>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between mb-1">
+                      <div className="flex items-baseline flex-wrap gap-x-1.5 min-w-0 pr-2">
+                        <span className="font-medium text-sm truncate max-w-[150px] text-foreground">
+                          {item.user.name}
+                        </span>
+                        <span className="text-muted-foreground text-xs truncate max-w-[100px]">
+                          @{item.user.username}
                         </span>
                       </div>
-                      <p className="text-sm text-foreground mb-2.5 leading-relaxed break-words">
-                        {item.content}
-                      </p>
-                      {/* Interactive Buttons */}
-                      <div className="flex items-center gap-5">
-                        {/* Like Button */}
-                        <button
-                          onClick={handleToggleLike(item.id)}
-                          className={cn(
-                            'flex items-center gap-1.5 text-xs transition-colors',
-                            chainInteractions.likedChains.has(item.id)
-                              ? 'text-destructive'
-                              : 'text-muted-foreground hover:text-destructive',
-                          )}
-                        >
-                          <Heart
-                            className={cn(
-                              'w-4 h-4',
-                              chainInteractions.likedChains.has(item.id) &&
-                                'fill-current',
-                            )}
-                          />
-                          <span>{item.stats.likes}</span>
-                        </button>
-                        {/* Reply Button */}
-                        <button
-                          onClick={handleStartReply(item.id)}
-                          className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-accent transition-colors"
-                        >
-                          <Reply className="w-4 h-4" />
-                          <span>{item.stats.replies}</span>
-                        </button>
-                        {/* Share Button */}
-                        <button
-                          onClick={handleShareChain(item.id, item.content)}
-                          className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-accent transition-colors"
-                        >
-                          <Share2 className="w-4 h-4" />
-                          <span>{item.stats.shares}</span>
-                        </button>
-                        {/* More / Delete menu */}
-                        {item.author_id === user.id ? (
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <button
-                                className="ml-auto text-muted-foreground hover:text-accent transition-colors"
-                                aria-label="Chain options"
-                              >
-                                <MoreHorizontal className="w-4 h-4" />
-                              </button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent
-                              sideOffset={4}
-                              align="center"
-                              className="z-50 min-w-[120px] rounded-md border bg-background p-1 shadow-md"
-                            >
-                              <DropdownMenuItem
-                                onSelect={handleDeleteChain(item.id)}
-                                className="flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm text-destructive focus:bg-accent/10 dark:focus:bg-accent/20 outline-none"
-                              >
-                                Delete
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        ) : (
-                          <button
-                            className="ml-auto text-muted-foreground hover:text-accent transition-colors"
-                            aria-label="Chain options"
-                          >
-                            <MoreHorizontal className="w-4 h-4" />
-                          </button>
+                      <span className="text-muted-foreground text-xs flex-shrink-0">
+                        {item.timestamp}
+                      </span>
+                    </div>
+                    <p className="text-sm text-foreground mb-2.5 leading-relaxed break-words">
+                      {item.content}
+                    </p>
+                    {/* Interactive Buttons */}
+                    <div className="flex items-center gap-5">
+                      {/* Like Button */}
+                      <button
+                        onClick={handleToggleLike(item.id)}
+                        className={cn(
+                          'flex items-center gap-1.5 text-xs transition-colors',
+                          chainInteractions.likedChains.has(item.id)
+                            ? 'text-destructive'
+                            : 'text-muted-foreground hover:text-destructive',
                         )}
-                      </div>
-                      {/* Reply Form */}
-                      {chainInteractions.replyingTo === item.id && (
-                        <div className="mt-4 space-y-3">
-                          <Textarea
-                            value={chainInteractions.replyContent}
-                            onChange={handleReplyContentChange}
-                            placeholder={`Reply to ${item.user.name}...`}
-                            className="w-full text-sm min-h-[70px] resize-none"
-                            maxLength={CHARACTER_LIMIT}
-                          />
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs text-muted-foreground">
-                              {CHARACTER_LIMIT -
-                                chainInteractions.replyContent.length}{' '}
-                              characters remaining
-                            </span>
-                            <div className="flex gap-2">
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={chainInteractions.cancelReply}
-                                className="h-7 text-xs px-3"
-                              >
-                                Cancel
-                              </Button>
-                              <Button
-                                size="sm"
-                                onClick={handleSubmitReply(item.id)}
-                                disabled={
-                                  chainInteractions.replyContent.trim()
-                                    .length === 0 || chainInteractions.isPosting
-                                }
-                                className="h-7 text-xs px-3"
-                              >
-                                {chainInteractions.isPosting ? (
-                                  <Loader2 className="w-3 h-3 animate-spin" />
-                                ) : (
-                                  'Reply'
-                                )}
-                              </Button>
-                            </div>
-                          </div>
-                        </div>
+                      >
+                        <Heart
+                          className={cn(
+                            'w-4 h-4',
+                            chainInteractions.likedChains.has(item.id) &&
+                              'fill-current',
+                          )}
+                        />
+                        <span>{item.stats.likes}</span>
+                      </button>
+                      {/* Reply Button */}
+                      <button
+                        onClick={handleStartReply(item.id)}
+                        className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-accent transition-colors"
+                      >
+                        <Reply className="w-4 h-4" />
+                        <span>{item.stats.replies}</span>
+                      </button>
+                      {/* Share Button */}
+                      <button
+                        onClick={handleShareChain(item.id, item.content)}
+                        className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-accent transition-colors"
+                      >
+                        <Share2 className="w-4 h-4" />
+                        <span>{item.stats.shares}</span>
+                      </button>
+                      {/* More / Delete menu */}
+                      {item.author_id === user.id ? (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <button
+                              className="ml-auto text-muted-foreground hover:text-accent transition-colors"
+                              aria-label="Chain options"
+                            >
+                              <MoreHorizontal className="w-4 h-4" />
+                            </button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent
+                            sideOffset={4}
+                            align="center"
+                            className="z-50 min-w-[120px] rounded-md border bg-background p-1 shadow-md"
+                          >
+                            <DropdownMenuItem
+                              onSelect={handleDeleteChain(item.id)}
+                              className="flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm text-destructive focus:bg-accent/10 dark:focus:bg-accent/20 outline-none"
+                            >
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      ) : (
+                        <button
+                          className="ml-auto text-muted-foreground hover:text-accent transition-colors"
+                          aria-label="Chain options"
+                        >
+                          <MoreHorizontal className="w-4 h-4" />
+                        </button>
                       )}
                     </div>
+                    {/* Reply Form */}
+                    {chainInteractions.replyingTo === item.id && (
+                      <div className="mt-4 space-y-3">
+                        <Textarea
+                          value={chainInteractions.replyContent}
+                          onChange={handleReplyContentChange}
+                          placeholder={`Reply to ${item.user.name}...`}
+                          className="w-full text-sm min-h-[70px] resize-none"
+                          maxLength={CHARACTER_LIMIT}
+                        />
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs text-muted-foreground">
+                            {CHARACTER_LIMIT -
+                              chainInteractions.replyContent.length}{' '}
+                            characters remaining
+                          </span>
+                          <div className="flex gap-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={chainInteractions.cancelReply}
+                              className="h-7 text-xs px-3"
+                            >
+                              Cancel
+                            </Button>
+                            <Button
+                              size="sm"
+                              onClick={handleSubmitReply(item.id)}
+                              disabled={
+                                chainInteractions.replyContent.trim().length ===
+                                  0 || chainInteractions.isPosting
+                              }
+                              className="h-7 text-xs px-3"
+                            >
+                              {chainInteractions.isPosting ? (
+                                <Loader2 className="w-3 h-3 animate-spin" />
+                              ) : (
+                                'Reply'
+                              )}
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
-              ))}
-            </div>
-          )}
-        </div>
-        {/* Chain Post Form - Fixed at bottom */}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+      {/* Chain Post Form - Fixed at bottom */}
+      <div className="flex-shrink-0">
         <ChainPostForm user={user} profile={profile} onPostSuccess={refetch} />
       </div>
     </div>

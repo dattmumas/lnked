@@ -26,18 +26,6 @@ interface SearchBarProps {
   className?: string;
 }
 
-const recentSearches = [
-  'Next.js tutorials',
-  'TypeScript best practices',
-  'React hooks',
-];
-
-const trendingSearches = [
-  'AI in web development',
-  'Modern CSS techniques',
-  'Database optimization',
-];
-
 export default function SearchBar({
   className,
 }: SearchBarProps): React.ReactElement {
@@ -364,52 +352,8 @@ export default function SearchBar({
                 </div>
               )}
 
-              {/* Recent and Trending Searches */}
-              {query.length === 0 && (
-                <div className="p-3 space-y-4">
-                  {/* Recent Searches */}
-                  <div>
-                    <div className="flex items-center gap-2 mb-2">
-                      <Clock className="h-4 w-4 text-muted-foreground" />
-                      <h3 className="text-sm font-medium text-muted-foreground">
-                        Recent
-                      </h3>
-                    </div>
-                    <div className="space-y-1">
-                      {recentSearches.map((search, index) => (
-                        <button
-                          key={index}
-                          onClick={handleRecentSearchClick(search)}
-                          className="block w-full text-left p-2 text-sm rounded-lg hover:bg-accent/20 transition-colors duration-150"
-                        >
-                          {search}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Trending Searches */}
-                  <div>
-                    <div className="flex items-center gap-2 mb-2">
-                      <TrendingUp className="h-4 w-4 text-muted-foreground" />
-                      <h3 className="text-sm font-medium text-muted-foreground">
-                        Trending
-                      </h3>
-                    </div>
-                    <div className="space-y-1">
-                      {trendingSearches.map((search, index) => (
-                        <button
-                          key={index}
-                          onClick={handleTrendingSearchClick(search)}
-                          className="block w-full text-left p-2 text-sm rounded-lg hover:bg-accent/20 transition-colors duration-150"
-                        >
-                          {search}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              )}
+              {/* No default suggestions when query empty */}
+              {query.length === 0 && null}
 
               {/* Footer */}
               <div className="px-3 py-2 bg-accent/5 border-t border-border/30">
