@@ -27,6 +27,7 @@ import { ChatPanel } from './chat-panel';
 import { TenantChannelsSidebar } from './TenantChannelsSidebar';
 
 import type { MessageWithSender } from '@/lib/chat/types';
+import type { ChatPageData } from '@/lib/data-loaders/chat-loader';
 
 type ActiveChannel = {
   id: string;
@@ -35,7 +36,15 @@ type ActiveChannel = {
   tenant_id: string | null;
 };
 
-export default function TenantChatInterface(): React.JSX.Element {
+interface TenantChatInterfaceProps {
+  initialData?: ChatPageData;
+  userId?: string;
+}
+
+export default function TenantChatInterface({
+  initialData,
+  userId,
+}: TenantChatInterfaceProps): React.JSX.Element {
   const { user } = useUser();
   const { toast } = useToast();
   const { currentTenant } = useTenant();
@@ -43,7 +52,11 @@ export default function TenantChatInterface(): React.JSX.Element {
     data: allConversations = [],
     isLoading: conversationsLoading,
     error: conversationsError,
-  } = useTenantConversations();
+  } = useTenantConversations(
+    initialData?.conversationsWithParticipants
+      ? { initialData: initialData.conversationsWithParticipants }
+      : undefined,
+  );
 
   // Derive and sort channels and direct messages from the single source
   const { channels, directMessages } = useMemo(() => {
@@ -65,7 +78,7 @@ export default function TenantChatInterface(): React.JSX.Element {
     return { channels, directMessages };
   }, [allConversations]);
 
-  const isLoading = conversationsLoading;
+  const isLoading = conversationsLoading && !initialData;
   const error = conversationsError;
 
   const [activeChannel, setActiveChannel] = useState<ActiveChannel | null>(

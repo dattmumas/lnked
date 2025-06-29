@@ -75,33 +75,31 @@ export default async function VideoPlayerPage({
   }
 
   return (
-    <div className="min-h-screen bg-background flex flex-col lg:flex-row">
-      {/* Main content: video details + player + comments */}
-      <main className="ml-16 w-[calc(100%-4rem)] lg:w-[calc(100%-4rem-28rem)] flex flex-col items-center py-8">
-        {/* Video metadata - renders immediately (no Suspense) */}
-        <VideoDetailsServer video={videoAsset} />
+    // Main content area – relies on parent layout grid. Full width on all screens.
+    <main className="flex flex-col items-center w-full py-8 bg-background min-h-screen">
+      {/* Video metadata - renders immediately (no Suspense) */}
+      <VideoDetailsServer video={videoAsset} />
 
-        {/* Video player - independent Suspense boundary */}
-        <Suspense fallback={<VideoPlayerSkeleton />}>
-          <VideoPlayerClient
-            video={{
-              id: videoAsset.id,
-              title: videoAsset.title ?? undefined,
-              mux_playback_id: videoAsset.mux_playback_id ?? undefined,
-            }}
-          />
-        </Suspense>
+      {/* Video player - independent Suspense boundary */}
+      <Suspense fallback={<VideoPlayerSkeleton />}>
+        <VideoPlayerClient
+          video={{
+            id: videoAsset.id,
+            title: videoAsset.title ?? undefined,
+            mux_playback_id: videoAsset.mux_playback_id ?? undefined,
+          }}
+        />
+      </Suspense>
 
-        {/* Comments section - now using universal comment system */}
-        <Suspense fallback={<CommentsSkeleton />}>
-          <CommentSection
-            entityType="video"
-            entityId={videoAsset.id}
-            initialCommentsCount={videoAsset.comment_count ?? 0}
-            className="w-full max-w-4xl mt-8"
-          />
-        </Suspense>
-      </main>
-    </div>
+      {/* Comments section - now using universal comment system */}
+      <Suspense fallback={<CommentsSkeleton />}>
+        <CommentSection
+          entityType="video"
+          entityId={videoAsset.id}
+          initialCommentsCount={videoAsset.comment_count ?? 0}
+          className="w-full max-w-4xl mt-8"
+        />
+      </Suspense>
+    </main>
   );
 }

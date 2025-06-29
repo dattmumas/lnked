@@ -3,11 +3,11 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import React from 'react';
 
-import DashboardPostsTable from '@/components/app/dashboard/posts/DashboardPostsTable';
 import { Button } from '@/components/ui/button';
+import { loadPostsData } from '@/lib/data-loaders/posts-loader';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 
-import type { Database, Enums } from '@/lib/database.types';
+import type { Database } from '@/lib/database.types';
 
 // Use a type alias for DashboardPost
 export type DashboardPost = Database['public']['Tables']['posts']['Row'] & {
@@ -29,6 +29,13 @@ type VideoAsset = Pick<
   'id' | 'title'
 >;
 
+// Enable ISR with 2-minute revalidation for posts data
+// Posts change frequently, 2 minutes provides good balance
+export const revalidate = 120;
+
+// Dynamic rendering for personalized content
+export const dynamic = 'force-dynamic';
+
 export default async function MyPostsPage(): Promise<React.ReactElement> {
   const supabase = await createServerSupabaseClient();
 
@@ -44,153 +51,146 @@ export default async function MyPostsPage(): Promise<React.ReactElement> {
     session.user === null ||
     session.user === undefined
   ) {
-    redirect('/sign-in');
+    redirect('/sign-in?redirect=/posts');
   }
 
   const userId = session.user.id;
 
-  // Fetch all posts authored by the user (personal and collective)
-  const { data: posts, error: postsError } = await supabase
-    .from('posts')
-    .select(
-      `
-      *,
-      collective:collectives!collective_id(id, name, slug),
-      post_reactions:post_reactions!post_id(count)
-    `,
-    )
-    .eq('author_id', userId)
-    .neq('status', 'removed')
-    .order('created_at', { ascending: false });
+  try {
+    // Load all posts data using the optimized loader
+    const { posts, publishingCollectives, stats } = await loadPostsData(userId);
 
-  // Fetch videos created by the user to map video posts
-  const { data: videos, error: videosError } = await supabase
-    .from('video_assets')
-    .select('id, title')
-    .eq('created_by', userId);
+    const renderNewPostButton = (): React.ReactElement => {
+      return (
+        <Button asChild size="sm" className="w-full md:w-auto">
+          <Link href="/posts/new">
+            <Plus className="h-4 w-4 mr-2" /> New Post
+          </Link>
+        </Button>
+      );
+    };
 
-  if (videosError) {
-    console.error('Error fetching videos:', videosError.message);
-  }
-
-  // Fetch collectives the user owns
-  const { data: ownedCollectives, error: ownedError } = await supabase
-    .from('collectives')
-    .select('id, name, slug')
-    .eq('owner_id', userId)
-    .order('name', { ascending: true });
-
-  // Fetch collectives the user is a member of (editor or author roles might be relevant for posting)
-  const { data: memberCollectivesData, error: memberError } = await supabase
-    .from('collective_members')
-    .select('role, collective:collectives!inner(id, name, slug)')
-    .eq('member_id', userId)
-    .in('role', [
-      'admin',
-      'editor',
-      'author',
-    ] as Enums<'collective_member_role'>[])
-    .order('collective(name)', { ascending: true });
-
-  if (postsError !== null || ownedError !== null || memberError !== null) {
-    console.error('Error fetching data for My Posts page:', {
-      postsError: JSON.stringify(postsError, null, 2),
-      ownedError: JSON.stringify(ownedError, null, 2),
-      memberError: JSON.stringify(memberError, null, 2),
-    });
-    return <div className="p-4">Failed to load page data.</div>;
-  }
-
-  const publishingCollectives: PublishingTargetCollective[] = [];
-  const addedCollectiveIds = new Set<string>();
-
-  if (
-    ownedCollectives !== null &&
-    ownedCollectives !== undefined &&
-    Array.isArray(ownedCollectives)
-  ) {
-    ownedCollectives.forEach((c: PublishingTargetCollective) => {
-      if (!addedCollectiveIds.has(c.id)) {
-        publishingCollectives.push(c);
-        addedCollectiveIds.add(c.id);
-      }
-    });
-  }
-  if (
-    memberCollectivesData !== null &&
-    memberCollectivesData !== undefined &&
-    Array.isArray(memberCollectivesData)
-  ) {
-    memberCollectivesData.forEach(
-      (membership: { collective?: PublishingTargetCollective }) => {
-        if (
-          membership.collective !== null &&
-          membership.collective !== undefined &&
-          !addedCollectiveIds.has(membership.collective.id)
-        ) {
-          publishingCollectives.push(membership.collective);
-          addedCollectiveIds.add(membership.collective.id);
-        }
-      },
-    );
-  }
-
-  const { data: featuredPosts, error: featuredError } = await supabase
-    .from('featured_posts')
-    .select('post_id')
-    .eq('owner_id', userId)
-    .eq('owner_type', 'user');
-
-  if (featuredError) {
-    console.error('Error fetching featured posts:', featuredError.message);
-  }
-
-  const featuredIds = new Set(
-    (featuredPosts ?? []).map((fp: { post_id: string }) => fp.post_id),
-  );
-
-  // Create a mapping of video post titles to video IDs
-  const videoMap = new Map<string, { id: string; title: string | null }>();
-  if (videos !== null && videos !== undefined && Array.isArray(videos)) {
-    (videos as VideoAsset[]).forEach(({ id, title }) => {
-      // Match the title pattern used in getOrCreatePostForVideo
-      const videoPostTitle = `Video: ${(title ?? '').trim() || id}`;
-      videoMap.set(videoPostTitle, { id, title });
-    });
-  }
-
-  // Map posts to include likeCount and video information
-  const postsWithLikeCount = (posts as DashboardPost[]).map(
-    (post: DashboardPost) => {
-      const video = videoMap.get(post.title);
-      const transformedPost: DashboardPost = {
-        ...post,
-        likeCount: post.like_count || 0,
-        isFeatured: featuredIds.has(post.id),
-        ...(video ? { video } : { video: null }),
-        post_reactions: post.post_reactions || [],
-      };
-      return transformedPost;
-    },
-  );
-
-  const renderNewPostButton = (): React.ReactElement => {
     return (
-      <Button asChild size="sm" className="w-full md:w-auto">
-        <Link href="/posts/new">
-          <Plus className="h-4 w-4 mr-2" /> New Post
-        </Link>
-      </Button>
-    );
-  };
+      <div className="container mx-auto p-6 max-w-6xl">
+        <div className="flex justify-between items-center mb-8">
+          <h1 className="text-3xl font-bold">My Posts</h1>
+          {renderNewPostButton()}
+        </div>
 
-  return (
-    <div className="flex flex-col gap-6">
-      <div className="flex justify-end mb-4">{renderNewPostButton()}</div>
-      <DashboardPostsTable
-        posts={postsWithLikeCount}
-        queryKey={['dashboard-posts', userId]}
-      />
-    </div>
-  );
+        {/* Stats Overview */}
+        <div className="grid gap-4 md:grid-cols-4 mb-8">
+          <div className="bg-white border rounded-lg p-4 text-center shadow-sm">
+            <p className="text-3xl font-bold text-gray-800">
+              {stats.totalPosts}
+            </p>
+            <p className="text-gray-600">Total Posts</p>
+          </div>
+          <div className="bg-white border rounded-lg p-4 text-center shadow-sm">
+            <p className="text-3xl font-bold text-green-600">
+              {stats.publishedPosts}
+            </p>
+            <p className="text-gray-600">Published</p>
+          </div>
+          <div className="bg-white border rounded-lg p-4 text-center shadow-sm">
+            <p className="text-3xl font-bold text-yellow-600">
+              {stats.draftPosts}
+            </p>
+            <p className="text-gray-600">Drafts</p>
+          </div>
+          <div className="bg-white border rounded-lg p-4 text-center shadow-sm">
+            <p className="text-3xl font-bold text-blue-600">
+              {stats.totalViews.toLocaleString()}
+            </p>
+            <p className="text-gray-600">Total Views</p>
+          </div>
+        </div>
+
+        {/* Posts List */}
+        <div className="bg-white border rounded-lg shadow-sm">
+          {posts.length === 0 ? (
+            <div className="p-8 text-center">
+              <p className="text-gray-500 mb-4">
+                You haven't created any posts yet.
+              </p>
+              <Link href="/posts/new" className="text-blue-600 hover:underline">
+                Create your first post →
+              </Link>
+            </div>
+          ) : (
+            <div className="divide-y divide-gray-200">
+              {posts.map((post) => (
+                <div
+                  key={post.id}
+                  className="p-6 hover:bg-gray-50 transition-colors"
+                >
+                  <div className="flex justify-between items-start">
+                    <div className="flex-1">
+                      <h3 className="text-lg font-semibold mb-2">
+                        <a
+                          href={`/posts/${post.slug}`}
+                          className="hover:text-blue-600 transition-colors"
+                        >
+                          {post.title}
+                        </a>
+                      </h3>
+                      <div className="flex items-center gap-4 text-sm text-gray-500">
+                        <span
+                          className={`px-2 py-1 rounded-full text-xs font-medium ${
+                            post.status === 'active'
+                              ? 'bg-green-100 text-green-800'
+                              : 'bg-gray-100 text-gray-800'
+                          }`}
+                        >
+                          {post.status}
+                        </span>
+                        <span>{post.view_count} views</span>
+                        <span>{post.like_count} likes</span>
+                        {post.published_at && (
+                          <span>
+                            Published{' '}
+                            {new Date(post.published_at).toLocaleDateString()}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 ml-4">
+                      <a
+                        href={`/posts/${post.slug}/edit`}
+                        className="text-gray-600 hover:text-blue-600 transition-colors"
+                      >
+                        Edit
+                      </a>
+                      <span className="text-gray-300">•</span>
+                      <a
+                        href={`/posts/${post.slug}`}
+                        className="text-gray-600 hover:text-blue-600 transition-colors"
+                      >
+                        View
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Pagination placeholder */}
+        {posts.length > 0 && (
+          <div className="mt-6 text-center text-sm text-gray-500">
+            Showing {posts.length} of {stats.totalPosts} posts
+          </div>
+        )}
+      </div>
+    );
+  } catch (error) {
+    console.error('Error loading posts page:', error);
+    return (
+      <div className="p-4">
+        <p className="text-red-600">
+          Failed to load posts. Please try again later.
+        </p>
+      </div>
+    );
+  }
 }

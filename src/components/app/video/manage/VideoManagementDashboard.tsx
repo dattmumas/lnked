@@ -37,10 +37,24 @@ import {
   PAD_CHARACTER,
 } from '@/lib/constants/video';
 
+import type {
+  VideoPageData,
+  VideoAsset as VideoAssetType,
+} from '@/lib/data-loaders/video-loader';
+
 // Constants
 const REFRESH_INTERVAL_MS = 5000;
 const VIDEOS_PER_PAGE = 20;
 const VIDEO_ID_DISPLAY_LENGTH = 8;
+const SEARCH_DEBOUNCE_DELAY_MS = 300;
+
+// Status configuration
+const STATUS_CONFIG = {
+  ready: { label: 'Ready', variant: 'default' as const },
+  preparing: { label: 'Preparing', variant: 'secondary' as const },
+  processing: { label: 'Processing', variant: 'secondary' as const },
+  errored: { label: 'Error', variant: 'destructive' as const },
+} as const;
 
 // Types
 interface VideoAsset {
@@ -62,6 +76,12 @@ interface ApiResponse {
     videos: VideoAsset[];
     total: number;
   };
+}
+
+interface VideoManagementDashboardProps {
+  initialData?: VideoPageData;
+  initialProcessingVideos?: VideoAssetType[];
+  userId?: string;
 }
 
 // Note: VideoRefreshResponse interface available if needed for future features
@@ -93,9 +113,31 @@ function StatusBadge({
   );
 }
 
-export default function VideoManagementDashboard(): React.ReactElement {
-  const [videos, setVideos] = useState<VideoAsset[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+export default function VideoManagementDashboard({
+  initialData,
+  initialProcessingVideos,
+  userId,
+}: VideoManagementDashboardProps): React.ReactElement {
+  // Initialize state with initial data if provided
+  const [videos, setVideos] = useState<VideoAsset[]>(() => {
+    if (initialData?.videos) {
+      return initialData.videos.map((v) => ({
+        id: v.id,
+        title: v.title,
+        description: v.description,
+        status: v.status,
+        duration: v.duration,
+        aspect_ratio: v.aspect_ratio,
+        created_at: v.created_at,
+        updated_at: v.updated_at,
+        mux_asset_id: v.mux_asset_id,
+        mux_playback_id: v.mux_playback_id,
+        created_by: v.created_by,
+      }));
+    }
+    return [];
+  });
+  const [isLoading, setIsLoading] = useState(!initialData);
   const [error, setError] = useState<string | undefined>(undefined);
   const [activeTab, setActiveTab] = useState('library');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
@@ -105,7 +147,15 @@ export default function VideoManagementDashboard(): React.ReactElement {
   const [statusFilter, setStatusFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
+  const [totalPages, setTotalPages] = useState(() => {
+    if (initialData?.pagination) {
+      return initialData.pagination.totalPages;
+    }
+    return 1;
+  });
+
+  // Track if we've loaded initial data to skip first fetch
+  const hasLoadedInitialData = useRef(Boolean(initialData));
 
   // Fix #2: Race condition protection
   const lastRequestIdRef = useRef(0);
@@ -126,10 +176,22 @@ export default function VideoManagementDashboard(): React.ReactElement {
 
   // Fix #3: Processing video IDs tracking (prevents useEffect loop)
   const processingVideoIds = useMemo(() => {
-    return videos
+    const fromVideos = videos
       .filter((v) => v.status === 'preparing' || v.status === 'processing')
       .map((v) => v.id);
-  }, [videos]);
+
+    // Include initial processing videos if provided
+    if (initialProcessingVideos) {
+      const fromInitial = initialProcessingVideos
+        .filter((v) => v.status === 'preparing' || v.status === 'processing')
+        .map((v) => v.id);
+
+      // Merge and deduplicate
+      return [...new Set([...fromVideos, ...fromInitial])];
+    }
+
+    return fromVideos;
+  }, [videos, initialProcessingVideos]);
 
   // Fix #1 & #2: Enhanced fetchVideos with caching and race protection
   const fetchVideos = useCallback(async (): Promise<void> => {
@@ -246,6 +308,12 @@ export default function VideoManagementDashboard(): React.ReactElement {
 
   // Fetch videos when component mounts or filters change
   useEffect(() => {
+    // Skip initial fetch if we have initial data
+    if (hasLoadedInitialData.current) {
+      hasLoadedInitialData.current = false;
+      return;
+    }
+
     if (activeTab === 'library') {
       void fetchVideos();
     }
@@ -677,24 +745,11 @@ const transformVideoAsset = (video: VideoAsset): TransformedVideoAsset => ({
   created_by: video.created_by ?? undefined,
 });
 
-// Fix #12: Static status mapping for performance
-const STATUS_CONFIG = {
-  preparing: { label: 'Preparing', variant: 'secondary' as const },
-  ready: { label: 'Ready', variant: 'default' as const },
-  processing: { label: 'Processing', variant: 'secondary' as const },
-  errored: { label: 'Error', variant: 'destructive' as const },
-  failed: { label: 'Failed', variant: 'destructive' as const },
-} as const;
-
 // Fix #8: Thumbnail size configuration for performance
 const THUMBNAIL_SIZES = {
   grid: { width: 320, height: 180, quality: 85 },
   list: { width: 96, height: 56, quality: 75 },
 } as const;
-
-// Debounce delay for search input
-// eslint-disable-next-line no-magic-numbers
-const SEARCH_DEBOUNCE_DELAY_MS = 300 as const;
 
 // Enhanced VideoCard component with design tokens
 interface VideoCardProps {

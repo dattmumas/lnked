@@ -3,9 +3,9 @@ import { redirect } from 'next/navigation';
 import React, { Suspense } from 'react';
 
 import {
+  getUserPersonalTenant,
   loadUserFeed,
   loadUserTenants,
-  getUserPersonalTenant,
 } from '@/lib/data-loaders/feed-loader';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 
@@ -13,7 +13,11 @@ import HomePageClient from './HomePageClient';
 
 import type { FeedItem } from '@/types/home/types';
 
-// Force dynamic rendering to ensure fresh data
+// Enable ISR with 60-second revalidation for feed data
+// Feed content changes frequently but 1 minute cache provides good balance
+export const revalidate = 60;
+
+// Dynamic rendering for personalized content
 export const dynamic = 'force-dynamic';
 
 // Loading component for Suspense boundaries
@@ -25,17 +29,14 @@ function LoadingSpinner(): React.JSX.Element {
   );
 }
 
-export default async function HomePage(): Promise<React.JSX.Element> {
+export default async function HomePage(): Promise<React.ReactElement> {
   const supabase = await createServerSupabaseClient();
-
-  // Get authenticated user
   const {
     data: { user },
-    error: authError,
   } = await supabase.auth.getUser();
 
-  if (authError || !user) {
-    redirect('/sign-in?redirect=/home');
+  if (user === null) {
+    redirect('/sign-in');
   }
 
   try {
@@ -66,9 +67,17 @@ export default async function HomePage(): Promise<React.JSX.Element> {
       </Suspense>
     );
   } catch (error) {
-    console.error('Error loading home page data:', error);
-
-    // Fallback to client-side loading if server fetch fails
-    return <HomePageClient />;
+    console.error('Error loading homepage data:', error);
+    // Return with empty data on error - client will fetch
+    return (
+      <Suspense fallback={<LoadingSpinner />}>
+        <HomePageClient
+          user={user}
+          initialFeedItems={[]}
+          initialTenants={[]}
+          personalTenantId={null}
+        />
+      </Suspense>
+    );
   }
 }

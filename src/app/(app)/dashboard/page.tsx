@@ -16,46 +16,16 @@ import StatsRow from '@/components/app/dashboard/organisms/StatsRow';
 import { Button } from '@/components/primitives/Button';
 import { Card } from '@/components/primitives/Card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { loadDashboardData } from '@/lib/data-loaders/dashboard-loader';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 
 const MAX_RECENT_PERSONAL_POSTS_DISPLAY = 3;
 
-type PersonalPost = {
-  id: string;
-  title: string;
-  published_at: string | null;
-  created_at: string;
-  is_public: boolean;
-  collective_id: string | null;
-};
+// Enable ISR with 5-minute revalidation for dashboard data
+// Dashboard data changes moderately, 5 minutes provides good balance
+export const revalidate = 300;
 
-type OwnedCollective = {
-  id: string;
-  name: string;
-  slug: string;
-  description: string | null;
-};
-
-type DashboardStats = {
-  subscriber_count: number;
-  follower_count: number;
-  total_views: number;
-  total_likes: number;
-  published_this_month: number;
-  total_posts: number;
-  collective_count: number;
-};
-
-type DashboardContent = {
-  profile: {
-    username: string | null;
-    full_name?: string | null;
-    avatar_url?: string | null;
-  } | null;
-  recent_posts: PersonalPost[];
-  owned_collectives: OwnedCollective[];
-};
-
+// Dynamic rendering for personalized content
 export const dynamic = 'force-dynamic';
 
 export default async function DashboardManagementPage(): Promise<React.ReactElement> {
@@ -70,151 +40,16 @@ export default async function DashboardManagementPage(): Promise<React.ReactElem
     redirect('/sign-in?redirect=/dashboard');
   }
 
-  const userId = session.user.id;
-
-  // OPTIMIZATION: Use parallel queries instead of serial
-  // Reduced from 7 serial queries to 2 parallel RPC calls
-  // Fall back to individual queries if RPC functions are not available
-  let dashboardStats, dashboardContent;
-
-  try {
-    const [dashboardStatsResult, dashboardContentResult] = await Promise.all([
-      supabase
-        .rpc('get_user_dashboard_stats', { user_id_param: userId })
-        .single()
-        .then(
-          (res) => res as { data: DashboardStats | null; error: Error | null },
-        ),
-
-      supabase
-        .rpc('get_user_dashboard_content', {
-          user_id_param: userId,
-          posts_limit: MAX_RECENT_PERSONAL_POSTS_DISPLAY,
-        })
-        .single()
-        .then(
-          (res) =>
-            res as { data: DashboardContent | null; error: Error | null },
-        ),
-    ]);
-
-    // Handle potential errors from RPC calls
-    if (dashboardStatsResult.error) {
-      console.error(
-        'Dashboard stats RPC not available, falling back to individual queries:',
-        dashboardStatsResult.error,
-      );
-      throw new Error(
-        'RPC function not available, falling back to individual queries',
-      );
-    }
-
-    if (dashboardContentResult.error) {
-      console.error(
-        'Dashboard content RPC not available, falling back to individual queries:',
-        dashboardContentResult.error,
-      );
-      throw new Error(
-        'RPC function not available, falling back to individual queries',
-      );
-    }
-
-    // Parse RPC results - dashboardStats is now a direct object from table return
-    dashboardStats = dashboardStatsResult.data || {
-      subscriber_count: 0,
-      follower_count: 0,
-      total_views: 0,
-      total_likes: 0,
-      published_this_month: 0,
-      total_posts: 0,
-      collective_count: 0,
-    };
-
-    // Parse content result - this returns JSON so we need to parse it
-    const dashboardContentData = dashboardContentResult.data;
-    dashboardContent = dashboardContentData || {
-      profile: { username: undefined },
-      recent_posts: [],
-      owned_collectives: [],
-    };
-  } catch (error: unknown) {
-    console.error('Falling back to individual queries:', error);
-
-    // FALLBACK: Use individual queries if RPC functions are not available
-    const [
-      subscriberCountResult,
-      followerCountResult,
-      profileResult,
-      postsResult,
-      collectivesResult,
-    ] = await Promise.all([
-      supabase
-        .from('subscriptions')
-        .select('*', { count: 'exact', head: true })
-        .eq('target_entity_type', 'user')
-        .eq('target_entity_id', userId)
-        .eq('status', 'active'),
-
-      supabase
-        .from('follows')
-        .select('*', { count: 'exact', head: true })
-        .eq('following_id', userId)
-        .eq('following_type', 'user'),
-
-      supabase
-        .from('users')
-        .select('username, full_name, avatar_url')
-        .eq('id', userId)
-        .single(),
-
-      supabase
-        .from('posts')
-        .select('id, title, published_at, created_at, is_public, collective_id')
-        .eq('author_id', userId)
-        .is('collective_id', null)
-        .order('created_at', { ascending: false })
-        .limit(MAX_RECENT_PERSONAL_POSTS_DISPLAY),
-
-      supabase
-        .from('collectives')
-        .select('id, name, slug, description')
-        .eq('owner_id', userId)
-        .order('name', { ascending: true }),
-    ]);
-
-    // Build stats from individual query results
-    dashboardStats = {
-      subscriber_count:
-        (subscriberCountResult.count ?? 0) > 0
-          ? (subscriberCountResult.count ?? 0)
-          : 0,
-      follower_count:
-        (followerCountResult.count ?? 0) > 0
-          ? (followerCountResult.count ?? 0)
-          : 0,
-      total_views: 0, // TODO: Add post view aggregation
-      total_likes: 0, // TODO: Add post like aggregation
-      published_this_month: 0, // TODO: Add monthly post count
-      total_posts: 0, // TODO: Add total post count
-      collective_count:
-        (collectivesResult.data?.length ?? 0) > 0
-          ? (collectivesResult.data?.length ?? 0)
-          : 0,
-    };
-
-    // Build content from individual query results
-    dashboardContent = {
-      profile: profileResult.data || { username: undefined },
-      recent_posts: postsResult.data || [],
-      owned_collectives: collectivesResult.data || [],
-    };
-  }
+  // Load all dashboard data using the optimized loader
+  const dashboardData = await loadDashboardData(session.user.id);
 
   const {
     profile,
+    stats,
     recent_posts: personalPosts,
     owned_collectives: ownedCollectives,
-  } = dashboardContent;
+  } = dashboardData;
+
   const username =
     (profile?.username ?? '').trim().length > 0
       ? (profile?.username ?? '')
@@ -224,16 +59,16 @@ export default async function DashboardManagementPage(): Promise<React.ReactElem
     <div className="pattern-stack gap-section">
       {/* Enhanced Stats Row with design system integration */}
       <StatsRow
-        subscriberCount={dashboardStats.subscriber_count}
-        followerCount={dashboardStats.follower_count}
-        totalPosts={dashboardStats.total_posts}
-        collectiveCount={dashboardStats.collective_count}
-        totalViews={dashboardStats.total_views}
-        totalLikes={dashboardStats.total_likes}
-        monthlyRevenue={0} // TODO: Implement when payment system is ready
-        pendingPayout={0} // TODO: Implement when payout system is ready
+        subscriberCount={stats.subscriber_count}
+        followerCount={stats.follower_count}
+        totalPosts={stats.total_posts}
+        collectiveCount={stats.collective_count}
+        totalViews={stats.total_views}
+        totalLikes={stats.total_likes}
+        monthlyRevenue={stats.monthly_revenue}
+        pendingPayout={stats.pending_payout}
         openRate="0%" // TODO: Implement when email tracking is ready
-        publishedThisMonth={dashboardStats.published_this_month}
+        publishedThisMonth={stats.published_this_month}
       />
 
       {/* Enhanced main content sections with improved grid */}
@@ -310,7 +145,7 @@ export default async function DashboardManagementPage(): Promise<React.ReactElem
                 <div className="divide-y divide-border-subtle">
                   {personalPosts
                     .slice(0, MAX_RECENT_PERSONAL_POSTS_DISPLAY)
-                    .map((post: PersonalPost) => (
+                    .map((post) => (
                       <RecentPostRowComponent
                         key={post.id}
                         id={post.id}
@@ -389,7 +224,7 @@ export default async function DashboardManagementPage(): Promise<React.ReactElem
             Array.isArray(ownedCollectives) &&
             ownedCollectives.length > 0 ? (
               <div className="dashboard-grid dashboard-grid-secondary">
-                {ownedCollectives.map((collective: OwnedCollective) => (
+                {ownedCollectives.map((collective) => (
                   <Card
                     key={collective.id}
                     size="md"
@@ -407,6 +242,12 @@ export default async function DashboardManagementPage(): Promise<React.ReactElem
                             ? collective.description
                             : 'No description'}
                         </p>
+                        {collective.member_count !== undefined && (
+                          <p className="text-xs text-content-tertiary mt-2">
+                            {collective.member_count} members •{' '}
+                            {collective.post_count || 0} posts
+                          </p>
+                        )}
                       </div>
                       <Button
                         size="sm"

@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import React from 'react';
 
 import TenantChatInterface from '@/components/chat/TenantChatInterface';
+import { loadChatData } from '@/lib/data-loaders/chat-loader';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 
 export default async function ChatPage(): Promise<React.ReactElement> {
@@ -11,15 +12,11 @@ export default async function ChatPage(): Promise<React.ReactElement> {
   } = await supabase.auth.getUser();
 
   if (user === null) {
-    redirect('/sign-in');
+    redirect('/sign-in?redirect=/chat');
   }
 
-  // Fetch user profile for the chains sidebar
-  const { data: profile } = await supabase
-    .from('users')
-    .select('id, username, full_name, avatar_url, bio')
-    .eq('id', user.id)
-    .single();
+  // Load initial chat data server-side
+  const chatData = await loadChatData(user.id);
 
   return (
     <div className="h-full">
@@ -27,7 +24,7 @@ export default async function ChatPage(): Promise<React.ReactElement> {
       <div className="h-full flex">
         {/* Chat Interface - responsive width */}
         <div className="flex-1 min-w-0">
-          <TenantChatInterface />
+          <TenantChatInterface initialData={chatData} userId={user.id} />
         </div>
       </div>
     </div>

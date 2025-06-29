@@ -12,19 +12,34 @@ import {
 } from '@/hooks/collectives/useCollectiveData';
 import supabase from '@/lib/supabase/browser';
 
+import type { CollectiveData } from '@/lib/data-loaders/collective-loader';
+
 // Constants
 const MAX_TAGS_DISPLAY = 3;
 
 interface CollectiveHeroProps {
   collectiveSlug: string;
+  initialData: CollectiveData | null;
 }
 
 export function CollectiveHero({
   collectiveSlug,
+  initialData,
 }: CollectiveHeroProps): React.ReactElement {
-  const { data: collective, isLoading } = useCollectiveData(collectiveSlug);
+  const { data: collective, isLoading } = useCollectiveData(
+    collectiveSlug,
+    initialData ? { initialData } : undefined,
+  );
   const { data: stats } = useCollectiveStats(collective?.id ?? '', {
     enabled: Boolean(collective?.id),
+    ...(initialData
+      ? {
+          initialData: {
+            memberCount: initialData.member_count,
+            followerCount: 0,
+          },
+        }
+      : {}),
   }) as { data: { memberCount: number; followerCount: number } | undefined };
   const [currentUser, setCurrentUser] = useState<{ id: string } | undefined>(
     undefined,
@@ -44,7 +59,7 @@ export function CollectiveHero({
     void fetchUser();
   }, [fetchUser]);
 
-  if (isLoading) {
+  if (isLoading && !initialData) {
     return (
       <div className="collective-meta-card rounded-lg border bg-card text-card-foreground shadow-sm p-6 animate-pulse">
         <div className="flex flex-col items-center text-center space-y-4">

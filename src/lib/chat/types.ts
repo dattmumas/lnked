@@ -3,22 +3,31 @@ import type { Database } from '@/lib/database.types';
 
 // Re-export the exact database types
 export type Conversation = Database['public']['Tables']['conversations']['Row'];
-export type ConversationInsert = Database['public']['Tables']['conversations']['Insert'];
-export type ConversationUpdate = Database['public']['Tables']['conversations']['Update'];
+export type ConversationInsert =
+  Database['public']['Tables']['conversations']['Insert'];
+export type ConversationUpdate =
+  Database['public']['Tables']['conversations']['Update'];
 
-export type ConversationParticipant = Database['public']['Tables']['conversation_participants']['Row'];
-export type ConversationParticipantInsert = Database['public']['Tables']['conversation_participants']['Insert'];
-export type ConversationParticipantUpdate = Database['public']['Tables']['conversation_participants']['Update'];
+export type ConversationParticipant =
+  Database['public']['Tables']['conversation_participants']['Row'];
+export type ConversationParticipantInsert =
+  Database['public']['Tables']['conversation_participants']['Insert'];
+export type ConversationParticipantUpdate =
+  Database['public']['Tables']['conversation_participants']['Update'];
 
 export type Message = Database['public']['Tables']['messages']['Row'];
 export type MessageInsert = Database['public']['Tables']['messages']['Insert'];
 export type MessageUpdate = Database['public']['Tables']['messages']['Update'];
 
-export type MessageReaction = Database['public']['Tables']['message_reactions']['Row'];
-export type MessageReactionInsert = Database['public']['Tables']['message_reactions']['Insert'];
+export type MessageReaction =
+  Database['public']['Tables']['message_reactions']['Row'];
+export type MessageReactionInsert =
+  Database['public']['Tables']['message_reactions']['Insert'];
 
-export type MessageReadReceipt = Database['public']['Tables']['message_read_receipts']['Row'];
-export type MessageReadReceiptInsert = Database['public']['Tables']['message_read_receipts']['Insert'];
+export type MessageReadReceipt =
+  Database['public']['Tables']['message_read_receipts']['Row'];
+export type MessageReadReceiptInsert =
+  Database['public']['Tables']['message_read_receipts']['Insert'];
 
 // Extended types with joined data
 export type MessageWithSender = Message & {

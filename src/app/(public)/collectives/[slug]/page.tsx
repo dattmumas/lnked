@@ -1,4 +1,5 @@
 import { CollectiveLayout } from '@/components/app/collectives/layout/CollectiveLayout';
+import { loadCollectiveData } from '@/lib/data-loaders/collective-loader';
 
 // Enable ISR with 10-minute revalidation for collective pages
 // Collective data changes less frequently than general content
@@ -11,5 +12,10 @@ export default async function Page({
 }): Promise<React.JSX.Element> {
   const { slug } = await params;
 
-  return <CollectiveLayout collectiveSlug={slug} />;
+  // Load collective data server-side
+  const collectiveData = await loadCollectiveData(slug);
+
+  return (
+    <CollectiveLayout collectiveSlug={slug} initialData={collectiveData} />
+  );
 }

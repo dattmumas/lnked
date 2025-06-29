@@ -29,6 +29,10 @@ interface TenantConversationsResponse {
   };
 }
 
+interface UseTenantConversationsOptions {
+  initialData?: ConversationWithParticipants[];
+}
+
 const fetchTenantConversations = async (
   tenantId: string,
 ): Promise<ConversationWithParticipants[]> => {
@@ -97,8 +101,12 @@ const setupConversationSubscription = (
  * A consolidated hook to fetch all conversations for the current tenant.
  * This replaces useTenantChannels and useDirectMessages to avoid redundant API calls.
  * It fetches all conversation types and lets the component derive channels and DMs.
+ *
+ * @param options - Optional configuration including initial data from SSR
  */
-export function useTenantConversations() {
+export function useTenantConversations(
+  options?: UseTenantConversationsOptions,
+) {
   const { currentTenant } = useTenant();
   const { user } = useUser();
   const queryClient = useQueryClient();
@@ -112,6 +120,7 @@ export function useTenantConversations() {
     enabled: Boolean(tenantId) && Boolean(userId),
     staleTime: STALE_TIME_MS,
     retry: 2,
+    initialData: options?.initialData,
   });
 
   // Set up real-time subscription when we have both tenant and user
