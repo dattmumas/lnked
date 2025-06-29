@@ -2616,6 +2616,10 @@ export type Database = {
           updated_at: string | null
         }[]
       }
+      follow_toggle: {
+        Args: { p_follower: string; p_target: string; p_target_type: string }
+        Returns: boolean
+      }
       generate_direct_conversation_hash: {
         Args: { conversation_uuid: string }
         Returns: string
@@ -2752,6 +2756,10 @@ export type Database = {
           reaction_counts: Json
           user_reactions: string[]
         }[]
+      }
+      get_follow_status: {
+        Args: { p_follower: string; p_target: string; p_target_type: string }
+        Returns: boolean
       }
       get_follower_count: {
         Args: { entity_id: string; entity_type: string }

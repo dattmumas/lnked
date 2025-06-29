@@ -12,7 +12,7 @@ import {
 import { SocialSidebar } from '@/components/app/profile/social/SocialSidebar';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 
-import type { Database } from '@/types/database.types';
+import type { Database } from '@/lib/database.types';
 
 type PostRow = Database['public']['Tables']['posts']['Row'];
 

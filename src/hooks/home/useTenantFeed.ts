@@ -19,6 +19,7 @@ interface TenantFeedOptions {
   status?: 'all' | 'published' | 'draft';
   author_id?: string;
   includeCollectives?: boolean; // Include posts from user's collectives
+  initialData?: FeedItem[]; // Initial data from server
 }
 
 interface TenantFeedPost {
@@ -106,6 +107,7 @@ export function useTenantFeed(
     status = 'published',
     author_id,
     includeCollectives = true,
+    initialData,
   } = options;
 
   // Determine which tenants to fetch from
@@ -161,6 +163,24 @@ export function useTenantFeed(
     enabled: Boolean(currentTenant),
     staleTime: 1000 * 60 * 5, // 5 minutes
     gcTime: 1000 * 60 * 30, // 30 minutes
+    // Use initial data for the first page only
+    initialData:
+      offset === 0 && initialData
+        ? {
+            posts: [],
+            pagination: {
+              limit,
+              offset: 0,
+              total: initialData.length,
+              hasMore: false,
+            },
+            meta: {
+              tenant_id: currentTenant?.id || '',
+              user_role: 'member',
+              status_filter: status,
+            },
+          }
+        : undefined,
   });
 
   // Fetch posts from collective tenants (if enabled)
@@ -227,6 +247,16 @@ export function useTenantFeed(
 
   // Combine and transform posts
   const feedItems = useMemo((): FeedItem[] => {
+    // If we have initial data and we're on the first page with no posts loaded yet, use initial data
+    if (
+      initialData &&
+      offset === 0 &&
+      allPosts.length === 0 &&
+      !currentTenantData
+    ) {
+      return initialData;
+    }
+
     const collectivePosts = collectiveData || [];
 
     // Combine accumulated tenant posts with collective posts and sort
@@ -275,7 +305,7 @@ export function useTenantFeed(
         },
       }),
     );
-  }, [allPosts, collectiveData]);
+  }, [allPosts, collectiveData, initialData, offset, currentTenantData]);
 
   // Loading and error states
   const isLoading = isLoadingCurrent || isLoadingCollectives;

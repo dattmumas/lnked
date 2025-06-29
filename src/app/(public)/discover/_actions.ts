@@ -1,12 +1,15 @@
-"use server";
+'use server';
 
 import { revalidatePath } from 'next/cache';
-import { z } from "zod";
+import { z } from 'zod';
 
-import { followCollective as followCollectiveAction, unfollowCollective as unfollowCollectiveAction } from '@/app/actions/followActions';
-import { createServerSupabaseClient } from "@/lib/supabase/server";
+import {
+  followCollective as followCollectiveAction,
+  unfollowCollective as unfollowCollectiveAction,
+} from '@/app/actions/followActions';
+import { createServerSupabaseClient } from '@/lib/supabase/server';
 
-import type { Database } from '@/types/database.types';
+import type { Database } from '@/lib/database.types';
 
 // Constants
 const DEFAULT_COLLECTIVES_LIMIT = 10;
@@ -27,8 +30,8 @@ interface DiscoverResult {
 const FeedbackSchema = z.object({
   collectiveId: z.string().uuid(),
   feedbackType: z.enum([
-    "recommended_interested",
-    "recommended_not_interested",
+    'recommended_interested',
+    'recommended_not_interested',
   ]),
 });
 
@@ -46,7 +49,7 @@ interface ActionResult {
  */
 export async function logRecommendationFeedback(
   prevState: ActionResult | undefined,
-  formData: FormData
+  formData: FormData,
 ): Promise<ActionResult> {
   const supabase = await createServerSupabaseClient();
 
@@ -56,12 +59,12 @@ export async function logRecommendationFeedback(
   } = await supabase.auth.getUser();
 
   if (userError || !user) {
-    return { success: false, error: "User not authenticated" };
+    return { success: false, error: 'User not authenticated' };
   }
 
   const rawData = {
-    collectiveId: formData.get("collectiveId"),
-    feedbackType: formData.get("feedbackType"),
+    collectiveId: formData.get('collectiveId'),
+    feedbackType: formData.get('feedbackType'),
   };
 
   const validation = FeedbackSchema.safeParse(rawData);
@@ -69,7 +72,7 @@ export async function logRecommendationFeedback(
   if (!validation.success) {
     return {
       success: false,
-      error: "Invalid input.",
+      error: 'Invalid input.',
       fieldErrors: validation.error.flatten().fieldErrors,
     };
   }
@@ -77,23 +80,23 @@ export async function logRecommendationFeedback(
   const { collectiveId, feedbackType } = validation.data;
 
   try {
-    const { error: insertError } = await supabase.from("interactions").insert({
+    const { error: insertError } = await supabase.from('interactions').insert({
       user_id: user.id,
       entity_id: collectiveId,
-      entity_type: "collective", // From your ENUM
+      entity_type: 'collective', // From your ENUM
       interaction_type: feedbackType, // From your ENUM
     });
 
     if (insertError) {
-      console.error("Error inserting interaction:", insertError);
+      console.error('Error inserting interaction:', insertError);
       // Check for unique constraint violation (user already interacted)
-      if (insertError.code === "23505") {
+      if (insertError.code === '23505') {
         // PostgreSQL unique violation code
-        return { success: true, message: "Feedback already recorded." };
+        return { success: true, message: 'Feedback already recorded.' };
       }
       return {
         success: false,
-        error: "Failed to record feedback.",
+        error: 'Failed to record feedback.',
         message: insertError.message,
       };
     }
@@ -102,11 +105,11 @@ export async function logRecommendationFeedback(
     // For simple feedback logging, this might not be strictly necessary
     revalidatePath('/discover');
 
-    return { success: true, message: "Feedback recorded successfully." };
+    return { success: true, message: 'Feedback recorded successfully.' };
   } catch (e: unknown) {
-    console.error("Unexpected error recording feedback:", e);
+    console.error('Unexpected error recording feedback:', e);
     const errorMessage =
-      e instanceof Error ? e.message : "An unexpected error occurred.";
+      e instanceof Error ? e.message : 'An unexpected error occurred.';
     return { success: false, error: errorMessage };
   }
 }
@@ -114,7 +117,7 @@ export async function logRecommendationFeedback(
 export async function getCollectives(
   limit: number = DEFAULT_COLLECTIVES_LIMIT,
   offset: number = 0,
-  searchTerm?: string
+  searchTerm?: string,
 ): Promise<DiscoverResult> {
   const supabase = await createServerSupabaseClient();
 
@@ -125,17 +128,21 @@ export async function getCollectives(
 
   let query = supabase
     .from('collectives')
-    .select(`
+    .select(
+      `
       *,
       follower_count:follows(count)
-    `)
+    `,
+    )
     .eq('is_public', true)
     .order('created_at', { ascending: false })
     .range(offset, offset + limit);
 
   // Add search filter if provided
   if (searchTerm !== undefined && searchTerm.trim() !== '') {
-    query = query.or(`name.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%`);
+    query = query.or(
+      `name.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%`,
+    );
   }
 
   const { data: collectives, error } = await query;
@@ -150,26 +157,30 @@ export async function getCollectives(
 
   if (user !== null && collectives !== null) {
     const collectiveIds = collectives.map((c: Collective) => c.id);
-    
+
     const { data: follows } = await supabase
       .from('follows')
       .select('following_id')
       .eq('follower_id', user.id)
       .in('following_id', collectiveIds);
 
-    const followingIds = new Set(follows?.map(f => f.following_id) || []);
+    const followingIds = new Set(follows?.map((f) => f.following_id) || []);
 
-    collectivesWithFollowStatus = collectives.map((collective: Collective & { follower_count: { count: number }[] }) => ({
-      ...collective,
-      is_following: followingIds.has(collective.id),
-      follower_count: collective.follower_count?.[0]?.count || 0,
-    }));
+    collectivesWithFollowStatus = collectives.map(
+      (collective: Collective & { follower_count: { count: number }[] }) => ({
+        ...collective,
+        is_following: followingIds.has(collective.id),
+        follower_count: collective.follower_count?.[0]?.count || 0,
+      }),
+    );
   } else {
-    collectivesWithFollowStatus = (collectives || []).map((collective: Collective & { follower_count: { count: number }[] }) => ({
-      ...collective,
-      is_following: false,
-      follower_count: collective.follower_count?.[0]?.count || 0,
-    }));
+    collectivesWithFollowStatus = (collectives || []).map(
+      (collective: Collective & { follower_count: { count: number }[] }) => ({
+        ...collective,
+        is_following: false,
+        follower_count: collective.follower_count?.[0]?.count || 0,
+      }),
+    );
   }
 
   return {
@@ -179,10 +190,14 @@ export async function getCollectives(
 }
 
 // Server action wrappers for follow/unfollow functions
-export async function followCollective(collectiveId: string): Promise<{ success: boolean; error?: string }> {
+export async function followCollective(
+  collectiveId: string,
+): Promise<{ success: boolean; error?: string }> {
   return await followCollectiveAction(collectiveId);
 }
 
-export async function unfollowCollective(collectiveId: string): Promise<{ success: boolean; error?: string }> {
+export async function unfollowCollective(
+  collectiveId: string,
+): Promise<{ success: boolean; error?: string }> {
   return await unfollowCollectiveAction(collectiveId);
 }

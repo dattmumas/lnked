@@ -1,7 +1,7 @@
 // Universal Polymorphic Comment System Types
 // Corresponds to supabase/migrations/20250106100000_create_polymorphic_comment_system.sql
 
-import type { Enums } from '@/types/database.types';
+import type { Enums } from '@/lib/database.types';
 
 // Entity types that can have comments
 export type CommentEntityType = 'video' | 'post' | 'collective' | 'profile';
@@ -159,7 +159,10 @@ export interface UseCommentsReturn {
   loading: boolean;
   error: string | null;
   addComment: (content: string, parentId?: string) => Promise<void>;
-  toggleReaction: (commentId: string, reactionType: ReactionType) => Promise<void>;
+  toggleReaction: (
+    commentId: string,
+    reactionType: ReactionType,
+  ) => Promise<void>;
   loadMoreComments: () => Promise<void>;
   loadReplies: (commentId: string) => Promise<void>;
   hasMore: boolean;
@@ -171,7 +174,11 @@ export type EntityValidator = {
 };
 
 // Comment sorting options
-export type CommentSortOption = 'newest' | 'oldest' | 'most_liked' | 'most_replies';
+export type CommentSortOption =
+  | 'newest'
+  | 'oldest'
+  | 'most_liked'
+  | 'most_replies';
 
 // Comment filter options
 export interface CommentFilters {

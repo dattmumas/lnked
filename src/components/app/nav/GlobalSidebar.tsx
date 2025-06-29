@@ -31,7 +31,7 @@ const TRANSITION_DELAY_MULTIPLIER = 50;
 const navigationItems = [
   { icon: Compass, label: 'Explore', href: '/discover' },
   { icon: Video, label: 'Videos', href: '/videos' },
-  { icon: FileText, label: 'Posts', href: '/dashboard/posts' },
+  { icon: FileText, label: 'Posts', href: '/posts' },
   { icon: UserIcon, label: 'Profile', href: '/profile' },
   { icon: LayoutDashboard, label: 'Dashboard', href: '/dashboard' },
   { icon: Settings, label: 'Settings', href: '/settings' },

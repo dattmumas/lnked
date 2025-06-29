@@ -1,7 +1,7 @@
 // Tenant System Types
 // Comprehensive TypeScript types for the unified tenant model
 
-import type { Database } from './database.types';
+import type { Database } from '@/lib/database.types';
 
 // =============================================================================
 // CORE TENANT TYPES
@@ -85,7 +85,7 @@ export interface PostWithTenant extends TenantScopedContent {
   like_count: number | null;
   comment_count: number | null;
   view_count: number | null;
-  
+
   // Enhanced fields
   tenant: Tenant;
   author: {
@@ -108,7 +108,7 @@ export interface CommentWithTenant extends TenantScopedContent {
   created_at: string | null;
   updated_at: string | null;
   deleted_at: string | null;
-  
+
   // Enhanced fields
   tenant: Tenant;
   author: {
@@ -132,11 +132,11 @@ export interface ConversationWithTenant {
   is_private: boolean | null;
   archived: boolean | null;
   last_message_at: string | null;
-  
+
   // Tenant fields
   tenant_id: string | null;
   tenant?: Tenant | null;
-  
+
   // Enhanced fields
   participants: Array<{
     user_id: string;
@@ -307,4 +307,4 @@ export type TenantInsert = TenantsTable['Insert'];
 export type TenantUpdate = TenantsTable['Update'];
 export type TenantMemberRow = TenantMembersTable['Row'];
 export type TenantMemberInsert = TenantMembersTable['Insert'];
-export type TenantMemberUpdate = TenantMembersTable['Update']; 
+export type TenantMemberUpdate = TenantMembersTable['Update'];

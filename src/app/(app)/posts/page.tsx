@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import React from 'react';
 
-import PostListItem from '@/components/app/dashboard/posts/PostListItem';
+import DashboardPostsTable from '@/components/app/dashboard/posts/DashboardPostsTable';
 import { Button } from '@/components/ui/button';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 
@@ -22,6 +22,11 @@ export type DashboardPost = Database['public']['Tables']['posts']['Row'] & {
 type PublishingTargetCollective = Pick<
   Database['public']['Tables']['collectives']['Row'],
   'id' | 'name' | 'slug'
+>;
+
+type VideoAsset = Pick<
+  Database['public']['Tables']['video_assets']['Row'],
+  'id' | 'title'
 >;
 
 export default async function MyPostsPage(): Promise<React.ReactElement> {
@@ -55,6 +60,7 @@ export default async function MyPostsPage(): Promise<React.ReactElement> {
     `,
     )
     .eq('author_id', userId)
+    .neq('status', 'removed')
     .order('created_at', { ascending: false });
 
   // Fetch videos created by the user to map video posts
@@ -146,10 +152,10 @@ export default async function MyPostsPage(): Promise<React.ReactElement> {
   // Create a mapping of video post titles to video IDs
   const videoMap = new Map<string, { id: string; title: string | null }>();
   if (videos !== null && videos !== undefined && Array.isArray(videos)) {
-    videos.forEach((video) => {
+    (videos as VideoAsset[]).forEach(({ id, title }) => {
       // Match the title pattern used in getOrCreatePostForVideo
-      const videoPostTitle = `Video: ${(video.title ?? '').trim() || video.id}`;
-      videoMap.set(videoPostTitle, video);
+      const videoPostTitle = `Video: ${(title ?? '').trim() || id}`;
+      videoMap.set(videoPostTitle, { id, title });
     });
   }
 
@@ -180,48 +186,11 @@ export default async function MyPostsPage(): Promise<React.ReactElement> {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-2">
-        <h1 className="text-2xl font-serif font-semibold">My Posts</h1>
-        {renderNewPostButton()}
-      </div>
-      <div className="overflow-x-auto rounded-lg border border-border bg-card">
-        {postsWithLikeCount !== null &&
-        postsWithLikeCount !== undefined &&
-        Array.isArray(postsWithLikeCount) &&
-        postsWithLikeCount.length > 0 ? (
-          <table className="min-w-full text-sm divide-y divide-border">
-            <thead>
-              <tr className="bg-muted/50 text-muted-foreground">
-                <th className="px-4 py-3 text-left font-semibold whitespace-nowrap">
-                  Title
-                </th>
-                <th className="px-4 py-3 text-left font-semibold whitespace-nowrap">
-                  Status
-                </th>
-                <th className="px-4 py-3 text-left font-semibold whitespace-nowrap">
-                  Publish Date
-                </th>
-                <th className="px-4 py-3 text-left font-semibold whitespace-nowrap">
-                  Likes
-                </th>
-                <th className="px-4 py-3 text-left font-semibold whitespace-nowrap">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {postsWithLikeCount.map((post) => (
-                <PostListItem key={post.id} post={post} tableMode />
-              ))}
-            </tbody>
-          </table>
-        ) : (
-          <div className="p-8 text-center text-muted-foreground">
-            No posts found. Click &apos;New Post&apos; to create your first
-            post!
-          </div>
-        )}
-      </div>
+      <div className="flex justify-end mb-4">{renderNewPostButton()}</div>
+      <DashboardPostsTable
+        posts={postsWithLikeCount}
+        queryKey={['dashboard-posts', userId]}
+      />
     </div>
   );
 }

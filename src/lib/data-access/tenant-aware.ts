@@ -1,5 +1,5 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server';
-import type { Database } from '@/types/database.types';
+import type { Database } from '@/lib/database.types';
 
 type Tables = Database['public']['Tables'];
 
@@ -28,12 +28,10 @@ export class TenantAwareRepository {
       throw new Error('Tenant context required for post reactions');
     }
 
-    return this.supabase
-      .from('post_reactions')
-      .insert({
-        ...data,
-        tenant_id: this.tenantId,
-      });
+    return this.supabase.from('post_reactions').insert({
+      ...data,
+      tenant_id: this.tenantId,
+    });
   }
 
   /**
@@ -49,12 +47,10 @@ export class TenantAwareRepository {
       throw new Error('Tenant context required for post reactions');
     }
 
-    return this.supabase
-      .from('post_reactions')
-      .upsert({
-        ...data,
-        tenant_id: this.tenantId,
-      });
+    return this.supabase.from('post_reactions').upsert({
+      ...data,
+      tenant_id: this.tenantId,
+    });
   }
 
   /**
@@ -65,12 +61,10 @@ export class TenantAwareRepository {
       throw new Error('Tenant context required for posts');
     }
 
-    return this.supabase
-      .from('posts')
-      .insert({
-        ...data,
-        tenant_id: this.tenantId,
-      });
+    return this.supabase.from('posts').insert({
+      ...data,
+      tenant_id: this.tenantId,
+    });
   }
 
   /**
@@ -81,12 +75,10 @@ export class TenantAwareRepository {
       throw new Error('Tenant context required for posts');
     }
 
-    return this.supabase
-      .from('posts')
-      .upsert({
-        ...data,
-        tenant_id: this.tenantId,
-      });
+    return this.supabase.from('posts').upsert({
+      ...data,
+      tenant_id: this.tenantId,
+    });
   }
 
   /**
@@ -97,44 +89,31 @@ export class TenantAwareRepository {
       throw new Error('Tenant context required for comments');
     }
 
-    return this.supabase
-      .from('comments')
-      .insert({
-        ...data,
-        tenant_id: this.tenantId,
-      });
+    return this.supabase.from('comments').insert({
+      ...data,
+      tenant_id: this.tenantId,
+    });
   }
 
   /**
    * Insert into post_bookmarks with automatic tenant_id injection
    */
-  async insertPostBookmark(data: {
-    user_id: string;
-    post_id: string;
-  }) {
+  async insertPostBookmark(data: { user_id: string; post_id: string }) {
     if (!this.tenantId) {
       throw new Error('Tenant context required for bookmarks');
     }
 
-    return this.supabase
-      .from('post_bookmarks')
-      .insert({
-        ...data,
-        tenant_id: this.tenantId,
-      });
+    return this.supabase.from('post_bookmarks').insert({
+      ...data,
+      tenant_id: this.tenantId,
+    });
   }
 
   /**
    * Delete from post_bookmarks
    */
-  async deletePostBookmark(data: {
-    user_id: string;
-    post_id: string;
-  }) {
-    return this.supabase
-      .from('post_bookmarks')
-      .delete()
-      .match(data);
+  async deletePostBookmark(data: { user_id: string; post_id: string }) {
+    return this.supabase.from('post_bookmarks').delete().match(data);
   }
 }
 
@@ -143,10 +122,12 @@ export class TenantAwareRepository {
  */
 export async function createTenantAwareRepository(): Promise<TenantAwareRepository> {
   const supabase = await createServerSupabaseClient();
-  
+
   // Get current user session
-  const { data: { user } } = await supabase.auth.getUser();
-  
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
   if (!user) {
     throw new Error('Authentication required for tenant-aware operations');
   }
@@ -160,7 +141,7 @@ export async function createTenantAwareRepository(): Promise<TenantAwareReposito
     .single();
 
   const tenantId = tenantMember?.tenant_id;
-  
+
   if (!tenantId) {
     throw new Error('User is not associated with any tenant');
   }
@@ -174,8 +155,10 @@ export async function createTenantAwareRepository(): Promise<TenantAwareReposito
 export async function getCurrentTenantId(): Promise<string | null> {
   try {
     const supabase = await createServerSupabaseClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
     if (!user) return null;
 
     const { data: tenantMember } = await supabase
@@ -188,4 +171,4 @@ export async function getCurrentTenantId(): Promise<string | null> {
   } catch {
     return null;
   }
-} 
+}

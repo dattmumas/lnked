@@ -91,6 +91,7 @@
     "react-window": "^1.8.11",
     "remark-gfm": "^4.0.1",
     "resend": "^4.5.1",
+    "sonner": "^2.0.5",
     "stripe": "^18.1.0",
     "tailwind-merge": "^3.3.0",
     "y-websocket": "^3.0.0",

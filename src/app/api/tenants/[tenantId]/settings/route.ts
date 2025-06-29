@@ -4,9 +4,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
-import { withTenantAccess, createTenantErrorResponse, createTenantSuccessResponse } from '@/lib/api/tenant-helpers';
+import {
+  withTenantAccess,
+  createTenantErrorResponse,
+  createTenantSuccessResponse,
+} from '@/lib/api/tenant-helpers';
 
-import type { Database } from '@/types/database.types';
+import type { Database } from '@/lib/database.types';
 
 // =============================================================================
 // VALIDATION SCHEMAS
@@ -29,7 +33,7 @@ const TenantSettingsUpdateSchema = z.object({
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ tenantId: string }> }
+  { params }: { params: Promise<{ tenantId: string }> },
 ): Promise<NextResponse> {
   try {
     const { tenantId } = await params;
@@ -42,7 +46,8 @@ export async function GET(
         // Get tenant details with settings
         const { data: tenant, error } = await supabase
           .from('tenants')
-          .select(`
+          .select(
+            `
             id,
             name,
             slug,
@@ -56,7 +61,8 @@ export async function GET(
             settings,
             created_at,
             updated_at
-          `)
+          `,
+          )
           .eq('id', tenantId)
           .single();
 
@@ -75,9 +81,11 @@ export async function GET(
         }
 
         // Only admins+ can see sensitive settings
-        const sensitiveSettings = ['admin', 'owner'].includes(userRole) ? {
-          settings: tenant.settings,
-        } : {};
+        const sensitiveSettings = ['admin', 'owner'].includes(userRole)
+          ? {
+              settings: tenant.settings,
+            }
+          : {};
 
         return {
           tenant: {
@@ -88,7 +96,7 @@ export async function GET(
           user_role: userRole,
           can_edit: ['admin', 'owner'].includes(userRole),
         };
-      }
+      },
     );
 
     if (result.error) {
@@ -96,7 +104,6 @@ export async function GET(
     }
 
     return createTenantSuccessResponse(result.data);
-
   } catch (error) {
     console.error('Error fetching tenant settings:', error);
     return createTenantErrorResponse('Internal server error', 500);
@@ -109,18 +116,18 @@ export async function GET(
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: Promise<{ tenantId: string }> }
+  { params }: { params: Promise<{ tenantId: string }> },
 ): Promise<NextResponse> {
   try {
     const { tenantId } = await params;
     const body = await request.json();
-    
+
     // Validate request body
     const validationResult = TenantSettingsUpdateSchema.safeParse(body);
     if (!validationResult.success) {
       return createTenantErrorResponse(
         `Invalid request data: ${validationResult.error.message}`,
-        400
+        400,
       );
     }
 
@@ -132,17 +139,22 @@ export async function PATCH(
       'admin', // Only admins+ can update settings
       async (supabase, userRole) => {
         // Get current user for audit logging
-        const { data: { user }, error: authError } = await supabase.auth.getUser();
+        const {
+          data: { user },
+          error: authError,
+        } = await supabase.auth.getUser();
         if (authError || !user) {
           throw new Error('Authentication required');
         }
 
         // Prepare update data - filter out undefined values
         const filteredUpdates = Object.fromEntries(
-          Object.entries(updates).filter(([, value]) => value !== undefined)
+          Object.entries(updates).filter(([, value]) => value !== undefined),
         );
-        
-        const updateData: Partial<Database['public']['Tables']['tenants']['Row']> = {
+
+        const updateData: Partial<
+          Database['public']['Tables']['tenants']['Row']
+        > = {
           ...filteredUpdates,
           updated_at: new Date().toISOString(),
         };
@@ -158,7 +170,8 @@ export async function PATCH(
           .from('tenants')
           .update(updateData)
           .eq('id', tenantId)
-          .select(`
+          .select(
+            `
             id,
             name,
             slug,
@@ -169,7 +182,8 @@ export async function PATCH(
             location,
             is_public,
             updated_at
-          `)
+          `,
+          )
           .single();
 
         if (updateError) {
@@ -178,17 +192,15 @@ export async function PATCH(
 
         // Log the settings change (optional - for audit trail)
         try {
-          await supabase
-            .from('tenant_audit_log')
-            .insert({
-              tenant_id: tenantId,
-              user_id: user.id,
-              action: 'settings_updated',
-              details: {
-                updated_fields: Object.keys(updates),
-                user_role: userRole,
-              },
-            });
+          await supabase.from('tenant_audit_log').insert({
+            tenant_id: tenantId,
+            user_id: user.id,
+            action: 'settings_updated',
+            details: {
+              updated_fields: Object.keys(updates),
+              user_role: userRole,
+            },
+          });
         } catch (auditError) {
           // Don't fail the request if audit logging fails
           console.warn('Failed to log settings update:', auditError);
@@ -199,7 +211,7 @@ export async function PATCH(
           message: 'Settings updated successfully',
           updated_fields: Object.keys(updates),
         };
-      }
+      },
     );
 
     if (result.error) {
@@ -207,7 +219,6 @@ export async function PATCH(
     }
 
     return createTenantSuccessResponse(result.data);
-
   } catch (error) {
     console.error('Error updating tenant settings:', error);
     return createTenantErrorResponse('Internal server error', 500);
@@ -220,7 +231,7 @@ export async function PATCH(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: Promise<{ tenantId: string }> }
+  { params }: { params: Promise<{ tenantId: string }> },
 ): Promise<NextResponse> {
   try {
     const { tenantId } = await params;
@@ -231,7 +242,10 @@ export async function DELETE(
       'owner', // Only owners can delete tenants
       async (supabase, userRole) => {
         // Get current user
-        const { data: { user }, error: authError } = await supabase.auth.getUser();
+        const {
+          data: { user },
+          error: authError,
+        } = await supabase.auth.getUser();
         if (authError || !user) {
           throw new Error('Authentication required');
         }
@@ -266,17 +280,15 @@ export async function DELETE(
 
         // Log the deletion
         try {
-          await supabase
-            .from('tenant_audit_log')
-            .insert({
-              tenant_id: tenantId,
-              user_id: user.id,
-              action: 'tenant_deleted',
-              details: {
-                tenant_name: tenant.name,
-                deleted_by: user.id,
-              },
-            });
+          await supabase.from('tenant_audit_log').insert({
+            tenant_id: tenantId,
+            user_id: user.id,
+            action: 'tenant_deleted',
+            details: {
+              tenant_name: tenant.name,
+              deleted_by: user.id,
+            },
+          });
         } catch (auditError) {
           console.warn('Failed to log tenant deletion:', auditError);
         }
@@ -285,7 +297,7 @@ export async function DELETE(
           message: `Tenant "${tenant.name}" has been deleted`,
           deleted_at: new Date().toISOString(),
         };
-      }
+      },
     );
 
     if (result.error) {
@@ -293,9 +305,8 @@ export async function DELETE(
     }
 
     return createTenantSuccessResponse(result.data);
-
   } catch (error) {
     console.error('Error deleting tenant:', error);
     return createTenantErrorResponse('Internal server error', 500);
   }
-} 
+}

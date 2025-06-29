@@ -50,12 +50,12 @@ export default function NewPostEditorPage(): React.ReactElement {
       setShowUnsavedWarning(true);
       return;
     }
-    void router.push('/dashboard/posts');
+    void router.push('/posts');
   }, [isDirty, router]);
 
   const handleConfirmLeave = useCallback((): void => {
     setShowUnsavedWarning(false);
-    void router.push('/dashboard/posts');
+    void router.push('/posts');
   }, [router]);
 
   const handleCancelLeave = useCallback((): void => {
@@ -171,6 +171,15 @@ export default function NewPostEditorPage(): React.ReactElement {
               <Save className="h-4 w-4" />
               Save
             </Button>
+            {/* Floating continue button */}
+            <Button
+              size="sm"
+              className=""
+              onClick={handleContinueClick}
+              disabled={!formData.title.trim()}
+            >
+              Continue to Settings →
+            </Button>
           </div>
         </div>
       </header>
@@ -200,18 +209,6 @@ export default function NewPostEditorPage(): React.ReactElement {
           </div>
         </div>
       </main>
-
-      {/* Floating continue button */}
-      <div className="fixed bottom-6 right-6">
-        <Button
-          size="lg"
-          className="shadow-lg"
-          onClick={handleContinueClick}
-          disabled={!formData.title.trim()}
-        >
-          Continue to Settings →
-        </Button>
-      </div>
     </div>
   );
 }

@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 
 import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
 
-
 interface FollowerData {
   followerCount: number;
   isFollowing: boolean;
@@ -34,38 +33,41 @@ export function useFollowerData({
         setLoading(true);
         setError(null);
 
-        // Get follower count
-        const { count, error: countError } = await supabase
-          .from('follows')
-          .select('*', { count: 'exact', head: true })
-          .eq('following_id', targetId)
-          .eq('following_type', targetType);
+        // Get follower count via RPC (avoids 406 Accept issues)
+        const { data, error } = await supabase.rpc('get_follower_count', {
+          entity_id: targetId,
+          entity_type: targetType,
+        });
 
-        if (countError) {
-          throw new Error(
-            `Failed to fetch follower count: ${countError.message}`,
-          );
+        if (error) {
+          console.error('Error fetching follower count:', error);
+          setError(error instanceof Error ? error.message : 'Unknown error');
+        } else {
+          setFollowerCount(data || 0);
         }
 
-        setFollowerCount(count ?? 0);
-
         // Check if current user is following (only if authenticated)
-        if (currentUserId !== null && currentUserId !== undefined && currentUserId !== '') {
-          const { data: followData, error: followError } = await supabase
-            .from('follows')
-            .select('*')
-            .eq('follower_id', currentUserId)
-            .eq('following_id', targetId)
-            .eq('following_type', targetType)
-            .maybeSingle();
+        if (
+          currentUserId !== null &&
+          currentUserId !== undefined &&
+          currentUserId !== ''
+        ) {
+          const { data: isFollow, error: followError } = await supabase.rpc(
+            'is_following',
+            {
+              follower_user_id: currentUserId,
+              target_id: targetId,
+              target_type: targetType,
+            },
+          );
 
-          if (followError) {
+          if (followError !== null && followError !== undefined) {
             throw new Error(
               `Failed to check follow status: ${followError.message}`,
             );
           }
 
-          setIsFollowing(Boolean(followData));
+          setIsFollowing(Boolean(isFollow));
         } else {
           setIsFollowing(false);
         }
@@ -106,14 +108,16 @@ export function useRealtimeFollowerData({
         setLoading(true);
         setError(null);
 
-        // Get initial follower count
-        const { count, error: countError } = await supabase
-          .from('follows')
-          .select('*', { count: 'exact', head: true })
-          .eq('following_id', targetId)
-          .eq('following_type', targetType);
+        // Get initial follower count via RPC
+        const { data: count, error: countError } = await supabase.rpc(
+          'get_follower_count',
+          {
+            entity_id: targetId,
+            entity_type: targetType,
+          },
+        );
 
-        if (countError) {
+        if (countError !== null && countError !== undefined) {
           throw new Error(
             `Failed to fetch follower count: ${countError.message}`,
           );
@@ -121,23 +125,30 @@ export function useRealtimeFollowerData({
 
         setFollowerCount(count ?? 0);
 
-        // Check initial follow status
-        if (currentUserId !== null && currentUserId !== undefined && currentUserId !== '') {
-          const { data: followData, error: followError } = await supabase
-            .from('follows')
-            .select('*')
-            .eq('follower_id', currentUserId)
-            .eq('following_id', targetId)
-            .eq('following_type', targetType)
-            .maybeSingle();
+        // Check initial follow status via RPC
+        if (
+          currentUserId !== null &&
+          currentUserId !== undefined &&
+          currentUserId !== ''
+        ) {
+          const { data: isFollow, error: followError } = await supabase.rpc(
+            'is_following',
+            {
+              follower_user_id: currentUserId,
+              target_id: targetId,
+              target_type: targetType,
+            },
+          );
 
-          if (followError) {
+          if (followError !== null && followError !== undefined) {
             throw new Error(
               `Failed to check follow status: ${followError.message}`,
             );
           }
 
-          setIsFollowing(Boolean(followData));
+          setIsFollowing(Boolean(isFollow));
+        } else {
+          setIsFollowing(false);
         }
       } catch (err: unknown) {
         setError(err instanceof Error ? err.message : 'Unknown error');

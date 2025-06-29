@@ -1,9 +1,9 @@
-import { createServerClient } from "@supabase/ssr";
-import { cookies } from "next/headers";
-import { cache } from "react";
+import { createServerClient } from '@supabase/ssr';
+import { cookies } from 'next/headers';
+import { cache } from 'react';
 
-import type { Database } from "@/types/database.types";
-import type { SupabaseClient } from "@supabase/supabase-js";
+import type { Database } from '@/lib/database.types';
+import type { SupabaseClient } from '@supabase/supabase-js';
 
 type CookieOptions = Partial<{
   domain: string;
@@ -21,16 +21,14 @@ type CookieOptions = Partial<{
  * This ensures we only create one client per request, improving performance
  * while maintaining proper session context through cookies
  */
-export const createServerSupabaseClient = cache(async (): Promise<SupabaseClient<Database>> => {
-  const cookieStore = await cookies();
+export const createServerSupabaseClient = cache(
+  async (): Promise<SupabaseClient<Database>> => {
+    const cookieStore = await cookies();
 
-  const url = process.env['NEXT_PUBLIC_SUPABASE_URL']!;
-  const key = process.env['NEXT_PUBLIC_SUPABASE_ANON_KEY']!;
+    const url = process.env['NEXT_PUBLIC_SUPABASE_URL']!;
+    const key = process.env['NEXT_PUBLIC_SUPABASE_ANON_KEY']!;
 
-  return createServerClient<Database>(
-    url,
-    key,
-    {
+    return createServerClient<Database>(url, key, {
       cookies: {
         get(name: string) {
           return cookieStore.get(name)?.value;
@@ -54,21 +52,19 @@ export const createServerSupabaseClient = cache(async (): Promise<SupabaseClient
           }
         },
       },
-    },
-  );
-});
+    });
+  },
+);
 
 // Create a service role client for admin operations
-export const createServerSupabaseAdminClient = cache(async (): Promise<SupabaseClient<Database>> => {
-  const cookieStore = await cookies();
+export const createServerSupabaseAdminClient = cache(
+  async (): Promise<SupabaseClient<Database>> => {
+    const cookieStore = await cookies();
 
-  const url = process.env['NEXT_PUBLIC_SUPABASE_URL']!;
-  const key = process.env['SUPABASE_SERVICE_ROLE_KEY']!;
+    const url = process.env['NEXT_PUBLIC_SUPABASE_URL']!;
+    const key = process.env['SUPABASE_SERVICE_ROLE_KEY']!;
 
-  return createServerClient<Database>(
-    url,
-    key,
-    {
+    return createServerClient<Database>(url, key, {
       cookies: {
         get(name: string) {
           return cookieStore.get(name)?.value;
@@ -92,6 +88,6 @@ export const createServerSupabaseAdminClient = cache(async (): Promise<SupabaseC
           }
         },
       },
-    },
-  );
-});
+    });
+  },
+);

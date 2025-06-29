@@ -12,4 +12,4 @@ export const REFETCH_DELAY = 500;
 export const CHAINS_LIMIT = 20;
 export const POSTS_LIMIT = 10;
 export const INITIALS_LENGTH = 2;
-export const INITIALIZATION_DELAY_DIVISOR = 5; 
+export const INITIALIZATION_DELAY_DIVISOR = 5;

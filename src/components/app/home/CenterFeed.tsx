@@ -10,13 +10,18 @@ import { useTenant } from '@/providers/TenantProvider';
 
 import { PostCardWrapper } from './PostCardWrapper';
 
+import type { FeedItem } from '@/types/home/types';
 import type { User } from '@supabase/supabase-js';
 
 interface Props {
   user: User;
+  initialFeedItems?: FeedItem[];
 }
 
-export function CenterFeed({ user }: Props): React.JSX.Element {
+export function CenterFeed({
+  user,
+  initialFeedItems,
+}: Props): React.JSX.Element {
   const {
     currentTenant,
     userTenants,
@@ -30,6 +35,7 @@ export function CenterFeed({ user }: Props): React.JSX.Element {
       includeCollectives,
       status: 'published',
       limit: 20,
+      ...(initialFeedItems ? { initialData: initialFeedItems } : {}),
     });
 
   const interactions = usePostFeedInteractions(user.id);
@@ -83,7 +89,7 @@ export function CenterFeed({ user }: Props): React.JSX.Element {
     );
   }
 
-  if (isLoading) {
+  if (isLoading && !initialFeedItems) {
     return (
       <div className="flex justify-center py-10">
         <Loader2 className="w-6 h-6 animate-spin text-blue-600" />

@@ -1,4 +1,9 @@
-import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import {
+  useQuery,
+  useInfiniteQuery,
+  useMutation,
+  useQueryClient,
+} from '@tanstack/react-query';
 
 import { HttpStatusCode } from '@/lib/constants/errors';
 import {
@@ -45,8 +50,6 @@ import {
 import type { Database } from '@/lib/database.types';
 import type { UseMutationResult } from '@tanstack/react-query';
 
-
-
 // ---------------------------------------------------------------------------
 // Helper functions
 // ---------------------------------------------------------------------------
@@ -59,20 +62,26 @@ type Json = Database['public']['Tables']['users']['Row']['social_links'];
 // Query key factories
 export const profileKeys = {
   all: ['profiles'] as const,
-  profile: (username: string) => [...profileKeys.all, 'profile', username] as const,
-  metrics: (username: string) => [...profileKeys.all, 'metrics', username] as const,
-  followStatus: (username: string) => [...profileKeys.all, 'followStatus', username] as const,
-  posts: (username: string, filters: ContentFilters) => [...profileKeys.all, 'posts', username, filters] as const,
-  socialFeed: (username: string, feedType: SocialFeedType) => [...profileKeys.all, 'socialFeed', username, feedType] as const,
+  profile: (username: string) =>
+    [...profileKeys.all, 'profile', username] as const,
+  metrics: (username: string) =>
+    [...profileKeys.all, 'metrics', username] as const,
+  followStatus: (username: string) =>
+    [...profileKeys.all, 'followStatus', username] as const,
+  posts: (username: string, filters: ContentFilters) =>
+    [...profileKeys.all, 'posts', username, filters] as const,
+  socialFeed: (username: string, feedType: SocialFeedType) =>
+    [...profileKeys.all, 'socialFeed', username, feedType] as const,
 };
 
 // Data fetching functions
 async function fetchProfile(username: string): Promise<Profile> {
   const supabase = createSupabaseBrowserClient();
-  
+
   const { data, error } = await supabase
     .from('users')
-    .select(`
+    .select(
+      `
       id,
       username,
       full_name,
@@ -86,7 +95,8 @@ async function fetchProfile(username: string): Promise<Profile> {
       show_subscriptions,
       tags,
       updated_at
-    `)
+    `,
+    )
     .eq('username', username)
     .single();
 
@@ -94,12 +104,24 @@ async function fetchProfile(username: string): Promise<Profile> {
     if (error.code === 'PGRST116') {
       throw new NotFoundError('Profile');
     }
-    throw new ProfileError('Failed to fetch profile', error.code, HttpStatusCode.InternalServerError);
+    throw new ProfileError(
+      'Failed to fetch profile',
+      error.code,
+      HttpStatusCode.InternalServerError,
+    );
   }
 
   // Validate that username exists since it's required for Profile interface
-  if (data.username === null || data.username === undefined || data.username === '') {
-    throw new ProfileError('Profile missing username', 'INVALID_PROFILE', HttpStatusCode.UnprocessableEntity);
+  if (
+    data.username === null ||
+    data.username === undefined ||
+    data.username === ''
+  ) {
+    throw new ProfileError(
+      'Profile missing username',
+      'INVALID_PROFILE',
+      HttpStatusCode.UnprocessableEntity,
+    );
   }
 
   return {
@@ -122,7 +144,7 @@ async function fetchProfile(username: string): Promise<Profile> {
 
 async function fetchProfileMetrics(username: string): Promise<ProfileMetrics> {
   const supabase = createSupabaseBrowserClient();
-  
+
   // Get user ID first
   const { data: user } = await supabase
     .from('users')
@@ -142,37 +164,46 @@ async function fetchProfileMetrics(username: string): Promise<ProfileMetrics> {
       .select('*', { count: 'exact', head: true })
       .eq('following_id', user.id)
       .eq('following_type', 'user'),
-    
-    // Following count  
+
+    // Following count
     supabase
       .from('follows')
       .select('*', { count: 'exact', head: true })
       .eq('follower_id', user.id)
       .eq('following_type', 'user'),
-    
+
     // Post counts by type
     supabase
       .from('posts')
       .select('post_type, view_count, like_count')
       .eq('author_id', user.id)
       .eq('status', 'active')
-      .eq('is_public', true)
+      .eq('is_public', true),
   ]);
 
   const followerCount = followersResult.count ?? 0;
   const followingCount = followingResult.count ?? 0;
-  
+
   // Calculate post counts and totals
   const posts = postsResult.data ?? [];
-  const postCounts = posts.reduce((acc, post) => {
-    const type = post.post_type === 'video' ? 'video' : 'writing'; // text -> writing for UI
-    acc[type] += 1;
-    acc.total += 1;
-    return acc;
-  }, { writing: 0, video: 0, total: 0 });
+  const postCounts = posts.reduce(
+    (acc, post) => {
+      const type = post.post_type === 'video' ? 'video' : 'writing'; // text -> writing for UI
+      acc[type] += 1;
+      acc.total += 1;
+      return acc;
+    },
+    { writing: 0, video: 0, total: 0 },
+  );
 
-  const totalViews = posts.reduce((sum, post) => sum + (post.view_count ?? 0), 0);
-  const totalLikes = posts.reduce((sum, post) => sum + (post.like_count ?? 0), 0);
+  const totalViews = posts.reduce(
+    (sum, post) => sum + (post.view_count ?? 0),
+    0,
+  );
+  const totalLikes = posts.reduce(
+    (sum, post) => sum + (post.like_count ?? 0),
+    0,
+  );
 
   return {
     followerCount,
@@ -183,11 +214,15 @@ async function fetchProfileMetrics(username: string): Promise<ProfileMetrics> {
   };
 }
 
-async function fetchFollowStatus(username: string): Promise<{ isFollowing: boolean }> {
+async function fetchFollowStatus(
+  username: string,
+): Promise<{ isFollowing: boolean }> {
   const supabase = createSupabaseBrowserClient();
-  
+
   // Get current user
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (user === null || user === undefined) {
     return { isFollowing: false };
   }
@@ -208,30 +243,40 @@ async function fetchFollowStatus(username: string): Promise<{ isFollowing: boole
     return { isFollowing: false };
   }
 
-  // Check if following
-  const { data } = await supabase
-    .from('follows')
-    .select('*')
-    .eq('follower_id', user.id)
-    .eq('following_id', targetUser.id)
-    .eq('following_type', 'user')
-    .single();
+  // Check if following via RPC
+  const { data: isFollow, error } = await supabase.rpc('is_following', {
+    follower_user_id: user.id,
+    target_id: targetUser.id,
+    target_type: 'user',
+  });
 
-  return { isFollowing: Boolean(data) };
+  if (error !== null && error !== undefined) {
+    throw new ProfileError(
+      'Failed to check follow status',
+      error.code,
+      HttpStatusCode.InternalServerError,
+    );
+  }
+
+  return { isFollowing: Boolean(isFollow) };
 }
 
 async function fetchProfilePosts(
   username: string,
   filters: ContentFilters,
-  pageParam: number = 0
+  pageParam: number = 0,
 ): Promise<PaginatedResponse<ProfilePost>> {
   const supabase = createSupabaseBrowserClient();
-  
+
   // Add validation for username
   if (!exists(username) || username.trim() === '') {
-    throw new ProfileError('Username is required to fetch posts', 'MISSING_USERNAME', HttpStatusCode.BadRequest);
+    throw new ProfileError(
+      'Username is required to fetch posts',
+      'MISSING_USERNAME',
+      HttpStatusCode.BadRequest,
+    );
   }
-  
+
   const limit = filters.limit ?? PAGE_LIMIT_DEFAULT;
   const offset = pageParam * limit;
 
@@ -242,16 +287,25 @@ async function fetchProfilePosts(
     .eq('username', username)
     .single();
 
-  if ((userError !== null && userError !== undefined) || user === null || user === undefined) {
+  if (
+    (userError !== null && userError !== undefined) ||
+    user === null ||
+    user === undefined
+  ) {
     if (userError?.code === 'PGRST116') {
       throw new NotFoundError('Profile');
     }
-    throw new ProfileError(`Failed to find user with username: ${username}`, userError?.code || 'USER_LOOKUP_FAILED', HttpStatusCode.InternalServerError);
+    throw new ProfileError(
+      `Failed to find user with username: ${username}`,
+      userError?.code || 'USER_LOOKUP_FAILED',
+      HttpStatusCode.InternalServerError,
+    );
   }
 
   let query = supabase
     .from('posts')
-    .select(`
+    .select(
+      `
       id,
       title,
       content,
@@ -276,17 +330,23 @@ async function fetchProfilePosts(
         name,
         slug
       )
-    `)
+    `,
+    )
     .eq('author_id', user.id)
     .eq('status', 'active')
-    .order(filters.sortBy ?? 'published_at', { ascending: filters.sortOrder === 'asc' })
+    .order(filters.sortBy ?? 'published_at', {
+      ascending: filters.sortOrder === 'asc',
+    })
     .range(offset, offset + limit - 1);
 
   // Apply filters
   if (exists(filters.type)) {
-    query = query.eq('post_type', filters.type as NonNullable<typeof filters.type>);
+    query = query.eq(
+      'post_type',
+      filters.type as NonNullable<typeof filters.type>,
+    );
   }
-  
+
   if (exists(filters.search)) {
     query = query.textSearch('title', filters.search as string);
   }
@@ -294,12 +354,18 @@ async function fetchProfilePosts(
   const { data, error, count } = await query;
 
   if (error !== null && error !== undefined) {
-    throw new ProfileError(`Failed to fetch posts: ${error.message}`, error.code, HttpStatusCode.InternalServerError);
+    throw new ProfileError(
+      `Failed to fetch posts: ${error.message}`,
+      error.code,
+      HttpStatusCode.InternalServerError,
+    );
   }
 
-  const posts: ProfilePost[] = (Array.isArray(data) ? data : []).map(post => {
+  const posts: ProfilePost[] = (Array.isArray(data) ? data : []).map((post) => {
     const readTime =
-      exists(post.content) && typeof post.content === 'string' && post.content.length > 0
+      exists(post.content) &&
+      typeof post.content === 'string' &&
+      post.content.length > 0
         ? Math.ceil(post.content.length / SECOND_MS)
         : undefined;
 
@@ -360,7 +426,7 @@ async function fetchProfilePosts(
 async function fetchSocialFeed(
   username: string,
   feedType: SocialFeedType,
-  pageParam: number = 0
+  pageParam: number = 0,
 ): Promise<PaginatedResponse<ActivityFeedItem | UserConnection>> {
   const supabase = createSupabaseBrowserClient();
   const limit = PAGE_LIMIT_DEFAULT;
@@ -381,7 +447,8 @@ async function fetchSocialFeed(
     // Fetch following list
     const { data, error, count } = await supabase
       .from('follows')
-      .select(`
+      .select(
+        `
         created_at,
         following:users!following_id (
           id,
@@ -390,24 +457,31 @@ async function fetchSocialFeed(
           avatar_url,
           bio
         )
-      `)
+      `,
+      )
       .eq('follower_id', user.id)
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1);
 
     if (error !== null && error !== undefined) {
-      throw new ProfileError('Failed to fetch following', error.code, HttpStatusCode.InternalServerError);
+      throw new ProfileError(
+        'Failed to fetch following',
+        error.code,
+        HttpStatusCode.InternalServerError,
+      );
     }
 
-    const connections: UserConnection[] = (Array.isArray(data) ? data : []).map(follow => ({
-      id: ((follow.following as unknown) as DBUser).id,
-      username: ((follow.following as unknown) as DBUser).username ?? 'unknown',
-      fullName: ((follow.following as unknown) as DBUser).full_name ?? '',
-      avatarUrl: ((follow.following as unknown) as DBUser).avatar_url ?? '',
-      bio: ((follow.following as unknown) as DBUser).bio ?? '',
-      isFollowing: true,
-      followedAt: follow.created_at ?? '',
-    }));
+    const connections: UserConnection[] = (Array.isArray(data) ? data : []).map(
+      (follow) => ({
+        id: (follow.following as unknown as DBUser).id,
+        username: (follow.following as unknown as DBUser).username ?? 'unknown',
+        fullName: (follow.following as unknown as DBUser).full_name ?? '',
+        avatarUrl: (follow.following as unknown as DBUser).avatar_url ?? '',
+        bio: (follow.following as unknown as DBUser).bio ?? '',
+        isFollowing: true,
+        followedAt: follow.created_at ?? '',
+      }),
+    );
 
     const hasMore = (count ?? 0) > offset + limit;
     const response: PaginatedResponse<UserConnection> = {
@@ -490,14 +564,17 @@ export function useFollowStatus(username: string): UseFollowStatusReturn {
 
 export function useProfilePosts(
   username: string,
-  filters: ContentFilters = {}
+  filters: ContentFilters = {},
 ): UseProfilePostsReturn {
   const query = useInfiniteQuery({
     queryKey: profileKeys.posts(username, filters),
-    queryFn: ({ pageParam = 0 }) => fetchProfilePosts(username, filters, pageParam),
+    queryFn: ({ pageParam = 0 }) =>
+      fetchProfilePosts(username, filters, pageParam),
     initialPageParam: 0,
     getNextPageParam: (lastPage) => {
-      return lastPage.hasMore ? parseInt(lastPage.nextCursor ?? '0') : undefined;
+      return lastPage.hasMore
+        ? parseInt(lastPage.nextCursor ?? '0')
+        : undefined;
     },
     staleTime: POSTS_STALE_MS,
     gcTime: POSTS_GC_MS,
@@ -505,7 +582,11 @@ export function useProfilePosts(
     retry: (failureCount, error) => {
       // Don't retry on certain errors
       if (error instanceof NotFoundError || error instanceof ProfileError) {
-        if (exists(error.message) && (error.message.includes('MISSING_USERNAME') || error.message.includes('USER_LOOKUP_FAILED'))) {
+        if (
+          exists(error.message) &&
+          (error.message.includes('MISSING_USERNAME') ||
+            error.message.includes('USER_LOOKUP_FAILED'))
+        ) {
           return false;
         }
       }
@@ -529,22 +610,28 @@ export function useProfilePosts(
 
 export function useSocialFeed(
   username: string,
-  feedType: SocialFeedType
+  feedType: SocialFeedType,
 ): UseSocialFeedReturn {
   type SocialFeedQueryKey = ReturnType<typeof profileKeys.socialFeed>;
 
   const query = useInfiniteQuery<
     PaginatedResponse<ActivityFeedItem | UserConnection>,
     Error,
-    import('@tanstack/react-query').InfiniteData<PaginatedResponse<ActivityFeedItem | UserConnection>, number>,
+    import('@tanstack/react-query').InfiniteData<
+      PaginatedResponse<ActivityFeedItem | UserConnection>,
+      number
+    >,
     SocialFeedQueryKey,
     number
   >({
     queryKey: profileKeys.socialFeed(username, feedType),
-    queryFn: ({ pageParam = 0 }) => fetchSocialFeed(username, feedType, pageParam),
+    queryFn: ({ pageParam = 0 }) =>
+      fetchSocialFeed(username, feedType, pageParam),
     initialPageParam: 0,
     getNextPageParam: (lastPage) => {
-      return lastPage.hasMore ? parseInt(lastPage.nextCursor ?? '0') : undefined;
+      return lastPage.hasMore
+        ? parseInt(lastPage.nextCursor ?? '0')
+        : undefined;
     },
     staleTime: SOCIAL_FEED_STALE_MS,
     gcTime: SOCIAL_FEED_GC_MS,
@@ -577,9 +664,11 @@ export function useFollowMutation(): UseMutationResult<
   return useMutation({
     mutationFn: async ({ targetUsername, action }: FollowMutationVariables) => {
       const supabase = createSupabaseBrowserClient();
-      
+
       // Get current user
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (user === null || user === undefined) {
         throw new PermissionError('Must be authenticated to follow users');
       }
@@ -595,48 +684,46 @@ export function useFollowMutation(): UseMutationResult<
         throw new NotFoundError('User');
       }
 
-      if (action === 'follow') {
-        const { error } = await supabase
-          .from('follows')
-          .insert({
-            follower_id: user.id,
-            following_id: targetUser.id,
-            following_type: 'user',
-          });
+      // Toggle follow via RPC (single round-trip)
+      const { data: isNowFollowing, error } = await supabase.rpc(
+        'follow_toggle',
+        {
+          p_follower: user.id,
+          p_target: targetUser.id,
+          p_target_type: 'user',
+        },
+      );
 
-        if (error !== null && error !== undefined) {
-          throw new ProfileError('Failed to follow user', error.code, HttpStatusCode.InternalServerError);
-        }
-      } else {
-        const { error } = await supabase
-          .from('follows')
-          .delete()
-          .eq('follower_id', user.id)
-          .eq('following_id', targetUser.id)
-          .eq('following_type', 'user');
-
-        if (error !== null && error !== undefined) {
-          throw new ProfileError('Failed to unfollow user', error.code, HttpStatusCode.InternalServerError);
-        }
+      if (error !== null && error !== undefined) {
+        throw new ProfileError(
+          'Failed to toggle follow',
+          error.code,
+          HttpStatusCode.InternalServerError,
+        );
       }
 
-      return { success: true };
+      return {
+        success: true,
+        isFollowing: Boolean(isNowFollowing),
+      } as unknown as { success: boolean };
     },
     onSuccess: (data, variables) => {
       // Update follow‑status cache when mutation succeeds
       if (data?.success) {
         queryClient.setQueryData(
           profileKeys.followStatus(variables.targetUsername),
-          { isFollowing: variables.action === 'follow' }
+          { isFollowing: variables.action === 'follow' },
         );
       }
 
       // Invalidate metrics so follower counts refresh
-      queryClient.invalidateQueries({
-        queryKey: profileKeys.metrics(variables.targetUsername),
-      }).catch((error) => {
-        console.error('Failed to invalidate metrics cache:', error);
-      });
+      queryClient
+        .invalidateQueries({
+          queryKey: profileKeys.metrics(variables.targetUsername),
+        })
+        .catch((error) => {
+          console.error('Failed to invalidate metrics cache:', error);
+        });
     },
   });
 }
@@ -652,9 +739,11 @@ export function useUpdateProfileMutation(): UseMutationResult<
   return useMutation({
     mutationFn: async ({ username, updates }: UpdateProfileVariables) => {
       const supabase = createSupabaseBrowserClient();
-      
+
       // Get current user and verify permissions
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (user === null || user === undefined) {
         throw new PermissionError('Must be authenticated to update profile');
       }
@@ -685,18 +774,24 @@ export function useUpdateProfileMutation(): UseMutationResult<
         .single();
 
       if (error !== null && error !== undefined) {
-        throw new ProfileError('Failed to update profile', error.code, HttpStatusCode.InternalServerError);
+        throw new ProfileError(
+          'Failed to update profile',
+          error.code,
+          HttpStatusCode.InternalServerError,
+        );
       }
 
       return data;
     },
     onSuccess: (data, variables) => {
       // Invalidate profile cache to refetch updated data
-      queryClient.invalidateQueries({
-        queryKey: profileKeys.profile(variables.username),
-      }).catch((error) => {
-        console.error('Failed to invalidate profile cache:', error);
-      });
+      queryClient
+        .invalidateQueries({
+          queryKey: profileKeys.profile(variables.username),
+        })
+        .catch((error) => {
+          console.error('Failed to invalidate profile cache:', error);
+        });
     },
   });
 }

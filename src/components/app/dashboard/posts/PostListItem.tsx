@@ -1,608 +1,82 @@
 'use client';
 
-import {
-  MoreHorizontal,
-  Eye,
-  Heart,
-  MessageSquare,
-  Calendar,
-  Edit,
-  Trash2,
-  ExternalLink,
-  Users,
-} from 'lucide-react';
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import React, { useCallback, useState } from 'react';
 
-import { deletePost } from '@/app/actions/postActions';
-import { Button } from '@/components/primitives/Button';
-import { Card } from '@/components/primitives/Card';
-import { Badge } from '@/components/ui/badge';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+import { useDeletePostMutation } from '@/hooks/posts/useDeletePostMutation';
 
-// Constants for time calculations
-const MILLISECONDS_TO_SECONDS = 1000;
-const SECONDS_IN_MINUTE = 60;
-const SECONDS_IN_HOUR = 3600;
-const SECONDS_IN_DAY = 86400;
-const SECONDS_IN_MONTH = 2592000;
+import PostCard, { PostCardData } from './PostCard';
+import PostCompact, { PostCompactData } from './PostCompact';
+import PostRow, { PostRowData } from './PostRow';
 
-type DashboardPost = {
-  id: string;
-  title: string;
-  slug?: string;
-  published_at: string | null;
-  created_at: string;
-  description?: string | null;
-  view_count?: number | null;
-  collective?: { id: string; name: string; slug: string } | null;
-  likes?: { count: number }[] | null;
-  post_reactions?: { count: number; type?: string }[] | null;
-  likeCount?: number;
-  comments?: { id: string; content: string }[] | null;
-  isFeatured?: boolean;
-  video?: { id: string; title: string | null } | null;
-};
+// A union type for the post data, ensuring any of the variants can be handled.
+// This should be derived from a single, canonical database type in the future.
+type DashboardPost = PostCardData & PostRowData & PostCompactData;
 
 export interface PostListItemProps {
   post: DashboardPost;
-  onDelete?: (_id: string) => void;
-  isSelected?: boolean;
   onSelect?: () => void;
+  isSelected?: boolean;
   showCollective?: boolean;
-  compact?: boolean;
-  tableMode?: boolean;
+  variant?: 'card' | 'compact' | 'table';
+  queryKey: readonly unknown[]; // Query key for the list this item belongs to
 }
 
 /**
- * Enhanced PostListItem component using our design system.
- * Provides consistent post display with improved visual hierarchy,
- * interaction states, and responsive design.
+ * Renders a post list item, delegating to the appropriate variant component.
+ * It contains the shared delete logic using an optimistic mutation hook.
  */
 export default function PostListItem({
   post,
-  onDelete,
-  isSelected = false,
   onSelect,
+  isSelected = false,
   showCollective = false,
-  compact = false,
-  tableMode = false,
+  variant = 'card',
+  queryKey,
 }: PostListItemProps): React.ReactElement {
-  const [isDeleting, setIsDeleting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const router = useRouter();
+  const deleteMutation = useDeletePostMutation(queryKey);
 
-  const handleDelete = useCallback(async (): Promise<void> => {
+  const handleDelete = useCallback((): void => {
     if (!showDeleteConfirm) {
       setShowDeleteConfirm(true);
+      setTimeout(() => setShowDeleteConfirm(false), 3000);
       return;
     }
+    deleteMutation.mutate(post.id);
+  }, [showDeleteConfirm, deleteMutation, post.id]);
 
-    setIsDeleting(true);
-    try {
-      if (onDelete !== undefined) {
-        onDelete(post.id);
-      } else {
-        await deletePost(post.id);
-      }
-      router.refresh();
-    } catch (error: unknown) {
-      console.error('Failed to delete post:', error);
-    } finally {
-      setIsDeleting(false);
-      setShowDeleteConfirm(false);
-    }
-  }, [showDeleteConfirm, onDelete, post.id, router]);
-
-  const getStatusVariant = useCallback(
-    (post: DashboardPost): 'secondary' | 'outline' | 'default' => {
-      if (
-        post.published_at === undefined ||
-        post.published_at === null ||
-        post.published_at.length === 0
-      )
-        return 'secondary'; // draft
-      if (
-        post.published_at !== undefined &&
-        post.published_at !== null &&
-        post.published_at.length > 0 &&
-        new Date(post.published_at) > new Date()
-      )
-        return 'outline'; // scheduled
-      return 'default'; // published
-    },
-    [],
-  );
-
-  const getStatusLabel = useCallback((post: DashboardPost): string => {
-    if (
-      post.published_at === undefined ||
-      post.published_at === null ||
-      post.published_at.length === 0
-    )
-      return 'Draft';
-    if (
-      post.published_at !== undefined &&
-      post.published_at !== null &&
-      post.published_at.length > 0 &&
-      new Date(post.published_at) > new Date()
-    )
-      return 'Scheduled';
-    return 'Published';
-  }, []);
-
-  const formatDate = useCallback((dateString: string | null): string => {
-    if (
-      dateString === undefined ||
-      dateString === null ||
-      dateString.length === 0
-    )
-      return 'Never';
-    try {
-      const date = new Date(dateString);
-      const now = new Date();
-      const diffInSeconds = Math.floor(
-        (now.getTime() - date.getTime()) / MILLISECONDS_TO_SECONDS,
-      );
-
-      if (diffInSeconds < SECONDS_IN_MINUTE) return 'Just now';
-      if (diffInSeconds < SECONDS_IN_HOUR)
-        return `${Math.floor(diffInSeconds / SECONDS_IN_MINUTE)}m ago`;
-      if (diffInSeconds < SECONDS_IN_DAY)
-        return `${Math.floor(diffInSeconds / SECONDS_IN_HOUR)}h ago`;
-      if (diffInSeconds < SECONDS_IN_MONTH)
-        return `${Math.floor(diffInSeconds / SECONDS_IN_DAY)}d ago`;
-
-      return date.toLocaleDateString();
-    } catch {
-      return 'Invalid date';
-    }
-  }, []);
-
-  // Calculate engagement metrics from existing post data
-  const likes =
-    typeof post.likeCount === 'number' &&
-    post.likeCount !== undefined &&
-    post.likeCount !== null &&
-    post.likeCount >= 0
-      ? post.likeCount
-      : post.likes !== undefined &&
-          post.likes !== null &&
-          post.likes.length > 0 &&
-          post.likes[0] !== undefined &&
-          post.likes[0] !== null &&
-          post.likes[0].count >= 0
-        ? post.likes[0].count
-        : post.post_reactions !== undefined &&
-            post.post_reactions !== null &&
-            post.post_reactions.length > 0 &&
-            post.post_reactions[0] !== undefined &&
-            post.post_reactions[0] !== null &&
-            post.post_reactions[0].count >= 0
-          ? post.post_reactions[0].count
-          : 0;
-
-  const views =
-    post.view_count !== undefined &&
-    post.view_count !== null &&
-    post.view_count >= 0
-      ? post.view_count
-      : 0;
-  const comments =
-    post.comments !== undefined && post.comments !== null
-      ? post.comments.length
-      : 0;
-
-  // Helper functions for URL routing
-  const getPostViewUrl = useCallback((post: DashboardPost): string => {
-    return post.video !== undefined && post.video !== null
-      ? `/videos/${post.video.id}`
-      : `/posts/${post.id}`;
-  }, []);
-
-  const getPostEditUrl = useCallback((post: DashboardPost): string => {
-    // Video posts don't have edit functionality yet, so keep routing to post edit
-    return `/posts/${post.id}/edit`;
-  }, []);
-
-  const handleSelectChange = useCallback((): void => {
-    if (onSelect !== undefined) {
-      onSelect();
-    }
+  const handleSelect = useCallback((): void => {
+    onSelect?.();
   }, [onSelect]);
 
-  const handleDeleteClick = useCallback((): void => {
-    void handleDelete();
-  }, [handleDelete]);
+  const baseProps = {
+    post,
+    onDelete: handleDelete,
+    isDeleting: deleteMutation.isPending,
+    showDeleteConfirm,
+  } as const;
 
-  // Table mode - render as table rows
-  if (tableMode) {
-    return (
-      <tr
-        className={`hover:bg-muted/50 transition-colors ${isSelected ? 'bg-muted' : ''}`}
-      >
-        <td className="px-4 py-3">
-          <div className="flex items-center gap-2">
-            {onSelect !== undefined && (
-              <input
-                type="checkbox"
-                checked={isSelected}
-                onChange={handleSelectChange}
-                className="h-4 w-4 rounded border-border accent-accent"
-              />
-            )}
-            <div className="min-w-0 flex-1">
-              <Link href={getPostViewUrl(post)} className="group block">
-                <h3 className="font-medium text-foreground truncate group-hover:text-accent transition-colors">
-                  {post.title}
-                </h3>
-              </Link>
-              {post.description !== undefined &&
-                post.description !== null &&
-                post.description.length > 0 && (
-                  <p className="text-sm text-muted-foreground line-clamp-1 mt-1">
-                    {post.description}
-                  </p>
-                )}
-            </div>
-          </div>
-        </td>
-        <td className="px-4 py-3">
-          <Badge variant={getStatusVariant(post)}>{getStatusLabel(post)}</Badge>
-        </td>
-        <td className="px-4 py-3 text-muted-foreground">
-          {formatDate(
-            post.published_at !== undefined &&
-              post.published_at !== null &&
-              post.published_at.length > 0
-              ? post.published_at
-              : post.created_at,
-          )}
-        </td>
-        <td className="px-4 py-3 text-muted-foreground">
-          {likes > 0 ? likes.toLocaleString() : '—'}
-        </td>
-        <td className="px-4 py-3">
-          <div className="flex items-center gap-1">
-            <Button size="sm" variant="ghost" asChild>
-              <Link href={getPostEditUrl(post)}>
-                <Edit className="h-4 w-4" />
-              </Link>
-            </Button>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button size="sm" variant="ghost">
-                  <MoreHorizontal className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem asChild>
-                  <Link
-                    href={getPostViewUrl(post)}
-                    className="flex items-center gap-2"
-                  >
-                    <ExternalLink className="h-4 w-4" />
-                    {post.video !== undefined && post.video !== null
-                      ? 'View Video'
-                      : 'View Post'}
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link
-                    href={getPostEditUrl(post)}
-                    className="flex items-center gap-2"
-                  >
-                    <Edit className="h-4 w-4" />
-                    Edit Post
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  onClick={handleDeleteClick}
-                  disabled={isDeleting}
-                  className="text-destructive focus:text-destructive focus:bg-destructive/10"
-                >
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  {showDeleteConfirm
-                    ? 'Confirm Delete'
-                    : isDeleting
-                      ? 'Deleting...'
-                      : 'Delete Post'}
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        </td>
-      </tr>
-    );
+  switch (variant) {
+    case 'table':
+      return <PostRow {...baseProps} />;
+    case 'compact':
+      return (
+        <PostCompact
+          {...baseProps}
+          onSelect={handleSelect}
+          isSelected={isSelected}
+          showCollective={showCollective}
+        />
+      );
+    case 'card':
+    default:
+      return (
+        <PostCard
+          {...baseProps}
+          onSelect={handleSelect}
+          isSelected={isSelected}
+          showCollective={showCollective}
+        />
+      );
   }
-
-  if (compact) {
-    return (
-      <div
-        className={`flex items-center gap-component p-card-sm border-b border-border-subtle transition-colors transition-fast hover:bg-interaction-hover ${
-          isSelected ? 'bg-interaction-focus border-accent' : ''
-        }`}
-      >
-        {/* Selection checkbox */}
-        {onSelect !== undefined && (
-          <input
-            type="checkbox"
-            checked={isSelected}
-            onChange={handleSelectChange}
-            className="h-4 w-4 rounded border-border-subtle accent-accent micro-interaction"
-          />
-        )}
-
-        {/* Post content */}
-        <div className="flex-1 min-w-0">
-          <div className="flex items-start justify-between gap-component">
-            <div className="min-w-0 flex-1">
-              <Link href={getPostViewUrl(post)} className="group block">
-                <h3 className="font-medium text-content-primary truncate group-hover:text-content-accent transition-colors transition-fast">
-                  {post.title}
-                </h3>
-              </Link>
-              <div className="flex items-center gap-2 mt-1">
-                <Badge
-                  variant={getStatusVariant(post)}
-                  className="micro-interaction"
-                >
-                  {getStatusLabel(post)}
-                </Badge>
-                {showCollective &&
-                  post.collective !== undefined &&
-                  post.collective !== null && (
-                    <span className="text-xs text-content-secondary flex items-center gap-1">
-                      <Users className="h-3 w-3" />
-                      {post.collective.name}
-                    </span>
-                  )}
-                <span className="text-xs text-content-secondary flex items-center gap-1">
-                  <Calendar className="h-3 w-3" />
-                  {formatDate(
-                    post.published_at !== undefined &&
-                      post.published_at !== null &&
-                      post.published_at.length > 0
-                      ? post.published_at
-                      : post.created_at,
-                  )}
-                </span>
-              </div>
-            </div>
-
-            {/* Action buttons */}
-            <div className="flex items-center gap-1 flex-shrink-0">
-              <Button
-                size="sm"
-                variant="ghost"
-                className="micro-interaction nav-hover"
-                asChild
-              >
-                <Link href={getPostEditUrl(post)}>
-                  <Edit className="h-4 w-4" />
-                </Link>
-              </Button>
-
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="micro-interaction nav-hover"
-                  >
-                    <MoreHorizontal className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent
-                  align="end"
-                  className="bg-surface-elevated-1 border-border-subtle"
-                >
-                  <DropdownMenuItem asChild>
-                    <Link
-                      href={getPostViewUrl(post)}
-                      className="flex items-center gap-2"
-                    >
-                      <ExternalLink className="h-4 w-4" />
-                      {post.video !== undefined && post.video !== null
-                        ? 'View Video'
-                        : 'View Post'}
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link
-                      href={getPostEditUrl(post)}
-                      className="flex items-center gap-2"
-                    >
-                      <Edit className="h-4 w-4" />
-                      Edit Post
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator className="border-border-subtle" />
-                  <DropdownMenuItem
-                    onClick={handleDeleteClick}
-                    disabled={isDeleting}
-                    className="text-destructive focus:text-destructive focus:bg-destructive/10"
-                  >
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    {showDeleteConfirm
-                      ? 'Confirm Delete'
-                      : isDeleting
-                        ? 'Deleting...'
-                        : 'Delete Post'}
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <Card
-      size="md"
-      className={`pattern-card micro-interaction card-lift transition-all transition-normal ${
-        isSelected ? 'ring-2 ring-accent border-accent' : ''
-      }`}
-    >
-      {/* Header */}
-      <div className="flex items-start justify-between gap-component">
-        <div className="flex items-start gap-component flex-1 min-w-0">
-          {/* Selection checkbox */}
-          {onSelect !== undefined && (
-            <input
-              type="checkbox"
-              checked={isSelected}
-              onChange={handleSelectChange}
-              className="h-4 w-4 rounded border-border-subtle accent-accent micro-interaction mt-1"
-            />
-          )}
-
-          {/* Post content */}
-          <div className="flex-1 min-w-0">
-            <div className="pattern-stack gap-component">
-              {/* Title and status */}
-              <div className="flex items-start justify-between gap-component">
-                <Link
-                  href={getPostViewUrl(post)}
-                  className="group flex-1 min-w-0"
-                >
-                  <h3 className="text-lg font-semibold text-content-primary group-hover:text-content-accent transition-colors transition-fast line-clamp-2">
-                    {post.title}
-                  </h3>
-                </Link>
-                <Badge
-                  variant={getStatusVariant(post)}
-                  className="micro-interaction flex-shrink-0"
-                >
-                  {getStatusLabel(post)}
-                </Badge>
-              </div>
-
-              {/* Content snippet from post description */}
-              {post.description !== undefined &&
-                post.description !== null &&
-                post.description.length > 0 && (
-                  <p className="text-content-secondary text-sm line-clamp-2">
-                    {post.description}
-                  </p>
-                )}
-
-              {/* Metadata */}
-              <div className="flex flex-wrap items-center gap-component text-xs text-content-secondary">
-                {showCollective &&
-                  post.collective !== undefined &&
-                  post.collective !== null && (
-                    <div className="flex items-center gap-1">
-                      <Users className="h-3 w-3" />
-                      <Link
-                        href={`/collectives/${post.collective.slug}`}
-                        className="hover:text-content-accent transition-colors transition-fast"
-                      >
-                        {post.collective.name}
-                      </Link>
-                    </div>
-                  )}
-
-                <div className="flex items-center gap-1">
-                  <Calendar className="h-3 w-3" />
-                  {formatDate(
-                    post.published_at !== undefined &&
-                      post.published_at !== null &&
-                      post.published_at.length > 0
-                      ? post.published_at
-                      : post.created_at,
-                  )}
-                </div>
-              </div>
-
-              {/* Engagement metrics */}
-              {(views > 0 || likes > 0 || comments > 0) && (
-                <div className="flex items-center gap-component text-xs text-content-secondary border-t border-border-subtle pt-component">
-                  {views > 0 && (
-                    <div className="flex items-center gap-1">
-                      <Eye className="h-3 w-3" />
-                      {views.toLocaleString()} views
-                    </div>
-                  )}
-                  {likes > 0 && (
-                    <div className="flex items-center gap-1">
-                      <Heart className="h-3 w-3" />
-                      {likes.toLocaleString()} likes
-                    </div>
-                  )}
-                  {comments > 0 && (
-                    <div className="flex items-center gap-1">
-                      <MessageSquare className="h-3 w-3" />
-                      {comments.toLocaleString()} comments
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Action menu */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              size="sm"
-              variant="ghost"
-              className="micro-interaction nav-hover flex-shrink-0"
-            >
-              <MoreHorizontal className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent
-            align="end"
-            className="bg-surface-elevated-1 border-border-subtle"
-          >
-            <DropdownMenuItem asChild>
-              <Link
-                href={getPostViewUrl(post)}
-                className="flex items-center gap-2"
-              >
-                <ExternalLink className="h-4 w-4" />
-                {post.video !== undefined && post.video !== null
-                  ? 'View Video'
-                  : 'View Post'}
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem asChild>
-              <Link
-                href={getPostEditUrl(post)}
-                className="flex items-center gap-2"
-              >
-                <Edit className="h-4 w-4" />
-                Edit Post
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuSeparator className="border-border-subtle" />
-            <DropdownMenuItem
-              onClick={handleDeleteClick}
-              disabled={isDeleting}
-              className="text-destructive focus:text-destructive focus:bg-destructive/10"
-            >
-              <Trash2 className="h-4 w-4 mr-2" />
-              {showDeleteConfirm
-                ? 'Confirm Delete'
-                : isDeleting
-                  ? 'Deleting...'
-                  : 'Delete Post'}
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
-    </Card>
-  );
 }

@@ -17,7 +17,7 @@ import {
   isSupabaseStorageUrl,
 } from '@/lib/utils/thumbnail';
 
-import type { TablesInsert, TablesUpdate } from '@/types/database.types';
+import type { TablesInsert, TablesUpdate } from '@/lib/database.types';
 
 // Constants for configuration
 const MAX_SLUG_LENGTH = 75;

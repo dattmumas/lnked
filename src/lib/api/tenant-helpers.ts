@@ -5,7 +5,7 @@ import { NextResponse } from 'next/server';
 
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 
-import type { Database } from '@/types/database.types';
+import type { Database } from '@/lib/database.types';
 import type { MemberRole } from '@/types/tenant.types';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
@@ -34,11 +34,11 @@ export interface TenantAccessResult {
  */
 export async function checkTenantAccess(
   tenantId: string,
-  requiredRole?: MemberRole
+  requiredRole?: MemberRole,
 ): Promise<TenantAccessResult> {
   try {
     const supabase = await createServerSupabaseClient();
-    
+
     const {
       data: { user },
       error: authError,
@@ -56,17 +56,18 @@ export async function checkTenantAccess(
     if (tenantId === user.id) {
       const userRole: MemberRole = 'owner';
       // Skip membership table check for personal spaces
-      const roleHierarchyCheck = requiredRole !== undefined
-        ? (() => {
-            const roleHierarchy: Record<MemberRole, number> = {
-              member: 1,
-              editor: 2,
-              admin: 3,
-              owner: 4,
-            };
-            return roleHierarchy[userRole] >= roleHierarchy[requiredRole];
-          })()
-        : true;
+      const roleHierarchyCheck =
+        requiredRole !== undefined
+          ? (() => {
+              const roleHierarchy: Record<MemberRole, number> = {
+                member: 1,
+                editor: 2,
+                admin: 3,
+                owner: 4,
+              };
+              return roleHierarchy[userRole] >= roleHierarchy[requiredRole];
+            })()
+          : true;
 
       if (!roleHierarchyCheck) {
         return {
@@ -125,7 +126,8 @@ export async function checkTenantAccess(
         owner: 4,
       };
 
-      const hasRequiredRole = roleHierarchy[userRole] >= roleHierarchy[requiredRole];
+      const hasRequiredRole =
+        roleHierarchy[userRole] >= roleHierarchy[requiredRole];
       if (!hasRequiredRole) {
         return {
           hasAccess: false,
@@ -163,21 +165,24 @@ export async function checkTenantAccess(
 export async function withTenantAccess<T>(
   tenantId: string,
   requiredRole: MemberRole,
-  operation: (supabase: SupabaseClient, userRole: MemberRole) => Promise<T>
+  operation: (supabase: SupabaseClient, userRole: MemberRole) => Promise<T>,
 ): Promise<{ data?: T; error?: string; status: number }> {
   const accessResult = await checkTenantAccess(tenantId, requiredRole);
 
   if (!accessResult.hasAccess) {
     return {
       error: accessResult.error ?? 'Access denied',
-      status: accessResult.error === 'Authentication required' ? HTTP_UNAUTHORIZED : HTTP_FORBIDDEN,
+      status:
+        accessResult.error === 'Authentication required'
+          ? HTTP_UNAUTHORIZED
+          : HTTP_FORBIDDEN,
     };
   }
 
   try {
     const supabase = await createServerSupabaseClient();
     const data = await operation(supabase, accessResult.userRole!);
-    
+
     return {
       data,
       status: HTTP_OK,
@@ -205,11 +210,11 @@ export async function withTenantAccess<T>(
 export async function getTenantContent(
   tenantId: string,
   tableName: string,
-  additionalFilters?: Record<string, string | number | boolean>
+  additionalFilters?: Record<string, string | number | boolean>,
 ): Promise<{ data: Record<string, unknown>[] | null; error?: string }> {
   try {
     const supabase = await createServerSupabaseClient();
-    
+
     let query = supabase
       .from(tableName as keyof Database['public']['Tables'])
       .select('*')
@@ -231,9 +236,9 @@ export async function getTenantContent(
     return { data: data as Record<string, unknown>[] };
   } catch (error) {
     console.error('Error fetching tenant content:', error);
-    return { 
-      data: null, 
-      error: error instanceof Error ? error.message : 'Failed to fetch content' 
+    return {
+      data: null,
+      error: error instanceof Error ? error.message : 'Failed to fetch content',
     };
   }
 }
@@ -250,11 +255,11 @@ export async function getTenantContent(
  */
 export async function checkTenantMembership(
   tenantId: string,
-  userId?: string
+  userId?: string,
 ): Promise<{ isMember: boolean; role: MemberRole | null; error?: string }> {
   try {
     const supabase = await createServerSupabaseClient();
-    
+
     let targetUserId = userId;
     if (targetUserId === undefined || targetUserId === null) {
       const {
@@ -284,10 +289,10 @@ export async function checkTenantMembership(
         // No rows found
         return { isMember: false, role: null };
       }
-      return { 
-        isMember: false, 
-        role: null, 
-        error: error.message 
+      return {
+        isMember: false,
+        role: null,
+        error: error.message,
       };
     }
 
@@ -300,7 +305,8 @@ export async function checkTenantMembership(
     return {
       isMember: false,
       role: null,
-      error: error instanceof Error ? error.message : 'Failed to check membership',
+      error:
+        error instanceof Error ? error.message : 'Failed to check membership',
     };
   }
 }
@@ -314,14 +320,14 @@ export async function checkTenantMembership(
  */
 export function createTenantErrorResponse(
   error: string,
-  status: number = HTTP_BAD_REQUEST
+  status: number = HTTP_BAD_REQUEST,
 ): NextResponse {
   return NextResponse.json(
     {
       error,
       timestamp: new Date().toISOString(),
     },
-    { status }
+    { status },
   );
 }
 
@@ -330,21 +336,23 @@ export function createTenantErrorResponse(
  */
 export function createTenantSuccessResponse<T>(
   data: T,
-  status: number = HTTP_OK
+  status: number = HTTP_OK,
 ): NextResponse {
   return NextResponse.json(
     {
       data,
       timestamp: new Date().toISOString(),
     },
-    { status }
+    { status },
   );
 }
 
 /**
  * Get tenant context including tenant info and user's role
  */
-export async function getTenantContext(tenantId: string): Promise<Record<string, unknown> | null> {
+export async function getTenantContext(
+  tenantId: string,
+): Promise<Record<string, unknown> | null> {
   const supabase = await createServerSupabaseClient();
 
   // Use RPC function to get tenant context
@@ -375,7 +383,9 @@ export async function getTenantContext(tenantId: string): Promise<Record<string,
 /**
  * Get posts for a specific tenant with proper access control
  */
-export async function getTenantPosts(tenantId: string): Promise<Record<string, unknown>[]> {
+export async function getTenantPosts(
+  tenantId: string,
+): Promise<Record<string, unknown>[]> {
   const supabase = await createServerSupabaseClient();
 
   // Check access first
@@ -386,11 +396,13 @@ export async function getTenantPosts(tenantId: string): Promise<Record<string, u
 
   const { data: posts, error } = await supabase
     .from('posts')
-    .select(`
+    .select(
+      `
       *,
       author:users(id, username, full_name, avatar_url),
       collective:collectives(id, name, slug)
-    `)
+    `,
+    )
     .eq('collective_id', tenantId);
 
   if (error !== null) {
@@ -398,4 +410,4 @@ export async function getTenantPosts(tenantId: string): Promise<Record<string, u
   }
 
   return posts as Record<string, unknown>[];
-} 
+}

@@ -83,20 +83,21 @@ export default function FollowButton({
       return;
 
     try {
-      const { data, error } = await supabase
-        .from('follows')
-        .select('*')
-        .eq('follower_id', actualCurrentUserId)
-        .eq('following_id', targetUserId)
-        .eq('following_type', 'user')
-        .maybeSingle();
+      const { data: rpcData, error } = await supabase.rpc('is_following', {
+        follower_user_id: actualCurrentUserId,
+        target_id: targetUserId,
+        target_type: 'user',
+      });
 
       if (error !== undefined && error !== null) {
-        console.error('Error verifying follow status:', error);
+        console.error('Error verifying follow status via RPC:', error);
         return;
       }
 
-      const serverIsFollowing = Boolean(data);
+      const serverIsFollowing = Boolean(
+        (rpcData as unknown as { is_following: boolean } | null)
+          ?.is_following ?? rpcData,
+      );
       if (serverIsFollowing !== isFollowing) {
         console.warn(
           `Follow state sync: client=${isFollowing}, server=${serverIsFollowing}`,

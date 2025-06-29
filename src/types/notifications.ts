@@ -15,7 +15,12 @@ export type NotificationType =
   | 'post_bookmark'
   | 'featured_post';
 
-export type EntityType = 'post' | 'comment' | 'user' | 'collective' | 'subscription';
+export type EntityType =
+  | 'post'
+  | 'comment'
+  | 'user'
+  | 'collective'
+  | 'subscription';
 
 export interface Notification {
   id: string;
@@ -89,7 +94,10 @@ export interface NotificationDisplayConfig {
   groupable: boolean;
 }
 
-export const NOTIFICATION_CONFIGS: Record<NotificationType, NotificationDisplayConfig> = {
+export const NOTIFICATION_CONFIGS: Record<
+  NotificationType,
+  NotificationDisplayConfig
+> = {
   follow: {
     icon: '👤',
     color: 'bg-blue-500',
@@ -202,14 +210,18 @@ export const SECONDS_PER_DAY = SECONDS_PER_HOUR * HOURS_PER_DAY; // 86_400
 const SECONDS_PER_WEEK = SECONDS_PER_DAY * DAYS_PER_WEEK; // 604_800
 
 // Helper functions
-export function getNotificationConfig(type: NotificationType): NotificationDisplayConfig {
+export function getNotificationConfig(
+  type: NotificationType,
+): NotificationDisplayConfig {
   return NOTIFICATION_CONFIGS[type];
 }
 
 export function formatNotificationTime(createdAt: string): string {
   const now = new Date();
   const created = new Date(createdAt);
-  const diffInSeconds = Math.floor((now.getTime() - created.getTime()) / MILLISECONDS_PER_SECOND);
+  const diffInSeconds = Math.floor(
+    (now.getTime() - created.getTime()) / MILLISECONDS_PER_SECOND,
+  );
 
   if (diffInSeconds < SECONDS_PER_MINUTE) {
     return 'Just now';
@@ -227,7 +239,9 @@ export function formatNotificationTime(createdAt: string): string {
   }
 }
 
-export function groupNotifications(notifications: Notification[]): Notification[][] {
+export function groupNotifications(
+  notifications: Notification[],
+): Notification[][] {
   const groups: Notification[][] = [];
   const groupableTypes = Object.entries(NOTIFICATION_CONFIGS)
     .filter(([, config]) => config.groupable)
@@ -236,7 +250,7 @@ export function groupNotifications(notifications: Notification[]): Notification[
   for (const notification of notifications) {
     if (groupableTypes.includes(notification.type)) {
       // Try to find an existing group for this type and entity
-      const existingGroup = groups.find(group => {
+      const existingGroup = groups.find((group) => {
         if (group.length === 0) return false;
         const first = group[0]!;
         return (
@@ -257,4 +271,4 @@ export function groupNotifications(notifications: Notification[]): Notification[
   }
 
   return groups;
-} 
+}

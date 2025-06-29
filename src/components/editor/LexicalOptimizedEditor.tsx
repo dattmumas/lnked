@@ -41,7 +41,7 @@ import SpecialTextPlugin from './plugins/formatting/SpecialTextPlugin';
 // Essential input plugins
 import DragDropPastePlugin from './plugins/input/DragDropPastePlugin';
 import EmojisPlugin from './plugins/input/EmojisPlugin';
-import { MaxLengthPlugin } from './plugins/input/MaxLengthPlugin';
+import MaxLengthPlugin from './plugins/input/MaxLengthPlugin';
 import ShortcutsPlugin from './plugins/input/ShortcutsPlugin';
 import TabFocusPlugin from './plugins/input/TabFocusPlugin';
 import CollapsiblePlugin from './plugins/interactive/CollapsiblePlugin';
@@ -50,7 +50,7 @@ import DraggableBlockPlugin from './plugins/interactive/DraggableBlockPlugin';
 
 // Essential layout plugins
 import AutoEmbedPlugin from './plugins/layout/AutoEmbedPlugin';
-import { LayoutPlugin } from './plugins/layout/LayoutPlugin/LayoutPlugin';
+import LayoutPlugin from './plugins/layout/LayoutPlugin/LayoutPlugin';
 import PageBreakPlugin from './plugins/layout/PageBreakPlugin';
 import TableCellResizer from './plugins/layout/TableCellResizer';
 import TableHoverActionsPlugin from './plugins/layout/TableHoverActionsPlugin';
