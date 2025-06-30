@@ -1,9 +1,10 @@
 import { notFound } from 'next/navigation';
 import React from 'react';
 
-import { InvitePageClient } from '@/app/invite/[inviteCode]/InvitePageClient';
 import { Database } from '@/lib/database.types';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
+
+import { InvitePageClient } from './InvitePageClient';
 
 type Collective = Database['public']['Tables']['collectives']['Row'];
 type CollectiveInvite =

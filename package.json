@@ -26,6 +26,7 @@
     "@lexical/code": "0.31.2",
     "@lexical/file": "^0.31.2",
     "@lexical/hashtag": "^0.31.2",
+    "@lexical/headless": "^0.32.1",
     "@lexical/history": "^0.31.2",
     "@lexical/link": "0.31.2",
     "@lexical/list": "0.31.2",

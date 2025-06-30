@@ -17,6 +17,11 @@ import { RichTextPlugin } from '@lexical/react/LexicalRichTextPlugin';
 import { TabIndentationPlugin } from '@lexical/react/LexicalTabIndentationPlugin';
 import { TablePlugin } from '@lexical/react/LexicalTablePlugin';
 import { useEffect, useState, useCallback, useRef } from 'react';
+import {
+  $convertFromMarkdownString,
+  $convertToMarkdownString,
+} from '@lexical/markdown';
+import { $getRoot } from 'lexical';
 
 // Core imports - always loaded
 import {
@@ -36,6 +41,7 @@ import KeywordsPlugin from './plugins/formatting/KeywordsPlugin';
 import LinkPlugin from './plugins/formatting/LinkPlugin';
 import MarkdownShortcutPlugin from './plugins/formatting/MarkdownShortcutPlugin';
 import SpecialTextPlugin from './plugins/formatting/SpecialTextPlugin';
+import { PLAYGROUND_TRANSFORMERS } from './plugins/formatting/MarkdownTransformers';
 
 // Essential interactive plugins
 // Essential input plugins
@@ -74,28 +80,58 @@ import ContentEditable from './ui/inputs/ContentEditable';
 interface OptimizedEditorProps {
   initialContent?: string;
   placeholder?: string;
-  onChange?: (json: string) => void;
+  onChange?: (json: string, markdown?: string) => void;
   pluginConfig?: Partial<PluginConfig>;
+  contentFormat?: 'json' | 'markdown' | 'auto';
 }
 
-function LoadInitialJsonPlugin({ json }: { json?: string }) {
+function LoadInitialContentPlugin({
+  content,
+  format = 'auto',
+}: {
+  content?: string;
+  format?: 'json' | 'markdown' | 'auto';
+}) {
   const [editor] = useLexicalComposerContext();
   const hasLoadedInitialContent = useRef(false);
 
   useEffect(() => {
-    if (!json || hasLoadedInitialContent.current) return;
+    if (!content || hasLoadedInitialContent.current) return;
 
     const timer = setTimeout(() => {
-      try {
-        editor.setEditorState(editor.parseEditorState(json));
+      let isJson = false;
+
+      // Auto-detect format
+      if (format === 'auto') {
+        try {
+          const parsed = JSON.parse(content);
+          isJson = parsed && typeof parsed === 'object' && parsed.root;
+        } catch {
+          isJson = false;
+        }
+      } else {
+        isJson = format === 'json';
+      }
+
+      if (isJson) {
+        // Parse as Lexical JSON
+        try {
+          editor.setEditorState(editor.parseEditorState(content));
+          hasLoadedInitialContent.current = true;
+        } catch (err: unknown) {
+          console.error('Could not parse initialContent JSON', err);
+        }
+      } else {
+        // Parse as Markdown
+        editor.update(() => {
+          $convertFromMarkdownString(content, PLAYGROUND_TRANSFORMERS);
+        });
         hasLoadedInitialContent.current = true;
-      } catch (err: unknown) {
-        console.error('Could not parse initialContent JSON', err);
       }
     }, 0);
 
     return () => clearTimeout(timer);
-  }, [editor]);
+  }, [editor, content, format]);
 
   return undefined;
 }
@@ -105,11 +141,13 @@ function EditorContent({
   initialContent,
   onChange,
   advancedPlugins,
+  contentFormat,
 }: {
   placeholder: string;
   initialContent?: string;
-  onChange?: (json: string) => void;
+  onChange?: (json: string, markdown?: string) => void;
   advancedPlugins: PluginConfig['advanced'];
+  contentFormat?: 'json' | 'markdown' | 'auto';
 }) {
   const [editor] = useLexicalComposerContext();
   const [activeEditor, setActiveEditor] = useState(editor);
@@ -119,10 +157,16 @@ function EditorContent({
   const stableOnChange = useCallback(
     (state: unknown) => {
       if (onChange) {
-        onChange(JSON.stringify(state));
+        const json = JSON.stringify(state);
+
+        // Also generate markdown if callback accepts it
+        editor.update(() => {
+          const markdown = $convertToMarkdownString(PLAYGROUND_TRANSFORMERS);
+          onChange(json, markdown);
+        });
       }
     },
-    [onChange],
+    [onChange, editor],
   );
 
   return (
@@ -225,7 +269,12 @@ function EditorContent({
           enabled={advancedPlugins.tableActionMenu}
         />
 
-        {initialContent && <LoadInitialJsonPlugin json={initialContent} />}
+        {initialContent && (
+          <LoadInitialContentPlugin
+            content={initialContent}
+            format={contentFormat}
+          />
+        )}
         {onChange && (
           <OnChangePlugin onChange={stableOnChange} ignoreSelectionChange />
         )}
@@ -239,6 +288,7 @@ export default function LexicalOptimizedEditor({
   placeholder = 'Enter some rich text...',
   onChange,
   pluginConfig,
+  contentFormat = 'auto',
 }: OptimizedEditorProps) {
   const [advancedPlugins, setAdvancedPlugins] = useState<
     PluginConfig['advanced']
@@ -278,6 +328,7 @@ export default function LexicalOptimizedEditor({
               initialContent={initialContent}
               onChange={onChange}
               advancedPlugins={advancedPlugins}
+              contentFormat={contentFormat}
             />
           </ToolbarContext>
         </SharedHistoryContext>
