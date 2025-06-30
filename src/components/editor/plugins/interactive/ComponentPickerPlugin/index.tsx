@@ -38,7 +38,7 @@ import { useCallback, useMemo, useState, useEffect } from 'react';
 import * as ReactDOM from 'react-dom';
 
 import useModal from '../../../hooks/useModal';
-import catTypingGif from '../../../ui/images/cat-typing.gif';
+import catTypingGif from '../../../images/cat-typing.gif';
 import { EmbedConfigs } from '../../layout/AutoEmbedPlugin';
 import InsertLayoutDialog from '../../layout/LayoutPlugin/InsertLayoutDialog';
 import { INSERT_PAGE_BREAK } from '../../layout/PageBreakPlugin';
@@ -52,6 +52,7 @@ import { INSERT_COLLAPSIBLE_COMMAND } from '../CollapsiblePlugin';
 import { InsertEquationDialog } from '../EquationsPlugin';
 import { InsertPollDialog } from '../PollPlugin';
 import { $createStickyNode } from '../../../nodes/interactive/StickyNode';
+import { ImageNode } from '../../../nodes/media/ImageNode';
 import { usePluginEnabler } from '../../../LexicalOptimizedEditor';
 
 import type { JSX } from 'react';

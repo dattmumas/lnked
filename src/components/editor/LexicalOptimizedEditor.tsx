@@ -153,12 +153,13 @@ function EditorContent({
         onChange?.(json, markdown);
 
         // Dynamic plugin analysis - debounced
+        const textContent = $getRoot().getTextContent();
+
         if (contentCheckTimeoutRef.current) {
           clearTimeout(contentCheckTimeoutRef.current);
         }
 
         contentCheckTimeoutRef.current = setTimeout(() => {
-          const textContent = $getRoot().getTextContent();
           if (textContent.length > 5000 && !advancedPlugins.tableOfContents) {
             enablePlugin('tableOfContents');
           }

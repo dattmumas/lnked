@@ -210,7 +210,7 @@ export default function NewPostEditorPage(): React.ReactElement {
               placeholder="Post title..."
               value={formData.title}
               onChange={handleTitleChange}
-              className="w-full text-3xl font-bold bg-transparent border-none outline-none placeholder:text-muted-foreground focus:ring-0 p-0"
+              className="w-full text-3xl font-bold border-border outline-none placeholder:text-muted-foreground focus:ring-0 p-0"
             />
           </div>
 

@@ -91,7 +91,6 @@
   max-width: 100%;
   border: 0;
   display: flex;
-  position: relative;
   outline: 0;
   z-index: 0;
   resize: vertical;
@@ -102,8 +101,9 @@
   width: 100%;
   max-width: 100%;
   position: relative;
+  z-index: 0;
   resize: vertical;
-  z-index: -1;
+  padding: 0.75rem 1rem; /* space so placeholder starts inside box */
 }
 
 .editor img {

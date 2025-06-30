@@ -21,14 +21,14 @@ export function useTypingStatus(channelId: string): UseTypingStatusReturn {
 
   const sendTypingStop = useCallback((): void => {
     if (!isMountedRef.current || !isTypingRef.current) return;
-    
+
     isTypingRef.current = false;
     void realTime.broadcastTyping(channelId, false);
   }, [channelId]);
 
   const sendTypingStart = useCallback((): void => {
     if (!isMountedRef.current || isTypingRef.current) return;
-    
+
     isTypingRef.current = true;
     void realTime.broadcastTyping(channelId, true);
   }, [channelId]);
@@ -50,7 +50,7 @@ export function useTypingStatus(channelId: string): UseTypingStatusReturn {
 
   const registerKeystroke = useCallback((): void => {
     if (!isMountedRef.current) return;
-    
+
     // Start typing if not already typing
     sendTypingStart();
 
@@ -73,7 +73,7 @@ export function useTypingStatus(channelId: string): UseTypingStatusReturn {
 
     return () => {
       isMountedRef.current = false;
-      
+
       // Clear any pending timeout
       if (timeoutRef.current !== null) {
         clearTimeout(timeoutRef.current);
@@ -92,4 +92,4 @@ export function useTypingStatus(channelId: string): UseTypingStatusReturn {
     registerKeystroke,
     stopTyping,
   };
-} 
+}

@@ -21,7 +21,7 @@ import { useMemo, useState } from 'react';
 import * as ReactDOM from 'react-dom';
 
 import { Button } from '@/components/ui/button';
-import { usePluginEnabler } from '../../LexicalOptimizedEditor';
+import { usePluginEnabler } from '../../../LexicalOptimizedEditor';
 
 import useModal from '../../../hooks/useModal';
 import { DialogActions } from '../../../ui/modals/Dialog';
