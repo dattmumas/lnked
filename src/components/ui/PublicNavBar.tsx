@@ -38,10 +38,10 @@ export default function PublicNavBar(): React.ReactElement {
       <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         {/* Brand / Logo */}
         <Link
-          href="/"
+          href="/home"
           className="text-lg font-semibold text-foreground hover:text-accent transition-colors"
         >
-          Lnked
+          NewPaper
         </Link>
 
         {/* Auth-aware Navigation */}

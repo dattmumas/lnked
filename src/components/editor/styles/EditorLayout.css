@@ -1,12 +1,67 @@
 .editor-shell {
   @apply mx-auto my-10 relative leading-[1.7] font-normal;
   color: hsl(var(--foreground));
+  width: 100%;
   max-width: 100%;
   padding: 0;
+  /* Account for GlobalSidebar which has w-16 (4rem) on desktop */
+  margin-left: 4rem;
 }
 
-@media (max-width: 768px) {
+/* Desktop sidebar accounting - matches GlobalSidebar visibility */
+@media (min-width: 1024px) {
   .editor-shell {
+    /* LG and up: Sidebar is visible, account for it */
+    margin-left: 4rem;
+  }
+}
+
+/* Mobile/tablet - sidebar hidden, no margin needed */
+@media (max-width: 1023px) {
+  .editor-shell {
+    /* MD and smaller: Sidebar is hidden, no margin needed */
+    margin-left: 0;
+  }
+}
+
+/* Responsive width management for optimal reading experience */
+@media (min-width: 1536px) {
+  .editor-shell {
+    /* 2XL screens: Very wide but with generous margins, accounting for sidebar */
+    max-width: calc(100vw - 12rem); /* 8rem for margins + 4rem for sidebar */
+    padding: 0 2rem;
+  }
+}
+
+@media (min-width: 1280px) and (max-width: 1535px) {
+  .editor-shell {
+    /* XL screens: Wide layout, accounting for sidebar */
+    max-width: calc(100vw - 10rem); /* 6rem for margins + 4rem for sidebar */
+    padding: 0 1.5rem;
+  }
+}
+
+@media (min-width: 1024px) and (max-width: 1279px) {
+  .editor-shell {
+    /* LG screens: Comfortable wide layout, accounting for sidebar */
+    max-width: calc(100vw - 8rem); /* 4rem for margins + 4rem for sidebar */
+    padding: 0 1rem;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1023px) {
+  .editor-shell {
+    /* MD screens: No sidebar, full width available */
+    max-width: calc(100vw - 3rem); /* 3rem for margins only */
+    padding: 0 0.75rem;
+    @apply my-6;
+  }
+}
+
+@media (max-width: 767px) {
+  .editor-shell {
+    /* SM and smaller: No sidebar, full mobile width */
+    max-width: 100%;
     @apply px-3 my-6;
   }
 }
@@ -27,10 +82,12 @@
   background: transparent;
   position: relative;
   display: block;
+  width: 100%;
 }
 
 .editor-scroller {
   min-height: 150px;
+  width: 100%;
   max-width: 100%;
   border: 0;
   display: flex;
@@ -42,6 +99,7 @@
 
 .editor {
   flex: auto;
+  width: 100%;
   max-width: 100%;
   position: relative;
   resize: vertical;

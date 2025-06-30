@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
@@ -13,16 +12,16 @@ import {
   $isRangeSelection,
   $setSelection,
   FOCUS_COMMAND,
+  COMMAND_PRIORITY_LOW,
 } from 'lexical';
 import { useEffect } from 'react';
 
-const COMMAND_PRIORITY_LOW = 1;
 const TAB_TO_FOCUS_INTERVAL = 100;
 
 let lastTabKeyDownTimestamp = 0;
 let hasRegisteredKeyDownListener = false;
 
-function registerKeyTimeStampTracker() {
+function registerKeyTimeStampTracker(): void {
   window.addEventListener(
     'keydown',
     (event: KeyboardEvent) => {

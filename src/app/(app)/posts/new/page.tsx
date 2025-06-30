@@ -185,8 +185,8 @@ export default function NewPostEditorPage(): React.ReactElement {
       </header>
 
       {/* Full-screen editor */}
-      <main className="px-4 py-8">
-        <div className="max-w-4xl mx-auto space-y-6">
+      <main className="px-4 py-8 lg:ml-16">
+        <div className="max-w-[1400px] xl:max-w-[1600px] 2xl:max-w-[1800px] mx-auto space-y-6">
           {/* Title input */}
           <div>
             <input
@@ -202,7 +202,7 @@ export default function NewPostEditorPage(): React.ReactElement {
           <div className="min-h-[500px]">
             <PostEditor
               key="new-post-editor"
-              initialContent={stableInitialContent}
+              initialContent={stableInitialContent || ''}
               onChange={handleContentChange}
               placeholder="Start writing your post..."
             />

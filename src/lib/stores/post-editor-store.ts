@@ -17,6 +17,7 @@ export interface PostFormData {
   is_public: boolean;
   status: 'draft' | 'active' | 'removed';
   collective_id?: string;
+  tenant_id?: string;
   published_at?: string;
 }
 
@@ -119,4 +120,4 @@ export const usePostEditorStore = create<PostEditorStore>((set) => ({
     set({
       isLoading: loading,
     }),
-})); 
+}));

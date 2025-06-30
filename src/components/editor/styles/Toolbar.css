@@ -3,8 +3,12 @@
 .toolbar {
   display: flex;
   margin-bottom: 1px;
+  /* Use proper site color tokens for consistent dark mode */
   background: hsl(var(--background));
+  color: hsl(var(--foreground));
   padding: var(--spacing-xs);
+  /* Add bottom padding for pleasant spacing to canvas */
+  padding-bottom: 1.5rem;
   border-top-left-radius: 0;
   border-top-right-radius: 0;
   vertical-align: middle;
@@ -23,20 +27,58 @@
   max-width: 100%;
 }
 
-/* Mobile responsive adjustments */
-@media (max-width: 768px) {
+/* Enhanced responsive toolbar with more granular breakpoints */
+@media (min-width: 1536px) {
   .toolbar {
-    padding: 1px 2px;
-    height: 40px; /* 5 * 8px */
-    min-height: 40px; /* 5 * 8px */
+    /* 2XL screens: Spacious toolbar with comfortable padding */
+    padding: 6px 12px 1.5rem 12px;
+    height: 52px;
+    min-height: 52px;
+  }
+}
+
+@media (min-width: 1280px) and (max-width: 1535px) {
+  .toolbar {
+    /* XL screens: Wide toolbar */
+    padding: 5px 10px 1.5rem 10px;
+    height: 50px;
+    min-height: 50px;
+  }
+}
+
+@media (min-width: 1024px) and (max-width: 1279px) {
+  .toolbar {
+    /* LG screens: Standard toolbar */
+    padding: 4px 8px 1.5rem 8px;
+    height: 48px;
+    min-height: 48px;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1023px) {
+  .toolbar {
+    /* MD screens: Compact but usable */
+    padding: 3px 6px 1rem 6px;
+    height: 44px;
+    min-height: 44px;
+  }
+}
+
+@media (max-width: 767px) {
+  .toolbar {
+    /* SM screens: More compact */
+    padding: 2px 4px 0.75rem 4px;
+    height: 40px;
+    min-height: 40px;
   }
 }
 
 @media (max-width: 480px) {
   .toolbar {
-    padding: 1px;
-    height: 32px; /* 4 * 8px */
-    min-height: 32px; /* 4 * 8px */
+    /* XS screens: Very compact */
+    padding: 1px 2px 0.5rem 2px;
+    height: 36px;
+    min-height: 36px;
   }
 }
 
@@ -45,31 +87,110 @@
   align-items: center;
 }
 
-/* Base toolbar item styles - using attribute selector for higher specificity */
+/* Base toolbar item styles - Enhanced with proper color tokens */
 button[class*='toolbar-item'],
 .toolbar-item {
   background: transparent;
   border: none;
   cursor: pointer;
-  padding: 3px 6px;
-  margin-right: 2px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: hsl(var(--foreground) / 0.4);
+  /* Use site color tokens for consistent theming */
+  color: hsl(var(--foreground) / 0.6);
   border-radius: var(--radius);
-  transition: all var(--transition-fast);
-  min-width: 32px; /* 4 * 8px */
-  height: 32px;
+  transition: all 0.15s ease;
   position: relative;
   -webkit-appearance: none;
   appearance: none;
 }
 
-/* Mobile responsive toolbar items */
-@media (max-width: 768px) {
+/* Enhanced hover states with proper color tokens */
+button[class*='toolbar-item']:hover:not(:disabled),
+.toolbar-item:hover:not(:disabled) {
+  background: hsl(var(--accent));
+  color: hsl(var(--accent-foreground));
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px hsl(var(--foreground) / 0.1);
+}
+
+/* Enhanced active states */
+button[class*='toolbar-item'].active,
+.toolbar-item.active {
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  box-shadow: inset 0 1px 3px hsl(var(--foreground) / 0.1);
+}
+
+/* Focus states with proper ring colors */
+button[class*='toolbar-item']:focus-visible,
+.toolbar-item:focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
+}
+
+/* Disabled states */
+button[class*='toolbar-item']:disabled,
+.toolbar-item:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: transparent;
+  color: hsl(var(--foreground) / 0.3);
+}
+
+/* Enhanced responsive toolbar items with better scaling */
+@media (min-width: 1536px) {
   button[class*='toolbar-item'],
   .toolbar-item {
+    /* 2XL screens: Generous sizing for comfort */
+    padding: 8px 12px;
+    margin-right: 4px;
+    min-width: 44px;
+    height: 40px;
+    border-radius: calc(var(--radius) + 2px);
+  }
+}
+
+@media (min-width: 1280px) and (max-width: 1535px) {
+  button[class*='toolbar-item'],
+  .toolbar-item {
+    /* XL screens: Comfortable sizing */
+    padding: 6px 10px;
+    margin-right: 3px;
+    min-width: 40px;
+    height: 36px;
+    border-radius: calc(var(--radius) + 1px);
+  }
+}
+
+@media (min-width: 1024px) and (max-width: 1279px) {
+  button[class*='toolbar-item'],
+  .toolbar-item {
+    /* LG screens: Standard sizing */
+    padding: 4px 8px;
+    margin-right: 3px;
+    min-width: 36px;
+    height: 32px;
+    border-radius: var(--radius);
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1023px) {
+  button[class*='toolbar-item'],
+  .toolbar-item {
+    /* MD screens: Slightly compact */
+    padding: 3px 6px;
+    margin-right: 2px;
+    min-width: 32px;
+    height: 30px;
+    border-radius: calc(var(--radius) - 1px);
+  }
+}
+
+@media (max-width: 767px) {
+  button[class*='toolbar-item'],
+  .toolbar-item {
+    /* SM screens: Compact but touchable */
     padding: var(--spacing-xs);
     margin-right: 1px;
     min-width: 28px;
@@ -81,40 +202,13 @@ button[class*='toolbar-item'],
 @media (max-width: 480px) {
   button[class*='toolbar-item'],
   .toolbar-item {
+    /* XS screens: Very compact */
     padding: 1px 3px;
     margin-right: 1px;
     min-width: 24px;
     height: 24px;
     border-radius: 3px;
   }
-}
-
-/* Hover state with high specificity */
-button[class*='toolbar-item']:hover:not(:disabled),
-.toolbar button:hover:not(:disabled) {
-  background-color: hsl(var(--accent)) !important;
-  color: hsl(var(--accent-foreground)) !important;
-}
-
-/* Active/Selected state with high specificity */
-button[class*='toolbar-item'][class*='active'],
-.toolbar button.active {
-  background-color: hsl(var(--primary)) !important;
-  color: hsl(var(--primary-foreground)) !important;
-}
-
-/* Disabled state */
-button[class*='toolbar-item']:disabled,
-.toolbar button:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
-/* Focus visible for accessibility */
-button[class*='toolbar-item']:focus-visible,
-.toolbar button:focus-visible {
-  outline: 2px solid hsl(var(--ring));
-  outline-offset: 2px;
 }
 
 .toolbar-item.spaced {
@@ -431,9 +525,41 @@ button[class*='toolbar-item']:focus-visible,
   margin-left: 3px;
 }
 
-/* Responsive toolbar group visibility */
-@media (max-width: 768px) {
-  /* Hide font family and size controls on tablets */
+/* Responsive toolbar group visibility - Enhanced for better space utilization */
+@media (min-width: 1536px) {
+  /* 2XL screens: Show everything with generous spacing */
+  .toolbar-group + .toolbar-group {
+    margin-left: 8px;
+  }
+}
+
+@media (min-width: 1280px) and (max-width: 1535px) {
+  /* XL screens: Show everything with good spacing */
+  .toolbar-group + .toolbar-group {
+    margin-left: 6px;
+  }
+}
+
+@media (min-width: 1024px) and (max-width: 1279px) {
+  /* LG screens: Show all essential tools */
+  .toolbar-group + .toolbar-group {
+    margin-left: 4px;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1023px) {
+  /* MD screens: Hide font family but keep size and other essentials */
+  .toolbar-group:has(.font-family) {
+    display: none !important;
+  }
+
+  .toolbar-group + .toolbar-group {
+    margin-left: 3px;
+  }
+}
+
+@media (max-width: 767px) {
+  /* SM screens: Hide font controls but keep formatting */
   .toolbar-group:has(.font-family),
   .toolbar-group:has(.font-size) {
     display: none !important;
@@ -445,26 +571,41 @@ button[class*='toolbar-item']:focus-visible,
 }
 
 @media (max-width: 640px) {
-  /* Hide color pickers on smaller tablets */
+  /* Smaller tablets: Hide color pickers too */
+  .toolbar-group:has(.font-family),
+  .toolbar-group:has(.font-size),
   .toolbar-item.color-picker {
     display: none !important;
   }
 }
 
 @media (max-width: 480px) {
-  /* Hide additional formatting options on mobile */
+  /* XS screens: Hide advanced formatting, keep core essentials */
+  .toolbar-group:has(.font-family),
+  .toolbar-group:has(.font-size),
   .toolbar-group:has(.code-language),
-  .toolbar-group:has(.alignment) {
+  .toolbar-item.color-picker {
     display: none !important;
   }
 
-  /* Hide the "more options" dropdown on mobile */
+  /* Keep alignment on mobile but hide advanced options */
   .toolbar-item[aria-label*='additional text styles'] {
     display: none !important;
   }
 
   .toolbar-group + .toolbar-group {
     margin-left: 1px;
+  }
+}
+
+@media (max-width: 360px) {
+  /* Very small screens: Only core formatting */
+  .toolbar-group:has(.font-family),
+  .toolbar-group:has(.font-size),
+  .toolbar-group:has(.code-language),
+  .toolbar-group:has(.alignment),
+  .toolbar-item.color-picker {
+    display: none !important;
   }
 }
 

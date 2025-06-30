@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
@@ -7,46 +6,35 @@
  *
  */
 
+import { CodeHighlightNode, CodeNode } from '@lexical/code';
+import { HashtagNode } from '@lexical/hashtag';
+import { AutoLinkNode, LinkNode } from '@lexical/link';
+import { ListItemNode, ListNode } from '@lexical/list';
+import { MarkNode } from '@lexical/mark';
+import { HorizontalRuleNode } from '@lexical/react/LexicalHorizontalRuleNode';
+import { HeadingNode, QuoteNode } from '@lexical/rich-text';
+import { TableCellNode, TableNode, TableRowNode } from '@lexical/table';
 
-import {CodeHighlightNode, CodeNode} from '@lexical/code';
-import {HashtagNode} from '@lexical/hashtag';
-import {AutoLinkNode, LinkNode} from '@lexical/link';
-import {ListItemNode, ListNode} from '@lexical/list';
-import {MarkNode} from '@lexical/mark';
-import {OverflowNode} from '@lexical/overflow';
-import {HorizontalRuleNode} from '@lexical/react/LexicalHorizontalRuleNode';
-import {HeadingNode, QuoteNode} from '@lexical/rich-text';
-import {TableCellNode, TableNode, TableRowNode} from '@lexical/table';
+import { EmojiNode } from './interactive/EmojiNode';
+import { EquationNode } from './interactive/EquationNode';
+import { ExcalidrawNode } from './interactive/ExcalidrawNode';
+import { MentionNode } from './interactive/MentionNode';
+import { PollNode } from './interactive/PollNode';
+import { StickyNode } from './interactive/StickyNode';
+import { LayoutContainerNode } from './layout/LayoutContainerNode';
+import { LayoutItemNode } from './layout/LayoutItemNode';
+import { PageBreakNode } from './layout/PageBreakNode';
+import { FigmaNode } from './media/FigmaNode';
+import { ImageNode } from './media/ImageNode';
+import { InlineImageNode } from './media/InlineImageNode/InlineImageNode';
+import { YouTubeNode } from './media/YouTubeNode';
+import { TweetNode } from './text/TweetNode';
+import { SpecialTextNode } from './text/SpecialTextNode';
+import { CollapsibleContainerNode } from '../plugins/interactive/CollapsiblePlugin/CollapsibleContainerNode';
+import { CollapsibleContentNode } from '../plugins/interactive/CollapsiblePlugin/CollapsibleContentNode';
+import { CollapsibleTitleNode } from '../plugins/interactive/CollapsiblePlugin/CollapsibleTitleNode';
 
-// Interactive nodes
-import {CollapsibleContainerNode} from '../plugins/interactive/CollapsiblePlugin/CollapsibleContainerNode';
-import {CollapsibleContentNode} from '../plugins/interactive/CollapsiblePlugin/CollapsibleContentNode';
-import {CollapsibleTitleNode} from '../plugins/interactive/CollapsiblePlugin/CollapsibleTitleNode';
-
-import {EmojiNode} from './interactive/EmojiNode';
-import {EquationNode} from './interactive/EquationNode';
-import {ExcalidrawNode} from './interactive/ExcalidrawNode';
-import {MentionNode} from './interactive/MentionNode';
-import {PollNode} from './interactive/PollNode';
-import {StickyNode} from './interactive/StickyNode';
-
-// Media nodes
-import {LayoutContainerNode} from './layout/LayoutContainerNode';
-import {LayoutItemNode} from './layout/LayoutItemNode';
-import {PageBreakNode} from './layout/PageBreakNode';
-import {FigmaNode} from './media/FigmaNode';
-import {ImageNode} from './media/ImageNode';
-import {InlineImageNode} from './media/InlineImageNode/InlineImageNode';
-import {YouTubeNode} from './media/YouTubeNode';
-
-// Layout nodes
-
-// Text nodes
-import {KeywordNode} from './text/KeywordNode';
-import {SpecialTextNode} from './text/SpecialTextNode';
-import {TweetNode} from './text/TweetNode';
-
-import type {Klass, LexicalNode} from 'lexical';
+import type { Klass, LexicalNode } from 'lexical';
 
 const PlaygroundNodes: Array<Klass<LexicalNode>> = [
   HeadingNode,
@@ -54,35 +42,33 @@ const PlaygroundNodes: Array<Klass<LexicalNode>> = [
   ListItemNode,
   QuoteNode,
   CodeNode,
+  CodeHighlightNode,
   TableNode,
   TableCellNode,
   TableRowNode,
   HashtagNode,
-  CodeHighlightNode,
   AutoLinkNode,
   LinkNode,
-  OverflowNode,
+  MarkNode,
+  HorizontalRuleNode,
+  EmojiNode,
+  EquationNode,
+  ExcalidrawNode,
+  MentionNode,
   PollNode,
   StickyNode,
+  LayoutContainerNode,
+  LayoutItemNode,
+  PageBreakNode,
+  FigmaNode,
   ImageNode,
   InlineImageNode,
-  MentionNode,
-  EmojiNode,
-  ExcalidrawNode,
-  EquationNode,
-  KeywordNode,
-  HorizontalRuleNode,
-  TweetNode,
   YouTubeNode,
-  FigmaNode,
-  MarkNode,
+  TweetNode,
+  SpecialTextNode,
   CollapsibleContainerNode,
   CollapsibleContentNode,
   CollapsibleTitleNode,
-  PageBreakNode,
-  LayoutContainerNode,
-  LayoutItemNode,
-  SpecialTextNode,
 ];
 
 export default PlaygroundNodes;

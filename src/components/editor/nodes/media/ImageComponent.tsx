@@ -48,10 +48,9 @@ import {
 import Image from 'next/image';
 import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 
-import { createWebsocketProvider } from '../../collaboration';
 import { useSharedHistoryContext } from '../../context/SharedHistoryContext';
 import brokenImage from '../../images/image-broken.svg';
-import KeywordsPlugin from '../../plugins/formatting/KeywordsPlugin';
+
 import LinkPlugin from '../../plugins/formatting/LinkPlugin';
 import EmojisPlugin from '../../plugins/input/EmojisPlugin';
 import MentionsPlugin from '../../plugins/interactive/MentionsPlugin';
@@ -487,13 +486,9 @@ export default function ImageComponent({
               <LinkPlugin />
               <EmojisPlugin />
               <HashtagPlugin />
-              <KeywordsPlugin />
+
               {isCollabActive ? (
-                <CollaborationPlugin
-                  id={caption.getKey()}
-                  providerFactory={createWebsocketProvider}
-                  shouldBootstrap
-                />
+                <CollaborationPlugin id={caption.getKey()} />
               ) : (
                 <HistoryPlugin externalHistoryState={historyState} />
               )}

@@ -10,7 +10,6 @@ import {
   MAX_META_DESCRIPTION_LENGTH,
 } from '@/lib/constants/post';
 
-
 /**
  * Extract plain text from Lexical editor JSON to validate content length.
  */
@@ -52,9 +51,7 @@ const baseFields = {
 /**
  * Adds a refinement that requires `published_at` when status === 'scheduled'.
  */
-const applyPublishRefinement = <
-  T extends z.ZodTypeAny,
->(
+const applyPublishRefinement = <T extends z.ZodTypeAny>(
   schema: T,
 ): z.ZodEffects<T, z.output<T>, z.input<T>> =>
   schema.refine(
@@ -112,6 +109,7 @@ export const FullPostSchema = z.object({
   content: z.string().nullable(),
   author_id: z.string().uuid(),
   collective_id: z.string().uuid().optional().nullable(),
+  tenant_id: z.string().uuid(),
   status: z.enum(['draft', 'active', 'removed']), // Database enum
   is_public: z.boolean(),
   published_at: z.string().datetime().optional().nullable(),
@@ -119,7 +117,11 @@ export const FullPostSchema = z.object({
   // Editor-specific fields
   author: z.string().max(MAX_AUTHOR_LENGTH).optional().nullable(),
   seo_title: z.string().max(MAX_SEO_TITLE_LENGTH).optional().nullable(),
-  meta_description: z.string().max(MAX_META_DESCRIPTION_LENGTH).optional().nullable(),
+  meta_description: z
+    .string()
+    .max(MAX_META_DESCRIPTION_LENGTH)
+    .optional()
+    .nullable(),
   // Engagement fields
   like_count: z.number().default(0),
   dislike_count: z.number().optional().nullable(),
@@ -158,7 +160,11 @@ export const BasePostServerSchema = z.object({
   selected_collectives: z.array(z.string().uuid()).optional().default([]),
   author: z.string().max(MAX_AUTHOR_LENGTH).optional().nullable(),
   seo_title: z.string().max(MAX_SEO_TITLE_LENGTH).optional().nullable(),
-  meta_description: z.string().max(MAX_META_DESCRIPTION_LENGTH).optional().nullable(),
+  meta_description: z
+    .string()
+    .max(MAX_META_DESCRIPTION_LENGTH)
+    .optional()
+    .nullable(),
 });
 
 export const CreatePostServerSchema = BasePostServerSchema.extend({
@@ -176,11 +182,13 @@ export const UpdatePostServerSchema = BasePostServerSchema.partial().extend({
  * Maps form status to database status enum
  */
 export const PostFormToDbSchema = z.object({
+  id: z.string().uuid().optional(),
   title: z.string().min(1).max(MAX_TITLE_LENGTH),
   subtitle: z.string().max(MAX_SUBTITLE_LENGTH).optional().nullable(),
   content: z.string(),
   author_id: z.string().uuid(),
   collective_id: z.string().uuid().optional().nullable(),
+  tenant_id: z.string().uuid(),
   selected_collectives: z.array(z.string().uuid()).optional().default([]),
   status: z.enum(['draft', 'published', 'scheduled']).transform((val) => {
     // Transform form status to database enum
@@ -196,7 +204,11 @@ export const PostFormToDbSchema = z.object({
   published_at: z.string().datetime().optional().nullable(),
   author: z.string().max(MAX_AUTHOR_LENGTH).optional().nullable(),
   seo_title: z.string().max(MAX_SEO_TITLE_LENGTH).optional().nullable(),
-  meta_description: z.string().max(MAX_META_DESCRIPTION_LENGTH).optional().nullable(),
+  meta_description: z
+    .string()
+    .max(MAX_META_DESCRIPTION_LENGTH)
+    .optional()
+    .nullable(),
 });
 
 export type CreatePostServerValues = z.infer<typeof CreatePostServerSchema>;

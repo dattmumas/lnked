@@ -22,6 +22,7 @@ import {
   $convertToMarkdownString,
 } from '@lexical/markdown';
 import { $getRoot } from 'lexical';
+import { loadContentIntoEditor, ContentFormat } from './utils/content-loader';
 
 // Core imports - always loaded
 import {
@@ -37,7 +38,7 @@ import PlaygroundNodes from './nodes/PlaygroundNodes';
 import AutoLinkPlugin from './plugins/formatting/AutoLinkPlugin';
 import CodeActionMenuPlugin from './plugins/formatting/CodeActionMenuPlugin';
 import CodeHighlightPlugin from './plugins/formatting/CodeHighlightPlugin';
-import KeywordsPlugin from './plugins/formatting/KeywordsPlugin';
+
 import LinkPlugin from './plugins/formatting/LinkPlugin';
 import MarkdownShortcutPlugin from './plugins/formatting/MarkdownShortcutPlugin';
 import SpecialTextPlugin from './plugins/formatting/SpecialTextPlugin';
@@ -90,7 +91,7 @@ function LoadInitialContentPlugin({
   format = 'auto',
 }: {
   content?: string;
-  format?: 'json' | 'markdown' | 'auto';
+  format?: ContentFormat;
 }) {
   const [editor] = useLexicalComposerContext();
   const hasLoadedInitialContent = useRef(false);
@@ -98,36 +99,15 @@ function LoadInitialContentPlugin({
   useEffect(() => {
     if (!content || hasLoadedInitialContent.current) return;
 
+    // Use a small delay to ensure editor is ready
     const timer = setTimeout(() => {
-      let isJson = false;
-
-      // Auto-detect format
-      if (format === 'auto') {
-        try {
-          const parsed = JSON.parse(content);
-          isJson = parsed && typeof parsed === 'object' && parsed.root;
-        } catch {
-          isJson = false;
-        }
-      } else {
-        isJson = format === 'json';
-      }
-
-      if (isJson) {
-        // Parse as Lexical JSON
-        try {
-          editor.setEditorState(editor.parseEditorState(content));
+      loadContentIntoEditor(editor, { content, format })
+        .then(() => {
           hasLoadedInitialContent.current = true;
-        } catch (err: unknown) {
-          console.error('Could not parse initialContent JSON', err);
-        }
-      } else {
-        // Parse as Markdown
-        editor.update(() => {
-          $convertFromMarkdownString(content, PLAYGROUND_TRANSFORMERS);
+        })
+        .catch((error) => {
+          console.error('Failed to load initial content:', error);
         });
-        hasLoadedInitialContent.current = true;
-      }
     }, 0);
 
     return () => clearTimeout(timer);
@@ -225,7 +205,7 @@ function EditorContent({
           setIsLinkEditMode={setIsLinkEditMode}
         />
         <DragDropPastePlugin />
-        <KeywordsPlugin />
+
         <TableHoverActionsPlugin />
         <PageBreakPlugin />
         <FloatingLinkEditorPlugin

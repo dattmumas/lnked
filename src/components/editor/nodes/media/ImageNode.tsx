@@ -7,7 +7,6 @@
  *
  */
 
-
 import { HashtagNode } from '@lexical/hashtag';
 import { LinkNode } from '@lexical/link';
 import {
@@ -22,7 +21,6 @@ import {
 import * as React from 'react';
 
 import { EmojiNode } from '../interactive/EmojiNode';
-import { KeywordNode } from '../text/KeywordNode';
 
 import type {
   DOMConversionMap,
@@ -190,7 +188,6 @@ export class ImageNode extends DecoratorNode<JSX.Element> {
           LinkNode,
           EmojiNode,
           HashtagNode,
-          KeywordNode,
         ],
       });
     this.__captionsEnabled = captionsEnabled || captionsEnabled === undefined;
@@ -227,7 +224,7 @@ export class ImageNode extends DecoratorNode<JSX.Element> {
 
   createDOM(config: EditorConfig): HTMLElement {
     const span = document.createElement('span');
-    const {theme} = config;
+    const { theme } = config;
     const className = theme.image;
     if (className !== undefined) {
       span.className = className;

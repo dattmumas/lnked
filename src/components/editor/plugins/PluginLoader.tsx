@@ -1,33 +1,36 @@
-// @ts-nocheck
 'use client';
 
 import React, { lazy, Suspense, ComponentType } from 'react';
 
-// Lazy load advanced plugins to reduce bundle size
-const LazyEquationsPlugin = lazy(() => import('./interactive/EquationsPlugin'));
-const LazyExcalidrawPlugin = lazy(() => import('./media/ExcalidrawPlugin'));
-const LazyPollPlugin = lazy(() => import('./interactive/PollPlugin'));
-const LazyStickyPlugin = lazy(() => import('./interactive/StickyPlugin'));
-const LazyYouTubePlugin = lazy(() => import('./media/YouTubePlugin'));
-const LazyTwitterPlugin = lazy(() => import('./media/TwitterPlugin'));
-const LazyFigmaPlugin = lazy(() => import('./media/FigmaPlugin'));
-const LazyEmojiPickerPlugin = lazy(() => import('./input/EmojiPickerPlugin'));
-const LazySpeechToTextPlugin = lazy(() => import('./input/SpeechToTextPlugin'));
-const LazyTableOfContentsPlugin = lazy(
-  () => import('./layout/TableOfContentsPlugin'),
-);
-const LazyTableActionMenuPlugin = lazy(
-  () => import('./layout/TableActionMenuPlugin'),
-);
+// Map plugin names to their lazy imports
+const PLUGIN_LOADERS: Record<
+  string,
+  React.LazyExoticComponent<React.ComponentType<any>>
+> = {
+  equations: lazy(() => import('./interactive/EquationsPlugin')),
+  excalidraw: lazy(() => import('./media/ExcalidrawPlugin')),
+  poll: lazy(() => import('./interactive/PollPlugin')),
+  sticky: lazy(() => import('./interactive/StickyPlugin')),
+  youtube: lazy(() => import('./media/YouTubePlugin')),
+  twitter: lazy(() => import('./media/TwitterPlugin')),
+  figma: lazy(() => import('./media/FigmaPlugin')),
+  emojiPicker: lazy(() => import('./input/EmojiPickerPlugin')),
+  speechToText: lazy(() => import('./input/SpeechToTextPlugin')),
+  tableOfContents: lazy(() => import('./layout/TableOfContentsPlugin')),
+  tableActionMenu: lazy(() => import('./layout/TableActionMenuPlugin')),
+} as const;
+
+type PluginName = keyof typeof PLUGIN_LOADERS;
 
 interface LazyPluginProps {
-  pluginName: string;
+  pluginName: PluginName;
   enabled: boolean;
   [key: string]: unknown;
 }
 
 function LoadingFallback(): React.JSX.Element | null {
-  return null; // Silent loading for plugins
+  // Silent loading for plugins - they'll appear when ready
+  return null;
 }
 
 function LazyPlugin({
@@ -35,8 +38,24 @@ function LazyPlugin({
   enabled,
   ...props
 }: LazyPluginProps): React.JSX.Element | null {
-  // Temporarily disable all lazy plugins to debug the issue
-  return null;
+  // Only render if enabled
+  if (!enabled) {
+    return null;
+  }
+
+  // Get the lazy component for this plugin
+  const LazyComponent = PLUGIN_LOADERS[pluginName];
+
+  if (!LazyComponent) {
+    console.warn(`Unknown plugin: ${pluginName}`);
+    return null;
+  }
+
+  return (
+    <Suspense fallback={<LoadingFallback />}>
+      <LazyComponent {...props} />
+    </Suspense>
+  );
 }
 
 export default LazyPlugin;

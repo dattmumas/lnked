@@ -72,7 +72,7 @@ export async function fetchPost(
       collective:collectives!collective_id(id, name, slug)
     `,
     )
-    .eq('id', slugOrId)
+    .eq(isUUID ? 'id' : 'slug', slugOrId)
     .maybeSingle();
 
   if (postError) {
@@ -84,17 +84,20 @@ export async function fetchPost(
     throw new Error('404');
   }
 
+  // Use the actual post ID for all subsequent queries
+  const postId = postData.id;
+
   // Get real like/dislike counts from post_reactions table
   const [{ count: likeCount }, { count: dislikeCount }] = await Promise.all([
     supabase
       .from('post_reactions')
       .select('*', { count: 'exact', head: true })
-      .eq('post_id', slugOrId)
+      .eq('post_id', postId)
       .eq('type', 'like'),
     supabase
       .from('post_reactions')
       .select('*', { count: 'exact', head: true })
-      .eq('post_id', slugOrId)
+      .eq('post_id', postId)
       .eq('type', 'dislike'),
   ]);
 
@@ -107,13 +110,13 @@ export async function fetchPost(
       supabase
         .from('post_reactions')
         .select('type')
-        .eq('post_id', slugOrId)
+        .eq('post_id', postId)
         .eq('user_id', viewerId)
         .maybeSingle(),
       supabase
         .from('post_bookmarks')
         .select('post_id')
-        .eq('post_id', slugOrId)
+        .eq('post_id', postId)
         .eq('user_id', viewerId)
         .maybeSingle(),
     ]);
@@ -125,7 +128,7 @@ export async function fetchPost(
   // Get comment count
   const { data: commentCount } = await supabase.rpc('get_comment_count', {
     p_entity_type: 'post',
-    p_entity_id: slugOrId,
+    p_entity_id: postId,
   });
 
   // Determine viewer permissions

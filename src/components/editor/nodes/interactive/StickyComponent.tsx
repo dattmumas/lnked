@@ -24,7 +24,6 @@ import { calculateZoomLevel } from '@lexical/utils';
 import { $getNodeByKey } from 'lexical';
 import { useEffect, useLayoutEffect, useRef } from 'react';
 
-import { createWebsocketProvider } from '../../collaboration';
 import { useSharedHistoryContext } from '../../context/SharedHistoryContext';
 import StickyEditorTheme from '../../themes/StickyEditorTheme';
 import ContentEditable from '../../ui/inputs/ContentEditable';
@@ -265,11 +264,7 @@ export default function StickyComponent({
           initialTheme={StickyEditorTheme}
         >
           {isCollabActive ? (
-            <CollaborationPlugin
-              id={caption.getKey()}
-              providerFactory={createWebsocketProvider}
-              shouldBootstrap
-            />
+            <CollaborationPlugin id={caption.getKey()} />
           ) : (
             <HistoryPlugin externalHistoryState={historyState} />
           )}

@@ -1,29 +1,36 @@
 import { createBrowserClient, createServerClient } from '@supabase/ssr';
 
 import type { Database } from '@/lib/database.types';
-import { 
-  parsePost, 
-  parsePosts, 
+import {
+  parsePost,
+  parsePosts,
   parsePostsWithAuthor,
   PostInsertSchema,
   PostUpdateSchema,
-  type Post, 
-  type PostInsert, 
+  type Post,
+  type PostInsert,
   type PostUpdate,
   type PostWithAuthor,
   type PostReaction,
-  type PostBookmark
+  type PostBookmark,
 } from './schemas/post.schema';
-import { createTenantAwareRepository, getCurrentTenantId } from './tenant-aware';
+import {
+  createTenantAwareRepository,
+  getCurrentTenantId,
+} from './tenant-aware';
 
 /**
  * Post Repository
- * 
+ *
  * Handles all post-related database operations with automatic null/undefined conversion.
  * Use this instead of direct Supabase calls to maintain ESLint compliance.
  */
 export class PostRepository {
-  constructor(private supabase: ReturnType<typeof createBrowserClient<Database>> | ReturnType<typeof createServerClient<Database>>) {}
+  constructor(
+    private supabase:
+      | ReturnType<typeof createBrowserClient<Database>>
+      | ReturnType<typeof createServerClient<Database>>,
+  ) {}
 
   /**
    * Get a single post by ID
@@ -48,7 +55,8 @@ export class PostRepository {
   async getBySlug(slug: string): Promise<PostWithAuthor | undefined> {
     const { data, error } = await this.supabase
       .from('posts')
-      .select(`
+      .select(
+        `
         *,
         author_info:users!author_id (
           id,
@@ -56,8 +64,9 @@ export class PostRepository {
           full_name,
           avatar_url
         )
-      `)
-      .eq('id', slug)
+      `,
+      )
+      .eq('slug', slug)
       .single();
 
     if (error || !data) {
@@ -110,15 +119,32 @@ export class PostRepository {
    */
   async create(postData: PostInsert): Promise<Post | undefined> {
     const tenantRepo = await createTenantAwareRepository();
-    
+
     // Ensure slug is included and transform for database
     const postWithSlug = PostInsertSchema.parse({
       ...postData,
-      slug: postData.slug || `${postData.title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${Date.now()}`,
+      slug:
+        postData.slug ||
+        `${postData.title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${Date.now()}`,
     });
 
     // Build clean object omitting null enum values
-    const { status, post_type, author, subtitle, seo_title, meta_description, thumbnail_url, published_at, metadata, sharing_settings, is_public, collective_id, content, ...requiredFields } = postWithSlug;
+    const {
+      status,
+      post_type,
+      author,
+      subtitle,
+      seo_title,
+      meta_description,
+      thumbnail_url,
+      published_at,
+      metadata,
+      sharing_settings,
+      is_public,
+      collective_id,
+      content,
+      ...requiredFields
+    } = postWithSlug;
     const cleanedPost = {
       ...requiredFields,
       ...(status !== null ? { status } : {}),
@@ -135,7 +161,7 @@ export class PostRepository {
       ...(collective_id !== null ? { collective_id } : {}),
       ...(content !== null ? { content } : {}),
     };
-    
+
     const { data, error } = await tenantRepo.insertPost(cleanedPost);
 
     if (error !== null) {
@@ -150,12 +176,14 @@ export class PostRepository {
    */
   async update(id: string, updates: PostUpdate): Promise<Post | undefined> {
     const dbUpdates = PostUpdateSchema.parse(updates);
-    
+
     // Build clean object omitting null/undefined values
     const cleanedUpdates = Object.fromEntries(
-      Object.entries(dbUpdates).filter(([, v]) => v !== null && v !== undefined)
+      Object.entries(dbUpdates).filter(
+        ([, v]) => v !== null && v !== undefined,
+      ),
     );
-    
+
     const { data, error } = await this.supabase
       .from('posts')
       .update(cleanedUpdates)
@@ -185,13 +213,17 @@ export class PostRepository {
   /**
    * Add a reaction to a post
    */
-  async addReaction(postId: string, userId: string, type = 'like'): Promise<boolean> {
+  async addReaction(
+    postId: string,
+    userId: string,
+    type = 'like',
+  ): Promise<boolean> {
     const tenantRepo = await createTenantAwareRepository();
     const { error } = await tenantRepo.upsertPostReaction({
       post_id: postId,
       user_id: userId,
       type,
-      created_at: new Date().toISOString()
+      created_at: new Date().toISOString(),
     });
 
     return !error;
@@ -200,14 +232,18 @@ export class PostRepository {
   /**
    * Remove a reaction from a post
    */
-  async removeReaction(postId: string, userId: string, type = 'like'): Promise<boolean> {
+  async removeReaction(
+    postId: string,
+    userId: string,
+    type = 'like',
+  ): Promise<boolean> {
     const { error } = await this.supabase
       .from('post_reactions')
       .delete()
       .match({
         post_id: postId,
         user_id: userId,
-        type
+        type,
       });
 
     return !error;
@@ -217,13 +253,11 @@ export class PostRepository {
    * Add a bookmark
    */
   async addBookmark(postId: string, userId: string): Promise<boolean> {
-    const { error } = await this.supabase
-      .from('post_bookmarks')
-      .insert({
-        post_id: postId,
-        user_id: userId,
-        created_at: new Date().toISOString()
-      });
+    const { error } = await this.supabase.from('post_bookmarks').insert({
+      post_id: postId,
+      user_id: userId,
+      created_at: new Date().toISOString(),
+    });
 
     return !error;
   }
@@ -237,7 +271,7 @@ export class PostRepository {
       .delete()
       .match({
         post_id: postId,
-        user_id: userId
+        user_id: userId,
       });
 
     return !error;
@@ -246,10 +280,14 @@ export class PostRepository {
   /**
    * Get user's bookmarked posts
    */
-  async getUserBookmarks(userId: string, limit = 20): Promise<PostWithAuthor[]> {
+  async getUserBookmarks(
+    userId: string,
+    limit = 20,
+  ): Promise<PostWithAuthor[]> {
     const { data, error } = await this.supabase
       .from('post_bookmarks')
-      .select(`
+      .select(
+        `
         posts!inner (
           *,
           author_info:users!author_id (
@@ -259,7 +297,8 @@ export class PostRepository {
             avatar_url
           )
         )
-      `)
+      `,
+      )
       .eq('user_id', userId)
       .order('created_at', { ascending: false })
       .limit(limit);
@@ -269,7 +308,7 @@ export class PostRepository {
     }
 
     // Extract posts from the join result
-    const posts = data.map(item => (item as any).posts);
+    const posts = data.map((item) => (item as any).posts);
     return parsePostsWithAuthor(posts);
   }
 
@@ -303,4 +342,4 @@ export class PostRepository {
 
     return !error;
   }
-} 
+}

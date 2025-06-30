@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
     "target": "ES2017",
-    "lib": ["dom", "dom.iterable", "esnext"],
+    "lib": ["dom", "dom.iterable", "es6"],
     "allowJs": true,
     "skipLibCheck": true,
     "strict": true,
@@ -11,8 +11,8 @@
     "noUncheckedIndexedAccess": true,
     "noEmit": true,
     "esModuleInterop": true,
-    "module": "NodeNext",
-    "moduleResolution": "node16",
+    "module": "esnext",
+    "moduleResolution": "bundler",
     "resolveJsonModule": true,
     "isolatedModules": true,
     "jsx": "preserve",
@@ -60,12 +60,12 @@
     "src/components/editor/ui/**/*",
     "src/components/editor/utils/**/*",
     "src/components/editor/config/**/*",
-    "src/components/editor/collaboration.ts",
     "src/components/editor/appSettings.ts",
     "src/components/editor/EditorLayout.tsx",
     "src/components/editor/ErrorBoundary.tsx",
     "src/components/editor/PlaygroundNodes.ts",
     "src/components/editor/SharedAutocompleteContext.tsx",
-    "src/components/editor/SharedHistoryContext.tsx"
+    "src/components/editor/SharedHistoryContext.tsx",
+    "src/components/editor/plugins/formatting/KeywordsPlugin/index.ts"
   ]
 }

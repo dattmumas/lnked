@@ -48,8 +48,16 @@ import {
   $isEquationNode,
   EquationNode,
 } from '../../../nodes/interactive/EquationNode';
-import {$createImageNode, $isImageNode, ImageNode} from '../../../nodes/media/ImageNode';
-import {$createTweetNode, $isTweetNode, TweetNode} from '../../../nodes/text/TweetNode';
+import {
+  $createImageNode,
+  $isImageNode,
+  ImageNode,
+} from '../../../nodes/media/ImageNode';
+import {
+  $createTweetNode,
+  $isTweetNode,
+  TweetNode,
+} from '../../../nodes/text/TweetNode';
 import emojiList from '../../../utils/text/emoji-list';
 
 export const HR: ElementTransformer = {
@@ -186,10 +194,14 @@ export const TABLE: ElementTransformer = {
 
       output.push(`| ${rowOutput.join(' | ')} |`);
       if (isHeaderRow) {
-        output.push(`| ${rowOutput.map((_) => {
-          void _; // Parameter required by interface but not used
-          return '---';
-        }).join(' | ')} |`);
+        output.push(
+          `| ${rowOutput
+            .map((_) => {
+              void _; // Parameter required by interface but not used
+              return '---';
+            })
+            .join(' | ')} |`,
+        );
       }
     }
 

@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
@@ -7,7 +6,7 @@
  *
  */
 
-import type {EditorThemeClasses} from 'lexical';
+import type { EditorThemeClasses } from 'lexical';
 
 import './PlaygroundEditorTheme.css';
 
