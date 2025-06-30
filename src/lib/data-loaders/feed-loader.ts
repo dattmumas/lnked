@@ -37,12 +37,16 @@ export interface FeedLoaderOptions {
   limit?: number;
   offset?: number;
   includeCollectives?: boolean;
+  includeFollowed?: boolean;
   status?: 'all' | 'published' | 'draft';
 }
 
 /**
  * Load user feed data server-side
- * This function fetches posts from the user's personal tenant and optionally their collective tenants
+ * This function fetches posts from:
+ * 1. User's personal tenant
+ * 2. User's collective tenants (if includeCollectives = true)
+ * 3. Posts from users they follow (if includeFollowed = true)
  */
 export async function loadUserFeed(
   userId: string,
@@ -53,6 +57,7 @@ export async function loadUserFeed(
     limit = 20,
     offset = 0,
     includeCollectives = true,
+    includeFollowed = true,
     status = 'published',
   } = options;
 
@@ -151,8 +156,60 @@ export async function loadUserFeed(
       }
     }
 
+    // If including followed users, fetch posts from users they follow
+    let followedPosts: FeedPost[] = [];
+    if (includeFollowed) {
+      // Get list of users that current user follows
+      const { data: follows } = await supabase
+        .from('follows')
+        .select('following_id')
+        .eq('follower_id', userId)
+        .eq('following_type', 'user');
+
+      if (follows && follows.length > 0) {
+        const followedUserIds = follows.map((f) => f.following_id);
+
+        // Fetch recent posts from followed users
+        // Posts from followed users should come from their personal tenants
+        const { data: followPosts } = await supabase
+          .from('posts')
+          .select(
+            `
+            *,
+            author:users!author_id(
+              id,
+              username,
+              full_name,
+              avatar_url
+            ),
+            tenant:tenants!tenant_id(
+              id,
+              name,
+              slug,
+              type
+            ),
+            collective:collectives!collective_id(
+              id,
+              name,
+              slug
+            )
+          `,
+          )
+          .in('author_id', followedUserIds)
+          .eq('status', 'active')
+          .not('published_at', 'is', null)
+          .eq('is_public', true) // Only show public posts from followed users
+          .order('published_at', { ascending: false })
+          .limit(15); // Get more followed posts as they're often most interesting
+
+        if (followPosts) {
+          followedPosts = followPosts;
+        }
+      }
+    }
+
     // Combine and sort all posts
-    const allPosts = [...(posts || []), ...collectivePosts];
+    const allPosts = [...(posts || []), ...collectivePosts, ...followedPosts];
     allPosts.sort((a, b) => {
       const dateA = new Date(a.published_at || a.created_at);
       const dateB = new Date(b.published_at || b.created_at);

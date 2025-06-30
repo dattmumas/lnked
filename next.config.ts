@@ -19,7 +19,12 @@ const nextConfig: NextConfig = {
     remotePatterns: [
       {
         protocol: 'https',
-        hostname: '**.supabase.co',        
+        hostname: '**.supabase.co',
+      },
+      {
+        protocol: 'https',
+        hostname: process.env.NEXT_PUBLIC_SUPABASE_PROJECT_ID + '.supabase.co',
+        pathname: '/storage/**',
       },
       {
         protocol: 'https',
@@ -31,7 +36,6 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-  
 
   // Redirects - Consider removing these for better performance and simplicity
   // Most apps don't need vanity URLs and they add complexity + performance overhead
@@ -75,12 +79,7 @@ const nextConfig: NextConfig = {
     // Exclude test files and scripts from build
     config.module.rules.push({
       test: /\.(ts|tsx)$/,
-      include: [
-        /scripts\//,
-        /\.test\./,
-        /\.spec\./,
-        /__tests__/,
-      ],
+      include: [/scripts\//, /\.test\./, /\.spec\./, /__tests__/],
       use: 'ignore-loader',
     });
 

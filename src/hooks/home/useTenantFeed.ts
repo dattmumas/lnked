@@ -19,6 +19,7 @@ interface TenantFeedOptions {
   status?: 'all' | 'published' | 'draft';
   author_id?: string;
   includeCollectives?: boolean; // Include posts from user's collectives
+  includeFollowed?: boolean; // Include posts from followed users
   initialData?: FeedItem[]; // Initial data from server
 }
 
@@ -100,13 +101,13 @@ export function useTenantFeed(
 ): UseTenantFeedReturn {
   const { currentTenant, userTenants } = useTenant();
   const [offset, setOffset] = useState(0);
-  const [allPosts, setAllPosts] = useState<TenantFeedPost[]>([]);
 
   const {
     limit = 20,
     status = 'published',
     author_id,
     includeCollectives = true,
+    includeFollowed = true,
     initialData,
   } = options;
 
@@ -167,7 +168,7 @@ export function useTenantFeed(
     initialData:
       offset === 0 && initialData
         ? {
-            posts: [],
+            posts: initialData as unknown as TenantFeedPost[],
             pagination: {
               limit,
               offset: 0,
@@ -228,39 +229,61 @@ export function useTenantFeed(
     gcTime: 1000 * 60 * 60, // 1 hour
   });
 
-  // Accumulate paginated results for current tenant
-  useEffect(() => {
-    if (!currentTenantData?.posts) return;
+  // Fetch posts from followed users (if enabled)
+  const {
+    data: followedData,
+    isLoading: isLoadingFollowed,
+    isFetching: isFetchingFollowed,
+    error: followedError,
+    refetch: refetchFollowed,
+  } = useQuery({
+    queryKey: ['followed-feed', { limit: 15, offset: 0 }],
+    queryFn: async (): Promise<TenantFeedPost[]> => {
+      if (!includeFollowed) return [];
 
-    setAllPosts((prev) => {
-      // If this is the first page (offset === 0), replace entirely
-      if (offset === 0) return currentTenantData.posts;
+      const params = new URLSearchParams({
+        limit: '15',
+        offset: '0',
+      });
 
-      // Otherwise append unique posts to preserve earlier pages
-      const existingIds = new Set(prev.map((p) => p.id));
-      const newUnique = currentTenantData.posts.filter(
-        (p) => !existingIds.has(p.id),
-      );
-      return [...prev, ...newUnique];
-    });
-  }, [currentTenantData?.posts, offset]);
+      const response = await fetch(`/api/feed/followed?${params}`);
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          // User not authenticated, return empty array instead of throwing
+          return [];
+        }
+        throw new Error('Failed to fetch followed users feed');
+      }
+
+      const result = await response.json();
+      return result.data?.posts ?? [];
+    },
+    enabled: Boolean(includeFollowed),
+    staleTime: 1000 * 60 * 5, // 5 minutes (more frequent updates for followed content)
+    gcTime: 1000 * 60 * 30, // 30 minutes
+  });
 
   // Combine and transform posts
   const feedItems = useMemo((): FeedItem[] => {
-    // If we have initial data and we're on the first page with no posts loaded yet, use initial data
-    if (
-      initialData &&
-      offset === 0 &&
-      allPosts.length === 0 &&
-      !currentTenantData
-    ) {
-      return initialData;
-    }
-
+    // Use currentTenantData.posts directly instead of allPosts state
+    const tenantPosts = currentTenantData?.posts || [];
     const collectivePosts = collectiveData || [];
+    const followedPosts = followedData || [];
 
-    // Combine accumulated tenant posts with collective posts and sort
-    const allCombinedPosts = [...allPosts, ...collectivePosts].sort(
+    // Combine all post types and deduplicate by post ID
+    const allPosts = [...tenantPosts, ...collectivePosts, ...followedPosts];
+
+    // Deduplicate posts by ID (keep the first occurrence)
+    const uniquePostsMap = new Map<string, TenantFeedPost>();
+    allPosts.forEach((post) => {
+      if (!uniquePostsMap.has(post.id)) {
+        uniquePostsMap.set(post.id, post);
+      }
+    });
+
+    // Convert map back to array and sort by published date
+    const allCombinedPosts = Array.from(uniquePostsMap.values()).sort(
       (a, b) =>
         new Date(b.published_at || b.created_at).getTime() -
         new Date(a.published_at || a.created_at).getTime(),
@@ -305,12 +328,18 @@ export function useTenantFeed(
         },
       }),
     );
-  }, [allPosts, collectiveData, initialData, offset, currentTenantData]);
+  }, [currentTenantData, collectiveData, followedData, initialData, offset]);
 
   // Loading and error states
-  const isLoading = isLoadingCurrent || isLoadingCollectives;
-  const isFetching = isFetchingCurrent || isFetchingCollectives;
-  const error = currentError?.message || collectiveError?.message || null;
+  const isLoading =
+    isLoadingCurrent || isLoadingCollectives || isLoadingFollowed;
+  const isFetching =
+    isFetchingCurrent || isFetchingCollectives || isFetchingFollowed;
+  const error =
+    currentError?.message ||
+    collectiveError?.message ||
+    followedError?.message ||
+    null;
 
   // Pagination
   const hasMore = currentTenantData?.pagination?.hasMore || false;
@@ -322,7 +351,16 @@ export function useTenantFeed(
     if (includeCollectives) {
       refetchCollectives();
     }
-  }, [refetchCurrent, refetchCollectives, includeCollectives]);
+    if (includeFollowed) {
+      refetchFollowed();
+    }
+  }, [
+    refetchCurrent,
+    refetchCollectives,
+    refetchFollowed,
+    includeCollectives,
+    includeFollowed,
+  ]);
 
   const loadMore = useCallback(() => {
     if (hasMore && !isFetching) {
@@ -333,7 +371,6 @@ export function useTenantFeed(
   // Reset offset when tenant changes
   useEffect(() => {
     setOffset(0);
-    setAllPosts([]);
   }, [currentTenant?.id]);
 
   return {

@@ -52,29 +52,49 @@ export async function checkTenantAccess(
       };
     }
 
-    // Handle personal tenant (tenantId === user.id) shortcut
-    if (tenantId === user.id) {
-      const userRole: MemberRole = 'owner';
-      // Skip membership table check for personal spaces
-      const roleHierarchyCheck =
-        requiredRole !== undefined
-          ? (() => {
-              const roleHierarchy: Record<MemberRole, number> = {
-                member: 1,
-                editor: 2,
-                admin: 3,
-                owner: 4,
-              };
-              return roleHierarchy[userRole] >= roleHierarchy[requiredRole];
-            })()
-          : true;
+    // Handle personal tenant access - check if this tenant is the user's personal tenant
+    // Personal tenants in the system have user_id === tenant_id in tenant_members table
+    const { data: personalTenantCheck, error: personalTenantError } =
+      await supabase
+        .from('tenant_members')
+        .select('role, tenant:tenants!tenant_id(type)')
+        .eq('tenant_id', tenantId)
+        .eq('user_id', user.id)
+        .single();
 
-      if (!roleHierarchyCheck) {
-        return {
-          hasAccess: false,
-          userRole,
-          error: `Requires ${requiredRole} role or higher`,
+    if (personalTenantError && personalTenantError.code !== 'PGRST116') {
+      console.error('Error checking personal tenant:', personalTenantError);
+      return {
+        hasAccess: false,
+        userRole: null,
+        error: 'Failed to check tenant access',
+      };
+    }
+
+    if (
+      personalTenantCheck &&
+      personalTenantCheck.tenant?.type === 'personal'
+    ) {
+      const userRole = personalTenantCheck.role as MemberRole;
+
+      // Check role requirements if specified
+      if (requiredRole !== undefined) {
+        const roleHierarchy: Record<MemberRole, number> = {
+          member: 1,
+          editor: 2,
+          admin: 3,
+          owner: 4,
         };
+
+        const hasRequiredRole =
+          roleHierarchy[userRole] >= roleHierarchy[requiredRole];
+        if (!hasRequiredRole) {
+          return {
+            hasAccess: false,
+            userRole,
+            error: `Requires ${requiredRole} role or higher`,
+          };
+        }
       }
 
       return {

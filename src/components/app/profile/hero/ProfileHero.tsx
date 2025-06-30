@@ -1,9 +1,10 @@
 'use client';
 
-import Image from 'next/image';
 import React, { useCallback } from 'react';
 
-import { useProfileContext, useFollowMutation } from '@/lib/hooks/profile';
+import FollowButton from '@/components/FollowButton';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { useProfileContext } from '@/lib/hooks/profile';
 import {
   getOptimizedAvatarUrl,
   generateUserInitials,
@@ -32,14 +33,8 @@ const COUNT_THOUSAND = 1000;
 export function ProfileHero({
   className = '',
 }: ProfileHeroProps): React.ReactElement {
-  const {
-    profile,
-    metrics,
-    isOwner,
-    canEdit,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    permissions: _permissions,
-  } = useProfileContext();
+  const { profile, metrics, isOwner, canEdit, isFollowing } =
+    useProfileContext();
 
   const handleAvatarEdit = useCallback(() => {
     // TODO: Implement avatar edit functionality
@@ -71,7 +66,7 @@ export function ProfileHero({
         {/* Avatar Section */}
         <div className="avatar-section flex-shrink-0">
           <AvatarCard
-            src={profile.avatarUrl}
+            src={profile.avatarUrl ?? null}
             size={AVATAR_SIZE_LARGE}
             editable={canEdit}
             onEdit={handleAvatarEdit}
@@ -113,7 +108,15 @@ export function ProfileHero({
 
         {/* Action Button */}
         <div className="actions flex-shrink-0">
-          {isOwner ? <EditProfileButton /> : <FollowButton />}
+          {isOwner ? (
+            <EditProfileButton />
+          ) : (
+            <FollowButton
+              targetUserId={profile.id}
+              targetUserName={profile.username ?? ''}
+              initialIsFollowing={isFollowing}
+            />
+          )}
         </div>
       </div>
     </section>
@@ -145,18 +148,15 @@ function AvatarCard({
 
   // Get optimized avatar URL with appropriate size and quality
   const optimizedAvatarUrl = React.useMemo(() => {
-    return getOptimizedAvatarUrl(
-      src !== undefined && src !== null ? src : undefined,
-      {
-        width: size,
-        height: size,
-        quality:
-          size >= AVATAR_SIZE_LARGE
-            ? AVATAR_QUALITY_HIGH
-            : AVATAR_QUALITY_STANDARD,
-        resize: 'cover',
-      },
-    );
+    return getOptimizedAvatarUrl(src ?? undefined, {
+      width: size,
+      height: size,
+      quality:
+        size >= AVATAR_SIZE_LARGE
+          ? AVATAR_QUALITY_HIGH
+          : AVATAR_QUALITY_STANDARD,
+      resize: 'cover',
+    });
   }, [src, size]);
 
   const handleKeyDown = useCallback(
@@ -168,17 +168,6 @@ function AvatarCard({
     [onEdit],
   );
 
-  const handleError = useCallback(
-    (event: React.SyntheticEvent<HTMLImageElement>) => {
-      // Fallback to original URL if optimized version fails
-      if (src !== undefined && src !== null && optimizedAvatarUrl !== src) {
-        const imgElement = event.currentTarget;
-        imgElement.src = src;
-      }
-    },
-    [src, optimizedAvatarUrl],
-  );
-
   return (
     <div className={`avatar-card relative ${className}`}>
       <div
@@ -187,13 +176,8 @@ function AvatarCard({
           relative 
           group 
           cursor-pointer
-          rounded-full 
-          overflow-hidden 
-          border-2 
-          border-border
           transition-all
-          hover:border-primary/50
-          hover:shadow-lg
+          hover:scale-105
         "
         style={{
           width: size,
@@ -204,37 +188,16 @@ function AvatarCard({
         tabIndex={editable ? 0 : undefined}
         onKeyDown={editable ? handleKeyDown : undefined}
       >
-        {optimizedAvatarUrl !== undefined &&
-        optimizedAvatarUrl !== null &&
-        optimizedAvatarUrl.length > 0 ? (
-          <Image
-            src={optimizedAvatarUrl}
-            alt={`${profile.fullName !== undefined && profile.fullName !== null ? profile.fullName : profile.username} avatar`}
-            width={size}
-            height={size}
-            className="w-full h-full object-cover"
-            loading="lazy"
-            onError={handleError}
+        <Avatar className="w-full h-full border-2 border-border hover:border-primary/50 transition-colors">
+          <AvatarImage
+            src={optimizedAvatarUrl ?? ''}
+            alt={`${profile.fullName ?? profile.username} avatar`}
+            className="object-cover"
           />
-        ) : (
-          <div
-            className="
-            w-full 
-            h-full 
-            bg-gradient-to-br
-            from-primary/20
-            to-primary/40
-            flex 
-            items-center 
-            justify-center 
-            text-foreground 
-            font-semibold
-            text-2xl
-          "
-          >
+          <AvatarFallback className="text-2xl font-semibold bg-gradient-to-br from-primary/20 to-primary/40">
             {initials}
-          </div>
-        )}
+          </AvatarFallback>
+        </Avatar>
 
         {/* Edit Overlay */}
         {editable && (
@@ -250,6 +213,7 @@ function AvatarCard({
             group-hover:opacity-100 
             transition-opacity
             backdrop-blur-sm
+            rounded-full
           "
           >
             <span className="text-white text-sm font-medium">Edit</span>
@@ -514,68 +478,6 @@ function SocialLinks({
         </button>
       )}
     </div>
-  );
-}
-
-/**
- * Follow Button Component - Now with real mutation hooks
- */
-function FollowButton(): React.ReactElement | undefined {
-  const { isFollowing, profile, permissions } = useProfileContext();
-  const followMutation = useFollowMutation();
-
-  const handleFollowClickAsync = useCallback(async (): Promise<void> => {
-    if (!permissions.canFollow) return;
-
-    try {
-      await followMutation.mutateAsync({
-        targetUsername: profile.username,
-        action: isFollowing ? 'unfollow' : 'follow',
-      });
-    } catch (error: unknown) {
-      console.error('Follow/unfollow error:', error);
-    }
-  }, [permissions.canFollow, followMutation, profile.username, isFollowing]);
-
-  const handleFollowClick = useCallback((): void => {
-    void handleFollowClickAsync();
-  }, [handleFollowClickAsync]);
-
-  if (!permissions.canFollow) {
-    return undefined; // Don't show follow button to owner or unauthenticated users
-  }
-
-  return (
-    <button
-      onClick={handleFollowClick}
-      disabled={followMutation.isPending}
-      className={`
-      follow-button 
-      px-4 
-      py-2 
-      rounded-md 
-      text-sm 
-      font-medium 
-      transition-colors
-      disabled:opacity-50
-      disabled:cursor-not-allowed
-      
-      ${
-        isFollowing
-          ? 'bg-muted text-foreground border border-border hover:bg-muted/80'
-          : 'bg-primary text-primary-foreground hover:bg-primary/90'
-      }
-    `}
-    >
-      {followMutation.isPending ? (
-        <span className="flex items-center gap-2">
-          <span className="animate-spin h-4 w-4 border-2 border-current border-t-transparent rounded-full" />
-          {isFollowing ? 'Unfollowing...' : 'Following...'}
-        </span>
-      ) : (
-        <span>{isFollowing ? 'Following' : 'Follow'}</span>
-      )}
-    </button>
   );
 }
 

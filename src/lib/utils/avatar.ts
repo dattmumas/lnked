@@ -175,10 +175,16 @@ export function extractSupabaseImagePath(
     }
 
     // Remove any existing query params so we don't duplicate transformations
-    const path = pathMatch2.split('?')[0];
+    let path = pathMatch2.split('?')[0];
 
     if (!path || path === '') {
       throw new Error('Could not extract bucket and path from URL');
+    }
+
+    // Handle legacy URLs with duplicate bucket paths (e.g., "avatars/avatars/file.jpg")
+    // Remove duplicate bucket prefix if it exists
+    if (path.startsWith(`${bucketMatch}/`)) {
+      path = path.substring(bucketMatch.length + 1);
     }
 
     // At this point we know both values are defined due to the checks above
@@ -195,50 +201,78 @@ export function getOptimizedAvatarUrl(
   avatarUrl: string | undefined,
   options: ImageTransformOptions = {},
 ): string | undefined {
-  if (avatarUrl === undefined || avatarUrl === '') return undefined;
+  if (avatarUrl === undefined || avatarUrl.trim() === '') return undefined;
 
   // If the URL already contains Supabase transformation params (e.g. ?width=)
   // assume it is already optimised and avoid adding another set which causes
-  // duplicated query strings like `...?w=128...?w=256` that trigger CORB.
+  // duplicated query strings like `...?width=128...?width=256`.
   if (/[?&]width=/.test(avatarUrl)) {
     return avatarUrl;
   }
 
-  // Check if it's a Supabase storage URL
+  // Prepare transformation options early (shared by both absolute/relative).
+  const transformOptions: {
+    quality: number;
+    resize: string;
+    width?: number;
+    height?: number;
+    format?: string;
+  } = {
+    quality: options.quality ?? QUALITY.MEDIUM,
+    resize: options.resize || 'cover',
+  };
+
+  if (options.width !== undefined) transformOptions.width = options.width;
+  if (options.height !== undefined) transformOptions.height = options.height;
+  if (options.format) transformOptions.format = options.format;
+
+  // ---------------------------------------------------------------------
+  // A. Absolute Supabase storage URL (already contains project domain)
+  // ---------------------------------------------------------------------
   const pathInfo = extractSupabaseImagePath(avatarUrl);
-  if (!pathInfo) {
-    // Return original URL if not a Supabase storage URL
-    return avatarUrl;
-  }
-
-  try {
-    const transformOptions: {
-      quality: number;
-      resize: string;
-      width?: number;
-      height?: number;
-      format?: string;
-    } = {
-      quality: options.quality ?? QUALITY.MEDIUM,
-      resize: options.resize || 'cover',
-    };
-
-    if (options.width !== undefined) transformOptions.width = options.width;
-    if (options.height !== undefined) transformOptions.height = options.height;
-    if (options.format) transformOptions.format = options.format;
-
-    const { data } = supabase.storage
-      .from(pathInfo.bucket)
-      .getPublicUrl(pathInfo.path, {
+  if (pathInfo) {
+    try {
+      const { data } = supabase.storage
+        .from(pathInfo.bucket)
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        transform: transformOptions as any,
-      });
+        .getPublicUrl(pathInfo.path, { transform: transformOptions as any });
 
-    return data.publicUrl;
-  } catch (error: unknown) {
-    console.warn('Failed to get optimized avatar URL:', error);
-    return avatarUrl;
+      return data.publicUrl;
+    } catch (error: unknown) {
+      console.warn('Failed to transform Supabase avatar URL:', error);
+      return avatarUrl;
+    }
   }
+
+  // ---------------------------------------------------------------------
+  // B. Relative storage path (e.g. "avatars/user-123/xyz.png")
+  // ---------------------------------------------------------------------
+  if (!avatarUrl.startsWith('http') && !avatarUrl.startsWith('data:')) {
+    const relativeMatch = /^([^/]+)\/(.+)$/.exec(avatarUrl);
+    if (relativeMatch !== null) {
+      // Capture groups are guaranteed by regex, but TS can't infer non-null.
+      const bucket = relativeMatch[1] as string;
+      const path = relativeMatch[2] as string;
+      try {
+        const { data } = supabase.storage
+          .from(bucket)
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          .getPublicUrl(path, { transform: transformOptions as any });
+
+        return data.publicUrl;
+      } catch (error: unknown) {
+        console.warn(
+          'Failed to build public avatar URL from relative path:',
+          error,
+        );
+        return avatarUrl; // Let custom loader attempt resolution.
+      }
+    }
+  }
+
+  // Fallback: return original value untouched so that custom Next image
+  // loader can attempt to resolve it (or browser shows broken image).
+  return avatarUrl;
 }
 
 /**

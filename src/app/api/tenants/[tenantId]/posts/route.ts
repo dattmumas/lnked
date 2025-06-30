@@ -131,7 +131,9 @@ export async function GET(
         // Apply status filter based on user role
         switch (status) {
           case 'published': {
-            query = query.eq('status', 'active').eq('is_public', true);
+            query = query
+              .eq('status', 'active')
+              .not('published_at', 'is', null);
 
             break;
           }
@@ -209,7 +211,9 @@ export async function GET(
           .eq('tenant_id', tenantId);
 
         if (status === 'published') {
-          countQuery = countQuery.eq('status', 'active').eq('is_public', true);
+          countQuery = countQuery
+            .eq('status', 'active')
+            .not('published_at', 'is', null);
         } else if (status === 'draft') {
           countQuery = countQuery.eq('status', 'draft');
         }

@@ -33,6 +33,7 @@ export function CenterFeed({
   const { feedItems, isLoading, error, refetch, loadMore, hasMore } =
     useTenantFeed({
       includeCollectives,
+      includeFollowed: true,
       status: 'published',
       limit: 20,
       ...(initialFeedItems ? { initialData: initialFeedItems } : {}),

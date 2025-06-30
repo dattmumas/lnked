@@ -10,6 +10,7 @@ import {
   AVATAR_CONFIG,
   extractFilePathFromUrl,
   isSupabaseStorageUrl,
+  generateAvatarFilename,
 } from '@/lib/utils/avatar';
 
 import type { TablesUpdate } from '@/lib/database.types';
@@ -151,21 +152,6 @@ async function validateFileType(
       error: 'Failed to validate file type',
     };
   }
-}
-
-/**
- * Generate collision-proof avatar filename
- */
-function generateUniqueAvatarFilename(
-  userId: string,
-  fileType: string,
-): string {
-  const now = new Date();
-  const timestamp = now.toISOString().replace(/[:.]/g, '-');
-  const uniqueId = generateUniqueId();
-  const extension = fileType.split('/')[1] || 'jpg';
-
-  return `avatars/${userId}_${timestamp}_${uniqueId}.${extension}`;
 }
 
 /**
@@ -453,7 +439,7 @@ export async function uploadAvatar(
     }
 
     // Generate collision-proof file path
-    const filePath = generateUniqueAvatarFilename(user.id, file.type);
+    const filePath = generateAvatarFilename(user.id, file.type);
 
     // Upload new avatar to Supabase storage
     const { error: uploadError } = await supabaseAdmin.storage

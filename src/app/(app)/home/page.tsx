@@ -52,6 +52,7 @@ export default async function HomePage(): Promise<React.ReactElement> {
       initialFeedItems = await loadUserFeed(user.id, personalTenantId, {
         limit: 20,
         includeCollectives: true,
+        includeFollowed: true,
         status: 'published',
       });
     }
