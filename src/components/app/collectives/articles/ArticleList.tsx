@@ -19,17 +19,19 @@ import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
 
 interface ArticleListProps {
   collectiveSlug: string;
+  initialPosts?: ArticlePost[] | undefined;
 }
 
-interface ArticlePost {
+// 🎓 Shared Types: Export for use in SSR data transformation
+export interface ArticlePost {
   id: string;
-  title: string;
+  title: string | null;
   subtitle: string | null;
-  author: string | null;
   published_at: string | null;
-  post_type: 'text' | 'video';
-  like_count: number;
+  post_type: string | null;
+  like_count: number | null;
   view_count: number | null;
+  author: string | null;
 }
 
 type FilterType = 'all' | 'text' | 'video';
@@ -46,64 +48,152 @@ const WORDS_PER_MINUTE = 200;
 
 export function ArticleList({
   collectiveSlug,
+  initialPosts,
 }: ArticleListProps): React.ReactElement {
   const { data: collective } = useCollectiveData(collectiveSlug);
   const [filter, setFilter] = useState<FilterType>('all');
 
+  // 🎓 SSR Query Configuration: Split into two configurations based on initial data
+  // This avoids TypeScript issues with conditional initialData
+  const queryConfig = initialPosts
+    ? {
+        // Configuration when we have SSR data
+        queryKey: ['collective-posts', collective?.id, filter],
+        queryFn: async ({ pageParam }: { pageParam: number }) => {
+          // Same query function but only runs for subsequent pages
+          if (
+            collective?.id === undefined ||
+            collective?.id === null ||
+            collective.id.length === 0
+          )
+            return { posts: [], hasMore: false };
+
+          const supabase = createSupabaseBrowserClient();
+          const from = pageParam * POSTS_PER_PAGE;
+          const to = from + POSTS_PER_PAGE - 1;
+
+          let query = supabase
+            .from('posts')
+            .select(
+              `
+          id, title, subtitle, published_at, post_type,
+          like_count, view_count,
+          author_profile:users!author_id(id, username, full_name, avatar_url)
+        `,
+            )
+            .eq('collective_id', collective.id)
+            .not('published_at', 'is', null)
+            .eq('is_public', true);
+
+          if (filter !== 'all') {
+            query = query.eq('post_type', filter);
+          }
+
+          const { data: posts, error } = await query
+            .order('published_at', { ascending: false })
+            .range(from, to);
+
+          if (error) throw error;
+
+          const transformedPosts: ArticlePost[] = (posts ?? []).map((post) => ({
+            ...post,
+            author:
+              post.author_profile?.full_name ||
+              post.author_profile?.username ||
+              null,
+          }));
+
+          return {
+            posts: transformedPosts,
+            hasMore:
+              posts !== undefined &&
+              posts !== null &&
+              posts.length === POSTS_PER_PAGE,
+          };
+        },
+        initialData: {
+          pages: [
+            {
+              posts: initialPosts,
+              hasMore: initialPosts.length === POSTS_PER_PAGE,
+            },
+          ],
+          pageParams: [0],
+        },
+        enabled: collective?.id !== undefined && collective?.id !== null,
+        initialPageParam: 0,
+        staleTime: 1000 * 60 * 5,
+        gcTime: 1000 * 60 * 15,
+      }
+    : {
+        // Configuration when we need to fetch from client
+        queryKey: ['collective-posts', collective?.id, filter],
+        queryFn: async ({ pageParam }: { pageParam: number }) => {
+          if (
+            collective?.id === undefined ||
+            collective?.id === null ||
+            collective.id.length === 0
+          )
+            return { posts: [], hasMore: false };
+
+          const supabase = createSupabaseBrowserClient();
+          const from = pageParam * POSTS_PER_PAGE;
+          const to = from + POSTS_PER_PAGE - 1;
+
+          let query = supabase
+            .from('posts')
+            .select(
+              `
+          id, title, subtitle, published_at, post_type,
+          like_count, view_count,
+          author_profile:users!author_id(id, username, full_name, avatar_url)
+        `,
+            )
+            .eq('collective_id', collective.id)
+            .not('published_at', 'is', null)
+            .eq('is_public', true);
+
+          if (filter !== 'all') {
+            query = query.eq('post_type', filter);
+          }
+
+          const { data: posts, error } = await query
+            .order('published_at', { ascending: false })
+            .range(from, to);
+
+          if (error) throw error;
+
+          const transformedPosts: ArticlePost[] = (posts ?? []).map((post) => ({
+            ...post,
+            author:
+              post.author_profile?.full_name ||
+              post.author_profile?.username ||
+              null,
+          }));
+
+          return {
+            posts: transformedPosts,
+            hasMore:
+              posts !== undefined &&
+              posts !== null &&
+              posts.length === POSTS_PER_PAGE,
+          };
+        },
+        enabled: collective?.id !== undefined && collective?.id !== null,
+        initialPageParam: 0,
+        staleTime: 1000 * 60 * 5,
+        gcTime: 1000 * 60 * 15,
+      };
+
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } =
     useInfiniteQuery({
-      queryKey: ['collective-posts', collective?.id, filter],
-      queryFn: async ({ pageParam }: { pageParam: number }) => {
-        if (
-          collective?.id === undefined ||
-          collective?.id === null ||
-          collective.id.length === 0
-        )
-          return { posts: [], hasMore: false };
-
-        const supabase = createSupabaseBrowserClient();
-        const from = pageParam * POSTS_PER_PAGE;
-        const to = from + POSTS_PER_PAGE - 1;
-
-        let query = supabase
-          .from('posts')
-          .select(
-            `
-            id, title, subtitle, author, published_at, post_type,
-            like_count, view_count
-          `,
-          )
-          .eq('collective_id', collective.id)
-          .not('published_at', 'is', undefined)
-          .eq('is_public', true);
-
-        // Apply filter
-        if (filter !== 'all') {
-          query = query.eq('post_type', filter);
-        }
-
-        const { data: posts, error } = await query
-          .order('published_at', { ascending: false })
-          .range(from, to);
-
-        if (error) throw error;
-
-        return {
-          posts: posts ?? [],
-          hasMore:
-            posts !== undefined &&
-            posts !== null &&
-            posts.length === POSTS_PER_PAGE,
-        };
-      },
-      initialPageParam: 0,
+      ...queryConfig,
       getNextPageParam: (
         lastPage: { posts: ArticlePost[]; hasMore: boolean },
         pages: Array<{ posts: ArticlePost[]; hasMore: boolean }>,
       ) => {
         return lastPage.hasMore ? pages.length : undefined;
       },
-      enabled: collective?.id !== undefined && collective?.id !== null,
     });
 
   const allPosts = useMemo(() => {
@@ -120,7 +210,9 @@ export function ArticleList({
     setFilter(value as FilterType);
   }, []);
 
-  if (isLoading) {
+  // 🎓 SSR Loading State: Only show loading if we have no initial data
+  // With SSR, we get immediate data, so loading states are rare
+  if (isLoading && !initialPosts) {
     return (
       <div className="article-list-container">
         <div className="flex items-center justify-between mb-6">
@@ -238,7 +330,7 @@ const ArticleRow = React.memo<{
           <div className="flex-1 min-w-0">
             {/* Title */}
             <h3 className="text-lg font-semibold leading-tight line-clamp-2 group-hover:text-accent transition-colors">
-              {post.title}
+              {post.title || 'Untitled'}
             </h3>
 
             {/* Subtitle */}
@@ -270,7 +362,7 @@ const ArticleRow = React.memo<{
                   </>
                 )}
 
-              <span>{getReadingTime(post.title, post.subtitle)}</span>
+              <span>{getReadingTime(post.title || '', post.subtitle)}</span>
 
               {post.post_type === 'video' && (
                 <>

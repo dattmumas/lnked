@@ -17,17 +17,30 @@ const RECENT_POSTS_LIMIT = 2;
 interface FeaturedMediaProps {
   collectiveSlug: string;
   className?: string;
+  initialFeaturedPosts?: TransformedPost[] | undefined;
+}
+
+// 🎓 Shared Types: Export interfaces for use across SSR components
+export interface TransformedPost {
+  id: string;
+  title: string | null; // Database allows null titles
+  subtitle: string | null;
+  thumbnail_url: string | null;
+  post_type: string | null; // Database has various post types
+  published_at: string | null;
+  author: string | null;
 }
 
 export function FeaturedMedia({
   collectiveSlug,
   className = '',
+  initialFeaturedPosts,
 }: FeaturedMediaProps): React.ReactElement {
   const { data: collective } = useCollectiveData(collectiveSlug);
 
   const { data: featuredPosts, isLoading } = useQuery({
     queryKey: ['featured-posts', collective?.id],
-    queryFn: async () => {
+    queryFn: async (): Promise<TransformedPost[]> => {
       if (
         collective?.id === undefined ||
         collective.id === null ||
@@ -56,16 +69,25 @@ export function FeaturedMedia({
           .from('posts')
           .select(
             `
-            id, title, subtitle, thumbnail_url, post_type, author, published_at
+            id, title, subtitle, thumbnail_url, post_type, 
+            author_profile:users!author_id(id, username, full_name, avatar_url),
+            published_at
           `,
           )
           .eq('collective_id', collective.id)
-          .not('published_at', 'is', undefined)
+          .not('published_at', 'is', null)
           .eq('is_public', true)
           .order('published_at', { ascending: false })
           .limit(RECENT_POSTS_LIMIT);
 
-        return recentPosts || [];
+        // Transform data to match expected interface
+        return (recentPosts || []).map((post) => ({
+          ...post,
+          author:
+            post.author_profile?.full_name ||
+            post.author_profile?.username ||
+            null,
+        }));
       }
 
       // Get the actual featured posts
@@ -74,14 +96,33 @@ export function FeaturedMedia({
         .from('posts')
         .select(
           `
-          id, title, subtitle, thumbnail_url, post_type, author, published_at
+          id, title, subtitle, thumbnail_url, post_type,
+          author_profile:users!author_id(id, username, full_name, avatar_url),
+          published_at
         `,
         )
         .in('id', postIds);
 
-      return posts || [];
+      // Transform data to match expected interface
+      return (posts || []).map((post) => ({
+        ...post,
+        author:
+          post.author_profile?.full_name ||
+          post.author_profile?.username ||
+          null,
+      }));
     },
-    enabled: Boolean(collective?.id),
+    // 🎓 SSR Pattern: Use server data as initial value
+    // This means React will render immediately with server data,
+    // then optionally refetch if the data becomes stale
+    initialData: initialFeaturedPosts,
+
+    // 🎓 Conditional Querying: Only run client query if we don't have server data
+    // This prevents unnecessary API calls when we already have fresh data from SSR
+    enabled: Boolean(collective?.id) && !initialFeaturedPosts,
+
+    staleTime: 1000 * 60 * 10, // 10 minutes - server data stays fresh longer
+    gcTime: 1000 * 60 * 30, // 30 minutes
   });
 
   const getOverlayIcon = (postType: string): React.ReactElement => {
@@ -106,7 +147,10 @@ export function FeaturedMedia({
     }
   };
 
-  if (isLoading) {
+  // 🎓 SSR Loading State: Only show loading if we have no data at all
+  // With SSR, we might have initialData immediately, so no loading needed
+  // Only show loading if: no initial data AND still loading from client query
+  if (isLoading && !initialFeaturedPosts) {
     return (
       <div className={`featured-media-container ${className}`}>
         <h2 className="text-xl font-semibold mb-4">Featured</h2>
@@ -159,27 +203,27 @@ export function FeaturedMedia({
                 post.thumbnail_url.length > 0 ? (
                   <Image
                     src={post.thumbnail_url}
-                    alt={post.title}
+                    alt={post.title?.toString() || ''}
                     fill
                     className="object-cover"
                   />
                 ) : (
                   <div className="w-full h-full bg-gradient-to-br from-muted to-muted/50 flex items-center justify-center">
-                    {getOverlayIcon(post.post_type)}
+                    {getOverlayIcon(post.post_type?.toString() || '')}
                   </div>
                 )}
 
                 {/* Overlay icon */}
                 <div className="absolute inset-0 bg-black/20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                   <div className="bg-black/60 rounded-full p-3 text-white">
-                    {getOverlayIcon(post.post_type)}
+                    {getOverlayIcon(post.post_type?.toString() || '')}
                   </div>
                 </div>
 
                 {/* Post type badge */}
                 <div className="absolute top-3 left-3">
                   <Badge variant="secondary" className="text-xs">
-                    {getPostTypeLabel(post.post_type)}
+                    {getPostTypeLabel(post.post_type?.toString() || '')}
                   </Badge>
                 </div>
               </div>
@@ -187,7 +231,7 @@ export function FeaturedMedia({
               {/* Content */}
               <div className="p-4">
                 <h3 className="font-semibold leading-tight line-clamp-2 group-hover:text-accent transition-colors">
-                  {post.title}
+                  {post.title?.toString() || 'Untitled'}
                 </h3>
 
                 {post.subtitle !== undefined &&

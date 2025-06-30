@@ -66,22 +66,191 @@ export async function loadCollectiveData(
 ): Promise<CollectivePageData> {
   const supabase = await createServerSupabaseClient();
 
-  // First get the collective basic data
-  const { data: collective, error: collectiveError } = await supabase
-    .from('collectives')
-    .select(
-      `
-      *,
-      owner:users!owner_id(id, username, full_name, avatar_url),
-      collective_members(count),
-      posts(count)
-    `,
-    )
-    .eq('slug', slug)
-    .single();
+  try {
+    // First get the collective basic data (simplified query)
+    const { data: collective, error: collectiveError } = await supabase
+      .from('collectives')
+      .select(
+        `
+        *,
+        owner:users!owner_id(id, username, full_name, avatar_url)
+      `,
+      )
+      .eq('slug', slug)
+      .single();
 
-  if (collectiveError || !collective) {
-    console.error('Error fetching collective:', collectiveError);
+    if (collectiveError || !collective) {
+      console.error('Error fetching collective:', {
+        error: collectiveError,
+        slug,
+        message: collectiveError?.message || 'No collective found',
+        code: collectiveError?.code || 'UNKNOWN',
+        details: collectiveError?.details || 'No details',
+      });
+
+      return {
+        collective: null,
+        featuredPosts: [],
+        recentPosts: [],
+        members: [],
+        stats: {
+          totalPosts: 0,
+          totalMembers: 0,
+          totalViews: 0,
+          totalLikes: 0,
+        },
+      };
+    }
+
+    // Get counts separately for better error handling
+    const [memberCountResult, postCountResult] = await Promise.all([
+      supabase
+        .from('collective_members')
+        .select('*', { count: 'exact', head: true })
+        .eq('collective_id', collective.id),
+
+      supabase
+        .from('posts')
+        .select('*', { count: 'exact', head: true })
+        .eq('collective_id', collective.id)
+        .eq('status', 'active'),
+    ]);
+
+    const memberCount = memberCountResult.count || 0;
+    const postCount = postCountResult.count || 0;
+
+    // Execute parallel queries for better performance
+    const [featuredPostsResult, recentPostsResult, membersResult, statsResult] =
+      await Promise.all([
+        // Get featured posts
+        supabase
+          .from('featured_posts')
+          .select('post_id, display_order')
+          .eq('owner_id', collective.id)
+          .eq('owner_type', 'collective')
+          .order('display_order', { ascending: true })
+          .limit(2),
+
+        // Get recent posts
+        supabase
+          .from('posts')
+          .select(
+            `
+          *,
+          author_profile:users!author_id(
+            id,
+            username,
+            full_name,
+            avatar_url
+          )
+        `,
+          )
+          .eq('collective_id', collective.id)
+          .eq('is_public', true)
+          .eq('status', 'active')
+          .not('published_at', 'is', null)
+          .order('published_at', { ascending: false })
+          .limit(10),
+
+        // Get members
+        supabase
+          .from('collective_members')
+          .select(
+            `
+          role,
+          created_at,
+          member:users!member_id(
+            id,
+            username,
+            full_name,
+            avatar_url,
+            bio
+          )
+        `,
+          )
+          .eq('collective_id', collective.id)
+          .order('created_at', { ascending: true })
+          .limit(20),
+
+        // Get aggregate stats
+        supabase
+          .from('posts')
+          .select('view_count, like_count')
+          .eq('collective_id', collective.id)
+          .eq('status', 'active'),
+      ]);
+
+    // Process featured posts
+    let featuredPosts: CollectivePost[] = [];
+    if (featuredPostsResult.data && featuredPostsResult.data.length > 0) {
+      const featuredIds = featuredPostsResult.data.map((fp) => fp.post_id);
+      const { data: featuredPostsData } = await supabase
+        .from('posts')
+        .select(
+          `
+          *,
+          author_profile:users!author_id(
+            id,
+            username,
+            full_name,
+            avatar_url
+          )
+        `,
+        )
+        .in('id', featuredIds);
+
+      featuredPosts = featuredPostsData || [];
+    }
+
+    // Calculate stats
+    let totalViews = 0;
+    let totalLikes = 0;
+
+    if (statsResult.data) {
+      statsResult.data.forEach((post) => {
+        totalViews += post.view_count || 0;
+        totalLikes += post.like_count || 0;
+      });
+    }
+
+    // Transform members data
+    const members: CollectiveMember[] = (membersResult.data || [])
+      .filter((m) => m.member)
+      .map((m) => ({
+        id: m.member.id,
+        username: m.member.username,
+        full_name: m.member.full_name,
+        avatar_url: m.member.avatar_url,
+        bio: m.member.bio,
+        role: m.role,
+        joined_at: m.created_at,
+      }));
+
+    // Transform collective data
+    const collectiveData: CollectiveData = {
+      ...collective,
+      member_count: memberCount,
+      post_count: postCount,
+      owner: collective.owner as Partial<UserRow> | null,
+    };
+
+    return {
+      collective: collectiveData,
+      featuredPosts:
+        featuredPosts.length > 0
+          ? featuredPosts
+          : recentPostsResult.data?.slice(0, 2) || [],
+      recentPosts: recentPostsResult.data || [],
+      members,
+      stats: {
+        totalPosts: collectiveData.post_count,
+        totalMembers: collectiveData.member_count,
+        totalViews,
+        totalLikes,
+      },
+    };
+  } catch (error) {
+    console.error('Error loading collective data:', error);
     return {
       collective: null,
       featuredPosts: [],
@@ -95,141 +264,6 @@ export async function loadCollectiveData(
       },
     };
   }
-
-  // Execute parallel queries for better performance
-  const [featuredPostsResult, recentPostsResult, membersResult, statsResult] =
-    await Promise.all([
-      // Get featured posts
-      supabase
-        .from('featured_posts')
-        .select('post_id, display_order')
-        .eq('owner_id', collective.id)
-        .eq('owner_type', 'collective')
-        .order('display_order', { ascending: true })
-        .limit(2),
-
-      // Get recent posts
-      supabase
-        .from('posts')
-        .select(
-          `
-        *,
-        author_profile:users!author_id(
-          id,
-          username,
-          full_name,
-          avatar_url
-        )
-      `,
-        )
-        .eq('collective_id', collective.id)
-        .eq('is_public', true)
-        .eq('status', 'active')
-        .not('published_at', 'is', null)
-        .order('published_at', { ascending: false })
-        .limit(10),
-
-      // Get members
-      supabase
-        .from('collective_members')
-        .select(
-          `
-        role,
-        created_at,
-        member:users!member_id(
-          id,
-          username,
-          full_name,
-          avatar_url,
-          bio
-        )
-      `,
-        )
-        .eq('collective_id', collective.id)
-        .order('created_at', { ascending: true })
-        .limit(20),
-
-      // Get aggregate stats
-      supabase
-        .from('posts')
-        .select('view_count, like_count')
-        .eq('collective_id', collective.id)
-        .eq('status', 'active'),
-    ]);
-
-  // Process featured posts
-  let featuredPosts: CollectivePost[] = [];
-  if (featuredPostsResult.data && featuredPostsResult.data.length > 0) {
-    const featuredIds = featuredPostsResult.data.map((fp) => fp.post_id);
-    const { data: featuredPostsData } = await supabase
-      .from('posts')
-      .select(
-        `
-        *,
-        author_profile:users!author_id(
-          id,
-          username,
-          full_name,
-          avatar_url
-        )
-      `,
-      )
-      .in('id', featuredIds);
-
-    featuredPosts = featuredPostsData || [];
-  }
-
-  // Calculate stats
-  let totalViews = 0;
-  let totalLikes = 0;
-
-  if (statsResult.data) {
-    statsResult.data.forEach((post) => {
-      totalViews += post.view_count || 0;
-      totalLikes += post.like_count || 0;
-    });
-  }
-
-  // Transform members data
-  const members: CollectiveMember[] = (membersResult.data || [])
-    .filter((m) => m.member)
-    .map((m) => ({
-      id: m.member.id,
-      username: m.member.username,
-      full_name: m.member.full_name,
-      avatar_url: m.member.avatar_url,
-      bio: m.member.bio,
-      role: m.role,
-      joined_at: m.created_at,
-    }));
-
-  // Transform collective data
-  const collectiveData: CollectiveData = {
-    ...collective,
-    member_count: Array.isArray(collective.collective_members)
-      ? collective.collective_members.length
-      : extractCount(collective.collective_members),
-    post_count: Array.isArray(collective.posts)
-      ? collective.posts.length
-      : extractCount(collective.posts),
-    owner: collective.owner as Partial<UserRow> | null,
-  };
-
-  return {
-    collective: collectiveData,
-    featuredPosts:
-      featuredPosts.length > 0
-        ? featuredPosts
-        : recentPostsResult.data?.slice(0, 2) || [],
-    recentPosts: recentPostsResult.data || [],
-    members,
-    stats: {
-      totalPosts: collectiveData.post_count,
-      totalMembers: collectiveData.member_count,
-      totalViews,
-      totalLikes,
-    },
-  };
 }
 
 /**
