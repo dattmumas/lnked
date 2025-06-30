@@ -115,7 +115,7 @@ export function InsertInlineImageDialog({
 
   return (
     <>
-      <div style={{ marginBottom: '1em' }}>
+      <div className="editor-form-spacing">
         <FileInput
           label="Image Upload"
           onChange={loadImage}
@@ -123,7 +123,7 @@ export function InsertInlineImageDialog({
           data-test-id="image-modal-file-upload"
         />
       </div>
-      <div style={{ marginBottom: '1em' }}>
+      <div className="editor-form-spacing">
         <TextInput
           label="Alt Text"
           placeholder="Descriptive alternative text"
@@ -137,7 +137,7 @@ export function InsertInlineImageDialog({
         value={position}
         onValueChange={(value: string) => setPosition(value as Position)}
       >
-        <SelectTrigger style={{ marginBottom: '1em', width: '290px' }}>
+        <SelectTrigger className="editor-form-spacing editor-select-width">
           <SelectValue placeholder="Position" />
         </SelectTrigger>
         <SelectContent>

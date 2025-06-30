@@ -9,6 +9,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { usePostEditor } from '@/hooks/posts/usePostEditor';
+import { usePostEditorStore } from '@/lib/stores/post-editor-store';
 
 // Dynamic import for the editor to avoid SSR issues
 const PostEditor = dynamic(() => import('@/components/editor/PostEditor'), {
@@ -30,12 +31,25 @@ export default function NewPostEditorPage(): React.ReactElement {
     isDirty,
     savePost,
     setCurrentPage,
+    resetForm,
   } = usePostEditor();
 
   // Set current page for state management
   useEffect((): void => {
     setCurrentPage('editor');
   }, [setCurrentPage]);
+
+  // Clean up on unmount to prevent form persistence
+  useEffect(() => {
+    return () => {
+      // Use the store directly to get the latest state
+      const currentStore = usePostEditorStore.getState();
+      // Only clear form if it's a new post (no ID) and not dirty
+      if (!currentStore.formData.id && !currentStore.isDirty) {
+        currentStore.clearForm();
+      }
+    };
+  }, []); // Empty dependency array to run only on mount/unmount
 
   const handleContinue = useCallback(async (): Promise<void> => {
     // Save before navigating if there are changes
@@ -54,9 +68,11 @@ export default function NewPostEditorPage(): React.ReactElement {
   }, [isDirty, router]);
 
   const handleConfirmLeave = useCallback((): void => {
+    // Reset form when leaving without saving
+    resetForm();
     setShowUnsavedWarning(false);
     void router.push('/posts');
-  }, [router]);
+  }, [router, resetForm]);
 
   const handleCancelLeave = useCallback((): void => {
     setShowUnsavedWarning(false);
@@ -92,10 +108,10 @@ export default function NewPostEditorPage(): React.ReactElement {
   );
 
   // Memoize the initial content to prevent the editor from re-initializing
-  const stableInitialContent = useMemo((): undefined => {
-    // For new posts, don't pass any initial content - let the editor start empty
-    return undefined;
-  }, []); // Empty dependency array means this only runs once
+  const stableInitialContent = useMemo((): string => {
+    // For new posts, use the current content from the store or empty string
+    return formData.content || '';
+  }, []); // Empty dependency array to stabilize the value
 
   return (
     <div className="min-h-screen bg-background">
@@ -202,7 +218,7 @@ export default function NewPostEditorPage(): React.ReactElement {
           <div className="min-h-[500px]">
             <PostEditor
               key="new-post-editor"
-              initialContent={stableInitialContent || ''}
+              initialContent={stableInitialContent}
               onChange={handleContentChange}
               placeholder="Start writing your post..."
             />

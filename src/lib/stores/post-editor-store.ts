@@ -5,6 +5,7 @@ import { Database } from '@/lib/database.types';
 // Enhanced PostFormData interface with new schema fields
 export interface PostFormData {
   id?: string;
+  slug?: string;
   title: string;
   content: string;
   subtitle?: string;
@@ -41,6 +42,7 @@ interface PostEditorStore {
   markSaved: () => void;
   markError: () => void;
   resetForm: () => void;
+  clearForm: () => void;
   initializeForm: (_data: PostFormData) => void;
   setLoading: (_loading: boolean) => void;
 }
@@ -104,6 +106,14 @@ export const usePostEditorStore = create<PostEditorStore>((set) => ({
   resetForm: () =>
     set((state) => ({
       formData: state.originalData || defaultFormData,
+      isDirty: false,
+      autoSaveStatus: 'idle',
+    })),
+
+  clearForm: () =>
+    set((state) => ({
+      formData: defaultFormData,
+      originalData: undefined,
       isDirty: false,
       autoSaveStatus: 'idle',
     })),

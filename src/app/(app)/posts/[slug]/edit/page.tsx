@@ -1,6 +1,6 @@
 'use client';
 
-import { ArrowLeft, Save } from 'lucide-react';
+import { ArrowLeft, Save, Send } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { useRouter, useParams } from 'next/navigation';
 import React, { useEffect, useCallback, useMemo, useState } from 'react';
@@ -33,6 +33,7 @@ export default function EditPostEditorPage(): React.ReactElement {
     isDirty,
     isLoading,
     savePost,
+    publishPost,
     setCurrentPage,
     originalData,
   } = usePostEditor(postId);
@@ -55,12 +56,12 @@ export default function EditPostEditorPage(): React.ReactElement {
       setShowUnsavedWarning(true);
       return;
     }
-    void router.push('/dashboard/posts');
+    void router.push(' /posts');
   }, [isDirty, router]);
 
   const handleConfirmLeave = useCallback((): void => {
     setShowUnsavedWarning(false);
-    void router.push('/dashboard/posts');
+    void router.push('/posts');
   }, [router]);
 
   const handleCancelLeave = useCallback((): void => {
@@ -101,6 +102,13 @@ export default function EditPostEditorPage(): React.ReactElement {
   const stableInitialContent = useMemo((): string | undefined => {
     return originalData?.content ?? undefined;
   }, [originalData?.content]); // Include content dependency to fix exhaustive-deps
+
+  const handlePublish = useCallback(async (): Promise<void> => {
+    const publishedPost = await publishPost();
+    if (publishedPost?.id) {
+      router.push(`/posts/${publishedPost.slug ?? publishedPost.id}`);
+    }
+  }, [publishPost, router]);
 
   // Show loading state while post data is being fetched
   if (isLoading) {
@@ -145,7 +153,7 @@ export default function EditPostEditorPage(): React.ReactElement {
             className="flex items-center gap-2"
           >
             <ArrowLeft className="h-4 w-4" />
-            Back to Dashboard
+            Return to Posts
           </Button>
 
           <div className="flex items-center gap-3">
@@ -191,6 +199,22 @@ export default function EditPostEditorPage(): React.ReactElement {
               <Save className="h-4 w-4" />
               Save
             </Button>
+
+            {/* Publish button - only for drafts */}
+            {formData?.status === 'draft' && (
+              <Button
+                size="sm"
+                onClick={handlePublish}
+                disabled={
+                  (formData?.title ?? '').trim().length === 0 ||
+                  autoSaveStatus === 'saving'
+                }
+                className="flex items-center gap-2"
+              >
+                <Send className="h-4 w-4" />
+                Publish
+              </Button>
+            )}
           </div>
         </div>
       </header>

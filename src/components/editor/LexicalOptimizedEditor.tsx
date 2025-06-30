@@ -157,7 +157,8 @@ function EditorContent({
         setActiveEditor={setActiveEditor}
         setIsLinkEditMode={setIsLinkEditMode}
       />
-      <div className="editor-container w-full">
+      <br />
+      <div className="editor-container w-full h-full">
         {/* Core plugins - always loaded */}
         <AutoFocusPlugin />
         <ClearEditorPlugin />
@@ -239,10 +240,6 @@ function EditorContent({
         <LazyPlugin
           pluginName="speechToText"
           enabled={advancedPlugins.speechToText}
-        />
-        <LazyPlugin
-          pluginName="tableOfContents"
-          enabled={advancedPlugins.tableOfContents}
         />
         <LazyPlugin
           pluginName="tableActionMenu"

@@ -16,7 +16,6 @@ const PLUGIN_LOADERS: Record<
   figma: lazy(() => import('./media/FigmaPlugin')),
   emojiPicker: lazy(() => import('./input/EmojiPickerPlugin')),
   speechToText: lazy(() => import('./input/SpeechToTextPlugin')),
-  tableOfContents: lazy(() => import('./layout/TableOfContentsPlugin')),
   tableActionMenu: lazy(() => import('./layout/TableActionMenuPlugin')),
 } as const;
 

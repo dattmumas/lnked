@@ -12,7 +12,7 @@ import {
 } from '@/lib/stores/post-editor-store';
 import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
 
-import type { Json } from '@/lib/database.types';
+import type { Json , Database } from '@/lib/database.types';
 import type { User } from '@supabase/supabase-js';
 import type { UseMutationResult } from '@tanstack/react-query';
 
@@ -20,19 +20,32 @@ const PostFormSchema = z.object({
   id: z.string().uuid().optional(),
   title: z.string().trim().min(1, 'Title is required'),
   content: z.string().default(''),
-  subtitle: z.string().optional(),
-  author: z.string().optional(),
+  subtitle: z.string().optional().nullable(),
+  author: z.string().optional().nullable(),
   author_id: z.string().uuid(),
-  seo_title: z.string().optional(),
-  meta_description: z.string().optional(),
-  thumbnail_url: z.string().url().optional(),
+  seo_title: z.string().optional().nullable(),
+  meta_description: z.string().optional().nullable(),
+  thumbnail_url: z.string().url().optional().nullable(),
   post_type: z.enum(['text', 'video']),
   metadata: z.record(z.unknown()).default({}),
   is_public: z.boolean(),
   status: z.enum(['draft', 'active', 'removed']),
-  collective_id: z.string().uuid().optional(),
+  collective_id: z.string().uuid().optional().nullable(),
   tenant_id: z.string().uuid().optional(),
-  published_at: z.string().datetime().optional(),
+  published_at: z.preprocess((arg) => {
+    if (
+      typeof arg === 'string' ||
+      typeof arg === 'number' ||
+      arg instanceof Date
+    ) {
+      const d = new Date(arg);
+      if (!isNaN(d.getTime())) {
+        return d.toISOString();
+      }
+    }
+    return null;
+  }, z.string().datetime().nullable().optional()),
+  slug: z.string().optional(),
 });
 
 // Simple client-side user hook
@@ -128,19 +141,17 @@ export const useAutoSavePost = (): UseMutationResult<
       });
 
       // Transform data to match database schema
-      const upsertData = {
+      const upsertData: Record<string, unknown> = {
         // Required fields
         title: validated.title,
         content: validated.content,
         author_id: validated.author_id,
-        tenant_id: tenantId, // Use the guaranteed string value
-        slug: validated.id
-          ? `${validated.title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${Date.now()}`
-          : `${validated.title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${Date.now()}`,
+        tenant_id: tenantId,
         post_type: validated.post_type,
         status: validated.status,
         is_public: validated.is_public,
         metadata: validated.metadata as Json,
+        // Slug will be added below for new posts
         // Optional fields
         ...(validated.id && { id: validated.id }),
         ...(validated.subtitle && { subtitle: validated.subtitle }),
@@ -158,9 +169,30 @@ export const useAutoSavePost = (): UseMutationResult<
         ...(validated.published_at && { published_at: validated.published_at }),
       };
 
+      // For new posts without ID, generate a slug server-side
+      if (!validated.id) {
+        // First, get a slug from the database function
+        const { data: slugData, error: slugError } = await supabase.rpc(
+          'generate_post_slug',
+          {
+            post_title: validated.title,
+            post_tenant_id: tenantId,
+          },
+        );
+
+        if (slugError || !slugData) {
+          console.error('Failed to generate slug:', slugError);
+          // Fallback to simple client-side slug
+          upsertData['slug'] =
+            `${validated.title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${Date.now()}`;
+        } else {
+          upsertData['slug'] = slugData;
+        }
+      }
+
       const { data: post, error } = await supabase
         .from('posts')
-        .upsert(upsertData)
+        .upsert(upsertData as Database['public']['Tables']['posts']['Insert']) // Type assertion needed due to complex type requirements
         .select()
         .single();
 
@@ -197,6 +229,7 @@ export const useAutoSavePost = (): UseMutationResult<
 
       // Add optional properties
       if (validatedPost.id) result.id = validatedPost.id;
+      if (validatedPost.slug) result.slug = validatedPost.slug;
       if (validatedPost.subtitle) result.subtitle = validatedPost.subtitle;
       if (validatedPost.author) result.author = validatedPost.author;
       if (validatedPost.seo_title) result.seo_title = validatedPost.seo_title;
@@ -294,6 +327,7 @@ export const usePostData = (
 
       // Add optional properties
       if (parsed.id) result.id = parsed.id;
+      if (parsed.slug) result.slug = parsed.slug;
       if (parsed.subtitle) result.subtitle = parsed.subtitle;
       if (parsed.author) result.author = parsed.author;
       if (parsed.seo_title) result.seo_title = parsed.seo_title;
@@ -323,6 +357,7 @@ interface UsePostEditorResult {
   updateFormData: (updates: Partial<PostFormData>) => void;
   setCurrentPage: (page: 'editor' | 'details') => void;
   resetForm: () => void;
+  clearForm: () => void;
   savePost: () => Promise<PostFormData | undefined> | undefined;
   publishPost: () => Promise<PostFormData | undefined> | undefined;
   isSaving: boolean;
@@ -334,9 +369,28 @@ export const usePostEditor = (postId?: string): UsePostEditorResult => {
   const store = usePostEditorStore();
   const autoSave = useAutoSavePost();
   const { data: postData, isLoading: isLoadingPost } = usePostData(postId);
-  const { user } = useUser();
+  const { user, loading: userLoading } = useUser();
 
-  // Initialize form data from server when post loads
+  // Initialize form data for new posts (when no postId is provided)
+  useEffect(() => {
+    if (
+      !postId &&
+      store.formData.title === '' &&
+      store.formData.content === ''
+    ) {
+      // Initialize with default values for new posts
+      store.initializeForm({
+        title: '',
+        content: '',
+        post_type: 'text',
+        metadata: {},
+        is_public: false,
+        status: 'draft',
+      });
+    }
+  }, [postId, store]);
+
+  // Initialize form data from server when post loads (for existing posts)
   useEffect(() => {
     if (
       postData !== null &&
@@ -347,22 +401,23 @@ export const usePostEditor = (postId?: string): UsePostEditorResult => {
     }
   }, [postData, store.originalData, store]);
 
-  // Auto-save when dirty with 500ms debounce
+  // Auto-save when dirty with debounce
   useEffect(() => {
-    // Don't auto-save while loading initial data
-    if (isLoadingPost) {
+    // Don't auto-save while loading initial data or user auth
+    if (isLoadingPost || userLoading) {
       return undefined;
     }
 
     // Check all conditions for auto-save
     if (
       store.isDirty &&
-      typeof store.formData?.title === 'string' &&
+      store.formData &&
+      typeof store.formData.title === 'string' &&
       store.formData.title.trim().length > 0 &&
       typeof user?.id === 'string'
     ) {
       const timer = setTimeout(() => {
-        console.warn('🚀 Auto-saving post...');
+        console.log('🚀 Auto-saving post...');
         // The store.formData already contains the post ID (if it exists)
         const dataToSave = {
           ...store.formData,
@@ -377,7 +432,14 @@ export const usePostEditor = (postId?: string): UsePostEditorResult => {
     }
 
     return undefined;
-  }, [store.formData, store.isDirty, autoSave, user, isLoadingPost]);
+  }, [
+    store.formData,
+    store.isDirty,
+    autoSave,
+    user,
+    isLoadingPost,
+    userLoading,
+  ]);
 
   // Manual save function
   const savePost = useCallback(():
@@ -432,7 +494,7 @@ export const usePostEditor = (postId?: string): UsePostEditorResult => {
     formData: store.formData,
     originalData: store.originalData,
     isDirty: store.isDirty,
-    isLoading: isLoadingPost || store.isLoading,
+    isLoading: isLoadingPost || store.isLoading || userLoading,
 
     // Auto-save status
     autoSaveStatus: store.autoSaveStatus,
@@ -444,6 +506,7 @@ export const usePostEditor = (postId?: string): UsePostEditorResult => {
     updateFormData: store.updateFormData,
     setCurrentPage: store.setCurrentPage,
     resetForm: store.resetForm,
+    clearForm: store.clearForm,
     savePost,
     publishPost,
 

@@ -58,7 +58,7 @@ export default function PlusButtonPlugin() {
       className="p-2 sm:p-1 opacity-80 hover:opacity-100 text-muted-foreground"
     >
       <Image
-        src="/plus-slash-minus.svg"
+        src="plus-slash-minus.svg"
         alt="add"
         width={20}
         height={20}

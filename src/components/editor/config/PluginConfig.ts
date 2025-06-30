@@ -28,7 +28,6 @@ export interface PluginConfig {
     figma: boolean;
     emojiPicker: boolean;
     speechToText: boolean;
-    tableOfContents: boolean;
     tableActionMenu: boolean;
   };
 }
@@ -60,7 +59,6 @@ export const defaultPluginConfig: PluginConfig = {
     figma: false, // Load on demand when user embeds Figma
     emojiPicker: false, // Load on demand when user opens emoji picker
     speechToText: false, // Load on demand when user enables speech
-    tableOfContents: false, // Load on demand for long documents
     tableActionMenu: false, // Load on demand when user uses tables
   },
 };
@@ -98,11 +96,6 @@ export function analyzeContentForPlugins(
 
   if (content.includes('figma.com')) {
     pluginsNeeded.figma = true;
-  }
-
-  // Enable table of contents for long documents
-  if (content.length > 5000) {
-    pluginsNeeded.tableOfContents = true;
   }
 
   return pluginsNeeded;

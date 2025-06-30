@@ -138,7 +138,7 @@ export function UpdateInlineImageDialog({
 
   return (
     <>
-      <div style={{ marginBottom: '1em' }}>
+      <div className="editor-form-spacing">
         <TextInput
           label="Alt Text"
           placeholder="Descriptive alternative text"
@@ -152,7 +152,7 @@ export function UpdateInlineImageDialog({
         value={position}
         onValueChange={(value: string) => setPosition(value as Position)}
       >
-        <SelectTrigger style={{ marginBottom: '1em', width: '208px' }}>
+        <SelectTrigger className="editor-form-spacing editor-select-width-sm">
           <SelectValue placeholder="Position" />
         </SelectTrigger>
         <SelectContent>

@@ -956,7 +956,7 @@ export default function ToolbarPlugin({
           className="toolbar-item spaced"
           aria-label="Undo"
         >
-          <Undo2 className="w-4 h-4" />
+          <Undo2 className="toolbar-icon" />
         </button>
         <button
           disabled={!toolbarState.canRedo || !isEditable}
@@ -966,7 +966,7 @@ export default function ToolbarPlugin({
           className="toolbar-item"
           aria-label="Redo"
         >
-          <Redo2 className="w-4 h-4" />
+          <Redo2 className="toolbar-icon" />
         </button>
       </div>
       <Divider />
@@ -1030,7 +1030,7 @@ export default function ToolbarPlugin({
               type="button"
               aria-label={`Format text as bold. Shortcut: ${SHORTCUTS.BOLD}`}
             >
-              <BoldIcon className="w-4 h-4" />
+              <BoldIcon className="toolbar-icon" />
             </button>
             <button
               disabled={!isEditable}
@@ -1040,7 +1040,7 @@ export default function ToolbarPlugin({
               type="button"
               aria-label={`Format text as italics. Shortcut: ${SHORTCUTS.ITALIC}`}
             >
-              <ItalicIcon className="w-4 h-4" />
+              <ItalicIcon className="toolbar-icon" />
             </button>
             <button
               disabled={!isEditable}
@@ -1052,7 +1052,7 @@ export default function ToolbarPlugin({
               type="button"
               aria-label={`Format text to underlined. Shortcut: ${SHORTCUTS.UNDERLINE}`}
             >
-              <UnderlineIcon className="w-4 h-4" />
+              <UnderlineIcon className="toolbar-icon" />
             </button>
             {canViewerSeeInsertCodeButton && (
               <button
@@ -1063,7 +1063,7 @@ export default function ToolbarPlugin({
                 type="button"
                 aria-label="Insert code block"
               >
-                <CodeIcon className="w-4 h-4" />
+                <CodeIcon className="toolbar-icon" />
               </button>
             )}
             <button
@@ -1074,7 +1074,7 @@ export default function ToolbarPlugin({
               title={`Insert link (${SHORTCUTS.INSERT_LINK})`}
               type="button"
             >
-              <LinkIcon className="w-4 h-4" />
+              <LinkIcon className="toolbar-icon" />
             </button>
             <DropdownColorPicker
               disabled={!isEditable}

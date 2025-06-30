@@ -2,27 +2,23 @@
 
 .toolbar {
   display: flex;
+  align-items: center; /* Vertically center all items */
+  gap: 8px; /* Consistent spacing between groups */
   margin-bottom: 1px;
-  /* Use proper site color tokens for consistent dark mode */
-  background: hsl(var(--background));
+  background: hsl(var(--card)); /* Use card background for subtle separation */
   color: hsl(var(--foreground));
-  padding: var(--spacing-xs);
-  /* Add bottom padding for pleasant spacing to canvas */
-  padding-bottom: 1.5rem;
-  border-top-left-radius: 0;
-  border-top-right-radius: 0;
-  vertical-align: middle;
+  padding: 8px 12px;
+  border-bottom: 1px solid hsl(var(--border));
   flex-wrap: nowrap;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-  height: 48px; /* 6 * 8px */
-  min-height: 48px; /* 6 * 8px */
+  overflow: visible !important; /* ensure no scrollbars appear */
+  -webkit-overflow-scrolling: auto !important;
+  scroll-behavior: auto !important;
+  scroll-snap-type: none !important;
+  height: auto; /* Let padding and content define height */
+  min-height: 52px;
   position: sticky;
   top: 0;
-  z-index: 2;
-  overflow-y: hidden;
-  border-bottom: 1px solid hsl(var(--border));
-  box-shadow: 0 2px 8px hsl(var(--foreground) / 0.08);
+  z-index: 10; /* Ensure it's above other content */
   width: 100%;
   max-width: 100%;
 }
@@ -85,10 +81,10 @@
 .toolbar-group {
   display: flex;
   align-items: center;
+  gap: 2px; /* Consistent spacing within a group */
 }
 
 /* Base toolbar item styles - Enhanced with proper color tokens */
-button[class*='toolbar-item'],
 .toolbar-item {
   background: transparent;
   border: none;
@@ -96,17 +92,21 @@ button[class*='toolbar-item'],
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  /* Use site color tokens for consistent theming */
-  color: hsl(var(--foreground) / 0.6);
-  border-radius: var(--radius);
+  color: hsl(var(--foreground) / 0.7); /* Slightly more visible */
+  border-radius: 6px; /* Softer corners */
   transition: all 0.15s ease;
+  padding: 6px; /* Uniform padding */
+  min-width: 36px;
+  height: 36px;
   position: relative;
   -webkit-appearance: none;
   appearance: none;
+  /* Ensure consistent baseline alignment for all button types */
+  vertical-align: middle;
+  line-height: 1;
 }
 
 /* Enhanced hover states with proper color tokens */
-button[class*='toolbar-item']:hover:not(:disabled),
 .toolbar-item:hover:not(:disabled) {
   background: hsl(var(--accent));
   color: hsl(var(--accent-foreground));
@@ -114,105 +114,66 @@ button[class*='toolbar-item']:hover:not(:disabled),
   box-shadow: 0 2px 8px hsl(var(--foreground) / 0.1);
 }
 
-/* Enhanced active states */
-button[class*='toolbar-item'].active,
+/* Stronger active state for toolbar buttons */
 .toolbar-item.active {
-  background: hsl(var(--primary));
-  color: hsl(var(--primary-foreground));
-  box-shadow: inset 0 1px 3px hsl(var(--foreground) / 0.1);
+  background: hsl(var(--accent)) !important; /* vivid branding colour */
+  color: hsl(var(--accent-foreground)) !important;
+  border: 1px solid hsl(var(--accent));
+  box-shadow: 0 0 0 2px hsl(var(--accent) / 0.35);
 }
 
 /* Focus states with proper ring colors */
-button[class*='toolbar-item']:focus-visible,
 .toolbar-item:focus-visible {
   outline: 2px solid hsl(var(--ring));
   outline-offset: 2px;
 }
 
 /* Disabled states */
-button[class*='toolbar-item']:disabled,
 .toolbar-item:disabled {
-  opacity: 0.5;
+  opacity: 0.4;
   cursor: not-allowed;
   background: transparent;
-  color: hsl(var(--foreground) / 0.3);
+  color: hsl(var(--foreground) / 0.4);
+  transform: none;
+  box-shadow: none;
 }
 
-/* Enhanced responsive toolbar items with better scaling */
+/* Remove all responsive toolbar item overrides */
 @media (min-width: 1536px) {
-  button[class*='toolbar-item'],
   .toolbar-item {
-    /* 2XL screens: Generous sizing for comfort */
-    padding: 8px 12px;
-    margin-right: 4px;
-    min-width: 44px;
-    height: 40px;
-    border-radius: calc(var(--radius) + 2px);
+    /* No overrides needed, use base style */
   }
 }
-
 @media (min-width: 1280px) and (max-width: 1535px) {
-  button[class*='toolbar-item'],
   .toolbar-item {
-    /* XL screens: Comfortable sizing */
-    padding: 6px 10px;
-    margin-right: 3px;
-    min-width: 40px;
-    height: 36px;
-    border-radius: calc(var(--radius) + 1px);
+    /* No overrides needed, use base style */
   }
 }
-
 @media (min-width: 1024px) and (max-width: 1279px) {
-  button[class*='toolbar-item'],
   .toolbar-item {
-    /* LG screens: Standard sizing */
-    padding: 4px 8px;
-    margin-right: 3px;
-    min-width: 36px;
-    height: 32px;
-    border-radius: var(--radius);
+    /* No overrides needed, use base style */
   }
 }
-
 @media (min-width: 768px) and (max-width: 1023px) {
-  button[class*='toolbar-item'],
   .toolbar-item {
-    /* MD screens: Slightly compact */
-    padding: 3px 6px;
-    margin-right: 2px;
-    min-width: 32px;
-    height: 30px;
-    border-radius: calc(var(--radius) - 1px);
+    /* No overrides needed, use base style */
   }
 }
-
 @media (max-width: 767px) {
-  button[class*='toolbar-item'],
   .toolbar-item {
-    /* SM screens: Compact but touchable */
-    padding: var(--spacing-xs);
-    margin-right: 1px;
-    min-width: 28px;
-    height: 28px;
-    border-radius: calc(var(--radius) - 2px);
+    /* No overrides needed, use base style */
   }
 }
-
 @media (max-width: 480px) {
-  button[class*='toolbar-item'],
   .toolbar-item {
-    /* XS screens: Very compact */
-    padding: 1px 3px;
-    margin-right: 1px;
-    min-width: 24px;
-    height: 24px;
-    border-radius: 3px;
+    padding: 4px;
+    min-width: 32px;
+    height: 32px;
   }
 }
 
 .toolbar-item.spaced {
-  margin-right: 2px;
+  margin-right: 0; /* Remove old spacing, handled by gap */
 }
 
 .toolbar-item:last-of-type {
@@ -241,7 +202,9 @@ button[class*='toolbar-item']:disabled,
 
 .toolbar-item i.format {
   background-size: contain;
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   height: 18px;
   width: 18px;
   vertical-align: -0.25em;
@@ -303,23 +266,47 @@ button[class*='toolbar-item']:disabled,
   }
 }
 
-/* Icon styles */
-.toolbar-item i.format {
-  background-size: contain;
-  display: inline-block;
-  height: 16px;
+/* Consolidated Icon styles */
+.toolbar-icon,
+.toolbar-item i.format,
+.toolbar-item .icon {
   width: 16px;
-  vertical-align: -0.25em;
-  display: flex;
-  opacity: 0.6;
+  height: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.85;
+  transition: opacity 0.15s ease;
+  stroke: currentColor;
+  fill: none;
+  margin-right: 6px;
+  flex-shrink: 0;
 }
 
-.toolbar-item.active i {
+/* Fix alignment for dropdown buttons with text + icons */
+.toolbar-item:has(.text) {
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+}
+
+.toolbar-item:has(.text) .icon {
+  margin-right: 4px;
+}
+
+.toolbar-item:has(.text) .text {
+  margin-right: 2px;
+}
+
+.toolbar-item.active .toolbar-icon,
+.toolbar-item.active i,
+.toolbar-item.active .icon {
   opacity: 1;
 }
 
 /* Mobile responsive icon sizes */
 @media (max-width: 768px) {
+  .toolbar-icon,
   .toolbar-item i.format,
   .toolbar-item .icon {
     height: 14px;
@@ -328,6 +315,7 @@ button[class*='toolbar-item']:disabled,
 }
 
 @media (max-width: 480px) {
+  .toolbar-icon,
   .toolbar-item i.format,
   .toolbar-item .icon {
     height: 12px;
@@ -352,7 +340,7 @@ button[class*='toolbar-item']:disabled,
   line-height: 18px;
   vertical-align: middle;
   font-size: 13px;
-  color: inherit;
+  color: hsl(var(--muted-foreground));
   text-overflow: ellipsis;
   overflow: hidden;
   height: 18px;
@@ -380,33 +368,19 @@ button[class*='toolbar-item']:disabled,
   }
 }
 
-.toolbar .toolbar-item .icon {
-  display: flex;
-  width: 18px;
-  height: 18px;
-  user-select: none;
-  margin-right: 6px;
-  line-height: 16px;
-  background-size: contain;
-}
+/* Removed conflicting icon sizing - handled by consolidated .toolbar-icon rule */
 
 .toolbar-item i.chevron-down,
 .toolbar-item .chevron-down {
-  margin-top: 2px;
-  margin-left: 3px;
+  margin-left: 2px;
   width: 14px;
   height: 14px;
-  display: flex;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   user-select: none;
   opacity: 0.6;
-}
-
-.toolbar .divider {
-  width: 1px;
-  background-color: hsl(var(--border));
-  margin: 0 3px;
-  height: 20px;
-  align-self: center;
+  flex-shrink: 0;
 }
 
 /* Ensure dropdown button text is visible */
@@ -426,31 +400,19 @@ button[class*='toolbar-item']:disabled,
   display: inline-block;
 }
 
-/* Icon base styles */
-.toolbar i,
-.toolbar .icon {
-  display: inline-block;
-  background-size: contain;
-  background-position: center;
-  background-repeat: no-repeat;
-  width: 18px;
-  height: 18px;
-  vertical-align: middle;
+/* Legacy icon styles - consolidated above */
+
+/* Editor form spacing classes */
+.editor-form-spacing {
+  margin-bottom: 1em;
 }
 
-/* Ensure icons in buttons are properly sized */
-.toolbar-item i,
-.toolbar-item .icon {
-  width: 16px;
-  height: 16px;
+.editor-select-width {
+  width: 290px;
 }
 
-/* Ensure Lucide icons inherit color */
-.toolbar button svg {
-  width: 15px;
-  height: 15px;
-  stroke: currentColor;
-  fill: none;
+.editor-select-width-sm {
+  width: 208px;
 }
 
 /* Fix dropdown active state */
@@ -485,7 +447,7 @@ button[class*='toolbar-item']:disabled,
   border: 1px solid hsl(var(--border));
   border-radius: calc(var(--radius) - 2px);
   background: hsl(var(--background));
-  color: hsl(var(--foreground));
+  color: hsl(var(--muted-foreground));
   font-size: 13px;
   text-align: center;
 }
@@ -498,7 +460,7 @@ button[class*='toolbar-item']:disabled,
   border: 1px solid hsl(var(--border)) !important;
   border-radius: 6px !important;
   background: hsl(var(--background)) !important;
-  color: hsl(var(--foreground)) !important;
+  color: hsl(var(--muted-foreground)) !important;
   font-size: 13px !important;
   text-align: center !important;
   margin: 0 3px !important;
@@ -614,49 +576,50 @@ button[class*='toolbar-item']:disabled,
   border: 1px solid hsl(var(--border));
 }
 
-/* FINAL OVERRIDE RULES - Maximum specificity to ensure these work */
-.lexical-playground
-  .editor-shell
-  .toolbar
-  button.toolbar-item.spaced:hover:not(:disabled),
-.lexical-playground
-  .editor-shell
-  .toolbar
-  button.toolbar-item:hover:not(:disabled) {
-  background-color: hsl(var(--accent)) !important;
-  color: hsl(var(--accent-foreground)) !important;
-  transform: translateY(-1px);
-  box-shadow: 0 2px 8px hsl(var(--foreground) / 0.08);
-}
-
-.lexical-playground .editor-shell .toolbar button.toolbar-item.spaced.active,
-.lexical-playground .editor-shell .toolbar button.toolbar-item.active {
-  background-color: hsl(var(--primary)) !important;
-  color: hsl(var(--primary-foreground)) !important;
-  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-/* Ensure transitions work */
-.lexical-playground .editor-shell .toolbar button {
-  transition: all 0.15s ease !important;
-}
-/* Enhanced Overflow Handling - Phase 4 Improvements */
+/* Hide previously added custom scrollbar styles (no longer needed) */
 .toolbar::-webkit-scrollbar {
-  height: 4px;
+  display: none;
 }
-.toolbar::-webkit-scrollbar-thumb {
-  background: hsl(var(--foreground) / 0.3);
-  border-radius: 2px;
+
+/* Ensure dropdown menu text & shortcuts inherit correct color in both themes */
+.toolbar .dropdown .item .text,
+.toolbar .dropdown .item .shortcut {
+  color: hsl(var(--foreground));
 }
-.toolbar {
-  scroll-behavior: smooth;
-  scroll-snap-type: x proximity;
+
+/* ---- Global dropdown theming overrides ---- */
+.dropdown {
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
+  border: 1px solid hsl(var(--border));
 }
-.toolbar-group {
-  scroll-snap-align: start;
+
+.dropdown .divider {
+  background: hsl(var(--border));
 }
-@media (max-width: 480px) {
-  .toolbar-item {
-    min-height: 44px;
+
+.dropdown .item .text {
+  color: hsl(var(--foreground));
+}
+
+.dropdown .item .shortcut {
+  color: hsl(var(--muted-foreground));
+}
+
+.dropdown .item:hover {
+  background: hsl(var(--muted));
+  color: hsl(var(--foreground));
+}
+
+@media (prefers-color-scheme: dark) {
+  .dropdown {
+    background: hsl(var(--card));
+  }
+
+  .toolbar-item.active {
+    background: hsl(var(--primary));
+    color: hsl(var(--primary-foreground));
+    border-color: transparent;
+    box-shadow: 0 0 0 2px hsl(var(--primary) / 0.5);
   }
 }
