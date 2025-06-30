@@ -9,7 +9,6 @@
 
 'use client';
 
-
 import { $createCodeNode } from '@lexical/code';
 import {
   INSERT_CHECK_LIST_COMMAND,
@@ -35,11 +34,11 @@ import {
   LexicalEditor,
   TextNode,
 } from 'lexical';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState, useEffect } from 'react';
 import * as ReactDOM from 'react-dom';
 
 import useModal from '../../../hooks/useModal';
-import catTypingGif from '../../../images/cat-typing.gif';
+import catTypingGif from '../../../ui/images/cat-typing.gif';
 import { EmbedConfigs } from '../../layout/AutoEmbedPlugin';
 import InsertLayoutDialog from '../../layout/LayoutPlugin/InsertLayoutDialog';
 import { INSERT_PAGE_BREAK } from '../../layout/PageBreakPlugin';
@@ -52,6 +51,8 @@ import {
 import { INSERT_COLLAPSIBLE_COMMAND } from '../CollapsiblePlugin';
 import { InsertEquationDialog } from '../EquationsPlugin';
 import { InsertPollDialog } from '../PollPlugin';
+import { $createStickyNode } from '../../../nodes/interactive/StickyNode';
+import { usePluginEnabler } from '../../../LexicalOptimizedEditor';
 
 import type { JSX } from 'react';
 
@@ -120,7 +121,11 @@ function ComponentPickerMenuItem({
   );
 }
 
-function getDynamicOptions(editor: LexicalEditor, queryString: string) {
+function getDynamicOptions(
+  editor: LexicalEditor,
+  queryString: string,
+  { enablePlugin }: { enablePlugin: (plugin: string) => void },
+) {
   const options: Array<ComponentPickerOption> = [];
 
   if (queryString == undefined) {
@@ -141,8 +146,10 @@ function getDynamicOptions(editor: LexicalEditor, queryString: string) {
           new ComponentPickerOption(`${rows}x${columns} Table`, {
             icon: <i className="icon table" />,
             keywords: ['table'],
-            onSelect: () =>
-              editor.dispatchCommand(INSERT_TABLE_COMMAND, { columns, rows }),
+            onSelect: () => {
+              enablePlugin('tableActionMenu');
+              editor.dispatchCommand(INSERT_TABLE_COMMAND, { columns, rows });
+            },
           }),
       ),
     );
@@ -153,7 +160,11 @@ function getDynamicOptions(editor: LexicalEditor, queryString: string) {
 
 type ShowModal = ReturnType<typeof useModal>[1];
 
-function getBaseOptions(editor: LexicalEditor, showModal: ShowModal) {
+function getBaseOptions(
+  editor: LexicalEditor,
+  showModal: ShowModal,
+  { enablePlugin }: { enablePlugin: (plugin: string) => void },
+) {
   return [
     new ComponentPickerOption('Paragraph', {
       icon: <i className="icon paragraph" />,
@@ -183,10 +194,16 @@ function getBaseOptions(editor: LexicalEditor, showModal: ShowModal) {
     new ComponentPickerOption('Table', {
       icon: <i className="icon table" />,
       keywords: ['table', 'grid', 'spreadsheet', 'rows', 'columns'],
-      onSelect: () =>
+      onSelect: () => {
+        enablePlugin('tableActionMenu');
         showModal('Insert Table', (onClose) => (
-          <InsertTableDialog activeEditor={editor} onClose={onClose} />
-        )),
+          <InsertTableDialog
+            activeEditor={editor}
+            onClose={onClose}
+            onBeforeInsert={() => enablePlugin('tableActionMenu')}
+          />
+        ));
+      },
     }),
     new ComponentPickerOption('Numbered List', {
       icon: <i className="icon number" />,
@@ -248,19 +265,23 @@ function getBaseOptions(editor: LexicalEditor, showModal: ShowModal) {
       keywords: ['page break', 'divider'],
       onSelect: () => editor.dispatchCommand(INSERT_PAGE_BREAK, undefined),
     }),
-    new ComponentPickerOption('Excalidraw', {
+    new ComponentPickerOption('Drawing', {
       icon: <i className="icon diagram-2" />,
       keywords: ['excalidraw', 'diagram', 'drawing'],
-      onSelect: () =>
-        editor.dispatchCommand(INSERT_EXCALIDRAW_COMMAND, undefined),
+      onSelect: () => {
+        enablePlugin('excalidraw');
+        editor.dispatchCommand(INSERT_EXCALIDRAW_COMMAND, undefined);
+      },
     }),
     new ComponentPickerOption('Poll', {
       icon: <i className="icon poll" />,
       keywords: ['poll', 'vote'],
-      onSelect: () =>
+      onSelect: () => {
+        enablePlugin('poll');
         showModal('Insert Poll', (onClose) => (
           <InsertPollDialog activeEditor={editor} onClose={onClose} />
-        )),
+        ));
+      },
     }),
     ...EmbedConfigs.map(
       (embedConfig) =>
@@ -274,10 +295,12 @@ function getBaseOptions(editor: LexicalEditor, showModal: ShowModal) {
     new ComponentPickerOption('Equation', {
       icon: <i className="icon equation" />,
       keywords: ['equation', 'latex', 'math'],
-      onSelect: () =>
+      onSelect: () => {
+        enablePlugin('equations');
         showModal('Insert Equation', (onClose) => (
           <InsertEquationDialog activeEditor={editor} onClose={onClose} />
-        )),
+        ));
+      },
     }),
     new ComponentPickerOption('GIF', {
       icon: <i className="icon gif" />,
@@ -330,13 +353,14 @@ export default function ComponentPickerMenuPlugin(): JSX.Element {
   const [editor] = useLexicalComposerContext();
   const [modal, showModal] = useModal();
   const [queryString, setQueryString] = useState<string | null>(null);
+  const { enablePlugin } = usePluginEnabler();
 
   const checkForTriggerMatch = useBasicTypeaheadTriggerMatch('/', {
     minLength: 0,
   });
 
   const options = useMemo(() => {
-    const baseOptions = getBaseOptions(editor, showModal);
+    const baseOptions = getBaseOptions(editor, showModal, { enablePlugin });
 
     if (!queryString) {
       return baseOptions;
@@ -345,14 +369,14 @@ export default function ComponentPickerMenuPlugin(): JSX.Element {
     const regex = new RegExp(queryString, 'i');
 
     return [
-      ...getDynamicOptions(editor, queryString),
+      ...getDynamicOptions(editor, queryString, { enablePlugin }),
       ...baseOptions.filter(
         (option) =>
           regex.test(option.title) ||
           option.keywords.some((keyword) => regex.test(keyword)),
       ),
     ];
-  }, [editor, queryString, showModal]);
+  }, [editor, queryString, showModal, enablePlugin]);
 
   const onSelectOption = useCallback(
     (
@@ -369,6 +393,12 @@ export default function ComponentPickerMenuPlugin(): JSX.Element {
     },
     [editor],
   );
+
+  useEffect(() => {
+    if (!editor.hasNodes([ImageNode])) {
+      throw new Error('ImagesPlugin: ImageNode not registered on editor');
+    }
+  }, [editor]);
 
   return (
     <>

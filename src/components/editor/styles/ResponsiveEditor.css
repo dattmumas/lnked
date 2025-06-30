@@ -238,31 +238,7 @@
   }
 }
 
-/* Plus button plugin responsiveness */
-@media (max-width: 768px) {
-  .plus-button {
-    width: 24px !important;
-    height: 24px !important;
-  }
-
-  /* Plus button positioning adjustments for mobile */
-  button[style*='position: absolute'] img[alt='add'] {
-    width: 16px !important;
-    height: 16px !important;
-  }
-}
-
-@media (max-width: 480px) {
-  .plus-button {
-    width: 20px !important;
-    height: 20px !important;
-  }
-
-  button[style*='position: absolute'] img[alt='add'] {
-    width: 14px !important;
-    height: 14px !important;
-  }
-}
+/* Plus button plugin styles moved to globals.css for better organization */
 
 /* Emoji picker responsiveness */
 @media (max-width: 768px) {

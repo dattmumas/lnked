@@ -9,7 +9,6 @@
  *
  */
 
-
 import {
   AutoEmbedOption,
   EmbedConfig,
@@ -22,6 +21,7 @@ import { useMemo, useState } from 'react';
 import * as ReactDOM from 'react-dom';
 
 import { Button } from '@/components/ui/button';
+import { usePluginEnabler } from '../../LexicalOptimizedEditor';
 
 import useModal from '../../../hooks/useModal';
 import { DialogActions } from '../../../ui/modals/Dialog';
@@ -47,6 +47,9 @@ interface PlaygroundEmbedConfig extends EmbedConfig {
 
   // Embed a Figma Project.
   description?: string;
+
+  // Plugin name for lazy loading
+  pluginName?: keyof import('../../config/PluginConfig').PluginConfig['advanced'];
 }
 
 export const YoutubeEmbedConfig: PlaygroundEmbedConfig = {
@@ -56,6 +59,8 @@ export const YoutubeEmbedConfig: PlaygroundEmbedConfig = {
 
   // Icon for display.
   icon: <i className="icon youtube" />,
+
+  pluginName: 'youtube',
 
   insertNode: (editor: LexicalEditor, result: EmbedMatchResult) => {
     editor.dispatchCommand(INSERT_YOUTUBE_COMMAND, result.id);
@@ -92,6 +97,8 @@ export const TwitterEmbedConfig: PlaygroundEmbedConfig = {
   // Icon for display.
   icon: <i className="icon x" />,
 
+  pluginName: 'twitter',
+
   // Create the Lexical embed node from the url data.
   insertNode: (editor: LexicalEditor, result: EmbedMatchResult) => {
     editor.dispatchCommand(INSERT_TWEET_COMMAND, result.id);
@@ -126,6 +133,8 @@ export const FigmaEmbedConfig: PlaygroundEmbedConfig = {
   exampleUrl: 'https://www.figma.com/file/LKQ4FJ4bTnCSjedbRpk931/Sample-File',
 
   icon: <i className="icon figma" />,
+
+  pluginName: 'figma',
 
   insertNode: (editor: LexicalEditor, result: EmbedMatchResult) => {
     editor.dispatchCommand(INSERT_FIGMA_COMMAND, result.id);
@@ -242,12 +251,17 @@ export function AutoEmbedDialog({
   const [text, setText] = useState('');
   const [editor] = useLexicalComposerContext();
   const [embedResult, setEmbedResult] = useState<EmbedMatchResult | null>(null);
+  const { enablePlugin } = usePluginEnabler();
 
   const validateText = useMemo(
     () =>
       debounce((inputText: string) => {
         const urlMatch = URL_MATCHER.exec(inputText);
-        if (embedConfig != undefined && inputText != undefined && urlMatch != undefined) {
+        if (
+          embedConfig != undefined &&
+          inputText != undefined &&
+          urlMatch != undefined
+        ) {
           Promise.resolve(embedConfig.parseUrl(inputText)).then(
             (parseResult) => {
               setEmbedResult(parseResult);
@@ -262,6 +276,10 @@ export function AutoEmbedDialog({
 
   const onClick = () => {
     if (embedResult != undefined) {
+      // Enable the plugin before inserting
+      if (embedConfig.pluginName) {
+        enablePlugin(embedConfig.pluginName);
+      }
       embedConfig.insertNode(editor, embedResult);
       onClose();
     }
@@ -298,6 +316,7 @@ export function AutoEmbedDialog({
 
 export default function AutoEmbedPlugin(): JSX.Element {
   const [modal, showModal] = useModal();
+  const { enablePlugin } = usePluginEnabler();
 
   const openEmbedModal = (embedConfig: PlaygroundEmbedConfig) => {
     showModal(`Embed ${embedConfig.contentName}`, (onClose) => (
@@ -315,7 +334,13 @@ export default function AutoEmbedPlugin(): JSX.Element {
         onSelect: dismissFn,
       }),
       new AutoEmbedOption(`Embed ${activeEmbedConfig.contentName}`, {
-        onSelect: embedFn,
+        onSelect: () => {
+          // Enable the plugin before embedding
+          if (activeEmbedConfig.pluginName) {
+            enablePlugin(activeEmbedConfig.pluginName);
+          }
+          embedFn();
+        },
       }),
     ];
   };

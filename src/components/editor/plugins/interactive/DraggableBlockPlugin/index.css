@@ -7,31 +7,25 @@
   left: 0;
   top: 0;
   will-change: transform;
-  display: flex;
-  gap: 2px;
 }
 
 .draggable-block-menu .icon {
-  width: 16px;
-  height: 16px;
+  width: 8px;
+  height: 8px;
   opacity: 0.3;
-  background-image: url('../../../images/icons/draggable-block-menu.svg');
-}
-
-.draggable-block-menu .icon-plus {
-  display: inline-block;
-  border: none;
-  cursor: pointer;
-  background-color: transparent;
-  background-image: url('../../../images/icons/plus.svg');
+  background-image: url('/images/icons/draggable-block-menu.svg');
+  background-size: contain;
+  background-position: center;
+  background-repeat: no-repeat;
+  cursor: grab;
 }
 
 .draggable-block-menu:active {
   cursor: grabbing;
 }
 
-.draggable-block-menu .icon:hover {
-  background-color: #efefef;
+.draggable-block-menu:hover .icon {
+  opacity: 1;
 }
 
 .draggable-block-target-line {
@@ -39,8 +33,27 @@
   background: deepskyblue;
   height: 4px;
   position: absolute;
+  top: -2px;
   left: 0;
-  top: 0;
   opacity: 0;
-  will-change: transform;
+}
+
+/* When dragging */
+.draggable-block-menu[data-lexical-drag-preview='true'] {
+  opacity: 0.5;
+}
+
+.draggable-block-target-line[data-lexical-drag-target='true'] {
+  opacity: 1;
+}
+
+/* Dark mode compatibility */
+@media (prefers-color-scheme: dark) {
+  .draggable-block-menu {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  }
+
+  .draggable-block-menu:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  }
 }

@@ -1153,60 +1153,68 @@
 }
 
 /* Draggable block styling - Exact playground replica */
-.draggable-block-menu {
-  position: fixed;
-  cursor: grab;
-  user-select: none;
-  width: 20px;
-  height: 20px;
-  background: #f8f9fa;
-  border: 1px solid #e9ecef;
-  border-radius: 3px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 10;
-  color: #6c757d;
-  opacity: 0;
-}
-
-.draggable-block-menu.visible {
-  opacity: 1;
-}
-
-.draggable-block-menu:hover {
-  background: #e9ecef;
-  border-color: #d0d7de;
-  color: #495057;
-}
-
-.draggable-block-menu:active {
-  cursor: grabbing;
-  background: #dee2e6;
-}
-
-/* Note: Drag handle visibility is controlled by JavaScript hover detection */
-
-/* Target line for drag operations */
-.draggable-block-target-line {
-  pointer-events: none;
-  background: #0969da;
-  height: 2px;
-  position: fixed;
-  left: 0;
-  top: 0;
-  opacity: 0;
-  will-change: transform;
-  border-radius: 1px;
-  z-index: 1000;
-  transition: opacity 0.2s ease;
-}
+/* Draggable block styles are now handled in the plugin's own CSS file */
 
 /* Floating add button positioning */
 .floating-add-button {
   pointer-events: auto;
   z-index: 1000;
   position: fixed;
+}
+
+/* Plus button plugin - Clean implementation with CSS custom properties */
+.floating-add-button-plugin {
+  --button-size: 24px;
+  --button-left-offset: -40px;
+
+  pointer-events: auto !important;
+  z-index: 1000 !important;
+  position: fixed !important;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  width: var(--button-size, 24px);
+  height: var(--button-size, 24px);
+  background: hsl(var(--background));
+  border: 1px solid hsl(var(--border));
+  border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s ease;
+  opacity: 0;
+  transform: scale(0.9);
+  cursor: pointer;
+  color: hsl(var(--muted-foreground));
+}
+
+.floating-add-button-plugin.visible {
+  opacity: 1 !important;
+  transform: scale(1) !important;
+}
+
+.floating-add-button-plugin:hover {
+  background: hsl(var(--accent));
+  color: hsl(var(--accent-foreground));
+  border-color: hsl(var(--accent-foreground) / 0.2);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transform: scale(1.05);
+}
+
+.floating-add-button-plugin:active {
+  transform: scale(0.98);
+}
+
+.floating-add-button-plugin:focus {
+  outline: none;
+  ring: 2px solid hsl(var(--ring));
+  ring-offset: 2px;
+}
+
+/* Responsive sizing */
+@media (max-width: 768px) {
+  .floating-add-button-plugin {
+    --button-size: 20px;
+    --button-left-offset: -32px;
+  }
 }
 
 /* Responsive layout adjustments */
@@ -1266,9 +1274,13 @@
   outline-offset: 2px;
 }
 
-.floating-add-button button:focus-visible {
-  outline: 2px solid #0969da;
+.floating-add-button button:focus-visible,
+.floating-add-button-plugin:focus-visible {
+  outline: 2px solid hsl(var(--ring));
   outline-offset: 2px;
+  box-shadow:
+    0 0 0 2px hsl(var(--background)),
+    0 0 0 4px hsl(var(--ring));
 }
 
 /* Animation for layout insertion */

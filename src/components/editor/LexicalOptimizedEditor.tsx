@@ -16,7 +16,14 @@ import { OnChangePlugin } from '@lexical/react/LexicalOnChangePlugin';
 import { RichTextPlugin } from '@lexical/react/LexicalRichTextPlugin';
 import { TabIndentationPlugin } from '@lexical/react/LexicalTabIndentationPlugin';
 import { TablePlugin } from '@lexical/react/LexicalTablePlugin';
-import { useEffect, useState, useCallback, useRef } from 'react';
+import {
+  useEffect,
+  useState,
+  useCallback,
+  useRef,
+  createContext,
+  useContext,
+} from 'react';
 import {
   $convertFromMarkdownString,
   $convertToMarkdownString,
@@ -132,22 +139,66 @@ function EditorContent({
   const [editor] = useLexicalComposerContext();
   const [activeEditor, setActiveEditor] = useState(editor);
   const [isLinkEditMode, setIsLinkEditMode] = useState<boolean>(false);
+  const editorContainerRef = useRef<HTMLDivElement>(null);
   const isEditable = true;
+  const contentCheckTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const { enablePlugin } = usePluginEnabler();
 
   const stableOnChange = useCallback(
-    (state: unknown) => {
-      if (onChange) {
-        const json = JSON.stringify(state);
+    (editorState: any) => {
+      // Existing onChange logic
+      editorState.read(() => {
+        const markdown = $convertToMarkdownString(PLAYGROUND_TRANSFORMERS);
+        const json = JSON.stringify(editorState.toJSON());
+        onChange?.(json, markdown);
 
-        // Also generate markdown if callback accepts it
-        editor.update(() => {
-          const markdown = $convertToMarkdownString(PLAYGROUND_TRANSFORMERS);
-          onChange(json, markdown);
-        });
-      }
+        // Dynamic plugin analysis - debounced
+        if (contentCheckTimeoutRef.current) {
+          clearTimeout(contentCheckTimeoutRef.current);
+        }
+
+        contentCheckTimeoutRef.current = setTimeout(() => {
+          const textContent = $getRoot().getTextContent();
+          if (textContent.length > 5000 && !advancedPlugins.tableOfContents) {
+            enablePlugin('tableOfContents');
+          }
+
+          // Check for YouTube URLs
+          if (
+            !advancedPlugins.youtube &&
+            /(?:youtube\.com\/watch\?v=|youtu\.be\/)[\w-]+/.test(textContent)
+          ) {
+            enablePlugin('youtube');
+          }
+
+          // Check for Twitter/X URLs
+          if (
+            !advancedPlugins.twitter &&
+            /(?:twitter|x)\.com\/\w+\/status\/\d+/.test(textContent)
+          ) {
+            enablePlugin('twitter');
+          }
+
+          // Check for Figma URLs
+          if (
+            !advancedPlugins.figma &&
+            /figma\.com\/(file|proto)\/[\w-]+/.test(textContent)
+          ) {
+            enablePlugin('figma');
+          }
+        }, 1000); // Debounce by 1 second
+      });
     },
-    [onChange, editor],
+    [onChange, enablePlugin, advancedPlugins],
   );
+
+  useEffect(() => {
+    return () => {
+      if (contentCheckTimeoutRef.current) {
+        clearTimeout(contentCheckTimeoutRef.current);
+      }
+    };
+  }, []);
 
   return (
     <div className="editor-shell w-full">
@@ -172,7 +223,7 @@ function EditorContent({
         <RichTextPlugin
           contentEditable={
             <div className="editor-scroller">
-              <div className="editor">
+              <div className="editor" ref={editorContainerRef}>
                 <ContentEditable placeholder={placeholder} />
               </div>
             </div>
@@ -260,6 +311,26 @@ function EditorContent({
   );
 }
 
+// Create a context for enabling plugins dynamically
+interface PluginEnablerContextType {
+  enablePlugin: (pluginName: keyof PluginConfig['advanced']) => void;
+  advancedPlugins: PluginConfig['advanced'];
+}
+
+const PluginEnablerContext = createContext<PluginEnablerContextType | null>(
+  null,
+);
+
+export function usePluginEnabler() {
+  const context = useContext(PluginEnablerContext);
+  if (!context) {
+    throw new Error(
+      'usePluginEnabler must be used within PluginEnablerContext',
+    );
+  }
+  return context;
+}
+
 export default function LexicalOptimizedEditor({
   initialContent,
   placeholder = 'Enter some rich text...',
@@ -300,13 +371,25 @@ export default function LexicalOptimizedEditor({
       <LexicalComposer initialConfig={initialConfig}>
         <SharedHistoryContext>
           <ToolbarContext>
-            <EditorContent
-              placeholder={placeholder}
-              initialContent={initialContent}
-              onChange={onChange}
-              advancedPlugins={advancedPlugins}
-              contentFormat={contentFormat}
-            />
+            <PluginEnablerContext.Provider
+              value={{
+                enablePlugin: (pluginName: keyof PluginConfig['advanced']) => {
+                  setAdvancedPlugins((prev) => ({
+                    ...prev,
+                    [pluginName]: true,
+                  }));
+                },
+                advancedPlugins,
+              }}
+            >
+              <EditorContent
+                placeholder={placeholder}
+                initialContent={initialContent}
+                onChange={onChange}
+                advancedPlugins={advancedPlugins}
+                contentFormat={contentFormat}
+              />
+            </PluginEnablerContext.Provider>
           </ToolbarContext>
         </SharedHistoryContext>
       </LexicalComposer>

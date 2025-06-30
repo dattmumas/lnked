@@ -104,6 +104,9 @@ import {
 } from './utils';
 
 import type { JSX } from 'react';
+import { usePluginEnabler } from '../../../LexicalOptimizedEditor';
+import PlaygroundEditorTheme from '../../../themes/PlaygroundEditorTheme';
+import ContentEditable from '../../../ui/inputs/ContentEditable';
 
 function getCodeLanguageOptions(): [string, string][] {
   const options: [string, string][] = [];
@@ -548,6 +551,7 @@ export default function ToolbarPlugin({
   const [modal, showModal] = useModal();
   const [isEditable, setIsEditable] = useState(() => editor.isEditable());
   const { toolbarState, updateToolbarState } = useToolbarState();
+  const { enablePlugin } = usePluginEnabler();
 
   const $updateToolbar = useCallback(() => {
     const selection = $getSelection();
@@ -890,20 +894,26 @@ export default function ToolbarPlugin({
   }, [insertGifOnClick]);
 
   const handleInsertExcalidraw = useCallback(() => {
+    enablePlugin('excalidraw');
     activeEditor.dispatchCommand(INSERT_EXCALIDRAW_COMMAND, undefined);
-  }, [activeEditor]);
+  }, [activeEditor, enablePlugin]);
 
   const handleInsertTable = useCallback(() => {
     showModal('Insert Table', (onClose) => (
-      <InsertTableDialog activeEditor={activeEditor} onClose={onClose} />
+      <InsertTableDialog
+        activeEditor={activeEditor}
+        onClose={onClose}
+        onBeforeInsert={() => enablePlugin('tableActionMenu')}
+      />
     ));
-  }, [activeEditor, showModal]);
+  }, [activeEditor, showModal, enablePlugin]);
 
   const handleInsertPoll = useCallback(() => {
+    enablePlugin('poll');
     showModal('Insert Poll', (onClose) => (
       <InsertPollDialog activeEditor={activeEditor} onClose={onClose} />
     ));
-  }, [activeEditor, showModal]);
+  }, [activeEditor, showModal, enablePlugin]);
 
   const handleInsertColumnsLayout = useCallback(() => {
     showModal('Insert Columns Layout', (onClose) => (
@@ -912,18 +922,20 @@ export default function ToolbarPlugin({
   }, [activeEditor, showModal]);
 
   const handleInsertEquation = useCallback(() => {
+    enablePlugin('equations');
     showModal('Insert Equation', (onClose) => (
       <InsertEquationDialog activeEditor={activeEditor} onClose={onClose} />
     ));
-  }, [activeEditor, showModal]);
+  }, [activeEditor, showModal, enablePlugin]);
 
   const handleInsertStickyNote = useCallback(() => {
+    enablePlugin('sticky');
     editor.update(() => {
       const root = $getRoot();
       const stickyNode = $createStickyNode(0, 0);
       root.append(stickyNode);
     });
-  }, [editor]);
+  }, [editor, enablePlugin]);
 
   const handleInsertCollapsible = useCallback(() => {
     editor.dispatchCommand(INSERT_COLLAPSIBLE_COMMAND, undefined);

@@ -7,7 +7,6 @@
  *
  */
 
-
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
 import {
   INSERT_TABLE_COMMAND,
@@ -85,9 +84,11 @@ export function TableContext({ children }: { children: JSX.Element }) {
 export function InsertTableDialog({
   activeEditor,
   onClose,
+  onBeforeInsert,
 }: {
   activeEditor: LexicalEditor;
   onClose: () => void;
+  onBeforeInsert?: () => void;
 }): JSX.Element {
   const [rows, setRows] = useState('5');
   const [columns, setColumns] = useState('5');
@@ -104,6 +105,7 @@ export function InsertTableDialog({
   }, [rows, columns]);
 
   const onClick = () => {
+    onBeforeInsert?.();
     activeEditor.dispatchCommand(INSERT_TABLE_COMMAND, {
       columns,
       rows,

@@ -57,7 +57,7 @@ export const defaultPluginConfig: PluginConfig = {
     youtube: false, // Load on demand when user embeds YouTube
     twitter: false, // Load on demand when user embeds Tweet
     figma: false, // Load on demand when user embeds Figma
-    emojiPicker: false, // Load on demand when user opens emoji picker
+    emojiPicker: true, // Enable by default - lightweight and commonly used
     speechToText: false, // Load on demand when user enables speech
     tableActionMenu: false, // Load on demand when user uses tables
   },
