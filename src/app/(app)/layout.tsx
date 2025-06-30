@@ -1,3 +1,4 @@
+import { SpeedInsights } from '@vercel/speed-insights/next';
 import { redirect } from 'next/navigation';
 import React from 'react';
 
@@ -40,6 +41,7 @@ export default async function AppLayout({
 
   return (
     <UserProvider user={user} profile={profile}>
+      <SpeedInsights />
       <div className="flex min-h-screen flex-col">
         {/* Global navbar */}
         <header className="shrink-0 sticky top-0 z-50 bg-background backdrop-blur-md border-b border-border/50">
