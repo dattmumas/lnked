@@ -9,3 +9,9 @@
 - src/components/chat/ChannelIcon.tsx
 - src/components/chat/message-input.tsx
 - src/hooks/useTypingStatus.ts
+- src/components/chat/icons/AttachmentIcon.tsx
+- src/components/chat/icons/ErrorIcon.tsx
+- src/components/chat/icons/LoadingSpinner.tsx
+- src/components/app/dashboard/molecules/CompactCollectiveCardSkeleton.tsx
+- src/components/app/dashboard/molecules/RecentPostRowSkeleton.tsx
+- src/components/app/dashboard/molecules/StatCardSkeleton.tsx
