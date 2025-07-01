@@ -5,3 +5,6 @@
 - src/hooks/useOptimisticMessages.ts
 - src/lib/editorConstants.ts
 - src/components/chat/TenantSwitcherSidebar.tsx
+- src/components/chat/collective-icons-sidebar.tsx
+- src/components/chat/ChannelIcon.tsx
+- src/components/chat/message-input.tsx
