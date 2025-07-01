@@ -1,3 +1,5 @@
 - src/hooks/useInfiniteScroll.ts
 - src/hooks/useFirstChannel.ts
 - src/hooks/useTenantAnalytics.ts
+- src/hooks/use-unread-messages.ts
+- src/hooks/useOptimisticMessages.ts
