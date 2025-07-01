@@ -8,3 +8,4 @@
 - src/components/chat/collective-icons-sidebar.tsx
 - src/components/chat/ChannelIcon.tsx
 - src/components/chat/message-input.tsx
+- src/hooks/useTypingStatus.ts
