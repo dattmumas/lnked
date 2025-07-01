@@ -3,3 +3,4 @@
 - src/hooks/useTenantAnalytics.ts
 - src/hooks/use-unread-messages.ts
 - src/hooks/useOptimisticMessages.ts
+- src/lib/editorConstants.ts
