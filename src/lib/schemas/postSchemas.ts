@@ -11,7 +11,8 @@ import {
 } from '@/lib/constants/post';
 
 /**
- * Extract plain text from Lexical editor JSON to validate content length.
+ * Extract plain text from editor JSON to validate content length.
+ * This function will be updated when TipTap is implemented.
  */
 export function hasMinimumText(
   content: string,

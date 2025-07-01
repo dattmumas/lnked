@@ -1,227 +1,89 @@
 'use client';
 
-import { ArrowLeft, Save } from 'lucide-react';
-import dynamic from 'next/dynamic';
+import { ChevronLeft } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import React, { useEffect, useCallback, useMemo, useState } from 'react';
+import React, { useCallback } from 'react';
+import Link from 'next/link';
 
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { usePostEditor } from '@/hooks/posts/usePostEditor';
-import { usePostEditorStore } from '@/lib/stores/post-editor-store';
-
-// Dynamic import for the editor to avoid SSR issues
-const PostEditor = dynamic(() => import('@/components/editor/PostEditor'), {
-  ssr: false,
-  loading: (): React.ReactElement => (
-    <div className="h-96 bg-muted/30 rounded-lg animate-pulse flex items-center justify-center">
-      <span className="text-muted-foreground">Loading editor...</span>
-    </div>
-  ),
-});
 
 export default function NewPostEditorPage(): React.ReactElement {
   const router = useRouter();
-  const [showUnsavedWarning, setShowUnsavedWarning] = useState(false);
-  const {
-    formData,
-    updateFormData,
-    autoSaveStatus,
-    isDirty,
-    savePost,
-    setCurrentPage,
-    resetForm,
-  } = usePostEditor();
+  const { formData, updateFormData, savePost, publishPost } = usePostEditor();
 
-  // Set current page for state management
-  useEffect((): void => {
-    setCurrentPage('editor');
-  }, [setCurrentPage]);
+  const handleSaveDraft = useCallback(async (): Promise<void> => {
+    await savePost();
+  }, [savePost]);
 
-  // Clean up on unmount to prevent form persistence
-  useEffect(() => {
-    return () => {
-      // Use the store directly to get the latest state
-      const currentStore = usePostEditorStore.getState();
-      // Only clear form if it's a new post (no ID) and not dirty
-      if (!currentStore.formData.id && !currentStore.isDirty) {
-        currentStore.clearForm();
-      }
-    };
-  }, []); // Empty dependency array to run only on mount/unmount
-
-  const handleContinue = useCallback(async (): Promise<void> => {
-    // Save before navigating if there are changes
-    if (isDirty && formData.title.trim()) {
-      await savePost();
-    }
-    void router.push('/posts/new/details');
-  }, [isDirty, formData.title, savePost, router]);
-
-  const handleGoBack = useCallback((): void => {
-    if (isDirty) {
-      setShowUnsavedWarning(true);
-      return;
-    }
-    void router.push('/posts');
-  }, [isDirty, router]);
-
-  const handleConfirmLeave = useCallback((): void => {
-    // Reset form when leaving without saving
-    resetForm();
-    setShowUnsavedWarning(false);
-    void router.push('/posts');
-  }, [router, resetForm]);
-
-  const handleCancelLeave = useCallback((): void => {
-    setShowUnsavedWarning(false);
-  }, []);
-
-  // Memoize the content change handler to prevent unnecessary re-renders
-  const handleContentChange = useCallback(
-    (content: string): void => {
-      updateFormData({ content });
-    },
-    [updateFormData],
-  );
-
-  const handleManualSave = useCallback(async (): Promise<void> => {
-    if (formData.title.trim()) {
-      await savePost();
-    }
-  }, [formData.title, savePost]);
-
-  const handleManualSaveClick = useCallback((): void => {
-    void handleManualSave();
-  }, [handleManualSave]);
-
-  const handleContinueClick = useCallback((): void => {
-    void handleContinue();
-  }, [handleContinue]);
-
-  const handleTitleChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>): void => {
-      updateFormData({ title: e.target.value });
-    },
-    [updateFormData],
-  );
-
-  // Memoize the initial content to prevent the editor from re-initializing
-  const stableInitialContent = useMemo((): string => {
-    // For new posts, use the current content from the store or empty string
-    return formData.content || '';
-  }, []); // Empty dependency array to stabilize the value
+  const handlePublish = useCallback(async (): Promise<void> => {
+    await publishPost();
+  }, [publishPost]);
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Unsaved changes warning */}
-      {showUnsavedWarning && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <Alert className="max-w-md bg-background border shadow-lg">
-            <AlertDescription className="space-y-4">
-              <p>You have unsaved changes. Are you sure you want to leave?</p>
-              <div className="flex gap-2 justify-end">
-                <Button variant="outline" onClick={handleCancelLeave}>
-                  Cancel
-                </Button>
-                <Button variant="destructive" onClick={handleConfirmLeave}>
-                  Leave Without Saving
-                </Button>
+      {/* Header */}
+      <header className="sticky top-0 z-50 border-b bg-background/80 backdrop-blur-lg">
+        <div className="container mx-auto px-4">
+          <div className="flex h-16 items-center justify-between">
+            <div className="flex items-center gap-6">
+              <Link
+                href="/posts"
+                className="flex items-center gap-2 text-foreground/70 hover:text-foreground transition-colors"
+              >
+                <ChevronLeft className="h-4 w-4" />
+                Back
+              </Link>
+              <div className="hidden md:block text-sm text-foreground/50">
+                Editor removed
               </div>
-            </AlertDescription>
-          </Alert>
-        </div>
-      )}
-
-      {/* Minimal header */}
-      <header className="border-b bg-card/50 backdrop-blur-sm px-4 py-3">
-        <div className="flex items-center justify-between max-w-4xl mx-auto">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleGoBack}
-            className="flex items-center gap-2"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back to Dashboard
-          </Button>
-
-          <div className="flex items-center gap-3">
-            {/* Auto-save status */}
-            <div className="flex items-center gap-2">
-              {autoSaveStatus === 'saving' && (
-                <Badge variant="outline" className="animate-pulse">
-                  Saving...
-                </Badge>
-              )}
-              {autoSaveStatus === 'saved' && (
-                <Badge
-                  variant="outline"
-                  className="text-green-600 border-green-600"
-                >
-                  Saved
-                </Badge>
-              )}
-              {autoSaveStatus === 'error' && (
-                <Badge variant="destructive">Save Failed</Badge>
-              )}
-              {isDirty && autoSaveStatus === 'idle' && (
-                <Badge
-                  variant="outline"
-                  className="text-orange-600 border-orange-600"
-                >
-                  Unsaved Changes
-                </Badge>
-              )}
             </div>
 
-            {/* Manual save button */}
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleManualSaveClick}
-              disabled={!formData.title.trim() || autoSaveStatus === 'saving'}
-              className="flex items-center gap-2"
-            >
-              <Save className="h-4 w-4" />
-              Save
-            </Button>
-            {/* Floating continue button */}
-            <Button
-              size="sm"
-              className=""
-              onClick={handleContinueClick}
-              disabled={!formData.title.trim()}
-            >
-              Continue to Settings →
-            </Button>
+            <div className="flex items-center gap-3">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleSaveDraft}
+                disabled={!formData.title}
+                className="transition-all"
+              >
+                Save Draft
+              </Button>
+
+              <Button
+                onClick={handlePublish}
+                disabled={!formData.title}
+                size="sm"
+                className="relative transition-all duration-200"
+              >
+                Publish
+              </Button>
+            </div>
           </div>
         </div>
       </header>
 
-      {/* Full-screen editor */}
-      <main className="px-4 py-8 lg:ml-16">
-        <div className="max-w-[1400px] xl:max-w-[1600px] 2xl:max-w-[1800px] mx-auto space-y-6">
+      {/* Main Content */}
+      <main className="container mx-auto px-4 py-8">
+        <div className="max-w-4xl mx-auto">
           {/* Title input */}
-          <div>
+          <div className="mb-6">
             <input
               type="text"
               placeholder="Post title..."
               value={formData.title}
-              onChange={handleTitleChange}
-              className="w-full text-3xl font-bold border-border outline-none placeholder:text-muted-foreground focus:ring-0 p-0"
+              onChange={(e) => updateFormData({ title: e.target.value })}
+              className="w-full text-3xl font-bold border-0 outline-none placeholder:text-muted-foreground focus:ring-0 p-0 bg-transparent"
             />
           </div>
 
-          {/* Content editor */}
-          <div className="min-h-[500px]">
-            <PostEditor
-              key="new-post-editor"
-              initialContent={stableInitialContent}
-              onChange={handleContentChange}
-              placeholder="Start writing your post..."
-            />
+          {/* Editor Placeholder */}
+          <div className="rounded-lg border bg-card p-8 text-center">
+            <h3 className="text-lg font-medium mb-2">Editor Removed</h3>
+            <p className="text-muted-foreground">
+              The Lexical editor has been removed. TipTap will be implemented
+              here.
+            </p>
           </div>
         </div>
       </main>

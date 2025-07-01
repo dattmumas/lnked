@@ -18,7 +18,14 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { ReadOnlyLexicalViewer } from '@/components/ui/ReadOnlyLexicalViewer';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent } from '@/components/ui/card';
 import { formatPostDate } from '@/lib/posts';
 
 import type {
@@ -181,29 +188,17 @@ export default function PostViewer({
           </header>
 
           {/* Post Content */}
-          <div
-            className="prose prose-lg dark:prose-invert max-w-none
-              prose-headings:font-bold prose-headings:tracking-tight
-              prose-h1:text-4xl prose-h1:mb-8 prose-h1:mt-12
-              prose-h2:text-3xl prose-h2:mb-6 prose-h2:mt-10
-              prose-h3:text-2xl prose-h3:mb-4 prose-h3:mt-8
-              prose-p:text-xl prose-p:leading-relaxed prose-p:mb-6 prose-p:text-foreground/90
-              prose-li:text-xl prose-li:leading-relaxed prose-li:marker:text-muted-foreground
-              prose-blockquote:border-l-4 prose-blockquote:border-muted-foreground/30 
-              prose-blockquote:pl-6 prose-blockquote:italic prose-blockquote:text-xl
-              prose-code:text-base prose-code:bg-muted prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded
-              prose-pre:bg-muted prose-pre:text-base
-              prose-img:rounded-lg prose-img:shadow-lg
-              prose-a:text-primary prose-a:no-underline hover:prose-a:underline
-            "
-          >
-            {post.content ? (
-              <ReadOnlyLexicalViewer contentJSON={post.content} />
-            ) : (
-              <p className="text-muted-foreground italic">
-                No content available
+          <div className="prose prose-lg dark:prose-invert max-w-none">
+            <div className="rounded-lg border bg-card p-4 text-center">
+              <p className="text-muted-foreground">
+                Content viewer removed - TipTap will be implemented
               </p>
-            )}
+              {post.content && (
+                <div className="mt-2 text-sm text-muted-foreground">
+                  Content preview: {post.content.substring(0, 100)}...
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Comments Section */}

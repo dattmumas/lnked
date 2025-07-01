@@ -2,17 +2,6 @@ import type { NextConfig } from 'next';
 
 /** @type {import('next').NextConfig} */
 const nextConfig: NextConfig = {
-  // From audit: transpile the Lexical packages
-  transpilePackages: [
-    'lexical',
-    '@lexical/react',
-    '@lexical/rich-text',
-    '@lexical/code',
-    '@lexical/list',
-    '@lexical/link',
-    '@lexical/table',
-    '@lexical/markdown',
-  ],
   images: {
     loader: 'custom',
     loaderFile: './supabase-image-loader.js',

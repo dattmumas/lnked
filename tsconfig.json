@@ -47,25 +47,6 @@
     "**/*.test.ts",
     "**/*.test.tsx",
     "**/*.spec.ts",
-    "**/*.spec.tsx",
-    // Exclude ALL imported editor components except wrapper files
-    "src/components/editor/LexicalOptimizedEditor.tsx",
-    "src/components/editor/nodes/**/*",
-    "src/components/editor/plugins/**/*",
-    "src/components/editor/context/**/*",
-    "src/components/editor/hooks/**/*",
-    "src/components/editor/images/**/*",
-    "src/components/editor/styles/**/*",
-    "src/components/editor/themes/**/*",
-    "src/components/editor/ui/**/*",
-    "src/components/editor/utils/**/*",
-    "src/components/editor/config/**/*",
-    "src/components/editor/appSettings.ts",
-    "src/components/editor/EditorLayout.tsx",
-    "src/components/editor/ErrorBoundary.tsx",
-    "src/components/editor/PlaygroundNodes.ts",
-    "src/components/editor/SharedAutocompleteContext.tsx",
-    "src/components/editor/SharedHistoryContext.tsx",
-    "src/components/editor/plugins/formatting/KeywordsPlugin/index.ts"
+    "**/*.spec.tsx"
   ]
 }

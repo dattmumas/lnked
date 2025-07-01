@@ -41,9 +41,6 @@ const eslintConfig = [
       // Data access layer
       'src/lib/data-access/**/*',
 
-      // Lexical editor files (third-party code)
-      'src/components/editor/**/*',
-
       // Landing page files
       'src/components/landing/**/*',
 

@@ -59,72 +59,19 @@ interface ArticleCardProps {
   className?: string;
 }
 
-// Type for Lexical node structure
-interface LexicalNode {
-  type?: string;
-  text?: string;
-  children?: LexicalNode[];
-}
-
-// Type for Lexical document structure
-interface LexicalData {
-  root?: {
-    children?: LexicalNode[];
-  };
-}
-
-// Utility function to extract text from Lexical JSON or plain text
-const extractTextFromContent = (
-  content: string | null,
-  maxLength = DEFAULT_EXCERPT_LENGTH,
-): string => {
-  if (content === undefined || content === null || content.length === 0)
+// Utility function to extract text from content
+function getPostExcerpt(content: string | undefined | null): string {
+  if (!content) {
     return '';
-
-  try {
-    // Try to parse as Lexical JSON
-    const parsedData = JSON.parse(content) as unknown;
-
-    // Type guard to check if it's a valid LexicalData structure
-    const isLexicalData = (data: unknown): data is LexicalData => {
-      return typeof data === 'object' && data !== null && 'root' in data;
-    };
-
-    if (
-      isLexicalData(parsedData) &&
-      parsedData.root !== undefined &&
-      parsedData.root !== null &&
-      parsedData.root.children !== undefined &&
-      parsedData.root.children !== null
-    ) {
-      const extractText = (node: LexicalNode): string => {
-        if (
-          node.type === 'text' &&
-          node.text !== undefined &&
-          node.text !== null
-        ) {
-          return node.text;
-        }
-        if (node.children !== undefined && node.children !== null) {
-          return node.children.map(extractText).join('');
-        }
-        return '';
-      };
-
-      const fullText = parsedData.root.children.map(extractText).join(' ');
-      return fullText.length <= maxLength
-        ? fullText
-        : `${fullText.substring(0, maxLength)}...`;
-    }
-  } catch {
-    // If not valid JSON, treat as plain text
-    return content.length <= maxLength
-      ? content
-      : `${content.substring(0, maxLength)}...`;
   }
 
-  return '';
-};
+  // For now, just truncate the content
+  // When TipTap is implemented, this will handle its format
+  const plainText = content.replace(/<[^>]*>/g, ''); // Remove any HTML tags
+  return plainText.length > 200
+    ? `${plainText.substring(0, 200)}...`
+    : plainText;
+}
 
 export default function ArticleCard({
   post,
@@ -143,8 +90,7 @@ export default function ArticleCard({
       ? `/posts/${post.slug}`
       : `/posts/${post.id}`;
 
-  const excerpt =
-    post.meta_description ?? extractTextFromContent(post.content ?? null);
+  const excerpt = post.meta_description ?? getPostExcerpt(post.content ?? null);
 
   return (
     <Card
