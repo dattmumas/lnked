@@ -4,3 +4,4 @@
 - src/hooks/use-unread-messages.ts
 - src/hooks/useOptimisticMessages.ts
 - src/lib/editorConstants.ts
+- src/components/chat/TenantSwitcherSidebar.tsx
