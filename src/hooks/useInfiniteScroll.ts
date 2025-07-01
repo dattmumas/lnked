@@ -1,3 +1,6 @@
+// UNUSED: This file was determined to be legacy and is scheduled for removal. See files_to_remove.md for details.
+export {};
+
 import { useCallback, useRef, useState, useEffect } from 'react';
 
 // Constants for scroll thresholds

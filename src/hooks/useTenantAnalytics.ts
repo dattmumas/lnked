@@ -1,3 +1,6 @@
+// UNUSED: Legacy hook not referenced by runtime code; scheduled for removal. See files_to_remove.md.
+export {};
+
 import { useQuery } from '@tanstack/react-query';
 
 import { useTenant } from '@/providers/TenantProvider';
