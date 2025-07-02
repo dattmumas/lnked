@@ -34,7 +34,14 @@ import markdown from 'highlight.js/lib/languages/markdown';
 import typescript from 'highlight.js/lib/languages/typescript';
 import jsx from 'highlight.js/lib/languages/xml';
 import { createLowlight } from 'lowlight';
-import React, { useEffect, useMemo, useRef, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
+import React, {
+  useEffect,
+  useMemo,
+  useRef,
+  useCallback,
+  useState,
+} from 'react';
 import tippy, { type Instance, type Props } from 'tippy.js';
 import { WebsocketProvider } from 'y-websocket';
 import * as Y from 'yjs';
@@ -48,8 +55,10 @@ import { SlashCommand } from '@/components/editor/extensions/SlashCommand';
 import { slashCommandItems } from '@/components/editor/extensions/slashCommandItems';
 import SlashCommandMenu from '@/components/editor/SlashCommandMenu';
 import { useEnhancedAutosave } from '@/hooks/posts/useEnhancedAutosave';
+import { usePostEditor } from '@/hooks/posts/usePostEditor';
 import { useUser } from '@/hooks/useUser';
 import { AUTO_SAVE_DEBOUNCE_MS } from '@/lib/constants/post-editor';
+import { draftService } from '@/lib/services/draft-service';
 import { uploadImage } from '@/lib/services/file-upload-service';
 import { usePostEditorStore } from '@/lib/stores/post-editor-v2-store';
 
@@ -194,9 +203,88 @@ export default function RichTextEditor({ postId }: RichTextEditorProps) {
     collectiveSharingSettings,
   } = usePostEditorStore();
   const { user } = useUser();
+  const router = useRouter();
+
+  // State for navigation-triggered draft saving
+  const [showSaveModal, setShowSaveModal] = useState(false);
+  const [isSavingDraft, setIsSavingDraft] = useState(false);
+  const [pendingNavigation, setPendingNavigation] = useState<
+    (() => void) | null
+  >(null);
 
   // Get tenant ID - use collective_id if present, otherwise use author_id as personal tenant
   const tenantId = formData.collective_id || user?.id || '';
+
+  // Hook for saving to posts table
+  const { savePost } = usePostEditor(postId);
+
+  // Handlers for save draft modal
+  const handleSaveDraft = useCallback(async () => {
+    if (!user?.id || !formData.id) return;
+
+    setIsSavingDraft(true);
+    try {
+      // Save to posts table as draft
+      await savePost();
+
+      // Clean up local draft since it's now saved to posts table
+      await draftService.deleteDraft(formData.id);
+
+      // Proceed with navigation
+      if (pendingNavigation) {
+        pendingNavigation();
+        setPendingNavigation(null);
+      }
+      setShowSaveModal(false);
+    } catch (error) {
+      console.error('Failed to save draft:', error);
+      // Don't navigate on error - let user try again
+    } finally {
+      setIsSavingDraft(false);
+    }
+  }, [user?.id, formData.id, savePost, pendingNavigation]);
+
+  const handleDiscardDraft = useCallback(async () => {
+    if (formData.id) {
+      // Clean up local draft
+      await draftService.deleteDraft(formData.id);
+    }
+
+    // Proceed with navigation
+    if (pendingNavigation) {
+      pendingNavigation();
+      setPendingNavigation(null);
+    }
+    setShowSaveModal(false);
+  }, [formData.id, pendingNavigation]);
+
+  const handleCancelNavigation = useCallback(() => {
+    setPendingNavigation(null);
+    setShowSaveModal(false);
+  }, []);
+
+  // Function to handle navigation attempts
+  const handleNavigationAttempt = useCallback(
+    (navigationFn: () => void) => {
+      // Check if there are unsaved changes
+      const hasContent = Boolean(
+        formData.title?.trim() ||
+          formData.content?.trim() ||
+          (formData.contentJson &&
+            Object.keys(formData.contentJson).length > 1),
+      );
+
+      if (hasContent && isDirty) {
+        // Show modal to confirm saving
+        setPendingNavigation(() => navigationFn);
+        setShowSaveModal(true);
+      } else {
+        // No unsaved changes, navigate directly
+        navigationFn();
+      }
+    },
+    [formData.title, formData.content, formData.contentJson, isDirty],
+  );
 
   const tippyInstancesRef = useRef<Set<Instance<Props>>>(new Set());
   const editorRef = useRef<CoreEditor | null>(null);
@@ -285,13 +373,14 @@ export default function RichTextEditor({ postId }: RichTextEditorProps) {
     }
   }, [postId, ydoc]);
 
-  // Use enhanced autosave with offline support and content hashing
+  // Use enhanced autosave with offline support and content hashing (LOCAL ONLY)
   const enhancedAutosave = useEnhancedAutosave({
     formData,
     debounceMs: AUTO_SAVE_DEBOUNCE_MS,
     enableOffline: true,
   });
 
+  // Modified autosave - only saves locally, not to posts table
   const triggerAutoSave = useCallback(() => {
     if (!user?.id || !formData.id) {
       console.warn('Cannot autosave: missing user or post ID');
@@ -306,6 +395,7 @@ export default function RichTextEditor({ postId }: RichTextEditorProps) {
       return;
     }
 
+    // Only trigger local saving (IndexedDB + draft sync)
     enhancedAutosave.triggerSave();
   }, [
     formData.id,
@@ -733,7 +823,7 @@ export default function RichTextEditor({ postId }: RichTextEditorProps) {
       onUpdate: ({ editor }) => {
         try {
           const json = editor.getJSON();
-          updateFormData({ contentJson: json });
+          updateFormData({ contentJson: json, content: editor.getHTML() });
           scheduleAutosave();
         } catch (error) {
           console.error('Failed to update content:', error);

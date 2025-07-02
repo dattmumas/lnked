@@ -13,20 +13,22 @@ const CACHE_MAX_AGE = 30; // seconds
 // Whitelisted sortable columns to prevent injection and ensure index usage
 const ORDERABLE_COLUMNS = {
   created_at: 'created_at',
-  title: 'title', 
+  title: 'title',
   duration: 'duration',
   updated_at: 'updated_at',
 } as const;
-
-
 
 // Request parameter validation schema
 const VideoListParamsSchema = z.object({
   page: z.coerce.number().int().positive().default(1),
   limit: z.coerce.number().int().min(1).max(MAX_LIMIT).default(DEFAULT_LIMIT),
   search: z.string().max(MAX_SEARCH_LENGTH).optional(),
-  status: z.enum(['ready', 'processing', 'failed', 'preparing', 'all']).optional(),
-  sort: z.enum(['created_at', 'title', 'duration', 'updated_at']).default('created_at'),
+  status: z
+    .enum(['ready', 'processing', 'failed', 'preparing', 'all'])
+    .optional(),
+  sort: z
+    .enum(['created_at', 'title', 'duration', 'updated_at'])
+    .default('created_at'),
   order: z.enum(['asc', 'desc']).default('desc'),
   cursor: z.string().optional(), // For future keyset pagination
 });
@@ -54,29 +56,37 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   try {
     // Create Supabase client with proper auth context for edge runtime
     const supabase = await createServerSupabaseClient();
-    
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
 
     if (authError !== null || user === null) {
       return NextResponse.json(
         { error: 'Authentication required' },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
     // Validate query parameters with Zod for robust input handling
     let params: VideoListParams;
     try {
-      const searchParamsObj = Object.fromEntries(new URL(request.url).searchParams);
+      const searchParamsObj = Object.fromEntries(
+        new URL(request.url).searchParams,
+      );
       params = VideoListParamsSchema.parse(searchParamsObj);
     } catch (error: unknown) {
-      console.error('Invalid query parameters:', { 
+      console.error('Invalid query parameters:', {
         error: error instanceof z.ZodError ? error.errors : String(error),
-        user_id: user.id 
+        user_id: user.id,
       });
       return NextResponse.json(
-        { error: 'Invalid query parameters', details: error instanceof z.ZodError ? error.errors : undefined },
-        { status: 400 }
+        {
+          error: 'Invalid query parameters',
+          details: error instanceof z.ZodError ? error.errors : undefined,
+        },
+        { status: 400 },
       );
     }
 
@@ -112,15 +122,15 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     const { data: videos, error: fetchError } = await query;
 
     if (fetchError !== null) {
-      console.error('Database error:', { 
-        code: fetchError.code, 
+      console.error('Database error:', {
+        code: fetchError.code,
         message: fetchError.message,
         user_id: user.id,
-        operation: 'fetch_videos'
+        operation: 'fetch_videos',
       });
       return NextResponse.json(
         { error: 'Failed to fetch videos' },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
@@ -135,52 +145,63 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     };
 
     // Generate ETag for conditional requests (future optimization)
-    const lastUpdated = videos !== null && videos !== undefined && videos.length > 0 
-      ? Math.max(...videos.map(v => {
-          const timestamp = v.updated_at ?? v.created_at ?? new Date().toISOString();
-          return new Date(timestamp).getTime();
-        }))
-      : Date.now();
+    const lastUpdated =
+      videos !== null && videos !== undefined && videos.length > 0
+        ? Math.max(
+            ...videos.map((v) => {
+              const timestamp =
+                v.updated_at ?? v.created_at ?? new Date().toISOString();
+              return new Date(timestamp).getTime();
+            }),
+          )
+        : Date.now();
     const etag = `"${user.id}-${lastUpdated}-${JSON.stringify(params)}"`;
 
     // Transform null values to undefined for frontend compatibility
-    const transformedVideos = videos !== null && videos !== undefined
-      ? videos.map(video => VideoAssetListSchema.parse(video))
-      : [];
+    const transformedVideos =
+      videos !== null && videos !== undefined
+        ? videos.map((video) => VideoAssetListSchema.parse(video))
+        : [];
 
-    return NextResponse.json({
-      success: true,
-      data: {
-        videos: transformedVideos,
-        pagination: {
-          page,
-          limit,
-          hasMore,
-          nextPage,
-          // Note: total count removed for performance - use keyset pagination for large datasets
-        },
-        filters: {
-          search: search !== undefined && search.trim().length > 0 ? search.trim() : undefined,
-          status: status !== 'all' ? status : undefined,
-          sort: safeSort,
-          order: safeOrder,
+    return NextResponse.json(
+      {
+        success: true,
+        data: {
+          videos: transformedVideos,
+          pagination: {
+            page,
+            limit,
+            hasMore,
+            nextPage,
+            // Note: total count removed for performance - use keyset pagination for large datasets
+          },
+          filters: {
+            search:
+              search !== undefined && search.trim().length > 0
+                ? search.trim()
+                : undefined,
+            status: status !== 'all' ? status : undefined,
+            sort: safeSort,
+            order: safeOrder,
+          },
         },
       },
-    }, {
-      status: 200,
-      headers: {
-        ...cacheHeaders,
-        ETag: etag,
+      {
+        status: 200,
+        headers: {
+          ...cacheHeaders,
+          ETag: etag,
+        },
       },
-    });
+    );
   } catch (error: unknown) {
-    console.error('Videos API error:', { 
+    console.error('Videos API error:', {
       message: error instanceof Error ? error.message : String(error),
-      operation: 'get_videos'
+      operation: 'get_videos',
     });
     return NextResponse.json(
       { error: 'Internal server error' },
-      { status: 500 }
+      { status: 500 },
     );
   }
-} 
+}

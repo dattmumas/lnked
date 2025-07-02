@@ -1,10 +1,24 @@
-import { BarChart, CheckCircle, Edit3, FileText, Plus } from 'lucide-react';
+import {
+  BarChart,
+  CheckCircle,
+  Edit3,
+  FileText,
+  Plus,
+  Video,
+  ChevronDown,
+} from 'lucide-react';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import React from 'react';
 
 import PostRow from '@/app/(app)/posts/PostRow';
 import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import {
   Card,
   CardContent,
@@ -79,11 +93,29 @@ export default async function MyPostsPage(): Promise<React.ReactElement> {
               Manage and track your content
             </p>
           </div>
-          <Button asChild size="default" className="shadow-sm">
-            <Link href="/posts/new">
-              <Plus className="h-4 w-4 mr-2" /> New Post
-            </Link>
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button size="default" className="shadow-sm">
+                <Plus className="h-4 w-4 mr-2" />
+                New Post
+                <ChevronDown className="h-4 w-4 ml-2" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuItem asChild>
+                <Link href="/posts/new" className="flex items-center">
+                  <FileText className="h-4 w-4 mr-2" />
+                  Text Post
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href="/posts/new/video" className="flex items-center">
+                  <Video className="h-4 w-4 mr-2" />
+                  Video Post
+                </Link>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
 
         {/* Stats Overview */}
@@ -165,9 +197,20 @@ export default async function MyPostsPage(): Promise<React.ReactElement> {
                 <p className="text-gray-600 dark:text-gray-400 mb-4">
                   You haven't created any posts yet.
                 </p>
-                <Button asChild variant="outline">
-                  <Link href="/posts/new">Create your first post →</Link>
-                </Button>
+                <div className="flex gap-2 justify-center">
+                  <Button asChild variant="outline">
+                    <Link href="/posts/new">
+                      <FileText className="h-4 w-4 mr-2" />
+                      Text Post
+                    </Link>
+                  </Button>
+                  <Button asChild variant="outline">
+                    <Link href="/posts/new/video">
+                      <Video className="h-4 w-4 mr-2" />
+                      Video Post
+                    </Link>
+                  </Button>
+                </div>
               </div>
             ) : (
               <div className="divide-y divide-border/50">

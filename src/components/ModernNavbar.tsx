@@ -5,6 +5,7 @@ import Link from 'next/link';
 import React from 'react';
 
 import SearchBar from '@/components/app/nav/SearchBar';
+import { NewPostButton } from '@/components/app/nav/NewPostButton';
 import { UserNav } from '@/components/app/nav/UserNav';
 import TenantSwitcher from '@/components/app/tenant/TenantSwitcher';
 import { NotificationDropdown } from '@/components/notifications/NotificationDropdown';
@@ -49,6 +50,7 @@ export default function ModernNavbar(): React.ReactElement {
 
         {/* Right: User actions */}
         <div className="flex items-center gap-3">
+          {user && <NewPostButton size="sm" />}
           <ModeToggle />
           <NotificationDropdown />
           {user && <TenantSwitcher />}

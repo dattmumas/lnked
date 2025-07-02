@@ -627,8 +627,6 @@ export function NewPostDetailsClient({
         onSelectionChange={handleCollectiveSelectionChange}
         title="Select Collectives"
         description="Choose which collectives to share this post with. You can select multiple collectives where you have posting permissions."
-        showPermissionFilter
-        allowSearch
         initialCollectives={userCollectives}
       />
     </div>

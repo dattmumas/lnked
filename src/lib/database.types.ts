@@ -1622,6 +1622,7 @@ export type Database = {
           title: string
           tsv: unknown | null
           updated_at: string | null
+          video_id: string | null
           view_count: number | null
         }
         Insert: {
@@ -1648,6 +1649,7 @@ export type Database = {
           title: string
           tsv?: unknown | null
           updated_at?: string | null
+          video_id?: string | null
           view_count?: number | null
         }
         Update: {
@@ -1674,6 +1676,7 @@ export type Database = {
           title?: string
           tsv?: unknown | null
           updated_at?: string | null
+          video_id?: string | null
           view_count?: number | null
         }
         Relationships: [
@@ -1696,6 +1699,13 @@ export type Database = {
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "posts_video_id_fkey"
+            columns: ["video_id"]
+            isOneToOne: false
+            referencedRelation: "video_assets"
             referencedColumns: ["id"]
           },
         ]
@@ -2600,6 +2610,10 @@ export type Database = {
         Args: { user_id: string }
         Returns: undefined
       }
+      create_safe_delete_helper_view: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       create_tenant_conversation: {
         Args: {
           target_tenant_id: string
@@ -2616,6 +2630,15 @@ export type Database = {
           created_at: string
           tenant_id: string
         }[]
+      }
+      delete_related_records: {
+        Args: {
+          p_schema: string
+          p_table: string
+          p_column: string
+          p_user_id: string
+        }
+        Returns: undefined
       }
       find_existing_direct_conversation: {
         Args: { target_tenant_id: string; user1_id: string; user2_id: string }
@@ -2685,6 +2708,19 @@ export type Database = {
       generate_post_slug: {
         Args: { post_title: string; post_tenant_id: string; post_id?: string }
         Returns: string
+      }
+      get_auth_user_foreign_keys: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          constraint_name: string
+          table_schema: string
+          table_name: string
+          column_name: string
+          foreign_table_schema: string
+          foreign_table_name: string
+          foreign_column_name: string
+          delete_rule: string
+        }[]
       }
       get_cached_recommendations: {
         Args: {
@@ -2818,6 +2854,10 @@ export type Database = {
       get_following_count: {
         Args: { user_id: string; entity_type?: string }
         Returns: number
+      }
+      get_pg_connection: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
       }
       get_subscriber_count: {
         Args: { entity_id: string; entity_type: string }

@@ -1,21 +1,16 @@
 // Collective Selection Components
-export { 
+export {
   CollectiveSelectionCard,
-  CompactCollectiveSelectionCard,
-  CollectiveSelectionCardSkeleton
+  CollectiveSelectionCardSkeleton,
 } from './CollectiveSelectionCard';
 
-export { 
-  CollectiveSelectionModal 
-} from './CollectiveSelectionModal';
+export { CollectiveSelectionModal } from './CollectiveSelectionModal';
 
-export { 
-  CollectiveSelectionSummary
-} from './CollectiveSelectionSummary';
+export { CollectiveSelectionSummary } from './CollectiveSelectionSummary';
 
 export {
   CollectiveValidationFeedback,
-  CompactCollectiveValidationFeedback
+  CompactCollectiveValidationFeedback,
 } from './CollectiveValidationFeedback';
 
 // Local type definition using proper generated database types
@@ -30,4 +25,4 @@ export interface CollectiveWithPermission {
   user_role: Database['public']['Enums']['collective_member_role'];
   can_post: boolean;
   member_count?: number;
-} 
+}

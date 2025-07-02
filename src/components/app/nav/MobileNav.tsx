@@ -1,6 +1,6 @@
 'use client';
 
-import { Menu, Home } from 'lucide-react';
+import { Menu, Home, FileText, Video, Plus } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import React, { useState } from 'react';
@@ -14,7 +14,11 @@ import {
 } from '@/components/ui/sheet';
 import { cn } from '@/lib/utils/cn';
 
-const navItems = [{ href: '/home', label: 'Home', icon: Home }];
+const navItems = [
+  { href: '/home', label: 'Home', icon: Home },
+  { href: '/posts/new', label: 'New Text Post', icon: FileText },
+  { href: '/posts/new/video', label: 'New Video Post', icon: Video },
+];
 
 export function MobileNav(): React.ReactElement {
   const pathname = usePathname();

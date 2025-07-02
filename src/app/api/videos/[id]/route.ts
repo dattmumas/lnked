@@ -36,8 +36,6 @@ interface MuxError extends Error {
   status?: number;
 }
 
-
-
 // ─────────────────────────────────────────────────────────────────────────────
 // Constants & Helpers
 // ─────────────────────────────────────────────────────────────────────────────
@@ -63,7 +61,7 @@ const CACHE_MAX_AGE_SECONDS = 60;
 const getAllowedEncodingTiers = (): readonly string[] => {
   const envTiers = process.env['MUX_ALLOWED_TIERS'];
   if (envTiers !== undefined && envTiers.trim().length > 0) {
-    return envTiers.split(',').map(tier => tier.trim()) as readonly string[];
+    return envTiers.split(',').map((tier) => tier.trim()) as readonly string[];
   }
   return ['smart', 'baseline'] as const; // fallback
 };
@@ -83,18 +81,18 @@ function getMuxClient(): Mux {
   if (muxClient === null) {
     const id = process.env['MUX_TOKEN_ID'];
     const secret = process.env['MUX_TOKEN_SECRET'];
-    
+
     if (id === undefined || id.trim().length === 0) {
       throw new Error('MUX_TOKEN_ID environment variable is required');
     }
-    
+
     if (secret === undefined || secret.trim().length === 0) {
       throw new Error('MUX_TOKEN_SECRET environment variable is required');
     }
-    
+
     muxClient = new Mux({ tokenId: id, tokenSecret: secret });
   }
-  
+
   return muxClient;
 }
 
@@ -102,16 +100,21 @@ function getMuxClient(): Mux {
 function isRetryableError(error: MuxError): boolean {
   // Check status code from Mux SDK error
   const statusCode = error.statusCode ?? error.status;
-  
+
   if (statusCode !== undefined) {
-    return statusCode >= HTTP_STATUS_INTERNAL_SERVER_ERROR || statusCode === HTTP_STATUS_TOO_MANY_REQUESTS;
+    return (
+      statusCode >= HTTP_STATUS_INTERNAL_SERVER_ERROR ||
+      statusCode === HTTP_STATUS_TOO_MANY_REQUESTS
+    );
   }
-  
+
   // Fallback to message-based detection for specific patterns
   const message = error.message.toLowerCase();
-  return message.includes('timeout') || 
-         message.includes('network') ||
-         message.includes('connection');
+  return (
+    message.includes('timeout') ||
+    message.includes('network') ||
+    message.includes('connection')
+  );
 }
 
 // Fix #4: Retry wrapper with proper error detection
@@ -121,49 +124,61 @@ async function withMuxRetry<T>(
   options: MuxRetryOptions = DEFAULT_RETRY_OPTIONS,
 ): Promise<T> {
   let lastError: Error = new Error('Unknown error');
-  
+
   for (let attempt = 0; attempt <= options.maxRetries; attempt++) {
     try {
       return await operation();
     } catch (error: unknown) {
       lastError = error instanceof Error ? error : new Error(String(error));
-      
+
       // Don't retry on final attempt
       if (attempt === options.maxRetries) {
         break;
       }
-      
+
       // Check if error is retryable using proper statusCode detection
       if (!isRetryableError(lastError as MuxError)) {
         break;
       }
-      
+
       // Fix #7: Bounded exponential backoff with proper max delay
-      const exponentialDelay = options.baseDelay * Math.pow(EXPONENTIAL_BACKOFF_BASE, attempt);
-      const delay = Math.min(exponentialDelay + Math.random() * RANDOM_JITTER_MAX_MS, options.maxDelay);
-      
-      logWarn(`Mux ${context} attempt ${attempt + 1} failed, retrying in ${delay}ms`, {
-        error: lastError.message,
-        attempt: attempt + 1,
-        maxRetries: options.maxRetries,
-        statusCode: (lastError as MuxError).statusCode ?? (lastError as MuxError).status,
-      });
-      
-      await new Promise<void>(resolve => {
+      const exponentialDelay =
+        options.baseDelay * Math.pow(EXPONENTIAL_BACKOFF_BASE, attempt);
+      const delay = Math.min(
+        exponentialDelay + Math.random() * RANDOM_JITTER_MAX_MS,
+        options.maxDelay,
+      );
+
+      logWarn(
+        `Mux ${context} attempt ${attempt + 1} failed, retrying in ${delay}ms`,
+        {
+          error: lastError.message,
+          attempt: attempt + 1,
+          maxRetries: options.maxRetries,
+          statusCode:
+            (lastError as MuxError).statusCode ??
+            (lastError as MuxError).status,
+        },
+      );
+
+      await new Promise<void>((resolve) => {
         setTimeout(() => {
           resolve();
         }, delay);
       });
     }
   }
-  
+
   // Handle rate limit errors specially
   const muxError = lastError as MuxError;
   const statusCode = muxError.statusCode ?? muxError.status;
-  if (statusCode === HTTP_STATUS_TOO_MANY_REQUESTS || lastError.message.includes('rate_limit_exceeded')) {
+  if (
+    statusCode === HTTP_STATUS_TOO_MANY_REQUESTS ||
+    lastError.message.includes('rate_limit_exceeded')
+  ) {
     throw new Error('RATE_LIMITED');
   }
-  
+
   throw lastError;
 }
 
@@ -175,16 +190,21 @@ function shouldLog(): boolean {
   return Math.random() < LOG_SAMPLING_RATE;
 }
 
-function logError(context: string, error: unknown, metadata?: Record<string, unknown>): void {
+function logError(
+  context: string,
+  error: unknown,
+  metadata?: Record<string, unknown>,
+): void {
   if (LOG_LEVEL === 'none' || !shouldLog()) return;
-  
+
   const sanitizedMetadata = {
     ...metadata,
     // Redact sensitive fields
     user_id: metadata?.['user_id'] !== undefined ? '[REDACTED]' : undefined,
-    video_id: metadata?.['video_id'] !== undefined ? metadata['video_id'] : undefined,
+    video_id:
+      metadata?.['video_id'] !== undefined ? metadata['video_id'] : undefined,
   };
-  
+
   // In production, send to central logging service (Datadog, Loki, etc.)
   if (process.env.NODE_ENV === 'production') {
     // TODO: Send to central logging service
@@ -200,7 +220,7 @@ function logError(context: string, error: unknown, metadata?: Record<string, unk
 
 function logWarn(message: string, metadata?: Record<string, unknown>): void {
   if (LOG_LEVEL === 'none' || LOG_LEVEL === 'error' || !shouldLog()) return;
-  
+
   if (process.env.NODE_ENV === 'production') {
     // TODO: Send to central logging service
   } else {
@@ -222,11 +242,11 @@ function generateETag(video: VideoAsset): string {
     mux_playback_id: video.mux_playback_id,
     status: video.status,
   };
-  
+
   const hash = createHash('sha1')
     .update(JSON.stringify(hashableFields))
     .digest('hex');
-    
+
   return `"${hash}"`;
 }
 
@@ -244,25 +264,25 @@ async function assertOwnership(
     .eq('created_by', userId)
     .is('deleted_at', null) // Only active (non-deleted) videos
     .maybeSingle(); // Use maybeSingle to avoid 406 errors
-    
+
   if (error !== null) {
     throw new Error(`Database query failed: ${error.message}`);
   }
-  
+
   if (data === null) {
     throw new Error('Video not found or access denied');
   }
-  
+
   return VideoAssetSchema.parse(data);
 }
 
 // Fix #6: Queue-based asset cleanup (preparation for durable queue)
 function scheduleCleanupJob(video: VideoAsset): void {
   // In production, push to durable queue (Supabase pgmq, SQS, Redis Streams)
-  
+
   // TODO: Implement actual queue integration
   // Example: await pgmq.send('mux_cleanup_queue', cleanupJob);
-  
+
   // Fallback: immediate cleanup for now (but logged as async)
   cleanupMuxResources(video).catch((cleanupError: unknown) => {
     logError('async_mux_cleanup_failed', cleanupError, { video_id: video.id });
@@ -273,10 +293,14 @@ function scheduleCleanupJob(video: VideoAsset): void {
 // Fix #8: Handle orphaned assets after upload cancellation
 async function cleanupMuxResources(video: VideoAsset): Promise<void> {
   const mux = getMuxClient();
-  
+
   try {
     // Handle asset deletion with correct SDK method
-    if (video.mux_asset_id !== null && video.mux_asset_id !== undefined && video.mux_asset_id.trim().length > 0) {
+    if (
+      video.mux_asset_id !== null &&
+      video.mux_asset_id !== undefined &&
+      video.mux_asset_id.trim().length > 0
+    ) {
       try {
         await withMuxRetry(
           () => mux.video.assets.delete(video.mux_asset_id as string), // Fix #1: Use .delete() method
@@ -290,20 +314,31 @@ async function cleanupMuxResources(video: VideoAsset): Promise<void> {
         // 404 means asset doesn't exist - that's actually success for deletion
         const muxError = assetError as MuxError;
         const statusCode = muxError.statusCode ?? muxError.status;
-        if (statusCode === HTTP_STATUS_NOT_FOUND || (assetError instanceof Error && assetError.message.includes('not_found'))) {
-          logWarn('Mux asset already deleted or never existed - cleanup successful', {
-            video_id: video.id,
-            mux_asset_id: video.mux_asset_id,
-          });
+        if (
+          statusCode === HTTP_STATUS_NOT_FOUND ||
+          (assetError instanceof Error &&
+            assetError.message.includes('not_found'))
+        ) {
+          logWarn(
+            'Mux asset already deleted or never existed - cleanup successful',
+            {
+              video_id: video.id,
+              mux_asset_id: video.mux_asset_id,
+            },
+          );
         } else {
           // Only log actual errors, not expected 404s
           throw assetError;
         }
       }
     }
-    
+
     // Handle upload cancellation with orphaned asset awareness
-    if (video.mux_upload_id !== null && video.mux_upload_id !== undefined && video.mux_upload_id.trim().length > 0) {
+    if (
+      video.mux_upload_id !== null &&
+      video.mux_upload_id !== undefined &&
+      video.mux_upload_id.trim().length > 0
+    ) {
       try {
         await withMuxRetry(
           () => mux.video.uploads.cancel(video.mux_upload_id as string),
@@ -316,18 +351,31 @@ async function cleanupMuxResources(video: VideoAsset): Promise<void> {
       } catch (cancelError: unknown) {
         const muxError = cancelError as MuxError;
         const statusCode = muxError.statusCode ?? muxError.status;
-        
+
         // Handle expected scenarios gracefully
-        if (statusCode === HTTP_STATUS_NOT_FOUND || (cancelError instanceof Error && cancelError.message.includes('not_found'))) {
-          logWarn('Mux upload already cancelled or never existed - cleanup successful', {
-            video_id: video.id,
-            mux_upload_id: video.mux_upload_id,
-          });
-        } else if (cancelError instanceof Error && cancelError.message.includes('already completed')) {
-          logWarn('Upload completed before cancellation - potential orphaned asset', {
-            upload_id: video.mux_upload_id,
-            video_id: video.id,
-          });
+        if (
+          statusCode === HTTP_STATUS_NOT_FOUND ||
+          (cancelError instanceof Error &&
+            cancelError.message.includes('not_found'))
+        ) {
+          logWarn(
+            'Mux upload already cancelled or never existed - cleanup successful',
+            {
+              video_id: video.id,
+              mux_upload_id: video.mux_upload_id,
+            },
+          );
+        } else if (
+          cancelError instanceof Error &&
+          cancelError.message.includes('already completed')
+        ) {
+          logWarn(
+            'Upload completed before cancellation - potential orphaned asset',
+            {
+              upload_id: video.mux_upload_id,
+              video_id: video.id,
+            },
+          );
           // Fix #8: Subscribe to video.upload.asset_created webhook
           // In production, implement webhook handler to track and clean orphaned assets
           // For now, log for manual follow-up
@@ -338,7 +386,7 @@ async function cleanupMuxResources(video: VideoAsset): Promise<void> {
       }
     }
   } catch (cleanupError: unknown) {
-    logError('mux_cleanup_failed', cleanupError, { 
+    logError('mux_cleanup_failed', cleanupError, {
       video_id: video.id,
       mux_asset_id: video.mux_asset_id,
       mux_upload_id: video.mux_upload_id,
@@ -349,15 +397,20 @@ async function cleanupMuxResources(video: VideoAsset): Promise<void> {
 
 // Fix #5: Idempotent playback policy update with mutex protection
 async function updatePlaybackPolicy(
-  video: VideoAsset, 
+  video: VideoAsset,
   newIsPublic: boolean,
   supabase: SupabaseClient<Database>, // Fix #2: Inject client
 ): Promise<void> {
   // Skip if no Mux asset ID yet (video still uploading/processing) or no change needed
-  if (video.mux_asset_id === null || video.mux_asset_id === undefined || video.mux_asset_id.trim() === '' || video.is_public === newIsPublic) {
+  if (
+    video.mux_asset_id === null ||
+    video.mux_asset_id === undefined ||
+    video.mux_asset_id.trim() === '' ||
+    video.is_public === newIsPublic
+  ) {
     return; // No change needed
   }
-  
+
   // Fix #5: Mutex protection against concurrent policy changes
   const mutexKey = video.id;
   const existingMutex = playbackPolicyMutex.get(mutexKey);
@@ -365,43 +418,49 @@ async function updatePlaybackPolicy(
     await existingMutex;
     return; // Another request is already handling this
   }
-  
+
   const operationPromise = (async (): Promise<void> => {
     const mux = getMuxClient();
     const newPolicy = newIsPublic ? 'public' : 'signed';
-    
+
     try {
       // If there's an existing playback ID with wrong policy, delete it
       if (video.mux_playback_id !== null) {
         await withMuxRetry(
-          () => mux.video.assets.deletePlaybackId(video.mux_asset_id as string, video.mux_playback_id as string),
+          () =>
+            mux.video.assets.deletePlaybackId(
+              video.mux_asset_id as string,
+              video.mux_playback_id as string,
+            ),
           'playback_id_deletion',
         );
       }
-      
+
       // Create new playback ID with correct policy
       const response = await withMuxRetry(
-        () => mux.video.assets.createPlaybackId(video.mux_asset_id as string, { policy: newPolicy }),
+        () =>
+          mux.video.assets.createPlaybackId(video.mux_asset_id as string, {
+            policy: newPolicy,
+          }),
         'playback_id_creation',
       );
-      
+
       // Update database with new playback ID using injected client
       await supabase
         .from('video_assets')
-        .update({ 
+        .update({
           mux_playback_id: response.id,
           playback_policy: newPolicy,
         })
         .eq('id', video.id);
-        
     } catch (error: unknown) {
       logError('playback_policy_sync_failed', error, { video_id: video.id });
       throw new Error('Failed to synchronize playback policy with Mux');
     }
   })();
-  
+
   playbackPolicyMutex.set(mutexKey, operationPromise);
-  
+
   try {
     await operationPromise;
   } finally {
@@ -417,87 +476,107 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> },
 ): Promise<NextResponse> {
   const { id } = await params;
-  
+
   try {
     const supabase = await createServerSupabaseClient();
-    
+
     const {
       data: { user },
       error: authError,
     } = await supabase.auth.getUser();
-    
+
     if (authError !== null || user === null) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: HTTP_STATUS_UNAUTHORIZED });
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: HTTP_STATUS_UNAUTHORIZED },
+      );
     }
 
     const videoId = VIDEO_ID.parse(id);
     const video = await assertOwnership(supabase, user.id, videoId);
-    
+
     // Fix #11: Enhanced ETag generation with more fields
     const etag = generateETag(video);
     const ifNoneMatch = request.headers.get('if-none-match');
-    
+
     if (ifNoneMatch === etag) {
       return new NextResponse(null, { status: HTTP_STATUS_NOT_MODIFIED });
     }
-    
+
     // Transform null values to undefined for frontend
     const transformedVideo = VideoAssetSchema.parse(video);
-    
+
     const response = NextResponse.json({ data: transformedVideo });
     response.headers.set('ETag', etag);
-    response.headers.set('Cache-Control', `private, max-age=${CACHE_MAX_AGE_SECONDS}`);
-    
+    response.headers.set(
+      'Cache-Control',
+      `private, max-age=${CACHE_MAX_AGE_SECONDS}`,
+    );
+
     return response;
   } catch (error: unknown) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
         { error: 'Invalid video ID format' },
-        { status: HTTP_STATUS_BAD_REQUEST }
+        { status: HTTP_STATUS_BAD_REQUEST },
       );
     }
-    
+
     if (error instanceof Error && error.message.includes('not found')) {
       return NextResponse.json(
         { error: 'Video not found' },
-        { status: HTTP_STATUS_NOT_FOUND }
+        { status: HTTP_STATUS_NOT_FOUND },
       );
     }
-    
-    logError('GET_video_error', error instanceof Error ? error.message : String(error), { video_id: id });
-    return NextResponse.json({ error: 'Internal server error' }, { status: HTTP_STATUS_INTERNAL_SERVER_ERROR });
+
+    logError(
+      'GET_video_error',
+      error instanceof Error ? error.message : String(error),
+      { video_id: id },
+    );
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: HTTP_STATUS_INTERNAL_SERVER_ERROR },
+    );
   }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
 // PATCH /api/videos/[id] - with environment-based encoding tier validation
 // ─────────────────────────────────────────────────────────────────────────────
-const UpdateSchema = z.object({
-  title: z.string().trim().min(1).optional(),
-  description: z.string().trim().optional(),
-  privacy_setting: z.enum(['public', 'private']).optional(),
-  encoding_tier: z.enum(ALLOWED_ENCODING_TIERS as [string, ...string[]]).optional(), // Fix #13: Env-based tiers
-  collective_id: z.string().uuid().nullable().optional(),
-  post_id: z.string().uuid().nullable().optional(),
-  // Note: is_published, published_at, tags, thumbnail_url are not database columns
-}).strict();
+const UpdateSchema = z
+  .object({
+    title: z.string().trim().min(1).optional(),
+    description: z.string().trim().optional(),
+    privacy_setting: z.enum(['public', 'private']).optional(),
+    encoding_tier: z
+      .enum(ALLOWED_ENCODING_TIERS as [string, ...string[]])
+      .optional(), // Fix #13: Env-based tiers
+    collective_id: z.string().uuid().nullable().optional(),
+    post_id: z.string().uuid().nullable().optional(),
+    // Note: is_published, published_at, tags, thumbnail_url are not database columns
+  })
+  .strict();
 
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ): Promise<NextResponse> {
   const { id } = await params;
-  
+
   try {
     const supabase = await createServerSupabaseClient();
-    
+
     const {
       data: { user },
       error: authError,
     } = await supabase.auth.getUser();
-    
+
     if (authError !== null || user === null) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: HTTP_STATUS_UNAUTHORIZED });
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: HTTP_STATUS_UNAUTHORIZED },
+      );
     }
 
     const videoId = VIDEO_ID.parse(id);
@@ -509,21 +588,25 @@ export async function PATCH(
     // Handle privacy setting changes with proper Mux sync
     if (body['privacy_setting'] !== undefined) {
       const newIsPublic = body['privacy_setting'] === 'public';
-      
+
       // Always update database fields
       updateData['is_public'] = newIsPublic;
       updateData['playback_policy'] = newIsPublic ? 'public' : 'signed';
       delete updateData['privacy_setting'];
-      
+
       // Update playback policy in Mux if asset exists and is ready
-      if (video.mux_asset_id !== null && video.mux_asset_id !== undefined && video.mux_asset_id.trim() !== '') {
+      if (
+        video.mux_asset_id !== null &&
+        video.mux_asset_id !== undefined &&
+        video.mux_asset_id.trim() !== ''
+      ) {
         try {
           await updatePlaybackPolicy(video, newIsPublic, supabase);
         } catch (error) {
           // Log error but don't fail the request - the database update is more important
-          logError('mux_playback_policy_sync_failed', error, { 
+          logError('mux_playback_policy_sync_failed', error, {
             video_id: video.id,
-            mux_asset_id: video.mux_asset_id 
+            mux_asset_id: video.mux_asset_id,
           });
         }
       }
@@ -548,38 +631,45 @@ export async function PATCH(
       logError('update_video_error', error, { video_id: videoId });
       return NextResponse.json(
         { error: 'Failed to update video' },
-        { status: HTTP_STATUS_INTERNAL_SERVER_ERROR }
+        { status: HTTP_STATUS_INTERNAL_SERVER_ERROR },
       );
     }
-    
+
     // Transform null values to undefined for frontend
     const transformedData = VideoAssetSchema.parse(data);
-    
+
     return NextResponse.json({ data: transformedData });
   } catch (error: unknown) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
         { error: 'Invalid request data', details: error.errors },
-        { status: HTTP_STATUS_BAD_REQUEST }
+        { status: HTTP_STATUS_BAD_REQUEST },
       );
     }
-    
+
     if (error instanceof Error && error.message.includes('not found')) {
       return NextResponse.json(
         { error: 'Video not found' },
-        { status: HTTP_STATUS_NOT_FOUND }
+        { status: HTTP_STATUS_NOT_FOUND },
       );
     }
-    
+
     if (error instanceof Error && error.message === 'RATE_LIMITED') {
       return NextResponse.json(
         { error: 'Service temporarily unavailable due to rate limiting' },
-        { status: HTTP_STATUS_TOO_MANY_REQUESTS }
+        { status: HTTP_STATUS_TOO_MANY_REQUESTS },
       );
     }
-    
-    logError('PATCH_video_error', error instanceof Error ? error.message : String(error), { video_id: id });
-    return NextResponse.json({ error: 'Internal server error' }, { status: HTTP_STATUS_INTERNAL_SERVER_ERROR });
+
+    logError(
+      'PATCH_video_error',
+      error instanceof Error ? error.message : String(error),
+      { video_id: id },
+    );
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: HTTP_STATUS_INTERNAL_SERVER_ERROR },
+    );
   }
 }
 
@@ -591,17 +681,20 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> },
 ): Promise<NextResponse> {
   const { id } = await params;
-  
+
   try {
     const supabase = await createServerSupabaseClient();
-    
+
     const {
       data: { user },
       error: authError,
     } = await supabase.auth.getUser();
-    
+
     if (authError !== null || user === null) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: HTTP_STATUS_UNAUTHORIZED });
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: HTTP_STATUS_UNAUTHORIZED },
+      );
     }
 
     const videoId = VIDEO_ID.parse(id);
@@ -611,7 +704,7 @@ export async function DELETE(
     const now = new Date().toISOString();
     const { error: deleteError } = await supabase
       .from('video_assets')
-      .update({ 
+      .update({
         deleted_at: now,
         status: 'deleted', // Keep for backward compatibility
         title: '[Deleted Video]', // Anonymize sensitive data
@@ -625,43 +718,53 @@ export async function DELETE(
       logError('soft_delete_failed', deleteError, { video_id: videoId });
       return NextResponse.json(
         { error: 'Failed to delete video' },
-        { status: HTTP_STATUS_INTERNAL_SERVER_ERROR }
+        { status: HTTP_STATUS_INTERNAL_SERVER_ERROR },
       );
     }
 
     // Respond immediately with 202 Accepted
-    const response = NextResponse.json({ 
-      deleted: true, 
-      message: 'Video deletion initiated' 
-    }, { status: 202 });
+    const response = NextResponse.json(
+      {
+        deleted: true,
+        message: 'Video deletion initiated',
+      },
+      { status: 202 },
+    );
 
     // Fix #6: Schedule cleanup via durable queue (preparation)
     scheduleCleanupJob(video);
-    
+
     return response;
   } catch (error: unknown) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
         { error: 'Invalid video ID format' },
-        { status: HTTP_STATUS_BAD_REQUEST }
+        { status: HTTP_STATUS_BAD_REQUEST },
       );
     }
-    
+
     if (error instanceof Error && error.message.includes('not found')) {
       return NextResponse.json(
         { error: 'Video not found' },
-        { status: HTTP_STATUS_NOT_FOUND }
+        { status: HTTP_STATUS_NOT_FOUND },
       );
     }
-    
+
     if (error instanceof Error && error.message === 'RATE_LIMITED') {
       return NextResponse.json(
         { error: 'Service temporarily unavailable due to rate limiting' },
-        { status: HTTP_STATUS_TOO_MANY_REQUESTS }
+        { status: HTTP_STATUS_TOO_MANY_REQUESTS },
       );
     }
-    
-    logError('DELETE_video_error', error instanceof Error ? error.message : String(error), { video_id: id });
-    return NextResponse.json({ error: 'Internal server error' }, { status: HTTP_STATUS_INTERNAL_SERVER_ERROR });
+
+    logError(
+      'DELETE_video_error',
+      error instanceof Error ? error.message : String(error),
+      { video_id: id },
+    );
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: HTTP_STATUS_INTERNAL_SERVER_ERROR },
+    );
   }
 }

@@ -42,8 +42,8 @@ const actionItems = [
   { icon: Edit, label: 'Write Post', href: '/posts/new', variant: 'primary' },
   {
     icon: Video,
-    label: 'Upload Video',
-    href: '/videos/upload',
+    label: 'Video Post',
+    href: '/posts/new/video',
     variant: 'primary',
   },
 ];
