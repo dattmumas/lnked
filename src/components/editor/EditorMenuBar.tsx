@@ -29,6 +29,8 @@ import {
   Youtube,
   Table,
   Minus,
+  Palette,
+  FileText,
 } from 'lucide-react';
 import { useState, useRef, useEffect, startTransition } from 'react';
 
@@ -320,6 +322,118 @@ export function EditorMenuBar() {
         >
           <Highlighter className="h-4 w-4" />
         </Button>
+
+        {/* Text Color Dropdown */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              className="h-8 w-8 p-0 rounded-md"
+              onMouseDown={(e) => e.preventDefault()}
+              title="Text Color"
+              aria-label="Text Color"
+            >
+              <Palette className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="w-48">
+            <DropdownMenuItem
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => editor.chain().focus().unsetColor().run()}
+            >
+              Default
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => editor.chain().focus().setColor('#ef4444').run()}
+            >
+              <div className="w-4 h-4 bg-red-500 rounded mr-2" />
+              Red
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => editor.chain().focus().setColor('#3b82f6').run()}
+            >
+              <div className="w-4 h-4 bg-blue-500 rounded mr-2" />
+              Blue
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => editor.chain().focus().setColor('#10b981').run()}
+            >
+              <div className="w-4 h-4 bg-green-500 rounded mr-2" />
+              Green
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => editor.chain().focus().setColor('#f59e0b').run()}
+            >
+              <div className="w-4 h-4 bg-yellow-500 rounded mr-2" />
+              Yellow
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => editor.chain().focus().setColor('#8b5cf6').run()}
+            >
+              <div className="w-4 h-4 bg-purple-500 rounded mr-2" />
+              Purple
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+
+        {/* Font Family Dropdown */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              className="h-8 px-3 rounded-md"
+              onMouseDown={(e) => e.preventDefault()}
+              title="Font Family"
+            >
+              <Type className="h-4 w-4 mr-1" />
+              <ChevronDown className="h-3 w-3" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="w-48">
+            <DropdownMenuItem
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => editor.chain().focus().unsetFontFamily().run()}
+            >
+              Default
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() =>
+                editor.chain().focus().setFontFamily('serif').run()
+              }
+              style={{ fontFamily: 'serif' }}
+            >
+              Serif
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() =>
+                editor.chain().focus().setFontFamily('monospace').run()
+              }
+              style={{ fontFamily: 'monospace' }}
+            >
+              Monospace
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() =>
+                editor.chain().focus().setFontFamily('cursive').run()
+              }
+              style={{ fontFamily: 'cursive' }}
+            >
+              Cursive
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       {/* Link */}
@@ -494,6 +608,27 @@ export function EditorMenuBar() {
           >
             <Minus className="h-4 w-4 mr-2" />
             Horizontal Rule
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => {
+              startTransition(() => {
+                try {
+                  editor
+                    .chain()
+                    .focus()
+                    .insertContent(
+                      '<div class="table-of-contents"><h3>Table of Contents</h3><p>Table of contents will appear here based on your headings.</p></div>',
+                    )
+                    .run();
+                } catch (error) {
+                  console.error('Failed to insert table of contents:', error);
+                }
+              });
+            }}
+          >
+            <FileText className="h-4 w-4 mr-2" />
+            Table of Contents
           </DropdownMenuItem>
           {editor.isActive('link') && (
             <DropdownMenuItem

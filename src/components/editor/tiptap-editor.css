@@ -653,3 +653,161 @@
   white-space: nowrap;
   border: 0;
 }
+
+/* Table of Contents */
+.editor .table-of-contents {
+  background: hsl(var(--muted));
+  border: 1px solid hsl(var(--border));
+  border-radius: 0.5rem;
+  padding: 1rem;
+  margin: 1rem 0;
+}
+
+.editor .table-of-contents h3 {
+  margin: 0 0 0.5rem 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: hsl(var(--foreground));
+}
+
+.editor .table-of-contents ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.editor .table-of-contents li {
+  margin: 0.25rem 0;
+  padding-left: 0;
+}
+
+.editor .table-of-contents a {
+  color: hsl(var(--muted-foreground));
+  text-decoration: none;
+  font-size: 0.875rem;
+  transition: color 150ms;
+}
+
+.editor .table-of-contents a:hover {
+  color: hsl(var(--primary));
+}
+
+.editor .table-of-contents li[data-level='1'] {
+  font-weight: 600;
+}
+
+.editor .table-of-contents li[data-level='2'] {
+  padding-left: 1rem;
+}
+
+.editor .table-of-contents li[data-level='3'] {
+  padding-left: 2rem;
+  font-size: 0.8rem;
+}
+
+.editor .table-of-contents li[data-level='4'],
+.editor .table-of-contents li[data-level='5'],
+.editor .table-of-contents li[data-level='6'] {
+  padding-left: 3rem;
+  font-size: 0.75rem;
+  color: hsl(var(--muted-foreground));
+}
+
+/* Text color and font family styling */
+.editor [data-font-family] {
+  font-family: var(--font-family);
+}
+
+.editor [data-color] {
+  color: var(--color);
+}
+
+/* Typography enhancements */
+.editor .smart-quote {
+  font-feature-settings:
+    'kern' 1,
+    'liga' 1,
+    'calt' 1;
+}
+
+/* Bubble menu styles */
+.bubble-menu {
+  background: hsl(var(--background));
+  border: 1px solid hsl(var(--border));
+  border-radius: 0.5rem;
+  box-shadow:
+    0 10px 15px -3px rgb(0 0 0 / 0.1),
+    0 4px 6px -4px rgb(0 0 0 / 0.1);
+  padding: 0.25rem;
+  display: flex;
+  gap: 0.125rem;
+  z-index: 9999;
+}
+
+.bubble-menu button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border: none;
+  background: transparent;
+  border-radius: 0.25rem;
+  color: hsl(var(--muted-foreground));
+  cursor: pointer;
+  transition: all 150ms;
+}
+
+.bubble-menu button:hover {
+  background: hsl(var(--muted));
+  color: hsl(var(--foreground));
+}
+
+.bubble-menu button.is-active {
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+}
+
+/* Enhanced table styling */
+.editor table {
+  border-collapse: collapse;
+  table-layout: fixed;
+  width: 100%;
+  margin: 1rem 0;
+  overflow: hidden;
+}
+
+.editor table td,
+.editor table th {
+  border: 2px solid hsl(var(--border));
+  padding: 0.5rem;
+  vertical-align: top;
+  box-sizing: border-box;
+  position: relative;
+  min-width: 1em;
+}
+
+.editor table th {
+  font-weight: bold;
+  text-align: left;
+  background-color: hsl(var(--muted));
+}
+
+.editor table .selectedCell {
+  background: hsl(var(--primary) / 0.2);
+}
+
+.editor table .column-resize-handle {
+  position: absolute;
+  right: -2px;
+  top: 0;
+  bottom: -2px;
+  width: 4px;
+  background-color: hsl(var(--primary));
+  pointer-events: none;
+}
+
+.editor table .resize-cursor {
+  cursor: ew-resize;
+  cursor: col-resize;
+}

@@ -74,6 +74,9 @@ importers:
       '@tiptap/core':
         specifier: ^3.0.0
         version: 3.0.0(@tiptap/pm@3.0.0)
+      '@tiptap/extension-bubble-menu':
+        specifier: ^2.23.1
+        version: 2.23.1(@tiptap/core@3.0.0(@tiptap/pm@3.0.0))(@tiptap/pm@3.0.0)
       '@tiptap/extension-code-block-lowlight':
         specifier: ^3.0.0
         version: 3.0.0(@tiptap/core@3.0.0(@tiptap/pm@3.0.0))(@tiptap/extension-code-block@3.0.0(@tiptap/core@3.0.0(@tiptap/pm@3.0.0))(@tiptap/pm@3.0.0))(@tiptap/pm@3.0.0)
@@ -83,6 +86,12 @@ importers:
       '@tiptap/extension-collaboration-cursor':
         specifier: ^3.0.0
         version: 3.0.0(@tiptap/core@3.0.0(@tiptap/pm@3.0.0))(y-prosemirror@1.3.6(prosemirror-model@1.25.1)(prosemirror-state@1.4.3)(prosemirror-view@1.40.0)(y-protocols@1.0.6(yjs@13.6.27))(yjs@13.6.27))
+      '@tiptap/extension-color':
+        specifier: ^2.23.1
+        version: 2.23.1(@tiptap/core@3.0.0(@tiptap/pm@3.0.0))(@tiptap/extension-text-style@2.23.1(@tiptap/core@3.0.0(@tiptap/pm@3.0.0)))
+      '@tiptap/extension-font-family':
+        specifier: ^2.23.1
+        version: 2.23.1(@tiptap/core@3.0.0(@tiptap/pm@3.0.0))(@tiptap/extension-text-style@2.23.1(@tiptap/core@3.0.0(@tiptap/pm@3.0.0)))
       '@tiptap/extension-highlight':
         specifier: ^3.0.0
         version: 3.0.0(@tiptap/core@3.0.0(@tiptap/pm@3.0.0))
@@ -113,6 +122,9 @@ importers:
       '@tiptap/extension-table-header':
         specifier: ^3.0.0
         version: 3.0.0(@tiptap/core@3.0.0(@tiptap/pm@3.0.0))
+      '@tiptap/extension-table-of-contents':
+        specifier: ^2.23.1
+        version: 2.23.1(@tiptap/core@3.0.0(@tiptap/pm@3.0.0))(@tiptap/pm@3.0.0)
       '@tiptap/extension-table-row':
         specifier: ^3.0.0
         version: 3.0.0(@tiptap/core@3.0.0(@tiptap/pm@3.0.0))
@@ -125,6 +137,12 @@ importers:
       '@tiptap/extension-text-align':
         specifier: ^3.0.0
         version: 3.0.0(@tiptap/core@3.0.0(@tiptap/pm@3.0.0))
+      '@tiptap/extension-text-style':
+        specifier: ^2.23.1
+        version: 2.23.1(@tiptap/core@3.0.0(@tiptap/pm@3.0.0))
+      '@tiptap/extension-typography':
+        specifier: ^2.23.1
+        version: 2.23.1(@tiptap/core@3.0.0(@tiptap/pm@3.0.0))
       '@tiptap/extension-underline':
         specifier: ^3.0.0
         version: 3.0.0(@tiptap/core@3.0.0(@tiptap/pm@3.0.0))
@@ -1815,6 +1833,12 @@ packages:
     peerDependencies:
       '@tiptap/core': ^3.0.0
 
+  '@tiptap/extension-bubble-menu@2.23.1':
+    resolution: {integrity: sha512-tupuvrlZMTziVZXJuCVjLwllUnux/an9BtTYHpoRyLX9Hg0v7Kh39k9x58zJaoW8Q/Oc/qxPhbJpyOqhE1rLeg==}
+    peerDependencies:
+      '@tiptap/core': ^2.7.0
+      '@tiptap/pm': ^2.7.0
+
   '@tiptap/extension-bubble-menu@3.0.0':
     resolution: {integrity: sha512-ETJTkapZhqVGtJmIQwILZKW1eeR/VZQH/H251Dm+07ChBpnOaE0fjGMJhX9KrYm1bLQTJherw+0Qr4z3yAcL1A==}
     deprecated: There are no breaking changes in this packages, we meant to release 2.5.0
@@ -1864,6 +1888,12 @@ packages:
       '@tiptap/pm': ^3.0.0
       y-prosemirror: ^1.2.6
 
+  '@tiptap/extension-color@2.23.1':
+    resolution: {integrity: sha512-WkTvez+L/tuqp967PRi8t4L09qwZ5lOWCl8ppVgjjzgAOVpZ7Fgl7hg0h1b7nyO3Vf1JXr396p7iyw4TxKHRrw==}
+    peerDependencies:
+      '@tiptap/core': ^2.7.0
+      '@tiptap/extension-text-style': ^2.7.0
+
   '@tiptap/extension-document@3.0.0':
     resolution: {integrity: sha512-kf6P4NcQGOW40D7B6l8v1ydSl+8lZ4AZPe9MAFfIvJgg1cEuydbPO2ze6SeKD2TzLiAG0SR/mC9I6HYlWEmIdw==}
     deprecated: There are no breaking changes in this packages, we meant to release 2.5.0
@@ -1883,6 +1913,12 @@ packages:
     peerDependencies:
       '@tiptap/core': ^3.0.0
       '@tiptap/pm': ^3.0.0
+
+  '@tiptap/extension-font-family@2.23.1':
+    resolution: {integrity: sha512-SHEGU68bcLkykrHzTU889fr8Zqeg4J3Lf77MYfpKy2EILorvB4u6o5CxvfQWtHpx6aYqCTThMIqwC9pULVG5xQ==}
+    peerDependencies:
+      '@tiptap/core': ^2.7.0
+      '@tiptap/extension-text-style': ^2.7.0
 
   '@tiptap/extension-gapcursor@3.0.0':
     resolution: {integrity: sha512-qkvr2/HX+OeNI7kD+GDWkShia0NHc1TZQmQmF/bKnfASr8s7av+BUf4KQMTo3S0ciXdVH/DTB6L5lp/wkwk8wg==}
@@ -2005,6 +2041,12 @@ packages:
     peerDependencies:
       '@tiptap/core': ^3.0.0
 
+  '@tiptap/extension-table-of-contents@2.23.1':
+    resolution: {integrity: sha512-WsUqSsCP42Ot5WRHchWzgq3QsxkuhmoCDYgs7X/EtqVhGixT9+fGqPufNAnaAI8v1hMoRNYKZWSH3Gg1BNs2fw==}
+    peerDependencies:
+      '@tiptap/core': ^2.7.0
+      '@tiptap/pm': ^2.7.0
+
   '@tiptap/extension-table-row@3.0.0':
     resolution: {integrity: sha512-8xMXMQUkFcjiS8yGLPDFU/IvkGYIDMuvO/2npQrsmoUM6L1dOoLF4EPYpU7VTFVhbnv/ZvWRwvJHKi4kDmR33g==}
     deprecated: There are no breaking changes in this packages, we meant to release 2.5.0
@@ -2037,11 +2079,21 @@ packages:
     peerDependencies:
       '@tiptap/core': ^3.0.0
 
+  '@tiptap/extension-text-style@2.23.1':
+    resolution: {integrity: sha512-fZn1GePlL27pUFfKXKoRZo4L4pZP9dUjNNiS/eltLpbi/SenJ15UKhAoHtN1KQvNGJsWkYN49FjnnltU8qvQ+Q==}
+    peerDependencies:
+      '@tiptap/core': ^2.7.0
+
   '@tiptap/extension-text@3.0.0':
     resolution: {integrity: sha512-7C+vD1Co7TqKnab4KMHhltR7FDSEIrHHKl4feGdrI/UuvIarjPsyaShl6UU7PqCv3r8Gt4A/knQ2ANyGhxl7iw==}
     deprecated: There are no breaking changes in this packages, we meant to release 2.5.0
     peerDependencies:
       '@tiptap/core': ^3.0.0
+
+  '@tiptap/extension-typography@2.23.1':
+    resolution: {integrity: sha512-G8QyK0jTs7VyR7yZPvOGAxU5O90sW7e/N9hmUjsYEY9ttUgFIsFMlihLMXlgqfLtHfgtyzjW5RqU4KVCfpuIQA==}
+    peerDependencies:
+      '@tiptap/core': ^2.7.0
 
   '@tiptap/extension-underline@3.0.0':
     resolution: {integrity: sha512-JH1ZUlTVYtabL/4cqPhQS1+k0glGlXR9SyAbzfaYlB7vjaPIcPnleoPKo+zN91FwdmiKqEtenzI6wZf2kVznww==}
@@ -5449,6 +5501,10 @@ packages:
   util-deprecate@1.0.2:
     resolution: {integrity: sha512-EPD5q1uXyFxJpCrLnCc1nHnq3gOa6DZBocAIiI2TaSCA7VCJ1UJDMagCzIkXNsUYfD1daK//LTEQ8xiIbrHtcw==}
 
+  uuid@10.0.0:
+    resolution: {integrity: sha512-8XkAphELsDnEGrDxUOHB3RGvXz6TeuYSGEZBOjtTtPm2lwhGBjLgOzLHB63IUWfBpNucQjND6d3AOudO+H3RWQ==}
+    hasBin: true
+
   v8-to-istanbul@9.3.0:
     resolution: {integrity: sha512-kiGUalWN+rgBJ/1OHZsBtU4rXZOfj/7rKQxULKlIzwzQSvMJUUNgPwJEEh7gU6xEVxC0ahoOBvN2YI8GH6FNgA==}
     engines: {node: '>=10.12.0'}
@@ -7194,6 +7250,12 @@ snapshots:
     dependencies:
       '@tiptap/core': 3.0.0(@tiptap/pm@3.0.0)
 
+  '@tiptap/extension-bubble-menu@2.23.1(@tiptap/core@3.0.0(@tiptap/pm@3.0.0))(@tiptap/pm@3.0.0)':
+    dependencies:
+      '@tiptap/core': 3.0.0(@tiptap/pm@3.0.0)
+      '@tiptap/pm': 3.0.0
+      tippy.js: 6.3.7
+
   '@tiptap/extension-bubble-menu@3.0.0(@tiptap/core@3.0.0(@tiptap/pm@3.0.0))(@tiptap/pm@3.0.0)':
     dependencies:
       '@tiptap/core': 3.0.0(@tiptap/pm@3.0.0)
@@ -7230,6 +7292,11 @@ snapshots:
       '@tiptap/pm': 3.0.0
       y-prosemirror: 1.3.6(prosemirror-model@1.25.1)(prosemirror-state@1.4.3)(prosemirror-view@1.40.0)(y-protocols@1.0.6(yjs@13.6.27))(yjs@13.6.27)
 
+  '@tiptap/extension-color@2.23.1(@tiptap/core@3.0.0(@tiptap/pm@3.0.0))(@tiptap/extension-text-style@2.23.1(@tiptap/core@3.0.0(@tiptap/pm@3.0.0)))':
+    dependencies:
+      '@tiptap/core': 3.0.0(@tiptap/pm@3.0.0)
+      '@tiptap/extension-text-style': 2.23.1(@tiptap/core@3.0.0(@tiptap/pm@3.0.0))
+
   '@tiptap/extension-document@3.0.0(@tiptap/core@3.0.0(@tiptap/pm@3.0.0))':
     dependencies:
       '@tiptap/core': 3.0.0(@tiptap/pm@3.0.0)
@@ -7244,6 +7311,11 @@ snapshots:
       '@tiptap/core': 3.0.0(@tiptap/pm@3.0.0)
       '@tiptap/pm': 3.0.0
       tippy.js: 6.3.7
+
+  '@tiptap/extension-font-family@2.23.1(@tiptap/core@3.0.0(@tiptap/pm@3.0.0))(@tiptap/extension-text-style@2.23.1(@tiptap/core@3.0.0(@tiptap/pm@3.0.0)))':
+    dependencies:
+      '@tiptap/core': 3.0.0(@tiptap/pm@3.0.0)
+      '@tiptap/extension-text-style': 2.23.1(@tiptap/core@3.0.0(@tiptap/pm@3.0.0))
 
   '@tiptap/extension-gapcursor@3.0.0(@tiptap/core@3.0.0(@tiptap/pm@3.0.0))(@tiptap/pm@3.0.0)':
     dependencies:
@@ -7329,6 +7401,12 @@ snapshots:
     dependencies:
       '@tiptap/core': 3.0.0(@tiptap/pm@3.0.0)
 
+  '@tiptap/extension-table-of-contents@2.23.1(@tiptap/core@3.0.0(@tiptap/pm@3.0.0))(@tiptap/pm@3.0.0)':
+    dependencies:
+      '@tiptap/core': 3.0.0(@tiptap/pm@3.0.0)
+      '@tiptap/pm': 3.0.0
+      uuid: 10.0.0
+
   '@tiptap/extension-table-row@3.0.0(@tiptap/core@3.0.0(@tiptap/pm@3.0.0))':
     dependencies:
       '@tiptap/core': 3.0.0(@tiptap/pm@3.0.0)
@@ -7351,7 +7429,15 @@ snapshots:
     dependencies:
       '@tiptap/core': 3.0.0(@tiptap/pm@3.0.0)
 
+  '@tiptap/extension-text-style@2.23.1(@tiptap/core@3.0.0(@tiptap/pm@3.0.0))':
+    dependencies:
+      '@tiptap/core': 3.0.0(@tiptap/pm@3.0.0)
+
   '@tiptap/extension-text@3.0.0(@tiptap/core@3.0.0(@tiptap/pm@3.0.0))':
+    dependencies:
+      '@tiptap/core': 3.0.0(@tiptap/pm@3.0.0)
+
+  '@tiptap/extension-typography@2.23.1(@tiptap/core@3.0.0(@tiptap/pm@3.0.0))':
     dependencies:
       '@tiptap/core': 3.0.0(@tiptap/pm@3.0.0)
 
@@ -11571,6 +11657,8 @@ snapshots:
       react: 19.1.0
 
   util-deprecate@1.0.2: {}
+
+  uuid@10.0.0: {}
 
   v8-to-istanbul@9.3.0:
     dependencies:

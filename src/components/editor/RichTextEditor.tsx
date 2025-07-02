@@ -4,6 +4,8 @@ import { textblockTypeInputRule } from '@tiptap/core';
 import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight';
 import Collaboration from '@tiptap/extension-collaboration';
 import CollaborationCursor from '@tiptap/extension-collaboration-cursor';
+import Color from '@tiptap/extension-color';
+import FontFamily from '@tiptap/extension-font-family';
 import Highlight from '@tiptap/extension-highlight';
 import Image from '@tiptap/extension-image';
 import Link from '@tiptap/extension-link';
@@ -14,10 +16,13 @@ import Superscript from '@tiptap/extension-superscript';
 import Table from '@tiptap/extension-table';
 import TableCell from '@tiptap/extension-table-cell';
 import TableHeader from '@tiptap/extension-table-header';
+import TableOfContents from '@tiptap/extension-table-of-contents';
 import TableRow from '@tiptap/extension-table-row';
 import TaskItem from '@tiptap/extension-task-item';
 import TaskList from '@tiptap/extension-task-list';
 import TextAlign from '@tiptap/extension-text-align';
+import TextStyle from '@tiptap/extension-text-style';
+import Typography from '@tiptap/extension-typography';
 import Underline from '@tiptap/extension-underline';
 import Youtube from '@tiptap/extension-youtube';
 import { ReactRenderer, useEditor, EditorContent } from '@tiptap/react';
@@ -204,7 +209,7 @@ export default function RichTextEditor({ postId }: RichTextEditorProps) {
 
   // Debug user state
   console.log('🧑 RichTextEditor user state:', {
-    hasUser: !!user,
+    hasUser: Boolean(user),
     userId: user?.id,
     userEmail: user?.email,
   });
@@ -212,7 +217,7 @@ export default function RichTextEditor({ postId }: RichTextEditorProps) {
   // Monitor user state changes
   useEffect(() => {
     console.log('👤 User state changed:', {
-      hasUser: !!user,
+      hasUser: Boolean(user),
       userId: user?.id,
       timestamp: new Date().toISOString(),
     });
@@ -369,6 +374,14 @@ export default function RichTextEditor({ postId }: RichTextEditorProps) {
           },
         },
       }),
+      // Text styling extensions - must come before Color and FontFamily
+      TextStyle,
+      Color.configure({
+        types: ['textStyle'],
+      }),
+      FontFamily.configure({
+        types: ['textStyle'],
+      }),
       Link.configure({
         openOnClick: false,
         HTMLAttributes: {
@@ -470,12 +483,25 @@ export default function RichTextEditor({ postId }: RichTextEditorProps) {
           class: 'border p-2',
         },
       }),
+      TableOfContents.configure({
+        // Basic configuration - will generate TOC from headings
+      }),
       TextAlign.configure({
         types: ['heading', 'paragraph'],
       }),
       Underline,
       Subscript,
       Superscript,
+      Typography.configure({
+        // Configure smart typography
+        openDoubleQuote: '"',
+        closeDoubleQuote: '"',
+        openSingleQuote: "'",
+        closeSingleQuote: "'",
+        ellipsis: '…',
+        emDash: '—',
+      }),
+      // BubbleMenu will be added later with proper component integration
       // Mentions
       Mention.configure({
         HTMLAttributes: {
@@ -741,8 +767,8 @@ export default function RichTextEditor({ postId }: RichTextEditorProps) {
       onCreate: ({ editor }) => {
         editorRef.current = editor;
         console.log('🎉 TipTap editor created successfully!', {
-          hasEditor: !!editor,
-          refSet: !!editorRef.current,
+          hasEditor: Boolean(editor),
+          refSet: Boolean(editorRef.current),
         });
       },
       onDestroy: () => {
@@ -871,9 +897,9 @@ export default function RichTextEditor({ postId }: RichTextEditorProps) {
         fileName: file.name,
         fileSize: file.size,
         fileType: file.type,
-        editorExists: !!currentEditor,
-        hookEditorExists: !!editor,
-        refEditorExists: !!editorRef.current,
+        editorExists: Boolean(currentEditor),
+        hookEditorExists: Boolean(editor),
+        refEditorExists: Boolean(editorRef.current),
       });
 
       if (!currentEditor) {
@@ -881,8 +907,8 @@ export default function RichTextEditor({ postId }: RichTextEditorProps) {
         // Retry after a short delay in case editor is still initializing
         setTimeout(() => {
           console.log('🔄 Retrying insertAndUploadFile...', {
-            refEditorNowExists: !!editorRef.current,
-            hookEditorExists: !!editor,
+            refEditorNowExists: Boolean(editorRef.current),
+            hookEditorExists: Boolean(editor),
           });
           if (editorRef.current) {
             insertAndUploadFile(file);
@@ -946,8 +972,8 @@ export default function RichTextEditor({ postId }: RichTextEditorProps) {
         console.log('🔄 attemptUpload called', {
           userId: currentUser?.id,
           formDataId: currentFormData.id,
-          userReady: !!currentUser?.id,
-          draftReady: !!currentFormData.id,
+          userReady: Boolean(currentUser?.id),
+          draftReady: Boolean(currentFormData.id),
           pendingUploads: pendingUploadsRef.current.length,
         });
 
