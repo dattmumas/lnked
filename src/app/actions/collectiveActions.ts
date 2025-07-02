@@ -12,9 +12,6 @@ interface CollectiveActionError {
   fieldErrors?: Record<string, string[]>;
 }
 
-// Re-export from memberActions for backward compatibility
-export { removeMemberFromCollective } from './memberActions';
-
 export async function updateCollectiveSettings(
   collectiveId: string,
   formData: TablesUpdate<'collectives'>,
