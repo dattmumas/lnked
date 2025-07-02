@@ -1,12 +1,19 @@
 'use client';
 
-import { ChevronLeft } from 'lucide-react';
+import { ChevronLeft, Settings } from 'lucide-react';
+import dynamic from 'next/dynamic';
+import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import React, { useCallback } from 'react';
-import Link from 'next/link';
 
 import { Button } from '@/components/ui/button';
-import { usePostEditor } from '@/lib/hooks/use-post-editor';
+import { usePostEditor } from '@/hooks/posts/usePostEditor';
+
+// Load the rich text editor dynamically to avoid SSR issues
+const RichTextEditor = dynamic(
+  () => import('@/components/editor/RichTextEditor'),
+  { ssr: false },
+);
 
 export default function EditPostEditorPage(): React.ReactElement {
   const router = useRouter();
@@ -23,6 +30,10 @@ export default function EditPostEditorPage(): React.ReactElement {
   const handlePublish = useCallback(async (): Promise<void> => {
     await publishPost();
   }, [publishPost]);
+
+  const handleSettingsClick = useCallback((): void => {
+    router.push(`/posts/${postId}/edit/details`);
+  }, [router, postId]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -44,6 +55,16 @@ export default function EditPostEditorPage(): React.ReactElement {
             </div>
 
             <div className="flex items-center gap-3">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleSettingsClick}
+                className="flex items-center gap-2 transition-all"
+              >
+                <Settings className="h-4 w-4" />
+                Settings
+              </Button>
+
               <Button
                 variant="ghost"
                 size="sm"
@@ -81,14 +102,8 @@ export default function EditPostEditorPage(): React.ReactElement {
             />
           </div>
 
-          {/* Editor Placeholder */}
-          <div className="rounded-lg border bg-card p-8 text-center">
-            <h3 className="text-lg font-medium mb-2">Editor Removed</h3>
-            <p className="text-muted-foreground">
-              The Lexical editor has been removed. TipTap will be implemented
-              here.
-            </p>
-          </div>
+          {/* Rich Text Editor with existing content */}
+          <RichTextEditor postId={postId} />
         </div>
       </main>
     </div>

@@ -874,6 +874,56 @@ export type Database = {
           },
         ]
       }
+      editor_drafts: {
+        Row: {
+          content: string | null
+          content_hash: string | null
+          content_json: Json | null
+          created_at: string | null
+          has_legacy_html: boolean
+          id: string
+          last_saved_at: string | null
+          metadata: Json | null
+          tenant_id: string
+          title: string | null
+          user_id: string
+        }
+        Insert: {
+          content?: string | null
+          content_hash?: string | null
+          content_json?: Json | null
+          created_at?: string | null
+          has_legacy_html?: boolean
+          id?: string
+          last_saved_at?: string | null
+          metadata?: Json | null
+          tenant_id: string
+          title?: string | null
+          user_id: string
+        }
+        Update: {
+          content?: string | null
+          content_hash?: string | null
+          content_json?: Json | null
+          created_at?: string | null
+          has_legacy_html?: boolean
+          id?: string
+          last_saved_at?: string | null
+          metadata?: Json | null
+          tenant_id?: string
+          title?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "editor_drafts_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       featured_posts: {
         Row: {
           created_at: string | null

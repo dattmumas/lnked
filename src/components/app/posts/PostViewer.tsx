@@ -18,14 +18,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
-import { Badge } from '@/components/ui/badge';
-import { Card, CardContent } from '@/components/ui/card';
 import { formatPostDate } from '@/lib/posts';
 
 import type {
@@ -189,16 +181,11 @@ export default function PostViewer({
 
           {/* Post Content */}
           <div className="prose prose-lg dark:prose-invert max-w-none">
-            <div className="rounded-lg border bg-card p-4 text-center">
-              <p className="text-muted-foreground">
-                Content viewer removed - TipTap will be implemented
-              </p>
-              {post.content && (
-                <div className="mt-2 text-sm text-muted-foreground">
-                  Content preview: {post.content.substring(0, 100)}...
-                </div>
-              )}
-            </div>
+            {post.content ? (
+              <div dangerouslySetInnerHTML={{ __html: post.content }} />
+            ) : (
+              <p className="text-muted-foreground">*(No content)*</p>
+            )}
           </div>
 
           {/* Comments Section */}

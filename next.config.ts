@@ -3,8 +3,6 @@ import type { NextConfig } from 'next';
 /** @type {import('next').NextConfig} */
 const nextConfig: NextConfig = {
   images: {
-    loader: 'custom',
-    loaderFile: './supabase-image-loader.js',
     remotePatterns: [
       {
         protocol: 'https',

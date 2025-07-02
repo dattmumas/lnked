@@ -34,6 +34,8 @@ import {
   CollectiveSelectionCardSkeleton,
 } from './CollectiveSelectionCard';
 
+import type { CollectiveWithPermission } from '@/lib/data-loaders/posts-loader';
+
 interface CollectiveSelectionModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -44,6 +46,7 @@ interface CollectiveSelectionModalProps {
   description?: string;
   showPermissionFilter?: boolean;
   allowSearch?: boolean;
+  initialCollectives?: CollectiveWithPermission[];
 }
 
 type SortOption = 'name' | 'role' | 'members';
@@ -59,6 +62,7 @@ export function CollectiveSelectionModal({
   description = 'Choose which collectives to share this post with',
   showPermissionFilter = true,
   allowSearch = true,
+  initialCollectives,
 }: CollectiveSelectionModalProps): React.ReactElement | null {
   // Local state
   const [searchQuery, setSearchQuery] = useState('');
@@ -69,9 +73,9 @@ export function CollectiveSelectionModal({
     selectedCollectiveIds,
   );
 
-  // Data fetching
+  // Data fetching - use initialCollectives if provided, otherwise fetch from hooks
   const {
-    data: allCollectives = [],
+    data: hookCollectives = [],
     isLoading: isLoadingAll,
     error: errorAll,
   } = useCollectiveMemberships(!showOnlyPostable);
@@ -79,9 +83,25 @@ export function CollectiveSelectionModal({
   const { data: searchResults = [], isLoading: isSearching } =
     useSearchCollectiveMemberships(searchQuery);
 
+  // Use initialCollectives if provided, otherwise use hook data
+  const allCollectives = initialCollectives || hookCollectives;
+
   // Use search results when searching, otherwise use all collectives
   const collectivesToShow = useMemo(() => {
-    let collectives = searchQuery.trim() ? searchResults : allCollectives;
+    let collectives =
+      searchQuery.trim() && !initialCollectives
+        ? searchResults
+        : allCollectives;
+
+    // Filter by search query if using initial collectives
+    if (searchQuery.trim() && initialCollectives) {
+      const query = searchQuery.toLowerCase();
+      collectives = collectives.filter(
+        (c) =>
+          c.name.toLowerCase().includes(query) ||
+          (c.description && c.description.toLowerCase().includes(query)),
+      );
+    }
 
     // Filter by posting permissions if enabled
     if (showOnlyPostable) {
@@ -235,7 +255,7 @@ export function CollectiveSelectionModal({
     setSearchQuery('');
   }, []);
 
-  const isLoading = isLoadingAll || isSearching;
+  const isLoading = initialCollectives ? false : isLoadingAll || isSearching;
   const selectedCount = localSelectedIds.length;
   const postableCount = collectivesToShow.filter((c) => c.can_post).length;
   const hasChanges =

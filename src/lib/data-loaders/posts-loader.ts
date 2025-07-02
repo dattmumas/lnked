@@ -30,6 +30,17 @@ export interface PostsPageData {
   };
 }
 
+export interface CollectiveWithPermission {
+  id: string;
+  name: string;
+  slug: string;
+  logo_url: string | null;
+  description: string | null;
+  user_role: 'owner' | 'admin' | 'editor' | 'author';
+  can_post: boolean;
+  member_count?: number;
+}
+
 /**
  * Load posts data for the posts listing page
  * Optimized to reduce number of queries and fetch all data in parallel
@@ -247,4 +258,119 @@ export async function loadPostsPaginated(
     totalCount: count || 0,
     hasMore: (count || 0) > offset + limit,
   };
+}
+
+/**
+ * Load post editor data for creating/editing posts
+ * Includes user's collectives with posting permissions
+ */
+export async function loadPostEditorData(userId: string): Promise<{
+  userCollectives: CollectiveWithPermission[];
+}> {
+  const supabase = await createServerSupabaseClient();
+
+  try {
+    // Fetch collectives where user can publish (owner or member with posting permissions)
+    const [ownedCollectivesResult, memberCollectivesResult] = await Promise.all(
+      [
+        // Fetch collectives the user owns
+        supabase
+          .from('collectives')
+          .select('id, name, slug, logo_url, description, owner_id')
+          .eq('owner_id', userId)
+          .order('name', { ascending: true }),
+
+        // Fetch collectives where user is a member with posting permissions
+        supabase
+          .from('collective_members')
+          .select(
+            `
+          role,
+          collective:collectives!inner(
+            id, 
+            name, 
+            slug, 
+            logo_url, 
+            description,
+            owner_id
+          )
+        `,
+          )
+          .eq('member_id', userId)
+          .eq('member_type', 'user')
+          .in('role', ['admin', 'editor', 'author'])
+          .order('collective(name)', { ascending: true }),
+      ],
+    );
+
+    if (ownedCollectivesResult.error) {
+      console.error(
+        'Error fetching owned collectives:',
+        ownedCollectivesResult.error,
+      );
+    }
+
+    if (memberCollectivesResult.error) {
+      console.error(
+        'Error fetching member collectives:',
+        memberCollectivesResult.error,
+      );
+    }
+
+    const ownedCollectives = ownedCollectivesResult.data || [];
+    const memberCollectives = memberCollectivesResult.data || [];
+
+    // Transform owned collectives to CollectiveWithPermission
+    const ownedWithPermissions: CollectiveWithPermission[] =
+      ownedCollectives.map((collective) => ({
+        id: collective.id,
+        name: collective.name,
+        slug: collective.slug,
+        logo_url: collective.logo_url,
+        description: collective.description,
+        user_role: 'owner' as const,
+        can_post: true,
+      }));
+
+    // Transform member collectives to CollectiveWithPermission
+    const memberWithPermissions: CollectiveWithPermission[] =
+      memberCollectives.map((membership) => ({
+        id: membership.collective.id,
+        name: membership.collective.name,
+        slug: membership.collective.slug,
+        logo_url: membership.collective.logo_url,
+        description: membership.collective.description,
+        user_role: membership.role,
+        can_post: true, // Already filtered for posting permissions above
+      }));
+
+    // Combine and deduplicate (in case user owns and is also a member)
+    const allCollectives = [...ownedWithPermissions, ...memberWithPermissions];
+    const uniqueCollectives = allCollectives.filter(
+      (collective, index, array) =>
+        array.findIndex((c) => c.id === collective.id) === index,
+    );
+
+    // Sort by role priority (owner > admin > editor > author) and then by name
+    const rolePriority = { owner: 4, admin: 3, editor: 2, author: 1 };
+    uniqueCollectives.sort((a, b) => {
+      const aPriority = rolePriority[a.user_role] || 0;
+      const bPriority = rolePriority[b.user_role] || 0;
+
+      if (aPriority !== bPriority) {
+        return bPriority - aPriority; // Higher priority first
+      }
+
+      return a.name.localeCompare(b.name); // Alphabetical by name
+    });
+
+    return {
+      userCollectives: uniqueCollectives,
+    };
+  } catch (error) {
+    console.error('Error loading post editor data:', error);
+    return {
+      userCollectives: [],
+    };
+  }
 }

@@ -1,12 +1,15 @@
 import { create } from 'zustand';
 
 import type { Database } from '@/lib/database.types';
+import type { JSONContent } from '@tiptap/core';
 
 // Type aliases from generated database types
 type PostRow = Database['public']['Tables']['posts']['Row'];
 type PostInsert = Database['public']['Tables']['posts']['Insert'];
-type PostCollectiveRow = Database['public']['Tables']['post_collectives']['Row'];
-type PostCollectiveInsert = Database['public']['Tables']['post_collectives']['Insert'];
+type PostCollectiveRow =
+  Database['public']['Tables']['post_collectives']['Row'];
+type PostCollectiveInsert =
+  Database['public']['Tables']['post_collectives']['Insert'];
 
 // Collective sharing settings for multi-collective posts
 export interface CollectiveSharingSettings {
@@ -35,7 +38,7 @@ export interface PostEditorFormData {
   // Core post fields from database
   id?: string;
   title: string;
-  content: string;
+  content?: string; // legacy HTML (optional)
   subtitle?: string;
   author_id?: string;
   author?: string; // Custom author byline field
@@ -46,16 +49,19 @@ export interface PostEditorFormData {
   metadata: Record<string, unknown>;
   is_public: boolean;
   status: Database['public']['Enums']['post_status_type'];
-  
+
   // Legacy field for backward compatibility
   collective_id?: string;
-  
+
   // New multi-collective fields
   selected_collectives: string[];
   collective_sharing_settings?: Record<string, CollectiveSharingSettings>;
-  
+
   // Optional timestamp
   published_at?: string;
+
+  // Canonical JSON representation of the document (new)
+  contentJson?: JSONContent | null;
 }
 
 // Store interface for post editor
@@ -88,9 +94,15 @@ interface PostEditorStore {
 
   // Multi-collective actions
   setCollectiveSelectionOpen: (_open: boolean) => void;
-  addCollective: (_collectiveId: string, _settings?: CollectiveSharingSettings) => void;
+  addCollective: (
+    _collectiveId: string,
+    _settings?: CollectiveSharingSettings,
+  ) => void;
   removeCollective: (_collectiveId: string) => void;
-  updateCollectiveSharingSettings: (_collectiveId: string, _settings: Partial<CollectiveSharingSettings>) => void;
+  updateCollectiveSharingSettings: (
+    _collectiveId: string,
+    _settings: Partial<CollectiveSharingSettings>,
+  ) => void;
   setSelectedCollectives: (_collectiveIds: string[]) => void;
   clearCollectiveSelections: () => void;
 
@@ -104,11 +116,12 @@ interface PostEditorStore {
 const defaultFormData: PostEditorFormData = {
   title: '',
   content: '',
+  contentJson: null,
   post_type: 'text',
   metadata: {},
   is_public: false,
   status: 'draft',
-  
+
   // New multi-collective fields
   selected_collectives: [],
   collective_sharing_settings: {},
@@ -208,10 +221,13 @@ export const usePostEditorStore = create<PostEditorStore>((set, get) => ({
         return {}; // No changes needed if already selected
       }
 
-      const newSelectedCollectives = [...state.selectedCollectives, collectiveId];
+      const newSelectedCollectives = [
+        ...state.selectedCollectives,
+        collectiveId,
+      ];
       const newSharingSettings = {
         ...state.collectiveSharingSettings,
-        [collectiveId]: { ...defaultSharingSettings, ...settings }
+        [collectiveId]: { ...defaultSharingSettings, ...settings },
       };
 
       return {
@@ -228,7 +244,9 @@ export const usePostEditorStore = create<PostEditorStore>((set, get) => ({
 
   removeCollective: (collectiveId) =>
     set((state) => {
-      const newSelectedCollectives = state.selectedCollectives.filter(id => id !== collectiveId);
+      const newSelectedCollectives = state.selectedCollectives.filter(
+        (id) => id !== collectiveId,
+      );
       const newSharingSettings = { ...state.collectiveSharingSettings };
       delete newSharingSettings[collectiveId];
 
@@ -251,19 +269,40 @@ export const usePostEditorStore = create<PostEditorStore>((set, get) => ({
         return {}; // No changes required
       }
 
-      const currentSettings = state.collectiveSharingSettings[collectiveId] ?? defaultSharingSettings;
+      const currentSettings =
+        state.collectiveSharingSettings[collectiveId] ?? defaultSharingSettings;
       const updatedSettings: CollectiveSharingSettings = {
         status: settings.status ?? currentSettings.status,
-        ...(settings.metadata !== undefined ? { metadata: settings.metadata } : currentSettings.metadata !== undefined ? { metadata: currentSettings.metadata } : {}),
-        ...(settings.display_order !== undefined ? { display_order: settings.display_order } : currentSettings.display_order !== undefined ? { display_order: currentSettings.display_order } : {}),
-        ...(settings.auto_publish !== undefined ? { auto_publish: settings.auto_publish } : currentSettings.auto_publish !== undefined ? { auto_publish: currentSettings.auto_publish } : {}),
-        ...(settings.require_approval !== undefined ? { require_approval: settings.require_approval } : currentSettings.require_approval !== undefined ? { require_approval: currentSettings.require_approval } : {}),
-        ...(settings.display_priority !== undefined ? { display_priority: settings.display_priority } : currentSettings.display_priority !== undefined ? { display_priority: currentSettings.display_priority } : {}),
+        ...(settings.metadata !== undefined
+          ? { metadata: settings.metadata }
+          : currentSettings.metadata !== undefined
+            ? { metadata: currentSettings.metadata }
+            : {}),
+        ...(settings.display_order !== undefined
+          ? { display_order: settings.display_order }
+          : currentSettings.display_order !== undefined
+            ? { display_order: currentSettings.display_order }
+            : {}),
+        ...(settings.auto_publish !== undefined
+          ? { auto_publish: settings.auto_publish }
+          : currentSettings.auto_publish !== undefined
+            ? { auto_publish: currentSettings.auto_publish }
+            : {}),
+        ...(settings.require_approval !== undefined
+          ? { require_approval: settings.require_approval }
+          : currentSettings.require_approval !== undefined
+            ? { require_approval: currentSettings.require_approval }
+            : {}),
+        ...(settings.display_priority !== undefined
+          ? { display_priority: settings.display_priority }
+          : currentSettings.display_priority !== undefined
+            ? { display_priority: currentSettings.display_priority }
+            : {}),
       };
 
       const newSharingSettings = {
         ...state.collectiveSharingSettings,
-        [collectiveId]: updatedSettings
+        [collectiveId]: updatedSettings,
       };
 
       return {
@@ -280,7 +319,7 @@ export const usePostEditorStore = create<PostEditorStore>((set, get) => ({
     set((state) => {
       // Preserve existing sharing settings for retained collectives
       const newSharingSettings: Record<string, CollectiveSharingSettings> = {};
-      collectiveIds.forEach(id => {
+      collectiveIds.forEach((id) => {
         newSharingSettings[id] =
           state.collectiveSharingSettings[id] ?? defaultSharingSettings;
       });
@@ -319,7 +358,9 @@ export const usePostEditorStore = create<PostEditorStore>((set, get) => ({
     set((state) => ({
       formData: {
         ...state.formData,
-        ...(collectiveId !== undefined && collectiveId !== '' ? { collective_id: collectiveId } : {}),
+        ...(collectiveId !== undefined && collectiveId !== ''
+          ? { collective_id: collectiveId }
+          : {}),
       },
       isDirty: true,
     })),
@@ -328,12 +369,14 @@ export const usePostEditorStore = create<PostEditorStore>((set, get) => ({
     set(() => {
       // Convert legacy single collective_id to multi-collective format
       const selectedCollectives =
-        legacyData.collective_id !== undefined && legacyData.collective_id !== ''
+        legacyData.collective_id !== undefined &&
+        legacyData.collective_id !== ''
           ? [legacyData.collective_id]
           : [];
 
       const collectiveSharingSettings =
-        legacyData.collective_id !== undefined && legacyData.collective_id !== ''
+        legacyData.collective_id !== undefined &&
+        legacyData.collective_id !== ''
           ? {
               [legacyData.collective_id]: defaultSharingSettings,
             }
@@ -344,6 +387,7 @@ export const usePostEditorStore = create<PostEditorStore>((set, get) => ({
         selected_collectives: selectedCollectives,
         collective_sharing_settings: collectiveSharingSettings,
         metadata: legacyData.metadata ?? {},
+        contentJson: legacyData.content ? null : null,
       };
 
       return {

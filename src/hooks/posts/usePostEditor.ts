@@ -37,11 +37,11 @@ export const useAutoSavePost = (): UseMutationResult<
     ): Promise<PostEditorFormData> => {
       const supabase = createBrowserSupabaseClient;
 
-      // Validate required fields
+      // Validate required fields - for autosave, we only need author_id and at least some content
       if (
         !data.author_id ||
-        (data.title?.trim() ?? '') === '' ||
-        (data.content ?? '') === ''
+        !data.id ||
+        ((data.title?.trim() ?? '') === '' && (data.content ?? '') === '')
       ) {
         throw new Error('Missing required fields');
       }
@@ -49,16 +49,18 @@ export const useAutoSavePost = (): UseMutationResult<
       // Determine tenant_id: use collective_id if present, otherwise use author_id as personal tenant
       const tenant_id = data.collective_id || data.author_id;
 
+      // Use client-side UUID for slug temporarily to avoid collisions
+      // The slug will be properly generated when the post is published
+      const tempSlug = data.id || `draft-${crypto.randomUUID()}`;
+
       const postData: PostInsert = {
-        ...(data.id ? { id: data.id } : {}),
-        title: data.title,
-        content: data.content,
+        id: data.id, // Validated above to be non-null
+        title: data.title || 'Untitled Post',
+        content: data.content ?? null,
         subtitle: data.subtitle || null,
         author_id: data.author_id,
         tenant_id,
-        slug:
-          data.id ||
-          `${data.title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${Date.now()}`,
+        slug: tempSlug,
         seo_title: data.seo_title || null,
         meta_description: data.meta_description || null,
         thumbnail_url: data.thumbnail_url || null,
@@ -66,7 +68,9 @@ export const useAutoSavePost = (): UseMutationResult<
         metadata: {
           ...data.metadata,
           ...(data.collective_sharing_settings
-            ? { collective_sharing_settings: data.collective_sharing_settings }
+            ? {
+                collective_sharing_settings: data.collective_sharing_settings,
+              }
             : {}),
           ...(data.selected_collectives
             ? { selected_collectives: data.selected_collectives }
@@ -78,9 +82,10 @@ export const useAutoSavePost = (): UseMutationResult<
         published_at: data.published_at || null,
       };
 
+      // Use upsert to handle both create and update in one operation
       const { data: post, error } = await supabase
         .from('posts')
-        .upsert(postData)
+        .upsert(postData, { onConflict: 'id' })
         .select()
         .single();
 

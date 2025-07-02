@@ -1,3 +1,4 @@
+import he from 'he';
 import { z } from 'zod';
 
 import {
@@ -11,24 +12,38 @@ import {
 } from '@/lib/constants/post';
 
 /**
- * Extract plain text from editor JSON to validate content length.
- * This function will be updated when TipTap is implemented.
+ * Extract plain text from editor content to validate minimum length.
+ * Supports both old JSON (Lexical) and new HTML (TipTap) content formats.
  */
 export function hasMinimumText(
   content: string,
   minimum: number = MIN_CONTENT_TEXT_LENGTH,
 ): boolean {
   try {
-    const json = JSON.parse(content) as { root?: unknown };
-    function extract(node: unknown): string {
-      if (node === null || typeof node !== 'object') return '';
-      const n = node as { type?: string; text?: string; children?: unknown[] };
-      if (n.type === 'text' && typeof n.text === 'string') return n.text;
-      if (Array.isArray(n.children)) return n.children.map(extract).join('');
-      return '';
+    // Support both old JSON and new HTML content formats
+    if (content.trim().startsWith('{')) {
+      // Lexical JSON format (legacy)
+      const json = JSON.parse(content) as { root?: unknown };
+      const extractText = (node: unknown): string => {
+        if (!node || typeof node !== 'object') return '';
+        const n = node as {
+          type?: string;
+          text?: string;
+          children?: unknown[];
+        };
+        if (n.text) return n.text;
+        if (Array.isArray(n.children))
+          return n.children.map(extractText).join('');
+        return '';
+      };
+      const text = extractText(json.root);
+      return text.trim().length >= minimum;
+    } else {
+      // HTML content (TipTap)
+      const plain = content.replace(/<[^>]+>/g, ' '); // strip HTML tags
+      const text = he.decode(plain); // decode entities
+      return text.trim().length >= minimum;
     }
-    const text = extract(json.root);
-    return text.trim().length >= minimum;
   } catch {
     return false;
   }

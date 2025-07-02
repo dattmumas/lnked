@@ -14,11 +14,11 @@ const SEARCH_STALE_TIME_MS = 1000 * 60 * 2; // 2 minutes for search results
 /* eslint-enable no-magic-numbers */
 
 // Role priority constants
-const ROLE_PRIORITY: Record<string, number> = { 
-  owner: 4, 
-  admin: 3, 
-  editor: 2, 
-  author: 1 
+const ROLE_PRIORITY: Record<string, number> = {
+  owner: 4,
+  admin: 3,
+  editor: 2,
+  author: 1,
 };
 
 // Narrow type for membership query results (select columns from `collective_members` plus joined `collectives`)
@@ -47,19 +47,24 @@ interface CollectiveWithPermission {
 }
 
 // Helper function to determine if user can post to collective based on role
-function canUserPostToCollective(role: Database['public']['Enums']['collective_member_role']): boolean {
+function canUserPostToCollective(
+  role: Database['public']['Enums']['collective_member_role'],
+): boolean {
   // Only editors, admins, and owners can post
   return ['editor', 'admin', 'owner'].includes(role);
 }
 
 // Hook to get user's collective memberships with posting permissions
-export const useCollectiveMemberships = (includeNonPostable = false): UseQueryResult<CollectiveWithPermission[], Error> => {
+export const useCollectiveMemberships = (
+  includeNonPostable = false,
+): UseQueryResult<CollectiveWithPermission[], Error> => {
   const { user } = useUser();
 
   return useQuery({
     queryKey: ['user-collective-memberships', user?.id, includeNonPostable],
     queryFn: async (): Promise<CollectiveWithPermission[]> => {
-      const hasUserId = user?.id !== undefined && user?.id !== null && user?.id !== '';
+      const hasUserId =
+        user?.id !== undefined && user?.id !== null && user?.id !== '';
       if (!hasUserId) {
         throw new Error('User not authenticated');
       }
@@ -69,7 +74,8 @@ export const useCollectiveMemberships = (includeNonPostable = false): UseQueryRe
       // Query collective memberships with collective details
       const { data: memberships, error } = await supabase
         .from('collective_members')
-        .select(`
+        .select(
+          `
           collective_id,
           role,
           collectives!inner(
@@ -79,13 +85,16 @@ export const useCollectiveMemberships = (includeNonPostable = false): UseQueryRe
             logo_url,
             description
           )
-        `)
+        `,
+        )
         .eq('member_id', user.id)
         .eq('member_type', 'user');
 
       if (error !== null) {
         console.error('Error fetching collective memberships:', error);
-        throw new Error(`Failed to fetch collective memberships: ${error.message}`);
+        throw new Error(
+          `Failed to fetch collective memberships: ${error.message}`,
+        );
       }
 
       const hasMemberships = memberships !== null && memberships !== undefined;
@@ -97,7 +106,8 @@ export const useCollectiveMemberships = (includeNonPostable = false): UseQueryRe
       const collectivesWithPermissions: CollectiveWithPermission[] = memberships
         .map((membership: MembershipRow) => {
           const collective = membership.collectives;
-          const userRole = membership.role as Database['public']['Enums']['collective_member_role'];
+          const userRole =
+            membership.role as Database['public']['Enums']['collective_member_role'];
           const canPost = canUserPostToCollective(userRole);
 
           return {
@@ -119,11 +129,11 @@ export const useCollectiveMemberships = (includeNonPostable = false): UseQueryRe
       return collectivesWithPermissions.sort((a, b) => {
         const aPriority = ROLE_PRIORITY[a.user_role] ?? 0;
         const bPriority = ROLE_PRIORITY[b.user_role] ?? 0;
-        
+
         if (aPriority !== bPriority) {
           return bPriority - aPriority; // Higher priority first
         }
-        
+
         return a.name.localeCompare(b.name); // Alphabetical by name
       });
     },
@@ -134,7 +144,9 @@ export const useCollectiveMemberships = (includeNonPostable = false): UseQueryRe
 };
 
 // Hook to get collective membership counts (for display purposes)
-export const useCollectiveMembershipCounts = (collectiveIds: string[]): UseQueryResult<Record<string, number>, Error> => {
+export const useCollectiveMembershipCounts = (
+  collectiveIds: string[],
+): UseQueryResult<Record<string, number>, Error> => {
   return useQuery({
     queryKey: ['collective-membership-counts', collectiveIds],
     queryFn: async (): Promise<Record<string, number>> => {
@@ -156,12 +168,13 @@ export const useCollectiveMembershipCounts = (collectiveIds: string[]): UseQuery
 
       // Count memberships per collective
       const countMap: Record<string, number> = {};
-      collectiveIds.forEach(id => {
+      collectiveIds.forEach((id) => {
         countMap[id] = 0;
       });
 
-      counts?.forEach(member => {
-        countMap[member.collective_id] = (countMap[member.collective_id] ?? 0) + 1;
+      counts?.forEach((member) => {
+        countMap[member.collective_id] =
+          (countMap[member.collective_id] ?? 0) + 1;
       });
 
       return countMap;
@@ -172,13 +185,16 @@ export const useCollectiveMembershipCounts = (collectiveIds: string[]): UseQuery
 };
 
 // Hook to validate user's posting permissions for specific collectives
-export const useCollectivePostingPermissions = (collectiveIds: string[]): UseQueryResult<Record<string, boolean>, Error> => {
+export const useCollectivePostingPermissions = (
+  collectiveIds: string[],
+): UseQueryResult<Record<string, boolean>, Error> => {
   const { user } = useUser();
 
   return useQuery({
     queryKey: ['collective-posting-permissions', user?.id, collectiveIds],
     queryFn: async (): Promise<Record<string, boolean>> => {
-      const hasUserId = user?.id !== undefined && user?.id !== null && user?.id !== '';
+      const hasUserId =
+        user?.id !== undefined && user?.id !== null && user?.id !== '';
       if (!hasUserId || collectiveIds.length === 0) {
         return {};
       }
@@ -194,20 +210,23 @@ export const useCollectivePostingPermissions = (collectiveIds: string[]): UseQue
 
       if (error !== null) {
         console.error('Error checking posting permissions:', error);
-        throw new Error(`Failed to check posting permissions: ${error.message}`);
+        throw new Error(
+          `Failed to check posting permissions: ${error.message}`,
+        );
       }
 
       const permissions: Record<string, boolean> = {};
-      
+
       // Initialize all as false
-      collectiveIds.forEach(id => {
+      collectiveIds.forEach((id) => {
         permissions[id] = false;
       });
 
       // Set permissions based on user role
-      memberships?.forEach(membership => {
+      memberships?.forEach((membership) => {
         const userRole = membership.role;
-        permissions[membership.collective_id] = canUserPostToCollective(userRole);
+        permissions[membership.collective_id] =
+          canUserPostToCollective(userRole);
       });
 
       return permissions;
@@ -218,15 +237,21 @@ export const useCollectivePostingPermissions = (collectiveIds: string[]): UseQue
 };
 
 // Hook to search collective memberships (for large collective lists)
-export const useSearchCollectiveMemberships = (searchQuery: string): UseQueryResult<CollectiveWithPermission[], Error> => {
+export const useSearchCollectiveMemberships = (
+  searchQuery: string,
+): UseQueryResult<CollectiveWithPermission[], Error> => {
   const { user } = useUser();
 
   return useQuery({
     queryKey: ['search-collective-memberships', user?.id, searchQuery],
     queryFn: async (): Promise<CollectiveWithPermission[]> => {
-      const hasUserId = user?.id !== undefined && user?.id !== null && user?.id !== '';
-      const hasSearchQuery = searchQuery !== undefined && searchQuery !== null && searchQuery.trim() !== '';
-      
+      const hasUserId =
+        user?.id !== undefined && user?.id !== null && user?.id !== '';
+      const hasSearchQuery =
+        searchQuery !== undefined &&
+        searchQuery !== null &&
+        searchQuery.trim() !== '';
+
       if (!hasUserId || !hasSearchQuery) {
         return [];
       }
@@ -236,7 +261,8 @@ export const useSearchCollectiveMemberships = (searchQuery: string): UseQueryRes
       // Search collective memberships by name or slug
       const { data: memberships, error } = await supabase
         .from('collective_members')
-        .select(`
+        .select(
+          `
           collective_id,
           role,
           collectives!inner(
@@ -246,16 +272,19 @@ export const useSearchCollectiveMemberships = (searchQuery: string): UseQueryRes
             logo_url,
             description
           )
-        `)
+        `,
+        )
         .eq('member_id', user.id)
         .eq('member_type', 'user')
-        .or(`name.ilike.%${searchQuery}%,slug.ilike.%${searchQuery}%`, { 
-          referencedTable: 'collectives' 
+        .or(`name.ilike.%${searchQuery}%,slug.ilike.%${searchQuery}%`, {
+          referencedTable: 'collectives',
         });
 
       if (error !== null) {
         console.error('Error searching collective memberships:', error);
-        throw new Error(`Failed to search collective memberships: ${error.message}`);
+        throw new Error(
+          `Failed to search collective memberships: ${error.message}`,
+        );
       }
 
       const hasMemberships = memberships !== null && memberships !== undefined;
@@ -267,7 +296,8 @@ export const useSearchCollectiveMemberships = (searchQuery: string): UseQueryRes
       return memberships
         .map((membership: MembershipRow) => {
           const collective = membership.collectives;
-          const userRole = membership.role as Database['public']['Enums']['collective_member_role'];
+          const userRole =
+            membership.role as Database['public']['Enums']['collective_member_role'];
           const canPost = canUserPostToCollective(userRole);
 
           return {
@@ -285,4 +315,4 @@ export const useSearchCollectiveMemberships = (searchQuery: string): UseQueryRes
     enabled: Boolean(user?.id) && Boolean(searchQuery.trim()),
     staleTime: SEARCH_STALE_TIME_MS,
   });
-}; 
+};
