@@ -4,8 +4,8 @@ import { Home, MessageCircle } from 'lucide-react';
 import Link from 'next/link';
 import React from 'react';
 
-import SearchBar from '@/components/app/nav/SearchBar';
 import { NewPostButton } from '@/components/app/nav/NewPostButton';
+import SearchBar from '@/components/app/nav/SearchBar';
 import { UserNav } from '@/components/app/nav/UserNav';
 import TenantSwitcher from '@/components/app/tenant/TenantSwitcher';
 import { NotificationDropdown } from '@/components/notifications/NotificationDropdown';

@@ -14,18 +14,18 @@ import React from 'react';
 import PostRow from '@/app/(app)/posts/PostRow';
 import { Button } from '@/components/ui/button';
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { loadPostsData } from '@/lib/data-loaders/posts-loader';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 

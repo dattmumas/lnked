@@ -1,8 +1,10 @@
 'use client';
 
 import Link from 'next/link';
-import { Avatar, AvatarImage } from '@/components/ui/avatar';
+
 import VideoThumbnail from '@/components/app/posts/molecules/VideoThumbnail';
+import { Avatar, AvatarImage } from '@/components/ui/avatar';
+
 import type { VideoAsset } from '@/lib/data-access/schemas/video.schema';
 
 interface VideoPostCardProps {

@@ -934,7 +934,7 @@ export async function uploadThumbnail(
 
   try {
     // If postId is provided, check if user has permission to edit the post
-    if (postId !== null && postId !== undefined) {
+    if (postId !== null && postId !== undefined && postId.trim() !== '') {
       const { data: post, error: postError } = await supabase
         .from('posts')
         .select(
@@ -945,47 +945,53 @@ export async function uploadThumbnail(
         .maybeSingle();
 
       if (postError !== null || post === null) {
-        return {
-          success: false,
-          error: 'Post not found or access denied.',
-        };
-      }
+        // Don't fail if post not found - it might be a draft
+        logPostAction(
+          'uploadThumbnail',
+          {
+            message: 'Post not found in posts table, might be a draft',
+            postId,
+          },
+          'info',
+        );
+      } else {
+        // Post exists, check permissions
+        const isAuthor = post.author_id === user.id;
+        let hasPermission = isAuthor;
 
-      const isAuthor = post.author_id === user.id;
-      let hasPermission = isAuthor;
-
-      // Check collective permissions if post belongs to a collective
-      if (
-        !isAuthor &&
-        post.collective_id !== null &&
-        post.collective !== null
-      ) {
-        const isCollectiveOwner = post.collective.owner_id === user.id;
-        if (isCollectiveOwner) {
-          hasPermission = true;
-        } else {
-          // Check if user is a collective member with edit permissions
-          const { data: membership } = await supabase
-            .from('collective_members')
-            .select('role')
-            .eq('collective_id', post.collective_id)
-            .eq('member_id', user.id)
-            .maybeSingle();
-
-          if (
-            membership !== null &&
-            ['owner', 'admin', 'editor'].includes(membership.role)
-          ) {
+        // Check collective permissions if post belongs to a collective
+        if (
+          !isAuthor &&
+          post.collective_id !== null &&
+          post.collective !== null
+        ) {
+          const isCollectiveOwner = post.collective.owner_id === user.id;
+          if (isCollectiveOwner) {
             hasPermission = true;
+          } else {
+            // Check if user is a collective member with edit permissions
+            const { data: membership } = await supabase
+              .from('collective_members')
+              .select('role')
+              .eq('collective_id', post.collective_id)
+              .eq('member_id', user.id)
+              .maybeSingle();
+
+            if (
+              membership !== null &&
+              ['owner', 'admin', 'editor'].includes(membership.role)
+            ) {
+              hasPermission = true;
+            }
           }
         }
-      }
 
-      if (!hasPermission) {
-        return {
-          success: false,
-          error: 'You do not have permission to update this post.',
-        };
+        if (!hasPermission) {
+          return {
+            success: false,
+            error: 'You do not have permission to update this post.',
+          };
+        }
       }
     }
 
@@ -1045,82 +1051,86 @@ export async function uploadThumbnail(
 
     const thumbnailUrl = publicUrlData.publicUrl;
 
-    // If postId is provided, update the post's thumbnail_url in database
-    if (postId !== null && postId !== undefined) {
-      // Get current post data to check for existing thumbnail
-      const { data: currentPost } = await supabase
+    // If postId is provided AND the post exists, update the post's thumbnail_url in database
+    if (postId !== null && postId !== undefined && postId.trim() !== '') {
+      // Check if post exists before trying to update
+      const { data: postExists } = await supabase
         .from('posts')
-        .select('thumbnail_url')
+        .select('id, thumbnail_url')
         .eq('id', postId)
         .maybeSingle();
 
-      const { error: updateError } = await supabase
-        .from('posts')
-        .update({ thumbnail_url: thumbnailUrl })
-        .eq('id', postId);
+      if (postExists !== null) {
+        const { error: updateError } = await supabase
+          .from('posts')
+          .update({ thumbnail_url: thumbnailUrl })
+          .eq('id', postId);
 
-      if (updateError !== null) {
-        logPostAction(
-          'uploadThumbnail',
-          { error: updateError, postId },
-          'error',
-        );
-        return {
-          success: false,
-          error: 'Failed to update thumbnail URL in database.',
-        };
-      }
-
-      // Queue old thumbnail deletion with retry mechanism
-      if (
-        currentPost?.thumbnail_url !== null &&
-        currentPost?.thumbnail_url !== undefined &&
-        isSupabaseStorageUrl(currentPost.thumbnail_url)
-      ) {
-        try {
-          const oldFilePath = extractThumbnailFilePathFromUrl(
-            currentPost.thumbnail_url,
-          );
-
-          if (oldFilePath !== null && oldFilePath !== undefined) {
-            // Queue deletion job (implement proper job queue in production)
-            void setTimeout((): void => {
-              void (async (): Promise<void> => {
-                try {
-                  await supabaseAdmin.storage
-                    .from(THUMBNAIL_CONFIG.bucket)
-                    .remove([oldFilePath]);
-                  logPostAction('uploadThumbnail', {
-                    message: 'Old thumbnail deleted',
-                    oldFilePath,
-                  });
-                } catch (error: unknown) {
-                  logPostAction(
-                    'uploadThumbnail',
-                    {
-                      error,
-                      oldFilePath,
-                      message:
-                        'Failed to delete old thumbnail - queuing for retry',
-                    },
-                    'warn',
-                  );
-                  // TODO: Implement proper retry queue
-                }
-              })();
-            }, CLEANUP_DELAY_MS);
-          }
-        } catch (error: unknown) {
+        if (updateError !== null) {
           logPostAction(
             'uploadThumbnail',
-            { error, message: 'Error processing old thumbnail cleanup' },
+            { error: updateError, postId },
+            'error',
+          );
+          // Don't fail the whole operation if update fails
+          logPostAction(
+            'uploadThumbnail',
+            { message: 'Thumbnail uploaded but failed to update post', postId },
             'warn',
           );
+        } else {
+          // Queue old thumbnail deletion with retry mechanism
+          if (
+            postExists.thumbnail_url !== null &&
+            postExists.thumbnail_url !== undefined &&
+            isSupabaseStorageUrl(postExists.thumbnail_url)
+          ) {
+            try {
+              const oldFilePath = extractThumbnailFilePathFromUrl(
+                postExists.thumbnail_url,
+              );
+
+              if (oldFilePath !== null && oldFilePath !== undefined) {
+                // Queue deletion job (implement proper job queue in production)
+                void setTimeout((): void => {
+                  void (async (): Promise<void> => {
+                    try {
+                      await supabaseAdmin.storage
+                        .from(THUMBNAIL_CONFIG.bucket)
+                        .remove([oldFilePath]);
+                      logPostAction('uploadThumbnail', {
+                        message: 'Old thumbnail deleted',
+                        oldFilePath,
+                      });
+                    } catch (error: unknown) {
+                      logPostAction(
+                        'uploadThumbnail',
+                        {
+                          error,
+                          oldFilePath,
+                          message:
+                            'Failed to delete old thumbnail - queuing for retry',
+                        },
+                        'warn',
+                      );
+                      // TODO: Implement proper retry queue
+                    }
+                  })();
+                }, CLEANUP_DELAY_MS);
+              }
+            } catch (error: unknown) {
+              logPostAction(
+                'uploadThumbnail',
+                { error, message: 'Error processing old thumbnail cleanup' },
+                'warn',
+              );
+            }
+          }
+
+          // Batch revalidation
+          await batchRevalidatePaths(['/dashboard/posts', `/posts/${postId}`]);
         }
       }
-
-      // Batch revalidation
-      await batchRevalidatePaths(['/dashboard/posts', `/posts/${postId}`]);
     }
 
     return { success: true, thumbnailUrl };

@@ -2,7 +2,7 @@ import { SpeedInsights } from '@vercel/speed-insights/next';
 import { redirect } from 'next/navigation';
 import React from 'react';
 
-import { RightSidebar } from '@/components/app/chains/RightSidebar';
+import { ConditionalRightSidebar } from '@/components/app/layout/ConditionalRightSidebar';
 import { GlobalSidebar } from '@/components/app/nav/GlobalSidebar';
 import ModernNavbar from '@/components/ModernNavbar';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
@@ -13,6 +13,15 @@ import { UserProvider, UserProfile } from '@/providers/UserContext';
 // 2. Render global chrome (navbar, GlobalSidebar, RightSidebar).
 // 3. Expose `user` / `profile` via context or props.
 // 4. Wrap children appropriately.
+
+// Define routes where RightSidebar should be hidden
+const ROUTES_WITHOUT_SIDEBAR = [
+  '/chat',
+  '/settings',
+  '/videos/upload',
+  '/posts/new',
+  '/collectives/new',
+];
 
 export default async function AppLayout({
   children,
@@ -52,16 +61,10 @@ export default async function AppLayout({
           {/* app-wide sidebar */}
           <GlobalSidebar />
 
-          {/* Main + Right sidebar columns */}
-          <div className="grid flex-1 grid-cols-1 xl:grid-cols-[minmax(0,1fr)_32rem] min-w-0 ml-16">
-            {/* Main content */}
-            <main className="overflow-y-auto min-h-screen">{children}</main>
-
-            {/* Right sidebar desktop only */}
-            <aside className="hidden xl:block w-[32rem] flex-shrink-0 sticky top-16 h-[calc(100vh_-_4rem)] overflow-y-auto">
-              <RightSidebar user={user} profile={profile} />
-            </aside>
-          </div>
+          {/* Main content and conditional right sidebar */}
+          <ConditionalRightSidebar user={user} profile={profile}>
+            {children}
+          </ConditionalRightSidebar>
         </div>
       </div>
     </UserProvider>

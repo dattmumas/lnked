@@ -2,7 +2,6 @@
 
 import { CenterFeed } from '@/components/app/home/CenterFeed';
 import { FloatingCreateButton } from '@/components/app/home/FloatingCreateButton';
-import { TenantProvider } from '@/providers/TenantProvider';
 import { useUser } from '@/providers/UserContext';
 
 import type { FeedItem } from '@/types/home/types';
@@ -32,21 +31,8 @@ export default function HomePageClient(
   // Use server-provided user or fall back to context
   const user = props.user || contextUser;
 
-  // If we have server-provided tenant data, wrap with configured TenantProvider
-  if (props.initialTenants && props.personalTenantId) {
-    return (
-      <TenantProvider initialTenantId={props.personalTenantId}>
-        <HomeContent
-          user={user}
-          {...(props.initialFeedItems
-            ? { initialFeedItems: props.initialFeedItems }
-            : {})}
-        />
-      </TenantProvider>
-    );
-  }
-
-  // Otherwise use default TenantProvider behavior
+  // Always use the same HomeContent component
+  // The TenantProvider is already provided at the root layout level
   return (
     <HomeContent
       user={user}
@@ -69,13 +55,15 @@ function HomeContent({
   return (
     <div className="relative flex h-full">
       {/* Center feed – scrollable */}
-      <main className="flex-1 w-0 min-w-0 overflow-y-auto p-6 min-h-screen">
-        {user && (
-          <CenterFeedWrapper
-            user={user}
-            {...(initialFeedItems ? { initialFeedItems } : {})}
-          />
-        )}
+      <main className="flex-1 w-0 min-w-0 overflow-y-auto min-h-screen">
+        <div className="max-w-3xl mx-auto px-6 py-6">
+          {user && (
+            <CenterFeedWrapper
+              user={user}
+              {...(initialFeedItems ? { initialFeedItems } : {})}
+            />
+          )}
+        </div>
       </main>
 
       {/* Floating action button (mobile only) */}

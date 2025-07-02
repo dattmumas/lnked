@@ -12,23 +12,19 @@ import {
 } from 'lucide-react';
 import React, { useCallback, useRef, useState, useEffect } from 'react';
 
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { useSimplifiedVideoUpload } from '@/hooks/video/useSimplifiedVideoUpload';
-
-import type { VideoFormData } from '@/hooks/video/useSimplifiedVideoUpload';
 
 interface VideoUploadStepFormProps {
   onComplete: (videoId: string) => void;
   onCancel?: () => void;
+  onReset?: () => void;
 }
 
 export default function VideoUploadStepForm({
   onComplete,
   onCancel,
+  onReset,
 }: VideoUploadStepFormProps): React.ReactElement {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -65,10 +61,14 @@ export default function VideoUploadStepForm({
           // Create preview URL for video
           const url = URL.createObjectURL(file);
           setFilePreviewUrl(url);
+
+          // Auto-populate title from filename for the upload
+          const nameWithoutExtension = file.name.replace(/\.[^/.]+$/, '');
+          updateFormData({ title: nameWithoutExtension });
         }
       }
     },
-    [selectFile],
+    [selectFile, updateFormData],
   );
 
   // Handle upload (without publish)
@@ -106,7 +106,8 @@ export default function VideoUploadStepForm({
     setSelectedFile(null);
     setFilePreviewUrl(null);
     reset();
-  }, [filePreviewUrl, reset]);
+    onReset?.();
+  }, [filePreviewUrl, reset, onReset]);
 
   // Click handlers for upload area
   const handleUploadAreaClick = useCallback(() => {
@@ -294,9 +295,13 @@ export default function VideoUploadStepForm({
 
         {onCancel && (
           <Button
-            onClick={onCancel}
+            onClick={() => {
+              if (isUploading || isProcessing) {
+                cancelUpload();
+              }
+              onCancel();
+            }}
             variant="outline"
-            disabled={isUploading || isProcessing}
           >
             Cancel
           </Button>

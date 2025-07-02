@@ -31,6 +31,22 @@ interface FeedPost {
     name: string;
     slug: string;
   } | null;
+  video_assets?:
+    | {
+        id: string;
+        mux_playback_id: string | null;
+        status: string | null;
+        duration: number | null;
+        is_public: boolean | null;
+      }
+    | Array<{
+        id: string;
+        mux_playback_id: string | null;
+        status: string | null;
+        duration: number | null;
+        is_public: boolean | null;
+      }>
+    | null;
 }
 
 export interface FeedLoaderOptions {
@@ -86,6 +102,13 @@ export async function loadUserFeed(
           id,
           name,
           slug
+        ),
+        video_assets!posts_video_id_fkey(
+          id,
+          mux_playback_id,
+          status,
+          duration,
+          is_public
         )
       `,
       )
@@ -141,6 +164,13 @@ export async function loadUserFeed(
               id,
               name,
               slug
+            ),
+            video_assets!posts_video_id_fkey(
+              id,
+              mux_playback_id,
+              status,
+              duration,
+              is_public
             )
           `,
           )
@@ -151,7 +181,7 @@ export async function loadUserFeed(
           .limit(10);
 
         if (collPosts) {
-          collectivePosts = collPosts;
+          collectivePosts = collPosts as unknown as FeedPost[];
         }
       }
     }
@@ -192,6 +222,13 @@ export async function loadUserFeed(
               id,
               name,
               slug
+            ),
+            video_assets!posts_video_id_fkey(
+              id,
+              mux_playback_id,
+              status,
+              duration,
+              is_public
             )
           `,
           )
@@ -223,6 +260,11 @@ export async function loadUserFeed(
       const authorUsername = post.author?.username || 'unknown';
       const avatarUrl = post.author?.avatar_url ?? undefined;
 
+      // Handle video_assets - Supabase returns single object when using foreign key join
+      const videoAsset = Array.isArray(post.video_assets)
+        ? post.video_assets[0]
+        : post.video_assets;
+
       const feedItem: FeedItem = {
         id: post.id,
         type: post.post_type === 'video' ? 'video' : 'post',
@@ -241,6 +283,22 @@ export async function loadUserFeed(
           views: post.view_count || 0,
         },
         thumbnail_url: post.thumbnail_url ?? null,
+        // Add video metadata for video posts
+        ...(post.post_type === 'video' && videoAsset
+          ? {
+              ...(videoAsset.duration !== null &&
+              videoAsset.duration !== undefined
+                ? { duration: videoAsset.duration.toString() }
+                : {}),
+              metadata: {
+                ...(videoAsset.mux_playback_id
+                  ? { playbackId: videoAsset.mux_playback_id }
+                  : {}),
+                status: videoAsset.status || 'preparing',
+                videoAssetId: videoAsset.id,
+              },
+            }
+          : {}),
       };
 
       // Add collective if present

@@ -172,14 +172,16 @@ export default function EditCollectiveSettingsForm({
         startTransition(async () => {
           // Transform tags_string to string[] for the server action
           const serverData = {
-            ...data,
-            tags_string:
+            name: data.name,
+            slug: data.slug,
+            description: data.description ?? null,
+            tags:
               (data.tags_string ?? '').trim().length > 0
                 ? (data.tags_string ?? '')
                     .split(',')
                     .map((tag) => tag.trim())
                     .filter((tag) => tag.length > 0)
-                : [],
+                : null,
           };
           const result = (await updateCollectiveSettings(
             collectiveId,
@@ -237,7 +239,12 @@ export default function EditCollectiveSettingsForm({
   useEffect((): void => {
     setStripeLoading(true);
     getCollectiveStripeStatus(collectiveId)
-      .then((status) => setStripeStatus(status))
+      .then(
+        (status: {
+          status: 'active' | 'pending' | 'none';
+          stripe_account_id?: string;
+        }) => setStripeStatus(status),
+      )
       .catch((err: unknown) => {
         const message =
           err instanceof Error ? err.message : 'Failed to load Stripe status';

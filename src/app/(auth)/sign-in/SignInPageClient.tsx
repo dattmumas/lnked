@@ -344,6 +344,9 @@ export default function SignInPage(): React.JSX.Element {
         // Success: refresh router and redirect
         void router.refresh();
 
+        // Small delay to ensure auth state propagates
+        await new Promise((resolve) => setTimeout(resolve, 100));
+
         // Reduced delay with proper state management
         setTimeout(() => {
           if (!signal.aborted) {

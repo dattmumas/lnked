@@ -15,8 +15,14 @@ import remarkGfm from 'remark-gfm';
 
 import { MessageEditForm } from './message-edit-form';
 
-import type { OptimisticMessage } from '@/hooks/useOptimisticMessages';
 import type { MessageWithSender as Message } from '@/lib/chat/types';
+
+// Define OptimisticMessage type locally since useOptimisticMessages is deprecated
+interface OptimisticMessage extends Message {
+  isOptimistic: boolean;
+  sendStatus?: 'sending' | 'sent' | 'failed';
+  tempId?: string;
+}
 
 // Constants to avoid magic numbers
 const MESSAGE_GROUP_TIME_THRESHOLD_MINUTES = 5;

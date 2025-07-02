@@ -14,6 +14,7 @@ const PostSchema = z.object({
   video_id: z.string().uuid(),
   title: z.string().min(1).max(300),
   body: z.string().optional(),
+  is_public: z.boolean().default(false),
 });
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
@@ -32,7 +33,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       );
     }
 
-    const { video_id, title, body } = parsed.data;
+    const { video_id, title, body, is_public } = parsed.data;
 
     const supabase = createRequestScopedSupabaseClient(request);
     const {
@@ -58,7 +59,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       videoErr !== null ||
       videoAsset === null ||
       videoAsset.created_by !== user.id ||
-      videoAsset.status !== 'ready'
+      !videoAsset.status ||
+      !['ready', 'processing', 'complete', 'preparing'].includes(
+        videoAsset.status,
+      )
     ) {
       return NextResponse.json(
         {
@@ -69,17 +73,26 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       );
     }
 
+    // Generate slug from title
+    const baseSlug = title
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .substring(0, 50);
+    const uniqueSlug = `${baseSlug}-${crypto.randomUUID().substring(0, 8)}`;
+
     // Insert post row
     const payload: TablesInsert<'posts'> = {
       post_type: 'video',
       video_id,
       author_id: user.id,
       tenant_id: user.id,
-      slug: `draft-${crypto.randomUUID()}`,
-      status: 'draft',
-      is_public: false,
+      slug: uniqueSlug,
+      status: 'active',
+      is_public,
       title,
       content: body ?? null,
+      published_at: new Date().toISOString(),
     };
 
     const { data: inserted, error: insertErr } = await supabase

@@ -54,13 +54,21 @@ export function usePostFeedInteractions(userId: string): PostFeedInteractions {
 
         if (mounted) {
           const liked = new Set(
-            reactions?.filter((r) => r.type === 'like').map((r) => r.post_id) ?? [],
+            reactions?.filter((r) => r.type === 'like').map((r) => r.post_id) ??
+              [],
           );
           const disliked = new Set(
-            reactions?.filter((r) => r.type === 'dislike').map((r) => r.post_id) ?? [],
+            reactions
+              ?.filter((r) => r.type === 'dislike')
+              .map((r) => r.post_id) ?? [],
           );
           const bookmarked = new Set(bookmarks?.map((b) => b.post_id) ?? []);
-          setState({ likedPosts: liked, dislikedPosts: disliked, bookmarkedPosts: bookmarked, initialized: true });
+          setState({
+            likedPosts: liked,
+            dislikedPosts: disliked,
+            bookmarkedPosts: bookmarked,
+            initialized: true,
+          });
         }
       } catch (err) {
         console.error('Error loading post interactions', err);
@@ -90,7 +98,11 @@ export function usePostFeedInteractions(userId: string): PostFeedInteractions {
       });
       try {
         const tenantRepo = await createTenantAwareRepositoryClient();
-        await tenantRepo.insertPostReaction({ user_id: userId, post_id: postId, type: 'like' });
+        await tenantRepo.insertPostReaction({
+          user_id: userId,
+          post_id: postId,
+          type: 'like',
+        });
       } catch (err) {
         console.error('toggleLike error', err);
       }
@@ -113,7 +125,11 @@ export function usePostFeedInteractions(userId: string): PostFeedInteractions {
       });
       try {
         const tenantRepo = await createTenantAwareRepositoryClient();
-        await tenantRepo.insertPostReaction({ user_id: userId, post_id: postId, type: 'dislike' });
+        await tenantRepo.insertPostReaction({
+          user_id: userId,
+          post_id: postId,
+          type: 'dislike',
+        });
       } catch (err) {
         console.error('toggleDislike error', err);
       }
@@ -134,10 +150,16 @@ export function usePostFeedInteractions(userId: string): PostFeedInteractions {
       try {
         if (isBookmarked) {
           const tenantRepo = await createTenantAwareRepositoryClient();
-          await tenantRepo.deletePostBookmark({ user_id: userId, post_id: postId });
+          await tenantRepo.deletePostBookmark({
+            user_id: userId,
+            post_id: postId,
+          });
         } else {
           const tenantRepo = await createTenantAwareRepositoryClient();
-          await tenantRepo.insertPostBookmark({ user_id: userId, post_id: postId });
+          await tenantRepo.insertPostBookmark({
+            user_id: userId,
+            post_id: postId,
+          });
         }
       } catch (err) {
         console.error('toggleBookmark error', err);
@@ -147,4 +169,4 @@ export function usePostFeedInteractions(userId: string): PostFeedInteractions {
   );
 
   return { ...state, toggleLike, toggleDislike, toggleBookmark };
-} 
+}

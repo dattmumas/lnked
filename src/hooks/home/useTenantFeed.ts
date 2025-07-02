@@ -33,6 +33,7 @@ interface TenantFeedPost {
   collective_id?: string;
   is_public: boolean;
   status: string;
+  post_type: 'text' | 'video';
   view_count: number;
   like_count: number;
   comment_count: number;
@@ -40,6 +41,13 @@ interface TenantFeedPost {
   updated_at: string;
   published_at?: string;
   thumbnail_url?: string | null;
+  video?: {
+    id: string;
+    mux_playback_id: string | null;
+    status: string | null;
+    duration: number | null;
+    is_public: boolean | null;
+  } | null;
   author: {
     id: string;
     username: string;
@@ -159,6 +167,7 @@ export function useTenantFeed(
       }
 
       const result = await response.json();
+
       return result.data;
     },
     enabled: Boolean(currentTenant),
@@ -266,6 +275,12 @@ export function useTenantFeed(
 
   // Combine and transform posts
   const feedItems = useMemo((): FeedItem[] => {
+    // If we're on the first page and have initial data, use it directly
+    // Initial data is already transformed to FeedItem format by the server
+    if (offset === 0 && initialData && initialData.length > 0) {
+      return initialData;
+    }
+
     // Use currentTenantData.posts directly instead of allPosts state
     const tenantPosts = currentTenantData?.posts || [];
     const collectivePosts = collectiveData || [];
@@ -290,10 +305,10 @@ export function useTenantFeed(
     );
 
     // Transform to FeedItem format
-    return allCombinedPosts.map(
-      (post): FeedItem => ({
+    return allCombinedPosts.map((post): FeedItem => {
+      const feedItem: FeedItem = {
         id: post.id,
-        type: 'post', // TODO: Detect video posts
+        type: post.post_type === 'video' ? 'video' : 'post',
         title: post.title,
         content: post.content,
         author: {
@@ -312,6 +327,22 @@ export function useTenantFeed(
           views: post.view_count,
         },
         thumbnail_url: post.thumbnail_url ?? null,
+        // Add video metadata for video posts
+        ...(post.post_type === 'video' && post.video
+          ? {
+              ...(post.video.duration !== null &&
+              post.video.duration !== undefined
+                ? { duration: post.video.duration.toString() }
+                : {}),
+              metadata: {
+                ...(post.video.mux_playback_id
+                  ? { playbackId: post.video.mux_playback_id }
+                  : {}),
+                status: post.video.status || 'preparing',
+                videoAssetId: post.video.id,
+              },
+            }
+          : {}),
         ...(post.tenant.type === 'collective'
           ? {
               collective: {
@@ -326,8 +357,10 @@ export function useTenantFeed(
           name: post.tenant.name,
           type: post.tenant.type,
         },
-      }),
-    );
+      };
+
+      return feedItem;
+    });
   }, [currentTenantData, collectiveData, followedData, initialData, offset]);
 
   // Loading and error states

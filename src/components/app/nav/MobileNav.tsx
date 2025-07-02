@@ -1,6 +1,6 @@
 'use client';
 
-import { Menu, Home, FileText, Video, Plus } from 'lucide-react';
+import { Menu, Home, FileText, Video } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import React, { useState } from 'react';

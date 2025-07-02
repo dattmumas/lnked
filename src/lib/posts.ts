@@ -13,6 +13,8 @@ export type PostWithAuthorAndCollective = {
   published_at: string | null;
   created_at: string | null;
   view_count: number | null;
+  post_type: Database['public']['Enums']['post_type_enum'];
+  video_id: string | null;
   author: {
     id: string;
     full_name: string | null;

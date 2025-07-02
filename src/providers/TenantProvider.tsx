@@ -298,6 +298,33 @@ export function TenantProvider({
     void initializeTenants();
   }, [refreshTenants]);
 
+  // Listen for auth state changes to refresh tenants
+  useEffect(() => {
+    const { data: authListener } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        if (event === 'SIGNED_IN' && session) {
+          // User just signed in, refresh tenants
+          setIsLoading(true);
+          try {
+            await refreshTenants();
+          } finally {
+            setIsLoading(false);
+          }
+        } else if (event === 'SIGNED_OUT') {
+          // Clear tenant data on sign out
+          setUserTenants([]);
+          setPersonalTenant(null);
+          setCurrentTenantId(null);
+          setCurrentTenant(null);
+        }
+      },
+    );
+
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
+  }, [supabase, refreshTenants]);
+
   // Refresh current tenant when currentTenantId changes
   useEffect(() => {
     if (currentTenantId && userTenants.length > 0) {

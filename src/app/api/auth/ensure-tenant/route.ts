@@ -23,10 +23,23 @@ export async function POST(): Promise<NextResponse> {
   let tenantId: string | null = tenantIdData ?? null;
 
   if (!tenantId) {
-    // Create if missing
-    await supabase.rpc('create_personal_tenant_for_user', {
-      user_id: user.id,
-    });
+    // Create if missing using the database function
+    const { error: createError } = await supabase.rpc(
+      'create_personal_tenant_for_user',
+      {
+        user_id: user.id,
+      },
+    );
+
+    if (createError) {
+      console.error('Error creating personal tenant:', createError);
+      return NextResponse.json(
+        { error: 'Failed to create personal tenant' },
+        { status: 500 },
+      );
+    }
+
+    // Try to get the tenant ID again
     const { data: newId } = await supabase.rpc('get_user_personal_tenant', {
       target_user_id: user.id,
     });

@@ -10,11 +10,13 @@ import type { FeedItem } from '@/types/home/types';
 interface Props {
   item: FeedItem;
   interactions: PostFeedInteractions;
+  index?: number;
 }
 
 export function PostCardWrapper({
   item,
   interactions,
+  index,
 }: Props): React.JSX.Element {
   const handleLike = useCallback((): void => {
     void interactions.toggleLike(item.id);
@@ -42,6 +44,14 @@ export function PostCardWrapper({
       item.duration !== null &&
       item.duration.length > 0
         ? { duration: item.duration }
+        : {}),
+      // Include video metadata if available
+      ...(item.metadata
+        ? {
+            playbackId: item.metadata.playbackId,
+            status: item.metadata.status,
+            videoAssetId: item.metadata.videoAssetId,
+          }
         : {}),
       // Add tenant information to metadata for access in components
       ...(item.tenant && {
@@ -81,6 +91,7 @@ export function PostCardWrapper({
       onToggleLike={handleLike}
       onToggleDislike={handleDislike}
       onToggleBookmark={handleBookmark}
+      {...(index !== undefined ? { index } : {})}
     />
   );
 }

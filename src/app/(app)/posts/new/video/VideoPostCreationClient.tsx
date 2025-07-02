@@ -9,18 +9,18 @@ import {
   CheckCircle,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 
+import { CollectiveSelectionModal } from '@/components/app/posts/collective-selection';
+import VideoUploadStepForm from '@/components/app/video/wizard/VideoUploadStepForm';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Progress } from '@/components/ui/progress';
-import VideoUploadStepForm from '@/components/app/video/wizard/VideoUploadStepForm';
-import { CollectiveSelectionModal } from '@/components/app/posts/collective-selection';
-import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
+import { Progress } from '@/components/ui/progress';
 import { Switch } from '@/components/ui/switch';
+import { Textarea } from '@/components/ui/textarea';
 
 import type { CollectiveWithPermission } from '@/lib/data-loaders/posts-loader';
 
@@ -31,8 +31,6 @@ interface VideoPostCreationClientProps {
 type Step = 'upload' | 'details' | 'settings' | 'complete';
 
 interface PostData {
-  title: string;
-  content: string;
   is_public: boolean;
   selectedCollectives: string[];
   videoTitle: string;
@@ -59,8 +57,6 @@ export default function VideoPostCreationClient({
   const [isCollectiveModalOpen, setIsCollectiveModalOpen] = useState(false);
   const [isCreatingPost, setIsCreatingPost] = useState(false);
   const [postData, setPostData] = useState<PostData>({
-    title: '',
-    content: '',
     is_public: true,
     selectedCollectives: [],
     videoTitle: '',
@@ -77,6 +73,7 @@ export default function VideoPostCreationClient({
 
   const handleBackToUpload = useCallback(() => {
     setCurrentStep('upload');
+    setVideoId(null); // Reset video ID when going back
   }, []);
 
   const handleNext = useCallback(() => {
@@ -114,15 +111,16 @@ export default function VideoPostCreationClient({
         throw new Error('Failed to update video metadata');
       }
 
-      // Then, create the post
+      // Then, create the post using the same title and description
       const postResponse = await fetch('/api/posts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           type: 'video',
           video_id: videoId,
-          title: postData.title,
-          body: postData.content,
+          title: postData.videoTitle,
+          body: postData.videoDescription,
+          is_public: postData.is_public,
         }),
       });
 
@@ -157,8 +155,7 @@ export default function VideoPostCreationClient({
     postData.selectedCollectives.includes(collective.id),
   );
 
-  const canProceedFromDetails =
-    postData.title.trim().length > 0 && postData.videoTitle.trim().length > 0;
+  const canProceedFromDetails = postData.videoTitle.trim().length > 0;
 
   return (
     <div className="min-h-screen bg-background">
@@ -173,7 +170,7 @@ export default function VideoPostCreationClient({
             <ArrowLeft className="h-4 w-4" />
             Cancel
           </Button>
-          <h1 className="text-lg font-semibold"></h1>
+          <h1 className="text-lg font-semibold">Create Video Post</h1>
           <div className="w-20" /> {/* Spacer for centering */}
         </div>
 
@@ -215,7 +212,10 @@ export default function VideoPostCreationClient({
                 <CardTitle>Upload Your Video</CardTitle>
               </CardHeader>
               <CardContent>
-                <VideoUploadStepForm onComplete={handleVideoUploadComplete} />
+                <VideoUploadStepForm
+                  onComplete={handleVideoUploadComplete}
+                  onReset={() => setVideoId(null)}
+                />
               </CardContent>
             </Card>
           )}
@@ -228,8 +228,6 @@ export default function VideoPostCreationClient({
               <CardContent className="space-y-6">
                 {/* Video Details Section */}
                 <div className="space-y-4">
-                  <h3 className="text-lg font-medium">Video Details</h3>
-
                   <div className="space-y-2">
                     <Label htmlFor="video-title">Video Title *</Label>
                     <Input
@@ -256,61 +254,6 @@ export default function VideoPostCreationClient({
                         setPostData((prev) => ({
                           ...prev,
                           videoDescription: e.target.value,
-                        }))
-                      }
-                    />
-                  </div>
-                </div>
-
-                {/* Post Details Section */}
-                <div className="space-y-4">
-                  <h3 className="text-lg font-medium">Post Details</h3>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="title">Post Title *</Label>
-                    <Input
-                      id="title"
-                      placeholder={
-                        postData.videoTitle ||
-                        'Enter a title for your video post'
-                      }
-                      value={postData.title}
-                      onChange={(e) =>
-                        setPostData((prev) => ({
-                          ...prev,
-                          title: e.target.value,
-                        }))
-                      }
-                    />
-                    {postData.videoTitle && !postData.title && (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() =>
-                          setPostData((prev) => ({
-                            ...prev,
-                            title: prev.videoTitle,
-                          }))
-                        }
-                        className="text-xs h-auto p-1"
-                      >
-                        Use video title: "{postData.videoTitle}"
-                      </Button>
-                    )}
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="content">Post Description</Label>
-                    <Textarea
-                      id="content"
-                      placeholder="Add context or discussion about your video..."
-                      className="min-h-[120px]"
-                      value={postData.content}
-                      onChange={(e) =>
-                        setPostData((prev) => ({
-                          ...prev,
-                          content: e.target.value,
                         }))
                       }
                     />

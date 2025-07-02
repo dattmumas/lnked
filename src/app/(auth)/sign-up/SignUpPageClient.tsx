@@ -43,7 +43,6 @@ export default function SignUpPage(): React.JSX.Element {
       setMessage(undefined);
       setRateLimitMessage(undefined);
 
-      // Check rate limiting
       if (!rateLimiterRef.current.canAttempt()) {
         const timeUntilReset = rateLimiterRef.current.getTimeUntilReset();
         setRateLimitMessage(formatRateLimitMessage(timeUntilReset, 'sign-up'));
@@ -51,7 +50,6 @@ export default function SignUpPage(): React.JSX.Element {
         return;
       }
 
-      // Extract and validate form data
       const { email, password, fullName, username } = formData;
 
       if (!email || !password) {
@@ -73,7 +71,6 @@ export default function SignUpPage(): React.JSX.Element {
         return;
       }
 
-      // Validate username format
       if (
         username === null ||
         username === undefined ||
@@ -96,17 +93,21 @@ export default function SignUpPage(): React.JSX.Element {
       }
 
       try {
-        // Record the attempt for rate limiting
         rateLimiterRef.current.recordAttempt();
 
-        // Check if username is already taken
-        const { data: existingUser } = await supabase
-          .from('users')
-          .select('username')
-          .eq('username', username)
-          .single();
+        const { data: usernameExists, error: rpcError } = await supabase.rpc(
+          'check_username_exists',
+          { p_username: username },
+        );
 
-        if (existingUser !== null) {
+        if (rpcError !== null) {
+          console.error('Error checking username:', rpcError);
+          setError('Could not verify username. Please try again.');
+          setIsLoading(false);
+          return;
+        }
+
+        if (usernameExists) {
           setError('Username is already taken. Please choose another one.');
           setIsLoading(false);
           return;
@@ -122,7 +123,6 @@ export default function SignUpPage(): React.JSX.Element {
                   username,
                   full_name: fullName,
                 },
-                // emailRedirectTo: `${window.location.origin}/auth/callback`, // Uncomment if email confirmation is enabled
               },
             }),
           AUTH_MAX_RETRIES,
@@ -130,28 +130,21 @@ export default function SignUpPage(): React.JSX.Element {
         );
 
         if (signUpError !== null) {
-          // Handle rate limit errors specifically
           if (isRateLimitError(signUpError)) {
             setRateLimitMessage(
               'Authentication service is temporarily busy. Please wait a moment and try again.',
             );
             return;
           }
-
           setError(getAuthErrorMessage(signUpError));
-        } else if (
-          data.user !== null &&
-          data.user.identities !== null &&
-          data.user.identities !== undefined &&
-          data.user.identities.length === 0
-        ) {
+        } else if (data.user !== null && data.user.identities?.length === 0) {
           setError(
             'This email may already be registered but not confirmed. Please check your email or try signing in.',
           );
         } else if (data.session !== null) {
           setMessage('Sign up successful! Redirecting...');
           void router.push('/dashboard');
-          void router.refresh(); // Ensure the layout re-renders with the new auth state
+          void router.refresh();
         } else if (data.user !== null) {
           setMessage(
             'Sign up successful! Please check your email to confirm your account before signing in.',
@@ -164,7 +157,6 @@ export default function SignUpPage(): React.JSX.Element {
       } catch (err: unknown) {
         console.error('Unexpected error during sign up:', err);
 
-        // Handle rate limit errors specifically
         if (isRateLimitError(err)) {
           setRateLimitMessage(
             'Too many requests to the authentication service. Please wait a few minutes before trying again.',

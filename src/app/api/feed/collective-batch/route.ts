@@ -92,12 +92,14 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         collective_id,
         is_public,
         status,
+        post_type,
         view_count,
         like_count,
         created_at,
         updated_at,
         published_at,
         thumbnail_url,
+        video_id,
         author:users!author_id(
           id,
           username,
@@ -109,6 +111,13 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           name,
           slug,
           type
+        ),
+        video_assets!posts_video_id_fkey(
+          id,
+          mux_playback_id,
+          status,
+          duration,
+          is_public
         )
       `,
       )
@@ -134,7 +143,20 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     }
 
     // Group posts by tenant and apply per-tenant limits
-    const groupedPosts: Record<string, typeof posts> = {};
+    type PostWithRelations = typeof posts extends (infer T)[] | null
+      ? T
+      : never;
+    type TransformedPost = Omit<PostWithRelations, 'video_assets'> & {
+      author: PostWithRelations['author'] extends (infer A)[]
+        ? A
+        : PostWithRelations['author'];
+      tenant: PostWithRelations['tenant'] extends (infer T)[]
+        ? T
+        : PostWithRelations['tenant'];
+      video: PostWithRelations['video_assets'];
+      comment_count: number;
+    };
+    const groupedPosts: Record<string, TransformedPost[]> = {};
 
     // Initialize groups
     tenantIds.forEach((tenantId) => {
@@ -153,11 +175,22 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       if (currentCount < limit) {
         // Ensure array init
         const arr = groupedPosts[tenantId] ?? (groupedPosts[tenantId] = []);
+
+        // Extract video_assets and process it
+        const { video_assets, ...postWithoutVideo } = post;
+
         arr.push({
-          ...post,
+          ...postWithoutVideo,
           // Flatten author and tenant data
           author: Array.isArray(post.author) ? post.author[0] : post.author,
           tenant: Array.isArray(post.tenant) ? post.tenant[0] : post.tenant,
+          // Add video data as 'video' property
+          video:
+            Array.isArray(video_assets) && video_assets.length > 0
+              ? video_assets[0]
+              : null,
+          // Add comment_count (defaulting to 0 for now)
+          comment_count: 0,
         });
         postCounts[tenantId] = currentCount + 1;
       }

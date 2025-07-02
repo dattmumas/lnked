@@ -88,27 +88,32 @@ export default function NewCollectivePage(): React.ReactElement {
 
       startTransition(() => {
         void (async (): Promise<void> => {
-          const result = await createCollective({
-            name,
-            slug,
-            description,
-          });
+          const formData = new FormData();
+          formData.append('name', name);
+          formData.append('slug', slug);
+          formData.append('description', description);
 
-          if ((result.error ?? '').trim().length > 0) {
-            setError(result.error);
-          } else if (result.data !== undefined) {
-            setSuccessMessage(
-              'Collective created successfully! Redirecting...',
-            );
+          const result = await createCollective({}, formData);
+
+          if (result.errors) {
+            const errorMessages = Object.values(result.errors)
+              .flat()
+              .join(', ');
+            setError(errorMessages || result.message || 'An error occurred');
+          } else if (
+            result.message &&
+            result.message.includes('successfully')
+          ) {
+            setSuccessMessage(result.message);
             // Optionally clear form fields
             setName('');
             setSlug('');
             setDescription('');
-            // Redirect to the new collective's dashboard
-            void router.push(`/collectives/${result.data.slug}/dashboard`);
+            // Redirect to the new collective's page
+            void router.push(`/collectives/${slug}`);
             void router.refresh();
           } else {
-            setError('An unexpected error occurred.');
+            setError(result.message || 'An unexpected error occurred.');
           }
         })();
       });

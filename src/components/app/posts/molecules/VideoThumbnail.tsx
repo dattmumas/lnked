@@ -18,6 +18,7 @@ interface VideoThumbnailProps {
   className?: string;
   onClick?: () => void;
   aspectRatio?: 'video' | 'square' | 'wide';
+  priority?: boolean; // Add priority prop for LCP optimization
 }
 
 export default function VideoThumbnail({
@@ -28,6 +29,7 @@ export default function VideoThumbnail({
   className,
   onClick,
   aspectRatio = 'video',
+  priority = false,
 }: VideoThumbnailProps): React.ReactElement {
   const [imageError, setImageError] = useState(false);
   const [imageLoading, setImageLoading] = useState(true);
@@ -112,12 +114,14 @@ export default function VideoThumbnail({
           alt="Video thumbnail"
           width={640}
           height={360}
+          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
           className={cn(
             'w-full h-full object-cover transition-transform duration-200 group-hover:scale-105',
             imageLoading && 'opacity-0',
           )}
           onLoad={handleImageLoad}
           onError={handleImageError}
+          priority={priority}
         />
       ) : (
         <div className="w-full h-full bg-gradient-to-br from-muted to-muted/60 flex items-center justify-center">

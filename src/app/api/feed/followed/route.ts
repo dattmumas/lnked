@@ -95,17 +95,24 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       .select(
         `
         *,
-        author:users!author_id(
+        author:users!posts_author_id_fkey(
           id,
           username,
           full_name,
           avatar_url
         ),
-        tenant:tenants!tenant_id(
+        tenant:tenants!posts_tenant_id_fkey(
           id,
           name,
           slug,
           type
+        ),
+        video_assets!posts_video_id_fkey(
+          id,
+          mux_playback_id,
+          status,
+          duration,
+          is_public
         )
       `,
       )
@@ -141,6 +148,11 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       ...post,
       author: Array.isArray(post.author) ? post.author[0] : post.author,
       tenant: Array.isArray(post.tenant) ? post.tenant[0] : post.tenant,
+      video:
+        Array.isArray(post.video_assets) && post.video_assets.length > 0
+          ? post.video_assets[0]
+          : null,
+      comment_count: 0,
     }));
 
     return NextResponse.json({

@@ -1,9 +1,10 @@
 'use client';
 
+import MuxPlayer from '@mux/mux-player-react';
 import { useRouter } from 'next/navigation';
 import React, { useCallback, useState, useRef } from 'react';
 
-import { Card, CardContent } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 
 import PostCardFooter from './PostCardFooter';
@@ -68,6 +69,7 @@ interface VideoCardProps {
   currentUserId?: string;
   showFollowButton?: boolean;
   className?: string;
+  index?: number;
 }
 
 export default function VideoCard({
@@ -81,15 +83,19 @@ export default function VideoCard({
   currentUserId,
   showFollowButton = false,
   className,
+  index,
 }: VideoCardProps): React.ReactElement {
   const router = useRouter();
-  const postUrl =
-    post.slug !== undefined && post.slug !== null && post.slug.length > 0
-      ? `/posts/${post.slug}`
-      : `/posts/${post.id}`;
+
+  // Redirect to /videos/[id] using the video asset ID from metadata
+  const videoAssetId = post.metadata?.videoAssetId;
+  const postUrl = videoAssetId
+    ? `/videos/${videoAssetId}`
+    : `/posts/${post.id}`;
 
   const isProcessing = post.metadata?.status === 'preparing';
   const hasError = post.metadata?.status === 'errored';
+  const isReady = post.metadata?.status === 'ready';
 
   // Extract description from content (for video posts, content is usually the description)
   const description =
@@ -101,14 +107,27 @@ export default function VideoCard({
         : post.content
       : undefined;
 
+  // If no playbackId, fallback to detail page navigation
+  // For now, allow playing if we have a playbackId and it's not errored
+  const canPlayInline =
+    post.metadata?.playbackId !== undefined &&
+    post.metadata?.playbackId !== null &&
+    post.metadata.playbackId.length > 0 &&
+    !hasError;
+
   // --- In-feed video playback state ---
   const [isPlaying, setIsPlaying] = useState(false);
-  const videoRef = useRef<HTMLVideoElement>(null);
+  const [videoError, setVideoError] = useState<string | null>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
 
-  const handlePlayClick = useCallback((e: React.MouseEvent): void => {
-    e.stopPropagation();
-    setIsPlaying(true);
-  }, []);
+  const handlePlayClick = useCallback(
+    (e: React.MouseEvent): void => {
+      e.stopPropagation();
+      setIsPlaying(true);
+      setVideoError(null);
+    },
+    [canPlayInline, post.metadata?.playbackId],
+  );
 
   const handleVideoEnded = useCallback((): void => {
     setIsPlaying(false);
@@ -119,26 +138,54 @@ export default function VideoCard({
     setIsPlaying(false);
   }, []);
 
+  const handleVideoError = useCallback(
+    (e: React.SyntheticEvent<HTMLVideoElement>): void => {
+      const { currentTarget } = e;
+      const { error } = currentTarget;
+
+      let errorMessage = 'Video playback failed';
+      if (error) {
+        switch (error.code) {
+          case 1:
+            errorMessage = 'Video loading aborted';
+            break;
+          case 2:
+            errorMessage = 'Network error while loading video';
+            break;
+          case 3:
+            errorMessage = 'Video format not supported';
+            break;
+          case 4:
+            errorMessage = 'Video source not supported';
+            break;
+        }
+      }
+      setVideoError(errorMessage);
+      setIsPlaying(false);
+    },
+    [post.id, post.metadata?.playbackId],
+  );
+
+  const handleVideoLoadStart = useCallback((): void => {
+    // Video loading started
+  }, [post.id, post.metadata?.playbackId]);
+
+  const handleCanPlay = useCallback((): void => {
+    // Video can play
+  }, [post.id, post.metadata?.playbackId]);
+
   const handleNavigateToPost = useCallback((): void => {
     void router.push(postUrl);
   }, [router, postUrl]);
 
-  // If no playbackId, fallback to detail page navigation
-  const canPlayInline =
-    post.metadata?.playbackId !== undefined &&
-    post.metadata?.playbackId !== null &&
-    post.metadata.playbackId.length > 0 &&
-    !isProcessing &&
-    !hasError;
-
   return (
     <Card
       className={cn(
-        'overflow-hidden border border-border drop-shadow-sm hover:shadow-lg transition-all duration-200 hover:ring-2 hover:ring-primary/20 hover:scale-[1.02]',
+        'overflow-hidden rounded-xl border bg-card shadow-sm transition-all duration-300 ease-in-out hover:shadow-md',
         className,
       )}
     >
-      <CardContent className="p-6">
+      <div className="p-6">
         <PostCardHeader
           author={post.author}
           timestamp={post.created_at}
@@ -150,36 +197,60 @@ export default function VideoCard({
         />
 
         {/* Video Player or Thumbnail */}
-        <div className="mb-4 relative">
-          {isPlaying && canPlayInline === true ? (
-            <video
-              ref={videoRef}
-              src={`https://stream.mux.com/${post.metadata?.playbackId}.m3u8`}
-              poster={
-                post.thumbnail_url !== undefined &&
+        {isPlaying && canPlayInline === true ? (
+          <div className="mt-4 relative">
+            <div className="relative aspect-video w-full overflow-hidden rounded-lg bg-muted">
+              <MuxPlayer
+                playbackId={post.metadata?.playbackId || ''}
+                {...(post.thumbnail_url !== undefined &&
                 post.thumbnail_url !== null &&
                 post.thumbnail_url.length > 0
-                  ? post.thumbnail_url
-                  : undefined
-              }
-              controls
-              autoPlay
-              playsInline
-              className="w-full rounded-lg bg-black aspect-video"
-              onEnded={handleVideoEnded}
-              onPause={handleVideoPause}
-            >
-              <track kind="captions" srcLang="en" label="English captions" />
-            </video>
-          ) : (
-            <button
-              type="button"
-              className="group w-full aspect-video relative focus:outline-none"
-              onClick={
-                canPlayInline === true ? handlePlayClick : handleNavigateToPost
-              }
-              aria-label="Play video"
-            >
+                  ? { poster: post.thumbnail_url }
+                  : {})}
+                autoPlay
+                muted
+                className="w-full h-full object-cover"
+                onEnded={handleVideoEnded}
+                onPause={handleVideoPause}
+                onError={() => {
+                  setVideoError('Video playback failed');
+                  setIsPlaying(false);
+                }}
+                onLoadStart={handleVideoLoadStart}
+                onCanPlay={handleCanPlay}
+                streamType="on-demand"
+                preload="metadata"
+              />
+              {videoError && (
+                <div className="absolute inset-0 flex items-center justify-center bg-black/80 rounded-lg">
+                  <div className="text-white text-center p-4">
+                    <p className="text-red-400 mb-2">{videoError}</p>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setIsPlaying(false);
+                        setVideoError(null);
+                      }}
+                      className="text-sm underline hover:no-underline"
+                    >
+                      Back to thumbnail
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        ) : (
+          <button
+            type="button"
+            className="mt-4 block w-full"
+            onClick={
+              canPlayInline === true ? handlePlayClick : handleNavigateToPost
+            }
+            aria-label="Play video"
+          >
+            <div className="relative aspect-video w-full overflow-hidden rounded-lg bg-muted group">
               <VideoThumbnail
                 {...(post.thumbnail_url
                   ? { thumbnailUrl: post.thumbnail_url }
@@ -192,74 +263,60 @@ export default function VideoCard({
                   ? { playbackId: post.metadata.playbackId }
                   : {})}
                 isProcessing={isProcessing}
-                className="w-full"
+                className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                priority={index === 0}
               />
-              {/* Play overlay */}
-              {canPlayInline === true && !isProcessing && !hasError && (
-                <span className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                  <svg
-                    className="w-16 h-16 text-white opacity-90 group-hover:scale-110 transition-transform"
-                    fill="currentColor"
-                    viewBox="0 0 64 64"
-                  >
-                    <circle
-                      cx="32"
-                      cy="32"
-                      r="32"
-                      fill="black"
-                      fillOpacity="0.4"
-                    />
-                    <polygon points="26,20 50,32 26,44" fill="white" />
-                  </svg>
-                </span>
-              )}
-            </button>
-          )}
+            </div>
+          </button>
+        )}
+
+        <div className="mt-4">
+          <a href={postUrl} className="group block">
+            <h2 className="text-xl font-bold leading-snug tracking-tight group-hover:text-primary transition-colors">
+              {post.title}
+            </h2>
+
+            {description && (
+              <p className="mt-2 text-sm leading-relaxed text-muted-foreground line-clamp-3">
+                {description}
+              </p>
+            )}
+
+            {/* Video Status Indicators */}
+            {isProcessing && (
+              <p className="mt-2 text-sm text-yellow-600 font-medium">
+                Video is processing...
+              </p>
+            )}
+
+            {hasError && (
+              <p className="mt-2 text-sm text-destructive font-medium">
+                Video processing failed
+              </p>
+            )}
+          </a>
         </div>
 
-        {/* Content */}
-        <a href={postUrl} className="group block">
-          <h2 className="text-xl font-semibold mb-3 group-hover:text-accent transition-colors line-clamp-2">
-            {post.title}
-          </h2>
-
-          {description !== undefined && (
-            <p className="text-sm text-muted-foreground mb-4 line-clamp-2 leading-relaxed">
-              {description}
-            </p>
-          )}
-
-          {/* Video Status Indicators */}
-          {isProcessing && (
-            <div className="text-sm text-yellow-600 mb-2 font-medium">
-              Video is processing...
-            </div>
-          )}
-
-          {hasError && (
-            <div className="text-sm text-destructive mb-2 font-medium">
-              Video processing failed
-            </div>
-          )}
-
-          <div className="text-sm font-medium text-accent hover:underline">
+        <div className="mt-4 flex items-center justify-between">
+          <a
+            href={postUrl}
+            className="text-sm font-semibold text-primary hover:underline"
+          >
             Watch video →
-          </div>
-        </a>
+          </a>
+        </div>
+      </div>
 
-        <PostCardFooter
-          postId={post.id}
-          {...(post.slug && post.slug.length > 0
-            ? { postSlug: post.slug }
-            : {})}
-          postTitle={post.title}
-          interactions={interactions}
-          {...(onToggleLike ? { onToggleLike } : {})}
-          {...(onToggleDislike ? { onToggleDislike } : {})}
-          {...(onToggleBookmark ? { onToggleBookmark } : {})}
-          showViewCount
-        />
-      </CardContent>
+      <PostCardFooter
+        postId={post.id}
+        postSlug={post.slug ?? null}
+        postTitle={post.title}
+        interactions={interactions}
+        {...(onToggleLike ? { onToggleLike } : {})}
+        {...(onToggleDislike ? { onToggleDislike } : {})}
+        {...(onToggleBookmark ? { onToggleBookmark } : {})}
+        showViewCount
+      />
     </Card>
   );
 }

@@ -1,8 +1,9 @@
 'use client';
 
 import { Loader2, RefreshCw, Building, User as UserIcon } from 'lucide-react';
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { usePostFeedInteractions } from '@/hooks/home/usePostFeedInteractions';
 import { useTenantFeed } from '@/hooks/home/useTenantFeed';
@@ -40,6 +41,54 @@ export function CenterFeed({
     });
 
   const interactions = usePostFeedInteractions(user.id);
+
+  const [errorState, setErrorState] = useState<string | undefined>(
+    error || undefined,
+  );
+  const refreshIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Check if any videos are still preparing
+  const hasPreparingVideos = feedItems.some(
+    (item) => item.type === 'video' && item.metadata?.status === 'preparing',
+  );
+
+  // Set up auto-refresh for preparing videos
+  useEffect(() => {
+    if (hasPreparingVideos) {
+      console.log('Found preparing videos, setting up auto-refresh');
+
+      refreshIntervalRef.current = setInterval(() => {
+        console.log('Auto-refreshing feed for preparing videos');
+        refetch();
+      }, 5000);
+    } else {
+      // Clear interval if no preparing videos
+      if (refreshIntervalRef.current) {
+        console.log('No preparing videos, clearing auto-refresh');
+        clearInterval(refreshIntervalRef.current);
+        refreshIntervalRef.current = null;
+      }
+    }
+
+    // Cleanup on unmount or when dependency changes
+    return () => {
+      if (refreshIntervalRef.current) {
+        clearInterval(refreshIntervalRef.current);
+        refreshIntervalRef.current = null;
+      }
+    };
+  }, [hasPreparingVideos, refetch]);
+
+  useEffect(() => {
+    if (error !== undefined && error !== null) {
+      setErrorState(error);
+      const timer = setTimeout(() => {
+        setErrorState(undefined);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+    return undefined;
+  }, [error]);
 
   if (tenantLoading) {
     return (
@@ -98,13 +147,12 @@ export function CenterFeed({
     );
   }
 
-  if (error) {
+  if (errorState) {
     return (
-      <div className="text-center py-10">
-        <p className="text-red-500 text-sm mb-2">Error loading feed: {error}</p>
-        <Button variant="outline" size="sm" onClick={refetch}>
-          <RefreshCw className="w-4 h-4 mr-1" /> Retry
-        </Button>
+      <div className="w-full max-w-2xl mx-auto">
+        <Alert variant="destructive">
+          <AlertDescription>{errorState}</AlertDescription>
+        </Alert>
       </div>
     );
   }
@@ -140,11 +188,12 @@ export function CenterFeed({
       {/* Feed Header removed per user request */}
 
       {/* Feed Items */}
-      {feedItems.map((item) => (
+      {feedItems.map((item, index) => (
         <PostCardWrapper
           key={item.id}
           item={item}
           interactions={interactions}
+          index={index}
         />
       ))}
 

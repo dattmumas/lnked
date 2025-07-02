@@ -19,6 +19,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { formatPostDate } from '@/lib/posts';
+import { transformImageUrls } from '@/lib/utils/transform-image-urls';
 
 import type {
   PostWithAuthorAndCollective,
@@ -180,9 +181,19 @@ export default function PostViewer({
           </header>
 
           {/* Post Content */}
-          <div className="prose prose-lg dark:prose-invert max-w-none">
+          <div className="article-content">
             {post.content ? (
-              <div dangerouslySetInnerHTML={{ __html: post.content }} />
+              // Check if content contains HTML tags
+              post.content.includes('<') && post.content.includes('>') ? (
+                <div
+                  dangerouslySetInnerHTML={{
+                    __html: transformImageUrls(post.content),
+                  }}
+                />
+              ) : (
+                // Render plain text with preserved line breaks
+                <div className="whitespace-pre-wrap">{post.content}</div>
+              )
             ) : (
               <p className="text-muted-foreground">*(No content)*</p>
             )}

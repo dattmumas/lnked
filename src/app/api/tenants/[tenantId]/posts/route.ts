@@ -20,6 +20,7 @@ type PostWithAuthor = {
   collective_id: string | null;
   is_public: boolean;
   status: string;
+  post_type: 'text' | 'video';
   view_count: number | null;
   like_count: number | null;
   created_at: string;
@@ -28,12 +29,22 @@ type PostWithAuthor = {
   seo_title: string | null;
   meta_description: string | null;
   thumbnail_url: string | null;
+  video_id: string | null;
   author:
     | {
         id: string;
         username: string | null;
         full_name: string | null;
         avatar_url: string | null;
+      }[]
+    | null;
+  video_assets:
+    | {
+        id: string;
+        mux_playback_id: string | null;
+        status: string | null;
+        duration: number | null;
+        is_public: boolean | null;
       }[]
     | null;
 };
@@ -110,6 +121,7 @@ export async function GET(
             collective_id,
             is_public,
             status,
+            post_type,
             view_count,
             like_count,
             created_at,
@@ -118,11 +130,19 @@ export async function GET(
             seo_title,
             meta_description,
             thumbnail_url,
+            video_id,
             author:users!author_id(
               id,
               username,
               full_name,
               avatar_url
+            ),
+            video_assets!posts_video_id_fkey(
+              id,
+              mux_playback_id,
+              status,
+              duration,
+              is_public
             )
           `,
           )
@@ -201,7 +221,13 @@ export async function GET(
           author: Array.isArray(p.author)
             ? (p.author[0] ?? null)
             : (p.author ?? null),
+          video:
+            Array.isArray(p.video_assets) && p.video_assets.length > 0
+              ? p.video_assets[0]
+              : null,
           tenant: safeTenant,
+          // Add comment_count (defaulting to 0 for now)
+          comment_count: 0,
         }));
 
         // Get total count for pagination

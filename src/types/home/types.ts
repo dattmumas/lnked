@@ -37,6 +37,11 @@ export interface FeedItem {
   };
   thumbnail_url?: string | null;
   duration?: string;
+  metadata?: {
+    playbackId?: string;
+    status?: string;
+    videoAssetId?: string;
+  };
   collective?: {
     name: string;
     slug: string;

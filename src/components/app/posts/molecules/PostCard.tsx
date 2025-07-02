@@ -54,6 +54,7 @@ interface PostCardProps {
   currentUserId?: string;
   showFollowButton?: boolean;
   className?: string;
+  index?: number;
 }
 
 /**
@@ -71,12 +72,16 @@ export default function PostCard({
   currentUserId,
   showFollowButton = false,
   className,
+  index,
 }: PostCardProps): React.ReactElement {
+  // Additional debug for video detection
+  const isVideo = post.post_type === 'video';
+
   // Determine post type and render appropriate card
-  if (post.post_type === 'video') {
+  if (isVideo) {
     return (
       <VideoCard
-        post={post as Parameters<typeof VideoCard>[0]['post']}
+        post={post}
         interactions={interactions}
         {...(onToggleLike ? { onToggleLike } : {})}
         {...(onToggleDislike ? { onToggleDislike } : {})}
@@ -86,6 +91,7 @@ export default function PostCard({
         {...(currentUserId ? { currentUserId } : {})}
         showFollowButton={showFollowButton}
         {...(className ? { className } : {})}
+        {...(index !== undefined ? { index } : {})}
       />
     );
   }
@@ -99,9 +105,9 @@ export default function PostCard({
       {...(onToggleDislike ? { onToggleDislike } : {})}
       {...(onToggleBookmark ? { onToggleBookmark } : {})}
       {...(onFollow ? { onFollow } : {})}
-      isFollowing={isFollowing}
+      {...(showFollowButton ? { showFollowButton } : {})}
       {...(currentUserId ? { currentUserId } : {})}
-      showFollowButton={showFollowButton}
+      {...(isFollowing !== undefined ? { isFollowing } : {})}
       {...(className ? { className } : {})}
     />
   );

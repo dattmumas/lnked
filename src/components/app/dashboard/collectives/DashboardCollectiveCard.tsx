@@ -4,7 +4,7 @@ import { Settings, LogOut, Users2, Edit } from 'lucide-react';
 import Link from 'next/link';
 import React, { useCallback, useState } from 'react';
 
-import { removeUserFromCollective } from '@/app/actions/collectiveActions';
+import { removeMemberFromCollective } from '@/app/actions/memberActions';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -58,15 +58,12 @@ export default function DashboardCollectiveCard({
     setStatusMessage(undefined);
 
     try {
-      const result = await removeUserFromCollective(collective.id, memberId);
+      const result = await removeMemberFromCollective({
+        collectiveId: collective.id,
+        memberId,
+      });
       if (result.success) {
-        setStatusMessage(
-          result.message !== undefined &&
-            result.message !== null &&
-            result.message.length > 0
-            ? result.message
-            : 'Successfully left collective.',
-        );
+        setStatusMessage('Successfully left collective.');
       } else {
         setStatusMessage(
           `Failed to leave collective: ${result.error !== undefined && result.error !== null && result.error.length > 0 ? result.error : 'Unknown error'}`,

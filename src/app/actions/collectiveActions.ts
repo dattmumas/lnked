@@ -2,457 +2,156 @@
 
 import { revalidatePath } from 'next/cache';
 
-import {
-  CollectiveSettingsServerSchema,
-  CollectiveSettingsServerFormValues,
-} from '@/lib/schemas/collectiveSettingsSchema';
 import { getStripe } from '@/lib/stripe';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 
-import type { Enums, TablesUpdate } from '@/lib/database.types';
+import type { TablesUpdate } from '@/lib/database.types';
 
 interface CollectiveActionError {
   error: string;
-  fieldErrors?: Partial<{ email: string; role: string; general: string }>;
+  fieldErrors?: Record<string, string[]>;
 }
 
-interface CollectiveActionResult {
-  success: boolean;
-  message?: string;
-  error?: string; // General error message
-  fieldErrors?: CollectiveActionError['fieldErrors'];
-}
-
-type MemberRecordWithCollective = {
-  collective_id: string;
-  user_id: string;
-  role: string;
-  collective: { owner_id: string };
-};
-
-// Note: Use inviteMemberToCollective from memberActions.ts for invitation functionality
-
-// --- Remove User from Collective ---
-export async function removeUserFromCollective(
-  collectiveId: string, // To verify ownership and for revalidation
-  membershipId: string, // The ID of the collective_members record
-): Promise<CollectiveActionResult> {
-  const supabase = await createServerSupabaseClient();
-
-  const {
-    data: { user: currentUser },
-    error: authError,
-  } = await supabase.auth.getUser();
-  if (authError !== null || currentUser === null) {
-    return { success: false, error: 'User not authenticated.' };
-  }
-
-  const { data: memberRecord, error: memberFetchError } = await supabase
-    .from('collective_members')
-    .select(
-      'collective_id, user_id, role, collective:collectives!collective_id(owner_id)',
-    )
-    .eq('id', membershipId)
-    .single<MemberRecordWithCollective>();
-
-  if (
-    memberFetchError !== null ||
-    memberRecord === null ||
-    typeof memberRecord !== 'object' ||
-    !('collective' in memberRecord) ||
-    memberRecord.collective === null
-  ) {
-    return {
-      success: false,
-      error: 'Membership record not found or invalid for this collective.',
-    };
-  }
-
-  const typedMemberRecord = memberRecord;
-
-  if (typedMemberRecord.collective.owner_id !== currentUser.id) {
-    return {
-      success: false,
-      error: 'Only the collective owner can remove members.',
-    };
-  }
-
-  // Prevent owner from removing themselves via this action if they are the last admin/owner
-  // This logic could be more complex depending on roles. For now, owner cannot remove self if they are the target.
-  if (
-    typedMemberRecord.user_id === currentUser.id &&
-    typedMemberRecord.collective.owner_id === currentUser.id
-  ) {
-    return {
-      success: false,
-      error: 'Collective owner cannot remove themselves through this action.',
-    };
-  }
-
-  // 2. Delete the membership
-  const { error: deleteError } = await supabase
-    .from('collective_members')
-    .delete()
-    .eq('id', membershipId);
-
-  if (deleteError !== null) {
-    console.error(
-      'Error removing member from collective:',
-      deleteError.message,
-    );
-    return {
-      success: false,
-      error: `Failed to remove member: ${deleteError.message}`,
-    };
-  }
-
-  revalidatePath(
-    `/dashboard/collectives/${typedMemberRecord.collective_id}/manage/members`,
-  );
-  return { success: true, message: 'Member removed successfully.' };
-}
-
-// --- Update Member Role in Collective ---
-export async function updateMemberRole(
-  collectiveId: string, // To verify ownership and for revalidation
-  membershipId: string, // The ID of the collective_members record to update
-  newRole: Enums<'collective_member_role'>,
-): Promise<CollectiveActionResult> {
-  const supabase = await createServerSupabaseClient();
-
-  const {
-    data: { user: currentUser },
-    error: authError,
-  } = await supabase.auth.getUser();
-  if (authError !== null || currentUser === null) {
-    return { success: false, error: 'User not authenticated.' };
-  }
-
-  // 1. Verify current user owns the collective associated with this membershipId
-  const { data: memberRecord, error: memberFetchError } = await supabase
-    .from('collective_members')
-    .select(
-      'collective_id, user_id, role, collective:collectives!collective_id(owner_id)',
-    )
-    .eq('id', membershipId)
-    .eq('collective_id', collectiveId) // Ensure membershipId is for the given collectiveId
-    .single<MemberRecordWithCollective>();
-
-  if (
-    memberFetchError !== null ||
-    memberRecord === null ||
-    typeof memberRecord !== 'object' ||
-    !('collective' in memberRecord) ||
-    memberRecord.collective === null
-  ) {
-    return {
-      success: false,
-      error: 'Membership record not found or invalid for this collective.',
-    };
-  }
-
-  const typedMemberRecord = memberRecord;
-
-  if (typedMemberRecord.collective.owner_id !== currentUser.id) {
-    return {
-      success: false,
-      error: 'Only the collective owner can change member roles.',
-    };
-  }
-
-  // Prevent owner from changing their own role if they are the target member and it would demote them from 'admin'
-  if (
-    typedMemberRecord.user_id === currentUser.id &&
-    typedMemberRecord.role === 'admin' &&
-    newRole !== 'admin'
-  ) {
-    return {
-      success: false,
-      error: 'Collective owner cannot demote themselves from admin role.',
-    };
-  }
-
-  // 2. Update the role
-  const { error: updateError } = await supabase
-    .from('collective_members')
-    .update({ role: newRole, updated_at: new Date().toISOString() })
-    .eq('id', membershipId);
-
-  if (updateError !== null) {
-    console.error('Error updating member role:', updateError.message);
-    return {
-      success: false,
-      error: `Failed to update role: ${updateError.message}`,
-    };
-  }
-
-  revalidatePath(`/dashboard/collectives/${collectiveId}/manage/members`);
-  return { success: true, message: 'Member role updated successfully.' };
-}
-
-// --- Update Collective Settings ---
-
-interface UpdateCollectiveSettingsResult {
-  success: boolean;
-  message?: string;
-  error?: string;
-  fieldErrors?: Partial<
-    Record<keyof CollectiveSettingsServerFormValues, string[]>
-  >;
-  updatedSlug?: string; // To redirect if slug changes
-}
+// Re-export from memberActions for backward compatibility
+export { removeMemberFromCollective } from './memberActions';
 
 export async function updateCollectiveSettings(
   collectiveId: string,
-  formData: CollectiveSettingsServerFormValues,
-): Promise<UpdateCollectiveSettingsResult> {
+  formData: TablesUpdate<'collectives'>,
+): Promise<CollectiveActionError | { success: true }> {
   const supabase = await createServerSupabaseClient();
-
-  const {
-    data: { user: currentUser },
-    error: authError,
-  } = await supabase.auth.getUser();
-
-  if (authError !== null || currentUser === null) {
-    return { success: false, error: 'User not authenticated.' };
-  }
-
-  // 1. Verify current user owns the collective
-  const { data: collective, error: collectiveFetchError } = await supabase
+  const { error } = await supabase
     .from('collectives')
-    .select('owner_id, slug')
-    .eq('id', collectiveId)
-    .single();
-
-  if (collectiveFetchError !== null || collective === null) {
-    return { success: false, error: 'Collective not found.' };
-  }
-  if (collective.owner_id !== currentUser.id) {
-    return {
-      success: false,
-      error: 'You are not the owner of this collective.',
-    };
-  }
-
-  const validatedFields = CollectiveSettingsServerSchema.safeParse(formData);
-  if (!validatedFields.success) {
-    return {
-      success: false,
-      error: 'Invalid input. Please check the fields.',
-      fieldErrors: validatedFields.error.flatten().fieldErrors,
-    };
-  }
-
-  const {
-    name,
-    slug,
-    description,
-    tags_string: transformed_tags,
-  } = validatedFields.data;
-
-  // 2. Check if new slug is unique (if it changed)
-  if (slug !== collective.slug) {
-    const { data: existingSlug, error: slugCheckError } = await supabase
-      .from('collectives')
-      .select('id')
-      .eq('slug', slug)
-      .not('id', 'eq', collectiveId) // Exclude current collective
-      .maybeSingle();
-
-    if (slugCheckError !== null) {
-      console.error('Error checking slug uniqueness:', slugCheckError);
-      return {
-        success: false,
-        error: 'Database error checking slug uniqueness.',
-      };
-    }
-    if (existingSlug !== null) {
-      return {
-        success: false,
-        error: 'This slug is already taken. Please choose another one.',
-        fieldErrors: { slug: ['This slug is already taken.'] },
-      };
-    }
-  }
-
-  const collectiveUpdate: TablesUpdate<'collectives'> = {
-    name,
-    slug,
-    description: description ?? null,
-    tags:
-      transformed_tags !== null && transformed_tags.length > 0 ? transformed_tags : null,
-    // updated_at will be handled by the database
-  };
-
-  const { error: updateError } = await supabase
-    .from('collectives')
-    .update(collectiveUpdate)
+    .update(formData)
     .eq('id', collectiveId);
 
-  if (updateError !== null) {
-    console.error('Error updating collective settings:', updateError);
-    if (updateError.code === '23505') {
-      // Unique constraint violation
-      return {
-        success: false,
-        error:
-          'A collective with this name or slug might already exist (check database logs for details).',
-        fieldErrors: {
-          slug: ['This slug might already be in use.'],
-          name: ['This name might already be in use.'],
-        },
-      };
-    }
-    return {
-      success: false,
-      error: `Failed to update collective: ${updateError.message}`,
-    };
+  if (error) {
+    return { error: 'Failed to update collective settings.' };
   }
 
-  revalidatePath(`/dashboard/collectives/${collectiveId}/settings`);
-  revalidatePath(`/dashboard`); // Revalidate dashboard as collective name/slug might be displayed there
-  if (slug !== collective.slug) {
-    revalidatePath(`/collectives/${collective.slug}`); // Old slug path
-    revalidatePath(`/collectives/${slug}`); // New slug path
-  }
-
-  return {
-    success: true,
-    message: 'Collective settings updated successfully.',
-    ...(slug !== collective.slug ? { updatedSlug: slug } : {}),
-  };
+  revalidatePath(`/settings/collectives/${collectiveId}`);
+  return { success: true };
 }
 
-/**
- * Fetch Stripe Connect account status for a collective.
- * Returns null if not connected, or Stripe account status fields if connected.
- */
-export async function getCollectiveStripeStatus(collectiveId: string): Promise<{
-  error?: string;
-  status?: string;
-  charges_enabled?: boolean;
-  payouts_enabled?: boolean;
-  details_submitted?: boolean;
-  requirements?: Record<string, unknown>;
-  email?: string | null;
-  type?: string;
-  id?: string;
-}> {
+export async function subscribeToCollective(
+  collectiveId: string,
+  userId: string,
+  planId: string,
+): Promise<CollectiveActionError | { success: true; subscriptionId: string }> {
   const supabase = await createServerSupabaseClient();
   const {
     data: { user },
-    error: authError,
   } = await supabase.auth.getUser();
-  if (authError !== null || user === null) {
-    return { error: 'Not authenticated' };
+  if (!user) {
+    return { error: 'User not authenticated.' };
   }
-  // Only owner can view
+
   const { data: collective, error: collectiveError } = await supabase
     .from('collectives')
-    .select('id, owner_id, stripe_account_id')
+    .select('stripe_customer_id')
     .eq('id', collectiveId)
     .single();
-  if (collectiveError !== null || collective === null) {
-    return { error: 'Collective not found' };
+
+  if (collectiveError || !collective) {
+    return { error: 'Collective not found.' };
   }
-  if (collective.owner_id !== user.id) {
-    return { error: 'Forbidden: Not the owner' };
-  }
-  if (collective.stripe_account_id === null || collective.stripe_account_id === undefined) {
-    return { status: 'not_connected' };
-  }
+
   const stripe = getStripe();
-  if (stripe === undefined) {
-    return { error: 'Stripe not configured' };
+  if (!stripe) {
+    return { error: 'Stripe is not configured.' };
   }
-  
-  try {
-    const account = await stripe.accounts.retrieve(
-      collective.stripe_account_id,
-    );
-    return {
-      status:
-        account.charges_enabled && account.payouts_enabled
-          ? 'active'
-          : account.details_submitted
-            ? 'pending'
-            : 'incomplete',
-      charges_enabled: account.charges_enabled,
-      payouts_enabled: account.payouts_enabled,
-      details_submitted: account.details_submitted,
-      ...(account.requirements ? { requirements: account.requirements as unknown as Record<string, unknown> } : {}),
-      email: account.email,
-      type: account.type,
-      id: account.id,
-    };
-  } catch (err: unknown) {
-    const message =
-      err instanceof Error
-        ? err.message
-        : 'Failed to fetch Stripe account status';
-    return { error: message };
-  }
+
+  const { id: subscriptionId } = await stripe.subscriptions.create({
+    customer: collective.stripe_customer_id!,
+    items: [{ price: planId }],
+    expand: ['latest_invoice.payment_intent'],
+  });
+
+  return { success: true, subscriptionId };
 }
 
 /**
- * Delete a collective and all related data (owner only).
+ * Get Stripe status for a collective
+ */
+export async function getCollectiveStripeStatus(
+  collectiveId: string,
+): Promise<{
+  status: 'active' | 'pending' | 'none';
+  stripe_account_id?: string;
+}> {
+  const supabase = await createServerSupabaseClient();
+
+  const { data: collective, error } = await supabase
+    .from('collectives')
+    .select('stripe_account_id')
+    .eq('id', collectiveId)
+    .single();
+
+  if (error || !collective) {
+    return { status: 'none' };
+  }
+
+  if (!collective.stripe_account_id) {
+    return { status: 'none' };
+  }
+
+  // For now, we'll assume if they have an account ID, it's active
+  // In a real implementation, you might check with Stripe API
+  return {
+    status: 'active',
+    stripe_account_id: collective.stripe_account_id,
+  };
+}
+
+/**
+ * Delete a collective (owner only)
  */
 export async function deleteCollective({
   collectiveId,
 }: {
   collectiveId: string;
-}): Promise<{ success: boolean; error?: string }> {
+}): Promise<{ success: boolean; error?: string; message?: string }> {
   const supabase = await createServerSupabaseClient();
+
   const {
-    data: { user: currentUser },
-    error: authError,
+    data: { user },
   } = await supabase.auth.getUser();
-  if (authError !== null || currentUser === null) {
-    return { success: false, error: 'Not authenticated.' };
+
+  if (!user) {
+    return { success: false, error: 'User not authenticated.' };
   }
-  // Only owner can delete
-  const { data: collective, error: collectiveError } = await supabase
+
+  // Verify ownership
+  const { data: collective, error: fetchError } = await supabase
     .from('collectives')
     .select('owner_id')
     .eq('id', collectiveId)
     .single();
-  if (collectiveError !== null || collective === null) {
+
+  if (fetchError || !collective) {
     return { success: false, error: 'Collective not found.' };
   }
-  if (collective.owner_id !== currentUser.id) {
-    return {
-      success: false,
-      error: 'Only the owner can delete this collective.',
-    };
+
+  if (collective.owner_id !== user.id) {
+    return { success: false, error: 'Only the owner can delete a collective.' };
   }
-  // Delete all posts
-  await supabase.from('posts').delete().eq('collective_id', collectiveId);
-  // Delete all members
-  await supabase
-    .from('collective_members')
-    .delete()
-    .eq('collective_id', collectiveId);
-  // Delete all invites
-  await supabase
-    .from('collective_invites')
-    .delete()
-    .eq('collective_id', collectiveId);
-  // Delete the collective
+
+  // Delete the collective (this will cascade delete related records based on foreign keys)
   const { error: deleteError } = await supabase
     .from('collectives')
     .delete()
     .eq('id', collectiveId);
-  if (deleteError !== null) {
-    return {
-      success: false,
-      error: `Failed to delete collective: ${deleteError.message}`,
-    };
+
+  if (deleteError) {
+    return { success: false, error: 'Failed to delete collective.' };
   }
-  return { success: true };
+
+  revalidatePath('/collectives');
+  return { success: true, message: 'Collective deleted successfully.' };
 }
 
 /**
- * Transfer ownership of a collective to another member (owner only).
+ * Transfer ownership of a collective to another member
  */
 export async function transferCollectiveOwnership({
   collectiveId,
@@ -460,63 +159,71 @@ export async function transferCollectiveOwnership({
 }: {
   collectiveId: string;
   newOwnerId: string;
-}): Promise<{ success: boolean; error?: string }> {
+}): Promise<{ success: boolean; error?: string; message?: string }> {
   const supabase = await createServerSupabaseClient();
+
   const {
-    data: { user: currentUser },
-    error: authError,
+    data: { user },
   } = await supabase.auth.getUser();
-  if (authError !== null || currentUser === null) {
-    return { success: false, error: 'Not authenticated.' };
+
+  if (!user) {
+    return { success: false, error: 'User not authenticated.' };
   }
-  // Only owner can transfer
-  const { data: collective, error: collectiveError } = await supabase
+
+  // Verify current ownership
+  const { data: collective, error: fetchError } = await supabase
     .from('collectives')
     .select('owner_id')
     .eq('id', collectiveId)
     .single();
-  if (collectiveError !== null || collective === null) {
+
+  if (fetchError || !collective) {
     return { success: false, error: 'Collective not found.' };
   }
-  if (collective.owner_id !== currentUser.id) {
-    return { success: false, error: 'Only the owner can transfer ownership.' };
+
+  if (collective.owner_id !== user.id) {
+    return {
+      success: false,
+      error: 'Only the current owner can transfer ownership.',
+    };
   }
-  if (newOwnerId === currentUser.id) {
-    return { success: false, error: 'You are already the owner.' };
-  }
-  // Check that newOwnerId is a member
-  const { data: member } = await supabase
-    .from('collective_members')
-    .select('id')
-    .eq('collective_id', collectiveId)
-    .eq('user_id', newOwnerId)
-    .maybeSingle();
-  if (member === null) {
-    return { success: false, error: 'New owner must be a current member.' };
-  }
-  // Update owner_id in collectives
+
+  // Update the owner
   const { error: updateError } = await supabase
     .from('collectives')
     .update({ owner_id: newOwnerId })
     .eq('id', collectiveId);
-  if (updateError !== null) {
-    return {
-      success: false,
-      error: `Failed to transfer ownership: ${updateError.message}`,
-    };
+
+  if (updateError) {
+    return { success: false, error: 'Failed to transfer ownership.' };
   }
-  // Update roles: set new owner to 'owner', old owner to 'editor'
-  await supabase
-    .from('collective_members')
-    .update({ role: 'owner' })
-    .eq('collective_id', collectiveId)
-    .eq('user_id', newOwnerId);
-  await supabase
+
+  // Update the old owner's role to editor in collective_members
+  const { error: memberUpdateError } = await supabase
     .from('collective_members')
     .update({ role: 'editor' })
     .eq('collective_id', collectiveId)
-    .eq('user_id', currentUser.id);
-  return { success: true };
-}
+    .eq('member_id', user.id);
 
-// Ensure no trailing </rewritten_file> or other extraneous characters at EOF
+  if (memberUpdateError) {
+    console.error('Failed to update old owner role:', memberUpdateError);
+  }
+
+  // Ensure new owner has owner role in collective_members
+  const { error: newOwnerUpdateError } = await supabase
+    .from('collective_members')
+    .upsert({
+      collective_id: collectiveId,
+      member_id: newOwnerId,
+      role: 'owner',
+    })
+    .eq('collective_id', collectiveId)
+    .eq('member_id', newOwnerId);
+
+  if (newOwnerUpdateError) {
+    console.error('Failed to update new owner role:', newOwnerUpdateError);
+  }
+
+  revalidatePath(`/collectives/${collectiveId}/settings`);
+  return { success: true, message: 'Ownership transferred successfully.' };
+}

@@ -124,6 +124,7 @@ const AuthFormFieldsComponent: React.FC<AuthFormFieldsProps> = ({
             minLength={2}
             maxLength={100}
             title="Full name must be 2-100 characters long"
+            autoComplete="name"
           />
         </div>
       )}
@@ -142,6 +143,7 @@ const AuthFormFieldsComponent: React.FC<AuthFormFieldsProps> = ({
             minLength={3}
             maxLength={20}
             title="Username must be 3-20 characters long and contain only lowercase letters, numbers, and underscores"
+            autoComplete="username"
           />
           <p className="text-xs text-muted-foreground">
             3-20 characters, lowercase letters, numbers, and underscores only

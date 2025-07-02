@@ -2,8 +2,8 @@ import { redirect } from 'next/navigation';
 import React from 'react';
 
 import VideoPostCreationClient from '@/app/(app)/posts/new/video/VideoPostCreationClient';
-import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { loadPostEditorData } from '@/lib/data-loaders/posts-loader';
+import { createServerSupabaseClient } from '@/lib/supabase/server';
 
 export default async function NewVideoPostPage(): Promise<React.ReactElement> {
   const supabase = await createServerSupabaseClient();

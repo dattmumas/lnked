@@ -26,7 +26,7 @@ export interface VideoFormData {
   title: string;
   description: string;
   privacySetting: 'public' | 'private';
-  encodingTier: 'baseline' | 'plus';
+  encodingTier: 'baseline' | 'smart';
   collectiveId?: string;
 }
 
@@ -75,7 +75,7 @@ const initialFormData: VideoFormData = {
   title: '',
   description: '',
   privacySetting: 'public',
-  encodingTier: 'baseline',
+  encodingTier: 'smart',
 };
 
 export const useSimplifiedVideoUpload = (
@@ -250,7 +250,7 @@ export const useSimplifiedVideoUpload = (
         body: JSON.stringify({
           title: formData.title.trim(),
           description: formData.description.trim(),
-          privacy_setting: formData.privacySetting,
+          privacySetting: formData.privacySetting,
           encoding_tier: formData.encodingTier,
           collective_id: formData.collectiveId,
           is_published: false,

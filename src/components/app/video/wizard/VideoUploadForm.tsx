@@ -128,7 +128,7 @@ export default function VideoUploadForm({
 
   const handleEncodingChange = useCallback(
     (e: React.ChangeEvent<HTMLSelectElement>) => {
-      updateFormData({ encodingTier: e.target.value as 'baseline' | 'plus' });
+      updateFormData({ encodingTier: e.target.value as 'baseline' | 'smart' });
     },
     [updateFormData],
   );
@@ -142,7 +142,7 @@ export default function VideoUploadForm({
           title?: string;
           description?: string;
           privacySetting?: 'public' | 'private';
-          encodingTier?: 'baseline' | 'plus';
+          encodingTier?: 'baseline' | 'smart';
           collectiveId?: string;
         };
         // Apply draft data to form
@@ -291,7 +291,7 @@ export default function VideoUploadForm({
               disabled={isUploading || isRetrying || isProcessing}
             >
               <option value="baseline">Baseline</option>
-              <option value="plus">Plus (Higher Quality)</option>
+              <option value="smart">Smart (Higher Quality)</option>
             </select>
           </div>
         </div>

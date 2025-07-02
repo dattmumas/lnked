@@ -158,7 +158,6 @@ export function NewPostDetailsClient({
 
   // Thumbnail upload functionality
   const thumbnailUpload = useThumbnailUpload({
-    ...(formData.id ? { postId: formData.id } : {}),
     onUploadSuccess: useCallback(
       (thumbnailUrl: string): void => {
         updateFormData({ thumbnail_url: thumbnailUrl });
