@@ -162,37 +162,25 @@ class WebSocketErrorBoundary extends React.Component<
 function getImageFile(e: DragEvent | ClipboardEvent): File | null {
   // @ts-expect-error ProseMirror uses non-standard clipboard vs dataTransfer types
   const dt: DataTransfer | null = e.clipboardData ?? e.dataTransfer ?? null;
-  console.log('🔍 getImageFile - DataTransfer:', dt ? 'found' : 'null');
 
   if (!dt) return null;
 
-  console.log(
-    '📁 Checking dt.files:',
-    Array.from(dt.files || []).map((f) => ({ name: f.name, type: f.type })),
-  );
   const fromFiles = Array.from(dt.files || []).find((f) =>
     f.type.startsWith('image/'),
   );
   if (fromFiles) {
-    console.log('✅ Found image in files:', fromFiles.name);
     return fromFiles;
   }
 
-  console.log(
-    '📋 Checking dt.items:',
-    Array.from(dt.items || []).map((i) => ({ kind: i.kind, type: i.type })),
-  );
   const item = Array.from(dt.items || []).find(
     (i) => i.kind === 'file' && i.type.startsWith('image/'),
   );
 
   if (item) {
     const file = item.getAsFile();
-    console.log('✅ Found image in items:', file?.name || 'unnamed');
     return file;
   }
 
-  console.log('❌ No image found in either files or items');
   return null;
 }
 
@@ -206,22 +194,6 @@ export default function RichTextEditor({ postId }: RichTextEditorProps) {
     collectiveSharingSettings,
   } = usePostEditorStore();
   const { user } = useUser();
-
-  // Debug user state
-  console.log('🧑 RichTextEditor user state:', {
-    hasUser: Boolean(user),
-    userId: user?.id,
-    userEmail: user?.email,
-  });
-
-  // Monitor user state changes
-  useEffect(() => {
-    console.log('👤 User state changed:', {
-      hasUser: Boolean(user),
-      userId: user?.id,
-      timestamp: new Date().toISOString(),
-    });
-  }, [user]);
 
   // Get tenant ID - use collective_id if present, otherwise use author_id as personal tenant
   const tenantId = formData.collective_id || user?.id || '';
@@ -246,10 +218,6 @@ export default function RichTextEditor({ postId }: RichTextEditorProps) {
   // When user becomes available, retry any pending uploads
   useEffect(() => {
     if (userRef.current?.id && pendingUploadsRef.current.length > 0) {
-      console.log(
-        '🔄 User is now available, retrying pending uploads:',
-        pendingUploadsRef.current.length,
-      );
       const uploads = [...pendingUploadsRef.current];
       pendingUploadsRef.current = [];
       uploads.forEach((upload) => upload());
@@ -335,7 +303,6 @@ export default function RichTextEditor({ postId }: RichTextEditorProps) {
 
     // Validate that we have something to save
     if (!currentTitle.trim() && !currentContent.trim()) {
-      console.log('⏭️ Skipping autosave: no content');
       return;
     }
 
@@ -548,19 +515,13 @@ export default function RichTextEditor({ postId }: RichTextEditorProps) {
                 });
 
                 if (!props.clientRect) {
-                  console.log('❌ No clientRect provided for slash command');
                   return;
                 }
-
-                console.log(
-                  '🎯 Creating slash command menu at cursor position',
-                );
 
                 tippyInstance = tippy(document.body, {
                   getReferenceClientRect: () => {
                     if (!props.clientRect) return null;
                     const rect = props.clientRect();
-                    console.log('📍 Slash command position:', rect);
                     return rect || null;
                   },
                   appendTo: () => document.body,
@@ -577,7 +538,6 @@ export default function RichTextEditor({ postId }: RichTextEditorProps) {
                 if (tippyInstance) {
                   tippyInstancesRef.current.add(tippyInstance);
                   tippyInstance.show();
-                  console.log('✅ Slash command menu shown');
                 }
               },
               onUpdate(raw: unknown) {
@@ -766,14 +726,9 @@ export default function RichTextEditor({ postId }: RichTextEditorProps) {
       immediatelyRender: false, // Required to prevent SSR hydration mismatches
       onCreate: ({ editor }) => {
         editorRef.current = editor;
-        console.log('🎉 TipTap editor created successfully!', {
-          hasEditor: Boolean(editor),
-          refSet: Boolean(editorRef.current),
-        });
       },
       onDestroy: () => {
         editorRef.current = null;
-        console.log('💥 TipTap editor destroyed');
       },
       onUpdate: ({ editor }) => {
         try {
@@ -798,17 +753,7 @@ export default function RichTextEditor({ postId }: RichTextEditorProps) {
           return true;
         },
         handleDrop: (_v, ev) => {
-          console.log('🎯 handleDrop triggered', {
-            dataTransfer: ev.dataTransfer,
-            files: ev.dataTransfer?.files?.length || 0,
-            items: ev.dataTransfer?.items?.length || 0,
-          });
-
           const file = getImageFile(ev);
-          console.log(
-            '📎 getImageFile result:',
-            file ? `${file.name} (${file.size} bytes)` : 'No file found',
-          );
 
           if (!file) return false;
 
@@ -893,27 +838,11 @@ export default function RichTextEditor({ postId }: RichTextEditorProps) {
     (file: File) => {
       const currentEditor = editorRef.current;
 
-      console.log('🚀 insertAndUploadFile called', {
-        fileName: file.name,
-        fileSize: file.size,
-        fileType: file.type,
-        editorExists: Boolean(currentEditor),
-        hookEditorExists: Boolean(editor),
-        refEditorExists: Boolean(editorRef.current),
-      });
-
       if (!currentEditor) {
-        console.log('❌ No editor available in ref - will retry in 100ms');
         // Retry after a short delay in case editor is still initializing
         setTimeout(() => {
-          console.log('🔄 Retrying insertAndUploadFile...', {
-            refEditorNowExists: Boolean(editorRef.current),
-            hookEditorExists: Boolean(editor),
-          });
           if (editorRef.current) {
             insertAndUploadFile(file);
-          } else {
-            console.log('❌ Editor still not available after retry');
           }
         }, 100);
         return;
@@ -922,9 +851,6 @@ export default function RichTextEditor({ postId }: RichTextEditorProps) {
       const tempUrl = URL.createObjectURL(file);
       const tempId = crypto.randomUUID();
 
-      console.log('🆔 Generated temp ID:', tempId);
-      console.log('🔗 Created blob URL:', tempUrl);
-
       // Client-side size validation (5 MB limit)
       if (file.size > 5 * 1024 * 1024) {
         console.error('❌ Image exceeds 5 MB limit');
@@ -932,7 +858,6 @@ export default function RichTextEditor({ postId }: RichTextEditorProps) {
         return;
       }
 
-      console.log('📝 Inserting placeholder into editor');
       // Always insert placeholder first
       const imageAttrs = {
         src: tempUrl,
@@ -941,23 +866,15 @@ export default function RichTextEditor({ postId }: RichTextEditorProps) {
         'data-id': tempId,
       };
 
-      console.log('🏷️ Setting image attributes:', imageAttrs);
-
       currentEditor.chain().focus().setImage(imageAttrs).run();
 
       // Verify the image was inserted with correct attributes
       setTimeout(() => {
-        console.log('🔍 Verifying inserted image...');
         const verifyEditor = editorRef.current;
         if (verifyEditor) {
           verifyEditor.state.doc.descendants((node, pos) => {
             if (node.type.name === 'image') {
-              console.log('🖼️ Found image after insert:', {
-                pos,
-                attrs: node.attrs,
-                hasDataId: 'data-id' in node.attrs,
-                dataId: node.attrs['data-id'],
-              });
+              // Silent verification - no logging needed
             }
           });
         }
@@ -969,31 +886,15 @@ export default function RichTextEditor({ postId }: RichTextEditorProps) {
         const currentUser = userRef.current;
         const currentFormData = formDataRef.current;
 
-        console.log('🔄 attemptUpload called', {
-          userId: currentUser?.id,
-          formDataId: currentFormData.id,
-          userReady: Boolean(currentUser?.id),
-          draftReady: Boolean(currentFormData.id),
-          pendingUploads: pendingUploadsRef.current.length,
-        });
-
         if (!currentUser?.id || !currentFormData.id) {
           if (!currentUser?.id) {
-            console.log('⏳ User not ready, adding to pending uploads...');
             pendingUploadsRef.current.push(attemptUpload);
             return;
           } else {
-            console.log('⏳ Draft not ready, retrying in 1s...');
             setTimeout(attemptUpload, 1000);
             return;
           }
         }
-
-        console.log('📤 Starting upload to Supabase...', {
-          fileName: file.name,
-          userId: currentUser.id,
-          draftId: currentFormData.id,
-        });
 
         uploadImage({
           file,
@@ -1001,10 +902,7 @@ export default function RichTextEditor({ postId }: RichTextEditorProps) {
           draftId: currentFormData.id,
         })
           .then((publicUrl) => {
-            console.log('✅ Upload successful!', { publicUrl, tempId });
             let found = false;
-
-            console.log('🔍 Searching for image node with tempId:', tempId);
 
             // Walk the doc; update only the node with matching tempId
             const updateEditor = editorRef.current;
@@ -1016,19 +914,8 @@ export default function RichTextEditor({ postId }: RichTextEditorProps) {
                   const nodeId = (
                     node.attrs as UploadingImageAttrs & { 'data-id'?: string }
                   )['data-id'];
-                  console.log('🖼️ Found image node:', {
-                    pos,
-                    nodeId,
-                    tempId,
-                    matches: nodeId === tempId,
-                    attrs: node.attrs,
-                  });
 
                   if (nodeId === tempId) {
-                    console.log(
-                      '🎯 Found matching node! Updating src to:',
-                      publicUrl,
-                    );
                     updateEditor
                       .chain()
                       .focus()
@@ -1060,8 +947,6 @@ export default function RichTextEditor({ postId }: RichTextEditorProps) {
                 '❌ Uploaded image node not found; something moved it.',
                 { tempId, totalImageNodes: 'counted above' },
               );
-            } else {
-              console.log('🎉 Successfully updated image node!');
             }
           })
           .catch((err) => {
@@ -1072,7 +957,6 @@ export default function RichTextEditor({ postId }: RichTextEditorProps) {
             });
 
             // Mark the node with matching tempId as error
-            console.log('🔄 Marking failed upload node as error...');
             const errorEditor = editorRef.current;
             if (errorEditor) {
               errorEditor.state.doc.descendants((node, pos) => {
@@ -1082,7 +966,6 @@ export default function RichTextEditor({ postId }: RichTextEditorProps) {
                     'data-id'
                   ] === tempId
                 ) {
-                  console.log('🚨 Found failed upload node, marking as error');
                   errorEditor
                     .chain()
                     .focus()
@@ -1103,17 +986,13 @@ export default function RichTextEditor({ postId }: RichTextEditorProps) {
                 }
               });
             }
-            // Optionally: surface toast or UI feedback (placeholder for actual toast impl)
-            // toast.error('Image upload failed. Please try again.');
           })
           .finally(() => {
-            console.log('🧹 Cleaning up blob URL:', tempUrl);
             URL.revokeObjectURL(tempUrl);
           });
       };
 
       // Start upload attempt
-      console.log('🚀 Starting upload attempt...');
       attemptUpload();
     },
     [], // Empty dependency array since we're using refs
