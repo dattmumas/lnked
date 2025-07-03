@@ -46,8 +46,13 @@ export const useAutoSavePost = (): UseMutationResult<
         throw new Error('Missing required fields');
       }
 
-      // Determine tenant_id: use collective_id if present, otherwise use author_id as personal tenant
-      const tenant_id = data.collective_id || data.author_id;
+      // ------------------------------
+      // Determine tenant / collective
+      // ------------------------------
+      const primaryCollective =
+        data.collective_id || data.selected_collectives?.[0] || null;
+
+      const tenant_id = primaryCollective ?? data.author_id; // personal fallback
 
       // Use client-side UUID for slug temporarily to avoid collisions
       // The slug will be properly generated when the post is published
@@ -78,11 +83,11 @@ export const useAutoSavePost = (): UseMutationResult<
         } as unknown as Database['public']['Tables']['posts']['Row']['metadata'],
         is_public: data.is_public,
         status: data.status,
-        collective_id: data.collective_id || null,
+        collective_id: primaryCollective, // legacy single-collective field
         published_at: data.published_at || null,
       };
 
-      // Use upsert to handle both create and update in one operation
+      // Upsert post row
       const { data: post, error } = await supabase
         .from('posts')
         .upsert(postData, { onConflict: 'id' })
@@ -96,6 +101,37 @@ export const useAutoSavePost = (): UseMutationResult<
 
       if (!post) {
         throw new Error('Post was not returned from database after save');
+      }
+
+      // ------------------------------
+      // Upsert post_collectives rows
+      // ------------------------------
+      if (
+        Array.isArray(data.selected_collectives) &&
+        data.selected_collectives.length > 0
+      ) {
+        const rows: PostCollectiveInsert[] = data.selected_collectives.map(
+          (cid) => ({
+            post_id: post.id,
+            collective_id: cid,
+            shared_by: data.author_id,
+            status: data.status === 'active' ? 'published' : 'draft',
+            shared_at: new Date().toISOString(),
+            display_order: 0,
+            metadata: {},
+          }),
+        );
+
+        const { error: pcError } = await supabase
+          .from('post_collectives')
+          .upsert(rows, {
+            onConflict: 'post_id,collective_id',
+            ignoreDuplicates: true,
+          });
+
+        if (pcError) {
+          console.warn('Failed to upsert post_collectives:', pcError.message);
+        }
       }
 
       return {

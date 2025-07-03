@@ -57,6 +57,7 @@ interface ArticleCardProps {
   currentUserId?: string;
   showFollowButton?: boolean;
   className?: string;
+  priority?: boolean;
 }
 
 // Utility function to extract text from content
@@ -84,6 +85,7 @@ export default function ArticleCard({
   currentUserId,
   showFollowButton = false,
   className,
+  priority = false,
 }: ArticleCardProps): React.ReactElement {
   const postUrl =
     post.slug !== undefined && post.slug !== null && post.slug.length > 0
@@ -117,8 +119,11 @@ export default function ArticleCard({
                 src={post.thumbnail_url}
                 alt={post.title}
                 fill
+                priority={priority}
                 sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                 className="object-cover transition-transform duration-300 group-hover:scale-105"
+                placeholder="blur"
+                blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCdABmX/9k="
               />
             </div>
           </Link>

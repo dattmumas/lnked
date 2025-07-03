@@ -87,6 +87,9 @@ export default function VideoCard({
 }: VideoCardProps): React.ReactElement {
   const router = useRouter();
 
+  // Add comprehensive logging for video metadata
+  // VideoCard rendering
+
   // Redirect to /videos/[id] using the video asset ID from metadata
   const videoAssetId = post.metadata?.videoAssetId;
   const postUrl = videoAssetId
@@ -96,6 +99,8 @@ export default function VideoCard({
   const isProcessing = post.metadata?.status === 'preparing';
   const hasError = post.metadata?.status === 'errored';
   const isReady = post.metadata?.status === 'ready';
+
+  // Video state computed
 
   // Extract description from content (for video posts, content is usually the description)
   const description =
@@ -120,14 +125,11 @@ export default function VideoCard({
   const [videoError, setVideoError] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
 
-  const handlePlayClick = useCallback(
-    (e: React.MouseEvent): void => {
-      e.stopPropagation();
-      setIsPlaying(true);
-      setVideoError(null);
-    },
-    [canPlayInline, post.metadata?.playbackId],
-  );
+  const handlePlayClick = useCallback((e: React.MouseEvent): void => {
+    e.stopPropagation();
+    setIsPlaying(true);
+    setVideoError(null);
+  }, []);
 
   const handleVideoEnded = useCallback((): void => {
     setIsPlaying(false);
@@ -163,16 +165,16 @@ export default function VideoCard({
       setVideoError(errorMessage);
       setIsPlaying(false);
     },
-    [post.id, post.metadata?.playbackId],
+    [],
   );
 
   const handleVideoLoadStart = useCallback((): void => {
     // Video loading started
-  }, [post.id, post.metadata?.playbackId]);
+  }, []);
 
   const handleCanPlay = useCallback((): void => {
     // Video can play
-  }, [post.id, post.metadata?.playbackId]);
+  }, []);
 
   const handleNavigateToPost = useCallback((): void => {
     void router.push(postUrl);

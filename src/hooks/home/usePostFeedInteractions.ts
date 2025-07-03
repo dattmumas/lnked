@@ -98,11 +98,14 @@ export function usePostFeedInteractions(userId: string): PostFeedInteractions {
       });
       try {
         const tenantRepo = await createTenantAwareRepositoryClient();
-        await tenantRepo.insertPostReaction({
+        const resp = await tenantRepo.insertPostReaction({
           user_id: userId,
           post_id: postId,
           type: 'like',
         });
+        /* eslint-disable no-console */
+        console.log('[toggleLike] upsert response', resp);
+        /* eslint-enable no-console */
       } catch (err) {
         console.error('toggleLike error', err);
       }
@@ -125,11 +128,14 @@ export function usePostFeedInteractions(userId: string): PostFeedInteractions {
       });
       try {
         const tenantRepo = await createTenantAwareRepositoryClient();
-        await tenantRepo.insertPostReaction({
+        const resp = await tenantRepo.insertPostReaction({
           user_id: userId,
           post_id: postId,
           type: 'dislike',
         });
+        /* eslint-disable no-console */
+        console.log('[toggleDislike] upsert response', resp);
+        /* eslint-enable no-console */
       } catch (err) {
         console.error('toggleDislike error', err);
       }

@@ -8,7 +8,8 @@ import {
   Calendar,
   CheckCircle,
 } from 'lucide-react';
-import React, { useMemo } from 'react';
+import Image from 'next/image';
+import React, { useMemo  } from 'react';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -18,7 +19,6 @@ import {
   type CollectiveSharingSettings,
 } from '@/lib/stores/post-editor-v2-store';
 import { cn } from '@/lib/utils/cn';
-
 
 interface CollectiveSelectionSummaryProps {
   selectedCollectives: CollectiveWithPermission[];
@@ -151,10 +151,13 @@ export function CollectiveSelectionSummary({
               >
                 <div className="flex items-center space-x-3 flex-1 min-w-0">
                   {collective.logo_url && (
-                    <img
+                    <Image
                       src={collective.logo_url}
                       alt={`${collective.name} logo`}
-                      className="h-8 w-8 rounded-full flex-shrink-0"
+                      width={32}
+                      height={32}
+                      className="rounded-full flex-shrink-0"
+                      sizes="32px"
                     />
                   )}
 

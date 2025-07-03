@@ -53,7 +53,7 @@ export class RealtimeHandler {
   constructor() {
     this.supabase = createSupabaseBrowserClient();
     this.apiClient = new ChatApiClient();
-    
+
     // Batch events every 100ms to reduce client updates
     const BATCH_INTERVAL_MS = 100;
     this.flushInterval = setInterval(() => {
@@ -64,7 +64,7 @@ export class RealtimeHandler {
   // Connect a user to real-time updates
   async connect(userId: string, conversationId?: string): Promise<void> {
     const existingConnection = this.connections.get(userId);
-    
+
     if (existingConnection?.channel) {
       await this.supabase.removeChannel(existingConnection.channel);
     }
@@ -78,11 +78,14 @@ export class RealtimeHandler {
           event: '*',
           schema: 'public',
           table: 'messages',
-          filter: conversationId !== undefined && conversationId !== null ? `conversation_id=eq.${conversationId}` : undefined,
+          filter:
+            conversationId !== undefined && conversationId !== null
+              ? `conversation_id=eq.${conversationId}`
+              : undefined,
         },
         (payload: unknown) => {
           this.handleMessageChange(userId, payload as Record<string, unknown>);
-        }
+        },
       )
       .on(
         'postgres_changes',
@@ -92,8 +95,11 @@ export class RealtimeHandler {
           table: 'message_read_receipts',
         },
         (payload) => {
-          this.handleReadReceiptChange(userId, payload as Record<string, unknown>);
-        }
+          this.handleReadReceiptChange(
+            userId,
+            payload as Record<string, unknown>,
+          );
+        },
       )
       .on(
         'postgres_changes',
@@ -104,17 +110,17 @@ export class RealtimeHandler {
         },
         (payload) => {
           this.handleReactionChange(userId, payload as Record<string, unknown>);
-        }
+        },
       )
       .on('presence', { event: 'sync' }, () => {
         this.handlePresenceSync(userId, channel);
       })
       .subscribe();
 
-    this.connections.set(userId, { 
-      userId, 
-      ...(conversationId ? { conversationId } : {}), 
-      channel 
+    this.connections.set(userId, {
+      userId,
+      ...(conversationId ? { conversationId } : {}),
+      channel,
     });
   }
 
@@ -129,19 +135,22 @@ export class RealtimeHandler {
   }
 
   // Handle message changes with intelligent diffing
-  private handleMessageChange(userId: string, payload: Record<string, unknown>): void {
+  private handleMessageChange(
+    userId: string,
+    payload: Record<string, unknown>,
+  ): void {
     const eventType = payload['eventType'] as string;
     const newRecord = payload['new'] as Record<string, unknown> | null;
     const oldRecord = payload['old'] as Record<string, unknown> | null;
-    
+
     let event: RealtimeEvent;
-    
+
     switch (eventType) {
       case 'INSERT': {
         if (!newRecord) return;
         const conversationId = newRecord['conversation_id'] as string;
         if (!conversationId) return;
-        
+
         event = {
           type: 'message',
           conversationId,
@@ -152,13 +161,13 @@ export class RealtimeHandler {
         };
         break;
       }
-        
+
       case 'UPDATE': {
         if (!newRecord || !oldRecord) return;
         const conversationId = newRecord['conversation_id'] as string;
         const messageId = newRecord['id'] as string;
         if (!conversationId || !messageId) return;
-        
+
         // Only send relevant fields that changed
         const changedFields = this.getChangedFields(oldRecord, newRecord);
         event = {
@@ -172,13 +181,13 @@ export class RealtimeHandler {
         };
         break;
       }
-        
+
       case 'DELETE': {
         if (!oldRecord) return;
         const conversationId = oldRecord['conversation_id'] as string;
         const messageId = oldRecord['id'] as string;
         if (!conversationId || !messageId) return;
-        
+
         event = {
           type: 'message',
           conversationId,
@@ -189,26 +198,29 @@ export class RealtimeHandler {
         };
         break;
       }
-        
+
       default:
         return;
     }
-    
+
     this.bufferEvent(userId, event);
   }
 
   // Handle read receipt changes
-  private handleReadReceiptChange(userId: string, payload: Record<string, unknown>): void {
+  private handleReadReceiptChange(
+    userId: string,
+    payload: Record<string, unknown>,
+  ): void {
     const newRecord = payload['new'] as Record<string, unknown> | null;
     if (!newRecord) return;
-    
+
     const conversationId = newRecord['conversation_id'] as string;
     const messageUserId = newRecord['user_id'] as string;
     const messageId = newRecord['message_id'] as string;
     const readAt = newRecord['read_at'] as string;
-    
+
     if (!conversationId || !messageUserId || !messageId || !readAt) return;
-    
+
     const event: RealtimeEvent = {
       type: 'read',
       conversationId,
@@ -218,26 +230,30 @@ export class RealtimeHandler {
         readAt,
       } as ReadEventData,
     };
-    
+
     this.bufferEvent(userId, event);
   }
 
   // Handle reaction changes
-  private handleReactionChange(userId: string, payload: Record<string, unknown>): void {
+  private handleReactionChange(
+    userId: string,
+    payload: Record<string, unknown>,
+  ): void {
     const eventType = payload['eventType'] as string;
     const newRecord = payload['new'] as Record<string, unknown> | null;
     const oldRecord = payload['old'] as Record<string, unknown> | null;
-    
+
     const record = newRecord ?? oldRecord;
     if (!record) return;
-    
+
     const conversationId = record['conversation_id'] as string;
     const messageId = record['message_id'] as string;
     const reactionUserId = record['user_id'] as string;
     const reactionType = record['reaction_type'] as string;
-    
-    if (!conversationId || !messageId || !reactionUserId || !reactionType) return;
-    
+
+    if (!conversationId || !messageId || !reactionUserId || !reactionType)
+      return;
+
     const event: RealtimeEvent = {
       type: 'reaction',
       conversationId,
@@ -248,7 +264,7 @@ export class RealtimeHandler {
         reaction: reactionType,
       } as ReactionEventData,
     };
-    
+
     this.bufferEvent(userId, event);
   }
 
@@ -259,7 +275,9 @@ export class RealtimeHandler {
     // The presence state returned by Supabase can be `unknown`. To satisfy the
     // `@typescript-eslint/no-unsafe-argument` rule we cast the flattened
     // presence array to a safer structure before further transformations.
-    const presenceStates = Object.values(presence).flat() as Array<Record<string, unknown>>;
+    const presenceStates = Object.values(presence).flat() as Array<
+      Record<string, unknown>
+    >;
 
     const typingUsers = presenceStates
       .filter((p) => Boolean(p['isTyping']))
@@ -268,15 +286,18 @@ export class RealtimeHandler {
         username: String(p['username']),
       }))
       .filter((user) => Boolean(user.userId) && Boolean(user.username));
-    
+
     const connection = this.connections.get(userId);
-    if (connection?.conversationId !== undefined && connection?.conversationId !== null) {
+    if (
+      connection?.conversationId !== undefined &&
+      connection?.conversationId !== null
+    ) {
       const event: RealtimeEvent = {
         type: 'typing',
         conversationId: connection.conversationId,
         data: { typingUsers } as TypingEventData,
       };
-      
+
       this.bufferEvent(userId, event);
     }
   }
@@ -292,20 +313,26 @@ export class RealtimeHandler {
   private flushEventBuffer(): void {
     for (const [userId, events] of this.eventBuffer.entries()) {
       if (events.length === 0) continue;
-      
+
       const connection = this.connections.get(userId);
       if (!connection?.channel) continue;
-      
+
       // Group events by type and conversation
       const groupedEvents = this.groupEvents(events);
-      
+
+      // DEV: Log every batch_update payload to trace component mounts
+      console.log(
+        '[RealtimeHandler] Sending batch_update payload',
+        groupedEvents,
+      );
+
       // Send batched update to client
       void connection.channel.send({
         type: 'broadcast',
         event: 'batch_update',
         payload: groupedEvents,
       });
-      
+
       // Clear buffer
       this.eventBuffer.set(userId, []);
     }
@@ -324,7 +351,7 @@ export class RealtimeHandler {
       reactions: [] as ReactionEventData[],
       typing: null as TypingEventData | null,
     };
-    
+
     for (const event of events) {
       switch (event.type) {
         case 'message':
@@ -342,20 +369,23 @@ export class RealtimeHandler {
           break;
       }
     }
-    
+
     return grouped;
   }
 
   // Get changed fields between two records
-  private getChangedFields(oldRecord: Record<string, unknown>, newRecord: Record<string, unknown>): Record<string, unknown> {
+  private getChangedFields(
+    oldRecord: Record<string, unknown>,
+    newRecord: Record<string, unknown>,
+  ): Record<string, unknown> {
     const changes: Record<string, unknown> = {};
-    
+
     for (const key in newRecord) {
       if (oldRecord[key] !== newRecord[key]) {
         changes[key] = newRecord[key];
       }
     }
-    
+
     return changes;
   }
 
@@ -363,11 +393,11 @@ export class RealtimeHandler {
   async sendTypingIndicator(
     userId: string,
     conversationId: string,
-    isTyping: boolean
+    isTyping: boolean,
   ): Promise<void> {
     const connection = this.connections.get(userId);
     if (!connection?.channel) return;
-    
+
     await connection.channel.track({
       userId,
       isTyping,
@@ -380,9 +410,9 @@ export class RealtimeHandler {
     if (this.flushInterval) {
       clearInterval(this.flushInterval);
     }
-    
+
     for (const [userId] of this.connections) {
       void this.disconnect(userId).catch(console.error);
     }
   }
-} 
+}

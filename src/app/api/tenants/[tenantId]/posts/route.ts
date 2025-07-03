@@ -8,7 +8,6 @@ import {
   createTenantErrorResponse,
   createTenantSuccessResponse,
 } from '@/lib/api/tenant-helpers';
-import { checkTenantAccessCached } from '@/lib/cache/tenant-cache';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 
 type PostWithAuthor = {
@@ -75,6 +74,7 @@ export async function GET(
 ): Promise<NextResponse> {
   try {
     const { tenantId } = await params;
+    // API call received
     const { searchParams } = new URL(request.url);
 
     // Validate query parameters
@@ -103,16 +103,43 @@ export async function GET(
 
     const { limit, offset, sort, order, status, author_id } = queryResult.data;
 
-    // Check tenant access with caching
-    const accessCheck = await checkTenantAccessCached(tenantId, 'member');
-    if (!accessCheck.hasAccess) {
-      return createTenantErrorResponse(
-        accessCheck.error || 'Access denied',
-        accessCheck.error === 'Authentication required' ? 401 : 403,
-      );
+    // Get the supabase client and user first
+    const supabase = await createServerSupabaseClient();
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return createTenantErrorResponse('Authentication required', 401);
     }
 
-    const supabase = await createServerSupabaseClient();
+    // Check tenant access using the cached function with user ID
+    const { data: hasAccess, error: accessError } = await supabase.rpc(
+      'user_has_tenant_access',
+      {
+        target_tenant_id: tenantId,
+        required_role: 'member',
+      },
+    );
+
+    if (accessError || !hasAccess) {
+      return createTenantErrorResponse('Access denied', 403);
+    }
+
+    // Get user's role in the tenant
+    const { data: memberData, error: memberError } = await supabase
+      .from('tenant_members')
+      .select('role')
+      .eq('tenant_id', tenantId)
+      .eq('user_id', user.id)
+      .single();
+
+    if (memberError || !memberData) {
+      return createTenantErrorResponse('Failed to get user role', 403);
+    }
+
+    const userRole = memberData.role;
 
     // Build query
     let query = supabase
@@ -140,13 +167,7 @@ export async function GET(
               full_name,
               avatar_url
             ),
-            video_assets!posts_video_id_fkey(
-              id,
-              mux_playback_id,
-              status,
-              duration,
-              is_public
-            )
+            video_id
           `,
       )
       .eq('tenant_id', tenantId);
@@ -160,9 +181,7 @@ export async function GET(
       }
       case 'draft': {
         // Only editors+ can see drafts
-        if (
-          !['editor', 'admin', 'owner'].includes(accessCheck.userRole || '')
-        ) {
+        if (!['editor', 'admin', 'owner'].includes(userRole || '')) {
           throw new Error('Insufficient permissions to view drafts');
         }
         query = query.eq('status', 'draft');
@@ -171,7 +190,7 @@ export async function GET(
       }
       case 'all': {
         // Only admins+ can see all posts
-        if (!['admin', 'owner'].includes(accessCheck.userRole || '')) {
+        if (!['admin', 'owner'].includes(userRole || '')) {
           throw new Error('Insufficient permissions to view all posts');
         }
 
@@ -218,20 +237,48 @@ export async function GET(
       ? posts
       : []) as unknown as PostWithAuthor[];
 
+    // Fetch video data for video posts
+    const videoPostIds = postsArray
+      .filter((p) => p.post_type === 'video' && p.video_id)
+      .map((p) => p.video_id)
+      .filter((id): id is string => id !== null);
+
+    const videoDataMap = new Map();
+    if (videoPostIds.length > 0) {
+      // Fetching video data
+      const { data: videoAssets } = await supabase
+        .from('video_assets')
+        .select('id, mux_playback_id, status, duration, is_public')
+        .in('id', videoPostIds);
+
+      if (videoAssets) {
+        videoAssets.forEach((asset) => {
+          videoDataMap.set(asset.id, asset);
+        });
+        // Video assets fetched successfully
+      }
+    }
+
     // Attach tenant metadata manually to each post result
-    const postsWithTenant = postsArray.map((p) => ({
-      ...p,
-      author: Array.isArray(p.author)
-        ? (p.author[0] ?? null)
-        : (p.author ?? null),
-      video:
-        Array.isArray(p.video_assets) && p.video_assets.length > 0
-          ? p.video_assets[0]
-          : null,
-      tenant: safeTenant,
-      // Add comment_count (defaulting to 0 for now)
-      comment_count: 0,
-    }));
+    const postsWithTenant = postsArray.map((p) => {
+      const video =
+        p.post_type === 'video' && p.video_id
+          ? videoDataMap.get(p.video_id) || null
+          : null;
+
+      // Processing post data
+
+      return {
+        ...p,
+        author: Array.isArray(p.author)
+          ? (p.author[0] ?? null)
+          : (p.author ?? null),
+        video,
+        tenant: safeTenant,
+        // Add comment_count (defaulting to 0 for now)
+        comment_count: 0,
+      };
+    });
 
     // Get total count for pagination
     let countQuery = supabase
@@ -267,7 +314,7 @@ export async function GET(
       },
       meta: {
         tenant_id: tenantId,
-        user_role: accessCheck.userRole,
+        user_role: userRole,
         status_filter: status,
       },
     });
@@ -311,25 +358,43 @@ export async function POST(
 
     const postData = validationResult.data;
 
-    // Check tenant access with caching
-    const accessCheck = await checkTenantAccessCached(tenantId, 'editor');
-    if (!accessCheck.hasAccess) {
-      return createTenantErrorResponse(
-        accessCheck.error || 'Access denied',
-        accessCheck.error === 'Authentication required' ? 401 : 403,
-      );
-    }
-
+    // Get the supabase client and user first
     const supabase = await createServerSupabaseClient();
-
-    // Get current user
     const {
       data: { user },
       error: authError,
     } = await supabase.auth.getUser();
-    if (authError !== null || user === null) {
-      throw new Error('Authentication required');
+
+    if (authError || !user) {
+      return createTenantErrorResponse('Authentication required', 401);
     }
+
+    // Check tenant access using the cached function with user ID
+    const { data: hasAccess, error: accessError } = await supabase.rpc(
+      'user_has_tenant_access',
+      {
+        target_tenant_id: tenantId,
+        required_role: 'editor',
+      },
+    );
+
+    if (accessError || !hasAccess) {
+      return createTenantErrorResponse('Access denied', 403);
+    }
+
+    // Get user's role in the tenant
+    const { data: memberData, error: memberError } = await supabase
+      .from('tenant_members')
+      .select('role')
+      .eq('tenant_id', tenantId)
+      .eq('user_id', user.id)
+      .single();
+
+    if (memberError || !memberData) {
+      return createTenantErrorResponse('Failed to get user role', 403);
+    }
+
+    const userRole = memberData.role;
 
     // Create the post
     const postInsertData = {

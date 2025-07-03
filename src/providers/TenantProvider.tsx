@@ -10,6 +10,7 @@ import React, {
   useState,
   useCallback,
   useMemo,
+  useRef,
 } from 'react';
 
 import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
@@ -65,12 +66,55 @@ interface TenantProviderProps {
   initialTenantId?: string;
 }
 
+// Define proper types for global cache
+interface GlobalTenantCache {
+  tenants: unknown;
+  currentTenant: unknown;
+  currentTenantId: string | null;
+}
+
+interface GlobalInflightPromises {
+  tenants: Promise<void> | null;
+  currentTenant: Promise<void> | null;
+}
+
+// Use proper type for globalThis with our extensions
+declare global {
+  // eslint-disable-next-line no-var
+  var __tenant_provider_cache__: GlobalTenantCache | undefined;
+  // eslint-disable-next-line no-var
+  var __tenant_provider_inflight__: GlobalInflightPromises | undefined;
+}
+
+const globalCacheKey = '__tenant_provider_cache__';
+const globalInflightKey = '__tenant_provider_inflight__';
+
+// Initialize global cache if it doesn't exist
+if (typeof globalThis !== 'undefined') {
+  globalThis[globalCacheKey] = globalThis[globalCacheKey] || {
+    tenants: null,
+    currentTenant: null,
+    currentTenantId: null,
+  };
+  globalThis[globalInflightKey] = globalThis[globalInflightKey] || {
+    tenants: null,
+    currentTenant: null,
+  };
+}
+
+// DEBUG: module reload indicator
+// eslint-disable-next-line no-console
+console.log(
+  '[TenantProvider] module evaluated. cachedId =',
+  globalThis[globalCacheKey]?.currentTenantId ?? null,
+);
+
 export function TenantProvider({
   children,
   initialTenantId,
 }: TenantProviderProps): React.JSX.Element {
   const [currentTenantId, setCurrentTenantId] = useState<string | null>(
-    initialTenantId || null,
+    initialTenantId ?? globalThis[globalCacheKey]?.currentTenantId ?? null,
   );
   const [currentTenant, setCurrentTenant] = useState<TenantContext | null>(
     null,
@@ -79,151 +123,228 @@ export function TenantProvider({
   const [personalTenant, setPersonalTenant] = useState<TenantType | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const hasInitialized = useRef(false);
 
   const supabase = createSupabaseBrowserClient();
 
   // Fetch all user tenants
-  const refreshTenants = useCallback(async (): Promise<void> => {
-    try {
-      setError(null);
-
-      // Get user's tenants using the RPC
-      const { data: tenants, error: tenantsError } =
-        await supabase.rpc('get_user_tenants');
-
-      if (tenantsError) {
-        throw new Error(`Failed to fetch tenants: ${tenantsError.message}`);
-      }
-
-      if (!tenants || tenants.length === 0) {
-        setError('No tenants found for user');
-        return;
-      }
-
-      // Transform RPC result to tenant format
-      const transformedTenants: TenantType[] = tenants.map((t: unknown) => {
-        const tenant = t as {
-          tenant_id: string;
-          tenant_name: string;
-          tenant_slug: string;
-          tenant_type: 'personal' | 'collective';
-          tenant_description?: string;
-          is_public: boolean;
-          logo_url?: string;
-          cover_image_url?: string;
-          settings?: Record<string, unknown>;
-          created_at: string;
-          updated_at: string;
-          member_count?: number;
-        };
-
-        return {
-          id: tenant.tenant_id,
-          name: tenant.tenant_name,
-          slug: tenant.tenant_slug,
-          type: tenant.tenant_type,
-          description: tenant.tenant_description ?? null,
-          is_public: tenant.is_public,
-          logo_url: tenant.logo_url ?? null,
-          cover_image_url: tenant.cover_image_url ?? null,
-          settings: tenant.settings || {},
-          created_at: tenant.created_at,
-          updated_at: tenant.updated_at,
-          deleted_at: null,
-          member_count: tenant.member_count ?? 0,
-        };
-      });
-
-      setUserTenants(transformedTenants);
-
-      // Find personal tenant
-      const personal = transformedTenants.find((t) => t.type === 'personal');
-      setPersonalTenant(personal || null);
-
-      // If no current tenant is set, default to personal tenant
-      if (!currentTenantId && personal) {
-        setCurrentTenantId(personal.id);
-      }
-    } catch (err) {
-      const errorMessage =
-        err instanceof Error ? err.message : 'Failed to fetch tenants';
-      setError(errorMessage);
-      console.error('Error fetching user tenants:', err);
+  const refreshTenants = useCallback((): Promise<void> => {
+    // Use global inflight promises to survive HMR
+    const inflightPromises = globalThis[globalInflightKey];
+    if (!inflightPromises) {
+      throw new Error('Global inflight promises not initialized');
     }
+
+    if (inflightPromises.tenants) {
+      // eslint-disable-next-line no-console
+      console.log('[TenantProvider] refreshTenants() await existing');
+      return inflightPromises.tenants;
+    }
+
+    inflightPromises.tenants = (async () => {
+      // eslint-disable-next-line no-console
+      console.log('[TenantProvider] refreshTenants() BEGIN');
+      try {
+        setError(null);
+        setIsLoading(true);
+
+        // Get user's tenants using the RPC
+        const { data: tenants, error: tenantsError } =
+          await supabase.rpc('get_user_tenants');
+
+        if (tenantsError) {
+          throw new Error(`Failed to fetch tenants: ${tenantsError.message}`);
+        }
+
+        if (!tenants || tenants.length === 0) {
+          setError('No tenants found for user');
+          return;
+        }
+
+        // Transform RPC result to tenant format
+        const transformedTenants: TenantType[] = tenants.map((t: unknown) => {
+          const tenant = t as {
+            tenant_id: string;
+            tenant_name: string;
+            tenant_slug: string;
+            tenant_type: 'personal' | 'collective';
+            tenant_description?: string;
+            is_public: boolean;
+            logo_url?: string;
+            cover_image_url?: string;
+            settings?: Record<string, unknown>;
+            created_at: string;
+            updated_at: string;
+            member_count?: number;
+          };
+
+          return {
+            id: tenant.tenant_id,
+            name: tenant.tenant_name,
+            slug: tenant.tenant_slug,
+            type: tenant.tenant_type,
+            description: tenant.tenant_description ?? null,
+            is_public: tenant.is_public,
+            logo_url: tenant.logo_url ?? null,
+            cover_image_url: tenant.cover_image_url ?? null,
+            settings: tenant.settings || {},
+            created_at: tenant.created_at,
+            updated_at: tenant.updated_at,
+            deleted_at: null,
+            member_count: tenant.member_count ?? 0,
+          };
+        });
+
+        setUserTenants(transformedTenants);
+        // eslint-disable-next-line no-console
+        console.log(
+          '[TenantProvider] refreshTenants() fetched',
+          transformedTenants.length,
+          'tenants',
+        );
+
+        // Find personal tenant
+        const personal = transformedTenants.find((t) => t.type === 'personal');
+        setPersonalTenant(personal || null);
+
+        // If no current tenant is set, default to personal tenant
+        if (!currentTenantId && personal) {
+          setCurrentTenantId(personal.id);
+        }
+
+        // Update global cache
+        if (typeof globalThis !== 'undefined' && globalThis[globalCacheKey]) {
+          globalThis[globalCacheKey] = {
+            ...globalThis[globalCacheKey],
+            tenants,
+          };
+        }
+      } catch (err) {
+        const errorMessage =
+          err instanceof Error ? err.message : 'Failed to fetch tenants';
+        setError(errorMessage);
+        console.error('Error fetching user tenants:', err);
+      } finally {
+        setIsLoading(false);
+        // eslint-disable-next-line no-console
+        console.log('[TenantProvider] refreshTenants() END');
+        if (inflightPromises) {
+          inflightPromises.tenants = null;
+        }
+      }
+    })();
+
+    return inflightPromises.tenants;
   }, [supabase, currentTenantId]);
 
   // Fetch current tenant context and user role
-  const refreshCurrentTenant = useCallback(async (): Promise<void> => {
-    if (!currentTenantId) {
-      setCurrentTenant(null);
-      return;
+  const refreshCurrentTenant = useCallback((): Promise<void> => {
+    // Use global inflight promises to survive HMR
+    const inflightPromises = globalThis[globalInflightKey];
+    if (!inflightPromises) {
+      throw new Error('Global inflight promises not initialized');
     }
 
-    try {
-      setError(null);
+    if (inflightPromises.currentTenant) {
+      // eslint-disable-next-line no-console
+      console.log('[TenantProvider] refreshCurrentTenant() await existing');
+      return inflightPromises.currentTenant;
+    }
 
-      // Get tenant context using RPC
-      const { data: tenantContext, error: contextError } = await supabase.rpc(
-        'get_tenant_context',
-        {
-          target_tenant_id: currentTenantId,
-        },
+    inflightPromises.currentTenant = (async () => {
+      // eslint-disable-next-line no-console
+      console.log(
+        '[TenantProvider] refreshCurrentTenant() BEGIN id=',
+        currentTenantId,
       );
 
-      if (contextError) {
-        throw new Error(
-          `Failed to fetch tenant context: ${contextError.message}`,
+      if (!currentTenantId) {
+        setCurrentTenant(null);
+        if (inflightPromises) {
+          inflightPromises.currentTenant = null;
+        }
+        return;
+      }
+
+      try {
+        setError(null);
+
+        // Get tenant context using RPC
+        const { data: tenantContext, error: contextError } = await supabase.rpc(
+          'get_tenant_context',
+          {
+            target_tenant_id: currentTenantId,
+          },
         );
+
+        if (contextError) {
+          throw new Error(
+            `Failed to fetch tenant context: ${contextError.message}`,
+          );
+        }
+
+        if (!tenantContext) {
+          throw new Error('No tenant context returned');
+        }
+
+        // Transform to our context format (cast to type for RPC response)
+        const tenantData = tenantContext as {
+          tenant_id: string; // RPC returns tenant_id, not id
+          name: string;
+          slug: string;
+          type: 'personal' | 'collective';
+          description?: string;
+          is_public: boolean;
+          user_role: UserRole;
+          member_count?: number;
+        };
+        const context: TenantContext = {
+          id: tenantData.tenant_id,
+          tenant_id: tenantData.tenant_id,
+          name: tenantData.name,
+          tenant_name: tenantData.name,
+          slug: tenantData.slug,
+          tenant_slug: tenantData.slug,
+          type: tenantData.type,
+          tenant_type: tenantData.type,
+          is_public: tenantData.is_public,
+          is_personal: tenantData.type === 'personal',
+          user_role: tenantData.user_role,
+          ...(tenantData.member_count !== undefined
+            ? { member_count: tenantData.member_count }
+            : {}),
+          ...(tenantData.description
+            ? { description: tenantData.description }
+            : {}),
+        };
+
+        setCurrentTenant(context);
+        // eslint-disable-next-line no-console
+        console.log('[TenantProvider] refreshCurrentTenant() SUCCESS');
+      } catch (err) {
+        const errorMessage =
+          err instanceof Error ? err.message : 'Failed to fetch tenant context';
+        setError(errorMessage);
+        console.error('Error fetching tenant context:', err);
+
+        // If we can't access this tenant, fall back to personal tenant
+        if (personalTenant && currentTenantId !== personalTenant.id) {
+          setCurrentTenantId(personalTenant.id);
+          if (globalThis[globalCacheKey]) {
+            globalThis[globalCacheKey].currentTenantId = personalTenant.id;
+          }
+        }
+      } finally {
+        if (inflightPromises) {
+          inflightPromises.currentTenant = null;
+        }
+        // eslint-disable-next-line no-console
+        console.log('[TenantProvider] refreshCurrentTenant() END');
       }
+    })();
 
-      if (!tenantContext) {
-        throw new Error('No tenant context returned');
-      }
-
-      // Transform to our context format (cast to any for RPC response)
-      const tenantData = tenantContext as {
-        tenant_id: string; // RPC returns tenant_id, not id
-        name: string;
-        slug: string;
-        type: 'personal' | 'collective';
-        description?: string;
-        is_public: boolean;
-        user_role: UserRole;
-        member_count?: number;
-      };
-      const context: TenantContext = {
-        id: tenantData.tenant_id,
-        tenant_id: tenantData.tenant_id,
-        name: tenantData.name,
-        tenant_name: tenantData.name,
-        slug: tenantData.slug,
-        tenant_slug: tenantData.slug,
-        type: tenantData.type,
-        tenant_type: tenantData.type,
-        is_public: tenantData.is_public,
-        is_personal: tenantData.type === 'personal',
-        user_role: tenantData.user_role,
-        ...(tenantData.member_count !== undefined
-          ? { member_count: tenantData.member_count }
-          : {}),
-        ...(tenantData.description
-          ? { description: tenantData.description }
-          : {}),
-      };
-
-      setCurrentTenant(context);
-    } catch (err) {
-      const errorMessage =
-        err instanceof Error ? err.message : 'Failed to fetch tenant context';
-      setError(errorMessage);
-      console.error('Error fetching tenant context:', err);
-
-      // If we can't access this tenant, fall back to personal tenant
-      if (personalTenant && currentTenantId !== personalTenant.id) {
-        setCurrentTenantId(personalTenant.id);
-      }
-    }
-  }, [currentTenantId, supabase, userTenants, personalTenant]);
+    return inflightPromises.currentTenant;
+  }, [currentTenantId, supabase, personalTenant]);
 
   // Switch to a different tenant
   const switchTenant = useCallback(
@@ -239,6 +360,9 @@ export function TenantProvider({
       }
 
       setCurrentTenantId(tenantId);
+      if (globalThis[globalCacheKey]) {
+        globalThis[globalCacheKey].currentTenantId = tenantId; // soft-persist
+      }
       return Promise.resolve();
     },
     [currentTenantId, userTenants],
@@ -284,38 +408,51 @@ export function TenantProvider({
   // Compute collective tenants (non-personal tenants)
   const collectiveTenants = userTenants.filter((t) => t.type === 'collective');
 
-  // Initialize tenants on mount
+  // Initialize tenants on mount (only once)
   useEffect(() => {
-    const initializeTenants = async (): Promise<void> => {
-      setIsLoading(true);
-      try {
-        await refreshTenants();
-      } finally {
-        setIsLoading(false);
-      }
+    // eslint-disable-next-line no-console
+    console.log('[TenantProvider] initialiseTenants effect fired');
+    if (hasInitialized.current) {
+      // eslint-disable-next-line no-console
+      console.log('[TenantProvider] already initialised – skipping');
+      return;
+    }
+
+    const initializeTenants = (): void => {
+      // eslint-disable-next-line no-console
+      console.log('[TenantProvider] initializeTenants() START');
+      hasInitialized.current = true;
+      void refreshTenants();
+      // eslint-disable-next-line no-console
+      console.log('[TenantProvider] initializeTenants() FINISH');
     };
 
-    void initializeTenants();
+    initializeTenants();
   }, [refreshTenants]);
 
   // Listen for auth state changes to refresh tenants
   useEffect(() => {
     const { data: authListener } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      (event, session) => {
         if (event === 'SIGNED_IN' && session) {
-          // User just signed in, refresh tenants
-          setIsLoading(true);
-          try {
-            await refreshTenants();
-          } finally {
-            setIsLoading(false);
+          // Only refresh if this is a real sign-in, not the initial load
+          // hasInitialized.current will be true if we've already loaded tenants
+          if (!hasInitialized.current) {
+            // User just signed in for the first time
+            void refreshTenants();
           }
+        } else if (event === 'TOKEN_REFRESHED' && session) {
+          // Session token refreshed while tab in background – ensure tenants stay fresh
+          void refreshTenants();
         } else if (event === 'SIGNED_OUT') {
           // Clear tenant data on sign out
           setUserTenants([]);
           setPersonalTenant(null);
           setCurrentTenantId(null);
           setCurrentTenant(null);
+          if (globalThis[globalCacheKey]) {
+            globalThis[globalCacheKey].currentTenantId = null;
+          }
         }
       },
     );
@@ -341,6 +478,13 @@ export function TenantProvider({
       }
     }
   }, [currentTenantId, userTenants, switchTenant]);
+
+  // When currentTenantId changes from elsewhere, sync cache
+  useEffect(() => {
+    if (globalThis[globalCacheKey]) {
+      globalThis[globalCacheKey].currentTenantId = currentTenantId;
+    }
+  }, [currentTenantId]);
 
   // Memoize context value to prevent unnecessary re-renders
   const contextValue = useMemo(
@@ -465,19 +609,15 @@ export function useTenantAccess(requiredRole?: UserRole) {
     [currentTenant, canPerformAction],
   );
 
-  const accessLevel = currentTenant?.user_role || null;
-  const canRead = canPerformAction('read');
-  const canWrite = canPerformAction('write');
-  const canAdmin = canPerformAction('admin');
-  const canManage = canPerformAction('manage');
-
   return {
     hasAccess: hasAccess(requiredRole),
-    accessLevel,
-    canRead,
-    canWrite,
-    canAdmin,
-    canManage,
-    tenant: currentTenant,
+    checkAccess: hasAccess,
+    currentRole: currentTenant?.user_role,
+    isOwner: currentTenant?.user_role === 'owner',
+    isAdmin: ['admin', 'owner'].includes(currentTenant?.user_role ?? ''),
+    canRead: canPerformAction('read'),
+    canWrite: canPerformAction('write'),
+    canAdmin: canPerformAction('admin'),
+    canManage: canPerformAction('manage'),
   };
 }

@@ -220,11 +220,11 @@ export function getOptimizedAvatarUrl(
   } = {
     quality: options.quality ?? QUALITY.MEDIUM,
     resize: options.resize || 'cover',
+    format: options.format || 'webp', // Default to WebP for better compression
   };
 
   if (options.width !== undefined) transformOptions.width = options.width;
   if (options.height !== undefined) transformOptions.height = options.height;
-  if (options.format) transformOptions.format = options.format;
 
   // ---------------------------------------------------------------------
   // A. Absolute Supabase storage URL (already contains project domain)

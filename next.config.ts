@@ -22,6 +22,10 @@ const nextConfig: NextConfig = {
         hostname: 'image.mux.com',
       },
     ],
+    formats: ['image/webp', 'image/avif'],
+    minimumCacheTTL: 31536000, // 1 year cache for optimized images
+    dangerouslyAllowSVG: false,
+    contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
   },
 
   // Redirects - Consider removing these for better performance and simplicity

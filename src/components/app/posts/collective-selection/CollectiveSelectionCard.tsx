@@ -1,6 +1,7 @@
 'use client';
 
 import { Check, Users } from 'lucide-react';
+import Image from 'next/image';
 import React, { useCallback } from 'react';
 
 import { Badge } from '@/components/ui/badge';
@@ -71,10 +72,13 @@ export function CollectiveSelectionCard({
                 {collective.name}
               </h3>
               {collective.logo_url && (
-                <img
+                <Image
                   src={collective.logo_url}
                   alt={`${collective.name} logo`}
-                  className="h-5 w-5 rounded-full flex-shrink-0"
+                  width={20}
+                  height={20}
+                  className="rounded-full flex-shrink-0"
+                  sizes="20px"
                 />
               )}
             </div>

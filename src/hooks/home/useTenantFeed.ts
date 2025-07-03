@@ -4,7 +4,7 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 
 import { useTenant } from '@/providers/TenantProvider';
 
@@ -136,6 +136,7 @@ export function useTenantFeed(
   }, [currentTenant, userTenants, includeCollectives]);
 
   // Fetch posts from current tenant
+
   const {
     data: currentTenantData,
     isLoading: isLoadingCurrent,
@@ -144,12 +145,14 @@ export function useTenantFeed(
     refetch: refetchCurrent,
   } = useQuery({
     queryKey: [
-      'tenant-feed',
+      'tenant-feed-v2', // Changed key to bust cache
       currentTenant?.id,
       { limit, offset, status, author_id },
     ],
     queryFn: async (): Promise<TenantFeedResponse | null> => {
       if (!currentTenant) return null;
+
+      // Making API call for tenant posts
 
       const params = new URLSearchParams({
         limit: limit.toString(),
@@ -167,6 +170,7 @@ export function useTenantFeed(
       }
 
       const result = await response.json();
+      // API response received successfully
 
       return result.data;
     },
@@ -306,6 +310,11 @@ export function useTenantFeed(
 
     // Transform to FeedItem format
     return allCombinedPosts.map((post): FeedItem => {
+      // Log video post processing
+      if (post.post_type === 'video') {
+        // Processing video post
+      }
+
       const feedItem: FeedItem = {
         id: post.id,
         type: post.post_type === 'video' ? 'video' : 'post',
@@ -359,6 +368,11 @@ export function useTenantFeed(
         },
       };
 
+      // Log final metadata for video posts
+      if (post.post_type === 'video') {
+        // Video metadata processed
+      }
+
       return feedItem;
     });
   }, [currentTenantData, collectiveData, followedData, initialData, offset]);
@@ -401,10 +415,7 @@ export function useTenantFeed(
     }
   }, [hasMore, isFetching, limit]);
 
-  // Reset offset when tenant changes
-  useEffect(() => {
-    setOffset(0);
-  }, [currentTenant?.id]);
+  // Reset offset when tenant changes (handled by query key change)
 
   return {
     // Data

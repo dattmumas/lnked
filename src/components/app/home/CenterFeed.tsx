@@ -1,12 +1,14 @@
 'use client';
 
 import { Loader2, RefreshCw, Building, User as UserIcon } from 'lucide-react';
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import { useFeedRealtime } from '@/hooks/home/useFeedRealtime';
 import { usePostFeedInteractions } from '@/hooks/home/usePostFeedInteractions';
 import { useTenantFeed } from '@/hooks/home/useTenantFeed';
+import { useVideoStatusRealtime } from '@/hooks/video/useVideoStatusRealtime';
 import { useTenant } from '@/providers/TenantProvider';
 
 import { PostCardWrapper } from './PostCardWrapper';
@@ -35,9 +37,6 @@ export function CenterFeed({
     useTenantFeed({
       includeCollectives,
       includeFollowed: true,
-      status: 'published',
-      limit: 20,
-      ...(initialFeedItems ? { initialData: initialFeedItems } : {}),
     });
 
   const interactions = usePostFeedInteractions(user.id);
@@ -45,39 +44,27 @@ export function CenterFeed({
   const [errorState, setErrorState] = useState<string | undefined>(
     error || undefined,
   );
-  const refreshIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Check if any videos are still preparing
-  const hasPreparingVideos = feedItems.some(
-    (item) => item.type === 'video' && item.metadata?.status === 'preparing',
-  );
+  // Set up real-time video status updates
+  useVideoStatusRealtime({
+    userId: user.id,
+    enabled: true,
+    onStatusUpdate: (update) => {
+      console.log(
+        `🎥 [FEED] Video status updated: ${update.id} -> ${update.status}`,
+      );
+      // The hook automatically updates React Query cache, which will trigger feed refresh
+    },
+  });
 
-  // Set up auto-refresh for preparing videos
-  useEffect(() => {
-    if (hasPreparingVideos) {
-      console.log('Found preparing videos, setting up auto-refresh');
-
-      refreshIntervalRef.current = setInterval(() => {
-        console.log('Auto-refreshing feed for preparing videos');
-        refetch();
-      }, 5000);
-    } else {
-      // Clear interval if no preparing videos
-      if (refreshIntervalRef.current) {
-        console.log('No preparing videos, clearing auto-refresh');
-        clearInterval(refreshIntervalRef.current);
-        refreshIntervalRef.current = null;
-      }
-    }
-
-    // Cleanup on unmount or when dependency changes
-    return () => {
-      if (refreshIntervalRef.current) {
-        clearInterval(refreshIntervalRef.current);
-        refreshIntervalRef.current = null;
-      }
-    };
-  }, [hasPreparingVideos, refetch]);
+  // Set up real-time feed updates
+  const { hasNewPosts, newPostsCount, refreshFeed } = useFeedRealtime({
+    tenantId: currentTenant?.tenant_id || '',
+    enabled: Boolean(currentTenant?.tenant_id),
+    onNewPostsAvailable: (count) => {
+      console.log(`📝 New posts available: ${count}`);
+    },
+  });
 
   useEffect(() => {
     if (error !== undefined && error !== null) {
@@ -142,7 +129,7 @@ export function CenterFeed({
   if (isLoading && !initialFeedItems) {
     return (
       <div className="flex justify-center py-10">
-        <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
+        <Loader2 className="w-8 h-8 animate-spin" />
       </div>
     );
   }
@@ -185,7 +172,20 @@ export function CenterFeed({
 
   return (
     <div className="space-y-6">
-      {/* Feed Header removed per user request */}
+      {/* New Posts Indicator */}
+      {hasNewPosts && (
+        <div className="flex justify-center">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={refreshFeed}
+            className="bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100"
+          >
+            <RefreshCw className="w-4 h-4 mr-2" />
+            {newPostsCount} new post{newPostsCount !== 1 ? 's' : ''} available
+          </Button>
+        </div>
+      )}
 
       {/* Feed Items */}
       {feedItems.map((item, index) => (

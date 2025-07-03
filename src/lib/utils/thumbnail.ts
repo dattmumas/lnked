@@ -32,7 +32,10 @@ export const THUMBNAIL_CONFIG = {
 /**
  * Validates an image file for thumbnail upload
  */
-export function validateThumbnailFile(file: File): { isValid: boolean; error?: string } {
+export function validateThumbnailFile(file: File): {
+  isValid: boolean;
+  error?: string;
+} {
   // Check file type
   if (!file.type.startsWith('image/')) {
     return {
@@ -50,7 +53,9 @@ export function validateThumbnailFile(file: File): { isValid: boolean; error?: s
   }
 
   // Check for allowed image formats
-  if (!(THUMBNAIL_CONFIG.allowedTypes as readonly string[]).includes(file.type)) {
+  if (
+    !(THUMBNAIL_CONFIG.allowedTypes as readonly string[]).includes(file.type)
+  ) {
     return {
       isValid: false,
       error: 'Please upload a JPEG, PNG, or WebP image.',
@@ -63,7 +68,11 @@ export function validateThumbnailFile(file: File): { isValid: boolean; error?: s
 /**
  * Generates a unique filename for thumbnail upload
  */
-export function generateThumbnailFilename(userId: string, postId: string | undefined, mimeType: string): string {
+export function generateThumbnailFilename(
+  userId: string,
+  postId: string | undefined,
+  mimeType: string,
+): string {
   const extension = mimeType.split('/')[1]?.replace('jpeg', 'jpg') || 'png';
   const timestamp = Date.now();
   const randomSuffix = crypto
@@ -81,15 +90,19 @@ export function generateThumbnailFilename(userId: string, postId: string | undef
 /**
  * Extracts the file path from a Supabase storage URL
  */
-export function extractThumbnailFilePathFromUrl(url: string): string | undefined {
+export function extractThumbnailFilePathFromUrl(
+  url: string,
+): string | undefined {
   try {
     const urlParts = url.split('/');
-    const bucketIndex = urlParts.findIndex(part => part === THUMBNAIL_CONFIG.bucket);
-    
+    const bucketIndex = urlParts.findIndex(
+      (part) => part === THUMBNAIL_CONFIG.bucket,
+    );
+
     if (bucketIndex !== -1 && bucketIndex < urlParts.length - 1) {
       return urlParts.slice(bucketIndex + 1).join('/');
     }
-    
+
     return undefined;
   } catch {
     return undefined;
@@ -106,19 +119,22 @@ export function isSupabaseStorageUrl(url: string): boolean {
 /**
  * Extract bucket and file path from Supabase storage URL
  */
-export function extractSupabaseImagePath(url: string): { bucket: string; path: string } | undefined {
+export function extractSupabaseImagePath(
+  url: string,
+): { bucket: string; path: string } | undefined {
   try {
     // Extract bucket and path
-    const pathMatch = /^https?:\/\/[^/]+\/storage\/v1\/object\/public\/([^/]+)\/(.+)$/.exec(
-      url,
-    );
+    const pathMatch =
+      /^https?:\/\/[^/]+\/storage\/v1\/object\/public\/([^/]+)\/(.+)$/.exec(
+        url,
+      );
     if (pathMatch === null || pathMatch === undefined) {
       throw new Error('Invalid storage URL format');
     }
 
     const bucket = pathMatch[1];
     const path = pathMatch[2];
-    
+
     if (!bucket || !path) {
       throw new Error('Could not extract bucket and path from URL');
     }
@@ -146,17 +162,17 @@ export interface ThumbnailTransformOptions {
  */
 export function getOptimizedThumbnailUrl(
   thumbnailUrl: string | undefined,
-  options: ThumbnailTransformOptions = {}
+  options: ThumbnailTransformOptions = {},
 ): string | undefined {
   if (thumbnailUrl === undefined || thumbnailUrl === '') return undefined;
-  
+
   // Check if it's a Supabase storage URL
   const pathInfo = extractSupabaseImagePath(thumbnailUrl);
   if (!pathInfo) {
     // Return original URL if not a Supabase storage URL
     return thumbnailUrl;
   }
-  
+
   try {
     const supabase = createSupabaseBrowserClient();
     const transformOptions: {
@@ -168,19 +184,19 @@ export function getOptimizedThumbnailUrl(
     } = {
       quality: options.quality ?? DEFAULT_IMAGE_QUALITY,
       resize: options.resize || 'cover',
+      format: options.format || 'webp',
     };
-    
+
     if (options.width !== undefined) transformOptions.width = options.width;
     if (options.height !== undefined) transformOptions.height = options.height;
-    if (options.format) transformOptions.format = options.format;
-    
+
     const { data } = supabase.storage
       .from(pathInfo.bucket)
       .getPublicUrl(pathInfo.path, {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         transform: transformOptions as any,
       });
-    
+
     return data.publicUrl;
   } catch (error: unknown) {
     console.warn('Failed to get optimized thumbnail URL:', error);
@@ -191,48 +207,48 @@ export function getOptimizedThumbnailUrl(
 /**
  * Get responsive thumbnail URLs for different display contexts
  */
-export function getResponsiveThumbnailUrls(
-  thumbnailUrl: string | undefined
-): {
-  small: string | undefined;
-  medium: string | undefined;
-  large: string | undefined;
-  original: string | undefined;
-} | undefined {
+export function getResponsiveThumbnailUrls(thumbnailUrl: string | undefined):
+  | {
+      small: string | undefined;
+      medium: string | undefined;
+      large: string | undefined;
+      original: string | undefined;
+    }
+  | undefined {
   if (thumbnailUrl === undefined || thumbnailUrl === '') return undefined;
-  
+
   return {
     // Small thumbnails (320px) - for lists, mobile cards
-    small: getOptimizedThumbnailUrl(thumbnailUrl, { 
-      width: 320, 
+    small: getOptimizedThumbnailUrl(thumbnailUrl, {
+      width: 320,
       height: 168, // 1.91:1 aspect ratio
-      quality: 75 
+      quality: 75,
     }),
     // Medium thumbnails (640px) - for cards, previews
-    medium: getOptimizedThumbnailUrl(thumbnailUrl, { 
-      width: 640, 
-      height: 336, 
-      quality: 80 
+    medium: getOptimizedThumbnailUrl(thumbnailUrl, {
+      width: 640,
+      height: 336,
+      quality: 80,
     }),
     // Large thumbnails (1024px) - for hero sections, featured posts
-    large: getOptimizedThumbnailUrl(thumbnailUrl, { 
-      width: 1024, 
-      height: 537, 
-      quality: DEFAULT_IMAGE_QUALITY 
+    large: getOptimizedThumbnailUrl(thumbnailUrl, {
+      width: 1024,
+      height: 537,
+      quality: DEFAULT_IMAGE_QUALITY,
     }),
     // Original optimized (quality only)
-    original: getOptimizedThumbnailUrl(thumbnailUrl, { 
-      quality: DEFAULT_IMAGE_QUALITY 
+    original: getOptimizedThumbnailUrl(thumbnailUrl, {
+      quality: DEFAULT_IMAGE_QUALITY,
     }),
   };
 }
 
 /**
  * Gets the public URL for a thumbnail stored in Supabase storage
- * 
+ *
  * @param path - The storage path to the thumbnail (undefined or empty string if invalid)
  * @returns The public URL for the thumbnail, or undefined if the path is invalid
- * 
+ *
  * @example
  * const url = getThumbnailUrl('avatars/user123.jpg');
  * // Returns: 'https://your-project.supabase.co/storage/v1/object/public/avatars/user123.jpg'
@@ -241,21 +257,19 @@ export function getThumbnailUrl(path: string | undefined): string | undefined {
   if (path === undefined || path === '') {
     return undefined;
   }
-  
+
   try {
     const supabase = createSupabaseBrowserClient();
-    const {storage} = supabase;
-    
-    const { data } = storage
-      .from('thumbnails')
-      .getPublicUrl(path);
-    
+    const { storage } = supabase;
+
+    const { data } = storage.from('thumbnails').getPublicUrl(path);
+
     // Validate the URL is properly formed
     if (!data?.publicUrl) {
       console.warn(`Failed to generate thumbnail URL for path: ${path}`);
       return undefined;
     }
-    
+
     return data.publicUrl;
   } catch (error) {
     console.error('Error generating thumbnail URL:', error);

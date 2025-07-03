@@ -31,6 +31,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useVideoStatusRealtime } from '@/hooks/video/useVideoStatusRealtime';
 import {
   SECONDS_PER_MINUTE,
   PAD_LENGTH,
@@ -43,7 +44,6 @@ import type {
 } from '@/lib/data-loaders/video-loader';
 
 // Constants
-const REFRESH_INTERVAL_MS = 5000;
 const VIDEOS_PER_PAGE = 20;
 const VIDEO_ID_DISPLAY_LENGTH = 8;
 const SEARCH_DEBOUNCE_DELAY_MS = 300;
@@ -257,54 +257,36 @@ export default function VideoManagementDashboard({
     }
   }, [currentPage, debouncedSearchQuery, statusFilter, sortBy, sortOrder]);
 
-  // Fix #3: Automatic refresh for processing videos (prevents memory leak)
-  useEffect(() => {
-    if (activeTab !== 'library' || processingVideoIds.length === 0) {
-      return undefined;
-    }
-
-    // Function to refresh processing videos
-    const refreshProcessingVideos = async (): Promise<void> => {
-      if (processingVideoIds.length === 0) return;
-
-      console.warn(
-        `Refreshing ${processingVideoIds.length} processing videos...`,
+  // Set up real-time video status updates to replace polling
+  useVideoStatusRealtime({
+    userId: userId || '',
+    enabled: activeTab === 'library' && processingVideoIds.length > 0,
+    onStatusUpdate: (update) => {
+      console.log(
+        `🎥 [DASHBOARD] Video status updated: ${update.id} -> ${update.status}`,
       );
 
-      // Fix #4: Batch refresh (future improvement: single endpoint)
-      // For now, limit to max 5 concurrent requests to prevent API overload
-      const batchSize = 5;
-      const batches = [];
-      for (let i = 0; i < processingVideoIds.length; i += batchSize) {
-        batches.push(processingVideoIds.slice(i, i + batchSize));
-      }
+      // Update the local videos state immediately for instant UI feedback
+      setVideos((prevVideos) =>
+        prevVideos.map((video) =>
+          video.id === update.id
+            ? {
+                ...video,
+                status: update.status,
+                duration: update.duration ?? video.duration,
+                aspect_ratio: update.aspect_ratio ?? video.aspect_ratio,
+                mux_playback_id:
+                  update.mux_playback_id ?? video.mux_playback_id,
+                updated_at: update.updated_at,
+              }
+            : video,
+        ),
+      );
 
-      for (const batch of batches) {
-        const refreshPromises = batch.map(async (videoId): Promise<void> => {
-          try {
-            await fetch(`/api/videos/${videoId}/refresh`, { method: 'POST' });
-          } catch (error: unknown) {
-            console.error(`Failed to refresh video ${videoId}:`, error);
-          }
-        });
-
-        await Promise.all(refreshPromises);
-      }
-
-      // Refetch all videos to get updated data
-      void fetchVideos();
-    };
-
-    // Initial refresh
-    void refreshProcessingVideos();
-
-    // Set up interval - only one interval created per activeTab/processingIds change
-    const intervalId = setInterval(() => {
-      void refreshProcessingVideos();
-    }, REFRESH_INTERVAL_MS);
-
-    return () => clearInterval(intervalId);
-  }, [activeTab, processingVideoIds, fetchVideos]); // No more 'videos' dependency!
+      // Note: processingVideoIds will automatically update via useMemo when videos state changes
+      // No need to manually update it since it's computed from the videos array
+    },
+  });
 
   // Fetch videos when component mounts or filters change
   useEffect(() => {

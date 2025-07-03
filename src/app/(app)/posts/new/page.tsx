@@ -10,6 +10,8 @@ import { Button } from '@/components/ui/button';
 import { usePostEditor } from '@/hooks/posts/usePostEditor';
 import { useUser } from '@/hooks/useUser';
 import { draftService } from '@/lib/services/draft-service';
+import { usePostEditorStore } from '@/lib/stores/post-editor-v2-store';
+import { useTenant } from '@/providers/TenantProvider';
 
 // Load the rich text editor dynamically to avoid SSR issues
 const RichTextEditor = dynamic(
@@ -23,11 +25,14 @@ export default function NewPostEditorPage(): React.ReactElement {
   const { formData, updateFormData, publishPost, autoSaveStatus } =
     usePostEditor();
   const { user } = useUser();
+  const { currentTenant, isPersonalTenant } = useTenant();
+  const postEditorStore = usePostEditorStore();
 
   // Only render the editor once we have attempted to restore any draft
   const [draftReady, setDraftReady] = useState(false);
 
   // Generate ID if missing, then attempt to restore any persisted draft
+
   useEffect(() => {
     (async () => {
       // ---------- ID PERSISTENCE ----------
@@ -70,8 +75,26 @@ export default function NewPostEditorPage(): React.ReactElement {
       // after all attempts finish (success or error) mark draft ready
       setDraftReady(true);
     })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- updateFormData is stable from store
-  }, [formData.id, user?.id, searchParams]);
+  }, [formData.id, user?.id, searchParams, router, updateFormData]);
+
+  // Seed collective when tenant is collective and not already selected
+  useEffect(() => {
+    if (
+      currentTenant &&
+      !isPersonalTenant &&
+      currentTenant.tenant_id &&
+      postEditorStore.selectedCollectives.length === 0
+    ) {
+      postEditorStore.addCollective(currentTenant.tenant_id);
+      postEditorStore.setLegacyCollectiveId(currentTenant.tenant_id);
+    }
+  }, [
+    currentTenant,
+    isPersonalTenant,
+    postEditorStore.addCollective,
+    postEditorStore.setLegacyCollectiveId,
+    postEditorStore.selectedCollectives.length,
+  ]);
 
   // Title changes are now autosaved through the unified editor autosave pipeline
 

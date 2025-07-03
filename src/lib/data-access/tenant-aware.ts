@@ -28,10 +28,14 @@ export class TenantAwareRepository {
       throw new Error('Tenant context required for post reactions');
     }
 
-    return this.supabase.from('post_reactions').insert({
-      ...data,
-      tenant_id: this.tenantId,
-    });
+    return this.supabase.from('post_reactions').upsert(
+      {
+        ...data,
+        tenant_id: this.tenantId,
+        // created_at handled by default DB value if not provided
+      },
+      { onConflict: 'user_id,post_id' },
+    );
   }
 
   /**
@@ -47,10 +51,22 @@ export class TenantAwareRepository {
       throw new Error('Tenant context required for post reactions');
     }
 
-    return this.supabase.from('post_reactions').upsert({
-      ...data,
-      tenant_id: this.tenantId,
+    const result = await this.supabase.from('post_reactions').upsert(
+      {
+        ...data,
+        tenant_id: this.tenantId,
+      },
+      { onConflict: 'user_id,post_id' },
+    );
+
+    /* eslint-disable no-console */
+    console.log('[post_reactions] upsert result (server)', {
+      data: result.data,
+      error: result.error,
     });
+    /* eslint-enable no-console */
+
+    return result;
   }
 
   /**
