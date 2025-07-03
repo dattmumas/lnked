@@ -4,8 +4,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
-import { withTenantAccess, createTenantErrorResponse, createTenantSuccessResponse } from '@/lib/api/tenant-helpers';
-
+import {
+  createTenantErrorResponse,
+  createTenantSuccessResponse,
+} from '@/lib/api/tenant-helpers';
+import { checkTenantAccessCached } from '@/lib/cache/tenant-cache';
+import { createServerSupabaseClient } from '@/lib/supabase/server';
 
 // =============================================================================
 // VALIDATION SCHEMAS
@@ -27,20 +31,27 @@ const UpdateMemberRoleSchema = z.object({
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ tenantId: string }> }
+  { params }: { params: Promise<{ tenantId: string }> },
 ): Promise<NextResponse> {
   try {
     const { tenantId } = await params;
 
-    // Execute with tenant access validation
-    const result = await withTenantAccess(
-      tenantId,
-      'member', // Any member can view the member list
-      async (supabase, userRole) => {
-        // Get tenant members with user information
-        const { data: members, error } = await supabase
-          .from('tenant_members')
-          .select(`
+    // Check tenant access with caching
+    const accessCheck = await checkTenantAccessCached(tenantId, 'member');
+    if (!accessCheck.hasAccess) {
+      return createTenantErrorResponse(
+        accessCheck.error || 'Access denied',
+        accessCheck.error === 'Authentication required' ? 401 : 403,
+      );
+    }
+
+    const supabase = await createServerSupabaseClient();
+
+    // Get tenant members with user information
+    const { data: members, error } = await supabase
+      .from('tenant_members')
+      .select(
+        `
             id,
             tenant_id,
             user_id,
@@ -50,46 +61,41 @@ export async function GET(
               id,
               username,
               full_name,
-              email,
               avatar_url
             )
-          `)
-          .eq('tenant_id', tenantId)
-          .order('joined_at', { ascending: true });
+      `,
+      )
+      .eq('tenant_id', tenantId)
+      .order('joined_at', { ascending: true });
 
-        if (error) {
-          throw new Error(`Failed to fetch members: ${error.message}`);
-        }
-
-        // Transform data to match our TenantMember interface
-        const transformedMembers = (members || []).map(member => {
-          const user = member.user as { full_name?: string; username?: string; email?: string; avatar_url?: string } | null;
-          return {
-            id: member.id,
-            tenant_id: member.tenant_id,
-            user_id: member.user_id,
-            role: member.role,
-            joined_at: member.joined_at,
-            user_name: user?.full_name || user?.username || 'Unknown User',
-            user_email: user?.email || null,
-            user_avatar_url: user?.avatar_url || null,
-          };
-        });
-
-        return {
-          members: transformedMembers,
-          total_count: transformedMembers.length,
-          user_role: userRole,
-        };
-      }
-    );
-
-    if (result.error) {
-      return createTenantErrorResponse(result.error, result.status);
+    if (error) {
+      throw new Error(`Failed to fetch members: ${error.message}`);
     }
 
-    return createTenantSuccessResponse(result.data);
+    // Transform data to match our TenantMember interface
+    const transformedMembers = (members || []).map((member) => {
+      const user = member.user as {
+        full_name?: string;
+        username?: string;
+        avatar_url?: string;
+      } | null;
+      return {
+        id: member.id,
+        tenant_id: member.tenant_id,
+        user_id: member.user_id,
+        role: member.role,
+        joined_at: member.joined_at,
+        user_name: user?.full_name || user?.username || 'Unknown User',
+        user_email: null, // Email not available in public users table
+        user_avatar_url: user?.avatar_url || null,
+      };
+    });
 
+    return createTenantSuccessResponse({
+      members: transformedMembers,
+      total_count: transformedMembers.length,
+      user_role: accessCheck.userRole,
+    });
   } catch (error) {
     console.error('Error fetching tenant members:', error);
     return createTenantErrorResponse('Internal server error', 500);
@@ -102,91 +108,105 @@ export async function GET(
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: Promise<{ tenantId: string }> }
+  { params }: { params: Promise<{ tenantId: string }> },
 ): Promise<NextResponse> {
   try {
     const { tenantId } = await params;
     const body = await request.json();
-    
+
     // Validate request body
     const validationResult = InviteMemberSchema.safeParse(body);
     if (!validationResult.success) {
       return createTenantErrorResponse(
         `Invalid request data: ${validationResult.error.message}`,
-        400
+        400,
       );
     }
 
     const { email, role } = validationResult.data;
 
-    // Execute with tenant access validation
-    const result = await withTenantAccess(
-      tenantId,
-      'admin', // Only admins+ can invite members
-      async (supabase, userRole) => {
-        // Check if user exists with this email
-        const { data: userData, error: userError } = await supabase
-          .from('users')
-          .select('id, username, full_name, email')
-          .eq('email', email)
-          .single();
+    // Check tenant access with caching
+    const accessCheck = await checkTenantAccessCached(tenantId, 'admin');
+    if (!accessCheck.hasAccess) {
+      return createTenantErrorResponse(
+        accessCheck.error || 'Access denied',
+        accessCheck.error === 'Authentication required' ? 401 : 403,
+      );
+    }
 
-        if (userError) {
-          if (userError.code === 'PGRST116') {
-            throw new Error('User with this email does not exist');
-          }
-          throw new Error(`Failed to find user: ${userError.message}`);
-        }
+    const supabase = await createServerSupabaseClient();
 
-        // Check if user is already a member
-        const { data: existingMember, error: memberCheckError } = await supabase
-          .from('tenant_members')
-          .select('id')
-          .eq('tenant_id', tenantId)
-          .eq('user_id', userData.id)
-          .single();
+    // Check if user exists with this email (need to query auth.users)
+    const { data: authUsers, error: userError } =
+      await supabase.auth.admin.listUsers();
 
-        if (memberCheckError && memberCheckError.code !== 'PGRST116') {
-          throw new Error(`Failed to check existing membership: ${memberCheckError.message}`);
-        }
+    if (userError) {
+      throw new Error(`Failed to search users: ${userError.message}`);
+    }
 
-        if (existingMember) {
-          throw new Error('User is already a member of this tenant');
-        }
+    const authUser = authUsers.users.find((u) => u.email === email);
+    if (!authUser) {
+      throw new Error('User with this email does not exist');
+    }
 
-        // Add user to tenant
-        const { data: newMember, error: insertError } = await supabase
-          .from('tenant_members')
-          .insert({
-            tenant_id: tenantId,
-            user_id: userData.id,
-            role,
-          })
-          .select(`
+    // Get the public user profile
+    const { data: userData, error: profileError } = await supabase
+      .from('users')
+      .select('id, username, full_name')
+      .eq('id', authUser.id)
+      .single();
+
+    if (profileError) {
+      throw new Error(`Failed to find user profile: ${profileError.message}`);
+    }
+
+    // Check if user is already a member
+    const { data: existingMember, error: memberCheckError } = await supabase
+      .from('tenant_members')
+      .select('id')
+      .eq('tenant_id', tenantId)
+      .eq('user_id', userData.id)
+      .single();
+
+    if (memberCheckError && memberCheckError.code !== 'PGRST116') {
+      throw new Error(
+        `Failed to check existing membership: ${memberCheckError.message}`,
+      );
+    }
+
+    if (existingMember) {
+      throw new Error('User is already a member of this tenant');
+    }
+
+    // Add user to tenant
+    const { data: newMember, error: insertError } = await supabase
+      .from('tenant_members')
+      .insert({
+        tenant_id: tenantId,
+        user_id: userData.id,
+        role,
+      })
+      .select(
+        `
             id,
             role,
             joined_at,
-            user:users!user_id(username, full_name, email)
-          `)
-          .single();
+        user:users!user_id(username, full_name)
+      `,
+      )
+      .single();
 
-        if (insertError) {
-          throw new Error(`Failed to add member: ${insertError.message}`);
-        }
-
-        return {
-          member: newMember,
-          message: `Successfully invited ${userData.full_name || userData.username || email}`,
-        };
-      }
-    );
-
-    if (result.error) {
-      return createTenantErrorResponse(result.error, result.status);
+    if (insertError) {
+      throw new Error(`Failed to add member: ${insertError.message}`);
     }
 
-    return createTenantSuccessResponse(result.data, 201);
-
+    return createTenantSuccessResponse(
+      {
+        member: newMember,
+        message: `Successfully invited ${userData.full_name || userData.username || email}`,
+      },
+      201,
+    );
   } catch (error) {
     console.error('Error inviting member to tenant:', error);
     return createTenantErrorResponse('Internal server error', 500);
@@ -199,96 +219,98 @@ export async function POST(
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: Promise<{ tenantId: string }> }
+  { params }: { params: Promise<{ tenantId: string }> },
 ): Promise<NextResponse> {
   try {
     const { tenantId } = await params;
     const body = await request.json();
-    
+
     // Validate request body
     const validationResult = UpdateMemberRoleSchema.safeParse(body);
     if (!validationResult.success) {
       return createTenantErrorResponse(
         `Invalid request data: ${validationResult.error.message}`,
-        400
+        400,
       );
     }
 
     const { user_id, role } = validationResult.data;
 
-    // Execute with tenant access validation
-    const result = await withTenantAccess(
-      tenantId,
-      'admin', // Only admins+ can change roles
-      async (supabase, userRole) => {
-        // Get current user for permission checks
-        const { data: { user: currentUser }, error: authError } = await supabase.auth.getUser();
-        if (authError || !currentUser) {
-          throw new Error('Authentication required');
-        }
+    // Check tenant access with caching
+    const accessCheck = await checkTenantAccessCached(tenantId, 'admin');
+    if (!accessCheck.hasAccess) {
+      return createTenantErrorResponse(
+        accessCheck.error || 'Access denied',
+        accessCheck.error === 'Authentication required' ? 401 : 403,
+      );
+    }
 
-        // Prevent users from changing their own role (unless they're the owner)
-        if (user_id === currentUser.id && userRole !== 'owner') {
-          throw new Error('Cannot change your own role');
-        }
+    const supabase = await createServerSupabaseClient();
 
-        // Get the target member's current role
-        const { data: targetMember, error: memberError } = await supabase
-          .from('tenant_members')
-          .select('role')
-          .eq('tenant_id', tenantId)
-          .eq('user_id', user_id)
-          .single();
+    // Get current user for permission checks
+    const {
+      data: { user: currentUser },
+      error: authError,
+    } = await supabase.auth.getUser();
+    if (authError || !currentUser) {
+      throw new Error('Authentication required');
+    }
 
-        if (memberError) {
-          if (memberError.code === 'PGRST116') {
-            throw new Error('Member not found');
-          }
-          throw new Error(`Failed to find member: ${memberError.message}`);
-        }
+    // Prevent users from changing their own role (unless they're the owner)
+    if (user_id === currentUser.id && accessCheck.userRole !== 'owner') {
+      throw new Error('Cannot change your own role');
+    }
 
-        // Prevent non-owners from changing owner roles
-        if (targetMember.role === 'owner' && userRole !== 'owner') {
-          throw new Error('Only owners can change owner roles');
-        }
+    // Get the target member's current role
+    const { data: targetMember, error: memberError } = await supabase
+      .from('tenant_members')
+      .select('role')
+      .eq('tenant_id', tenantId)
+      .eq('user_id', user_id)
+      .single();
 
-        // Prevent admins from promoting to admin (only owners can do that)
-        if (role === 'admin' && userRole !== 'owner') {
-          throw new Error('Only owners can promote to admin');
-        }
+    if (memberError) {
+      if (memberError.code === 'PGRST116') {
+        throw new Error('Member not found');
+      }
+      throw new Error(`Failed to find member: ${memberError.message}`);
+    }
 
-        // Update the member's role
-        const { data: updatedMember, error: updateError } = await supabase
-          .from('tenant_members')
-          .update({ role })
-          .eq('tenant_id', tenantId)
-          .eq('user_id', user_id)
-          .select(`
+    // Prevent non-owners from changing owner roles
+    if (targetMember.role === 'owner' && accessCheck.userRole !== 'owner') {
+      throw new Error('Only owners can change owner roles');
+    }
+
+    // Prevent admins from promoting to admin (only owners can do that)
+    if (role === 'admin' && accessCheck.userRole !== 'owner') {
+      throw new Error('Only owners can promote to admin');
+    }
+
+    // Update the member's role
+    const { data: updatedMember, error: updateError } = await supabase
+      .from('tenant_members')
+      .update({ role })
+      .eq('tenant_id', tenantId)
+      .eq('user_id', user_id)
+      .select(
+        `
             id,
             role,
             user:users!user_id(username, full_name)
-          `)
-          .single();
+      `,
+      )
+      .single();
 
-        if (updateError) {
-          throw new Error(`Failed to update member role: ${updateError.message}`);
-        }
-
-        return {
-          member: updatedMember,
-          message: `Successfully updated role to ${role}`,
-        };
-      }
-    );
-
-    if (result.error) {
-      return createTenantErrorResponse(result.error, result.status);
+    if (updateError) {
+      throw new Error(`Failed to update member role: ${updateError.message}`);
     }
 
-    return createTenantSuccessResponse(result.data);
-
+    return createTenantSuccessResponse({
+      member: updatedMember,
+      message: `Successfully updated role to ${role}`,
+    });
   } catch (error) {
     console.error('Error updating member role:', error);
     return createTenantErrorResponse('Internal server error', 500);
   }
-} 
+}

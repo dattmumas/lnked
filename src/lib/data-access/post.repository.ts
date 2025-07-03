@@ -19,6 +19,17 @@ import {
   getCurrentTenantId,
 } from './tenant-aware';
 
+interface PostFilters {
+  authorId?: string;
+  collectiveId?: string;
+  tenantId?: string;
+  status?: 'active' | 'draft' | 'removed';
+  postType?: 'video' | 'text';
+  isPublic?: boolean;
+  limit?: number;
+  order?: string;
+}
+
 /**
  * Post Repository
  *
@@ -38,7 +49,14 @@ export class PostRepository {
   async getById(id: string): Promise<Post | undefined> {
     const { data, error } = await this.supabase
       .from('posts')
-      .select('*')
+      .select(
+        `
+        id, title, subtitle, content, slug, author_id, tenant_id, collective_id,
+        is_public, status, post_type, view_count, like_count,
+        created_at, updated_at, published_at, seo_title, meta_description,
+        thumbnail_url, video_id
+      `,
+      )
       .eq('id', id)
       .single();
 
@@ -57,13 +75,10 @@ export class PostRepository {
       .from('posts')
       .select(
         `
-        *,
-        author_info:users!author_id (
-          id,
-          username,
-          full_name,
-          avatar_url
-        )
+        id, title, subtitle, content, slug, author_id, tenant_id, collective_id,
+        is_public, status, post_type, view_count, like_count,
+        created_at, updated_at, published_at, seo_title, meta_description,
+        thumbnail_url, video_id
       `,
       )
       .eq('slug', slug)
@@ -73,7 +88,7 @@ export class PostRepository {
       return undefined;
     }
 
-    return parsePostsWithAuthor([data])[0];
+    return parsePost(data);
   }
 
   /**
@@ -341,5 +356,57 @@ export class PostRepository {
       .eq('collective_id', collectiveId);
 
     return !error;
+  }
+
+  async findMany(filters: PostFilters = {}): Promise<Post[]> {
+    let query = this.supabase.from('posts').select(`
+        id, title, subtitle, author_id, tenant_id, collective_id,
+        is_public, status, post_type, view_count, like_count,
+        created_at, published_at, thumbnail_url, video_id
+      `);
+
+    if (filters.authorId) {
+      query = query.eq('author_id', filters.authorId);
+    }
+
+    if (filters.collectiveId) {
+      query = query.eq('collective_id', filters.collectiveId);
+    }
+
+    if (filters.status) {
+      query = query.eq('status', filters.status);
+    }
+
+    if (filters.postType) {
+      query = query.eq('post_type', filters.postType);
+    }
+
+    if (filters.isPublic) {
+      query = query.eq('is_public', filters.isPublic);
+    }
+
+    if (filters.tenantId) {
+      query = query.eq('tenant_id', filters.tenantId);
+    }
+
+    if (filters.collectiveId) {
+      query = query.eq('collective_id', filters.collectiveId);
+    }
+
+    if (filters.limit) {
+      query = query.limit(filters.limit);
+    }
+
+    if (filters.order) {
+      query = query.order(filters.order);
+    }
+
+    const { data, error } = await query;
+
+    if (error || !data) {
+      return [];
+    }
+
+    return parsePosts(data);
   }
 }

@@ -3,7 +3,6 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, X } from 'lucide-react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import React, { useCallback, useState, useRef, useEffect } from 'react';
 
 import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
@@ -35,7 +34,6 @@ export default function SearchBar({
   const [isLoading, setIsLoading] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const router = useRouter();
   const supabase = createSupabaseBrowserClient();
 
   // Real search function using Supabase
@@ -196,11 +194,12 @@ export default function SearchBar({
         query !== null &&
         query.trim().length > 0
       ) {
-        setIsOpen(false);
-        void router.push(`/search?q=${encodeURIComponent(query.trim())}`);
+        // Enter key now just keeps the dropdown open with current results
+        // Could be extended to show more results in the future
+        e.preventDefault();
       }
     },
-    [query, router],
+    [query],
   );
 
   const handleResultClick = useCallback((): void => {
@@ -222,10 +221,6 @@ export default function SearchBar({
     },
     [],
   );
-
-  const handleViewAllResultsClick = useCallback((): void => {
-    setIsOpen(false);
-  }, []);
 
   const getTypeIcon = useCallback((type: SearchResult['type']): string => {
     switch (type) {
@@ -277,6 +272,7 @@ export default function SearchBar({
         />
         {query.length > 0 && (
           <button
+            type="button"
             onClick={handleClear}
             className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors duration-200"
           >
@@ -354,27 +350,6 @@ export default function SearchBar({
 
               {/* No default suggestions when query empty */}
               {query.length === 0 && null}
-
-              {/* Footer */}
-              <div className="px-3 py-2 bg-accent/5 border-t border-border/30">
-                {query.length > 0 && results.length > 0 ? (
-                  <Link
-                    href={`/search?q=${encodeURIComponent(query.trim())}`}
-                    onClick={handleViewAllResultsClick}
-                    className="block text-center text-sm text-accent hover:text-accent/80 transition-colors duration-150"
-                  >
-                    View all results for &quot;{query}&quot;
-                  </Link>
-                ) : (
-                  <p className="text-xs text-muted-foreground text-center">
-                    Press{' '}
-                    <kbd className="px-1 py-0.5 bg-accent/20 rounded text-xs">
-                      Enter
-                    </kbd>{' '}
-                    to search
-                  </p>
-                )}
-              </div>
             </div>
           </motion.div>
         )}

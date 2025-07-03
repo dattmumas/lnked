@@ -49,20 +49,39 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       );
     }
 
-    // Verify user has access to all requested tenants
-    const { data: userTenants, error: tenantsError } =
-      await supabase.rpc('get_user_tenants');
+    // ---------------------------------------------------------------------
+    // Determine the tenant IDs the user has access to (direct DB query)
+    // ---------------------------------------------------------------------
 
-    if (tenantsError !== null) {
+    const { data: membershipRows, error: membershipError } = await supabase
+      .from('tenant_members')
+      .select('tenant_id')
+      .eq('user_id', user.id);
+
+    if (membershipError !== null) {
+      console.error('Error fetching tenant memberships:', membershipError);
       return NextResponse.json(
         { error: 'Failed to verify tenant access' },
-        { status: 403 },
+        { status: 500 },
       );
     }
 
     const userTenantIds = new Set(
-      userTenants?.map((t: { tenant_id: string }) => t.tenant_id) || [],
+      (membershipRows ?? []).map((m) => m.tenant_id),
     );
+
+    // If the user belongs to no tenants, return an empty feed early
+    if (userTenantIds.size === 0) {
+      return NextResponse.json({
+        posts: [],
+        metadata: {
+          totalPosts: 0,
+          tenantCount: 0,
+          postsPerTenant: {},
+          requestedLimit: limit,
+        },
+      });
+    }
 
     // Check if user has access to all requested tenants
     const unauthorizedTenants = tenantIds.filter(
@@ -137,7 +156,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     if (postsError !== null) {
       console.error('Error fetching batch posts:', postsError);
       return NextResponse.json(
-        { error: 'Failed to fetch posts' },
+        {
+          error: 'Failed to fetch posts',
+          details: postsError.message ?? postsError,
+        },
         { status: 500 },
       );
     }
@@ -173,8 +195,11 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       const tenantId = post.tenant_id;
       const currentCount = postCounts[tenantId] ?? 0;
       if (currentCount < limit) {
-        // Ensure array init
-        const arr = groupedPosts[tenantId] ?? (groupedPosts[tenantId] = []);
+        // Ensure array is initialized (avoid assignment in expression for ESLint compliance)
+        if (groupedPosts[tenantId] == null) {
+          groupedPosts[tenantId] = [];
+        }
+        const arr = groupedPosts[tenantId];
 
         // Extract video_assets and process it
         const { video_assets, ...postWithoutVideo } = post;

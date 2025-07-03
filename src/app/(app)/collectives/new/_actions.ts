@@ -6,13 +6,6 @@ import { z } from 'zod';
 import { collectiveSchema } from '@/lib/schemas/collective';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 
-// Constants for validation
-const MIN_NAME_LENGTH = 3;
-const MAX_NAME_LENGTH = 100;
-const MIN_SLUG_LENGTH = 3;
-const MAX_SLUG_LENGTH = 50;
-const MAX_DESCRIPTION_LENGTH = 500;
-
 export type CollectiveState = {
   errors?: Partial<Record<keyof z.infer<typeof collectiveSchema>, string[]>>;
   message?: string;
@@ -50,18 +43,46 @@ export async function createCollective(
 
   const { name, description, slug } = validatedFields.data;
 
-  const { data: collective, error } = await supabase
+  // Ensure slug is unique before attempting insert
+  const { data: existingSlug } = await supabase
     .from('collectives')
-    .insert({
-      name,
-      description: description ?? null,
-      slug,
-      owner_id: user.id,
-    })
-    .select()
-    .single();
+    .select('id')
+    .eq('slug', slug)
+    .maybeSingle();
+
+  if (existingSlug) {
+    return {
+      errors: { slug: ['Slug already exists. Please choose another.'] },
+      message: 'Slug already exists.',
+    } satisfies CollectiveState;
+  }
+
+  // Use the proper tenant creation function that handles both tenant and collective creation
+  const rpcParams: {
+    tenant_name: string;
+    tenant_slug: string;
+    tenant_description?: string;
+    is_public?: boolean;
+  } = {
+    tenant_name: name,
+    tenant_slug: slug,
+    is_public: true, // Default to public
+  };
+
+  if (description && description.trim()) {
+    rpcParams.tenant_description = description;
+  }
+
+  const { error } = await supabase.rpc('create_collective_tenant', rpcParams);
 
   if (error) {
+    // Handle duplicate key conflicts gracefully
+    if (error.code === '23505' || /duplicate key/.test(error.message)) {
+      return {
+        errors: { slug: ['Slug already exists. Please choose another.'] },
+        message: 'Slug conflict',
+      } satisfies CollectiveState;
+    }
     return {
       message: 'There was an error creating the collective. Please try again.',
     };
@@ -70,6 +91,6 @@ export async function createCollective(
   revalidatePath('/collectives');
 
   return {
-    message: `Collective "${collective.name}" created successfully.`,
+    message: `Collective "${name}" created successfully.`,
   };
 }

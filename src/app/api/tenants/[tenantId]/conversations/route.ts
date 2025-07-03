@@ -4,7 +4,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
-import { withTenantAccess, createTenantErrorResponse, createTenantSuccessResponse } from '@/lib/api/tenant-helpers';
+import {
+  createTenantErrorResponse,
+  createTenantSuccessResponse,
+} from '@/lib/api/tenant-helpers';
+import { checkTenantAccessCached } from '@/lib/cache/tenant-cache';
+import { createServerSupabaseClient } from '@/lib/supabase/server';
 
 // =============================================================================
 // TYPE DEFINITIONS
@@ -64,45 +69,52 @@ const CreateConversationSchema = z.object({
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ tenantId: string }> }
+  { params }: { params: Promise<{ tenantId: string }> },
 ): Promise<NextResponse> {
   try {
     const { tenantId } = await params;
 
-    // Execute with tenant access validation
-    const result = await withTenantAccess(
-      tenantId,
-      'member', // Any member can view conversations
-      async (supabase, userRole) => {
-        // Use the new RPC to get tenant-scoped conversations
-        const { data: conversations, error } = await supabase.rpc('get_tenant_conversations', {
-          target_tenant_id: tenantId,
-        });
+    // Check tenant access with caching
+    const access = await checkTenantAccessCached(tenantId, 'member');
+    if (!access.hasAccess) {
+      return createTenantErrorResponse(access.error || 'Access denied', 403);
+    }
 
-        if (error) {
-          throw new Error(`Failed to fetch conversations: ${error.message}`);
-        }
+    const supabase = await createServerSupabaseClient();
 
-        const typedConversations = conversations as TenantConversation[] | null;
+    // Use the new RPC to get tenant-scoped conversations
+    const { data: conversations, error } = await supabase.rpc(
+      'get_tenant_conversations',
+      {
+        target_tenant_id: tenantId,
+      },
+    );
 
-        // Get detailed participant information for each conversation
-        const conversationIds = typedConversations?.map((c) => c.id) || [];
-        
-        if (conversationIds.length === 0) {
-          return {
-            conversations: [],
-            meta: {
-              tenant_id: tenantId,
-              user_role: userRole,
-              total: 0,
-            },
-          };
-        }
+    if (error) {
+      throw new Error(`Failed to fetch conversations: ${error.message}`);
+    }
 
-        // Fetch participants for all conversations
-        const { data: participants } = await supabase
-          .from('conversation_participants')
-        .select(`
+    const typedConversations = conversations as TenantConversation[] | null;
+
+    // Get detailed participant information for each conversation
+    const conversationIds = typedConversations?.map((c) => c.id) || [];
+
+    if (conversationIds.length === 0) {
+      return createTenantSuccessResponse({
+        conversations: [],
+        meta: {
+          tenant_id: tenantId,
+          user_role: access.userRole,
+          total: 0,
+        },
+      });
+    }
+
+    // Fetch participants for all conversations
+    const { data: participants } = await supabase
+      .from('conversation_participants')
+      .select(
+        `
             conversation_id,
             user_id,
             role,
@@ -112,14 +124,16 @@ export async function GET(
               full_name,
               avatar_url
             )
-          `)
-          .in('conversation_id', conversationIds)
-          .is('deleted_at', null);
+      `,
+      )
+      .in('conversation_id', conversationIds)
+      .is('deleted_at', null);
 
-        // Fetch last messages for all conversations
-        const { data: lastMessages } = await supabase
-          .from('messages')
-          .select(`
+    // Fetch last messages for all conversations
+    const { data: lastMessages } = await supabase
+      .from('messages')
+      .select(
+        `
             id,
             conversation_id,
             content,
@@ -130,63 +144,61 @@ export async function GET(
               full_name,
               avatar_url
           )
-        `)
-          .in('conversation_id', conversationIds)
-          .is('deleted_at', null)
-        .order('created_at', { ascending: false });
+    `,
+      )
+      .in('conversation_id', conversationIds)
+      .is('deleted_at', null)
+      .order('created_at', { ascending: false });
 
-        const typedParticipants = participants as ConversationParticipant[] | null;
-        const typedLastMessages = lastMessages as LastMessage[] | null;
+    const typedParticipants = participants as ConversationParticipant[] | null;
+    const typedLastMessages = lastMessages as LastMessage[] | null;
 
-        // Group participants and messages by conversation
-        const participantsMap = new Map<string, Omit<ConversationParticipant, 'conversation_id'>[]>();
-        typedParticipants?.forEach(p => {
-          if (!participantsMap.has(p.conversation_id)) {
-            participantsMap.set(p.conversation_id, []);
-          }
-          participantsMap.get(p.conversation_id)?.push({
-            user_id: p.user_id,
-            role: p.role,
-            user: p.user,
-          });
-        });
-
-        const lastMessagesMap = new Map<string, Omit<LastMessage, 'conversation_id'>>();
-        typedLastMessages?.forEach(msg => {
-          if (!lastMessagesMap.has(msg.conversation_id)) {
-            lastMessagesMap.set(msg.conversation_id, {
-              id: msg.id,
-              content: msg.content,
-              created_at: msg.created_at,
-              sender: msg.sender,
-            });
-          }
-        });
-
-        // Enhance conversations with participant and message data
-        const enhancedConversations = typedConversations?.map((conv) => ({
-          ...conv,
-          participants: participantsMap.get(conv.id) || [],
-          last_message: lastMessagesMap.get(conv.id) || null,
-        }));
-
-      return {
-          conversations: enhancedConversations,
-          meta: {
-            tenant_id: tenantId,
-            user_role: userRole,
-            total: typedConversations?.length || 0,
-          },
-      };
+    // Group participants and messages by conversation
+    const participantsMap = new Map<
+      string,
+      Omit<ConversationParticipant, 'conversation_id'>[]
+    >();
+    typedParticipants?.forEach((p) => {
+      if (!participantsMap.has(p.conversation_id)) {
+        participantsMap.set(p.conversation_id, []);
       }
-    );
+      participantsMap.get(p.conversation_id)?.push({
+        user_id: p.user_id,
+        role: p.role,
+        user: p.user,
+      });
+    });
 
-    if (result.error) {
-      return createTenantErrorResponse(result.error, result.status);
-    }
+    const lastMessagesMap = new Map<
+      string,
+      Omit<LastMessage, 'conversation_id'>
+    >();
+    typedLastMessages?.forEach((msg) => {
+      if (!lastMessagesMap.has(msg.conversation_id)) {
+        lastMessagesMap.set(msg.conversation_id, {
+          id: msg.id,
+          content: msg.content,
+          created_at: msg.created_at,
+          sender: msg.sender,
+        });
+      }
+    });
 
-    return createTenantSuccessResponse(result.data);
+    // Enhance conversations with participant and message data
+    const enhancedConversations = typedConversations?.map((conv) => ({
+      ...conv,
+      participants: participantsMap.get(conv.id) || [],
+      last_message: lastMessagesMap.get(conv.id) || null,
+    }));
 
+    return createTenantSuccessResponse({
+      conversations: enhancedConversations,
+      meta: {
+        tenant_id: tenantId,
+        user_role: access.userRole,
+        total: typedConversations?.length || 0,
+      },
+    });
   } catch (error) {
     console.error('Error fetching tenant conversations:', error);
     return createTenantErrorResponse('Internal server error', 500);
@@ -199,7 +211,7 @@ export async function GET(
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: Promise<{ tenantId: string }> }
+  { params }: { params: Promise<{ tenantId: string }> },
 ): Promise<NextResponse> {
   try {
     const { tenantId } = await params;
@@ -210,68 +222,88 @@ export async function POST(
     if (!validationResult.success) {
       return createTenantErrorResponse(
         `Invalid request data: ${validationResult.error.message}`,
-        400
+        400,
       );
     }
 
-    const { title, type, description, is_private, participant_ids } = validationResult.data;
+    const { title, type, description, is_private, participant_ids } =
+      validationResult.data;
 
     // Validate participants for conversation type
     if (type === 'direct' && participant_ids.length !== 1) {
       return createTenantErrorResponse(
         'Direct conversations must have exactly one other participant',
-        400
+        400,
       );
     }
 
     if (type === 'group' && participant_ids.length < 1) {
       return createTenantErrorResponse(
         'Group conversations must have at least one other participant',
-        400
+        400,
       );
+    }
+
+    // Check tenant access with caching
+    const access = await checkTenantAccessCached(tenantId, 'member');
+    if (!access.hasAccess) {
+      return createTenantErrorResponse(access.error || 'Access denied', 403);
+    }
+
+    const supabase = await createServerSupabaseClient();
+
+    // Check for existing direct conversation if type is direct
+    if (type === 'direct') {
+      const {
+        data: { user },
+        error: authError,
+      } = await supabase.auth.getUser();
+      if (authError || !user) {
+        return createTenantErrorResponse('Authentication required', 401);
       }
 
-    // Execute with tenant access validation
-    const result = await withTenantAccess(
-      tenantId,
-      'member', // Any member can create conversations
-      async (supabase, userRole) => {
-        // Check for existing direct conversation if type is direct
-        if (type === 'direct') {
-          const currentUserId = (await supabase.auth.getUser()).data.user?.id;
-          if (!currentUserId) {
-            throw new Error('User not authenticated');
-          }
+      const otherUserId = participant_ids[0]; // Direct conversations have exactly 1 other participant
 
-          const otherUserId = participant_ids[0]; // Direct conversations have exactly 1 other participant
+      // Use the safe function to find or create direct conversation
+      const { data: conversationId, error: findError } = await supabase.rpc(
+        'find_or_create_direct_conversation',
+        {
+          user1_id: user.id,
+          user2_id: otherUserId!,
+          target_tenant_id: tenantId,
+        },
+      );
 
-          // Use the safe function to find or create direct conversation
-          const { data: conversationId, error: findError } = await supabase.rpc('find_or_create_direct_conversation', {
-            user1_id: currentUserId,
-            user2_id: otherUserId,
-            target_tenant_id: tenantId,
-          });
+      if (findError) {
+        throw new Error(
+          `Failed to find/create direct conversation: ${findError.message}`,
+        );
+      }
 
-          if (findError) {
-            throw new Error(`Failed to find/create direct conversation: ${findError.message}`);
-          }
+      // Fetch the conversation details
+      const { data: fullConversation } = await supabase.rpc(
+        'get_tenant_conversations',
+        {
+          target_tenant_id: tenantId,
+        },
+      );
 
-          // Fetch the conversation details
-          const { data: fullConversation } = await supabase.rpc('get_tenant_conversations', {
-            target_tenant_id: tenantId,
-          });
+      const typedConversations = fullConversation as
+        | TenantConversation[]
+        | null;
+      const conversation = typedConversations?.find(
+        (conv) => conv.id === conversationId,
+      );
 
-          const typedConversations = fullConversation as TenantConversation[] | null;
-          const conversation = typedConversations?.find(conv => conv.id === conversationId);
+      if (!conversation) {
+        throw new Error('Conversation not found after creation');
+      }
 
-          if (!conversation) {
-            throw new Error('Conversation not found after creation');
-          }
-
-          // Fetch participants for the conversation
-          const { data: rawParticipants } = await supabase
-            .from('conversation_participants')
-            .select(`
+      // Fetch participants for the conversation
+      const { data: rawParticipants } = await supabase
+        .from('conversation_participants')
+        .select(
+          `
               user_id,
               role,
               user:users!conversation_participants_user_id_fkey(
@@ -280,56 +312,66 @@ export async function POST(
                 full_name,
                 avatar_url
               )
-            `)
-            .eq('conversation_id', conversation.id)
-            .is('deleted_at', null);
+        `,
+        )
+        .eq('conversation_id', conversation.id)
+        .is('deleted_at', null);
 
-          const participants = (rawParticipants ?? []).map((p) => ({
-            user_id: p.user_id,
-            role: p.role,
-            user: p.user,
-          }));
+      const participants = (rawParticipants ?? []).map((p) => ({
+        user_id: p.user_id,
+        role: p.role,
+        user: p.user,
+      }));
 
-          return {
-            conversation: {
-              ...conversation,
-              participants,
-              last_message: null,
-            },
-            existing: true, // Could be existing or newly created
-            message: 'Direct conversation ready',
-          };
-        }
+      return createTenantSuccessResponse(
+        {
+          conversation: {
+            ...conversation,
+            participants,
+            last_message: null,
+          },
+          existing: true, // Could be existing or newly created
+          message: 'Direct conversation ready',
+        },
+        201,
+      );
+    }
 
-        // For non-direct conversations (groups, channels), use the RPC
-        const { data: newConversation, error } = await supabase.rpc('create_tenant_conversation', {
-          target_tenant_id: tenantId,
-          conversation_title: title || null,
-          conversation_type: type,
-          conversation_description: description || null,
-          is_private_conversation: is_private,
-          participant_user_ids: participant_ids,
-        });
+    // For non-direct conversations (groups, channels), use the RPC
+    const { data: newConversation, error } = await supabase.rpc(
+      'create_tenant_conversation',
+      {
+        target_tenant_id: tenantId,
+        conversation_title: title || '',
+        conversation_type: type,
+        conversation_description: description || '',
+        is_private_conversation: is_private,
+        participant_user_ids: participant_ids,
+      },
+    );
 
-        if (error) {
-          throw new Error(`Failed to create conversation: ${error.message}`);
-        }
+    if (error) {
+      throw new Error(`Failed to create conversation: ${error.message}`);
+    }
 
-        const typedNewConversation = newConversation as TenantConversation[] | null;
+    const typedNewConversation = newConversation as unknown as
+      | TenantConversation[]
+      | null;
 
-        if (!typedNewConversation || typedNewConversation.length === 0) {
-          throw new Error('No conversation returned from creation');
-        }
+    if (!typedNewConversation || typedNewConversation.length === 0) {
+      throw new Error('No conversation returned from creation');
+    }
 
-        const newConv = typedNewConversation[0]!;
+    const newConv = typedNewConversation[0]!;
 
-        /* ------------------------------------------------------------------
-         * Fetch participants so the client immediately receives a hydrated
-         * conversation object (id, title, participants, etc.).
-         * ------------------------------------------------------------------ */
-        const { data: rawParticipants } = await supabase
-          .from('conversation_participants')
-          .select(`
+    /* ------------------------------------------------------------------
+     * Fetch participants so the client immediately receives a hydrated
+     * conversation object (id, title, participants, etc.).
+     * ------------------------------------------------------------------ */
+    const { data: rawParticipants } = await supabase
+      .from('conversation_participants')
+      .select(
+        `
             user_id,
             role,
             user:users!conversation_participants_user_id_fkey(
@@ -338,36 +380,31 @@ export async function POST(
               full_name,
               avatar_url
             )
-          `)
-          .eq('conversation_id', newConv.id)
-          .is('deleted_at', null);
+      `,
+      )
+      .eq('conversation_id', newConv.id)
+      .is('deleted_at', null);
 
-        const participants = (rawParticipants ?? []).map((p) => ({
-          user_id: p.user_id,
-          role: p.role,
-          user: p.user,
-        }));
+    const participants = (rawParticipants ?? []).map((p) => ({
+      user_id: p.user_id,
+      role: p.role,
+      user: p.user,
+    }));
 
-        return {
-          conversation: {
-            ...newConv,
-            participants,
-            last_message: null,
-          },
-          existing: false,
-          message: 'Conversation created successfully',
-        };
-      }
+    return createTenantSuccessResponse(
+      {
+        conversation: {
+          ...newConv,
+          participants,
+          last_message: null,
+        },
+        existing: false,
+        message: 'Conversation created successfully',
+      },
+      201,
     );
-
-    if (result.error) {
-      return createTenantErrorResponse(result.error, result.status);
-    }
-
-    return createTenantSuccessResponse(result.data, 201);
-
   } catch (error) {
     console.error('Error creating tenant conversation:', error);
     return createTenantErrorResponse('Internal server error', 500);
   }
-} 
+}

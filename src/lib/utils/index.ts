@@ -12,7 +12,6 @@ export * from './rate-limiting';
 export * from './reactionHelpers';
 export * from './reading-time';
 export * from './request-validation';
-export * from './search';
 export * from './structured-logger';
 export * as ThumbnailUtils from './thumbnail';
 export * from './upload-retry';

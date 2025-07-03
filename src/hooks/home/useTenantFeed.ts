@@ -170,27 +170,27 @@ export function useTenantFeed(
 
       return result.data;
     },
-    enabled: Boolean(currentTenant),
+    enabled: Boolean(currentTenant) && (offset > 0 || !initialData),
     staleTime: 1000 * 60 * 5, // 5 minutes
     gcTime: 1000 * 60 * 30, // 30 minutes
-    // Use initial data for the first page only
-    initialData:
-      offset === 0 && initialData
-        ? {
+    ...(offset === 0 && initialData
+      ? {
+          initialData: {
             posts: initialData as unknown as TenantFeedPost[],
             pagination: {
               limit,
               offset: 0,
               total: initialData.length,
-              hasMore: false,
+              hasMore: initialData.length >= limit, // Assume more data if we got a full page
             },
             meta: {
               tenant_id: currentTenant?.id || '',
               user_role: 'member',
               status_filter: status,
             },
-          }
-        : undefined,
+          },
+        }
+      : {}),
   });
 
   // Fetch posts from collective tenants (if enabled)

@@ -13,11 +13,7 @@ import HomePageClient from './HomePageClient';
 
 import type { FeedItem } from '@/types/home/types';
 
-// Enable ISR with 60-second revalidation for feed data
-// Feed content changes frequently but 1 minute cache provides good balance
-export const revalidate = 60;
-
-// Dynamic rendering for personalized content
+// Dynamic rendering for personalized (non-cacheable) content
 export const dynamic = 'force-dynamic';
 
 // Loading component for Suspense boundaries

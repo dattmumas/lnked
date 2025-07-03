@@ -1,7 +1,8 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import React, { useCallback, useState, useTransition, FormEvent } from 'react';
+import React, { useCallback, useState, useEffect , useActionState } from 'react';
+import { useFormStatus } from 'react-dom';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -22,6 +23,7 @@ export interface CreateCollectiveFormState {
   message: string;
   fields?: Record<string, string>;
   issues?: string[];
+  errors?: Record<string, string[]>;
 }
 
 // Constants
@@ -32,28 +34,50 @@ const siteUrl =
     ? (process.env['NEXT_PUBLIC_SITE_URL'] ?? '')
     : '';
 
+function SubmitButton(): React.ReactElement {
+  const { pending } = useFormStatus();
+  return (
+    <Button type="submit" disabled={pending}>
+      {pending ? 'Creating...' : 'Create Collective'}
+    </Button>
+  );
+}
+
 export default function NewCollectivePage(): React.ReactElement {
   const router = useRouter();
-  const [isPending, startTransition] = useTransition();
   const [name, setName] = useState('');
   const [slug, setSlug] = useState('');
   const [description, setDescription] = useState('');
-  const [error, setError] = useState<string | undefined>(undefined);
-  const [successMessage, setSuccessMessage] = useState<string | undefined>(
-    undefined,
-  );
+
+  const initialState: CreateCollectiveFormState = { message: '' };
+  const [state, formAction] = useActionState(createCollective, initialState);
+
+  // Redirect on successful creation
+  useEffect(() => {
+    console.log('🔄 Form state changed:', state);
+    if (state.message && state.message.includes('successfully')) {
+      console.log(
+        '✅ Success detected, redirecting to:',
+        `/collectives/${slug}`,
+      );
+      void router.push(`/collectives/${slug}`);
+    }
+  }, [state.message, router, slug]);
 
   const generateSlug = useCallback((value: string): string => {
-    return value
+    const generated = value
       .toLowerCase()
       .replace(/\s+/g, '-') // Replace spaces with hyphens
       .replace(/[^a-z0-9-]/g, '') // Remove invalid characters
       .substring(0, MAX_SLUG_LENGTH); // Max length for slug
+    console.log('🔗 Generated slug:', { input: value, output: generated });
+    return generated;
   }, []);
 
   const handleNameChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>): void => {
       const newName = e.target.value;
+      console.log('📝 Name changed:', newName);
       setName(newName);
       if (newName.trim().length > 0) {
         setSlug(generateSlug(newName));
@@ -64,6 +88,7 @@ export default function NewCollectivePage(): React.ReactElement {
 
   const handleSlugChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>): void => {
+      console.log('🔗 Slug manually changed:', e.target.value);
       setSlug(generateSlug(e.target.value));
     },
     [generateSlug],
@@ -71,6 +96,7 @@ export default function NewCollectivePage(): React.ReactElement {
 
   const handleDescriptionChange = useCallback(
     (e: React.ChangeEvent<HTMLTextAreaElement>): void => {
+      console.log('📄 Description changed:', e.target.value);
       setDescription(e.target.value);
     },
     [],
@@ -79,47 +105,6 @@ export default function NewCollectivePage(): React.ReactElement {
   const handleCancel = useCallback((): void => {
     router.back();
   }, [router]);
-
-  const handleSubmit = useCallback(
-    (event: FormEvent<HTMLFormElement>): void => {
-      event.preventDefault();
-      setError(undefined);
-      setSuccessMessage(undefined);
-
-      startTransition(() => {
-        void (async (): Promise<void> => {
-          const formData = new FormData();
-          formData.append('name', name);
-          formData.append('slug', slug);
-          formData.append('description', description);
-
-          const result = await createCollective({}, formData);
-
-          if (result.errors) {
-            const errorMessages = Object.values(result.errors)
-              .flat()
-              .join(', ');
-            setError(errorMessages || result.message || 'An error occurred');
-          } else if (
-            result.message &&
-            result.message.includes('successfully')
-          ) {
-            setSuccessMessage(result.message);
-            // Optionally clear form fields
-            setName('');
-            setSlug('');
-            setDescription('');
-            // Redirect to the new collective's page
-            void router.push(`/collectives/${slug}`);
-            void router.refresh();
-          } else {
-            setError(result.message || 'An unexpected error occurred.');
-          }
-        })();
-      });
-    },
-    [name, slug, description, router],
-  );
 
   return (
     <div className="container mx-auto p-4 md:p-6 max-w-2xl">
@@ -130,7 +115,7 @@ export default function NewCollectivePage(): React.ReactElement {
             Start a new newsletter collective. Choose a unique name and slug.
           </CardDescription>
         </CardHeader>
-        <form onSubmit={handleSubmit}>
+        <form action={formAction}>
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="name">Collective Name</Label>
@@ -142,7 +127,6 @@ export default function NewCollectivePage(): React.ReactElement {
                 value={name}
                 onChange={handleNameChange}
                 maxLength={100}
-                disabled={isPending}
               />
             </div>
             <div className="space-y-2">
@@ -157,7 +141,6 @@ export default function NewCollectivePage(): React.ReactElement {
                 pattern="^[a-z0-9]+(?:-[a-z0-9]+)*$"
                 title="Slug can only contain lowercase letters, numbers, and hyphens."
                 maxLength={MAX_SLUG_LENGTH}
-                disabled={isPending}
               />
               <p className="text-xs text-muted-foreground">
                 {(siteUrl ?? '').trim().length > 0
@@ -175,14 +158,15 @@ export default function NewCollectivePage(): React.ReactElement {
                 onChange={handleDescriptionChange}
                 rows={4}
                 maxLength={500}
-                disabled={isPending}
               />
             </div>
-            {(error ?? '').trim().length > 0 && (
-              <p className="text-sm text-destructive">{error}</p>
+            {state.errors && Object.keys(state.errors).length > 0 && (
+              <p className="text-sm text-destructive">
+                {Object.values(state.errors).flat().join(', ')}
+              </p>
             )}
-            {(successMessage ?? '').trim().length > 0 && (
-              <p className="text-sm text-accent">{successMessage}</p>
+            {state.message && !state.errors && (
+              <p className="text-sm text-accent">{state.message}</p>
             )}
           </CardContent>
           <CardFooter className="flex justify-end">
@@ -190,14 +174,11 @@ export default function NewCollectivePage(): React.ReactElement {
               type="button"
               variant="outline"
               onClick={handleCancel}
-              disabled={isPending}
               className="mr-2"
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={isPending}>
-              {isPending ? 'Creating...' : 'Create Collective'}
-            </Button>
+            <SubmitButton />
           </CardFooter>
         </form>
       </Card>

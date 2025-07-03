@@ -1,3 +1,4 @@
+import { getCachedUserTenants } from '@/lib/cache/tenant-cache';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 
 import type { Database } from '@/lib/database.types';
@@ -80,8 +81,8 @@ export async function loadUserFeed(
   const supabase = await createServerSupabaseClient();
 
   try {
-    // Build the query
-    let query = supabase
+    // -------- 1. Build base personal-tenant query (always needed) --------
+    let personalQuery = supabase
       .from('posts')
       .select(
         `
@@ -118,135 +119,95 @@ export async function loadUserFeed(
 
     // Apply status filter
     if (status === 'published') {
-      query = query.eq('status', 'active').not('published_at', 'is', null);
+      personalQuery = personalQuery
+        .eq('status', 'active')
+        .not('published_at', 'is', null);
     } else if (status === 'draft') {
-      query = query.eq('status', 'draft');
+      personalQuery = personalQuery.eq('status', 'draft');
     }
 
-    const { data: posts, error } = await query;
+    // -------- 2. Fetch memberships & follows in parallel --------
+    const membershipsPromise = includeCollectives
+      ? supabase
+          .from('collective_members')
+          .select('collective_id')
+          .eq('member_id', userId)
+      : Promise.resolve({ data: [], error: null } as const);
 
-    if (error) {
-      console.error('Error fetching feed posts:', error);
+    const followsPromise = includeFollowed
+      ? supabase
+          .from('follows')
+          .select('following_id')
+          .eq('follower_id', userId)
+          .eq('following_type', 'user')
+      : Promise.resolve({ data: [], error: null } as const);
+
+    const [
+      { data: memberships },
+      { data: follows },
+      { data: personalPosts, error: personalError },
+    ] = await Promise.all([membershipsPromise, followsPromise, personalQuery]);
+
+    if (personalError) {
+      console.error('Error fetching personal posts:', personalError);
       return [];
     }
 
-    // If including collectives, fetch additional posts from user's collective tenants
-    let collectivePosts: FeedPost[] = [];
-    if (includeCollectives) {
-      // Get user's collective memberships
-      const { data: memberships } = await supabase
-        .from('collective_members')
-        .select('collective_id')
-        .eq('member_id', userId);
+    // -------- 3. Build collective & followed post queries --------
+    const collectiveIds = (memberships || []).map((m) => m.collective_id);
+    const followedUserIds = (follows || []).map((f) => f.following_id);
 
-      if (memberships && memberships.length > 0) {
-        const collectiveIds = memberships.map((m) => m.collective_id);
-
-        // Fetch recent posts from collectives
-        const { data: collPosts } = await supabase
-          .from('posts')
-          .select(
-            `
-            *,
-            author:users!author_id(
-              id,
-              username,
-              full_name,
-              avatar_url
-            ),
-            tenant:tenants!tenant_id(
-              id,
-              name,
-              slug,
-              type
-            ),
-            collective:collectives!collective_id(
-              id,
-              name,
-              slug
-            ),
-            video_assets!posts_video_id_fkey(
-              id,
-              mux_playback_id,
-              status,
-              duration,
-              is_public
+    const collectivePostsPromise =
+      includeCollectives && collectiveIds.length > 0
+        ? supabase
+            .from('posts')
+            .select(
+              `
+              *,
+              author:users!author_id(id,username,full_name,avatar_url),
+              tenant:tenants!tenant_id(id,name,slug,type),
+              collective:collectives!collective_id(id,name,slug),
+              video_assets!posts_video_id_fkey(id,mux_playback_id,status,duration,is_public)
+            `,
             )
-          `,
-          )
-          .in('collective_id', collectiveIds)
-          .eq('status', 'active')
-          .not('published_at', 'is', null)
-          .order('published_at', { ascending: false })
-          .limit(10);
+            .in('collective_id', collectiveIds)
+            .eq('status', 'active')
+            .not('published_at', 'is', null)
+            .order('published_at', { ascending: false })
+            .limit(10)
+        : Promise.resolve({ data: [], error: null } as const);
 
-        if (collPosts) {
-          collectivePosts = collPosts as unknown as FeedPost[];
-        }
-      }
-    }
-
-    // If including followed users, fetch posts from users they follow
-    let followedPosts: FeedPost[] = [];
-    if (includeFollowed) {
-      // Get list of users that current user follows
-      const { data: follows } = await supabase
-        .from('follows')
-        .select('following_id')
-        .eq('follower_id', userId)
-        .eq('following_type', 'user');
-
-      if (follows && follows.length > 0) {
-        const followedUserIds = follows.map((f) => f.following_id);
-
-        // Fetch recent posts from followed users
-        // Posts from followed users should come from their personal tenants
-        const { data: followPosts } = await supabase
-          .from('posts')
-          .select(
-            `
-            *,
-            author:users!author_id(
-              id,
-              username,
-              full_name,
-              avatar_url
-            ),
-            tenant:tenants!tenant_id(
-              id,
-              name,
-              slug,
-              type
-            ),
-            collective:collectives!collective_id(
-              id,
-              name,
-              slug
-            ),
-            video_assets!posts_video_id_fkey(
-              id,
-              mux_playback_id,
-              status,
-              duration,
-              is_public
+    const followedPostsPromise =
+      includeFollowed && followedUserIds.length > 0
+        ? supabase
+            .from('posts')
+            .select(
+              `
+              *,
+              author:users!author_id(id,username,full_name,avatar_url),
+              tenant:tenants!tenant_id(id,name,slug,type),
+              collective:collectives!collective_id(id,name,slug),
+              video_assets!posts_video_id_fkey(id,mux_playback_id,status,duration,is_public)
+            `,
             )
-          `,
-          )
-          .in('author_id', followedUserIds)
-          .eq('status', 'active')
-          .not('published_at', 'is', null)
-          .eq('is_public', true) // Only show public posts from followed users
-          .order('published_at', { ascending: false })
-          .limit(15); // Get more followed posts as they're often most interesting
+            .in('author_id', followedUserIds)
+            .eq('status', 'active')
+            .not('published_at', 'is', null)
+            .eq('is_public', true)
+            .order('published_at', { ascending: false })
+            .limit(15)
+        : Promise.resolve({ data: [], error: null } as const);
 
-        if (followPosts) {
-          followedPosts = followPosts;
-        }
-      }
-    }
+    const [{ data: collectivePosts }, { data: followedPosts }] =
+      await Promise.all([collectivePostsPromise, followedPostsPromise]);
+
+    // Use undefined fallback arrays
+    const personal: FeedPost[] = (personalPosts || []) as unknown as FeedPost[];
+    const coll: FeedPost[] = (collectivePosts || []) as unknown as FeedPost[];
+    const followP: FeedPost[] = (followedPosts || []) as unknown as FeedPost[];
 
     // Combine and sort all posts
-    const allPosts = [...(posts || []), ...collectivePosts, ...followedPosts];
+    const allPosts = [...personal, ...coll, ...followP];
     allPosts.sort((a, b) => {
       const dateA = new Date(a.published_at || a.created_at);
       const dateB = new Date(b.published_at || b.created_at);
@@ -335,18 +296,13 @@ export async function loadUserFeed(
  * Load user's tenant information
  */
 export async function loadUserTenants(userId: string) {
-  const supabase = await createServerSupabaseClient();
-
-  const { data, error } = await supabase.rpc('get_user_tenants', {
-    target_user_id: userId,
-  });
-
-  if (error) {
-    console.error('Error fetching user tenants:', error);
+  try {
+    const tenants = await getCachedUserTenants(userId);
+    return tenants || [];
+  } catch (error) {
+    console.error('Error fetching user tenants (cached):', error);
     return [];
   }
-
-  return data || [];
 }
 
 /**

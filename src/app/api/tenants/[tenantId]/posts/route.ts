@@ -5,10 +5,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
 import {
-  withTenantAccess,
   createTenantErrorResponse,
   createTenantSuccessResponse,
 } from '@/lib/api/tenant-helpers';
+import { checkTenantAccessCached } from '@/lib/cache/tenant-cache';
+import { createServerSupabaseClient } from '@/lib/supabase/server';
 
 type PostWithAuthor = {
   id: string;
@@ -102,20 +103,25 @@ export async function GET(
 
     const { limit, offset, sort, order, status, author_id } = queryResult.data;
 
-    // Execute with tenant access validation
-    const result = await withTenantAccess(
-      tenantId,
-      'member', // Minimum role required to view posts
-      async (supabase, userRole) => {
-        // Build query
-        let query = supabase
-          .from('posts')
-          .select(
-            `
+    // Check tenant access with caching
+    const accessCheck = await checkTenantAccessCached(tenantId, 'member');
+    if (!accessCheck.hasAccess) {
+      return createTenantErrorResponse(
+        accessCheck.error || 'Access denied',
+        accessCheck.error === 'Authentication required' ? 401 : 403,
+      );
+    }
+
+    const supabase = await createServerSupabaseClient();
+
+    // Build query
+    let query = supabase
+      .from('posts')
+      .select(
+        `
             id,
             title,
             subtitle,
-            content,
             author_id,
             tenant_id,
             collective_id,
@@ -125,10 +131,7 @@ export async function GET(
             view_count,
             like_count,
             created_at,
-            updated_at,
             published_at,
-            seo_title,
-            meta_description,
             thumbnail_url,
             video_id,
             author:users!author_id(
@@ -145,137 +148,129 @@ export async function GET(
               is_public
             )
           `,
-          )
-          .eq('tenant_id', tenantId);
+      )
+      .eq('tenant_id', tenantId);
 
-        // Apply status filter based on user role
-        switch (status) {
-          case 'published': {
-            query = query
-              .eq('status', 'active')
-              .not('published_at', 'is', null);
+    // Apply status filter based on user role
+    switch (status) {
+      case 'published': {
+        query = query.eq('status', 'active').not('published_at', 'is', null);
 
-            break;
-          }
-          case 'draft': {
-            // Only editors+ can see drafts
-            if (!['editor', 'admin', 'owner'].includes(userRole)) {
-              throw new Error('Insufficient permissions to view drafts');
-            }
-            query = query.eq('status', 'draft');
+        break;
+      }
+      case 'draft': {
+        // Only editors+ can see drafts
+        if (
+          !['editor', 'admin', 'owner'].includes(accessCheck.userRole || '')
+        ) {
+          throw new Error('Insufficient permissions to view drafts');
+        }
+        query = query.eq('status', 'draft');
 
-            break;
-          }
-          case 'all': {
-            // Only admins+ can see all posts
-            if (!['admin', 'owner'].includes(userRole)) {
-              throw new Error('Insufficient permissions to view all posts');
-            }
-
-            break;
-          }
-          // No default
+        break;
+      }
+      case 'all': {
+        // Only admins+ can see all posts
+        if (!['admin', 'owner'].includes(accessCheck.userRole || '')) {
+          throw new Error('Insufficient permissions to view all posts');
         }
 
-        // Apply author filter if specified
-        if (author_id !== null && author_id !== undefined) {
-          query = query.eq('author_id', author_id);
-        }
-
-        // Apply sorting and pagination
-        query = query
-          .order(sort, { ascending: order === 'asc' })
-          .range(offset, offset + limit - 1);
-
-        const { data: posts, error } = await query;
-
-        if (error) {
-          throw new Error(`Failed to fetch posts: ${error.message}`);
-        }
-
-        // Fetch tenant context once (security definer function bypasses RLS)
-        const { data: tenantContext, error: tenantContextError } =
-          await supabase.rpc('get_tenant_context', {
-            target_tenant_id: tenantId,
-          });
-
-        if (tenantContextError !== null) {
-          console.warn('Failed to fetch tenant context:', tenantContextError);
-        }
-
-        const safeTenant = tenantContext || {
-          id: tenantId,
-          name: 'Unknown',
-          slug: 'unknown',
-          type: 'collective',
-        };
-
-        // Ensure posts is a proper array to satisfy TypeScript
-        const postsArray = (Array.isArray(posts)
-          ? posts
-          : []) as unknown as PostWithAuthor[];
-
-        // Attach tenant metadata manually to each post result
-        const postsWithTenant = postsArray.map((p) => ({
-          ...p,
-          author: Array.isArray(p.author)
-            ? (p.author[0] ?? null)
-            : (p.author ?? null),
-          video:
-            Array.isArray(p.video_assets) && p.video_assets.length > 0
-              ? p.video_assets[0]
-              : null,
-          tenant: safeTenant,
-          // Add comment_count (defaulting to 0 for now)
-          comment_count: 0,
-        }));
-
-        // Get total count for pagination
-        let countQuery = supabase
-          .from('posts')
-          .select('*', { count: 'exact', head: true })
-          .eq('tenant_id', tenantId);
-
-        if (status === 'published') {
-          countQuery = countQuery
-            .eq('status', 'active')
-            .not('published_at', 'is', null);
-        } else if (status === 'draft') {
-          countQuery = countQuery.eq('status', 'draft');
-        }
-
-        if (author_id !== null && author_id !== undefined) {
-          countQuery = countQuery.eq('author_id', author_id);
-        }
-
-        const { count, error: countError } = await countQuery;
-
-        if (countError !== null) {
-          console.warn('Failed to get post count:', countError);
-        }
-
-        return {
-          posts: postsWithTenant,
-          pagination: {
-            limit,
-            offset,
-            total: count || 0,
-            hasMore: (count || 0) > offset + limit,
-          },
-          meta: {
-            tenant_id: tenantId,
-            user_role: userRole,
-            status_filter: status,
-          },
-        };
-      },
-    );
-
-    if (result.error !== null && result.error !== undefined) {
-      return createTenantErrorResponse(result.error, result.status);
+        break;
+      }
+      // No default
     }
 
-    return createTenantSuccessResponse(result.data);
+    // Apply author filter if specified
+    if (author_id !== null && author_id !== undefined) {
+      query = query.eq('author_id', author_id);
+    }
+
+    // Apply sorting and pagination
+    query = query
+      .order(sort, { ascending: order === 'asc' })
+      .range(offset, offset + limit - 1);
+
+    const { data: posts, error } = await query;
+
+    if (error) {
+      throw new Error(`Failed to fetch posts: ${error.message}`);
+    }
+
+    // Fetch tenant context once (security definer function bypasses RLS)
+    const { data: tenantContext, error: tenantContextError } =
+      await supabase.rpc('get_tenant_context', {
+        target_tenant_id: tenantId,
+      });
+
+    if (tenantContextError !== null) {
+      console.warn('Failed to fetch tenant context:', tenantContextError);
+    }
+
+    const safeTenant = tenantContext || {
+      id: tenantId,
+      name: 'Unknown',
+      slug: 'unknown',
+      type: 'collective',
+    };
+
+    // Ensure posts is a proper array to satisfy TypeScript
+    const postsArray = (Array.isArray(posts)
+      ? posts
+      : []) as unknown as PostWithAuthor[];
+
+    // Attach tenant metadata manually to each post result
+    const postsWithTenant = postsArray.map((p) => ({
+      ...p,
+      author: Array.isArray(p.author)
+        ? (p.author[0] ?? null)
+        : (p.author ?? null),
+      video:
+        Array.isArray(p.video_assets) && p.video_assets.length > 0
+          ? p.video_assets[0]
+          : null,
+      tenant: safeTenant,
+      // Add comment_count (defaulting to 0 for now)
+      comment_count: 0,
+    }));
+
+    // Get total count for pagination
+    let countQuery = supabase
+      .from('posts')
+      .select('*', { count: 'exact', head: true })
+      .eq('tenant_id', tenantId);
+
+    if (status === 'published') {
+      countQuery = countQuery
+        .eq('status', 'active')
+        .not('published_at', 'is', null);
+    } else if (status === 'draft') {
+      countQuery = countQuery.eq('status', 'draft');
+    }
+
+    if (author_id !== null && author_id !== undefined) {
+      countQuery = countQuery.eq('author_id', author_id);
+    }
+
+    const { count, error: countError } = await countQuery;
+
+    if (countError !== null) {
+      console.warn('Failed to get post count:', countError);
+    }
+
+    return createTenantSuccessResponse({
+      posts: postsWithTenant,
+      pagination: {
+        limit,
+        offset,
+        total: count || 0,
+        hasMore: (count || 0) > offset + limit,
+      },
+      meta: {
+        tenant_id: tenantId,
+        user_role: accessCheck.userRole,
+        status_filter: status,
+      },
+    });
   } catch (error) {
     console.error('Error in tenant posts API:', error);
     return createTenantErrorResponse('Internal server error', 500);
@@ -290,6 +285,7 @@ const CreatePostSchema = z.object({
   title: z.string().min(1).max(200),
   subtitle: z.string().max(300).optional(),
   content: z.string().min(1),
+  slug: z.string().min(3).max(100),
   is_public: z.boolean().default(true),
   status: z.enum(['draft', 'active']).default('draft'),
   seo_title: z.string().max(60).optional(),
@@ -315,31 +311,46 @@ export async function POST(
 
     const postData = validationResult.data;
 
-    // Execute with tenant access validation
-    const result = await withTenantAccess(
-      tenantId,
-      'editor', // Minimum role required to create posts
-      async (supabase, userRole) => {
-        // Get current user
-        const {
-          data: { user },
-          error: authError,
-        } = await supabase.auth.getUser();
-        if (authError !== null || user === null) {
-          throw new Error('Authentication required');
-        }
+    // Check tenant access with caching
+    const accessCheck = await checkTenantAccessCached(tenantId, 'editor');
+    if (!accessCheck.hasAccess) {
+      return createTenantErrorResponse(
+        accessCheck.error || 'Access denied',
+        accessCheck.error === 'Authentication required' ? 401 : 403,
+      );
+    }
 
-        // Create the post
-        const { data: newPost, error: insertError } = await supabase
-          .from('posts')
-          .insert({
-            ...postData,
-            author_id: user.id,
-            tenant_id: tenantId,
-            collective_id: tenantId, // For backward compatibility
-          })
-          .select(
-            `
+    const supabase = await createServerSupabaseClient();
+
+    // Get current user
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+    if (authError !== null || user === null) {
+      throw new Error('Authentication required');
+    }
+
+    // Create the post
+    const postInsertData = {
+      title: postData.title,
+      content: postData.content,
+      slug: postData.slug,
+      is_public: postData.is_public,
+      status: postData.status,
+      author_id: user.id,
+      tenant_id: tenantId,
+      collective_id: tenantId, // For backward compatibility
+      subtitle: postData.subtitle || null,
+      seo_title: postData.seo_title || null,
+      meta_description: postData.meta_description || null,
+    };
+
+    const { data: newPost, error: insertError } = await supabase
+      .from('posts')
+      .insert(postInsertData)
+      .select(
+        `
             id,
             title,
             subtitle,
@@ -347,25 +358,20 @@ export async function POST(
             created_at,
             author:users!author_id(username, full_name)
           `,
-          )
-          .single();
+      )
+      .single();
 
-        if (insertError !== null) {
-          throw new Error(`Failed to create post: ${insertError.message}`);
-        }
-
-        return {
-          post: newPost,
-          message: 'Post created successfully',
-        };
-      },
-    );
-
-    if (result.error !== null && result.error !== undefined) {
-      return createTenantErrorResponse(result.error, result.status);
+    if (insertError !== null) {
+      throw new Error(`Failed to create post: ${insertError.message}`);
     }
 
-    return createTenantSuccessResponse(result.data, 201);
+    return createTenantSuccessResponse(
+      {
+        post: newPost,
+        message: 'Post created successfully',
+      },
+      201,
+    );
   } catch (error) {
     console.error('Error creating post in tenant:', error);
     return createTenantErrorResponse('Internal server error', 500);

@@ -94,27 +94,39 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       .from('posts')
       .select(
         `
-        *,
-        author:users!posts_author_id_fkey(
           id,
-          username,
-          full_name,
-          avatar_url
-        ),
-        tenant:tenants!posts_tenant_id_fkey(
-          id,
-          name,
-          slug,
-          type
-        ),
-        video_assets!posts_video_id_fkey(
-          id,
-          mux_playback_id,
-          status,
-          duration,
-          is_public
-        )
-      `,
+          title,
+          subtitle,
+          author_id,
+          tenant_id,
+          collective_id,
+          post_type,
+          view_count,
+          like_count,
+          created_at,
+          published_at,
+          thumbnail_url,
+          video_id,
+          author:users!author_id(
+            id,
+            username,
+            full_name,
+            avatar_url
+          ),
+          tenant:tenants!tenant_id(
+            id,
+            name,
+            slug,
+            type
+          ),
+          video_assets!posts_video_id_fkey(
+            id,
+            mux_playback_id,
+            status,
+            duration,
+            is_public
+          )
+        `,
       )
       .in('author_id', followedUserIds)
       .eq('status', 'active')
@@ -152,7 +164,6 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         Array.isArray(post.video_assets) && post.video_assets.length > 0
           ? post.video_assets[0]
           : null,
-      comment_count: 0,
     }));
 
     return NextResponse.json({
