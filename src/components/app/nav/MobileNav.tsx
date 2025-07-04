@@ -1,10 +1,20 @@
 'use client';
 
-import { Menu, Home, FileText, Video } from 'lucide-react';
+import {
+  Menu,
+  Compass,
+  Video,
+  FileText,
+  User as UserIcon,
+  LayoutDashboard,
+  Settings,
+  X,
+} from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import React, { useState } from 'react';
 
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import {
   Sheet,
@@ -13,16 +23,29 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet';
 import { cn } from '@/lib/utils/cn';
+import { useUser } from '@/providers/UserContext';
 
 const navItems = [
-  { href: '/home', label: 'Home', icon: Home },
-  { href: '/posts/new', label: 'New Text Post', icon: FileText },
-  { href: '/posts/new/video', label: 'New Video Post', icon: Video },
+  { href: '/discover', label: 'Explore', icon: Compass },
+  { href: '/videos', label: 'Videos', icon: Video },
+  { href: '/posts', label: 'Posts', icon: FileText },
+  { href: '/profile', label: 'Profile', icon: UserIcon },
+  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/settings', label: 'Settings', icon: Settings },
 ];
 
 export function MobileNav(): React.ReactElement {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const { profile } = useUser();
+
+  const initials = profile?.full_name
+    ? profile.full_name
+        .split(' ')
+        .map((n) => n[0])
+        .join('')
+        .toUpperCase()
+    : 'U';
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
@@ -36,22 +59,57 @@ export function MobileNav(): React.ReactElement {
           <Menu className="h-5 w-5" />
         </Button>
       </SheetTrigger>
-      <SheetContent side="left" className="pr-0">
-        <SheetTitle>Navigation</SheetTitle>
-        <nav className="flex flex-col space-y-2 mt-4">
+      <SheetContent
+        side="left"
+        className="pr-0 w-full sm:w-[90%] data-[state=open]:animate-in"
+      >
+        <SheetTitle className="sr-only">Navigation</SheetTitle>
+
+        {/* User Row */}
+        <div className="flex items-center gap-3 px-4 pt-4 pb-4 border-b border-border">
+          <Avatar className="h-10 w-10">
+            {profile?.avatar_url ? (
+              <AvatarImage
+                src={profile.avatar_url}
+                alt={profile.full_name ?? ''}
+              />
+            ) : (
+              <AvatarFallback>{initials}</AvatarFallback>
+            )}
+          </Avatar>
+          <div className="flex flex-col min-w-0">
+            <span className="font-medium truncate max-w-[120px]">
+              {profile?.full_name ?? 'Unknown'}
+            </span>
+            <span className="text-xs text-muted-foreground truncate max-w-[120px]">
+              @{profile?.username ?? 'user'}
+            </span>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setOpen(false)}
+            className="ml-auto p-2 rounded-md hover:bg-muted focus:outline-none"
+            aria-label="Close navigation"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <nav className="flex flex-col mt-2">
           {navItems.map((item) => (
             <Link
               key={item.href}
               href={item.href}
               onClick={() => setOpen(false)}
               className={cn(
-                'flex items-center space-x-2 rounded-md px-3 py-2 text-sm font-medium transition-colors',
-                pathname === item.href
-                  ? 'bg-accent text-accent-foreground'
-                  : 'hover:bg-accent hover:text-accent-foreground',
+                'flex items-center gap-2 px-4 h-12 transition-colors',
+                pathname.startsWith(item.href)
+                  ? 'font-semibold text-foreground border-l-4 border-primary'
+                  : 'text-muted-foreground hover:text-foreground',
               )}
             >
-              <item.icon className="h-4 w-4" />
+              <item.icon className="h-5 w-5" />
               <span>{item.label}</span>
             </Link>
           ))}

@@ -83,7 +83,7 @@ export default function PostCardHeader({
           href={`/profile/${authorUsername}`}
           className="flex items-center gap-3 group"
         >
-          <Avatar className="h-10 w-10 ring-2 ring-transparent group-hover:ring-accent/20 transition-all">
+          <Avatar className="h-9 w-9 ring-2 ring-transparent group-hover:ring-accent/20 transition-all">
             <AvatarImage
               src={
                 author.avatar_url !== undefined &&
@@ -100,14 +100,20 @@ export default function PostCardHeader({
           </Avatar>
 
           <div className="flex flex-col">
-            <span className="font-medium text-card-foreground group-hover:text-accent transition-colors">
-              {authorName}
-            </span>
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <span>@{authorUsername}</span>
-              <span>•</span>
-              <time dateTime={timestamp}>{formattedDate}</time>
+            <div className="flex items-baseline gap-1">
+              <span className="font-medium text-card-foreground group-hover:text-accent transition-colors">
+                {authorName}
+              </span>
+              <span className="text-sm text-muted-foreground">
+                @{authorUsername}
+              </span>
             </div>
+            <time
+              dateTime={timestamp}
+              className="text-xs text-muted-foreground"
+            >
+              {formattedDate}
+            </time>
           </div>
         </Link>
 

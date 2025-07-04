@@ -154,7 +154,7 @@ export function GlobalSidebar(): React.ReactElement | undefined {
     <div
       className={cn(
         'fixed left-0 top-16 bottom-0 z-30 transition-all duration-200 ease-in-out',
-        'bg-background backdrop-blur-md border-r border-border',
+        'bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-r border-border',
         isExpanded ? 'w-64' : 'w-16',
       )}
       onMouseEnter={handleMouseEnter}
@@ -208,6 +208,7 @@ export function GlobalSidebar(): React.ReactElement | undefined {
         {/* Collectives Section with Toggleable Submenu */}
         <div className="px-3 border-t border-border">
           <button
+            type="button"
             onClick={handleCollectivesToggle}
             className={cn(
               'w-full flex items-center justify-between gap-3 px-3 py-2.5 mt-3 rounded-lg transition-all duration-200',
@@ -264,6 +265,7 @@ export function GlobalSidebar(): React.ReactElement | undefined {
                   {/* "All" button - always show if we have collectives */}
                   {collectives.length > 0 && (
                     <button
+                      type="button"
                       onClick={() => setCollectivesModalOpen(true)}
                       className={cn(
                         'flex items-center gap-2 px-2 py-1.5 rounded-md transition-all duration-200',
@@ -342,7 +344,7 @@ export function GlobalSidebar(): React.ReactElement | undefined {
                     ? `${index * TRANSITION_DELAY_MULTIPLIER}ms`
                     : '0ms',
                 }}
-                role="button"
+                type="button"
                 aria-label={item.label}
               >
                 <item.icon

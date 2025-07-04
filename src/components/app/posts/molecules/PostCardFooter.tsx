@@ -1,11 +1,6 @@
 'use client';
 
-import {
-  ThumbsUp,
-  ThumbsDown,
-  Share2,
-  MessageSquare,
-} from 'lucide-react';
+import { ThumbsUp, ThumbsDown, Share2, MessageSquare } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import React, { useCallback, useState, useTransition } from 'react';
 
@@ -152,14 +147,14 @@ export default function PostCardFooter({
 
   return (
     <>
-      <Separator />
-      <CardFooter className="px-6 py-3 flex items-center justify-between text-muted-foreground text-sm">
+      <Separator className="" />
+      <CardFooter className="px-4 py-1 flex items-center justify-between text-muted-foreground text-sm">
         <div className="flex items-center gap-6">
           {/* Like Button */}
           <button
             type="button"
             className={cn(
-              'flex items-center gap-1.5 hover:text-primary transition-colors',
+              'flex items-center gap-1.5 text-muted-foreground hover:text-primary transition-colors',
               interactions.isLiked && 'text-primary font-semibold',
             )}
             onClick={handleLikeClick}
@@ -173,7 +168,7 @@ export default function PostCardFooter({
           <button
             type="button"
             className={cn(
-              'flex items-center gap-1.5 hover:text-destructive transition-colors',
+              'flex items-center gap-1.5 text-muted-foreground hover:text-destructive transition-colors',
               interactions.isDisliked && 'text-destructive font-semibold',
             )}
             onClick={handleDislikeClick}
@@ -186,7 +181,7 @@ export default function PostCardFooter({
           {/* Comment Button */}
           <button
             type="button"
-            className="flex items-center gap-1.5 hover:text-primary transition-colors"
+            className="flex items-center gap-1.5 text-muted-foreground hover:text-primary transition-colors"
             onClick={handleCommentsClick}
           >
             <MessageSquare className="h-4 w-4" />

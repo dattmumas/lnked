@@ -1,9 +1,7 @@
-'use client';
-
-import { usePathname } from 'next/navigation';
+import { headers } from 'next/headers';
 import React from 'react';
 
-import { RightSidebar } from '@/components/app/chains/RightSidebar';
+import RightSidebarFeed from '@/components/app/chains/RightSidebarFeed';
 import { cn } from '@/lib/utils/cn';
 
 interface ConditionalRightSidebarProps {
@@ -30,12 +28,12 @@ const ROUTES_WITHOUT_SIDEBAR = [
   '/collectives/new',
 ];
 
-export function ConditionalRightSidebar({
+export async function ConditionalRightSidebar({
   user,
   profile,
   children,
-}: ConditionalRightSidebarProps): React.ReactElement {
-  const pathname = usePathname();
+}: ConditionalRightSidebarProps): Promise<React.ReactElement> {
+  const pathname = (await headers()).get('x-matched-path') ?? '';
 
   // Check if current route should hide the sidebar
   const shouldHideSidebar = ROUTES_WITHOUT_SIDEBAR.some((route) =>
@@ -45,7 +43,7 @@ export function ConditionalRightSidebar({
   return (
     <div
       className={cn(
-        'grid flex-1 min-w-0 ml-16',
+        'grid flex-1 min-w-0 md:ml-16',
         shouldHideSidebar
           ? 'grid-cols-1'
           : 'grid-cols-1 xl:grid-cols-[minmax(0,1fr)_32rem]',
@@ -56,8 +54,8 @@ export function ConditionalRightSidebar({
 
       {/* Right sidebar desktop only - conditionally rendered */}
       {!shouldHideSidebar && (
-        <aside className="hidden xl:block w-[32rem] flex-shrink-0 sticky top-16 h-[calc(100vh_-_4rem)] overflow-y-auto">
-          <RightSidebar user={user} profile={profile} />
+        <aside className="hidden xl:block w-[32rem] flex-shrink-0 sticky top-16 h-[calc(100vh_-_4rem)] overflow-y-auto border-l border-border">
+          <RightSidebarFeed user={user} profile={profile} />
         </aside>
       )}
     </div>

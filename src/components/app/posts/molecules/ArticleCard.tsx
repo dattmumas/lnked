@@ -97,59 +97,49 @@ export default function ArticleCard({
   return (
     <Card
       className={cn(
-        'overflow-hidden rounded-xl border bg-card shadow-sm transition-all duration-300 ease-in-out hover:shadow-md',
+        'overflow-hidden rounded-none bg-transparent shadow-none p-0 border-b border-border last:border-none',
         className,
       )}
     >
-      <div className="p-6">
-        <PostCardHeader
-          author={post.author}
-          timestamp={post.created_at}
-          {...(post.collective ? { collective: post.collective } : {})}
-          showFollowButton={showFollowButton}
-          {...(currentUserId ? { currentUserId } : {})}
-          {...(onFollow ? { onFollow } : {})}
-          isFollowing={isFollowing}
-        />
+      <PostCardHeader
+        author={post.author}
+        timestamp={post.created_at}
+        {...(post.collective ? { collective: post.collective } : {})}
+        showFollowButton={showFollowButton}
+        {...(currentUserId ? { currentUserId } : {})}
+        {...(onFollow ? { onFollow } : {})}
+      />
 
-        {post.thumbnail_url && (
-          <Link href={postUrl} className="mt-4 block">
-            <div className="relative aspect-video w-full overflow-hidden rounded-lg bg-muted">
-              <Image
-                src={post.thumbnail_url}
-                alt={post.title}
-                fill
-                priority={priority}
-                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                className="object-cover transition-transform duration-300 group-hover:scale-105"
-                placeholder="blur"
-                blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCdABmX/9k="
-              />
-            </div>
-          </Link>
+      {/* Title */}
+      <h2 className="text-xl font-bold leading-snug mt-2">
+        <Link href={postUrl} className="hover:underline">
+          {post.title}
+        </Link>
+      </h2>
+
+      {post.thumbnail_url && (
+        <Link href={postUrl} className="mt-2 block">
+          <div className="relative aspect-video w-full overflow-hidden bg-muted">
+            <Image
+              src={post.thumbnail_url}
+              alt={post.title}
+              fill
+              priority={priority}
+              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+              className="object-cover transition-transform duration-300 group-hover:scale-105"
+              placeholder="blur"
+              blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCdABmX/9k="
+            />
+          </div>
+        </Link>
+      )}
+
+      <div className="p-4 pt-3 space-y-2">
+        {excerpt && (
+          <p className="text-sm leading-relaxed text-muted-foreground line-clamp-3">
+            {excerpt}
+          </p>
         )}
-
-        <div className="mt-4">
-          <Link href={postUrl} className="group block">
-            <h2 className="text-xl font-bold leading-snug tracking-tight group-hover:text-primary transition-colors">
-              {post.title}
-            </h2>
-            {excerpt && (
-              <p className="mt-2 text-sm leading-relaxed text-muted-foreground line-clamp-3">
-                {excerpt}
-              </p>
-            )}
-          </Link>
-        </div>
-
-        <div className="mt-4 flex items-center justify-between">
-          <Link
-            href={postUrl}
-            className="text-sm font-semibold text-primary hover:underline"
-          >
-            Read more →
-          </Link>
-        </div>
       </div>
 
       <PostCardFooter

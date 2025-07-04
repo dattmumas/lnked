@@ -183,11 +183,11 @@ export default function VideoCard({
   return (
     <Card
       className={cn(
-        'overflow-hidden rounded-xl border bg-card shadow-sm transition-all duration-300 ease-in-out hover:shadow-md',
+        'overflow-hidden rounded-none bg-transparent shadow-none p-0 border-b border-border last:border-none',
         className,
       )}
     >
-      <div className="p-6">
+      <div className="p-4">
         <PostCardHeader
           author={post.author}
           timestamp={post.created_at}
@@ -197,6 +197,13 @@ export default function VideoCard({
           {...(onFollow ? { onFollow } : {})}
           isFollowing={isFollowing}
         />
+
+        {/* Title */}
+        <h2 className="text-xl font-bold leading-snug mt-2">
+          <a href={postUrl} className="hover:underline">
+            {post.title}
+          </a>
+        </h2>
 
         {/* Video Player or Thumbnail */}
         {isPlaying && canPlayInline === true ? (
@@ -272,40 +279,25 @@ export default function VideoCard({
           </button>
         )}
 
-        <div className="mt-4">
-          <a href={postUrl} className="group block">
-            <h2 className="text-xl font-bold leading-snug tracking-tight group-hover:text-primary transition-colors">
-              {post.title}
-            </h2>
+        <div className="mt-2 space-y-2">
+          {description && (
+            <p className="text-sm leading-relaxed text-muted-foreground line-clamp-3">
+              {description}
+            </p>
+          )}
 
-            {description && (
-              <p className="mt-2 text-sm leading-relaxed text-muted-foreground line-clamp-3">
-                {description}
-              </p>
-            )}
+          {/* Video Status Indicators */}
+          {isProcessing && (
+            <p className="text-sm text-yellow-600 font-medium">
+              Video is processing...
+            </p>
+          )}
 
-            {/* Video Status Indicators */}
-            {isProcessing && (
-              <p className="mt-2 text-sm text-yellow-600 font-medium">
-                Video is processing...
-              </p>
-            )}
-
-            {hasError && (
-              <p className="mt-2 text-sm text-destructive font-medium">
-                Video processing failed
-              </p>
-            )}
-          </a>
-        </div>
-
-        <div className="mt-4 flex items-center justify-between">
-          <a
-            href={postUrl}
-            className="text-sm font-semibold text-primary hover:underline"
-          >
-            Watch video →
-          </a>
+          {hasError && (
+            <p className="text-sm text-destructive font-medium">
+              Video processing failed
+            </p>
+          )}
         </div>
       </div>
 

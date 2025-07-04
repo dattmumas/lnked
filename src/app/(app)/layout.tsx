@@ -52,14 +52,16 @@ export default async function AppLayout({
     <UserProvider user={user} profile={profile}>
       <SpeedInsights />
       <div className="flex min-h-screen flex-col">
-        {/* Global navbar */}
-        <header className="shrink-0 sticky top-0 z-50 bg-background backdrop-blur-md border-b border-border/50">
+        {/* Global navbar (desktop & tablet) */}
+        <header className="hidden md:block shrink-0 sticky top-0 z-50 bg-background backdrop-blur-md border-b border-border/50">
           <ModernNavbar />
         </header>
 
         <div className="flex flex-1">
-          {/* app-wide sidebar */}
-          <GlobalSidebar />
+          {/* app-wide sidebar (desktop only) */}
+          <div className="hidden md:block">
+            <GlobalSidebar />
+          </div>
 
           {/* Main content and conditional right sidebar */}
           <ConditionalRightSidebar user={user} profile={profile}>
