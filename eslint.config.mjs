@@ -39,7 +39,7 @@ const eslintConfig = [
       'src/@types/**/*.d.ts',
 
       // Data access layer
-      'src/lib/data-access/**/*',
+      // 'src/lib/data-access/**/*', // re-enabled linting for data-access
 
       // Landing page files
       'src/components/landing/**/*',
@@ -112,7 +112,6 @@ const eslintConfig = [
       '**/*.otf',
 
       // Deprecated files
-      'src/app/api/chat/conversations/route.ts',
     ],
   },
   {

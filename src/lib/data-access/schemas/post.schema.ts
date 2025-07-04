@@ -1,6 +1,5 @@
 import { z } from 'zod';
 
-import type { Database } from '@/lib/database.types';
 
 // Post type enum from database
 export const PostTypeEnum = z.enum(['text', 'video']);
@@ -28,7 +27,7 @@ export const PostSchema = z.object({
   like_count: z.number(),
   dislike_count: z.number().nullable().transform(val => val ?? undefined),
   view_count: z.number().nullable().transform(val => val ?? undefined),
-  metadata: z.any().transform(val => val as any),
+  metadata: z.any().transform(val => val),
   sharing_settings: z.any().nullable().transform(val => val ?? undefined),
   tsv: z.unknown(),
 });

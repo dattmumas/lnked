@@ -1,5 +1,5 @@
 import { formatDistanceToNow } from 'date-fns';
-import React from 'react';
+import Script from 'next/script';
 
 import { VideoAsset } from '@/lib/data-access/schemas/video.schema';
 
@@ -70,40 +70,41 @@ export default function VideoDetailsServer({
         )}
 
       {/* SEO meta information (hidden from users but available for crawlers) */}
-      <script
+      <Script
+        id={`video-jsonld-${video.id}`}
         type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify({
-            '@context': 'https://schema.org',
-            '@type': 'VideoObject',
-            name:
-              video.title !== null &&
-              video.title !== undefined &&
-              video.title.length > 0
-                ? video.title
-                : 'Untitled Video',
-            description:
-              video.description !== null &&
-              video.description !== undefined &&
-              video.description.length > 0
-                ? video.description
-                : '',
-            duration:
-              video.duration !== null &&
-              video.duration !== undefined &&
-              video.duration > 0
-                ? `PT${video.duration}S`
-                : undefined,
-            uploadDate: formatUploadDate(video.created_at),
-            thumbnailUrl:
-              video.mux_playback_id !== null &&
-              video.mux_playback_id !== undefined &&
-              video.mux_playback_id.length > 0
-                ? `https://image.mux.com/${video.mux_playback_id}/thumbnail.jpg`
-                : undefined,
-          }),
-        }}
-      />
+        strategy="afterInteractive"
+      >
+        {JSON.stringify({
+          '@context': 'https://schema.org',
+          '@type': 'VideoObject',
+          name:
+            video.title !== null &&
+            video.title !== undefined &&
+            video.title.length > 0
+              ? video.title
+              : 'Untitled Video',
+          description:
+            video.description !== null &&
+            video.description !== undefined &&
+            video.description.length > 0
+              ? video.description
+              : '',
+          duration:
+            video.duration !== null &&
+            video.duration !== undefined &&
+            video.duration > 0
+              ? `PT${video.duration}S`
+              : undefined,
+          uploadDate: formatUploadDate(video.created_at),
+          thumbnailUrl:
+            video.mux_playback_id !== null &&
+            video.mux_playback_id !== undefined &&
+            video.mux_playback_id.length > 0
+              ? `https://image.mux.com/${video.mux_playback_id}/thumbnail.jpg`
+              : undefined,
+        })}
+      </Script>
     </div>
   );
 }

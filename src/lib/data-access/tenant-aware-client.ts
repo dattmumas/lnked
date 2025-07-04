@@ -1,5 +1,7 @@
 import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
+
 import type { Database } from '@/lib/database.types';
+import type { SupabaseClient } from '@supabase/supabase-js';
 
 type Tables = Database['public']['Tables'];
 
@@ -8,10 +10,10 @@ type Tables = Database['public']['Tables'];
  * from the current session context to prevent manual tenant_id management
  */
 export class TenantAwareRepositoryClient {
-  private supabase: any;
+  private supabase: SupabaseClient<Database>;
   private tenantId: string | null = null;
 
-  constructor(supabase: any, tenantId: string) {
+  constructor(supabase: SupabaseClient<Database>, tenantId: string) {
     this.supabase = supabase;
     this.tenantId = tenantId;
   }

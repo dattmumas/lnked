@@ -1,4 +1,4 @@
-import { createBrowserClient, createServerClient } from '@supabase/ssr';
+import { createBrowserClient } from '@supabase/ssr';
 
 import { 
   parseChain, 
@@ -19,7 +19,7 @@ import type { Database } from '@/lib/database.types';
  * Handles all chain-related database operations (microthread posts).
  */
 export class ChainRepository {
-  constructor(private supabase: ReturnType<typeof createBrowserClient<Database>> | ReturnType<typeof createServerClient<Database>>) {}
+  constructor(private supabase: ReturnType<typeof createBrowserClient<Database>>  ) {}
 
   /**
    * Create a new chain

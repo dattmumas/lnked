@@ -67,7 +67,10 @@ export async function inviteMemberToCollective(
     .single();
 
   if (memberError || !['owner', 'admin'].includes(memberData?.role)) {
-    return { success: false, error: 'You do not have permission to invite members.' };
+    return {
+      success: false,
+      error: 'You do not have permission to invite members.',
+    };
   }
 
   // Generate a unique invite code
@@ -86,15 +89,45 @@ export async function inviteMemberToCollective(
 
   if (inviteError) {
     console.error('Error creating invite:', inviteError);
-    if (inviteError.code === '23505') { // unique constraint violation
-      return { success: false, error: 'An invite for this email already exists.' };
+    if (inviteError.code === '23505') {
+      // unique constraint violation
+      return {
+        success: false,
+        error: 'An invite for this email already exists.',
+      };
     }
     return { success: false, error: 'Failed to create invite.' };
   }
 
-  // Here you would typically send an email with the invite link:
-  // const inviteLink = `${process.env.NEXT_PUBLIC_BASE_URL}/invite/${inviteCode}`;
-  // await sendEmail({ to: email, subject: "You're invited!", body: `Join here: ${inviteLink}` });
+  // Send invitation email
+  try {
+    // Get collective details for email
+    const { data: collectiveDetails } = await supabase
+      .from('collectives')
+      .select('name')
+      .eq('id', collectiveId)
+      .single();
+
+    const siteUrl =
+      process.env['NEXT_PUBLIC_SITE_URL'] ?? 'http://localhost:3000';
+    const inviteLink = `${siteUrl}/invite/${inviteCode}`;
+
+    const emailResult = await sendInviteEmail({
+      to: email,
+      inviteLink,
+      collectiveName: collectiveDetails?.name ?? 'a collective',
+      role,
+    });
+
+    if (!emailResult.sent) {
+      console.warn('Failed to send invite email:', emailResult.error);
+      // Don't fail the entire operation, but log the issue
+      // The invite is still created and can be resent manually
+    }
+  } catch (emailError) {
+    console.error('Error sending invite email:', emailError);
+    // Continue with success since the invite was created
+  }
 
   revalidatePath(`/collectives/${collectiveId}/members`);
 
@@ -271,13 +304,23 @@ export async function resendCollectiveInvite({
     .select('name')
     .eq('id', collectiveId)
     .single();
-  const siteUrl = process.env['NEXT_PUBLIC_SITE_URL'] ?? 'http://localhost:3000';
+  const siteUrl =
+    process.env['NEXT_PUBLIC_SITE_URL'] ?? 'http://localhost:3000';
   const inviteLink = `${siteUrl}/invite/${invite_code}`;
-  if (invite?.email !== null && invite?.email !== undefined && invite?.role !== null && invite?.role !== undefined) {
+  if (
+    invite?.email !== null &&
+    invite?.email !== undefined &&
+    invite?.role !== null &&
+    invite?.role !== undefined
+  ) {
     await sendInviteEmail({
       to: invite.email,
       inviteLink,
-      collectiveName: collectiveDetails?.name !== null && collectiveDetails?.name !== undefined ? collectiveDetails.name : 'a collective',
+      collectiveName:
+        collectiveDetails?.name !== null &&
+        collectiveDetails?.name !== undefined
+          ? collectiveDetails.name
+          : 'a collective',
       role: invite.role,
     });
   }
@@ -360,18 +403,21 @@ export async function acceptCollectiveInvite({
   const result = Array.isArray(data) ? data[0] : data;
 
   if (!result || !result.success) {
-    return { success: false, error: result?.message ?? 'Failed to accept invite.' };
+    return {
+      success: false,
+      error: result?.message ?? 'Failed to accept invite.',
+    };
   }
-  
+
   if (result.collective_slug) {
     revalidatePath(`/collectives/${result.collective_slug}`);
   }
   revalidatePath('/dashboard');
 
-  return { 
-    success: true, 
+  return {
+    success: true,
     data: {
-      slug: result.collective_slug
-    }
+      slug: result.collective_slug,
+    },
   };
 }

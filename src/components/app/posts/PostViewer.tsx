@@ -1,9 +1,11 @@
 'use client';
 
+import parse from 'html-react-parser';
+import DOMPurify from 'isomorphic-dompurify';
 import { Edit, Share2, MoreHorizontal } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Suspense } from 'react';
+import { Suspense, useMemo } from 'react';
 
 import { CommentSection } from '@/components/app/comments';
 import BookmarkButton from '@/components/app/posts/molecules/BookmarkButton';
@@ -56,6 +58,14 @@ export default function PostViewer({
   const initialUserReaction =
     (viewer.userReaction as 'like' | 'dislike' | null) ?? null;
   const initialBookmarked = viewer.isBookmarked;
+
+  const sanitizedHtml = useMemo(
+    () =>
+      DOMPurify.sanitize(transformImageUrls(post.content ?? ''), {
+        USE_PROFILES: { html: true },
+      }),
+    [post.content],
+  );
 
   return (
     <>
@@ -189,11 +199,7 @@ export default function PostViewer({
             {post.content ? (
               // Check if content contains HTML tags
               post.content.includes('<') && post.content.includes('>') ? (
-                <div
-                  dangerouslySetInnerHTML={{
-                    __html: transformImageUrls(post.content),
-                  }}
-                />
+                parse(sanitizedHtml)
               ) : (
                 // Render plain text with preserved line breaks
                 <div className="whitespace-pre-wrap">{post.content}</div>

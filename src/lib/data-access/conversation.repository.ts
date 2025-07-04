@@ -1,10 +1,9 @@
-import { createBrowserClient, createServerClient } from '@supabase/ssr';
+import { createBrowserClient } from '@supabase/ssr';
 
 import {
   parseConversation,
   parseConversations,
   parseMessage,
-  parseMessages,
   parseMessagesWithSender,
   ConversationInsertSchema,
   ConversationUpdateSchema,
@@ -17,8 +16,6 @@ import {
   type MessageInsert,
   type MessageWithSender,
   type ParticipantInsert,
-  type ConversationParticipant,
-  type MessageReaction,
 } from './schemas/conversation.schema';
 
 import type { Database } from '@/lib/database.types';
@@ -50,7 +47,7 @@ export class ConversationRepository {
   constructor(
     private supabase:
       | ReturnType<typeof createBrowserClient<Database>>
-      | ReturnType<typeof createServerClient<Database>>,
+       ,
   ) {}
 
   /**

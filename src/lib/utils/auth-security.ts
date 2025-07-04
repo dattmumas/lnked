@@ -7,7 +7,15 @@ import type { NextRequest } from 'next/server';
 const ALLOWED_CONTENT_TYPE = 'application/json';
 const MAX_BODY_SIZE_KB = 100;
 const MAX_BODY_SIZE_BYTES = MAX_BODY_SIZE_KB * 1024;
-const CSRF_SECRET = process.env['AUTH_CSRF_SECRET'] || 'fallback-dev-secret-change-in-prod';
+const CSRF_SECRET: string | null = (() => {
+  if (process.env['AUTH_CSRF_SECRET']) return process.env['AUTH_CSRF_SECRET'];
+  if (process.env.NODE_ENV === 'development') {
+    // Non-persistent dev secret – regenerated on each boot / HMR.
+    return crypto.randomUUID();
+  }
+  // Fail-closed in production when secret missing.
+  return null;
+})();
 const COOKIE_MAX_AGE_DAYS = 7;
 const COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * COOKIE_MAX_AGE_DAYS;
 
@@ -15,8 +23,9 @@ const COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * COOKIE_MAX_AGE_DAYS;
 const getAppOrigins = (): readonly string[] => {
   const origins = [
     process.env['NEXT_PUBLIC_APP_URL'],
-    process.env['VERCEL_URL'] !== null && process.env['VERCEL_URL'] !== undefined 
-      ? `https://${process.env['VERCEL_URL']}` 
+    process.env['VERCEL_URL'] !== null &&
+    process.env['VERCEL_URL'] !== undefined
+      ? `https://${process.env['VERCEL_URL']}`
       : undefined,
   ].filter(Boolean) as string[];
 
@@ -30,7 +39,7 @@ const getAppOrigins = (): readonly string[] => {
       // Default development origins
       origins.push('http://localhost:3000', 'https://localhost:3000');
     }
-    
+
     // Support localhost with any port pattern
     for (let port = 3000; port <= 3010; port++) {
       origins.push(`http://localhost:${port}`, `https://localhost:${port}`);
@@ -59,56 +68,85 @@ const isPrivateIPv6 = (hostname: string): boolean => {
     /^\[fd[0-9a-f]{2}:/i, // Unique local addresses (fd00::/8)
     /^\[fe80:/i, // Link-local addresses
   ];
-  
-  return ipv6Patterns.some(pattern => pattern.test(hostname));
+
+  return ipv6Patterns.some((pattern) => pattern.test(hostname));
 };
 
 // CSRF token generation and verification
-const generateCSRFToken = (): string => {
+const encoder = new TextEncoder();
+
+const importHmacKey = async (): Promise<CryptoKey | null> => {
+  if (!CSRF_SECRET) return null;
+  return crypto.subtle.importKey(
+    'raw',
+    encoder.encode(CSRF_SECRET),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign', 'verify'],
+  );
+};
+
+const toHex = (buf: ArrayBuffer): string =>
+  Array.from(new Uint8Array(buf))
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('');
+
+const generateCSRFToken = async (): Promise<string> => {
+  if (!CSRF_SECRET) {
+    throw new Error('AUTH_CSRF_SECRET not configured');
+  }
+
   const timestamp = Date.now().toString();
-  const random = crypto.getRandomValues(new Uint8Array(16));
-  const payload = `${timestamp}:${Array.from(random).map(b => b.toString(16).padStart(2, '0')).join('')}`;
-  
-  return btoa(payload);
+  const randomBytes = crypto.getRandomValues(new Uint8Array(16));
+  const randomHex = Array.from(randomBytes)
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('');
+
+  const data = `${timestamp}:${randomHex}`;
+  const key = await importHmacKey();
+  if (key === null) {
+    throw new Error('Failed to import HMAC key');
+  }
+  const sigBuf = await crypto.subtle.sign('HMAC', key, encoder.encode(data));
+  const sigHex = toHex(sigBuf);
+
+  return btoa(`${data}:${sigHex}`);
 };
 
 const verifyCSRFToken = async (token: string): Promise<boolean> => {
   try {
-    const payload = atob(token);
-    const [timestamp, random] = payload.split(':');
-    
-    if (random === null || random === undefined || random === '') {
-      return false;
+    const decoded = atob(token);
+    const [timestampStr, randomHex, sigHex] = decoded.split(':');
+
+    if (!timestampStr || !randomHex || !sigHex) return false;
+
+    // Timestamp freshness (≤ 1 hour)
+    const ts = Number.parseInt(timestampStr, 10);
+    if (Number.isNaN(ts) || Date.now() - ts > 60 * 60 * 1000) return false;
+
+    // Random part length check
+    if (randomHex.length !== 32) return false;
+
+    if (!CSRF_SECRET) return false; // Fail-closed if secret absent
+
+    const key = await importHmacKey();
+    if (key === null) return false;
+
+    const data = `${timestampStr}:${randomHex}`;
+    const expectedSigBuf = await crypto.subtle.sign(
+      'HMAC',
+      key,
+      encoder.encode(data),
+    );
+    const expectedSigHex = toHex(expectedSigBuf);
+
+    // Constant-time comparison
+    if (expectedSigHex.length !== sigHex.length) return false;
+    let diff = 0;
+    for (let i = 0; i < expectedSigHex.length; i += 1) {
+      diff |= expectedSigHex.charCodeAt(i) ^ sigHex.charCodeAt(i);
     }
-
-    // Verify timestamp is within last hour
-    const tokenTime = parseInt(timestamp || '0', 10);
-    const now = Date.now();
-    const maxAge = 60 * 60 * 1000; // 1 hour
-
-    if (isNaN(tokenTime) || now - tokenTime > maxAge) {
-      return false;
-    }
-
-    // In production, verify HMAC signature
-    if (process.env.NODE_ENV === 'production') {
-      const encoder = new TextEncoder();
-      if (CSRF_SECRET) {
-        await crypto.subtle.importKey(
-          'raw',
-          encoder.encode(CSRF_SECRET),
-          { name: 'HMAC', hash: 'SHA-256' },
-          false,
-          ['verify']
-        );
-      }
-      
-      // For production, implement proper HMAC verification
-      // This is a simplified version - implement full HMAC in production
-      return random.length === 32; // Basic length check
-    }
-
-    return true;
+    return diff === 0;
   } catch {
     return false;
   }
@@ -117,18 +155,22 @@ const verifyCSRFToken = async (token: string): Promise<boolean> => {
 // Zod schema for auth callback payload validation
 export const AuthCallbackSchema = z.object({
   event: z.enum(['SIGNED_IN', 'TOKEN_REFRESHED', 'SIGNED_OUT']),
-  session: z.object({
-    access_token: z.string().min(1),
-    refresh_token: z.string().min(1),
-    expires_at: z.number().int().positive(),
-    expires_in: z.number().int().positive(),
-    token_type: z.literal('bearer'),
-    user: z.object({
-      id: z.string().uuid(),
-      email: z.string().email().optional(),
-      // Add other user fields as needed
-    }).passthrough(),
-  }).optional(),
+  session: z
+    .object({
+      access_token: z.string().min(1),
+      refresh_token: z.string().min(1),
+      expires_at: z.number().int().positive(),
+      expires_in: z.number().int().positive(),
+      token_type: z.literal('bearer'),
+      user: z
+        .object({
+          id: z.string().uuid(),
+          email: z.string().email().optional(),
+          // Add other user fields as needed
+        })
+        .passthrough(),
+    })
+    .optional(),
 });
 
 export type AuthCallbackPayload = z.infer<typeof AuthCallbackSchema>;
@@ -181,42 +223,58 @@ export class AuthSecurityValidator {
    */
   static async validateRequest(
     request: NextRequest,
-    logger: AuthLogger
+    logger: AuthLogger,
   ): Promise<{ valid: boolean; error?: string }> {
-    const clientIP = (request.headers.get('x-forwarded-for') !== null && request.headers.get('x-forwarded-for') !== undefined) 
-      ? request.headers.get('x-forwarded-for') 
-      : (request.headers.get('x-real-ip') !== null && request.headers.get('x-real-ip') !== undefined) 
-        ? request.headers.get('x-real-ip') 
-        : 'unknown';
+    const clientIP =
+      request.headers.get('x-forwarded-for') !== null &&
+      request.headers.get('x-forwarded-for') !== undefined
+        ? request.headers.get('x-forwarded-for')
+        : request.headers.get('x-real-ip') !== null &&
+            request.headers.get('x-real-ip') !== undefined
+          ? request.headers.get('x-real-ip')
+          : 'unknown';
 
     // Check for required CSRF header and verify value
     const csrfToken = request.headers.get('x-supabase-csrf');
     if (csrfToken === null || csrfToken === undefined) {
-      logger.warn('Missing CSRF token', { clientIP, origin: request.headers.get('origin') });
+      logger.warn('Missing CSRF token', {
+        clientIP,
+        origin: request.headers.get('origin'),
+      });
       return { valid: false, error: 'Missing CSRF token' };
     }
 
     const csrfValid = await verifyCSRFToken(csrfToken);
     if (!csrfValid) {
-      logger.warn('Invalid CSRF token', { clientIP, origin: request.headers.get('origin') });
+      logger.warn('Invalid CSRF token', {
+        clientIP,
+        origin: request.headers.get('origin'),
+      });
       return { valid: false, error: 'Invalid CSRF token' };
     }
 
     // Validate origin with enhanced checks
     const origin = request.headers.get('origin');
     const referer = request.headers.get('referer');
-    
+
     if (origin === null && referer === null) {
       logger.warn('Missing origin and referer headers', { clientIP });
       return { valid: false, error: 'Missing origin and referer headers' };
     }
 
-    const requestOrigin = origin !== null && origin !== undefined 
-      ? origin 
-      : (referer !== null && referer !== undefined ? new URL(referer).origin : undefined);
-      
+    const requestOrigin =
+      origin !== null && origin !== undefined
+        ? origin
+        : referer !== null && referer !== undefined
+          ? new URL(referer).origin
+          : undefined;
+
     if (requestOrigin === null || requestOrigin === undefined) {
-      logger.warn('Could not determine request origin', { clientIP, origin, referer });
+      logger.warn('Could not determine request origin', {
+        clientIP,
+        origin,
+        referer,
+      });
       return { valid: false, error: 'Could not determine request origin' };
     }
 
@@ -224,30 +282,45 @@ export class AuthSecurityValidator {
     try {
       const url = new URL(requestOrigin);
       if (isPrivateIPv6(url.hostname)) {
-        logger.warn('IPv6 private range detected', { clientIP, origin: requestOrigin });
+        logger.warn('IPv6 private range detected', {
+          clientIP,
+          origin: requestOrigin,
+        });
         return { valid: false, error: 'Invalid origin: private IPv6 range' };
       }
     } catch {
-      logger.warn('Invalid origin URL format', { clientIP, origin: requestOrigin });
+      logger.warn('Invalid origin URL format', {
+        clientIP,
+        origin: requestOrigin,
+      });
       return { valid: false, error: 'Invalid origin URL format' };
     }
 
     if (!this.APP_ORIGINS.includes(requestOrigin)) {
-      logger.warn('Origin not in allowlist', { 
-        clientIP, 
-        origin: requestOrigin, 
-        allowedOrigins: this.APP_ORIGINS 
+      logger.warn('Origin not in allowlist', {
+        clientIP,
+        origin: requestOrigin,
+        allowedOrigins: this.APP_ORIGINS,
       });
-      return { 
-        valid: false, 
-        error: `Invalid origin: ${requestOrigin}. Expected one of: ${this.APP_ORIGINS.join(', ')}` 
+      return {
+        valid: false,
+        error: `Invalid origin: ${requestOrigin}. Expected one of: ${this.APP_ORIGINS.join(', ')}`,
       };
     }
 
     // Enhanced SameSite validation with fallback for missing header
     const sameSite = request.headers.get('sec-fetch-site');
-    if (sameSite !== null && sameSite !== undefined && sameSite !== 'same-origin' && sameSite !== 'same-site') {
-      logger.warn('Invalid cross-site request', { clientIP, origin: requestOrigin, sameSite });
+    if (
+      sameSite !== null &&
+      sameSite !== undefined &&
+      sameSite !== 'same-origin' &&
+      sameSite !== 'same-site'
+    ) {
+      logger.warn('Invalid cross-site request', {
+        clientIP,
+        origin: requestOrigin,
+        sameSite,
+      });
       return { valid: false, error: 'Invalid cross-site request' };
     }
 
@@ -255,11 +328,14 @@ export class AuthSecurityValidator {
     if (sameSite === null || sameSite === undefined) {
       const isStrictMatch = this.APP_ORIGINS.includes(requestOrigin);
       if (!isStrictMatch) {
-        logger.warn('Missing sec-fetch-site with non-strict origin', { 
-          clientIP, 
-          origin: requestOrigin 
+        logger.warn('Missing sec-fetch-site with non-strict origin', {
+          clientIP,
+          origin: requestOrigin,
         });
-        return { valid: false, error: 'Cross-site request with missing security headers' };
+        return {
+          valid: false,
+          error: 'Cross-site request with missing security headers',
+        };
       }
     }
 
@@ -271,27 +347,37 @@ export class AuthSecurityValidator {
    */
   static async validateBody(
     request: NextRequest,
-    logger: AuthLogger
+    logger: AuthLogger,
   ): Promise<{
     valid: boolean;
     body?: AuthCallbackPayload;
     error?: string;
   }> {
-    const clientIP = (request.headers.get('x-forwarded-for') !== null && request.headers.get('x-forwarded-for') !== undefined) 
-      ? request.headers.get('x-forwarded-for') 
-      : (request.headers.get('x-real-ip') !== null && request.headers.get('x-real-ip') !== undefined) 
-        ? request.headers.get('x-real-ip') 
-        : 'unknown';
+    const clientIP =
+      request.headers.get('x-forwarded-for') !== null &&
+      request.headers.get('x-forwarded-for') !== undefined
+        ? request.headers.get('x-forwarded-for')
+        : request.headers.get('x-real-ip') !== null &&
+            request.headers.get('x-real-ip') !== undefined
+          ? request.headers.get('x-real-ip')
+          : 'unknown';
 
     // Check Content-Type
     const contentType = request.headers.get('content-type');
-    if (contentType === null || contentType === undefined || !contentType.includes(ALLOWED_CONTENT_TYPE)) {
-      logger.warn('Invalid content-type', { 
-        clientIP, 
-        contentType, 
-        expected: ALLOWED_CONTENT_TYPE 
+    if (
+      contentType === null ||
+      contentType === undefined ||
+      !contentType.includes(ALLOWED_CONTENT_TYPE)
+    ) {
+      logger.warn('Invalid content-type', {
+        clientIP,
+        contentType,
+        expected: ALLOWED_CONTENT_TYPE,
       });
-      return { valid: false, error: `Invalid content-type. Expected: ${ALLOWED_CONTENT_TYPE}` };
+      return {
+        valid: false,
+        error: `Invalid content-type. Expected: ${ALLOWED_CONTENT_TYPE}`,
+      };
     }
 
     // Check Content-Length if available, but don't trust it exclusively
@@ -299,12 +385,15 @@ export class AuthSecurityValidator {
     if (contentLength !== null && contentLength !== undefined) {
       const size = parseInt(contentLength, 10);
       if (!isNaN(size) && size > MAX_BODY_SIZE_BYTES) {
-        logger.warn('Body too large via Content-Length', { 
-          clientIP, 
-          size, 
-          maxSize: MAX_BODY_SIZE_BYTES 
+        logger.warn('Body too large via Content-Length', {
+          clientIP,
+          size,
+          maxSize: MAX_BODY_SIZE_BYTES,
         });
-        return { valid: false, error: `Body too large. Max: ${MAX_BODY_SIZE_KB}KB` };
+        return {
+          valid: false,
+          error: `Body too large. Max: ${MAX_BODY_SIZE_KB}KB`,
+        };
       }
     }
 
@@ -325,12 +414,15 @@ export class AuthSecurityValidator {
 
         totalSize += value.length;
         if (totalSize > MAX_BODY_SIZE_BYTES) {
-          logger.warn('Body too large via streaming', { 
-            clientIP, 
-            size: totalSize, 
-            maxSize: MAX_BODY_SIZE_BYTES 
+          logger.warn('Body too large via streaming', {
+            clientIP,
+            size: totalSize,
+            maxSize: MAX_BODY_SIZE_BYTES,
           });
-          return { valid: false, error: `Body too large. Max: ${MAX_BODY_SIZE_KB}KB` };
+          return {
+            valid: false,
+            error: `Body too large. Max: ${MAX_BODY_SIZE_KB}KB`,
+          };
         }
 
         chunks.push(value);
@@ -347,26 +439,27 @@ export class AuthSecurityValidator {
 
       const bodyText = new TextDecoder().decode(body);
       const parsedBody: unknown = JSON.parse(bodyText);
-      
+
       const parsed = AuthCallbackSchema.safeParse(parsedBody);
       if (!parsed.success) {
-        logger.warn('Invalid payload schema', { 
-          clientIP, 
-          errors: parsed.error.errors.map(e => e.message) 
+        logger.warn('Invalid payload schema', {
+          clientIP,
+          errors: parsed.error.errors.map((e) => e.message),
         });
-        return { 
-          valid: false, 
-          error: `Invalid payload: ${parsed.error.errors.map(e => e.message).join(', ')}` 
+        return {
+          valid: false,
+          error: `Invalid payload: ${parsed.error.errors.map((e) => e.message).join(', ')}`,
         };
       }
 
       return { valid: true, body: parsed.data };
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Invalid JSON';
+      const errorMessage =
+        error instanceof Error ? error.message : 'Invalid JSON';
       logger.warn('Body parsing error', { clientIP, error: errorMessage });
-      return { 
-        valid: false, 
-        error: errorMessage
+      return {
+        valid: false,
+        error: errorMessage,
       };
     }
   }
@@ -374,7 +467,7 @@ export class AuthSecurityValidator {
   /**
    * Generate a CSRF token for client use
    */
-  static generateCSRFToken(): string {
+  static async generateCSRFToken(): Promise<string> {
     return generateCSRFToken();
   }
 }
@@ -394,9 +487,12 @@ export class CookieSecurityManager {
     try {
       // Edge runtime compatible cookie header handling
       const setCookieHeaders: string[] = [];
-      
+
       // Try modern API first, fallback for Edge runtime
-      if ('getSetCookie' in response.headers && typeof response.headers.getSetCookie === 'function') {
+      if (
+        'getSetCookie' in response.headers &&
+        typeof response.headers.getSetCookie === 'function'
+      ) {
         setCookieHeaders.push(...response.headers.getSetCookie());
       } else {
         // Edge runtime fallback - iterate through all headers
@@ -411,10 +507,12 @@ export class CookieSecurityManager {
       setCookieHeaders.forEach((cookieHeader) => {
         const cookieParts = cookieHeader.split('=');
         const cookieName = cookieParts[0] ?? '';
-        
-        if (this.SUPABASE_COOKIE_NAMES.some(name => cookieName.includes(name))) {
+
+        if (
+          this.SUPABASE_COOKIE_NAMES.some((name) => cookieName.includes(name))
+        ) {
           const updatedCookie = this.addSecurityFlags(cookieHeader);
-          
+
           // Remove old header and add new one
           response.headers.delete('set-cookie');
           response.headers.append('Set-Cookie', updatedCookie);
@@ -427,16 +525,19 @@ export class CookieSecurityManager {
   }
 
   private static addSecurityFlags(cookieHeader: string): string {
-    const [nameValue, ...attributes] = cookieHeader.split(';').map(s => s.trim());
-    
+    const [nameValue, ...attributes] = cookieHeader
+      .split(';')
+      .map((s) => s.trim());
+
     // Parse existing Max-Age if present, otherwise use default
-    const existingMaxAge = attributes.find(attr => 
-      attr.toLowerCase().startsWith('max-age=')
+    const existingMaxAge = attributes.find((attr) =>
+      attr.toLowerCase().startsWith('max-age='),
     );
-    
-    const maxAge = existingMaxAge !== null && existingMaxAge !== undefined
-      ? existingMaxAge.split('=')[1] 
-      : COOKIE_MAX_AGE_SECONDS.toString();
+
+    const maxAge =
+      existingMaxAge !== null && existingMaxAge !== undefined
+        ? existingMaxAge.split('=')[1]
+        : COOKIE_MAX_AGE_SECONDS.toString();
 
     const secureFlags = [
       'Secure',
@@ -446,12 +547,14 @@ export class CookieSecurityManager {
     ];
 
     // Remove existing security flags and add new ones
-    const filteredAttributes = attributes.filter(attr => {
+    const filteredAttributes = attributes.filter((attr) => {
       const lowerAttr = attr.toLowerCase();
-      return !lowerAttr.startsWith('secure') &&
-             !lowerAttr.startsWith('httponly') &&
-             !lowerAttr.startsWith('samesite') &&
-             !lowerAttr.startsWith('max-age');
+      return (
+        !lowerAttr.startsWith('secure') &&
+        !lowerAttr.startsWith('httponly') &&
+        !lowerAttr.startsWith('samesite') &&
+        !lowerAttr.startsWith('max-age')
+      );
     });
 
     return [nameValue, ...filteredAttributes, ...secureFlags].join('; ');
@@ -465,7 +568,7 @@ export class SessionManager {
    */
   static validateSessionIntegrity(
     authResponse: SupabaseAuthResponse,
-    expectedUserId?: string
+    expectedUserId?: string,
   ): SessionValidationResult {
     try {
       // Trust the setSession result as primary validation
@@ -475,11 +578,18 @@ export class SessionManager {
 
       const session = authResponse.data?.session;
       if (session === null || session === undefined) {
-        return { valid: false, error: 'Session not found in setSession result' };
+        return {
+          valid: false,
+          error: 'Session not found in setSession result',
+        };
       }
 
       // Validate user ID if provided
-      if (expectedUserId !== null && expectedUserId !== undefined && session.user?.id !== expectedUserId) {
+      if (
+        expectedUserId !== null &&
+        expectedUserId !== undefined &&
+        session.user?.id !== expectedUserId
+      ) {
         return { valid: false, error: 'Session user ID mismatch' };
       }
 
@@ -488,9 +598,10 @@ export class SessionManager {
 
       return { valid: true, session };
     } catch (error) {
-      return { 
-        valid: false, 
-        error: error instanceof Error ? error.message : 'Session validation failed' 
+      return {
+        valid: false,
+        error:
+          error instanceof Error ? error.message : 'Session validation failed',
       };
     }
   }
@@ -501,12 +612,12 @@ export class SessionManager {
   static clearAuthCookies(response: Response): void {
     const cookiesToClear = getSupabaseCookieNames();
 
-    cookiesToClear.forEach(cookieName => {
+    cookiesToClear.forEach((cookieName) => {
       // Use append to handle multiple cookies properly
       response.headers.append(
         'Set-Cookie',
-        `${cookieName}=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT; HttpOnly; Secure; SameSite=Lax`
+        `${cookieName}=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT; HttpOnly; Secure; SameSite=Lax`,
       );
     });
   }
-} 
+}

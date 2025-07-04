@@ -1,6 +1,6 @@
-import { createBrowserClient, createServerClient } from '@supabase/ssr';
+import { createBrowserClient } from '@supabase/ssr';
 
-import { 
+import {
   parseVideoAsset,
   parseVideoAssets,
   parseVideosWithUser,
@@ -9,25 +9,27 @@ import {
   type VideoAsset,
   type VideoInsert,
   type VideoUpdate,
-  type VideoWithUser
+  type VideoWithUser,
 } from './schemas/video.schema';
 
 import type { Database } from '@/lib/database.types';
 
 /**
  * Video Repository
- * 
+ *
  * Handles all video asset database operations.
  */
 export class VideoRepository {
-  constructor(private supabase: ReturnType<typeof createBrowserClient<Database>> | ReturnType<typeof createServerClient<Database>>) {}
+  constructor(
+    private supabase: ReturnType<typeof createBrowserClient<Database>>,
+  ) {}
 
   /**
    * Create a new video asset
    */
   async create(video: VideoInsert): Promise<VideoAsset | undefined> {
     const dbVideo = VideoInsertSchema.parse(video);
-    
+
     const { data, error } = await this.supabase
       .from('video_assets')
       .insert(dbVideo)
@@ -64,7 +66,8 @@ export class VideoRepository {
   async getVideosWithUser(limit = 20): Promise<VideoWithUser[]> {
     const { data, error } = await this.supabase
       .from('video_assets')
-      .select(`
+      .select(
+        `
         *,
         user:users!user_id (
           id,
@@ -72,7 +75,8 @@ export class VideoRepository {
           full_name,
           avatar_url
         )
-      `)
+      `,
+      )
       .eq('status', 'ready')
       .is('deleted_at', null)
       .order('created_at', { ascending: false })
@@ -107,14 +111,17 @@ export class VideoRepository {
   /**
    * Update a video
    */
-  async update(id: string, updates: VideoUpdate): Promise<VideoAsset | undefined> {
+  async update(
+    id: string,
+    updates: VideoUpdate,
+  ): Promise<VideoAsset | undefined> {
     const dbUpdates = VideoUpdateSchema.parse(updates);
-    
+
     const { data, error } = await this.supabase
       .from('video_assets')
       .update({
         ...dbUpdates,
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
       })
       .eq('id', id)
       .select()
@@ -135,7 +142,7 @@ export class VideoRepository {
       .from('video_assets')
       .update({
         status: 'deleted',
-        deleted_at: new Date().toISOString()
+        deleted_at: new Date().toISOString(),
       })
       .eq('id', id);
 
@@ -145,7 +152,10 @@ export class VideoRepository {
   /**
    * Update video status
    */
-  async updateStatus(id: string, status: 'processing' | 'ready' | 'error' | 'deleted'): Promise<boolean> {
+  async updateStatus(
+    id: string,
+    status: 'processing' | 'ready' | 'error' | 'deleted',
+  ): Promise<boolean> {
     const { error } = await this.supabase
       .from('video_assets')
       .update({ status })
@@ -158,19 +168,24 @@ export class VideoRepository {
    * Update Mux data for a video
    */
   async updateMuxData(
-    id: string, 
-    muxAssetId: string, 
+    id: string,
+    muxAssetId: string,
     muxPlaybackId: string,
-    duration?: number
+    duration?: number,
   ): Promise<VideoAsset | undefined> {
-    const updates: Record<string, any> = {
+    const updates: {
+      mux_asset_id: string;
+      mux_playback_id: string;
+      status: string;
+      duration?: number;
+    } = {
       mux_asset_id: muxAssetId,
       mux_playback_id: muxPlaybackId,
-      status: 'ready'
+      status: 'ready',
     };
 
     if (duration !== undefined) {
-      updates['duration'] = duration;
+      updates.duration = duration;
     }
 
     const { data, error } = await this.supabase
@@ -193,7 +208,9 @@ export class VideoRepository {
    */
   incrementViewCount(_id: string): boolean {
     // TODO: Implement when view_count column is added to the database
-    console.warn('incrementViewCount not implemented - view_count column missing');
+    console.warn(
+      'incrementViewCount not implemented - view_count column missing',
+    );
     return true;
   }
 
@@ -215,7 +232,8 @@ export class VideoRepository {
   async search(query: string, limit = 20): Promise<VideoWithUser[]> {
     const { data, error } = await this.supabase
       .from('video_assets')
-      .select(`
+      .select(
+        `
         *,
         user:users!user_id (
           id,
@@ -223,7 +241,8 @@ export class VideoRepository {
           full_name,
           avatar_url
         )
-      `)
+      `,
+      )
       .or(`title.ilike.%${query}%,description.ilike.%${query}%`)
       .eq('status', 'ready')
       .is('deleted_at', null)
@@ -239,14 +258,17 @@ export class VideoRepository {
   /**
    * Update video by Mux asset ID
    */
-  async updateByMuxAssetId(muxAssetId: string, updates: VideoUpdate): Promise<VideoAsset | undefined> {
+  async updateByMuxAssetId(
+    muxAssetId: string,
+    updates: VideoUpdate,
+  ): Promise<VideoAsset | undefined> {
     const dbUpdates = VideoUpdateSchema.parse(updates);
-    
+
     const { data, error } = await this.supabase
       .from('video_assets')
       .update({
         ...dbUpdates,
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
       })
       .eq('mux_asset_id', muxAssetId)
       .select()
@@ -262,14 +284,17 @@ export class VideoRepository {
   /**
    * Update video by Mux upload ID
    */
-  async updateByMuxUploadId(muxUploadId: string, updates: VideoUpdate): Promise<VideoAsset | undefined> {
+  async updateByMuxUploadId(
+    muxUploadId: string,
+    updates: VideoUpdate,
+  ): Promise<VideoAsset | undefined> {
     const dbUpdates = VideoUpdateSchema.parse(updates);
-    
+
     const { data, error } = await this.supabase
       .from('video_assets')
       .update({
         ...dbUpdates,
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
       })
       .eq('mux_upload_id', muxUploadId)
       .select()
@@ -298,4 +323,4 @@ export class VideoRepository {
 
     return parseVideoAssets(data);
   }
-} 
+}

@@ -3,17 +3,19 @@
 import { cookies } from 'next/headers';
 import { NextRequest, NextResponse } from 'next/server';
 
-import { getSupabaseSingleton, createCookieHandler } from '@/lib/supabase/singleton-client';
-import { 
-  AuthSecurityValidator, 
-  CookieSecurityManager, 
+import {
+  getSupabaseSingleton,
+  createCookieHandler,
+} from '@/lib/supabase/singleton-client';
+import {
+  AuthSecurityValidator,
+  CookieSecurityManager,
   SessionManager,
-  type AuthCallbackPayload 
+  type AuthCallbackPayload,
 } from '@/lib/utils/auth-security';
 import { recordAPIMetrics, createMetricsTimer } from '@/lib/utils/metrics';
 import { checkRateLimit, getClientIP } from '@/lib/utils/rate-limiting';
 import { APILogger } from '@/lib/utils/structured-logger';
-
 
 // Constants
 const RATE_LIMIT_CONFIG = {
@@ -33,10 +35,10 @@ const logger = new APILogger({ endpoint: '/api/auth/callback' });
 
 /**
  * Enterprise-grade auth callback route with comprehensive security
- * 
+ *
  * Security Features:
  * 1. CSRF/Origin validation
- * 2. Body size/schema validation  
+ * 2. Body size/schema validation
  * 3. Rate limiting (30 req/min/IP)
  * 4. Singleton Supabase client
  * 5. Cookie security enforcement
@@ -49,20 +51,25 @@ const logger = new APILogger({ endpoint: '/api/auth/callback' });
 export async function POST(request: NextRequest): Promise<NextResponse> {
   const timer = createMetricsTimer();
   const clientIP = getClientIP(request);
-  
+
   try {
     // 1. CSRF and Origin Validation
-    const securityValidation = await AuthSecurityValidator.validateRequest(request, logger);
+    const securityValidation = await AuthSecurityValidator.validateRequest(
+      request,
+      logger,
+    );
     if (!securityValidation.valid) {
       logger.warn('CSRF/Origin validation failed', {
-        ...(securityValidation.error ? { error: securityValidation.error } : {}),
+        ...(securityValidation.error
+          ? { error: securityValidation.error }
+          : {}),
         metadata: {
           clientIP,
           origin: request.headers.get('origin'),
           referer: request.headers.get('referer'),
-        }
+        },
       });
-      
+
       recordAPIMetrics({
         endpoint: '/api/auth/callback',
         method: 'POST',
@@ -70,15 +77,18 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         duration: timer(),
         error: 'csrf_validation_failed',
       });
-      
+
       return NextResponse.json(
         { error: 'Invalid request origin or missing CSRF token' },
-        { status: 403 }
+        { status: 403 },
       );
     }
 
     // 2. Rate Limiting - using enhanced rate limiting
-    const rateLimitResult = await checkRateLimit(clientIP, 'notifications_per_ip');
+    const rateLimitResult = await checkRateLimit(
+      clientIP,
+      'notifications_per_ip',
+    );
 
     if (!rateLimitResult.allowed) {
       logger.warn('Rate limit exceeded', {
@@ -86,7 +96,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           clientIP,
           remaining: rateLimitResult.remaining,
           resetTime: rateLimitResult.resetTime,
-        }
+        },
       });
 
       recordAPIMetrics({
@@ -99,18 +109,30 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
       const response = NextResponse.json(
         { error: 'Too many requests' },
-        { status: 429 }
+        { status: 429 },
       );
-      
-      response.headers.set('X-RateLimit-Limit', RATE_LIMIT_CONFIG.maxRequests.toString());
-      response.headers.set('X-RateLimit-Remaining', rateLimitResult.remaining.toString());
-      response.headers.set('X-RateLimit-Reset', Math.ceil(rateLimitResult.resetTime.getTime() / 1000).toString());
-      
+
+      response.headers.set(
+        'X-RateLimit-Limit',
+        RATE_LIMIT_CONFIG.maxRequests.toString(),
+      );
+      response.headers.set(
+        'X-RateLimit-Remaining',
+        rateLimitResult.remaining.toString(),
+      );
+      response.headers.set(
+        'X-RateLimit-Reset',
+        Math.ceil(rateLimitResult.resetTime.getTime() / 1000).toString(),
+      );
+
       return response;
     }
 
     // 3. Body Size and Schema Validation
-    const bodyValidation = await AuthSecurityValidator.validateBody(request, logger);
+    const bodyValidation = await AuthSecurityValidator.validateBody(
+      request,
+      logger,
+    );
     if (!bodyValidation.valid || !bodyValidation.body) {
       logger.warn('Body validation failed', {
         ...(bodyValidation.error ? { error: bodyValidation.error } : {}),
@@ -126,8 +148,13 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       });
 
       return NextResponse.json(
-        { error: bodyValidation.error !== null && bodyValidation.error !== undefined ? bodyValidation.error : 'Invalid request body' },
-        { status: 400 }
+        {
+          error:
+            bodyValidation.error !== null && bodyValidation.error !== undefined
+              ? bodyValidation.error
+              : 'Invalid request body',
+        },
+        { status: 400 },
       );
     }
 
@@ -139,18 +166,23 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         metadata: {
           event,
           hasSession: Boolean(session),
-          userId: session?.user?.id !== null && session?.user?.id !== undefined 
-            ? `user_${session.user.id.substring(0, USER_ID_ANONYMIZATION_LENGTH)}***` 
-            : undefined,
+          userId:
+            session?.user?.id !== null && session?.user?.id !== undefined
+              ? `user_${session.user.id.substring(0, USER_ID_ANONYMIZATION_LENGTH)}***`
+              : undefined,
           clientIP,
-        }
+        },
       });
     }
 
     // 4. Initialize Singleton Supabase Client with Secure Cookie Handler
     const response = NextResponse.json({ status: 'success' });
     const cookieStore = await cookies();
-    const cookieHandler = createCookieHandler(cookieStore, response, LOG_CONFIG.verbose);
+    const cookieHandler = createCookieHandler(
+      cookieStore,
+      response,
+      LOG_CONFIG.verbose,
+    );
     const supabase = await getSupabaseSingleton(cookieHandler);
 
     // 5. Process Auth Events with Session Rollback
@@ -159,10 +191,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
     if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
       if (!session) {
-        logger.error('Session data missing for sign-in event', { 
-          metadata: { event, clientIP }
+        logger.error('Session data missing for sign-in event', {
+          metadata: { event, clientIP },
         });
-        
+
         recordAPIMetrics({
           endpoint: '/api/auth/callback',
           method: 'POST',
@@ -170,10 +202,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           duration: timer(),
           error: 'missing_session_data',
         });
-        
+
         return NextResponse.json(
           { error: 'Session data required for sign-in events' },
-          { status: 400 }
+          { status: 400 },
         );
       }
 
@@ -195,24 +227,28 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
         // Clear any potentially set cookies on failure
         SessionManager.clearAuthCookies(response);
-        
+
         return NextResponse.json(
           { error: 'Failed to establish session' },
-          { status: 500 }
+          { status: 500 },
         );
       }
 
       // 6. Session Integrity Validation with Rollback (optimized - no extra round-trip)
       // Simple inline validation to avoid complex type issues
       const sessionValidation = {
-        valid: setSessionResult.error === null && setSessionResult.data?.session !== null,
+        valid:
+          setSessionResult.error === null &&
+          setSessionResult.data?.session !== null,
         session: setSessionResult.data?.session,
-        error: setSessionResult.error ? 'Session validation failed' : undefined
+        error: setSessionResult.error ? 'Session validation failed' : undefined,
       };
 
       if (!sessionValidation.valid) {
         logger.error('Session validation failed after setting', {
-          ...(sessionValidation.error ? { error: sessionValidation.error } : {}),
+          ...(sessionValidation.error
+            ? { error: sessionValidation.error }
+            : {}),
           metadata: { event, clientIP },
         });
 
@@ -226,25 +262,24 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
         // Rollback: Clear all auth cookies
         SessionManager.clearAuthCookies(response);
-        
+
         return NextResponse.json(
           { error: 'Session validation failed' },
-          { status: 500 }
+          { status: 500 },
         );
       }
 
       sessionResult = sessionValidation.session as SessionResult;
-      
+
       if (LOG_CONFIG.verbose) {
         logger.info('Session successfully established', {
           metadata: {
             event,
             sessionValid: true,
             clientIP,
-          }
+          },
         });
       }
-
     } else if (event === 'SIGNED_OUT') {
       if (LOG_CONFIG.verbose) {
         logger.info('Processing sign-out', { metadata: { event, clientIP } });
@@ -281,24 +316,24 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           event,
           duration,
           clientIP,
-        }
+        },
       });
     }
 
     return response;
-
   } catch (error: unknown) {
     // 9. Comprehensive Error Handling with Metrics
     const duration = timer();
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    
+    const errorMessage =
+      error instanceof Error ? error.message : 'Unknown error';
+
     logger.error('Auth callback unexpected error', {
       error: errorMessage,
       metadata: {
         clientIP,
         duration,
         stack: error instanceof Error ? error.stack : undefined,
-      }
+      },
     });
 
     recordAPIMetrics({
@@ -312,12 +347,12 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     // Create error response with cleared cookies
     const errorResponse = NextResponse.json(
       { error: 'Internal server error' },
-      { status: 500 }
+      { status: 500 },
     );
 
     // Clear potentially corrupted auth state
     SessionManager.clearAuthCookies(errorResponse);
-    
+
     return errorResponse;
   }
 }

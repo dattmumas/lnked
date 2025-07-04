@@ -279,12 +279,56 @@ const validateCollectivePermissions = async (
   }
 };
 
-// Slug conflict resolution - simplified since slug field doesn't exist in posts table
-const resolveSlugConflict = (baseSlug: string): string => {
-  // For now, return the base slug with timestamp to avoid conflicts
-  // TODO: Add slug field to posts table and implement proper conflict resolution
-  const timestamp = Date.now().toString(TIMESTAMP_BASE);
-  return `${baseSlug}-${timestamp}`.substring(0, MAX_SLUG_LENGTH);
+// Slug conflict resolution with database-backed uniqueness checking
+const resolveSlugConflict = async (
+  supabase: Awaited<ReturnType<typeof createServerSupabaseClient>>,
+  baseSlug: string,
+  tenantId: string,
+  excludePostId?: string,
+): Promise<string> => {
+  let candidateSlug = baseSlug;
+  let attempt = 0;
+  const maxAttempts = 10; // Prevent infinite loops
+
+  while (attempt < maxAttempts) {
+    // Check if slug exists in the tenant
+    let query = supabase
+      .from('posts')
+      .select('id')
+      .eq('slug', candidateSlug)
+      .eq('tenant_id', tenantId)
+      .neq('status', 'removed'); // Don't consider deleted posts
+
+    // Exclude current post if updating
+    if (excludePostId) {
+      query = query.neq('id', excludePostId);
+    }
+
+    const { data: existingPost } = await query.maybeSingle();
+
+    if (!existingPost) {
+      // Slug is available
+      return candidateSlug;
+    }
+
+    // Generate next candidate
+    attempt++;
+    if (attempt === 1) {
+      // First attempt: add current timestamp
+      const timestamp = Date.now().toString(TIMESTAMP_BASE);
+      candidateSlug = `${baseSlug}-${timestamp}`;
+    } else {
+      // Subsequent attempts: add incremental number
+      candidateSlug = `${baseSlug}-${attempt}`;
+    }
+
+    // Ensure we don't exceed max length
+    candidateSlug = candidateSlug.substring(0, MAX_SLUG_LENGTH);
+  }
+
+  // Fallback: use timestamp if all attempts failed
+  const fallbackTimestamp = Date.now().toString(TIMESTAMP_BASE);
+  return `${baseSlug.substring(0, MAX_SLUG_LENGTH - fallbackTimestamp.length - 1)}-${fallbackTimestamp}`;
 };
 
 type CreatePostFormValues = CreatePostServerValues;
@@ -396,12 +440,13 @@ export async function createPost(
       },
     };
   }
-  const postSlug = resolveSlugConflict(baseSlug);
-  const dbStatus = derivePostStatus(is_public, published_at);
 
   // Determine tenant_id: use collective_id if present, otherwise use user_id as personal tenant
   // TODO: Replace with proper tenant lookup once database types are updated
   const tenant_id = collectiveId ?? user.id;
+
+  const postSlug = await resolveSlugConflict(supabase, baseSlug, tenant_id);
+  const dbStatus = derivePostStatus(is_public, published_at);
 
   const postToInsert: TablesInsert<'posts'> = {
     author_id: user.id,
@@ -544,7 +589,7 @@ export async function updatePost(
   const { data: existingPost, error: fetchError } = await supabase
     .from('posts')
     .select(
-      'id, author_id, collective_id, published_at, is_public, status, title, collective:collectives!collective_id(slug, owner_id)',
+      'id, author_id, collective_id, tenant_id, published_at, is_public, status, title, collective:collectives!collective_id(slug, owner_id)',
     )
     .eq('id', postId)
     .neq('status', 'removed') // Prevent editing soft-deleted posts
@@ -681,7 +726,12 @@ export async function updatePost(
         },
       };
     }
-    const newSlug = resolveSlugConflict(newBaseSlug);
+    const newSlug = await resolveSlugConflict(
+      supabase,
+      newBaseSlug,
+      existingPost.tenant_id,
+      postId,
+    );
     postSlug = newSlug;
     updateData.slug = newSlug;
 

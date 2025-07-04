@@ -1,9 +1,10 @@
-import { createBrowserClient, createServerClient } from '@supabase/ssr';
+import { createBrowserClient } from '@supabase/ssr';
 import { z } from 'zod';
 
-import { 
+import { HttpError, HttpStatusCode } from '@/lib/constants/errors';
+
+import {
   parseComment,
-  parseComments,
   parseCommentsWithAuthor,
   CommentInsertSchema,
   CommentReactionTypeEnum,
@@ -11,15 +12,18 @@ import {
   type Comment,
   type CommentInsert,
   type CommentWithAuthor,
-  type CommentReaction,
-  type CommentMetadata
+  type CommentMetadata,
 } from './schemas/comment.schema';
-import { HttpError, HttpStatusCode } from '@/lib/constants/errors';
+
 import type { Database } from '@/lib/database.types';
 
 // Repository-specific error types
 export class CommentRepositoryError extends HttpError {
-  constructor(message: string, status: HttpStatusCode = HttpStatusCode.InternalServerError, public context?: Record<string, unknown>) {
+  constructor(
+    message: string,
+    status: HttpStatusCode = HttpStatusCode.InternalServerError,
+    public context?: Record<string, unknown>,
+  ) {
     super(status, message);
     this.name = 'CommentRepositoryError';
   }
@@ -27,14 +31,20 @@ export class CommentRepositoryError extends HttpError {
 
 export class CommentNotFoundError extends CommentRepositoryError {
   constructor(commentId: string) {
-    super(`Comment not found: ${commentId}`, HttpStatusCode.NotFound, { commentId });
+    super(`Comment not found: ${commentId}`, HttpStatusCode.NotFound, {
+      commentId,
+    });
     this.name = 'CommentNotFoundError';
   }
 }
 
 export class CommentValidationError extends CommentRepositoryError {
   constructor(message: string, details?: Record<string, unknown>) {
-    super(`Validation failed: ${message}`, HttpStatusCode.UnprocessableEntity, details);
+    super(
+      `Validation failed: ${message}`,
+      HttpStatusCode.UnprocessableEntity,
+      details,
+    );
     this.name = 'CommentValidationError';
   }
 }
@@ -46,8 +56,13 @@ const DEFAULT_REPLY_LIMIT = 20;
 const MAX_REPLY_LIMIT = 50;
 
 // Entity types with proper typing
-export const COMMENT_ENTITY_TYPES = ['video', 'post', 'collective', 'profile'] as const;
-export type CommentEntityType = typeof COMMENT_ENTITY_TYPES[number];
+export const COMMENT_ENTITY_TYPES = [
+  'video',
+  'post',
+  'collective',
+  'profile',
+] as const;
+export type CommentEntityType = (typeof COMMENT_ENTITY_TYPES)[number];
 
 // Reaction types from enum
 export type ReactionType = z.infer<typeof CommentReactionTypeEnum>;
@@ -101,13 +116,13 @@ interface CommentWithReactionsRaw extends CommentWithAuthorRaw {
 
 // Client interface for dependency injection
 interface SupabaseClient {
-  from: ReturnType<typeof createBrowserClient<Database>>['from'] | ReturnType<typeof createServerClient<Database>>['from'];
-  rpc: ReturnType<typeof createBrowserClient<Database>>['rpc'] | ReturnType<typeof createServerClient<Database>>['rpc'];
+  from: ReturnType<typeof createBrowserClient<Database>>['from'];
+  rpc: ReturnType<typeof createBrowserClient<Database>>['rpc'];
 }
 
 /**
  * Enhanced Comment Repository with comprehensive error handling, pagination, and performance optimizations
- * 
+ *
  * Key improvements:
  * - Proper type safety with Zod validation
  * - Cursor-based pagination for performance
@@ -119,7 +134,10 @@ interface SupabaseClient {
 export class CommentRepository {
   constructor(
     private supabase: SupabaseClient,
-    private logger?: (message: string, context?: Record<string, unknown>) => void
+    private logger?: (
+      message: string,
+      context?: Record<string, unknown>,
+    ) => void,
   ) {}
 
   /**
@@ -129,7 +147,7 @@ export class CommentRepository {
     try {
       // Validate input
       const validatedComment = CommentInsertSchema.parse(comment);
-      
+
       // Validate metadata if present
       if (validatedComment.metadata) {
         MetadataSchema.parse(validatedComment.metadata);
@@ -140,7 +158,7 @@ export class CommentRepository {
         throw new CommentRepositoryError(
           'User not authorized to create comment for different user',
           HttpStatusCode.Forbidden,
-          { userId, commentUserId: validatedComment.user_id }
+          { userId, commentUserId: validatedComment.user_id },
         );
       }
 
@@ -152,23 +170,37 @@ export class CommentRepository {
         .single();
 
       if (error) {
-        this.logger?.('Comment creation failed', { error, comment: validatedComment });
-        throw new CommentRepositoryError('Failed to create comment', HttpStatusCode.InternalServerError, { error });
+        this.logger?.('Comment creation failed', {
+          error,
+          comment: validatedComment,
+        });
+        throw new CommentRepositoryError(
+          'Failed to create comment',
+          HttpStatusCode.InternalServerError,
+          { error },
+        );
       }
 
       if (!data) {
-        throw new CommentRepositoryError('Comment creation returned no data', HttpStatusCode.InternalServerError);
+        throw new CommentRepositoryError(
+          'Comment creation returned no data',
+          HttpStatusCode.InternalServerError,
+        );
       }
 
       const parsedComment = parseComment(data);
-      this.logger?.('Comment created successfully', { commentId: parsedComment.id });
-      
+      this.logger?.('Comment created successfully', {
+        commentId: parsedComment.id,
+      });
+
       return parsedComment;
     } catch (error) {
       if (error instanceof CommentRepositoryError) {
         throw error;
       }
-      throw new CommentValidationError('Invalid comment data', { originalError: error });
+      throw new CommentValidationError('Invalid comment data', {
+        originalError: error,
+      });
     }
   }
 
@@ -178,35 +210,48 @@ export class CommentRepository {
   async getByEntity(
     entityType: CommentEntityType,
     entityId: string,
-    options: CommentPaginationParams & { userId?: string; includeReactions?: boolean } = {}
+    options: CommentPaginationParams & {
+      userId?: string;
+      includeReactions?: boolean;
+    } = {},
   ): Promise<CommentPaginationResult<CommentWithAuthor>> {
     try {
-      const { 
-        limit = DEFAULT_COMMENT_LIMIT, 
-        cursor, 
+      const {
+        limit = DEFAULT_COMMENT_LIMIT,
+        cursor,
         createdBefore,
         userId,
-        includeReactions = true 
+        includeReactions = true,
       } = options;
 
       // Validate and clamp limit
       const clampedLimit = Math.min(limit, MAX_COMMENT_LIMIT);
-      
+
       if (!COMMENT_ENTITY_TYPES.includes(entityType)) {
         throw new CommentValidationError(`Invalid entity type: ${entityType}`);
       }
 
       // Use optimized RPC function for efficient comment fetching with reactions
-      const { data, error } = await (this.supabase as any)
-        .rpc('get_entity_comments_with_reactions', {
-          p_entity_type: entityType,
-          p_entity_id: entityId,
-          p_limit: clampedLimit + 1, // Fetch one extra to check if more exist
-          p_cursor: cursor || null,
-          p_created_before: createdBefore?.toISOString() || null,
-          p_user_id: userId || null,
-          p_include_reactions: includeReactions
-        });
+      // Note: Using any cast for RPC as Supabase client doesn't have proper typing for custom RPC functions
+      const { data, error } = await (
+        this.supabase as unknown as {
+          rpc: (
+            name: string,
+            params: Record<string, unknown>,
+          ) => Promise<{
+            data: unknown;
+            error: unknown;
+          }>;
+        }
+      ).rpc('get_entity_comments_with_reactions', {
+        p_entity_type: entityType,
+        p_entity_id: entityId,
+        p_limit: clampedLimit + 1, // Fetch one extra to check if more exist
+        p_cursor: cursor || null,
+        p_created_before: createdBefore?.toISOString() || null,
+        p_user_id: userId || null,
+        p_include_reactions: includeReactions,
+      });
 
       if (error) {
         this.logger?.('Failed to fetch entity comments', {
@@ -214,10 +259,14 @@ export class CommentRepository {
           entityType,
           entityId,
         });
-        throw new CommentRepositoryError('Failed to fetch comments', HttpStatusCode.InternalServerError, { error });
+        throw new CommentRepositoryError(
+          'Failed to fetch comments',
+          HttpStatusCode.InternalServerError,
+          { error },
+        );
       }
 
-      const comments = (data || []) as CommentWithReactionsRaw[];
+      const comments = (data || []) as unknown as CommentWithReactionsRaw[];
       const hasMore = comments.length > clampedLimit;
       const resultComments = hasMore ? comments.slice(0, -1) : comments;
 
@@ -225,29 +274,35 @@ export class CommentRepository {
       if (hasMore && resultComments.length > 0) {
         const last = resultComments[resultComments.length - 1];
         if (last?.created_at && last?.id) {
-          nextCursor = Buffer.from(`${last.created_at}:${last.id}`).toString('base64');
+          nextCursor = Buffer.from(`${last.created_at}:${last.id}`).toString(
+            'base64',
+          );
         }
       }
 
       const parsedComments = parseCommentsWithAuthor(resultComments);
 
-      this.logger?.('Entity comments fetched successfully', { 
-        entityType, 
-        entityId, 
+      this.logger?.('Entity comments fetched successfully', {
+        entityType,
+        entityId,
         count: parsedComments.length,
-        hasMore 
+        hasMore,
       });
 
       return {
         data: parsedComments,
         ...(nextCursor ? { nextCursor } : {}),
-        hasMore
+        hasMore,
       };
     } catch (error) {
       if (error instanceof CommentRepositoryError) {
         throw error;
       }
-      throw new CommentRepositoryError('Failed to fetch entity comments', HttpStatusCode.InternalServerError, { error });
+      throw new CommentRepositoryError(
+        'Failed to fetch entity comments',
+        HttpStatusCode.InternalServerError,
+        { error },
+      );
     }
   }
 
@@ -255,28 +310,42 @@ export class CommentRepository {
    * Get replies to a comment with pagination
    */
   async getReplies(
-    parentId: string, 
-    options: CommentPaginationParams & { userId?: string } = {}
+    parentId: string,
+    options: CommentPaginationParams & { userId?: string } = {},
   ): Promise<CommentPaginationResult<CommentWithAuthor>> {
     try {
       const { limit = DEFAULT_REPLY_LIMIT, cursor, userId } = options;
       const clampedLimit = Math.min(limit, MAX_REPLY_LIMIT);
 
       // Use optimized RPC function for efficient reply fetching with reactions
-      const { data, error } = await (this.supabase as any)
-        .rpc('get_comment_replies_with_reactions', {
-          p_parent_id: parentId,
-          p_limit: clampedLimit + 1,
-          p_cursor: cursor || null,
-          p_user_id: userId || null
-        });
+      // Note: Using unknown cast for RPC as Supabase client doesn't have proper typing for custom RPC functions
+      const { data, error } = await (
+        this.supabase as unknown as {
+          rpc: (
+            name: string,
+            params: Record<string, unknown>,
+          ) => Promise<{
+            data: unknown;
+            error: unknown;
+          }>;
+        }
+      ).rpc('get_comment_replies_with_reactions', {
+        p_parent_id: parentId,
+        p_limit: clampedLimit + 1,
+        p_cursor: cursor || null,
+        p_user_id: userId || null,
+      });
 
       if (error) {
         this.logger?.('Failed to fetch comment replies', { error, parentId });
-        throw new CommentRepositoryError('Failed to fetch replies', HttpStatusCode.InternalServerError, { error });
+        throw new CommentRepositoryError(
+          'Failed to fetch replies',
+          HttpStatusCode.InternalServerError,
+          { error },
+        );
       }
 
-      const replies = (data || []) as CommentWithReactionsRaw[];
+      const replies = (data || []) as unknown as CommentWithReactionsRaw[];
       const hasMore = replies.length > clampedLimit;
       const resultReplies = hasMore ? replies.slice(0, -1) : replies;
 
@@ -284,35 +353,45 @@ export class CommentRepository {
       if (hasMore && resultReplies.length > 0) {
         const lastR = resultReplies[resultReplies.length - 1];
         if (lastR?.created_at && lastR?.id) {
-          nextCursor = Buffer.from(`${lastR.created_at}:${lastR.id}`).toString('base64');
+          nextCursor = Buffer.from(`${lastR.created_at}:${lastR.id}`).toString(
+            'base64',
+          );
         }
       }
 
       const parsedReplies = parseCommentsWithAuthor(resultReplies);
 
-      this.logger?.('Comment replies fetched successfully', { 
-        parentId, 
+      this.logger?.('Comment replies fetched successfully', {
+        parentId,
         count: parsedReplies.length,
-        hasMore 
+        hasMore,
       });
 
       return {
         data: parsedReplies,
         ...(nextCursor ? { nextCursor } : {}),
-        hasMore
+        hasMore,
       };
     } catch (error) {
       if (error instanceof CommentRepositoryError) {
         throw error;
       }
-      throw new CommentRepositoryError('Failed to fetch comment replies', HttpStatusCode.InternalServerError, { error });
+      throw new CommentRepositoryError(
+        'Failed to fetch comment replies',
+        HttpStatusCode.InternalServerError,
+        { error },
+      );
     }
   }
 
   /**
    * Update a comment with proper authorization
    */
-  async update(commentId: string, content: string, userId?: string): Promise<Comment> {
+  async update(
+    commentId: string,
+    content: string,
+    userId?: string,
+  ): Promise<Comment> {
     try {
       if (!content || content.trim().length === 0) {
         throw new CommentValidationError('Comment content cannot be empty');
@@ -325,7 +404,7 @@ export class CommentRepository {
           throw new CommentRepositoryError(
             'User not authorized to update this comment',
             HttpStatusCode.Forbidden,
-            { commentId, userId }
+            { commentId, userId },
           );
         }
       }
@@ -343,7 +422,11 @@ export class CommentRepository {
 
       if (error) {
         this.logger?.('Comment update failed', { error, commentId });
-        throw new CommentRepositoryError('Failed to update comment', HttpStatusCode.InternalServerError, { error });
+        throw new CommentRepositoryError(
+          'Failed to update comment',
+          HttpStatusCode.InternalServerError,
+          { error },
+        );
       }
 
       if (!data) {
@@ -352,13 +435,17 @@ export class CommentRepository {
 
       const updatedComment = parseComment(data);
       this.logger?.('Comment updated successfully', { commentId });
-      
+
       return updatedComment;
     } catch (error) {
       if (error instanceof CommentRepositoryError) {
         throw error;
       }
-      throw new CommentRepositoryError('Failed to update comment', HttpStatusCode.InternalServerError, { error });
+      throw new CommentRepositoryError(
+        'Failed to update comment',
+        HttpStatusCode.InternalServerError,
+        { error },
+      );
     }
   }
 
@@ -374,7 +461,7 @@ export class CommentRepository {
           throw new CommentRepositoryError(
             'User not authorized to delete this comment',
             HttpStatusCode.Forbidden,
-            { commentId, userId }
+            { commentId, userId },
           );
         }
       }
@@ -389,7 +476,11 @@ export class CommentRepository {
 
       if (error) {
         this.logger?.('Comment deletion failed', { error, commentId });
-        throw new CommentRepositoryError('Failed to delete comment', HttpStatusCode.InternalServerError, { error });
+        throw new CommentRepositoryError(
+          'Failed to delete comment',
+          HttpStatusCode.InternalServerError,
+          { error },
+        );
       }
 
       this.logger?.('Comment deleted successfully', { commentId });
@@ -397,14 +488,22 @@ export class CommentRepository {
       if (error instanceof CommentRepositoryError) {
         throw error;
       }
-      throw new CommentRepositoryError('Failed to delete comment', HttpStatusCode.InternalServerError, { error });
+      throw new CommentRepositoryError(
+        'Failed to delete comment',
+        HttpStatusCode.InternalServerError,
+        { error },
+      );
     }
   }
 
   /**
    * Add a reaction to a comment with conflict handling
    */
-  async addReaction(commentId: string, userId: string, reactionType: ReactionType): Promise<void> {
+  async addReaction(
+    commentId: string,
+    userId: string,
+    reactionType: ReactionType,
+  ): Promise<void> {
     try {
       // Validate reaction type
       CommentReactionTypeEnum.parse(reactionType);
@@ -413,35 +512,57 @@ export class CommentRepository {
       await this.getById(commentId);
 
       // Use upsert with proper conflict resolution
-      const { error } = await this.supabase
-        .from('comment_reactions')
-        .upsert({
+      const { error } = await this.supabase.from('comment_reactions').upsert(
+        {
           comment_id: commentId,
           user_id: userId,
           reaction_type: reactionType,
-          created_at: new Date().toISOString()
-        }, {
-          onConflict: 'comment_id,user_id,reaction_type'
-        });
+          created_at: new Date().toISOString(),
+        },
+        {
+          onConflict: 'comment_id,user_id,reaction_type',
+        },
+      );
 
       if (error) {
-        this.logger?.('Failed to add comment reaction', { error, commentId, userId, reactionType });
-        throw new CommentRepositoryError('Failed to add reaction', HttpStatusCode.InternalServerError, { error });
+        this.logger?.('Failed to add comment reaction', {
+          error,
+          commentId,
+          userId,
+          reactionType,
+        });
+        throw new CommentRepositoryError(
+          'Failed to add reaction',
+          HttpStatusCode.InternalServerError,
+          { error },
+        );
       }
 
-      this.logger?.('Comment reaction added successfully', { commentId, userId, reactionType });
+      this.logger?.('Comment reaction added successfully', {
+        commentId,
+        userId,
+        reactionType,
+      });
     } catch (error) {
       if (error instanceof CommentRepositoryError) {
         throw error;
       }
-      throw new CommentRepositoryError('Failed to add comment reaction', HttpStatusCode.InternalServerError, { error });
+      throw new CommentRepositoryError(
+        'Failed to add comment reaction',
+        HttpStatusCode.InternalServerError,
+        { error },
+      );
     }
   }
 
   /**
    * Remove a reaction from a comment
    */
-  async removeReaction(commentId: string, userId: string, reactionType: ReactionType): Promise<void> {
+  async removeReaction(
+    commentId: string,
+    userId: string,
+    reactionType: ReactionType,
+  ): Promise<void> {
     try {
       CommentReactionTypeEnum.parse(reactionType);
 
@@ -455,23 +576,43 @@ export class CommentRepository {
         });
 
       if (error) {
-        this.logger?.('Failed to remove comment reaction', { error, commentId, userId, reactionType });
-        throw new CommentRepositoryError('Failed to remove reaction', HttpStatusCode.InternalServerError, { error });
+        this.logger?.('Failed to remove comment reaction', {
+          error,
+          commentId,
+          userId,
+          reactionType,
+        });
+        throw new CommentRepositoryError(
+          'Failed to remove reaction',
+          HttpStatusCode.InternalServerError,
+          { error },
+        );
       }
 
-      this.logger?.('Comment reaction removed successfully', { commentId, userId, reactionType });
+      this.logger?.('Comment reaction removed successfully', {
+        commentId,
+        userId,
+        reactionType,
+      });
     } catch (error) {
       if (error instanceof CommentRepositoryError) {
         throw error;
       }
-      throw new CommentRepositoryError('Failed to remove comment reaction', HttpStatusCode.InternalServerError, { error });
+      throw new CommentRepositoryError(
+        'Failed to remove comment reaction',
+        HttpStatusCode.InternalServerError,
+        { error },
+      );
     }
   }
 
   /**
    * Get user reactions for comments (for UI state)
    */
-  async getUserReactions(userId: string, commentIds: string[]): Promise<Map<string, Set<ReactionType>>> {
+  async getUserReactions(
+    userId: string,
+    commentIds: string[],
+  ): Promise<Map<string, Set<ReactionType>>> {
     try {
       if (commentIds.length === 0) {
         return new Map();
@@ -479,30 +620,40 @@ export class CommentRepository {
 
       const { data, error } = await this.supabase
         .from('comment_reactions')
-        .select(`
+        .select(
+          `
           comment_id,
           reaction_type,
           comments!inner(id)
-        `)
+        `,
+        )
         .eq('user_id', userId)
         .in('comment_id', commentIds)
         .is('comments.deleted_at', null); // Only include reactions for non-deleted comments
 
       if (error) {
-        this.logger?.('Failed to fetch user reactions', { error, userId, commentIds });
-        throw new CommentRepositoryError('Failed to fetch user reactions', HttpStatusCode.InternalServerError, { error });
+        this.logger?.('Failed to fetch user reactions', {
+          error,
+          userId,
+          commentIds,
+        });
+        throw new CommentRepositoryError(
+          'Failed to fetch user reactions',
+          HttpStatusCode.InternalServerError,
+          { error },
+        );
       }
 
       const reactionMap = new Map<string, Set<ReactionType>>();
-      
-      for (const reaction of (data || [])) {
+
+      for (const reaction of data || []) {
         const commentId = reaction.comment_id;
-        const type = reaction.reaction_type as ReactionType;
-        
+        const type = reaction.reaction_type;
+
         if (!reactionMap.has(commentId)) {
           reactionMap.set(commentId, new Set());
         }
-        
+
         reactionMap.get(commentId)?.add(type);
       }
 
@@ -511,7 +662,11 @@ export class CommentRepository {
       if (error instanceof CommentRepositoryError) {
         throw error;
       }
-      throw new CommentRepositoryError('Failed to fetch user reactions', HttpStatusCode.InternalServerError, { error });
+      throw new CommentRepositoryError(
+        'Failed to fetch user reactions',
+        HttpStatusCode.InternalServerError,
+        { error },
+      );
     }
   }
 
@@ -536,7 +691,9 @@ export class CommentRepository {
   /**
    * Get reaction counts for comments (DB-side aggregation)
    */
-  private async getReactionCounts(commentIds: string[]): Promise<Map<string, ReactionCountRaw[]>> {
+  private async getReactionCounts(
+    commentIds: string[],
+  ): Promise<Map<string, ReactionCountRaw[]>> {
     if (commentIds.length === 0) {
       return new Map();
     }
@@ -553,31 +710,33 @@ export class CommentRepository {
 
     // Group and count reactions
     const reactionMap = new Map<string, Map<ReactionType, number>>();
-    
+
     for (const reaction of data) {
       const commentId = reaction.comment_id;
-      const type = reaction.reaction_type as ReactionType;
-      
+      const type = reaction.reaction_type;
+
       if (!reactionMap.has(commentId)) {
         reactionMap.set(commentId, new Map());
       }
-      
+
       const typeMap = reactionMap.get(commentId)!;
       typeMap.set(type, (typeMap.get(type) || 0) + 1);
     }
 
     // Convert to the desired format
     const result = new Map<string, ReactionCountRaw[]>();
-    
+
     for (const [commentId, typeMap] of reactionMap) {
-      const counts: ReactionCountRaw[] = Array.from(typeMap.entries()).map(([reaction_type, count]) => ({
-        comment_id: commentId,
-        reaction_type,
-        count,
-      }));
+      const counts: ReactionCountRaw[] = Array.from(typeMap.entries()).map(
+        ([reaction_type, count]) => ({
+          comment_id: commentId,
+          reaction_type,
+          count,
+        }),
+      );
       result.set(commentId, counts);
     }
 
     return result;
   }
-} 
+}

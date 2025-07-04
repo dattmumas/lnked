@@ -1,6 +1,5 @@
-import { createBrowserClient, createServerClient } from '@supabase/ssr';
+import { createBrowserClient } from '@supabase/ssr';
 
-import type { Database } from '@/lib/database.types';
 import {
   parsePost,
   parsePosts,
@@ -11,13 +10,10 @@ import {
   type PostInsert,
   type PostUpdate,
   type PostWithAuthor,
-  type PostReaction,
-  type PostBookmark,
 } from './schemas/post.schema';
-import {
-  createTenantAwareRepository,
-  getCurrentTenantId,
-} from './tenant-aware';
+import { createTenantAwareRepository } from './tenant-aware';
+
+import type { Database } from '@/lib/database.types';
 
 interface PostFilters {
   authorId?: string;
@@ -38,9 +34,7 @@ interface PostFilters {
  */
 export class PostRepository {
   constructor(
-    private supabase:
-      | ReturnType<typeof createBrowserClient<Database>>
-      | ReturnType<typeof createServerClient<Database>>,
+    private supabase: ReturnType<typeof createBrowserClient<Database>>,
   ) {}
 
   /**
@@ -323,7 +317,20 @@ export class PostRepository {
     }
 
     // Extract posts from the join result
-    const posts = data.map((item) => (item as any).posts);
+    interface BookmarkWithPost {
+      posts: {
+        id: string;
+        title: string;
+        author_info: {
+          id: string;
+          username: string | null;
+          full_name: string | null;
+          avatar_url: string | null;
+        };
+        [key: string]: unknown;
+      };
+    }
+    const posts = data.map((item) => (item as BookmarkWithPost).posts);
     return parsePostsWithAuthor(posts);
   }
 
