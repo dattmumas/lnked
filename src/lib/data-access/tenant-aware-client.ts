@@ -91,6 +91,14 @@ export class TenantAwareRepositoryClient {
   async deletePostBookmark(data: { user_id: string; post_id: string }) {
     return this.supabase.from('post_bookmarks').delete().match(data);
   }
+
+  private getTenantId(): string {
+    if (this.tenantId === null || this.tenantId === undefined) {
+      throw new Error('Tenant ID is required but not set');
+    }
+
+    return this.tenantId;
+  }
 }
 
 /**

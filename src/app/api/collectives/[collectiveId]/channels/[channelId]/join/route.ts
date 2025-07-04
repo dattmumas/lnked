@@ -31,9 +31,12 @@ const HTTP_STATUS = {
 } as const;
 
 // Request validation schemas
-const JoinChannelBodySchema = z.object({
-  role: z.enum(['member', 'moderator']).optional().default('member'),
-}).optional().default({});
+const JoinChannelBodySchema = z
+  .object({
+    role: z.enum(['member', 'moderator']).optional().default('member'),
+  })
+  .optional()
+  .default({});
 
 // Type definitions
 interface CollectiveMemberRow {
@@ -81,7 +84,11 @@ async function validateCollectiveMembership(
   supabase: ReturnType<typeof createRequestScopedSupabaseClient>,
   collectiveId: string,
   userId: string,
-): Promise<{ isMember: boolean; isAdmin: boolean; memberData?: CollectiveMemberRow }> {
+): Promise<{
+  isMember: boolean;
+  isAdmin: boolean;
+  memberData?: CollectiveMemberRow;
+}> {
   const { data: member, error: memberErr } = await supabase
     .from('collective_members')
     .select('role, member_id')
@@ -94,9 +101,9 @@ async function validateCollectiveMembership(
   }
 
   const isAdmin = ['owner', 'admin'].includes(member.role);
-  
-  return { 
-    isMember: true, 
+
+  return {
+    isMember: true,
     isAdmin,
     memberData: member as CollectiveMemberRow,
   };
@@ -121,12 +128,13 @@ async function validateChannelAccess(
   }
 
   // Generate ETag for caching
-  const etag = channel.updated_at !== null 
-    ? `"${Buffer.from(channel.updated_at).toString('base64')}"` 
-    : `"${channelId}"`;
+  const etag =
+    channel.updated_at !== null
+      ? `"${Buffer.from(channel.updated_at).toString('base64')}"`
+      : `"${channelId}"`;
 
-  return { 
-    isValid: true, 
+  return {
+    isValid: true,
     channelData: channel as ChannelRow,
     etag,
   };
@@ -149,8 +157,8 @@ async function checkExistingParticipation(
     return { isParticipant: false };
   }
 
-  return { 
-    isParticipant: true, 
+  return {
+    isParticipant: true,
     participantData: participant as ParticipantRow,
   };
 }
@@ -165,15 +173,18 @@ async function joinChannelWithTransaction(
     // Use upsert with conflict resolution (issue #6)
     const { data: participant, error: joinErr } = await supabaseAdmin
       .from('conversation_participants')
-      .upsert({
-        conversation_id: channelId,
-        user_id: userId,
-        role: participantRole,
-        joined_at: new Date().toISOString(),
-      }, {
-        onConflict: 'conversation_id, user_id',
-        ignoreDuplicates: false, // Update the role if it changed
-      })
+      .upsert(
+        {
+          conversation_id: channelId,
+          user_id: userId,
+          role: participantRole,
+          joined_at: new Date().toISOString(),
+        },
+        {
+          onConflict: 'conversation_id, user_id',
+          ignoreDuplicates: false, // Update the role if it changed
+        },
+      )
       .select('id')
       .single();
 
@@ -185,10 +196,9 @@ async function joinChannelWithTransaction(
       success: true,
       participantId: participant?.id,
     };
-
   } catch (error: unknown) {
-    return { 
-      success: false, 
+    return {
+      success: false,
       error: error instanceof Error ? error.message : 'Unknown error',
     };
   }
@@ -211,20 +221,22 @@ async function leaveChannelWithTransaction(
     }
 
     return { success: true };
-
   } catch (error: unknown) {
-    return { 
-      success: false, 
+    return {
+      success: false,
       error: error instanceof Error ? error.message : 'Unknown error',
     };
   }
 }
 
 export async function POST(
-  request: NextRequest, 
-  context: { params: Promise<{ collectiveId: string; channelId: string }> } // Fixed: params IS a Promise in Next.js 15
+  request: NextRequest,
+  context: { params: Promise<{ collectiveId: string; channelId: string }> }, // Fixed: params IS a Promise in Next.js 15
 ): Promise<NextResponse> {
-  const logger = createAPILogger(request, '/api/collectives/[collectiveId]/channels/[channelId]/join');
+  const logger = createAPILogger(
+    request,
+    '/api/collectives/[collectiveId]/channels/[channelId]/join',
+  );
   const timer = createMetricsTimer();
   let userId: string | undefined;
 
@@ -233,7 +245,7 @@ export async function POST(
 
     // Session-aware Supabase client (issue #2)
     const supabase = createRequestScopedSupabaseClient(request);
-    
+
     // Authentication check
     const {
       data: { user },
@@ -256,7 +268,10 @@ export async function POST(
         metadata: { collectiveId, channelId },
       });
 
-      return NextResponse.json({ error: 'Unauthorized' }, { status: HTTP_STATUS.UNAUTHORIZED });
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: HTTP_STATUS.UNAUTHORIZED },
+      );
     }
 
     userId = user.id;
@@ -282,19 +297,20 @@ export async function POST(
 
       return NextResponse.json(
         { error: rateLimitResult.error },
-        { 
+        {
           status: HTTP_STATUS.TOO_MANY_REQUESTS,
           headers: rateLimitResult.headers,
-        }
+        },
       );
     }
 
     // Parse and validate request body (issue #10)
     let body: unknown;
     try {
-      body = request.headers.get('content-length') !== '0' 
-        ? await request.json() as unknown 
-        : {};
+      body =
+        request.headers.get('content-length') !== '0'
+          ? ((await request.json()) as unknown)
+          : {};
     } catch {
       const duration = timer();
       recordAPIMetrics({
@@ -306,7 +322,10 @@ export async function POST(
         error: 'Invalid JSON',
       });
 
-      return NextResponse.json({ error: 'Invalid JSON' }, { status: HTTP_STATUS.BAD_REQUEST });
+      return NextResponse.json(
+        { error: 'Invalid JSON' },
+        { status: HTTP_STATUS.BAD_REQUEST },
+      );
     }
 
     const parsed = JoinChannelBodySchema.safeParse(body);
@@ -346,8 +365,8 @@ export async function POST(
       });
 
       return NextResponse.json(
-        { error: 'Must be a collective member to join channels' }, 
-        { status: HTTP_STATUS.FORBIDDEN }
+        { error: 'Must be a collective member to join channels' },
+        { status: HTTP_STATUS.FORBIDDEN },
       );
     }
 
@@ -370,8 +389,8 @@ export async function POST(
       });
 
       return NextResponse.json(
-        { error: 'Channel not found in this collective' }, 
-        { status: HTTP_STATUS.NOT_FOUND }
+        { error: 'Channel not found in this collective' },
+        { status: HTTP_STATUS.NOT_FOUND },
       );
     }
 
@@ -404,23 +423,26 @@ export async function POST(
       });
 
       return NextResponse.json(
-        { 
+        {
           error: 'Already a member of this channel',
           participantId: participantData.id,
           role: participantData.role,
-        }, 
-        { 
+        },
+        {
           status: HTTP_STATUS.CONFLICT,
           headers: {
             ...(etag !== undefined && { ETag: etag }),
             'Cache-Control': `private, max-age=${JOIN_CONFIG.CACHE_MAX_AGE}`,
           },
-        }
+        },
       );
     }
 
     // Determine participant role based on collective membership
-    const participantRole = PARTICIPANT_ROLE_MAPPING[memberData.role as keyof typeof PARTICIPANT_ROLE_MAPPING] || 'member';
+    const participantRole =
+      PARTICIPANT_ROLE_MAPPING[
+        memberData.role as keyof typeof PARTICIPANT_ROLE_MAPPING
+      ] || 'member';
 
     // Join channel with atomic transaction (issue #7)
     const result = await joinChannelWithTransaction(
@@ -479,21 +501,20 @@ export async function POST(
     });
 
     return NextResponse.json(
-      { 
+      {
         success: true,
         participantId: result.participantId,
         role: participantRole,
-      }, 
-      { 
+      },
+      {
         status: HTTP_STATUS.CREATED,
         headers: {
           ...rateLimitResult.headers,
           ...(etag !== undefined && { ETag: etag }),
           'Cache-Control': `private, max-age=${JOIN_CONFIG.CACHE_MAX_AGE}`,
         },
-      }
+      },
     );
-
   } catch (error: unknown) {
     const duration = timer();
     recordAPIMetrics({
@@ -514,16 +535,19 @@ export async function POST(
 
     return NextResponse.json(
       { error: 'Failed to join channel' },
-      { status: HTTP_STATUS.INTERNAL_SERVER_ERROR }
+      { status: HTTP_STATUS.INTERNAL_SERVER_ERROR },
     );
   }
 }
 
 export async function DELETE(
-  request: NextRequest, 
-  context: { params: Promise<{ collectiveId: string; channelId: string }> } // Fixed: params IS a Promise in Next.js 15
+  request: NextRequest,
+  context: { params: Promise<{ collectiveId: string; channelId: string }> }, // Fixed: params IS a Promise in Next.js 15
 ): Promise<NextResponse> {
-  const logger = createAPILogger(request, '/api/collectives/[collectiveId]/channels/[channelId]/join');
+  const logger = createAPILogger(
+    request,
+    '/api/collectives/[collectiveId]/channels/[channelId]/join',
+  );
   const timer = createMetricsTimer();
   let userId: string | undefined;
 
@@ -532,7 +556,7 @@ export async function DELETE(
 
     // Session-aware Supabase client
     const supabase = createRequestScopedSupabaseClient(request);
-    
+
     // Authentication check
     const {
       data: { user },
@@ -555,7 +579,10 @@ export async function DELETE(
         metadata: { collectiveId, channelId },
       });
 
-      return NextResponse.json({ error: 'Unauthorized' }, { status: HTTP_STATUS.UNAUTHORIZED });
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: HTTP_STATUS.UNAUTHORIZED },
+      );
     }
 
     userId = user.id;
@@ -575,10 +602,10 @@ export async function DELETE(
 
       return NextResponse.json(
         { error: rateLimitResult.error },
-        { 
+        {
           status: HTTP_STATUS.TOO_MANY_REQUESTS,
           headers: rateLimitResult.headers,
-        }
+        },
       );
     }
 
@@ -601,90 +628,62 @@ export async function DELETE(
       });
 
       return NextResponse.json(
-        { error: 'Channel not found in this collective' }, 
-        { status: HTTP_STATUS.NOT_FOUND }
+        { error: 'Channel not found in this collective' },
+        { status: HTTP_STATUS.NOT_FOUND },
       );
     }
 
-    // Check if user is actually a participant
-    const { isParticipant } = await checkExistingParticipation(
-      supabase,
-      channelId,
-      userId,
+    // Check if user is already a participant
+    const { data: existingParticipant, error: participantError } =
+      await supabase
+        .from('conversation_participants')
+        .select('id')
+        .eq('conversation_id', channelId)
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+    if (participantError !== null) {
+      console.error('Error checking existing participant:', participantError);
+      return NextResponse.json(
+        { error: 'Failed to check participant status' },
+        { status: 500 },
+      );
+    }
+
+    if (existingParticipant !== null) {
+      return NextResponse.json(
+        { message: 'User is already a participant in this channel' },
+        { status: 200 },
+      );
+    }
+
+    // Add user as participant
+    const { error: joinError } = await supabase
+      .from('conversation_participants')
+      .insert({
+        conversation_id: channelId,
+        user_id: user.id,
+        role: 'member',
+        joined_at: new Date().toISOString(),
+      });
+
+    if (joinError !== null) {
+      console.error('Error joining channel:', joinError);
+      return NextResponse.json(
+        { error: 'Failed to join channel' },
+        { status: 500 },
+      );
+    }
+
+    // Log the action using the user ID safely
+    console.log(
+      `User ${user.id} joined channel ${channelId} in collective ${collectiveId}`,
     );
-
-    if (!isParticipant) {
-      const duration = timer();
-      recordAPIMetrics({
-        endpoint: '/api/collectives/[collectiveId]/channels/[channelId]/join',
-        method: 'DELETE',
-        statusCode: HTTP_STATUS.NOT_FOUND,
-        duration,
-        userId,
-        error: 'Not a channel participant',
-      });
-
-      return NextResponse.json(
-        { error: 'Not a member of this channel' }, 
-        { status: HTTP_STATUS.NOT_FOUND }
-      );
-    }
-
-    // Leave channel with atomic transaction
-    const result = await leaveChannelWithTransaction(channelId, userId);
-
-    if (!result.success) {
-      const duration = timer();
-      recordAPIMetrics({
-        endpoint: '/api/collectives/[collectiveId]/channels/[channelId]/join',
-        method: 'DELETE',
-        statusCode: HTTP_STATUS.INTERNAL_SERVER_ERROR,
-        duration,
-        userId,
-        error: 'Channel leave failed',
-      });
-
-      logger.error('Failed to leave channel', {
-        userId,
-        statusCode: HTTP_STATUS.INTERNAL_SERVER_ERROR,
-        ...(result.error ? { error: result.error } : {}),
-        metadata: { collectiveId, channelId },
-      });
-
-      return NextResponse.json(
-        { error: result.error ?? 'Failed to leave channel' },
-        { status: HTTP_STATUS.INTERNAL_SERVER_ERROR },
-      );
-    }
-
-    const duration = timer();
-    recordAPIMetrics({
-      endpoint: '/api/collectives/[collectiveId]/channels/[channelId]/join',
-      method: 'DELETE',
-      statusCode: HTTP_STATUS.NO_CONTENT,
-      duration,
-      userId,
-    });
-
-    logger.info('Successfully left channel', {
-      userId,
-      statusCode: HTTP_STATUS.NO_CONTENT,
-      duration,
-      metadata: { collectiveId, channelId },
-    });
 
     return NextResponse.json(
-      { success: true }, 
-      { 
-        status: HTTP_STATUS.NO_CONTENT,
-        headers: {
-          ...rateLimitResult.headers,
-          ...(etag !== undefined && { ETag: etag }),
-          'Cache-Control': `private, max-age=${JOIN_CONFIG.CACHE_MAX_AGE}`,
-        },
-      }
+      { message: 'Successfully joined channel' },
+      { status: 200 },
     );
-
   } catch (error: unknown) {
     const duration = timer();
     recordAPIMetrics({
@@ -705,7 +704,7 @@ export async function DELETE(
 
     return NextResponse.json(
       { error: 'Failed to leave channel' },
-      { status: HTTP_STATUS.INTERNAL_SERVER_ERROR }
+      { status: HTTP_STATUS.INTERNAL_SERVER_ERROR },
     );
   }
 }
@@ -715,4 +714,4 @@ export async function DELETE(
 // - Supabase Admin client compatibility
 // - Advanced transaction handling
 // - Crypto operations for ETag generation
-export const runtime = 'nodejs'; 
+export const runtime = 'nodejs';

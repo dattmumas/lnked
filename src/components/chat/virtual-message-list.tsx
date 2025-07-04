@@ -75,8 +75,18 @@ const isGroupedWith = (
   }
 
   const timeDiff =
-    new Date(currentMessage.created_at).getTime() -
-    new Date(previousMessage.created_at).getTime();
+    new Date(
+      currentMessage.created_at !== null &&
+      currentMessage.created_at !== undefined
+        ? currentMessage.created_at
+        : 0,
+    ).getTime() -
+    new Date(
+      previousMessage.created_at !== null &&
+      previousMessage.created_at !== undefined
+        ? previousMessage.created_at
+        : 0,
+    ).getTime();
   return timeDiff < DEBOUNCE_DELAY_MS;
 };
 
@@ -106,10 +116,13 @@ export function VirtualMessageList({
     getScrollElement: () => scrollContainerRef.current,
     estimateSize: useCallback(
       (index: number) => {
-        const current = messages[index]!;
+        const current = messages[index];
+        if (!current) return MESSAGE_HEIGHT_DEFAULT;
+
+        const previous = messages[index - 1];
         const grouped =
-          index > 0 && messages[index - 1] !== undefined
-            ? isGroupedWith(current, messages[index - 1]!)
+          index > 0 && previous !== undefined
+            ? isGroupedWith(current, previous)
             : false;
         return grouped ? MESSAGE_HEIGHT_COMPACT : MESSAGE_HEIGHT_NORMAL;
       },
@@ -275,12 +288,13 @@ const MessageRow = React.memo(
       setReplyTarget(message.conversation_id, message.id);
     }, [message.id, message.conversation_id, setReplyTarget]);
 
-    const timestamp = message.created_at
-      ? new Date(message.created_at).toLocaleTimeString([], {
-          hour: '2-digit',
-          minute: '2-digit',
-        })
-      : '';
+    const timestamp =
+      message.created_at !== null && message.created_at !== undefined
+        ? new Date(message.created_at).toLocaleTimeString([], {
+            hour: '2-digit',
+            minute: '2-digit',
+          })
+        : '';
 
     return (
       <div

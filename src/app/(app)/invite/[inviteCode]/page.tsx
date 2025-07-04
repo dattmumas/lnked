@@ -1,23 +1,29 @@
 import { notFound } from 'next/navigation';
 import React from 'react';
 
-import { Database } from '@/lib/database.types';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 
 import { InvitePageClient } from './InvitePageClient';
 
-type Collective = Database['public']['Tables']['collectives']['Row'];
-type CollectiveInvite =
-  Database['public']['Tables']['collective_invites']['Row'] & {
-    collective: Collective;
-    inviter:
-      | {
-          full_name: string | null;
-          avatar_url: string | null;
-        }
-      | { [key: string]: unknown }
-      | null;
-  };
+import type { Database } from '@/lib/database.types';
+
+// Concrete row types
+type CollectiveRow = Database['public']['Tables']['collectives']['Row'];
+type CollectiveInviteRow =
+  Database['public']['Tables']['collective_invites']['Row'];
+
+type CollectiveInvite = CollectiveInviteRow & {
+  collective: CollectiveRow;
+  inviter:
+    | {
+        full_name: string | null;
+        avatar_url: string | null;
+      }
+    | { [key: string]: unknown }
+    | null;
+};
+
+type Collective = CollectiveRow;
 
 interface InvitePageProps {
   params: Promise<{
@@ -60,7 +66,7 @@ async function getInviteDetails(inviteCode: string): Promise<{
       : { fullName: 'A collective owner', avatarUrl: null };
 
   return {
-    invite: invite as CollectiveInvite,
+    invite,
     collective: invite.collective as Collective,
     inviter,
   };

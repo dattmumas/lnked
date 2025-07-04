@@ -7,12 +7,12 @@ import { useEffect, useState } from 'react';
 
 import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
 
-import type { 
-  Tenant, 
-  MemberRole, 
-  TenantPermissions, 
+import type {
+  Tenant,
+  MemberRole,
+  TenantPermissions,
   UseTenantReturn,
-  TenantContextResponse 
+  TenantContextResponse,
 } from '@/types/tenant.types';
 
 /**
@@ -58,8 +58,10 @@ export function useTenant(tenantId: string | null): UseTenantReturn {
         const supabase = createSupabaseBrowserClient();
 
         // Get tenant context (includes user role)
-        const { data: contextData, error: contextError } = await supabase
-          .rpc('get_tenant_context', { target_tenant_id: tenantId });
+        const { data: contextData, error: contextError } = await supabase.rpc(
+          'get_tenant_context',
+          { target_tenant_id: tenantId },
+        );
 
         if (contextError) {
           throw contextError;
@@ -88,12 +90,16 @@ export function useTenant(tenantId: string | null): UseTenantReturn {
         setUserRole(context.user_role);
 
         // Calculate permissions based on role
-        const calculatedPermissions = calculatePermissions(context.user_role, context.type);
+        const calculatedPermissions = calculatePermissions(
+          context.user_role,
+          context.type,
+        );
         setPermissions(calculatedPermissions);
-
       } catch (err) {
         console.error('Error fetching tenant data:', err);
-        setError(err instanceof Error ? err.message : 'Failed to fetch tenant data');
+        setError(
+          err instanceof Error ? err.message : 'Failed to fetch tenant data',
+        );
         setTenant(null);
         setUserRole(null);
         setPermissions({
@@ -124,7 +130,10 @@ export function useTenant(tenantId: string | null): UseTenantReturn {
 /**
  * Calculate user permissions based on role and tenant type
  */
-function calculatePermissions(role: MemberRole, tenantType: 'personal' | 'collective'): TenantPermissions {
+function calculatePermissions(
+  role: MemberRole,
+  tenantType: 'personal' | 'collective',
+): TenantPermissions {
   const basePermissions = {
     canRead: false,
     canWrite: false,
@@ -192,8 +201,8 @@ function calculatePermissions(role: MemberRole, tenantType: 'personal' | 'collec
  * @returns Boolean indicating if user has access and loading state
  */
 export function useTenantAccess(
-  tenantId: string | null, 
-  requiredRole: MemberRole = 'member'
+  tenantId: string | null,
+  requiredRole: MemberRole = 'member',
 ): { hasAccess: boolean; isLoading: boolean; error: string | null } {
   const [hasAccess, setHasAccess] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -213,18 +222,19 @@ export function useTenantAccess(
 
         const supabase = createSupabaseBrowserClient();
 
-        const { data, error: accessError } = await supabase
-          .rpc('user_has_tenant_access', { 
+        const { data, error: accessError } = await supabase.rpc(
+          'user_has_tenant_access',
+          {
             target_tenant_id: tenantId,
-            required_role: requiredRole 
-          });
+            required_role: requiredRole,
+          },
+        );
 
         if (accessError) {
           throw accessError;
         }
 
         setHasAccess(Boolean(data));
-
       } catch (err) {
         console.error('Error checking tenant access:', err);
         setError(err instanceof Error ? err.message : 'Failed to check access');
@@ -244,10 +254,10 @@ export function useTenantAccess(
  * Hook to get user's personal tenant
  * @returns Personal tenant ID and loading state
  */
-export function usePersonalTenant(): { 
-  personalTenantId: string | null; 
-  isLoading: boolean; 
-  error: string | null 
+export function usePersonalTenant(): {
+  personalTenantId: string | null;
+  isLoading: boolean;
+  error: string | null;
 } {
   const [personalTenantId, setPersonalTenantId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -261,18 +271,22 @@ export function usePersonalTenant(): {
 
         const supabase = createSupabaseBrowserClient();
 
-        const { data, error: tenantError } = await supabase
-          .rpc('get_user_personal_tenant');
+        const { data, error: tenantError } = await supabase.rpc(
+          'get_user_personal_tenant',
+        );
 
         if (tenantError) {
           throw tenantError;
         }
 
         setPersonalTenantId(data);
-
       } catch (err) {
         console.error('Error fetching personal tenant:', err);
-        setError(err instanceof Error ? err.message : 'Failed to fetch personal tenant');
+        setError(
+          err instanceof Error
+            ? err.message
+            : 'Failed to fetch personal tenant',
+        );
         setPersonalTenantId(null);
       } finally {
         setIsLoading(false);
@@ -283,4 +297,4 @@ export function usePersonalTenant(): {
   }, []);
 
   return { personalTenantId, isLoading, error };
-} 
+}

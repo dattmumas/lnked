@@ -83,6 +83,13 @@ function TenantSwitcher({
           <DropdownMenuItem
             className="flex items-center space-x-2 cursor-pointer"
             onClick={() => {
+              if (
+                personalTenant.slug === null ||
+                personalTenant.slug === undefined
+              ) {
+                console.error('Cannot switch to tenant: missing slug');
+                return;
+              }
               void switchTenant(personalTenant.id);
             }}
           >
@@ -108,10 +115,14 @@ function TenantSwitcher({
             {collectiveTenants.map((tenant) => (
               <DropdownMenuItem
                 key={tenant.id}
-                className="flex items-center space-x-2 cursor-pointer"
                 onClick={() => {
+                  if (tenant.slug === null || tenant.slug === undefined) {
+                    console.error('Cannot switch to tenant: missing slug');
+                    return;
+                  }
                   void switchTenant(tenant.id);
                 }}
+                className="flex items-center space-x-2 cursor-pointer"
               >
                 <div className="h-6 w-6 rounded-md bg-muted flex items-center justify-center">
                   <span className="text-xs font-medium">

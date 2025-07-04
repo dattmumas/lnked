@@ -54,10 +54,15 @@ async function validateCollectiveAdminAccess(
     return { hasAccess: false };
   }
 
-  const hasAdminAccess = ['owner', 'admin'].includes(requesterMember.role);
-  return { 
+  const userRole = requesterMember.role;
+  if (userRole === null || userRole === undefined) {
+    return { hasAccess: false };
+  }
+
+  const hasAdminAccess = ['owner', 'admin'].includes(userRole);
+  return {
     hasAccess: hasAdminAccess,
-    userRole: requesterMember.role,
+    userRole,
   };
 }
 
@@ -78,8 +83,8 @@ async function validateTargetMembership(
     return { isMember: false };
   }
 
-  return { 
-    isMember: true, 
+  return {
+    isMember: true,
     memberData: targetMember as CollectiveMemberRow,
   };
 }
@@ -113,33 +118,44 @@ async function getExistingParticipations(
     return { participations: [] };
   }
 
-  const { data: existingParticipations, error: participationErr } = await supabase
-    .from('conversation_participants')
-    .select('conversation_id')
-    .eq('user_id', userId)
-    .in('conversation_id', channelIds);
+  const { data: existingParticipations, error: participationErr } =
+    await supabase
+      .from('conversation_participants')
+      .select('conversation_id')
+      .eq('user_id', userId)
+      .in('conversation_id', channelIds);
 
   if (participationErr !== null) {
     return { participations: [], error: participationErr.message };
   }
 
-  return { 
-    participations: existingParticipations?.map(p => p.conversation_id).filter((id): id is string => id !== null) ?? [],
+  return {
+    participations:
+      existingParticipations
+        ?.map((p) => p.conversation_id)
+        .filter((id): id is string => id !== null) ?? [],
   };
 }
 
 export async function POST(
-  request: NextRequest, 
-  context: { params: Promise<{ collectiveId: string }> } // Fixed: params IS a Promise in Next.js 15
+  request: NextRequest,
+  context: { params: Promise<{ collectiveId: string }> }, // Fixed: params IS a Promise in Next.js 15
 ): Promise<NextResponse> {
-  const logger = createAPILogger(request, '/api/collectives/[collectiveId]/members/auto-join-channels');
+  const logger = createAPILogger(
+    request,
+    '/api/collectives/[collectiveId]/members/auto-join-channels',
+  );
   const timer = createMetricsTimer();
   let userId: string | undefined;
 
   try {
     const { collectiveId } = await context.params; // Await params in Next.js 15
-    
-    if (collectiveId === null || collectiveId === undefined || collectiveId === '') {
+
+    if (
+      collectiveId === null ||
+      collectiveId === undefined ||
+      collectiveId === ''
+    ) {
       const duration = timer();
       recordAPIMetrics({
         endpoint: '/api/collectives/[collectiveId]/members/auto-join-channels',
@@ -151,13 +167,13 @@ export async function POST(
 
       return NextResponse.json(
         { error: 'Missing collectiveId' },
-        { status: HTTP_STATUS.BAD_REQUEST }
+        { status: HTTP_STATUS.BAD_REQUEST },
       );
     }
 
     // Session-aware Supabase client with proper context
     const supabase = createRequestScopedSupabaseClient(request);
-    
+
     // Authentication check
     const {
       data: { user },
@@ -182,7 +198,10 @@ export async function POST(
         },
       });
 
-      return NextResponse.json({ error: 'Unauthorized' }, { status: HTTP_STATUS.UNAUTHORIZED });
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: HTTP_STATUS.UNAUTHORIZED },
+      );
     }
 
     userId = user.id;
@@ -190,7 +209,7 @@ export async function POST(
     // Parse and validate request body
     let body: unknown;
     try {
-      body = await request.json() as unknown;
+      body = (await request.json()) as unknown;
     } catch {
       const duration = timer();
       recordAPIMetrics({
@@ -202,7 +221,10 @@ export async function POST(
         error: 'Invalid JSON',
       });
 
-      return NextResponse.json({ error: 'Invalid JSON' }, { status: HTTP_STATUS.BAD_REQUEST });
+      return NextResponse.json(
+        { error: 'Invalid JSON' },
+        { status: HTTP_STATUS.BAD_REQUEST },
+      );
     }
 
     const parsed = BodySchema.safeParse(body);
@@ -243,16 +265,22 @@ export async function POST(
         error: 'Insufficient permissions',
       });
 
-      logger.warn('Unauthorized auto-join channels attempt - insufficient permissions', {
-        userId,
-        statusCode: HTTP_STATUS.FORBIDDEN,
-        metadata: {
-          collectiveId,
-          userRole,
+      logger.warn(
+        'Unauthorized auto-join channels attempt - insufficient permissions',
+        {
+          userId,
+          statusCode: HTTP_STATUS.FORBIDDEN,
+          metadata: {
+            collectiveId,
+            userRole,
+          },
         },
-      });
+      );
 
-      return NextResponse.json({ error: 'Forbidden' }, { status: HTTP_STATUS.FORBIDDEN });
+      return NextResponse.json(
+        { error: 'Forbidden' },
+        { status: HTTP_STATUS.FORBIDDEN },
+      );
     }
 
     // Verify the target user is a member of the collective
@@ -274,8 +302,8 @@ export async function POST(
       });
 
       return NextResponse.json(
-        { error: 'User is not a member of this collective' }, 
-        { status: HTTP_STATUS.NOT_FOUND }
+        { error: 'User is not a member of this collective' },
+        { status: HTTP_STATUS.NOT_FOUND },
       );
     }
 
@@ -323,18 +351,15 @@ export async function POST(
       });
 
       return NextResponse.json(
-        { message: 'No public channels to join', channelsJoined: 0 }, 
-        { status: HTTP_STATUS.OK }
+        { message: 'No public channels to join', channelsJoined: 0 },
+        { status: HTTP_STATUS.OK },
       );
     }
 
     // Get channels the user is already a participant of
-    const channelIds = channels.map(c => c.id);
-    const { participations: existingChannelIds, error: participationError } = await getExistingParticipations(
-      supabase,
-      targetUserId,
-      channelIds,
-    );
+    const channelIds = channels.map((c) => c.id);
+    const { participations: existingChannelIds, error: participationError } =
+      await getExistingParticipations(supabase, targetUserId, channelIds);
 
     if (participationError !== undefined) {
       const duration = timer();
@@ -364,7 +389,9 @@ export async function POST(
     }
 
     // Filter out channels the user is already in
-    const channelsToJoin = channels.filter(c => !existingChannelIds.includes(c.id));
+    const channelsToJoin = channels.filter(
+      (c) => !existingChannelIds.includes(c.id),
+    );
 
     if (channelsToJoin.length === 0) {
       const duration = timer();
@@ -377,15 +404,20 @@ export async function POST(
       });
 
       return NextResponse.json(
-        { message: 'User is already in all public channels', channelsJoined: 0 }, 
-        { status: HTTP_STATUS.OK }
+        {
+          message: 'User is already in all public channels',
+          channelsJoined: 0,
+        },
+        { status: HTTP_STATUS.OK },
       );
     }
 
     // Add user to all public channels they're not already in
-    const participantRole = ['owner', 'admin'].includes(memberData.role) ? 'admin' : 'member';
-    
-    const participants: ParticipantInsert[] = channelsToJoin.map(channel => ({
+    const participantRole = ['owner', 'admin'].includes(memberData.role)
+      ? 'admin'
+      : 'member';
+
+    const participants: ParticipantInsert[] = channelsToJoin.map((channel) => ({
       conversation_id: channel.id,
       user_id: targetUserId,
       role: participantRole,
@@ -445,12 +477,14 @@ export async function POST(
       },
     });
 
-    return NextResponse.json({ 
-      success: true, 
-      channelsJoined: participants.length,
-      message: `User added to ${participants.length} public channels`
-    }, { status: HTTP_STATUS.OK });
-
+    return NextResponse.json(
+      {
+        success: true,
+        channelsJoined: participants.length,
+        message: `User added to ${participants.length} public channels`,
+      },
+      { status: HTTP_STATUS.OK },
+    );
   } catch (error: unknown) {
     const duration = timer();
     recordAPIMetrics({
@@ -471,9 +505,9 @@ export async function POST(
 
     return NextResponse.json(
       { error: 'Failed to auto-join channels' },
-      { status: HTTP_STATUS.INTERNAL_SERVER_ERROR }
+      { status: HTTP_STATUS.INTERNAL_SERVER_ERROR },
     );
   }
 }
 
-export const runtime = 'nodejs'; 
+export const runtime = 'nodejs';

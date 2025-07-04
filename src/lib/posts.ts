@@ -137,7 +137,8 @@ export async function fetchPost(
   const isOwner = Boolean(viewerId && viewerId === postData.author_id);
   const isPublished = Boolean(
     postData.is_public &&
-      postData.published_at &&
+      postData.published_at !== null &&
+      postData.published_at !== undefined &&
       new Date(postData.published_at) <= new Date(),
   );
 

@@ -3,9 +3,11 @@ import { openDB, type IDBPDatabase } from 'idb';
 import supabase from '@/lib/supabase/browser';
 import { fastHash } from '@/lib/utils/hash';
 
-import type { Database, Json } from '@/lib/database.types';
+import type { Database } from '@/lib/database.types';
 import type { PostEditorFormData } from '@/lib/stores/post-editor-v2-store';
 
+// Type aliases
+type Json = Database['public']['Tables']['editor_drafts']['Row']['metadata'];
 type DraftInsert = Database['public']['Tables']['editor_drafts']['Insert'];
 type DraftRow = Database['public']['Tables']['editor_drafts']['Row'];
 

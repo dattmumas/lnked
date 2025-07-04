@@ -137,6 +137,29 @@ export async function PATCH(
       throw new Error('Authentication required');
     }
 
+    // Check user permissions
+    const { data: membership, error: membershipError } = await supabase
+      .from('tenant_members')
+      .select('role')
+      .eq('tenant_id', tenantId)
+      .eq('user_id', user.id)
+      .maybeSingle();
+
+    if (membershipError !== null) {
+      console.error('Error checking membership:', membershipError);
+      return NextResponse.json(
+        { error: 'Failed to verify permissions' },
+        { status: 500 },
+      );
+    }
+
+    if (membership === null || !['owner', 'admin'].includes(membership.role)) {
+      return NextResponse.json(
+        { error: 'Insufficient permissions' },
+        { status: 403 },
+      );
+    }
+
     // Prepare update data - filter out undefined values
     const filteredUpdates = Object.fromEntries(
       Object.entries(updates).filter(([, value]) => value !== undefined),

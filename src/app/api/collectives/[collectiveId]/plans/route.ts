@@ -38,31 +38,70 @@ interface ValidatedPlanData {
 }
 
 // Validate and sanitize plan request body
-function validatePlanRequest(body: PlanRequestBody): { isValid: boolean; data?: ValidatedPlanData; error?: string } {
-  const { name, amount, currency, interval, trial_period_days, description } = body;
+function validatePlanRequest(body: PlanRequestBody): {
+  isValid: boolean;
+  data?: ValidatedPlanData;
+  error?: string;
+} {
+  const { name, amount, currency, interval, trial_period_days, description } =
+    body;
 
   // Required field validation
-  if (name === null || name === undefined || typeof name !== 'string' || name.trim() === '') {
-    return { isValid: false, error: 'Plan name is required and must be a non-empty string' };
+  if (
+    name === null ||
+    name === undefined ||
+    typeof name !== 'string' ||
+    name.trim() === ''
+  ) {
+    return {
+      isValid: false,
+      error: 'Plan name is required and must be a non-empty string',
+    };
   }
 
-  if (amount === null || amount === undefined || typeof amount !== 'number' || amount <= 0) {
-    return { isValid: false, error: 'Plan amount is required and must be a positive number' };
+  if (
+    amount === null ||
+    amount === undefined ||
+    typeof amount !== 'number' ||
+    amount <= 0
+  ) {
+    return {
+      isValid: false,
+      error: 'Plan amount is required and must be a positive number',
+    };
   }
 
-  if (currency === null || currency === undefined || typeof currency !== 'string' || currency.trim() === '') {
-    return { isValid: false, error: 'Currency is required and must be a valid currency code' };
+  if (
+    currency === null ||
+    currency === undefined ||
+    typeof currency !== 'string' ||
+    currency.trim() === ''
+  ) {
+    return {
+      isValid: false,
+      error: 'Currency is required and must be a valid currency code',
+    };
   }
 
-  if (interval === null || interval === undefined || (interval !== 'month' && interval !== 'year')) {
-    return { isValid: false, error: 'Interval must be either "month" or "year"' };
+  if (
+    interval === null ||
+    interval === undefined ||
+    (interval !== 'month' && interval !== 'year')
+  ) {
+    return {
+      isValid: false,
+      error: 'Interval must be either "month" or "year"',
+    };
   }
 
   // Optional field validation
   let validTrialDays = DEFAULT_TRIAL_PERIOD_DAYS;
   if (trial_period_days !== null && trial_period_days !== undefined) {
     if (typeof trial_period_days !== 'number' || trial_period_days < 0) {
-      return { isValid: false, error: 'Trial period days must be a non-negative number' };
+      return {
+        isValid: false,
+        error: 'Trial period days must be a non-negative number',
+      };
     }
     validTrialDays = trial_period_days;
   }
@@ -104,14 +143,16 @@ async function validateCollectiveAccess(
   // Query collective with member roles (supporting multi-owner/admin)
   const { data: memberData, error: memberError } = await supabase
     .from('collective_members')
-    .select(`
+    .select(
+      `
       role,
       collective:collectives!inner(
         id,
         owner_id,
         stripe_account_id
       )
-    `)
+    `,
+    )
     .eq('collective_id', collectiveId)
     .eq('user_id', userId)
     .in('role', ['owner', 'admin'])
@@ -133,7 +174,10 @@ async function validateCollectiveAccess(
     return { collective: collectiveData as CollectiveData, hasAccess: true };
   }
 
-  return { collective: memberData.collective as CollectiveData, hasAccess: true };
+  return {
+    collective: memberData.collective as CollectiveData,
+    hasAccess: true,
+  };
 }
 
 export async function POST(
@@ -146,7 +190,11 @@ export async function POST(
 
   try {
     const { collectiveId } = await params; // Await params in Next.js 15
-    if (collectiveId === null || collectiveId === undefined || collectiveId === '') {
+    if (
+      collectiveId === null ||
+      collectiveId === undefined ||
+      collectiveId === ''
+    ) {
       const duration = timer();
       recordAPIMetrics({
         endpoint: '/api/collectives/[collectiveId]/plans',
@@ -158,13 +206,13 @@ export async function POST(
 
       return NextResponse.json(
         { error: 'Missing collectiveId' },
-        { status: HTTP_STATUS.BAD_REQUEST }
+        { status: HTTP_STATUS.BAD_REQUEST },
       );
     }
 
     // Session-aware Supabase client with proper context
     const supabase = createRequestScopedSupabaseClient(req);
-    
+
     // Authentication check
     const {
       data: { user },
@@ -189,10 +237,36 @@ export async function POST(
         },
       });
 
-      return NextResponse.json({ error: 'Unauthorized' }, { status: HTTP_STATUS.UNAUTHORIZED });
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: HTTP_STATUS.UNAUTHORIZED },
+      );
     }
 
     userId = user.id;
+
+    // Check if user is a member with sufficient permissions
+    const { data: membership, error: membershipError } = await supabase
+      .from('collective_members')
+      .select('role')
+      .eq('collective_id', collectiveId)
+      .eq('member_id', user.id)
+      .maybeSingle();
+
+    if (membershipError !== null) {
+      console.error('Error checking membership:', membershipError);
+      return NextResponse.json(
+        { error: 'Failed to verify membership' },
+        { status: 500 },
+      );
+    }
+
+    if (membership === null || !['owner', 'admin'].includes(membership.role)) {
+      return NextResponse.json(
+        { error: 'Insufficient permissions' },
+        { status: 403 },
+      );
+    }
 
     // Enhanced ownership check with admin role support
     const { collective, hasAccess } = await validateCollectiveAccess(
@@ -202,7 +276,8 @@ export async function POST(
     );
 
     if (!hasAccess || collective === null) {
-      const statusCode = collective === null ? HTTP_STATUS.NOT_FOUND : HTTP_STATUS.FORBIDDEN;
+      const statusCode =
+        collective === null ? HTTP_STATUS.NOT_FOUND : HTTP_STATUS.FORBIDDEN;
       const duration = timer();
       recordAPIMetrics({
         endpoint: '/api/collectives/[collectiveId]/plans',
@@ -213,15 +288,19 @@ export async function POST(
         error: collective === null ? 'Collective not found' : 'Access denied',
       });
 
-      const errorMessage = collective === null ? 'Collective not found' : 'Forbidden: Insufficient permissions';
-      return NextResponse.json(
-        { error: errorMessage },
-        { status: statusCode }
-      );
+      const errorMessage =
+        collective === null
+          ? 'Collective not found'
+          : 'Forbidden: Insufficient permissions';
+      return NextResponse.json({ error: errorMessage }, { status: statusCode });
     }
 
     // Check Stripe onboarding status
-    if (collective.stripe_account_id === null || collective.stripe_account_id === undefined || collective.stripe_account_id === '') {
+    if (
+      collective.stripe_account_id === null ||
+      collective.stripe_account_id === undefined ||
+      collective.stripe_account_id === ''
+    ) {
       const duration = timer();
       recordAPIMetrics({
         endpoint: '/api/collectives/[collectiveId]/plans',
@@ -234,7 +313,7 @@ export async function POST(
 
       return NextResponse.json(
         { error: 'Collective not onboarded to Stripe' },
-        { status: HTTP_STATUS.BAD_REQUEST }
+        { status: HTTP_STATUS.BAD_REQUEST },
       );
     }
 
@@ -261,14 +340,14 @@ export async function POST(
 
       return NextResponse.json(
         { error: 'Payment service unavailable' },
-        { status: HTTP_STATUS.INTERNAL_SERVER_ERROR }
+        { status: HTTP_STATUS.INTERNAL_SERVER_ERROR },
       );
     }
 
     // Validate request body
-    const body: PlanRequestBody = await req.json() as PlanRequestBody;
+    const body: PlanRequestBody = (await req.json()) as PlanRequestBody;
     const validation = validatePlanRequest(body);
-    
+
     if (!validation.isValid || validation.data === undefined) {
       const duration = timer();
       recordAPIMetrics({
@@ -282,7 +361,7 @@ export async function POST(
 
       return NextResponse.json(
         { error: validation.error ?? 'Invalid request data' },
-        { status: HTTP_STATUS.BAD_REQUEST }
+        { status: HTTP_STATUS.BAD_REQUEST },
       );
     }
 
@@ -318,7 +397,7 @@ export async function POST(
 
       return NextResponse.json(
         { error: 'Failed to lookup existing product' },
-        { status: HTTP_STATUS.INTERNAL_SERVER_ERROR }
+        { status: HTTP_STATUS.INTERNAL_SERVER_ERROR },
       );
     }
 
@@ -328,7 +407,9 @@ export async function POST(
     } else {
       product = await stripe.products.create({
         name: validatedData.name,
-        ...(validatedData.description ? { description: validatedData.description } : {}),
+        ...(validatedData.description
+          ? { description: validatedData.description }
+          : {}),
         metadata: { collectiveId },
       });
 
@@ -363,7 +444,7 @@ export async function POST(
 
         return NextResponse.json(
           { error: 'Failed to save product' },
-          { status: HTTP_STATUS.INTERNAL_SERVER_ERROR }
+          { status: HTTP_STATUS.INTERNAL_SERVER_ERROR },
         );
       }
     }
@@ -383,7 +464,9 @@ export async function POST(
       product_id: product.id,
       unit_amount: price.unit_amount,
       currency: price.currency,
-      ...(price.recurring?.interval ? { interval: price.recurring.interval } : {}),
+      ...(price.recurring?.interval
+        ? { interval: price.recurring.interval }
+        : {}),
       trial_period_days: validatedData.trial_period_days,
       active: true,
     });
@@ -412,7 +495,7 @@ export async function POST(
 
       return NextResponse.json(
         { error: 'Failed to save price' },
-        { status: HTTP_STATUS.INTERNAL_SERVER_ERROR }
+        { status: HTTP_STATUS.INTERNAL_SERVER_ERROR },
       );
     }
 
@@ -440,7 +523,6 @@ export async function POST(
     });
 
     return NextResponse.json({ product, price });
-
   } catch (error: unknown) {
     const duration = timer();
     recordAPIMetrics({
@@ -461,7 +543,7 @@ export async function POST(
 
     return NextResponse.json(
       { error: 'Failed to create subscription plan' },
-      { status: HTTP_STATUS.INTERNAL_SERVER_ERROR }
+      { status: HTTP_STATUS.INTERNAL_SERVER_ERROR },
     );
   }
 }

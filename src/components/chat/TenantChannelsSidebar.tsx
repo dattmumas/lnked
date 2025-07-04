@@ -340,6 +340,11 @@ function ItemActions({
   const deleteConversation = useDeleteConversation();
 
   const handleDelete = () => {
+    if (conversation.id === null || conversation.id === undefined) {
+      console.error('Cannot delete conversation: missing ID');
+      return;
+    }
+
     deleteConversation.mutate(conversation.id);
     setIsDeleteDialogOpen(false);
   };
@@ -415,8 +420,23 @@ function NewChannelDialog({
         title: title.trim(),
         type: 'channel',
       });
-      toast(`Channel "${newChannel.title}" created successfully!`);
-      onChannelCreated(newChannel);
+      toast(
+        `Channel "${newChannel.title ?? 'Untitled'}" created successfully!`,
+      );
+
+      if (newChannel.id === null || newChannel.id === undefined) {
+        console.error('Cannot use channel: missing ID');
+        return;
+      }
+
+      const channelData = {
+        id: newChannel.id,
+        title: newChannel.title,
+        type: newChannel.type,
+        tenant_id: newChannel.tenant_id,
+      };
+
+      onChannelCreated(channelData);
       setTitle('');
       setIsOpen(false);
     } catch (error) {

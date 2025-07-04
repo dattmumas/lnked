@@ -3,17 +3,21 @@
 import { Loader2, Smile, Image, Send } from 'lucide-react';
 import React, { useCallback, useMemo, useState } from 'react';
 
-
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
 import { cn } from '@/lib/utils';
+import { extractFirstUrl } from '@/lib/utils/extractLinks';
 
 import type { ChainWithAuthor } from '@/lib/data-access/schemas/chain.schema';
+import type { Database } from '@/lib/database.types';
+
+// Type alias for cleaner code
+type Json = Database['public']['Tables']['chains']['Row']['link_preview'];
 
 // Constants (kept here to avoid cross-file imports for now)
-const CHARACTER_LIMIT = 280;
+const CHARACTER_LIMIT = 180;
 const WARNING_THRESHOLD = 20;
 const MAX_INITIALS_LENGTH = 2;
 
@@ -71,6 +75,23 @@ export default function ChainComposer({
         const id =
           globalThis.crypto?.randomUUID?.() ??
           Math.random().toString(36).slice(2, 10);
+        const firstUrl = extractFirstUrl(content);
+        let preview: Json | null = null;
+        if (firstUrl !== null) {
+          const { data: previewData, error: unfurlErr } =
+            await supabase.functions.invoke('links-unfurl', {
+              body: { url: firstUrl },
+            });
+
+          if (unfurlErr === null && previewData !== null) {
+            // supabase-js returns raw text when content-type is application/json
+            // Convert string payload to object if necessary.
+            preview =
+              typeof previewData === 'string'
+                ? (JSON.parse(previewData) as Json)
+                : (previewData as Json);
+          }
+        }
         const { data, error } = await supabase
           .from('chains')
           .insert({
@@ -80,6 +101,7 @@ export default function ChainComposer({
             status: 'active',
             created_at: new Date().toISOString(),
             thread_root: id,
+            ...(preview ? { link_preview: preview } : {}),
           })
           .select(
             `*,
@@ -101,7 +123,12 @@ export default function ChainComposer({
   );
 
   return (
-    <div className="p-4">
+    <div
+      className={cn(
+        'relative mb-6 mx-3 rounded-2xl p-5 transition-all',
+        'bg-white/5 dark:bg-gray-100/50 bg-clip-padding backdrop-filter border-black backdrop-blur-xl backdrop-saturate-200',
+      )}
+    >
       <form onSubmit={handleSubmit} className="space-y-3">
         <div className="flex gap-3">
           <Avatar className="w-9 h-9 flex-shrink-0">
@@ -121,8 +148,8 @@ export default function ChainComposer({
             <Textarea
               value={content}
               onChange={(e): void => setContent(e.target.value)}
-              placeholder="What's happening?"
-              className="min-h-[90px] resize-none border-0 p-0 text-sm placeholder:text-muted-foreground focus-visible:ring-0 focus-visible:ring-offset-0"
+              placeholder="Thoughts?"
+              className="min-h-[90px] resize-none text-sm placeholder:text-muted-foreground focus-visible:ring-0 focus-visible:ring-offset-0"
               maxLength={CHARACTER_LIMIT}
               disabled={isPosting}
             />
@@ -143,7 +170,6 @@ export default function ChainComposer({
                   title="Add image"
                   disabled={isPosting}
                 >
-                  {/* eslint-disable-next-line jsx-a11y/alt-text */}
                   <Image className="w-4 h-4" />
                 </button>
               </div>

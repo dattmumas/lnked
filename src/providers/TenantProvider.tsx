@@ -17,6 +17,7 @@ import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
 
 import type { Database } from '@/lib/database.types';
 
+// Type aliases
 type TenantType = Database['public']['Tables']['tenants']['Row'];
 type UserRole = Database['public']['Enums']['member_role'];
 

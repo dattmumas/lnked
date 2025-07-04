@@ -28,12 +28,23 @@ const HTTP_STATUS = {
 
 // Request validation schema with environment-driven limits
 const GroupCreationSchema = z.object({
-  participantIds: z.array(z.string().uuid())
-    .min(ENV_CONFIG.GROUP_MIN_PARTICIPANTS, `At least ${ENV_CONFIG.GROUP_MIN_PARTICIPANTS} participant is required`)
-    .max(ENV_CONFIG.GROUP_MAX_PARTICIPANTS, `Cannot exceed ${ENV_CONFIG.GROUP_MAX_PARTICIPANTS} participants`),
-  title: z.string()
+  participantIds: z
+    .array(z.string().uuid())
+    .min(
+      ENV_CONFIG.GROUP_MIN_PARTICIPANTS,
+      `At least ${ENV_CONFIG.GROUP_MIN_PARTICIPANTS} participant is required`,
+    )
+    .max(
+      ENV_CONFIG.GROUP_MAX_PARTICIPANTS,
+      `Cannot exceed ${ENV_CONFIG.GROUP_MAX_PARTICIPANTS} participants`,
+    ),
+  title: z
+    .string()
     .trim()
-    .max(ENV_CONFIG.GROUP_MAX_TITLE_LENGTH, `Title must be at most ${ENV_CONFIG.GROUP_MAX_TITLE_LENGTH} characters`)
+    .max(
+      ENV_CONFIG.GROUP_MAX_TITLE_LENGTH,
+      `Title must be at most ${ENV_CONFIG.GROUP_MAX_TITLE_LENGTH} characters`,
+    )
     .optional(),
   // Allow empty groups for "create then invite" UX (Issue 6)
   allowEmptyGroup: z.boolean().default(false),
@@ -62,7 +73,10 @@ interface GroupCreationResponse {
 
 // RPC function interface for type safety
 interface SupabaseRpcClient {
-  rpc: (functionName: string, params: Record<string, unknown>) => Promise<{
+  rpc: (
+    functionName: string,
+    params: Record<string, unknown>,
+  ) => Promise<{
     data: unknown;
     error: { message: string } | null;
   }>;
@@ -81,7 +95,7 @@ function recordGroupMetrics(
   rollbackFailed?: boolean,
 ): void {
   const duration = timer();
-  
+
   recordAPIMetrics({
     endpoint: ENDPOINT,
     method,
@@ -90,7 +104,7 @@ function recordGroupMetrics(
     ...(userId ? { userId } : {}),
     ...(error ? { error } : {}),
   });
-  
+
   // Track specific group creation metrics
   if (participantCount !== undefined) {
     recordAPIMetrics({
@@ -101,15 +115,18 @@ function recordGroupMetrics(
       ...(userId ? { userId } : {}),
     });
   }
-  
+
   // Alert on rollback failures (Issue 8)
   if (rollbackFailed === true) {
-    console.error(`[CRITICAL] Group creation rollback failed for user ${userId ?? 'unknown'}`, {
-      endpoint: ENDPOINT,
-      userId,
-      error: 'Rollback operation failed',
-      timestamp: new Date().toISOString(),
-    });
+    console.error(
+      `[CRITICAL] Group creation rollback failed for user ${userId ?? 'unknown'}`,
+      {
+        endpoint: ENDPOINT,
+        userId,
+        error: 'Rollback operation failed',
+        timestamp: new Date().toISOString(),
+      },
+    );
   }
 }
 
@@ -126,10 +143,10 @@ async function validateParticipantsBatch(
     // Process in batches to handle large participant lists (Issue 4)
     const batchSize = ENV_CONFIG.PARTICIPANT_BATCH_SIZE;
     const allValidIds: string[] = [];
-    
+
     for (let i = 0; i < participantIds.length; i += batchSize) {
       const batch = participantIds.slice(i, i + batchSize);
-      
+
       const { data: existingUsers, error: userCheckError } = await supabase
         .from('users')
         .select('id')
@@ -139,25 +156,34 @@ async function validateParticipantsBatch(
         throw userCheckError;
       }
 
+      if (existingUsers === null || existingUsers === undefined) {
+        return {
+          isValid: false,
+          error: 'Failed to fetch user data',
+        };
+      }
+
       if (existingUsers.length !== batch.length) {
-        const foundIds = new Set(existingUsers.map(u => u.id));
-        const missingIds = batch.filter(id => !foundIds.has(id));
-        
+        const foundIds = new Set(existingUsers.map((u) => u.id));
+        const missingIds = batch.filter((id) => !foundIds.has(id));
+
         return {
           isValid: false,
           error: `Participants not found: ${missingIds.slice(0, 5).join(', ')}${missingIds.length > 5 ? '...' : ''}`,
         };
       }
-      
-      allValidIds.push(...existingUsers.map(u => u.id));
+
+      allValidIds.push(...existingUsers.map((u) => u.id));
     }
 
     return { isValid: true, validIds: allValidIds };
-
   } catch (error: unknown) {
     return {
       isValid: false,
-      error: error instanceof Error ? error.message : 'Failed to validate participants',
+      error:
+        error instanceof Error
+          ? error.message
+          : 'Failed to validate participants',
     };
   }
 }
@@ -179,7 +205,7 @@ async function createGroupAtomic(
         participant_ids: participantIds,
         group_title: title ?? null,
         check_participants: true, // RPC will validate participants
-      }
+      },
     );
 
     if (error !== null) {
@@ -190,12 +216,13 @@ async function createGroupAtomic(
       };
     }
 
-    return (data as AtomicGroupCreationResult) ?? {
-      success: false,
-      error: 'No response from RPC function',
-      error_code: 'NO_RESPONSE',
-    };
-
+    return (
+      (data as AtomicGroupCreationResult) ?? {
+        success: false,
+        error: 'No response from RPC function',
+        error_code: 'NO_RESPONSE',
+      }
+    );
   } catch (error: unknown) {
     return {
       success: false,
@@ -214,10 +241,13 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
     // Session-aware Supabase client
     const supabase = createRequestScopedSupabaseClient(request);
-    
+
     // Authentication check
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
     if (authError !== null || user === null) {
       recordGroupMetrics(
         timer,
@@ -233,7 +263,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         ...(authError?.message ? { error: authError.message } : {}),
       });
 
-      return NextResponse.json({ error: 'Unauthorized' }, { status: HTTP_STATUS.UNAUTHORIZED });
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: HTTP_STATUS.UNAUTHORIZED },
+      );
     }
 
     userId = user.id;
@@ -257,17 +290,17 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
       return NextResponse.json(
         { error: rateLimitResult.error ?? 'Rate limit exceeded' },
-        { 
+        {
           status: HTTP_STATUS.TOO_MANY_REQUESTS,
           headers: rateLimitResult.headers,
-        }
+        },
       );
     }
 
     // Parse and validate request body
     let body: unknown;
     try {
-      body = await request.json() as unknown;
+      body = (await request.json()) as unknown;
     } catch {
       recordGroupMetrics(
         timer,
@@ -278,7 +311,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         'Invalid JSON',
       );
 
-      return NextResponse.json({ error: 'Invalid JSON' }, { status: HTTP_STATUS.BAD_REQUEST });
+      return NextResponse.json(
+        { error: 'Invalid JSON' },
+        { status: HTTP_STATUS.BAD_REQUEST },
+      );
     }
 
     const parsed = GroupCreationSchema.safeParse(body);
@@ -301,7 +337,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     const { participantIds, title, allowEmptyGroup } = parsed.data;
 
     // Remove creator from participant list and handle empty group case (Issue 6)
-    const uniqueIds = Array.from(new Set(participantIds.filter((id) => id !== userId)));
+    const uniqueIds = Array.from(
+      new Set(participantIds.filter((id) => id !== userId)),
+    );
 
     // Allow empty groups only if explicitly requested and title is provided
     if (uniqueIds.length === 0 && !allowEmptyGroup) {
@@ -316,14 +354,19 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       );
 
       return NextResponse.json(
-        { 
-          error: 'Cannot create a group without other participants. Set allowEmptyGroup=true to create an empty group with a title.' 
+        {
+          error:
+            'Cannot create a group without other participants. Set allowEmptyGroup=true to create an empty group with a title.',
         },
-        { status: HTTP_STATUS.BAD_REQUEST }
+        { status: HTTP_STATUS.BAD_REQUEST },
       );
     }
 
-    if (uniqueIds.length === 0 && allowEmptyGroup && (title === undefined || title.length === 0)) {
+    if (
+      uniqueIds.length === 0 &&
+      allowEmptyGroup &&
+      (title === undefined || title.length === 0)
+    ) {
       recordGroupMetrics(
         timer,
         'POST',
@@ -336,13 +379,16 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
       return NextResponse.json(
         { error: 'Empty groups must have a title' },
-        { status: HTTP_STATUS.BAD_REQUEST }
+        { status: HTTP_STATUS.BAD_REQUEST },
       );
     }
 
     // Validate participants exist (Issue 7) - only if we have participants
     if (uniqueIds.length > 0) {
-      const validationResult = await validateParticipantsBatch(supabase, uniqueIds);
+      const validationResult = await validateParticipantsBatch(
+        supabase,
+        uniqueIds,
+      );
       if (!validationResult.isValid) {
         recordGroupMetrics(
           timer,
@@ -356,20 +402,28 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
         return NextResponse.json(
           { error: validationResult.error ?? 'Invalid participant list' },
-          { status: HTTP_STATUS.BAD_REQUEST }
+          { status: HTTP_STATUS.BAD_REQUEST },
         );
       }
     }
 
     // Create group using atomic RPC (Issues 1, 2, 3)
-    const creationResult = await createGroupAtomic(supabase, userId, uniqueIds, title);
-    
+    const creationResult = await createGroupAtomic(
+      supabase,
+      userId,
+      uniqueIds,
+      title,
+    );
+
     if (!creationResult.success) {
-      const isConflict = creationResult.error_code === 'INVALID_PARTICIPANTS' || 
-                        creationResult.error_code === 'INVALID_CREATOR';
-      
-      const statusCode = isConflict ? HTTP_STATUS.BAD_REQUEST : HTTP_STATUS.INTERNAL_SERVER_ERROR;
-      
+      const isConflict =
+        creationResult.error_code === 'INVALID_PARTICIPANTS' ||
+        creationResult.error_code === 'INVALID_CREATOR';
+
+      const statusCode = isConflict
+        ? HTTP_STATUS.BAD_REQUEST
+        : HTTP_STATUS.INTERNAL_SERVER_ERROR;
+
       recordGroupMetrics(
         timer,
         'POST',
@@ -389,17 +443,21 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         metadata: {
           participantCount: uniqueIds.length + 1,
           hasTitle: title !== undefined,
-          ...(creationResult.error_code ? { errorCode: creationResult.error_code } : {}),
-          ...(creationResult.sqlstate ? { sqlstate: creationResult.sqlstate } : {}),
+          ...(creationResult.error_code
+            ? { errorCode: creationResult.error_code }
+            : {}),
+          ...(creationResult.sqlstate
+            ? { sqlstate: creationResult.sqlstate }
+            : {}),
         },
       });
 
       return NextResponse.json(
-        { 
+        {
           error: creationResult.error ?? 'Failed to create group',
           code: creationResult.error_code,
         },
-        { status: statusCode }
+        { status: statusCode },
       );
     }
 
@@ -411,8 +469,14 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       conversationId: creationResult.conversation_id ?? '',
       participantCount: creationResult.participant_count ?? 0,
       isDuplicate,
-      ...(creationResult.title !== null && creationResult.title !== undefined && creationResult.title.length > 0 && { title: creationResult.title }),
-      ...(creationResult.group_hash !== null && creationResult.group_hash !== undefined && creationResult.group_hash.length > 0 && { groupHash: creationResult.group_hash }),
+      ...(creationResult.title !== null &&
+        creationResult.title !== undefined &&
+        creationResult.title.length > 0 && { title: creationResult.title }),
+      ...(creationResult.group_hash !== null &&
+        creationResult.group_hash !== undefined &&
+        creationResult.group_hash.length > 0 && {
+          groupHash: creationResult.group_hash,
+        }),
     };
 
     const response = NextResponse.json(responseData, {
@@ -435,21 +499,26 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       isDuplicate,
     );
 
-    logger.info(isDuplicate ? 'Returned existing group conversation' : 'Successfully created group conversation', {
-      userId,
-      statusCode,
-      metadata: {
-        conversationId: creationResult.conversation_id,
-        participantCount: creationResult.participant_count,
-        hasTitle: creationResult.title !== undefined && creationResult.title !== null,
-        title: creationResult.title,
-        isDuplicate,
-        groupHash: creationResult.group_hash,
+    logger.info(
+      isDuplicate
+        ? 'Returned existing group conversation'
+        : 'Successfully created group conversation',
+      {
+        userId,
+        statusCode,
+        metadata: {
+          conversationId: creationResult.conversation_id,
+          participantCount: creationResult.participant_count,
+          hasTitle:
+            creationResult.title !== undefined && creationResult.title !== null,
+          title: creationResult.title,
+          isDuplicate,
+          groupHash: creationResult.group_hash,
+        },
       },
-    });
+    );
 
     return response;
-
   } catch (error: unknown) {
     recordGroupMetrics(
       timer,
@@ -471,7 +540,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
     return NextResponse.json(
       { error: 'Internal server error' },
-      { status: HTTP_STATUS.INTERNAL_SERVER_ERROR }
+      { status: HTTP_STATUS.INTERNAL_SERVER_ERROR },
     );
   }
 }

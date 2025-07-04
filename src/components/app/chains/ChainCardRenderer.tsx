@@ -30,6 +30,7 @@ export default function ChainCardRenderer({
         content: item.content,
         timestamp: new Date(item.created_at).toLocaleString(),
         type: 'post',
+        link_preview: item.link_preview ?? null,
         stats: {
           likes: item.like_count,
           replies: item.reply_count,

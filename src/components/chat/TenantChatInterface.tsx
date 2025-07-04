@@ -66,8 +66,14 @@ export default function TenantChatInterface({
     }
 
     const allSorted = [...allConversations].sort((a, b) => {
-      const dateA = new Date(a.updated_at ?? 0).getTime();
-      const dateB = new Date(b.updated_at ?? 0).getTime();
+      const dateA =
+        a.updated_at !== null && a.updated_at !== undefined
+          ? new Date(a.updated_at).getTime()
+          : 0;
+      const dateB =
+        b.updated_at !== null && b.updated_at !== undefined
+          ? new Date(b.updated_at).getTime()
+          : 0;
       return dateB - dateA; // Sort descending (most recent first)
     });
 
@@ -247,7 +253,7 @@ export default function TenantChatInterface({
     if (activeChannel?.id) {
       markAsRead.mutate(activeChannel.id);
     }
-  }, [activeChannel?.id]);
+  }, [activeChannel?.id, markAsRead]);
 
   // Message handlers
   const handleSendMessage = useCallback(

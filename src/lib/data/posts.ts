@@ -2,11 +2,15 @@ import { createServerSupabaseClient } from '@/lib/supabase/server';
 
 import type { Database } from '@/lib/database.types';
 
-type PostWithAuthorAndCollective =
-  Database['public']['Tables']['posts']['Row'] & {
-    author: Database['public']['Tables']['users']['Row'] | null;
-    collective: Database['public']['Tables']['collectives']['Row'] | null;
-  };
+// Type aliases for cleaner code
+type PostRow = Database['public']['Tables']['posts']['Row'];
+type UserRow = Database['public']['Tables']['users']['Row'];
+type CollectiveRow = Database['public']['Tables']['collectives']['Row'];
+
+type PostWithAuthorAndCollective = PostRow & {
+  author: UserRow | null;
+  collective: CollectiveRow | null;
+};
 
 export async function getPostById(
   postId: string,
@@ -48,7 +52,10 @@ export async function getPostBySlug(
 
 export async function getPostStats(
   postId: string,
-): Promise<Partial<Database['public']['Tables']['posts']['Row']> | null> {
+): Promise<Pick<
+  PostRow,
+  'like_count' | 'dislike_count' | 'view_count'
+> | null> {
   const supabase = await createServerSupabaseClient();
   const { data, error } = await supabase
     .from('posts')
@@ -61,7 +68,10 @@ export async function getPostStats(
 
 export async function getPostStatsBySlug(
   slug: string,
-): Promise<Partial<Database['public']['Tables']['posts']['Row']> | null> {
+): Promise<Pick<
+  PostRow,
+  'like_count' | 'dislike_count' | 'view_count'
+> | null> {
   const supabase = await createServerSupabaseClient();
   const { data, error } = await supabase
     .from('posts')

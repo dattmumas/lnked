@@ -2,8 +2,10 @@ import { createServerSupabaseClient } from '@/lib/supabase/server';
 
 import type { Database } from '@/lib/database.types';
 
-type PostReaction = Database['public']['Tables']['post_reactions']['Row'];
-type CommentReaction = Database['public']['Tables']['comment_reactions']['Row'];
+// Type aliases for cleaner code
+type PostReactionRow = Database['public']['Tables']['post_reactions']['Row'];
+type CommentReactionRow =
+  Database['public']['Tables']['comment_reactions']['Row'];
 
 interface TogglePostReactionArgs {
   postId: string;
@@ -21,7 +23,7 @@ export async function togglePostReaction({
   postId,
   userId,
   type,
-}: TogglePostReactionArgs): Promise<PostReaction | null> {
+}: TogglePostReactionArgs): Promise<PostReactionRow | null> {
   const supabase = await createServerSupabaseClient();
   const { data, error } = await supabase
     .from('post_reactions')
@@ -39,7 +41,7 @@ export async function toggleCommentReaction({
   commentId,
   userId,
   reaction_type,
-}: ToggleCommentReactionArgs): Promise<CommentReaction | null> {
+}: ToggleCommentReactionArgs): Promise<CommentReactionRow | null> {
   const supabase = await createServerSupabaseClient();
   const { data, error } = await supabase
     .from('comment_reactions')
@@ -63,7 +65,7 @@ export async function toggleCommentReaction({
 
 export async function getReactionsForPost(
   postId: string,
-): Promise<PostReaction[]> {
+): Promise<PostReactionRow[]> {
   const supabase = await createServerSupabaseClient();
   const { data, error } = await supabase
     .from('post_reactions')

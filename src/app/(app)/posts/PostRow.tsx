@@ -77,11 +77,11 @@ export default function PostRow({ post }: PostRowProps) {
               </Badge>
               <span className="flex items-center gap-1.5">
                 <Eye className="h-3.5 w-3.5" />
-                {post.view_count} views
+                {post.view_count ?? 0} views
               </span>
               <span className="flex items-center gap-1.5">
                 <Heart className="h-3.5 w-3.5" />
-                {post.like_count} likes
+                {post.like_count ?? 0} likes
               </span>
               {post.published_at && (
                 <span className="text-muted-foreground/80">

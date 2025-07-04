@@ -630,6 +630,8 @@ export async function updatePost(
         return { error: 'Error checking collective membership for edit.' };
       const canEditAsCollectiveMember =
         membership !== null &&
+        membership.role !== null &&
+        membership.role !== undefined &&
         ['admin', 'editor', 'author'].includes(membership.role);
       if (canEditAsCollectiveMember === true) {
         isCollectiveOwnerOrMember = true;
@@ -705,11 +707,14 @@ export async function updatePost(
     const final_published_at =
       published_at === undefined ? existingPost.published_at : published_at;
 
-    updateData.status = derivePostStatus(final_is_public, final_published_at);
+    updateData.status = derivePostStatus(
+      final_is_public ?? false,
+      final_published_at,
+    );
   }
 
   // Generate slug from title (simplified since slug field doesn't exist in posts table)
-  let postSlug = generateSlug(existingPost.title);
+  let postSlug = generateSlug(existingPost.title ?? '');
 
   // Handle slug updates with conflict resolution (but keep old slug for redirects)
   if (title !== null && title !== undefined && title !== existingPost.title) {
@@ -729,7 +734,7 @@ export async function updatePost(
     const newSlug = await resolveSlugConflict(
       supabase,
       newBaseSlug,
-      existingPost.tenant_id,
+      existingPost.tenant_id ?? '',
       postId,
     );
     postSlug = newSlug;
@@ -740,7 +745,7 @@ export async function updatePost(
       'updatePost',
       {
         postId,
-        oldTitle: existingPost.title,
+        oldTitle: existingPost.title ?? '',
         newTitle: title,
         message:
           'Title changed - old links may break without redirect handling',
@@ -1029,6 +1034,8 @@ export async function uploadThumbnail(
 
             if (
               membership !== null &&
+              membership.role !== null &&
+              membership.role !== undefined &&
               ['owner', 'admin', 'editor'].includes(membership.role)
             ) {
               hasPermission = true;

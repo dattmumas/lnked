@@ -1,25 +1,30 @@
-"use server";
+'use server';
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath } from 'next/cache';
 
-import { getStripe } from "@/lib/stripe";
-import { createServerSupabaseClient } from "@/lib/supabase/server";
-import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { getStripe } from '@/lib/stripe';
+import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { supabaseAdmin } from '@/lib/supabaseAdmin';
 
-import type { Enums } from "@/lib/database.types";
+import type { Database } from '@/lib/database.types';
 
+// Type aliases for cleaner code
+type SubscriptionStatus = Database['public']['Enums']['subscription_status'];
+type SubscriptionTargetType =
+  Database['public']['Enums']['subscription_target_type'];
+type PriceInterval = Database['public']['Enums']['price_interval'];
 
 interface SubscriptionStatusResult {
   isSubscribed: boolean;
   dbSubscriptionId?: string; // id from your subscriptions table (which is stripe_subscription_id)
-  status?: Enums<"subscription_status"> | null;
+  status?: SubscriptionStatus | null;
   cancelAtPeriodEnd?: boolean | null;
   currentPeriodEnd?: string | null;
 }
 
 export async function getSubscriptionStatus(
-  targetEntityType: Enums<"subscription_target_type">,
-  targetEntityId: string
+  targetEntityType: SubscriptionTargetType,
+  targetEntityId: string,
 ): Promise<SubscriptionStatusResult | undefined> {
   const supabase = await createServerSupabaseClient();
 
@@ -29,17 +34,17 @@ export async function getSubscriptionStatus(
   if (!user) return { isSubscribed: false };
 
   const { data: subscription, error } = await supabase
-    .from("subscriptions")
+    .from('subscriptions')
     // Select only existing columns: id (is stripe_subscription_id), status, cancel_at_period_end, current_period_end
-    .select("id, status, cancel_at_period_end, current_period_end")
-    .eq("user_id", user.id)
-    .eq("target_entity_type", targetEntityType)
-    .eq("target_entity_id", targetEntityId)
-    .in("status", ["active", "trialing", "past_due"])
+    .select('id, status, cancel_at_period_end, current_period_end')
+    .eq('user_id', user.id)
+    .eq('target_entity_type', targetEntityType)
+    .eq('target_entity_id', targetEntityId)
+    .in('status', ['active', 'trialing', 'past_due'])
     .maybeSingle();
 
   if (error) {
-    console.error("Error fetching subscription status:", error.message);
+    console.error('Error fetching subscription status:', error.message);
     return undefined;
   }
 
@@ -49,9 +54,13 @@ export async function getSubscriptionStatus(
       dbSubscriptionId: subscription.id, // id from table is the Stripe Subscription ID
       status: subscription.status,
       cancelAtPeriodEnd: subscription.cancel_at_period_end,
-      ...(subscription.current_period_end ? { 
-        currentPeriodEnd: new Date(subscription.current_period_end).toLocaleDateString() 
-      } : {}),
+      ...(subscription.current_period_end
+        ? {
+            currentPeriodEnd: new Date(
+              subscription.current_period_end,
+            ).toLocaleDateString(),
+          }
+        : {}),
     };
   }
   return { isSubscribed: false };
@@ -64,7 +73,7 @@ interface UnsubscribeResult {
 
 export async function unsubscribeFromEntity(
   dbSubscriptionId: string, // ID from your public.subscriptions table
-  stripeSubscriptionId: string
+  stripeSubscriptionId: string,
 ): Promise<UnsubscribeResult> {
   const supabase = await createServerSupabaseClient();
   const {
@@ -72,41 +81,41 @@ export async function unsubscribeFromEntity(
     error: authError,
   } = await supabase.auth.getUser();
   if (authError || !user)
-    return { success: false, message: "User not authenticated." };
+    return { success: false, message: 'User not authenticated.' };
 
   // Verify user owns this DB subscription record before proceeding
   const { data: subRecord, error: subFetchError } = await supabase
-    .from("subscriptions")
-    .select("id, user_id, target_entity_type, target_entity_id")
-    .eq("id", dbSubscriptionId)
-    .eq("user_id", user.id)
+    .from('subscriptions')
+    .select('id, user_id, target_entity_type, target_entity_id')
+    .eq('id', dbSubscriptionId)
+    .eq('user_id', user.id)
     .single();
 
   if (subFetchError || subRecord === null) {
     console.error(
-      "Error fetching subscription for unsubscribe or permission denied:",
-      subFetchError?.message
+      'Error fetching subscription for unsubscribe or permission denied:',
+      subFetchError?.message,
     );
     return {
       success: false,
-      message: "Subscription not found or permission denied.",
+      message: 'Subscription not found or permission denied.',
     };
   }
 
   try {
     // Option 1: Cancel at period end (recommended)
     const stripe = getStripe();
-    if (stripe === null) throw new Error("Stripe SDK not initialized");
+    if (stripe === null) throw new Error('Stripe SDK not initialized');
     const updatedStripeSubscription = await stripe!.subscriptions.update(
       stripeSubscriptionId,
       {
         cancel_at_period_end: true,
-      }
+      },
     );
-    if (process.env.NODE_ENV === "development") {
+    if (process.env.NODE_ENV === 'development') {
       console.warn(
-        "Stripe subscription set to cancel at period end:",
-        updatedStripeSubscription.id
+        'Stripe subscription set to cancel at period end:',
+        updatedStripeSubscription.id,
       );
     }
 
@@ -119,23 +128,23 @@ export async function unsubscribeFromEntity(
     // For now, rely on webhook for DB state.
 
     // Revalidate paths related to this subscription or user's content access
-    if (subRecord.target_entity_type === "collective") {
+    if (subRecord.target_entity_type === 'collective') {
       // Need collective slug for path revalidation - this action doesn't have it.
       // This makes revalidation tricky from a generic action. Client might need to trigger specific revalidations.
       // Or, revalidate a broader path like the user's feed or dashboard.
       // For now, let's skip specific collective page revalidation from here.
     }
-    revalidatePath("/"); // Revalidate home feed
-    revalidatePath("/dashboard"); // Revalidate dashboard
+    revalidatePath('/'); // Revalidate home feed
+    revalidatePath('/dashboard'); // Revalidate dashboard
 
     return {
       success: true,
-      message: "Subscription set to cancel at period end.",
+      message: 'Subscription set to cancel at period end.',
     };
   } catch (error: unknown) {
     const errorMessage =
-      error instanceof Error ? error.message : "Unknown Stripe error";
-    console.error("Stripe unsubscribe error:", errorMessage, error);
+      error instanceof Error ? error.message : 'Unknown Stripe error';
+    console.error('Stripe unsubscribe error:', errorMessage, error);
     return {
       success: false,
       message: `Failed to unsubscribe: ${errorMessage}`,
@@ -181,7 +190,8 @@ export async function createPriceTier({
   }
 
   const stripe = getStripe();
-  if (stripe === null || stripe === undefined) return { success: false, error: 'Stripe not configured.' };
+  if (stripe === null || stripe === undefined)
+    return { success: false, error: 'Stripe not configured.' };
 
   const { data: existingProduct } = await supabase
     .from('products')
@@ -190,11 +200,19 @@ export async function createPriceTier({
     .maybeSingle();
 
   let productId: string;
-  if (existingProduct !== null && existingProduct.id !== null && existingProduct.id !== undefined && existingProduct.id !== '') {
+  if (
+    existingProduct !== null &&
+    existingProduct.id !== null &&
+    existingProduct.id !== undefined &&
+    existingProduct.id !== ''
+  ) {
     productId = existingProduct.id;
   } else {
     const product = await stripe.products.create({
-      name: (tierName !== null && tierName !== undefined && tierName !== '') ? tierName : 'Subscription',
+      name:
+        tierName !== null && tierName !== undefined && tierName !== ''
+          ? tierName
+          : 'Subscription',
       metadata: { collectiveId },
     });
     productId = product.id;
@@ -221,8 +239,11 @@ export async function createPriceTier({
     product_id: productId,
     unit_amount: price.unit_amount,
     currency: price.currency,
-    interval: price.recurring?.interval as Enums<'price_interval'> | null,
-    description: (tierName !== null && tierName !== undefined && tierName !== '') ? tierName : null,
+    interval: price.recurring?.interval as PriceInterval | null,
+    description:
+      tierName !== null && tierName !== undefined && tierName !== ''
+        ? tierName
+        : null,
     active: true,
   });
 
@@ -256,11 +277,15 @@ export async function deactivatePriceTier({
   }
 
   const stripe = getStripe();
-  if (stripe === null || stripe === undefined) return { success: false, error: 'Stripe not configured.' };
+  if (stripe === null || stripe === undefined)
+    return { success: false, error: 'Stripe not configured.' };
 
   await stripe.prices.update(priceId, { active: false });
 
-  await supabaseAdmin.from('prices').update({ active: false }).eq('id', priceId);
+  await supabaseAdmin
+    .from('prices')
+    .update({ active: false })
+    .eq('id', priceId);
 
   revalidatePath(`/dashboard/collectives/${collectiveId}/settings`);
   return { success: true };

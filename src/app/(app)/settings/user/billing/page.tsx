@@ -82,7 +82,8 @@ export default async function BillingSettingsPage() {
                       Next billing date
                     </p>
                     <p className="font-medium">
-                      {subscription.current_period_end
+                      {subscription.current_period_end !== null &&
+                      subscription.current_period_end !== undefined
                         ? new Date(
                             subscription.current_period_end,
                           ).toLocaleDateString()
@@ -94,7 +95,8 @@ export default async function BillingSettingsPage() {
                       Member since
                     </p>
                     <p className="font-medium">
-                      {subscription.created
+                      {subscription.created !== null &&
+                      subscription.created !== undefined
                         ? new Date(subscription.created).toLocaleDateString()
                         : 'N/A'}
                     </p>

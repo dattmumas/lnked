@@ -2,24 +2,25 @@ import { createServerSupabaseClient } from '@/lib/supabase/server';
 
 import type { Database } from '@/lib/database.types';
 
+// Type aliases for cleaner code
 type CollectiveRow = Database['public']['Tables']['collectives']['Row'];
 type PostRow = Database['public']['Tables']['posts']['Row'];
 type UserRow = Database['public']['Tables']['users']['Row'];
 
-export interface CollectiveData extends CollectiveRow {
+export type CollectiveData = CollectiveRow & {
   member_count: number;
   post_count: number;
   owner?: Partial<UserRow> | null;
-}
+};
 
-export interface CollectivePost extends PostRow {
+export type CollectivePost = PostRow & {
   author_profile?: {
     id: string;
     username: string | null;
     full_name: string | null;
     avatar_url: string | null;
   } | null;
-}
+};
 
 export interface CollectiveMember {
   id: string;
@@ -231,7 +232,7 @@ export async function loadCollectiveData(
       ...collective,
       member_count: memberCount,
       post_count: postCount,
-      owner: collective.owner as Partial<UserRow> | null,
+      owner: collective.owner,
     };
 
     return {

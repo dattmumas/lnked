@@ -45,6 +45,7 @@
     "cypress",
     "e2e",
     "docs",
+    "supabase/functions",
     "**/*.config.js",
     "**/*.config.ts",
     "**/*.stories.ts",

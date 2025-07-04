@@ -164,6 +164,11 @@ export async function createTenantAwareRepository(): Promise<TenantAwareReposito
     throw new Error('User is not associated with any tenant');
   }
 
+  // Validate tenant ID
+  if (tenantId === null || tenantId === undefined) {
+    throw new Error('Tenant ID is required');
+  }
+
   return new TenantAwareRepository(supabase, tenantId);
 }
 

@@ -12,10 +12,14 @@ import {
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 
-import type { Enums } from '@/lib/database.types';
+import type { Database } from '@/lib/database.types';
 
 // Constants for configuration
 const INVITE_CODE_BYTES = 16;
+
+// Type alias for cleaner code
+type CollectiveMemberRole =
+  Database['public']['Enums']['collective_member_role'];
 
 // Shared result type for actions
 export interface ActionResult {
@@ -177,10 +181,20 @@ export async function changeMemberRole({
   if (member.member_id === currentUser.id && newRole !== 'owner') {
     return { success: false, error: 'Owner cannot demote themselves.' };
   }
+  // Validate the new role
+  const validRoles: CollectiveMemberRole[] = [
+    'owner',
+    'admin',
+    'editor',
+    'author',
+  ];
+  if (!validRoles.includes(newRole as CollectiveMemberRole)) {
+    return { success: false, error: 'Invalid role specified.' };
+  }
   // Update role
   const { error: updateError } = await supabaseAdmin
     .from('collective_members')
-    .update({ role: newRole as Enums<'collective_member_role'> })
+    .update({ role: newRole as CollectiveMemberRole })
     .eq('id', memberId);
   if (updateError !== null) {
     return {

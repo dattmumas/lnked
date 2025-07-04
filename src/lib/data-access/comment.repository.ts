@@ -505,24 +505,52 @@ export class CommentRepository {
     reactionType: ReactionType,
   ): Promise<void> {
     try {
-      // Validate reaction type
-      CommentReactionTypeEnum.parse(reactionType);
+      // Validate required parameters
+      if (userId === null || userId === undefined) {
+        throw new Error('User ID is required');
+      }
+
+      if (commentId === null || commentId === undefined) {
+        throw new Error('Comment ID is required');
+      }
+
+      if (reactionType === null || reactionType === undefined) {
+        throw new Error('Reaction type is required');
+      }
+
+      // Validate reaction type is in allowed values
+      const validReactionTypes: ReactionType[] = [
+        'like',
+        'dislike',
+        'heart',
+        'laugh',
+        'angry',
+        'sad',
+        'wow',
+      ];
+      if (!validReactionTypes.includes(reactionType)) {
+        throw new Error('Invalid reaction type');
+      }
 
       // Ensure comment exists and is not deleted
       await this.getById(commentId);
 
       // Use upsert with proper conflict resolution
-      const { error } = await this.supabase.from('comment_reactions').upsert(
-        {
-          comment_id: commentId,
-          user_id: userId,
-          reaction_type: reactionType,
-          created_at: new Date().toISOString(),
-        },
-        {
-          onConflict: 'comment_id,user_id,reaction_type',
-        },
-      );
+      const { data, error } = await this.supabase
+        .from('comment_reactions')
+        .upsert(
+          {
+            comment_id: commentId,
+            user_id: userId,
+            reaction_type: reactionType,
+            created_at: new Date().toISOString(),
+          },
+          {
+            onConflict: 'comment_id,user_id',
+          },
+        )
+        .select('*')
+        .single();
 
       if (error) {
         this.logger?.('Failed to add comment reaction', {
@@ -564,7 +592,32 @@ export class CommentRepository {
     reactionType: ReactionType,
   ): Promise<void> {
     try {
-      CommentReactionTypeEnum.parse(reactionType);
+      // Validate required parameters
+      if (userId === null || userId === undefined) {
+        throw new Error('User ID is required');
+      }
+
+      if (commentId === null || commentId === undefined) {
+        throw new Error('Comment ID is required');
+      }
+
+      if (reactionType === null || reactionType === undefined) {
+        throw new Error('Reaction type is required');
+      }
+
+      // Validate reaction type is in allowed values
+      const validReactionTypes: ReactionType[] = [
+        'like',
+        'dislike',
+        'heart',
+        'laugh',
+        'angry',
+        'sad',
+        'wow',
+      ];
+      if (!validReactionTypes.includes(reactionType)) {
+        throw new Error('Invalid reaction type');
+      }
 
       const { error } = await this.supabase
         .from('comment_reactions')

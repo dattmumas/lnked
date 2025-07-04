@@ -1,9 +1,9 @@
 import { useQuery } from '@tanstack/react-query';
 
-import { Database } from '@/lib/database.types';
 import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
 
 import type { CollectiveData } from '@/lib/data-loaders/collective-loader';
+import type { Database } from '@/lib/database.types';
 import type { UseQueryResult } from '@tanstack/react-query';
 
 // Constants
@@ -12,19 +12,35 @@ const STALE_TIME_MS = 5 * 60 * 1000; // 5 minutes
 const GC_TIME_MS = 10 * 60 * 1000; // 10 minutes
 /* eslint-enable no-magic-numbers */
 
-type Collective = Database['public']['Tables']['collectives']['Row'] & {
+// Type aliases for cleaner code
+type CollectiveRow = Database['public']['Tables']['collectives']['Row'];
+type CollectiveMemberRow =
+  Database['public']['Tables']['collective_members']['Row'];
+
+// Type that matches what the query actually returns
+type Collective = Pick<
+  CollectiveRow,
+  | 'id'
+  | 'name'
+  | 'slug'
+  | 'description'
+  | 'owner_id'
+  | 'tags'
+  | 'logo_url'
+  | 'cover_image_url'
+  | 'intro_video_url'
+> & {
   owner: { full_name: string | null } | null;
 };
 
-type CollectiveMember =
-  Database['public']['Tables']['collective_members']['Row'] & {
-    user: {
-      full_name: string | null;
-      avatar_url: string | null;
-      bio: string | null;
-      username: string | null;
-    } | null;
-  };
+type CollectiveMember = CollectiveMemberRow & {
+  user: {
+    full_name: string | null;
+    avatar_url: string | null;
+    bio: string | null;
+    username: string | null;
+  } | null;
+};
 
 interface QueryOptions<T> {
   enabled?: boolean;
@@ -63,7 +79,7 @@ export function useCollectiveData(
         .from('collectives')
         .select(
           `
-          id, name, description, owner_id, tags, logo_url, cover_image_url, intro_video_url,
+          id, name, slug, description, owner_id, tags, logo_url, cover_image_url, intro_video_url,
           owner:users!owner_id(full_name)
         `,
         )
@@ -77,7 +93,7 @@ export function useCollectiveData(
         throw new Error('Collective not found');
       }
 
-      return data as Collective;
+      return data;
     },
     ...(transformedInitialData ? { initialData: transformedInitialData } : {}),
   });
@@ -104,7 +120,7 @@ export function useCollectiveMembers(
         .order('created_at', { ascending: true });
 
       if (error !== null) throw error;
-      return data as CollectiveMember[];
+      return data;
     },
     ...(options.initialData !== undefined
       ? { initialData: options.initialData }

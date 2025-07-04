@@ -340,11 +340,8 @@ async function fetchProfilePosts(
     .range(offset, offset + limit - 1);
 
   // Apply filters
-  if (exists(filters.type)) {
-    query = query.eq(
-      'post_type',
-      filters.type as NonNullable<typeof filters.type>,
-    );
+  if (exists(filters.type) && filters.type !== undefined) {
+    query = query.eq('post_type', filters.type);
   }
 
   if (exists(filters.search)) {

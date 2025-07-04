@@ -47,8 +47,15 @@ export class ChainRepository {
       throw new Error('thread_root must be provided for replies');
     }
 
-    const { status, visibility, collective_id, attachments, meta, ...rest } =
-      dbChain;
+    const {
+      status,
+      visibility,
+      collective_id,
+      attachments,
+      meta,
+      link_preview,
+      ...rest
+    } = dbChain;
     const cleanedChain = {
       ...rest,
       ...(status !== null ? { status } : {}),
@@ -59,6 +66,7 @@ export class ChainRepository {
       id,
       ...(attachments !== null ? { attachments } : {}),
       ...(meta !== null ? { meta } : {}),
+      ...(link_preview !== null ? { link_preview } : {}),
     };
 
     const { data, error } = await this.supabase

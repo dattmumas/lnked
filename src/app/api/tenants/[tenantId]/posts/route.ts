@@ -1,6 +1,7 @@
 // Tenant Posts API Route
 // Provides tenant-scoped post feeds with proper access control
 
+import { revalidatePath } from 'next/cache';
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
@@ -303,6 +304,29 @@ export async function GET(
     if (countError !== null) {
       console.warn('Failed to get post count:', countError);
     }
+
+    // Validate tenant exists and get its slug
+    const { data: tenant, error: tenantError } = await supabase
+      .from('tenants')
+      .select('slug')
+      .eq('id', tenantId)
+      .maybeSingle();
+
+    if (tenantError !== null || tenant === null) {
+      return NextResponse.json({ error: 'Tenant not found' }, { status: 404 });
+    }
+
+    const tenantSlug = tenant.slug;
+    if (tenantSlug === null || tenantSlug === undefined) {
+      return NextResponse.json(
+        { error: 'Invalid tenant configuration' },
+        { status: 500 },
+      );
+    }
+
+    // Use the validated tenant slug for revalidation
+    revalidatePath(`/tenants/${tenantSlug}`);
+    revalidatePath(`/tenants/${tenantSlug}/posts`);
 
     return createTenantSuccessResponse({
       posts: postsWithTenant,

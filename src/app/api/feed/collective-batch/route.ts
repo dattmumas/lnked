@@ -191,7 +191,14 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       postCounts[id] = 0;
     });
 
+    // Process posts with proper type checking
+    const allPosts: TransformedPost[] = [];
+
     posts?.forEach((post) => {
+      if (post === null || post === undefined || typeof post !== 'object') {
+        return; // Skip invalid posts
+      }
+
       const tenantId = post.tenant_id;
       const currentCount = postCounts[tenantId] ?? 0;
       if (currentCount < limit) {
@@ -204,7 +211,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         // Extract video_assets and process it
         const { video_assets, ...postWithoutVideo } = post;
 
-        arr.push({
+        const transformedPost: TransformedPost = {
           ...postWithoutVideo,
           // Flatten author and tenant data
           author: Array.isArray(post.author) ? post.author[0] : post.author,
@@ -216,13 +223,21 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
               : null,
           // Add comment_count (defaulting to 0 for now)
           comment_count: 0,
-        });
+        };
+
+        arr.push(transformedPost);
         postCounts[tenantId] = currentCount + 1;
       }
     });
 
     // Flatten all posts for response
-    const allPosts = Object.values(groupedPosts).flat();
+    Object.values(groupedPosts).forEach((posts) => {
+      posts.forEach((post) => {
+        if (post !== null && post !== undefined) {
+          allPosts.push(post);
+        }
+      });
+    });
 
     return NextResponse.json({
       posts: allPosts,

@@ -13,7 +13,10 @@ import {
   generateAvatarFilename,
 } from '@/lib/utils/avatar';
 
-import type { TablesUpdate } from '@/lib/database.types';
+import type { Database } from '@/lib/database.types';
+
+type TablesUpdate<T extends keyof Database['public']['Tables']> =
+  Database['public']['Tables'][T]['Update'];
 
 // Constants moved from magic numbers
 const USERNAME_MIN_LENGTH = 3;

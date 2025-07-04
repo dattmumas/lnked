@@ -35,6 +35,10 @@ export const ChainSchema = z.object({
     .any()
     .nullable()
     .transform((val) => val ?? undefined),
+  link_preview: z
+    .any()
+    .nullable()
+    .transform((val) => val ?? undefined),
   created_at: z.string(),
   updated_at: z.string(),
   tsv: z.unknown(),
@@ -103,6 +107,11 @@ export const ChainInsertSchema = z.object({
     .optional()
     .transform((val) => val ?? null),
   meta: z
+    .any()
+    .optional()
+    .transform((val) => val ?? null),
+  // Optional link preview JSON (og data)
+  link_preview: z
     .any()
     .optional()
     .transform((val) => val ?? null),

@@ -133,7 +133,11 @@ export async function loadPostsData(userId: string): Promise<PostsPageData> {
 
   // Add owned collectives
   ownedCollectives.forEach((collective) => {
-    if (!addedCollectiveIds.has(collective.id)) {
+    if (
+      collective.id !== null &&
+      collective.id !== undefined &&
+      !addedCollectiveIds.has(collective.id)
+    ) {
       publishingCollectives.push(collective);
       addedCollectiveIds.add(collective.id);
     }
@@ -146,7 +150,12 @@ export async function loadPostsData(userId: string): Promise<PostsPageData> {
       name: string;
       slug: string;
     } | null;
-    if (collective && !addedCollectiveIds.has(collective.id)) {
+    if (
+      collective &&
+      collective.id !== null &&
+      collective.id !== undefined &&
+      !addedCollectiveIds.has(collective.id)
+    ) {
       publishingCollectives.push(collective);
       addedCollectiveIds.add(collective.id);
     }

@@ -121,7 +121,9 @@ export function useFeed(): UseFeedReturn {
         commentCounts[id] = 0;
       });
       comments?.forEach((c) => {
-        commentCounts[c.entity_id] = (commentCounts[c.entity_id] ?? 0) + 1;
+        if (c.entity_id !== null && c.entity_id !== undefined) {
+          commentCounts[c.entity_id] = (commentCounts[c.entity_id] ?? 0) + 1;
+        }
       });
 
       const items: FeedItem[] = postRows.map((post) => {

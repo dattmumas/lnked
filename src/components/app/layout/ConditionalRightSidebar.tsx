@@ -4,6 +4,8 @@ import React from 'react';
 import RightSidebarFeed from '@/components/app/chains/RightSidebarFeed';
 import { cn } from '@/lib/utils/cn';
 
+import ResizableSidebarClient from './ResizableSidebarClient';
+
 interface ConditionalRightSidebarProps {
   user: {
     id: string;
@@ -46,7 +48,7 @@ export async function ConditionalRightSidebar({
         'grid flex-1 min-w-0 md:ml-16',
         shouldHideSidebar
           ? 'grid-cols-1'
-          : 'grid-cols-1 xl:grid-cols-[minmax(0,1fr)_32rem]',
+          : 'grid-cols-1 xl:grid-cols-[minmax(0,1fr)_auto]',
       )}
     >
       {/* Main content */}
@@ -54,9 +56,9 @@ export async function ConditionalRightSidebar({
 
       {/* Right sidebar desktop only - conditionally rendered */}
       {!shouldHideSidebar && (
-        <aside className="hidden xl:block w-[32rem] flex-shrink-0 sticky top-16 h-[calc(100vh_-_4rem)] overflow-y-auto border-l border-border">
+        <ResizableSidebarClient initialWidth={640}>
           <RightSidebarFeed user={user} profile={profile} />
-        </aside>
+        </ResizableSidebarClient>
       )}
     </div>
   );

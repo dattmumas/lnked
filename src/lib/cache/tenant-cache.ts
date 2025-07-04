@@ -13,9 +13,9 @@ import type { Database } from '@/lib/database.types';
 // =============================================================================
 
 // Cache durations (in seconds)
-const TENANT_CONTEXT_CACHE_TTL = 300; // 5 minutes
-const USER_TENANTS_CACHE_TTL = 600; // 10 minutes
-const TENANT_ACCESS_CACHE_TTL = 180; // 3 minutes
+const TENANT_CONTEXT_CACHE_TTL = 60 * 5; // 5 minutes
+const USER_TENANTS_CACHE_TTL = 60 * 10; // 10 minutes
+const TENANT_ACCESS_CACHE_TTL = 60 * 3; // 3 minutes
 
 // Cache tags for invalidation
 export const CACHE_TAGS = {
@@ -32,19 +32,19 @@ export const CACHE_TAGS = {
 // TYPES (Aligned with database.types.ts)
 // =============================================================================
 
-// Exact types from database schema
-type MemberRole = Database['public']['Enums']['member_role']; // 'owner' | 'admin' | 'editor' | 'member'
-type TenantType = Database['public']['Enums']['tenant_type']; // 'personal' | 'collective'
+// Type aliases for cleaner code
+type MemberRoleEnum = Database['public']['Enums']['member_role']; // 'owner' | 'admin' | 'editor' | 'member'
+type TenantTypeEnum = Database['public']['Enums']['tenant_type']; // 'personal' | 'collective'
 
 // Cached tenant context - matches get_tenant_context RPC return
 export interface CachedTenantContext {
   tenant_id: string;
   name: string;
   slug: string;
-  type: TenantType;
+  type: TenantTypeEnum;
   description?: string | null;
   is_public: boolean;
-  user_role: MemberRole;
+  user_role: MemberRoleEnum;
   member_count?: number | null;
   created_at: string;
 }
@@ -52,10 +52,10 @@ export interface CachedTenantContext {
 // Cached user tenant - matches get_user_tenants RPC return structure
 export interface CachedUserTenant {
   tenant_id: string;
-  tenant_type: TenantType;
+  tenant_type: TenantTypeEnum;
   tenant_name: string;
   tenant_slug: string;
-  user_role: MemberRole;
+  user_role: MemberRoleEnum;
   is_personal: boolean;
   member_count: number;
   is_public: boolean;
@@ -64,7 +64,7 @@ export interface CachedUserTenant {
 // Cached tenant access result
 export interface CachedTenantAccess {
   hasAccess: boolean;
-  userRole: MemberRole | null;
+  userRole: MemberRoleEnum | null;
   error?: string;
 }
 
@@ -92,7 +92,6 @@ export const getCachedTenantContext = unstable_cache(
       return null;
     }
 
-     
     return context as unknown as CachedTenantContext;
   },
   ['tenant-context'],
@@ -144,7 +143,7 @@ export const getCachedTenantAccess = unstable_cache(
   async (
     tenantId: string,
     userId: string,
-    requiredRole?: MemberRole,
+    requiredRole?: MemberRoleEnum,
   ): Promise<CachedTenantAccess> => {
     const supabase = await createServerSupabaseClient();
 
@@ -154,8 +153,7 @@ export const getCachedTenantAccess = unstable_cache(
         'user_has_tenant_access',
         {
           target_tenant_id: tenantId,
-          required_role: (requiredRole ||
-            'member'),
+          required_role: requiredRole || 'member',
         },
       );
 
@@ -219,7 +217,7 @@ export const getCachedTenantMembership = cache(
   ): Promise<
     Array<{
       user_id: string;
-      role: MemberRole;
+      role: MemberRoleEnum;
       joined_at: string | null;
     }>
   > => {
@@ -406,10 +404,10 @@ export async function warmUserTenantCache(userId: string): Promise<void> {
  */
 export async function checkTenantAccessCached(
   tenantId: string,
-  requiredRole?: MemberRole,
+  requiredRole?: MemberRoleEnum,
 ): Promise<{
   hasAccess: boolean;
-  userRole: MemberRole | null;
+  userRole: MemberRoleEnum | null;
   error?: string;
 }> {
   try {
@@ -437,7 +435,7 @@ export async function checkTenantAccessCached(
 
     const result: {
       hasAccess: boolean;
-      userRole: MemberRole | null;
+      userRole: MemberRoleEnum | null;
       error?: string;
     } = {
       hasAccess: cachedResult.hasAccess,
@@ -544,7 +542,7 @@ export async function getUserTenantsCached(): Promise<
 export async function checkTenantMembershipCached(
   tenantId: string,
   userId?: string,
-): Promise<{ isMember: boolean; role: MemberRole | null; error?: string }> {
+): Promise<{ isMember: boolean; role: MemberRoleEnum | null; error?: string }> {
   try {
     const supabase = await createServerSupabaseClient();
 
@@ -574,7 +572,7 @@ export async function checkTenantMembershipCached(
 
     const result: {
       isMember: boolean;
-      role: MemberRole | null;
+      role: MemberRoleEnum | null;
       error?: string;
     } = {
       isMember: cachedAccess.hasAccess,

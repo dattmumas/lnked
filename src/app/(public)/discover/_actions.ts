@@ -14,9 +14,10 @@ import type { Database } from '@/lib/database.types';
 // Constants
 const DEFAULT_COLLECTIVES_LIMIT = 10;
 
-type Collective = Database['public']['Tables']['collectives']['Row'];
+// Type aliases for cleaner code
+type CollectiveRow = Database['public']['Tables']['collectives']['Row'];
 
-interface CollectiveWithFollowStatus extends Collective {
+interface CollectiveWithFollowStatus extends CollectiveRow {
   is_following: boolean;
   follower_count: number;
 }
@@ -156,7 +157,7 @@ export async function getCollectives(
   let collectivesWithFollowStatus: CollectiveWithFollowStatus[] = [];
 
   if (user !== null && collectives !== null) {
-    const collectiveIds = collectives.map((c: Collective) => c.id);
+    const collectiveIds = collectives.map((c: CollectiveRow) => c.id);
 
     const { data: follows } = await supabase
       .from('follows')
@@ -167,7 +168,9 @@ export async function getCollectives(
     const followingIds = new Set(follows?.map((f) => f.following_id) || []);
 
     collectivesWithFollowStatus = collectives.map(
-      (collective: Collective & { follower_count: { count: number }[] }) => ({
+      (
+        collective: CollectiveRow & { follower_count: { count: number }[] },
+      ) => ({
         ...collective,
         is_following: followingIds.has(collective.id),
         follower_count: collective.follower_count?.[0]?.count || 0,
@@ -175,7 +178,9 @@ export async function getCollectives(
     );
   } else {
     collectivesWithFollowStatus = (collectives || []).map(
-      (collective: Collective & { follower_count: { count: number }[] }) => ({
+      (
+        collective: CollectiveRow & { follower_count: { count: number }[] },
+      ) => ({
         ...collective,
         is_following: false,
         follower_count: collective.follower_count?.[0]?.count || 0,

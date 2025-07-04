@@ -41,6 +41,13 @@ export interface ChainItem {
     liked: boolean;
     bookmarked: boolean;
   };
+  link_preview?: {
+    url: string;
+    title?: string | null;
+    description?: string | null;
+    image?: string | null;
+    site?: string | null;
+  } | null;
 }
 
 export interface ChainCardInteractions {
@@ -89,7 +96,16 @@ export default function ChainCard({
   const isReplying = interactions.replyingTo === item.id;
 
   return (
-    <div className="px-3 py-3 hover:bg-muted/50 transition-colors border-b border-border last:border-none">
+    <div
+      className={cn(
+        'relative mb-4 mx-3 rounded-2xl p-5 transition-all',
+        'bg-white/5 dark:bg-white/10 bg-clip-padding backdrop-filter',
+        'backdrop-blur-xl backdrop-saturate-200',
+        'border border-white/20 dark:border-white/10',
+        'ring-1 ring-inset ring-white/10 dark:ring-white/5',
+        'shadow-md hover:shadow-lg',
+      )}
+    >
       <div className="flex gap-3">
         <Avatar className="w-9 h-9 flex-shrink-0">
           {item.user.avatar_url ? (
@@ -120,6 +136,39 @@ export default function ChainCard({
           <p className="text-sm text-foreground mb-2.5 leading-relaxed break-words">
             {item.content}
           </p>
+
+          {/* Link preview */}
+          {item.link_preview && (
+            <a
+              href={item.link_preview.url}
+              target="_blank"
+              rel="noreferrer"
+              className="block rounded-lg overflow-hidden border border-white/10 dark:border-white/5 hover:bg-white/5/10 transition mb-3"
+            >
+              {item.link_preview.image && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={item.link_preview.image}
+                  alt=""
+                  className="w-full max-h-48 object-cover"
+                />
+              )}
+              <div className="p-3 space-y-0.5 bg-background/80 backdrop-blur-sm">
+                <p className="text-sm font-medium line-clamp-2">
+                  {item.link_preview.title}
+                </p>
+                {item.link_preview.description && (
+                  <p className="text-xs text-muted-foreground line-clamp-2">
+                    {item.link_preview.description}
+                  </p>
+                )}
+                <span className="text-xs text-muted-foreground">
+                  {item.link_preview.site ??
+                    new URL(item.link_preview.url).hostname}
+                </span>
+              </div>
+            </a>
+          )}
 
           {/* Action bar */}
           <div className="flex items-center gap-5">
@@ -170,7 +219,7 @@ export default function ChainCard({
                 <DropdownMenuContent
                   sideOffset={4}
                   align="center"
-                  className="z-50 min-w-[120px] rounded-md border bg-background p-1 shadow-md"
+                  className="z-50 min-w-[120px] rounded-md border bg-background p-1"
                 >
                   <DropdownMenuItem
                     onSelect={(): void => onDelete?.(item.id)}

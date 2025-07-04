@@ -92,7 +92,7 @@ export default function ThreadFeedClient({
         endReached={loadOlderBatch}
         itemContent={itemContent}
       />
-      <div className="border-t border-border bg-background">
+      <div className="bg-background">
         <ChainComposer
           user={{ id: currentUserId }}
           profile={profile}

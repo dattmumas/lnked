@@ -4,9 +4,12 @@ import { createServerSupabaseClient } from '@/lib/supabase/server';
 import type { Database } from '@/lib/database.types';
 import type { FeedItem } from '@/types/home/types';
 
+// Type aliases for cleaner code
 type PostRow = Database['public']['Tables']['posts']['Row'];
 type UserRow = Database['public']['Tables']['users']['Row'];
 type TenantRow = Database['public']['Tables']['tenants']['Row'];
+type PostStatusEnum = Database['public']['Enums']['post_status_type'];
+type PostTypeEnum = Database['public']['Enums']['post_type_enum'];
 
 // Define a custom type for posts with joined data
 interface FeedPost {
@@ -16,8 +19,8 @@ interface FeedPost {
   author_id: string;
   tenant_id: string;
   collective_id: string | null;
-  status: Database['public']['Enums']['post_status_type'];
-  post_type: Database['public']['Enums']['post_type_enum'];
+  status: PostStatusEnum;
+  post_type: PostTypeEnum;
   is_public: boolean;
   like_count: number;
   dislike_count: number | null;

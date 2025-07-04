@@ -17,15 +17,17 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useUser } from '@/hooks/useUser';
-import { Database } from '@/lib/database.types';
 import supabase from '@/lib/supabase/browser';
 import { getOptimizedAvatarUrl } from '@/lib/utils/avatar';
 
-type Profile = Database['public']['Tables']['users']['Row'];
+import type { Database } from '@/lib/database.types';
+
+// Type alias for cleaner code
+type UserRow = Database['public']['Tables']['users']['Row'];
 
 export function UserNav(): React.ReactElement {
   const { user, loading } = useUser();
-  const [profile, setProfile] = useState<Profile | null>(null);
+  const [profile, setProfile] = useState<UserRow | null>(null);
   const router = useRouter();
 
   useEffect(() => {

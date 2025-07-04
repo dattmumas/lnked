@@ -31,25 +31,24 @@ import { createServerSupabaseClient } from '@/lib/supabase/server';
 
 import type { Database } from '@/lib/database.types';
 
-// Use a type alias for DashboardPost
-export type DashboardPost = Database['public']['Tables']['posts']['Row'] & {
-  collective?: { id: string; name: string; slug: string } | null;
+// Type aliases for cleaner code
+type PostRowType = Database['public']['Tables']['posts']['Row'];
+type CollectiveRow = Database['public']['Tables']['collectives']['Row'];
+type VideoAssetRow = Database['public']['Tables']['video_assets']['Row'];
+
+// Use explicit row types instead of Database intersection
+export type DashboardPost = PostRowType & {
+  collective?: Pick<CollectiveRow, 'id' | 'name' | 'slug'> | null;
   post_reactions?: { count: number; type?: string }[] | null;
   likeCount?: number;
   isFeatured?: boolean;
-  video?: { id: string; title: string | null } | null;
+  video?: Pick<VideoAssetRow, 'id' | 'title'> | null;
 };
 
 // Type for collectives user can post to
-type PublishingTargetCollective = Pick<
-  Database['public']['Tables']['collectives']['Row'],
-  'id' | 'name' | 'slug'
->;
+type PublishingTargetCollective = Pick<CollectiveRow, 'id' | 'name' | 'slug'>;
 
-type VideoAsset = Pick<
-  Database['public']['Tables']['video_assets']['Row'],
-  'id' | 'title'
->;
+type VideoAsset = Pick<VideoAssetRow, 'id' | 'title'>;
 
 // Enable ISR with 2-minute revalidation for posts data
 // Posts change frequently, 2 minutes provides good balance
@@ -185,7 +184,10 @@ export default async function MyPostsPage(): Promise<React.ReactElement> {
                     fill="none"
                     viewBox="0 0 24 24"
                     stroke="currentColor"
+                    role="img"
+                    aria-labelledby="no-posts-title"
                   >
+                    <title id="no-posts-title">No posts illustration</title>
                     <path
                       strokeLinecap="round"
                       strokeLinejoin="round"

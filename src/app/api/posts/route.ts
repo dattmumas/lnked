@@ -59,7 +59,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       videoErr !== null ||
       videoAsset === null ||
       videoAsset.created_by !== user.id ||
-      !videoAsset.status ||
+      videoAsset.status === null ||
+      videoAsset.status === undefined ||
       !['ready', 'processing', 'complete', 'preparing'].includes(
         videoAsset.status,
       )

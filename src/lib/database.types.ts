@@ -105,6 +105,7 @@ export type Database = {
           created_at: string
           id: string
           like_count: number
+          link_preview: Json | null
           meta: Json | null
           parent_id: string | null
           reply_count: number
@@ -122,6 +123,7 @@ export type Database = {
           created_at?: string
           id?: string
           like_count?: number
+          link_preview?: Json | null
           meta?: Json | null
           parent_id?: string | null
           reply_count?: number
@@ -139,6 +141,7 @@ export type Database = {
           created_at?: string
           id?: string
           like_count?: number
+          link_preview?: Json | null
           meta?: Json | null
           parent_id?: string | null
           reply_count?: number

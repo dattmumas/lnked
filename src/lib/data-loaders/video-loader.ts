@@ -142,7 +142,24 @@ export async function loadVideoData(
     .is('deleted_at', null);
 
   // Calculate stats
-  const stats = calculateVideoStats(statsResult.data || []);
+  const videoStatsData = statsResult.data || [];
+  const validVideoStatsData: Array<{
+    status: string | null;
+    duration: number | null;
+  }> = [];
+
+  if (Array.isArray(videoStatsData)) {
+    videoStatsData.forEach((item) => {
+      if (item !== null && item !== undefined && typeof item === 'object') {
+        validVideoStatsData.push({
+          status: item.status ?? null,
+          duration: item.duration ?? null,
+        });
+      }
+    });
+  }
+
+  const stats = calculateVideoStats(validVideoStatsData);
 
   // Transform videos to include additional data
   const transformedVideos: VideoAsset[] = (videos || []).map((video) => ({

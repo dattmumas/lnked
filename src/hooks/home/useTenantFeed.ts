@@ -130,7 +130,11 @@ export function useTenantFeed(
 
     userTenants
       .filter((t) => t.type !== 'personal') // Only include collectives
-      .forEach((t) => tenantIds.add(t.id));
+      .forEach((t) => {
+        if (t.id !== null && t.id !== undefined) {
+          tenantIds.add(t.id);
+        }
+      });
 
     return Array.from(tenantIds);
   }, [currentTenant, userTenants, includeCollectives]);

@@ -6,10 +6,20 @@ import { createServerSupabaseClient } from '@/lib/supabase/server';
 
 import ManageMembersClientUI from './ManageMembersClientUI'; // New client component
 
-import type { Tables } from '@/lib/database.types';
+import type { Database } from '@/lib/database.types';
 
-export type MemberWithDetails = Tables<'collective_members'> & {
-  user: Pick<Tables<'users'>, 'id' | 'full_name'> | null; // Removed email
+// Row type for collective_members table
+type CollectiveMemberRow =
+  Database['public']['Tables']['collective_members']['Row'];
+
+// Row type for users table (only the fields we need)
+type UserPartial = Pick<
+  Database['public']['Tables']['users']['Row'],
+  'id' | 'full_name'
+>;
+
+export type MemberWithDetails = CollectiveMemberRow & {
+  user: UserPartial | null;
 };
 
 type PendingInvite = {

@@ -23,7 +23,7 @@ const DEFAULT_CONFIGS = {
   },
   notifications_per_ip: {
     maxRequests: parseInt(process.env['NOTIF_RATE_LIMIT_PER_IP'] ?? '200', 10), // 200 requests per hour
-    windowMs: parseInt(process.env['NOTIF_RATE_WINDOW_MS'] ?? '3600000', 10), // 1 hour  
+    windowMs: parseInt(process.env['NOTIF_RATE_WINDOW_MS'] ?? '3600000', 10), // 1 hour
     keyPrefix: 'notif_ip',
   },
 } as const;
@@ -33,7 +33,7 @@ const DEFAULT_CONFIGS = {
  */
 export async function checkRateLimit(
   identifier: string,
-  configName: keyof typeof DEFAULT_CONFIGS
+  configName: keyof typeof DEFAULT_CONFIGS,
 ): Promise<RateLimitResult> {
   const config = DEFAULT_CONFIGS[configName];
   const cacheKey = `${config.keyPrefix}:${identifier}`;
@@ -57,7 +57,10 @@ export async function checkRateLimit(
       .order('created_at', { ascending: false });
 
     if (fetchError !== null) {
-      console.error('Rate limit fetch error:', fetchError.message ?? 'Unknown error');
+      console.error(
+        'Rate limit fetch error:',
+        fetchError.message ?? 'Unknown error',
+      );
       return {
         allowed: true, // Fail open
         remaining: config.maxRequests - 1,
@@ -71,9 +74,15 @@ export async function checkRateLimit(
     if (requestCount >= config.maxRequests) {
       // Rate limit exceeded
       const oldestRequest = existing?.[existing.length - 1];
-      const resetTime = oldestRequest !== null && oldestRequest !== undefined
-        ? new Date(new Date(oldestRequest.created_at).getTime() + config.windowMs)
-        : new Date(now.getTime() + config.windowMs);
+      const resetTime =
+        oldestRequest !== null &&
+        oldestRequest !== undefined &&
+        oldestRequest.created_at !== null &&
+        oldestRequest.created_at !== undefined
+          ? new Date(
+              new Date(oldestRequest.created_at).getTime() + config.windowMs,
+            )
+          : new Date(now.getTime() + config.windowMs);
 
       return {
         allowed: false,
@@ -106,7 +115,6 @@ export async function checkRateLimit(
       remaining: config.maxRequests - requestCount - 1,
       resetTime: new Date(now.getTime() + config.windowMs),
     };
-
   } catch (error) {
     console.error('Rate limiting error:', error);
     return {
@@ -125,16 +133,17 @@ export function getClientIP(request: Request): string {
   const forwardedFor = request.headers.get('x-forwarded-for');
   const realIP = request.headers.get('x-real-ip');
   const cfConnectingIP = request.headers.get('cf-connecting-ip');
-  
+
   // Try different headers in order of preference
-  if (cfConnectingIP !== null && cfConnectingIP !== undefined) return cfConnectingIP;
+  if (cfConnectingIP !== null && cfConnectingIP !== undefined)
+    return cfConnectingIP;
   if (realIP !== null && realIP !== undefined) return realIP;
   if (forwardedFor !== null && forwardedFor !== undefined) {
     // x-forwarded-for can be a comma-separated list
-    const ips = forwardedFor.split(',').map(ip => ip.trim());
+    const ips = forwardedFor.split(',').map((ip) => ip.trim());
     return ips[0] || 'unknown'; // First IP is usually the client
   }
-  
+
   return 'unknown';
 }
 
@@ -143,12 +152,18 @@ export function getClientIP(request: Request): string {
  */
 export async function applyRateLimit(
   request: Request,
-  userId?: string
-): Promise<{ allowed: boolean; headers: Record<string, string>; error?: string }> {
+  userId?: string,
+): Promise<{
+  allowed: boolean;
+  headers: Record<string, string>;
+  error?: string;
+}> {
   const ip = getClientIP(request);
   const results = await Promise.all([
     // Check both user and IP limits
-    userId ? checkRateLimit(userId, 'notifications_per_user') : Promise.resolve(undefined),
+    userId
+      ? checkRateLimit(userId, 'notifications_per_user')
+      : Promise.resolve(undefined),
     checkRateLimit(ip, 'notifications_per_ip'),
   ]);
 
@@ -156,16 +171,24 @@ export async function applyRateLimit(
 
   // If either limit is exceeded, deny the request
   const allowed = (userLimit?.allowed ?? true) && ipLimit.allowed;
-  const mostRestrictive = userLimit && userLimit.remaining < ipLimit.remaining ? userLimit : ipLimit;
+  const mostRestrictive =
+    userLimit && userLimit.remaining < ipLimit.remaining ? userLimit : ipLimit;
 
   const headers: Record<string, string> = {
-    'X-RateLimit-Limit': String(DEFAULT_CONFIGS.notifications_per_user.maxRequests),
+    'X-RateLimit-Limit': String(
+      DEFAULT_CONFIGS.notifications_per_user.maxRequests,
+    ),
     'X-RateLimit-Remaining': String(mostRestrictive.remaining),
-    'X-RateLimit-Reset': Math.ceil(mostRestrictive.resetTime.getTime() / MILLISECONDS_PER_SECOND).toString(),
+    'X-RateLimit-Reset': Math.ceil(
+      mostRestrictive.resetTime.getTime() / MILLISECONDS_PER_SECOND,
+    ).toString(),
   };
 
   if (!allowed) {
-    headers['Retry-After'] = Math.ceil((mostRestrictive.resetTime.getTime() - Date.now()) / MILLISECONDS_PER_SECOND).toString();
+    headers['Retry-After'] = Math.ceil(
+      (mostRestrictive.resetTime.getTime() - Date.now()) /
+        MILLISECONDS_PER_SECOND,
+    ).toString();
   }
 
   return {
@@ -173,4 +196,4 @@ export async function applyRateLimit(
     headers,
     ...(allowed ? {} : { error: 'Rate limit exceeded' }),
   };
-} 
+}

@@ -40,7 +40,11 @@ const ChannelBodySchema = z.object({
 const PaginationSchema = z.object({
   before: z.string().datetime().optional(),
   after: z.string().datetime().optional(),
-  limit: z.coerce.number().min(1).max(CHANNEL_CONFIG.PAGE_MAX).default(CHANNEL_CONFIG.PAGE_DEFAULT),
+  limit: z.coerce
+    .number()
+    .min(1)
+    .max(CHANNEL_CONFIG.PAGE_MAX)
+    .default(CHANNEL_CONFIG.PAGE_DEFAULT),
 });
 
 // Type definitions
@@ -88,8 +92,8 @@ async function validateCollectiveMembership(
     return { isMember: false };
   }
 
-  return { 
-    isMember: true, 
+  return {
+    isMember: true,
     memberData: member as CollectiveMemberRow,
   };
 }
@@ -111,7 +115,7 @@ async function validateAdminAccess(
   }
 
   const hasAdminAccess = ['owner', 'admin'].includes(memberData.role);
-  return { 
+  return {
     hasAccess: hasAdminAccess,
     memberData,
   };
@@ -145,7 +149,7 @@ async function addParticipantsInBatches(
   // Use batch insertion with service role client for atomic operations
   try {
     const batchSize = CHANNEL_CONFIG.BATCH_SIZE;
-    
+
     for (let i = 0; i < participants.length; i += batchSize) {
       const batch = participants.slice(i, i + batchSize);
       const { error: batchError } = await supabaseAdmin
@@ -159,8 +163,8 @@ async function addParticipantsInBatches(
 
     return { success: true };
   } catch (error: unknown) {
-    return { 
-      success: false, 
+    return {
+      success: false,
       error: error instanceof Error ? error.message : 'Unknown error',
     };
   }
@@ -171,7 +175,12 @@ function createChannelWithTransaction(
   collectiveId: string,
   title: string,
   createdBy: string,
-): Promise<{ success: boolean; conversationId?: string; participantsAdded?: number; error?: string }> {
+): Promise<{
+  success: boolean;
+  conversationId?: string;
+  participantsAdded?: number;
+  error?: string;
+}> {
   // Use manual transaction handling since RPC functions may not exist
   return createChannelWithManualTransaction(collectiveId, title, createdBy);
 }
@@ -181,7 +190,12 @@ async function createChannelWithManualTransaction(
   collectiveId: string,
   title: string,
   createdBy: string,
-): Promise<{ success: boolean; conversationId?: string; participantsAdded?: number; error?: string }> {
+): Promise<{
+  success: boolean;
+  conversationId?: string;
+  participantsAdded?: number;
+  error?: string;
+}> {
   let conversationId: string | undefined;
 
   try {
@@ -199,7 +213,10 @@ async function createChannelWithManualTransaction(
       .single();
 
     if (convErr !== null || conversation === null) {
-      return { success: false, error: convErr?.message ?? 'Failed to create channel' };
+      return {
+        success: false,
+        error: convErr?.message ?? 'Failed to create channel',
+      };
     }
 
     conversationId = conversation.id;
@@ -212,13 +229,19 @@ async function createChannelWithManualTransaction(
 
     if (membersErr !== null) {
       // Rollback conversation
-      await supabaseAdmin.from('conversations').delete().eq('id', conversationId);
+      await supabaseAdmin
+        .from('conversations')
+        .delete()
+        .eq('id', conversationId);
       return { success: false, error: membersErr.message };
     }
 
     if (allMembers === null || allMembers.length === 0) {
       // Rollback conversation
-      await supabaseAdmin.from('conversations').delete().eq('id', conversationId);
+      await supabaseAdmin
+        .from('conversations')
+        .delete()
+        .eq('id', conversationId);
       return { success: false, error: 'No collective members found' };
     }
 
@@ -235,10 +258,13 @@ async function createChannelWithManualTransaction(
 
     if (!participantResult.success) {
       // Rollback conversation
-      await supabaseAdmin.from('conversations').delete().eq('id', conversationId);
-      return { 
-        success: false, 
-        ...(participantResult.error ? { error: participantResult.error } : {})
+      await supabaseAdmin
+        .from('conversations')
+        .delete()
+        .eq('id', conversationId);
+      return {
+        success: false,
+        ...(participantResult.error ? { error: participantResult.error } : {}),
       };
     }
 
@@ -247,15 +273,17 @@ async function createChannelWithManualTransaction(
       conversationId,
       participantsAdded: participants.length,
     };
-
   } catch (error: unknown) {
     // Emergency rollback
     if (conversationId !== undefined) {
-      await supabaseAdmin.from('conversations').delete().eq('id', conversationId);
+      await supabaseAdmin
+        .from('conversations')
+        .delete()
+        .eq('id', conversationId);
     }
-    
-    return { 
-      success: false, 
+
+    return {
+      success: false,
       error: error instanceof Error ? error.message : 'Unknown error',
     };
   }
@@ -264,25 +292,32 @@ async function createChannelWithManualTransaction(
 // Generate ETag for caching (issue #14)
 function generateChannelsETag(channels: ConversationRow[]): string {
   if (channels.length === 0) return 'empty';
-  
-  const validChannels = channels.filter(channel => channel.created_at !== null);
+
+  const validChannels = channels.filter(
+    (channel) => channel.created_at !== null,
+  );
   if (validChannels.length === 0) return 'empty';
-  
+
   const firstValidChannel = validChannels[0];
-  if (firstValidChannel?.created_at === null || firstValidChannel?.created_at === undefined) {
+  if (
+    firstValidChannel?.created_at === null ||
+    firstValidChannel?.created_at === undefined
+  ) {
     return 'empty';
   }
-  
+
   const latestCreatedAt = validChannels.reduce((latest, channel) => {
-    return (channel.created_at !== null && channel.created_at > latest) ? channel.created_at : latest;
+    return channel.created_at !== null && channel.created_at > latest
+      ? channel.created_at
+      : latest;
   }, firstValidChannel.created_at);
-  
+
   return `"${Buffer.from(latestCreatedAt).toString('base64')}"`;
 }
 
 export async function GET(
-  request: NextRequest, 
-  context: { params: Promise<{ collectiveId: string }> } // Fixed: params IS a Promise in Next.js 15
+  request: NextRequest,
+  context: { params: Promise<{ collectiveId: string }> }, // Fixed: params IS a Promise in Next.js 15
 ): Promise<NextResponse> {
   const logger = createAPILogger(request, ENDPOINT);
   let userId: string | undefined;
@@ -297,14 +332,14 @@ export async function GET(
       after: searchParams.get('after'),
       limit: searchParams.get('limit'),
     };
-    
+
     // Convert null to undefined for Zod validation
     const processedParams = {
       before: rawParams.before === null ? undefined : rawParams.before,
       after: rawParams.after === null ? undefined : rawParams.after,
       limit: rawParams.limit,
     };
-    
+
     logger.info('Processing channels request', {
       metadata: {
         collectiveId,
@@ -331,8 +366,11 @@ export async function GET(
       });
 
       return NextResponse.json(
-        { error: 'Invalid pagination parameters', details: paginationResult.error.flatten() },
-        { status: HTTP_STATUS.BAD_REQUEST }
+        {
+          error: 'Invalid pagination parameters',
+          details: paginationResult.error.flatten(),
+        },
+        { status: HTTP_STATUS.BAD_REQUEST },
       );
     }
 
@@ -340,7 +378,7 @@ export async function GET(
 
     // Session-aware Supabase client (issue #2)
     const supabase = createRequestScopedSupabaseClient(request);
-    
+
     // Authentication check
     const {
       data: { user },
@@ -356,7 +394,10 @@ export async function GET(
         },
       });
 
-      return NextResponse.json({ error: 'Unauthorized' }, { status: HTTP_STATUS.UNAUTHORIZED });
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: HTTP_STATUS.UNAUTHORIZED },
+      );
     }
 
     userId = user.id;
@@ -369,7 +410,10 @@ export async function GET(
     );
 
     if (!isMember) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: HTTP_STATUS.FORBIDDEN });
+      return NextResponse.json(
+        { error: 'Forbidden' },
+        { status: HTTP_STATUS.FORBIDDEN },
+      );
     }
 
     // Build query with bidirectional keyset pagination (issue #8)
@@ -416,7 +460,7 @@ export async function GET(
     const ifNoneMatch = request.headers.get('if-none-match');
 
     if (ifNoneMatch === etag) {
-      return new NextResponse(null, { 
+      return new NextResponse(null, {
         status: 304,
         headers: {
           ETag: etag,
@@ -431,18 +475,32 @@ export async function GET(
       metadata: {
         collectiveId,
         channelCount: channelData.length,
-        paginationDirection: before !== undefined ? 'before' : after !== undefined ? 'after' : 'initial',
+        paginationDirection:
+          before !== undefined
+            ? 'before'
+            : after !== undefined
+              ? 'after'
+              : 'initial',
       },
     });
 
-    return NextResponse.json(channelData as ConversationRow[], { 
+    // Ensure channelData is properly typed before returning
+    const validChannelData: ConversationRow[] = channelData.filter(
+      (item): item is ConversationRow =>
+        item !== null &&
+        item !== undefined &&
+        typeof item === 'object' &&
+        'id' in item &&
+        'type' in item,
+    );
+
+    return NextResponse.json(validChannelData, {
       status: HTTP_STATUS.OK,
       headers: {
         ETag: etag,
         'Cache-Control': `private, max-age=${CHANNEL_CONFIG.CACHE_MAX_AGE}`,
       },
     });
-
   } catch (error: unknown) {
     logger.error('Channels fetch operation failed', {
       ...(userId ? { userId } : {}),
@@ -452,14 +510,14 @@ export async function GET(
 
     return NextResponse.json(
       { error: 'Failed to fetch channels' },
-      { status: HTTP_STATUS.INTERNAL_SERVER_ERROR }
+      { status: HTTP_STATUS.INTERNAL_SERVER_ERROR },
     );
   }
 }
 
 export async function POST(
-  request: NextRequest, 
-  context: { params: Promise<{ collectiveId: string }> } // Fixed: params IS a Promise in Next.js 15
+  request: NextRequest,
+  context: { params: Promise<{ collectiveId: string }> }, // Fixed: params IS a Promise in Next.js 15
 ): Promise<NextResponse> {
   const logger = createAPILogger(request, ENDPOINT);
   let userId: string | undefined;
@@ -469,7 +527,7 @@ export async function POST(
 
     // Session-aware Supabase client (issue #2)
     const supabase = createRequestScopedSupabaseClient(request);
-    
+
     // Authentication check
     const {
       data: { user },
@@ -485,7 +543,10 @@ export async function POST(
         },
       });
 
-      return NextResponse.json({ error: 'Unauthorized' }, { status: HTTP_STATUS.UNAUTHORIZED });
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: HTTP_STATUS.UNAUTHORIZED },
+      );
     }
 
     userId = user.id;
@@ -503,10 +564,10 @@ export async function POST(
 
       return NextResponse.json(
         { error: rateLimitResult.error },
-        { 
+        {
           status: HTTP_STATUS.TOO_MANY_REQUESTS,
           headers: rateLimitResult.headers,
-        }
+        },
       );
     }
 
@@ -518,15 +579,21 @@ export async function POST(
     );
 
     if (!hasAccess) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: HTTP_STATUS.FORBIDDEN });
+      return NextResponse.json(
+        { error: 'Forbidden' },
+        { status: HTTP_STATUS.FORBIDDEN },
+      );
     }
 
     // Parse and validate request body
     let body: unknown;
     try {
-      body = await request.json() as unknown;
+      body = (await request.json()) as unknown;
     } catch {
-      return NextResponse.json({ error: 'Invalid JSON' }, { status: HTTP_STATUS.BAD_REQUEST });
+      return NextResponse.json(
+        { error: 'Invalid JSON' },
+        { status: HTTP_STATUS.BAD_REQUEST },
+      );
     }
 
     const parsed = ChannelBodySchema.safeParse(body);
@@ -548,8 +615,10 @@ export async function POST(
 
     if (!isUnique) {
       return NextResponse.json(
-        { error: 'A channel with this title already exists in this collective' },
-        { status: HTTP_STATUS.CONFLICT }
+        {
+          error: 'A channel with this title already exists in this collective',
+        },
+        { status: HTTP_STATUS.CONFLICT },
       );
     }
 
@@ -588,14 +657,16 @@ export async function POST(
       },
     });
 
-    return NextResponse.json({ 
-      conversationId: result.conversationId,
-      participantsAdded: result.participantsAdded,
-    }, { 
-      status: HTTP_STATUS.CREATED,
-      headers: rateLimitResult.headers,
-    });
-
+    return NextResponse.json(
+      {
+        conversationId: result.conversationId,
+        participantsAdded: result.participantsAdded,
+      },
+      {
+        status: HTTP_STATUS.CREATED,
+        headers: rateLimitResult.headers,
+      },
+    );
   } catch (error: unknown) {
     logger.error('Channel creation operation failed', {
       ...(userId ? { userId } : {}),
@@ -605,7 +676,7 @@ export async function POST(
 
     return NextResponse.json(
       { error: 'Failed to create channel' },
-      { status: HTTP_STATUS.INTERNAL_SERVER_ERROR }
+      { status: HTTP_STATUS.INTERNAL_SERVER_ERROR },
     );
   }
 }
