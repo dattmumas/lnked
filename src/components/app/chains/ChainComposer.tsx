@@ -3,7 +3,7 @@
 import { encode } from 'blurhash';
 import imageCompression from 'browser-image-compression';
 import { Loader2, Smile, Image as ImageIcon, Send, X } from 'lucide-react';
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState, useEffect } from 'react';
 import { useDropzone } from 'react-dropzone';
 
 import { Button } from '@/components/ui/button';
@@ -28,6 +28,16 @@ const MAX_INITIALS_LENGTH = 2;
 const MAX_FILES = 4;
 const ACCEPTED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
+// Dynamically create Web Worker (bundled by Next.js)
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore
+const blurWorker: Worker | null =
+  typeof window !== 'undefined' && typeof Worker !== 'undefined'
+    ? new Worker(
+        new URL('../../../workers/blurhash.worker.ts', import.meta.url),
+      )
+    : null;
+
 interface SelectedImage {
   file: File;
   preview: string;
@@ -35,6 +45,7 @@ interface SelectedImage {
   height: number;
   blurhash: string;
   compressed: Blob;
+  altText?: string;
 }
 
 export interface UserProfile {
@@ -52,6 +63,28 @@ export interface ChainComposerProps {
   /** If provided, composer posts as a reply to this root thread */
   rootId?: string;
   parentId?: string | undefined;
+}
+
+function encodeBlurhash(
+  data: Uint8ClampedArray,
+  w: number,
+  h: number,
+): Promise<string> {
+  return new Promise((resolve) => {
+    if (!blurWorker) {
+      resolve(encode(data, w, h, 4, 4));
+      return;
+    }
+    const id = Math.random();
+    const handler = (e: MessageEvent): void => {
+      if (e.data.id === id) {
+        blurWorker?.removeEventListener('message', handler);
+        resolve(e.data.hash as string);
+      }
+    };
+    blurWorker.addEventListener('message', handler);
+    blurWorker.postMessage({ id, data, width: w, height: h });
+  });
 }
 
 /**
@@ -96,19 +129,17 @@ export default function ChainComposer({
       for (const rawFile of accepted.slice(0, MAX_FILES - images.length)) {
         try {
           // Compress only JPG/PNG; skip others
-          const shouldCompress =
-            ACCEPTED_TYPES.includes(rawFile.type) && rawFile.size > 1_000_000; // >1MB
-          const compressed = shouldCompress
-            ? await imageCompression(rawFile, {
-                maxSizeMB: 1,
-                maxWidthOrHeight: 1920,
-              })
-            : rawFile;
+          const compressed = await imageCompression(rawFile, {
+            maxSizeMB: 0.9, // target ≤~900 KB
+            maxWidthOrHeight: 1920,
+            fileType: 'image/webp',
+            initialQuality: 0.8,
+          });
 
           // Read image dimensions via createImageBitmap
           const bitmap = await createImageBitmap(compressed);
-          const {width} = bitmap;
-          const {height} = bitmap;
+          const { width } = bitmap;
+          const { height } = bitmap;
 
           // Draw to canvas to get pixel data for blurhash (downscale for speed)
           const canvas = document.createElement('canvas');
@@ -120,7 +151,7 @@ export default function ChainComposer({
           canvas.height = hashH;
           ctx.drawImage(bitmap, 0, 0, hashW, hashH);
           const imageData = ctx.getImageData(0, 0, hashW, hashH);
-          const blurhash = encode(imageData.data, hashW, hashH, 4, 4);
+          const blurhash = await encodeBlurhash(imageData.data, hashW, hashH);
 
           const preview = URL.createObjectURL(compressed);
 
@@ -207,12 +238,12 @@ export default function ChainComposer({
         // ===== Upload images & create media rows =====
         if (images.length > 0) {
           const uploads = images.map(async (img, index) => {
-            const path = `${user.id}/${chainId}/${index + 1}.jpg`;
+            const path = `${user.id}/${chainId}/${index + 1}.webp`;
             const { error: upErr } = await supabase.storage
               .from('chain-images')
               .upload(path, img.compressed, {
                 upsert: false,
-                contentType: 'image/jpeg',
+                contentType: 'image/webp',
               });
             if (upErr !== null) throw upErr;
 
@@ -224,7 +255,7 @@ export default function ChainComposer({
               width: img.width,
               height: img.height,
               blurhash: img.blurhash,
-              alt_text: null,
+              alt_text: img.altText ?? null,
               storage_bucket: 'chain-images',
               allow_download: true,
             });
@@ -264,6 +295,12 @@ export default function ChainComposer({
       images,
     ],
   );
+
+  useEffect(() => {
+    return () => {
+      images.forEach((img) => URL.revokeObjectURL(img.preview));
+    };
+  }, [images]);
 
   return (
     <div className="mb-6 mx-3">
@@ -346,8 +383,8 @@ export default function ChainComposer({
           <div className="space-y-3">
             {images.length > 0 && (
               <div className="grid grid-cols-4 gap-2">
-                {images.map((img) => (
-                  <div key={img.preview} className="relative group">
+                {images.map((img, idx) => (
+                  <div key={img.preview} className="relative group space-y-1">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={img.preview}
@@ -366,6 +403,20 @@ export default function ChainComposer({
                     >
                       <X className="w-4 h-4" />
                     </button>
+                    <input
+                      type="text"
+                      value={img.altText ?? ''}
+                      onChange={(e): void => {
+                        const val = e.target.value.slice(0, 120);
+                        setImages((prev) =>
+                          prev.map((p, i) =>
+                            i === idx ? { ...p, altText: val } : p,
+                          ),
+                        );
+                      }}
+                      placeholder="Alt text (optional)"
+                      className="w-full p-1 rounded-md bg-background/60 text-xs focus:outline-none focus:ring-1 focus:ring-accent/50"
+                    />
                   </div>
                 ))}
               </div>

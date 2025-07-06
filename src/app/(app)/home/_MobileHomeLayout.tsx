@@ -1,8 +1,7 @@
 'use client';
 
-import { useRouter, usePathname } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import React, { useRef, useCallback } from 'react';
-
 
 import MobileBottomNav from '@/components/app/nav/MobileBottomNav';
 import MobileTenantSwitcher from '@/components/app/nav/MobileTenantSwitcher';
@@ -21,10 +20,9 @@ export default function MobileHomeLayout({
   const { user } = useUser();
 
   const router = useRouter();
-  const pathname = usePathname();
+  const searchParams = useSearchParams();
 
-  // Are we currently on the chain feed page?
-  const isChainsRoute = pathname.endsWith('/chains');
+  const isChainsRoute = searchParams.get('tab') === 'chains';
 
   const touchStartX = useRef<number | null>(null);
 
@@ -56,10 +54,10 @@ export default function MobileHomeLayout({
       const threshold = Math.min(window.innerWidth * 0.25, 120);
 
       if (dx < -threshold && !isChainsRoute) {
-        router.replace('/home/chains');
+        router.replace('/home?tab=chains', { scroll: false });
       }
       if (dx > threshold && isChainsRoute) {
-        router.replace('/home');
+        router.replace('/home', { scroll: false });
       }
     },
     [isChainsRoute, router, isMobileViewport],
@@ -75,17 +73,29 @@ export default function MobileHomeLayout({
       <MobileTenantSwitcher />
 
       {/* Page indicator */}
-      <div className="flex justify-center gap-6 py-2 mt-12 text-xs font-medium text-muted-foreground">
-        <span
-          className={cn(!isChainsRoute ? 'font-semibold text-foreground' : '')}
+      <div className="flex justify-center gap-6 py-2 mt-12 text-xs font-medium text-muted-foreground bg-transparent">
+        <button
+          type="button"
+          onClick={(): void => router.replace('/home', { scroll: false })}
+          className={cn(
+            'transition-colors',
+            !isChainsRoute ? 'font-semibold text-foreground' : '',
+          )}
         >
           Posts
-        </span>
-        <span
-          className={cn(isChainsRoute ? 'font-semibold text-foreground' : '')}
+        </button>
+        <button
+          type="button"
+          onClick={(): void =>
+            router.replace('/home?tab=chains', { scroll: false })
+          }
+          className={cn(
+            'transition-colors',
+            isChainsRoute ? 'font-semibold text-foreground' : '',
+          )}
         >
           Chains
-        </span>
+        </button>
       </div>
 
       <main

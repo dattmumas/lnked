@@ -21,10 +21,11 @@ export default function ChainImage({
   const h = height ?? 900;
   return (
     <Image
-      src={`${PUBLIC_BUCKET_URL}/${storagePath}?width=900&quality=75`}
+      src={`${PUBLIC_BUCKET_URL}/${storagePath}`}
       alt={alt ?? ''}
       width={w}
       height={h}
+      sizes="(max-width: 640px) 100vw, 600px"
       {...(blurhash
         ? {
             placeholder: 'blur' as const,

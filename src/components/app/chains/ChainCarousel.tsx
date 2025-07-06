@@ -6,7 +6,6 @@ import React, { useCallback, useEffect, useState } from 'react';
 
 import ChainImage from './ChainImage';
 
-
 interface MediaItem {
   id: string;
   storage_path: string;
@@ -32,11 +31,13 @@ export default function ChainCarousel({
 
   const [prevEnabled, setPrevEnabled] = useState(false);
   const [nextEnabled, setNextEnabled] = useState(false);
+  const [selectedIndex, setSelectedIndex] = useState(0);
 
   const onSelect = useCallback(() => {
     if (!emblaApi) return;
     setPrevEnabled(emblaApi.canScrollPrev());
     setNextEnabled(emblaApi.canScrollNext());
+    setSelectedIndex(emblaApi.selectedScrollSnap());
   }, [emblaApi]);
 
   useEffect(() => {
@@ -55,24 +56,39 @@ export default function ChainCarousel({
 
   return (
     <div className="relative">
-      <section ref={emblaRef} className="embla overflow-hidden rounded-lg">
+      <div ref={emblaRef} className="embla overflow-hidden rounded-lg">
         <div className="embla__container flex">
-          {media.map((m) => (
-            <div
-              key={m.id}
-              className="embla__slide flex-[0_0_100%] px-2 box-border"
-            >
-              <ChainImage
-                storagePath={m.storage_path}
-                width={m.width}
-                height={m.height}
-                blurhash={m.blurhash}
-                alt={m.alt_text}
-              />
-            </div>
-          ))}
+          {media.map((m, idx) => {
+            const isVisible = Math.abs(idx - selectedIndex) <= 2;
+            return (
+              <div
+                key={m.id}
+                className="embla__slide flex-[0_0_100%] px-2 box-border"
+              >
+                {isVisible ? (
+                  <ChainImage
+                    storagePath={m.storage_path}
+                    width={m.width}
+                    height={m.height}
+                    blurhash={m.blurhash}
+                    alt={m.alt_text}
+                  />
+                ) : (
+                  <div
+                    style={{
+                      paddingTop:
+                        m.height && m.width
+                          ? `${(m.height / m.width) * 100}%`
+                          : '56.25%',
+                    }}
+                    className="w-full bg-muted-foreground/10 rounded-md"
+                  />
+                )}
+              </div>
+            );
+          })}
         </div>
-      </section>
+      </div>
 
       {media.length > 1 && (
         <>
@@ -95,6 +111,16 @@ export default function ChainCarousel({
           >
             <ChevronRight className="w-5 h-5" />
           </button>
+
+          {/* Progress dots */}
+          <div className="hidden md:flex gap-1 absolute left-1/2 -translate-x-1/2 bottom-2 z-10">
+            {media.map((m, idx) => (
+              <span
+                key={m.id}
+                className={`block w-2 h-2 rounded-full transition-colors ${idx === selectedIndex ? 'bg-foreground' : 'bg-muted-foreground/40'}`}
+              />
+            ))}
+          </div>
         </>
       )}
     </div>

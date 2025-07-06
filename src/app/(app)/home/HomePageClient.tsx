@@ -1,5 +1,8 @@
 'use client';
 
+import { useSearchParams } from 'next/navigation';
+
+import RightSidebarFeed from '@/components/app/chains/RightSidebarFeed';
 import { CenterFeed } from '@/components/app/home/CenterFeed';
 import { FloatingCreateButton } from '@/components/app/home/FloatingCreateButton';
 import { useUser } from '@/providers/UserContext';
@@ -52,22 +55,28 @@ function HomeContent({
   user,
   initialFeedItems,
 }: HomeContentProps): React.JSX.Element {
+  const searchParams = useSearchParams();
+  const isChains = searchParams.get('tab') === 'chains';
   return (
     <div className="relative flex h-full">
       {/* Center feed – scrollable */}
       <main className="flex-1 w-0 min-w-0 overflow-y-auto min-h-screen">
-        <div className="max-w-3xl mx-auto px-6 py-6">
-          {user && (
-            <CenterFeedWrapper
-              user={user}
-              {...(initialFeedItems ? { initialFeedItems } : {})}
-            />
-          )}
-        </div>
+        {isChains ? (
+          <RightSidebarFeed user={{ id: user?.id ?? '' }} profile={null} />
+        ) : (
+          <div className="max-w-3xl mx-auto px-6 py-6">
+            {user && (
+              <CenterFeedWrapper
+                user={user}
+                {...(initialFeedItems ? { initialFeedItems } : {})}
+              />
+            )}
+          </div>
+        )}
       </main>
 
       {/* Floating action button (mobile only) */}
-      <FloatingCreateButton />
+      {!isChains && <FloatingCreateButton />}
     </div>
   );
 }
