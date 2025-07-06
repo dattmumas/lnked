@@ -39,7 +39,9 @@ export interface ChainItem {
 // trigger mutations without holding their own state.
 export interface ChainCardInteractions {
   likedChains: Set<ChainId>;
+  dislikedChains: Set<ChainId>;
   toggleLike: (id: ChainId) => void;
+  toggleDislike: (id: ChainId) => void;
   startReply: (id: ChainId) => void;
   cancelReply: () => void;
   replyingTo: ChainId | undefined;

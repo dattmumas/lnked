@@ -1,6 +1,13 @@
 'use client';
 
-import { Heart, Reply, Share2, MoreHorizontal, Loader2 } from 'lucide-react';
+import {
+  ThumbsUp,
+  ThumbsDown,
+  Reply,
+  Share2,
+  MoreHorizontal,
+  Loader2,
+} from 'lucide-react';
 import React, { useCallback } from 'react';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -27,6 +34,7 @@ export interface ChainStats {
   likes: number;
   replies: number;
   shares: number;
+  dislikes: number;
 }
 
 export interface ChainItem {
@@ -52,7 +60,9 @@ export interface ChainItem {
 
 export interface ChainCardInteractions {
   likedChains: Set<string>;
+  dislikedChains: Set<string>;
   toggleLike: (id: string) => void;
+  toggleDislike: (id: string) => void;
   startReply: (id: string) => void;
   cancelReply: () => void;
   replyingTo: string | undefined;
@@ -61,6 +71,7 @@ export interface ChainCardInteractions {
   isPosting: boolean;
   submitReply: (id: string) => void;
   shareChain: (id: string, content: string) => void;
+  getDeltas: (id: string) => { like: number; dislike: number };
 }
 
 export interface ChainCardProps {
@@ -68,6 +79,8 @@ export interface ChainCardProps {
   currentUserId: string;
   interactions: ChainCardInteractions;
   onDelete?: (id: string) => void;
+  /** Optional handler that opens the full thread view. If provided, a small link will appear in the action bar. */
+  onOpenThread?: () => void;
 }
 
 export default function ChainCard({
@@ -75,9 +88,14 @@ export default function ChainCard({
   currentUserId,
   interactions,
   onDelete,
+  onOpenThread,
 }: ChainCardProps): React.ReactElement {
   const handleToggleLike = useCallback((): void => {
     interactions.toggleLike(item.id);
+  }, [interactions, item.id]);
+
+  const handleToggleDislike = useCallback((): void => {
+    interactions.toggleDislike(item.id);
   }, [interactions, item.id]);
 
   const handleStartReply = useCallback((): void => {
@@ -93,7 +111,10 @@ export default function ChainCard({
   }, [interactions, item.id]);
 
   const isLiked = interactions.likedChains.has(item.id);
+  const isDisliked = interactions.dislikedChains.has(item.id);
   const isReplying = interactions.replyingTo === item.id;
+
+  const delta = interactions.getDeltas(item.id);
 
   return (
     <div
@@ -178,12 +199,28 @@ export default function ChainCard({
               className={cn(
                 'flex items-center gap-1.5 text-xs transition-colors',
                 isLiked
+                  ? 'text-accent'
+                  : 'text-muted-foreground hover:text-accent',
+              )}
+            >
+              <ThumbsUp className={cn('w-4 h-4', isLiked && 'fill-current')} />
+              <span>{item.stats.likes + delta.like}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={handleToggleDislike}
+              className={cn(
+                'flex items-center gap-1.5 text-xs transition-colors',
+                isDisliked
                   ? 'text-destructive'
                   : 'text-muted-foreground hover:text-destructive',
               )}
             >
-              <Heart className={cn('w-4 h-4', isLiked && 'fill-current')} />
-              <span>{item.stats.likes}</span>
+              <ThumbsDown
+                className={cn('w-4 h-4', isDisliked && 'fill-current')}
+              />
+              <span>{item.stats.dislikes + delta.dislike}</span>
             </button>
 
             <button
@@ -195,49 +232,64 @@ export default function ChainCard({
               <span>{item.stats.replies}</span>
             </button>
 
-            <button
-              type="button"
-              onClick={handleShare}
-              className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-accent transition-colors"
-            >
-              <Share2 className="w-4 h-4" />
-              <span>{item.stats.shares}</span>
-            </button>
-
-            {/* More menu for author */}
-            {item.author_id === currentUserId ? (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <button
-                    type="button"
-                    className="ml-auto text-muted-foreground hover:text-accent transition-colors"
-                    aria-label="Chain options"
-                  >
-                    <MoreHorizontal className="w-4 h-4" />
-                  </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent
-                  sideOffset={4}
-                  align="center"
-                  className="z-50 min-w-[120px] rounded-md border bg-background p-1"
-                >
-                  <DropdownMenuItem
-                    onSelect={(): void => onDelete?.(item.id)}
-                    className="flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm text-destructive focus:bg-accent/10 dark:focus:bg-accent/20 outline-none"
-                  >
-                    Delete
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            ) : (
+            {onOpenThread && (
               <button
                 type="button"
-                className="ml-auto text-muted-foreground hover:text-accent transition-colors"
-                aria-label="Chain options"
+                onClick={(e): void => {
+                  e.stopPropagation();
+                  onOpenThread();
+                }}
+                className="text-xs underline text-foreground hover:text-accent transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/60 rounded-sm"
               >
-                <MoreHorizontal className="w-4 h-4" />
+                See Chain
               </button>
             )}
+
+            <div className="flex items-center gap-5 ml-auto">
+              <button
+                type="button"
+                onClick={handleShare}
+                className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-accent transition-colors"
+              >
+                <Share2 className="w-4 h-4" />
+                <span>{item.stats.shares}</span>
+              </button>
+
+              {/* More menu for author */}
+              {item.author_id === currentUserId ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      type="button"
+                      className="ml-auto text-muted-foreground hover:text-accent transition-colors"
+                      aria-label="Chain options"
+                    >
+                      <MoreHorizontal className="w-4 h-4" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent
+                    sideOffset={4}
+                    align="center"
+                    className="z-50 min-w-[120px] rounded-md border bg-background p-1"
+                  >
+                    <DropdownMenuItem
+                      onSelect={(): void => onDelete?.(item.id)}
+                      className="flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm text-destructive focus:bg-accent/10 dark:focus:bg-accent/20 outline-none"
+                    >
+                      Delete
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : (
+                <button
+                  type="button"
+                  className="text-muted-foreground hover:text-accent transition-colors"
+                  aria-label="Chain options"
+                >
+                  <MoreHorizontal className="w-4 h-4" />
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Reply form */}

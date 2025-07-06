@@ -117,6 +117,7 @@ export class ChainRepository {
       `,
       )
       .eq('status', 'active')
+      .is('parent_id', null)
       .order('created_at', { ascending: false })
       .limit(limit);
 
@@ -171,7 +172,7 @@ export class ChainRepository {
       )
       .eq('parent_id', parentChainId)
       .eq('status', 'active')
-      .order('created_at', { ascending: false })
+      .order('created_at', { ascending: true })
       .limit(limit);
 
     if (error !== undefined || data === undefined) {
@@ -187,13 +188,17 @@ export class ChainRepository {
   async addReaction(
     chainId: string,
     userId: string,
-    reaction: 'like' | 'rechain' = 'like',
+    reaction: 'like' | 'dislike' | 'rechain' = 'like',
   ): Promise<boolean> {
-    const { error } = await this.supabase.from('chain_reactions').upsert({
-      chain_id: chainId,
-      user_id: userId,
-      reaction,
-    });
+    const { error } = await this.supabase.from('chain_reactions').upsert(
+      {
+        chain_id: chainId,
+        user_id: userId,
+        reaction:
+          reaction as Database['public']['Enums']['chain_reaction_type'],
+      },
+      { onConflict: 'chain_id,user_id' },
+    );
 
     return error === undefined;
   }
@@ -204,7 +209,7 @@ export class ChainRepository {
   async removeReaction(
     chainId: string,
     userId: string,
-    reaction: 'like' | 'rechain' = 'like',
+    reaction: 'like' | 'dislike' | 'rechain' = 'like',
   ): Promise<boolean> {
     const { error } = await this.supabase
       .from('chain_reactions')
@@ -212,7 +217,8 @@ export class ChainRepository {
       .match({
         chain_id: chainId,
         user_id: userId,
-        reaction,
+        reaction:
+          reaction as Database['public']['Enums']['chain_reaction_type'],
       });
 
     return error === undefined;

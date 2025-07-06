@@ -26,6 +26,10 @@ export const ChainSchema = z.object({
   status: ChainStatusEnum,
   visibility: ChainVisibilityEnum,
   like_count: z.number(),
+  dislike_count: z
+    .number()
+    .optional()
+    .transform((v) => v ?? 0),
   reply_count: z.number(),
   attachments: z
     .any()

@@ -1,7 +1,7 @@
 import { headers } from 'next/headers';
 import React from 'react';
 
-import RightSidebarFeed from '@/components/app/chains/RightSidebarFeed';
+import RightSidebarSwitcher from '@/components/app/layout/RightSidebarSwitcher';
 import { cn } from '@/lib/utils/cn';
 
 import ResizableSidebarClient from './ResizableSidebarClient';
@@ -48,7 +48,7 @@ export async function ConditionalRightSidebar({
         'grid flex-1 min-w-0 md:ml-16',
         shouldHideSidebar
           ? 'grid-cols-1'
-          : 'grid-cols-1 xl:grid-cols-[minmax(0,1fr)_auto]',
+          : 'xl:[grid-template-columns:minmax(0,1fr)_var(--rsb-width,_640px)]',
       )}
     >
       {/* Main content */}
@@ -57,7 +57,7 @@ export async function ConditionalRightSidebar({
       {/* Right sidebar desktop only - conditionally rendered */}
       {!shouldHideSidebar && (
         <ResizableSidebarClient initialWidth={640}>
-          <RightSidebarFeed user={user} profile={profile} />
+          <RightSidebarSwitcher user={user} profile={profile} />
         </ResizableSidebarClient>
       )}
     </div>

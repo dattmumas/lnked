@@ -1,40 +1,44 @@
-import React from 'react';
+'use client';
 
-import { ChainRepository } from '@/lib/data-access/chain.repository';
-import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { useEffect, useState } from 'react';
 
-import { UserProfile } from './ChainComposer';
+import { fetchInitialChains } from '@/app/actions/threadActions';
+
 import ThreadFeedClient from './ThreadFeedClient';
 
 import type { ChainWithAuthor } from '@/lib/data-access/schemas/chain.schema';
 
 interface RightSidebarFeedProps {
-  rootId?: string; // if omitted shows latest roots timeline
+  rootId?: string | undefined; // allow undefined
   user: { id: string; email?: string };
-  profile: UserProfile | null;
+  profile: import('@/components/app/chains/ChainComposer').UserProfile | null;
 }
 
-export default async function RightSidebarFeed({
+export default function RightSidebarFeed({
   rootId,
   user,
   profile,
-}: RightSidebarFeedProps): Promise<React.ReactElement> {
-  const supabase = await createServerSupabaseClient();
-  const repo = new ChainRepository(supabase);
+}: RightSidebarFeedProps): React.ReactElement {
+  const [initial, setInitial] = useState<ChainWithAuthor[] | null>(null);
 
-  let initial: ChainWithAuthor[] = [];
-  if (rootId) {
-    // fetch specific thread
-    initial = await repo.fetchThread(rootId, undefined, 40);
-  } else {
-    // fallback: fetch latest root chains (status active, no parent)
-    initial = await repo.getChainsWithAuthors(40);
+  useEffect(() => {
+    let isActive = true;
+    (async () => {
+      const rows = await fetchInitialChains(rootId ?? null, 40);
+      if (isActive) setInitial(rows);
+    })();
+    return () => {
+      isActive = false;
+    };
+  }, [rootId]);
+
+  if (initial === null) {
+    return <div className="flex-1" />; // simple placeholder / spinner later
   }
 
   return (
     <div className="h-full flex flex-col">
       <div className="flex-1 min-h-0 overflow-y-hidden">
-        {/* client-side virtual list with internal composer */}
         <ThreadFeedClient
           rootId={rootId ?? ''}
           initial={initial}

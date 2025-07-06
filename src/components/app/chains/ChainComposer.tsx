@@ -33,6 +33,9 @@ export interface ChainComposerProps {
   user: { id: string; email?: string };
   profile: UserProfile | null;
   onCreated?: (row: ChainWithAuthor) => void;
+  /** If provided, composer posts as a reply to this root thread */
+  rootId?: string;
+  parentId?: string | undefined;
 }
 
 /**
@@ -42,6 +45,8 @@ export default function ChainComposer({
   user,
   profile,
   onCreated,
+  rootId,
+  parentId,
 }: ChainComposerProps): React.ReactElement {
   const [content, setContent] = useState('');
   const [isPosting, setIsPosting] = useState(false);
@@ -92,17 +97,23 @@ export default function ChainComposer({
                 : (previewData as Json);
           }
         }
+        const insertPayload = {
+          id,
+          author_id: user.id,
+          content: content.trim(),
+          status: 'active',
+          created_at: new Date().toISOString(),
+          ...(parentId
+            ? { parent_id: parentId, thread_root: rootId ?? parentId }
+            : rootId
+              ? { parent_id: rootId, thread_root: rootId }
+              : { thread_root: id }),
+          ...(preview ? { link_preview: preview } : {}),
+        } as const;
+
         const { data, error } = await supabase
           .from('chains')
-          .insert({
-            id,
-            author_id: user.id,
-            content: content.trim(),
-            status: 'active',
-            created_at: new Date().toISOString(),
-            thread_root: id,
-            ...(preview ? { link_preview: preview } : {}),
-          })
+          .insert(insertPayload)
           .select(
             `*,
             author:users!author_id(id, username, full_name, avatar_url)
@@ -119,14 +130,14 @@ export default function ChainComposer({
         setIsPosting(false);
       }
     },
-    [content, isPosting, supabase, user.id, onCreated],
+    [content, isPosting, supabase, user.id, onCreated, rootId, parentId],
   );
 
   return (
     <div
       className={cn(
         'relative mb-6 mx-3 rounded-2xl p-5 transition-all',
-        'bg-white/5 dark:bg-gray-100/50 bg-clip-padding backdrop-filter border-black backdrop-blur-xl backdrop-saturate-200',
+        'bg-transparent',
       )}
     >
       <form onSubmit={handleSubmit} className="space-y-3">
@@ -147,8 +158,11 @@ export default function ChainComposer({
           <div className="flex-1 space-y-3">
             <Textarea
               value={content}
-              onChange={(e): void => setContent(e.target.value)}
-              placeholder="Thoughts?"
+              onChange={(e): void => {
+                const val = e.target.value.slice(0, CHARACTER_LIMIT);
+                setContent(val);
+              }}
+              placeholder={parentId || rootId ? `Reply...` : 'Thoughts?'}
               className="min-h-[90px] resize-none text-sm placeholder:text-muted-foreground focus-visible:ring-0 focus-visible:ring-offset-0"
               maxLength={CHARACTER_LIMIT}
               disabled={isPosting}
@@ -198,7 +212,7 @@ export default function ChainComposer({
                   {isPosting ? (
                     <div className="flex items-center gap-2">
                       <Loader2 className="w-4 h-4 animate-spin" />
-                      Posting...
+                      {rootId ? 'Replying...' : 'Posting...'}
                     </div>
                   ) : (
                     <div className="flex items-center gap-2">

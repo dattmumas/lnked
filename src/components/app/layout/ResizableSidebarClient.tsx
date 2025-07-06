@@ -31,6 +31,10 @@ export default function ResizableSidebarClient({
   const applyWidthNow = useCallback((w: number): void => {
     setWidth(w);
     pending.current = w;
+    // Update CSS variable on root so grid track picks up new width
+    if (typeof document !== 'undefined') {
+      document.documentElement.style.setProperty('--rsb-width', `${w}px`);
+    }
   }, []);
 
   // schedule update via rAF to coalesce pointermove
@@ -48,8 +52,9 @@ export default function ResizableSidebarClient({
 
   const onPointerMove = useCallback(
     (e: PointerEvent) => {
-      const delta = startX.current - e.clientX; // positive when dragging left
-      const next = clamp(startWidth.current + delta);
+      const delta = e.clientX - startX.current; // positive when dragging right
+      // Dragging right (positive delta) should decrease sidebar width
+      const next = clamp(startWidth.current - delta);
       scheduleApply(next);
     },
     [clamp, scheduleApply],
@@ -69,6 +74,7 @@ export default function ResizableSidebarClient({
       startWidth.current = width;
       window.addEventListener('pointermove', onPointerMove);
       window.addEventListener('pointerup', stopDragging);
+      window.addEventListener('pointercancel', stopDragging);
     },
     [width, onPointerMove, stopDragging],
   );
@@ -79,14 +85,16 @@ export default function ResizableSidebarClient({
     const stored = Number(window.localStorage.getItem('rsb-width'));
     if (!Number.isNaN(stored) && stored >= minWidth && stored <= maxWidth) {
       applyWidthNow(stored);
+    } else if (typeof document !== 'undefined') {
+      document.documentElement.style.setProperty(
+        '--rsb-width',
+        `${initialWidth}px`,
+      );
     }
-  }, [minWidth, maxWidth, applyWidthNow]);
+  }, [minWidth, maxWidth, applyWidthNow, initialWidth]);
 
   return (
-    <aside
-      style={{ width }}
-      className="relative hidden xl:block flex-shrink-0 sticky top-16 h-[calc(100vh_-_4rem)] overflow-y-auto"
-    >
+    <aside className="relative hidden xl:block flex-shrink-0 sticky top-16 h-[calc(100vh_-_4rem)] overflow-y-auto">
       {children}
       {/* Drag handle */}
       <div

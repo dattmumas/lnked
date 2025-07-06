@@ -17,3 +17,16 @@ export async function loadOlder(
   const repo = new ChainRepository(supabase);
   return repo.fetchThread(rootId, beforeISO, batch);
 }
+
+export async function fetchInitialChains(
+  rootId?: string | null,
+  limit = 40,
+): Promise<ChainWithAuthor[]> {
+  'use server';
+  const supabase = await createServerSupabaseClient();
+  const repo = new ChainRepository(supabase);
+  if (rootId && rootId.length > 0) {
+    return repo.fetchThread(rootId, undefined, limit);
+  }
+  return repo.getChainsWithAuthors(limit);
+}
