@@ -8,7 +8,7 @@ export const ChainVisibilityEnum = z.enum([
   'private',
   'unlisted',
 ]);
-export const ChainReactionTypeEnum = z.enum(['like', 'rechain']);
+export const ChainReactionTypeEnum = z.enum(['like', 'dislike', 'rechain']);
 
 // Chain schema with null to undefined transformation
 export const ChainSchema = z.object({
@@ -51,6 +51,20 @@ export const ChainSchema = z.object({
 
 export type Chain = z.infer<typeof ChainSchema>;
 
+// Media schema for carousel (subset for client use)
+export const MediaSchema = z.object({
+  id: z.string(),
+  storage_path: z.string(),
+  width: z.number().nullable(),
+  height: z.number().nullable(),
+  blurhash: z.string().nullable(),
+  alt_text: z.string().nullable(),
+  type: z.string(),
+  ordinal: z.number(),
+});
+
+export type Media = z.infer<typeof MediaSchema>;
+
 // Chain with author info
 export const ChainWithAuthorSchema = ChainSchema.extend({
   author: z
@@ -70,6 +84,10 @@ export const ChainWithAuthorSchema = ChainSchema.extend({
         .transform((val) => val ?? undefined),
     })
     .optional(),
+  media: z
+    .array(MediaSchema)
+    .nullable()
+    .transform((val) => val ?? []),
 });
 
 export type ChainWithAuthor = z.infer<typeof ChainWithAuthorSchema>;

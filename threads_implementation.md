@@ -1,94 +1,173 @@
-Ran tool
-Read file: src/lib/database.types.ts
-`collectives.row` has slug not null etc. So adding slug to selection is correct.
+# 📝 Implementation status – July 6, 2025
 
-Now after modifications, run typecheck again.
+## Where we are now
 
-```bash
-pnpm typecheck
-```
+| Layer          | Status                                                                                                                                             |
+| -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **DB**         | `media.chain_id` column added, RLS _chain read_ policy created, view `v_chain_with_media` returns `media` array ordered by `ordinal`.              |
+| **Types**      | `database.types.ts` regenerated; Zod `ChainWithAuthorSchema` extended with `media` (null → []). `ChainReactionTypeEnum` updated with `dislike`.    |
+| **Repository** | All read methods (`getChainsWithAuthors`, `getReplies`, `fetchThread`, `search`) now query `v_chain_with_media`; common `BASE_SELECT` string used. |
+| **Client**     | `ChainImage` + `ChainCarousel` components created; `ChainCardRenderer` renders carousel when `media.length > 0`.                                   |
+| **Reactions**  | Hook now rolls back optimistic state on failure & guards duplicate fetch.                                                                          |
 
-🎉 **TypeScript check is now fully clean – zero errors!**
+## Still TODO (next PRs)
 
-Schema reference (chains table):
+1. **Composer upload flow**  
+   • Integrate `react-dropzone` for up to 4 images.  
+   • Compress JPEG/PNG (`browser-image-compression`), skip GIF/video.  
+   • Web Worker generates BlurHash.  
+   • Upload to Storage `chain-images/<user>/<chainId>/<ordinal>.jpg`.  
+   • Insert matching `media` rows inside same TX.
+2. **Threading logic**  
+   Fix `thread_root` when replying to replies (use root id fetched from parent).
+3. **Carousel polish**  
+   Replace DIY snap scroll with `embla-carousel-react` for inertia & a11y; add `role="group" aria-roledescription="carousel"` and keyboard nav.
+4. **Optimistic reaction edge-cases**  
+   Debounce rapid taps; throttle network writes.
+5. **ChainCard a11y**  
+   Make wrapper focusable/button-like for keyboard thread opening.
+6. **Media schema typings**  
+   Define `MediaSchema` (id, storage_path, width, height, blurhash, alt_text, type, ordinal) and use instead of `any`.
 
-```98:130:src/lib/database.types.ts
-        Row: {
-          attachments: Json | null
-          author_id: string
-          collective_id: string | null
-          content: string
-          created_at: string
-          id: string
-          like_count: number
-          link_preview: Json | null
-          meta: Json | null
-          parent_id: string | null
-          reply_count: number
-          status: Database["public"]["Enums"]["chain_status"]
-          thread_root: string
-          tsv: unknown | null
-          updated_at: string
-          visibility: Database["public"]["Enums"]["chain_visibility"]
-        }
-```
+---
 
-Next steps to implement threaded discussions in the chain sidebar:
+_This table will be updated as each slice lands in main._
 
-1. Slice 0 – DB Hardening  
-   • Add the `parent_id` FK and `thread_root` FK already present.  
-   • Create trigger `set_thread_root()` that copies `id` into `thread_root` on root inserts; copies ancestor’s `thread_root` on replies.  
-   • Create trigger `enforce_consistency()` to ensure roots have `parent_id IS NULL` and replies have `parent_id IS NOT NULL AND thread_root <> id`.  
-   • Composite index `(thread_root, created_at DESC)` for fast fetch.
+End-to-end playbook: display a scrollable image carousel for each Chain using your enriched public.media table
 
-2. Slice 1 – Basic thread fetch  
-   • ChainRepository method `fetchThread(rootId, cursor, limit)`:
+⸻
 
-   ```sql
-   SELECT *
-   FROM chains
-   WHERE thread_root = :rootId
-   ORDER BY created_at DESC, id DESC
-   LIMIT :limit;
-   ```
+1 · Server-side — data plumbing
 
-   • Cursor = base64(created_at,id) for key-set pagination.  
-   • Expose an RSC route `src/app/thread/[id]/page.tsx` that streams the first page.
+Task How Details
+1.1 Add row-level policy sql CREATE POLICY "chain read" ON media FOR SELECT USING (true); Public read on media rows.
+1.2 Expose helper view ```sql
+create or replace view v_chain_with_media as
+select c.\*,
 
-3. Slice 2 – Realtime replies  
-   • `useRealtimeChain(rootId)`:
+jsonb_agg(m.\* order by m.ordinal) filter (where m.id is not null) as media
 
-   ```ts
-   supabase
-     .channel(`thread:${rootId}`)
-     .on(
-       'postgres_changes',
-       {
-         event: '*',
-         schema: 'public',
-         table: 'chains',
-         filter: `thread_root=eq.${rootId}`,
-       },
-       (payload) => addIfNew(payload.new),
-     )
-     .subscribe();
-   ```
+from chains c
+left join LATERAL (
+select id, type, storage_path, width, height, blurhash, alt_text, ordinal
+from media
+where media.chain_id = c.id
+order by ordinal
+) m on true
+group by c.id;
 
-   • Merge deltas into React-Query/RSC cache.
+| **1.3 Repository function** | `ts
+export async function fetchThread(rootId:string, before?:string){
+  return supabase
+    .from('v_chain_with_media')
+    .select('*')
+    .eq('thread_root', rootId)
+    .lt('created_at', before ?? new Date().toISOString())
+    .order('created_at', { ascending:false })
+    .limit(40);
+}
+` | Each item now carries `media` array. |
 
-4. Slice 3 – Reply composer  
-   • Extend `ChainComposer` with `replyTo(chainId, rootId)` props → passes `parent_id` + `thread_root` to server-action `replyToChain()`.  
-   • On success `revalidateTag('thread:'+rootId)`.
+---
 
-5. Slice 4 – Inline nesting UI  
-   • Each row’s indent = `depth = parent_id ? countAncestors()` (light recursion client-side).  
-   • Render left rail or `pl-${depth*4}` Tailwind class.  
-   • List remains flat: still virtualised by React-Virtuoso.
+## 2 · Upload flow (composer)
 
-6. Slice 5 – Collapse / expand sub-threads  
-   • Build `useThreadTree(items)` → returns map `parent_id → children[]`.  
-   • Local state `{ openIds }`; collapsed node shows “n replies”.
+| Step                | Code / Lib                                                | Notes                              |
+| ------------------- | --------------------------------------------------------- | ---------------------------------- |
+| **Drag/drop**       | `react-dropzone`                                          | Accept max 4, show thumb previews. |
+| **Client compress** | `browser-image-compression` @ 0.8                         | Skip for GIF/video rows.           |
+| **Blurhash**        | `import { encode } from 'blurhash'` (run in a Web Worker) | Store 20×20 preview.               |
+| **Upload**          | ```ts                                                     |
 
-The remaining slices (notifications, mentions, search, moderation, analytics) can be layered on after basic threading is in production.
+const path = `${user.id}/${chainId}/${i}.jpg`;
+await supabase.storage.from('chain-images').upload(path, file,{upsert:false});
 
-I’d recommend starting with Slice 0 + 1 in your next sprint (≈2 days). Let me know which slice you’d like to tackle first and I can scaffold the SQL triggers, repository code, and frontend route.
+````| |
+| **Insert media row** | ```ts
+await supabase.from('media').insert({
+  chain_id: chainId,
+  ordinal: i+1,
+  type: 'image',
+  storage_path: path,
+  width, height, blurhash, alt_text
+});
+``` | Part of same TX as chain insert. |
+
+---
+
+## 3 · Client components
+
+### 3.1 `ChainImage.tsx`
+```tsx
+import NextImage from 'next/image';
+
+export function ChainImage({ path, w, h, blur, alt }){
+  const base = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/chain-images`;
+  return (
+    <NextImage
+      src={`${base}/${path}?width=900&quality=75`}
+      alt={alt ?? ''}
+      width={w ?? 900}
+      height={h ?? 900}
+      placeholder={blur?'blur':undefined}
+      blurDataURL={blur && `data:image/jpeg;base64,${blur}`}
+      className="object-contain max-h-[70vh] mx-auto"
+    />
+  );
+}
+
+3.2 ChainCarousel.tsx
+
+import useEmblaCarousel from 'embla-carousel-react';
+import 'embla-carousel/embla.css';          // core styles
+
+export default function ChainCarousel({ media }){
+  const [ref] = useEmblaCarousel({ loop:false, dragFree:false });
+  return (
+    <div ref={ref} className="embla overflow-hidden rounded-lg">
+      <div className="embla__container flex">
+        {media.map(m=>(
+          <div key={m.id} className="embla__slide flex-[0_0_100%]">
+            <ChainImage path={m.storage_path} w={m.width} h={m.height}
+                        blur={m.blurhash} alt={m.alt_text}/>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+3.3 Integrate in ChainCard
+
+{item.media?.length > 0 && <ChainCarousel media={item.media} />}
+
+
+⸻
+
+4 · Performance knobs
+
+Tactic	How
+Lazy slides	embla-carousel-react plugin LazyLoad to mount only in-view slides.
+Responsive srcset	Add sizes="(max-width:640px) 100vw, 600px" to <Image> for automatic DPR selection.
+Virtuoso overscan	overscan={2} keeps only ±2 screens worth of slides in DOM.
+CDN transform variants	Use /render/image/w400/... for timeline thumbnails if you later add thumb grid.
+
+
+⸻
+
+5 · Accessibility & UX
+	•	Carousel wrapper: role="group" and aria-roledescription="carousel".
+	•	Provide alt-text entry in upload modal; store in alt_text.
+	•	Add keyboard nav plugin (ArrowLeft/ArrowRight).
+
+⸻
+
+6 · Testing checklist
+	1.	Insert 4 × 4 MB images → confirm Storage objects + 4 media rows.
+	2.	Feed shows blurred placeholders; tapping opens thread carousel.
+	3.	Swipe left/right smoothly at 60 fps on mobile Safari.
+	4.	Hard reload – payload size per item ≤ 15 kB JSON (no binary).
+	5.	Lighthouse CLS < 0.1 and LCP slide ≤ 2.5 s on 4G.
+
+Implementing exactly these steps wires your chain-images bucket, public.media table, Embla carousel, and React Virtuoso feed into a modern, performant image experience.
+````

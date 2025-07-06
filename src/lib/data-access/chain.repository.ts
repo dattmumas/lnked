@@ -103,19 +103,16 @@ export class ChainRepository {
    * Get chains with author info
    */
   async getChainsWithAuthors(limit = 20): Promise<ChainWithAuthor[]> {
+    const BASE_SELECT = `*,
+      author:users!author_id (
+        id,
+        username,
+        full_name,
+        avatar_url
+      )`;
     const { data, error } = await this.supabase
-      .from('chains')
-      .select(
-        `
-        *,
-        author:users!author_id (
-          id,
-          username,
-          full_name,
-          avatar_url
-        )
-      `,
-      )
+      .from('v_chain_with_media')
+      .select(BASE_SELECT)
       .eq('status', 'active')
       .is('parent_id', null)
       .order('created_at', { ascending: false })
@@ -157,19 +154,16 @@ export class ChainRepository {
     parentChainId: string,
     limit = 20,
   ): Promise<ChainWithAuthor[]> {
+    const BASE_SELECT = `*,
+      author:users!author_id (
+        id,
+        username,
+        full_name,
+        avatar_url
+      )`;
     const { data, error } = await this.supabase
-      .from('chains')
-      .select(
-        `
-        *,
-        author:users!author_id (
-          id,
-          username,
-          full_name,
-          avatar_url
-        )
-      `,
-      )
+      .from('v_chain_with_media')
+      .select(BASE_SELECT)
       .eq('parent_id', parentChainId)
       .eq('status', 'active')
       .order('created_at', { ascending: true })
@@ -194,8 +188,7 @@ export class ChainRepository {
       {
         chain_id: chainId,
         user_id: userId,
-        reaction:
-          reaction as Database['public']['Enums']['chain_reaction_type'],
+        reaction,
       },
       { onConflict: 'chain_id,user_id' },
     );
@@ -217,8 +210,7 @@ export class ChainRepository {
       .match({
         chain_id: chainId,
         user_id: userId,
-        reaction:
-          reaction as Database['public']['Enums']['chain_reaction_type'],
+        reaction,
       });
 
     return error === undefined;
@@ -284,19 +276,16 @@ export class ChainRepository {
    * Search chains by content
    */
   async search(query: string, limit = 20): Promise<ChainWithAuthor[]> {
+    const BASE_SELECT = `*,
+      author:users!author_id (
+        id,
+        username,
+        full_name,
+        avatar_url
+      )`;
     const { data, error } = await this.supabase
-      .from('chains')
-      .select(
-        `
-        *,
-        author:users!author_id (
-          id,
-          username,
-          full_name,
-          avatar_url
-        )
-      `,
-      )
+      .from('v_chain_with_media')
+      .select(BASE_SELECT)
       .textSearch('tsv', query)
       .eq('status', 'active')
       .limit(limit);
@@ -319,17 +308,16 @@ export class ChainRepository {
     before?: string | null,
     limit = 20,
   ): Promise<ChainWithAuthor[]> {
+    const BASE_SELECT = `*,
+      author:users!author_id (
+        id,
+        username,
+        full_name,
+        avatar_url
+      )`;
     const query = this.supabase
-      .from('chains')
-      .select(
-        `*,
-        author:users!author_id (
-          id,
-          username,
-          full_name,
-          avatar_url
-        )`,
-      )
+      .from('v_chain_with_media')
+      .select(BASE_SELECT)
       .eq('thread_root', rootId)
       .eq('status', 'active')
       .order('created_at', { ascending: false })

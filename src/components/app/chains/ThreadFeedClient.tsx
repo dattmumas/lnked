@@ -60,6 +60,7 @@ export default function ThreadFeedClient({
   const initialSorted = isThread ? [...initial].reverse() : initial;
   const [items, setItems] = useState<ChainWithAuthor[]>(initialSorted);
   const [replyingTo, setReplyingTo] = useState<string | undefined>(undefined);
+  const [replyContent, setReplyContent] = useState('');
   const router = useRouter();
   // keep items in sync when rootId or initial data changes
   useEffect(() => {
@@ -78,21 +79,18 @@ export default function ThreadFeedClient({
   // Merge realtime deltas (new replies) at the top if not dup.
   const handleDelta = useCallback(
     (row: Database['public']['Tables']['chains']['Row']): void => {
+      if (!isThread) return; // only mutate thread view
       const item = row as unknown as ChainWithAuthor;
       setItems((prev) => {
         const idx = prev.findIndex((c) => c.id === item.id);
-        if (idx === -1) {
-          // New insert
-          return [item, ...prev];
-        }
-        // Update existing (immutably)
-        const copy = [...prev];
-        copy[idx] = { ...copy[idx], ...item };
-        return copy;
+        if (idx === -1) return [item, ...prev];
+        const next = [...prev];
+        next[idx] = { ...next[idx], ...item };
+        return next;
       });
       reactions.clearDelta(item.id);
     },
-    [reactions],
+    [reactions, isThread],
   );
 
   useRealtimeChain(rootId, handleDelta);
@@ -104,7 +102,8 @@ export default function ThreadFeedClient({
       if (!isThread) return; // loadOlder is only for thread pagination for now
       const older = await loadOlder(rootId, oldestTimestamp);
       if (older.length > 0) {
-        const deduped = older.filter((o) => !items.find((p) => p.id === o.id));
+        const existingIds = new Set(items.map((p) => p.id));
+        const deduped = older.filter((o) => !existingIds.has(o.id));
         setItems((prev) => [...deduped.reverse(), ...prev]);
       }
     } finally {
@@ -116,6 +115,7 @@ export default function ThreadFeedClient({
     (row: ChainWithAuthor): void => {
       setItems((prev) => (isThread ? [...prev, row] : prev));
       setReplyingTo(undefined);
+      setReplyContent('');
     },
     [isThread],
   );
@@ -129,15 +129,18 @@ export default function ThreadFeedClient({
       toggleDislike: reactions.toggleDislike,
       getDeltas: reactions.getDeltas,
       startReply: (id: string): void => setReplyingTo(id),
-      cancelReply: (): void => setReplyingTo(undefined),
+      cancelReply: (): void => {
+        setReplyingTo(undefined);
+        setReplyContent('');
+      },
       replyingTo,
-      replyContent: '',
-      setReplyContent: () => {},
+      replyContent,
+      setReplyContent,
       isPosting: false,
       submitReply: () => {},
       shareChain: () => {},
     } as ChainCardInteractions;
-  }, [reactions, replyingTo]);
+  }, [reactions, replyingTo, replyContent]);
 
   // Stable item renderer generated once per user id
   const itemContent = useMemo(

@@ -52,6 +52,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "chain_bookmarks_chain_id_fkey"
+            columns: ["chain_id"]
+            isOneToOne: false
+            referencedRelation: "v_chain_with_media"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "chain_bookmarks_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
@@ -88,6 +95,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "chain_reactions_chain_id_fkey"
+            columns: ["chain_id"]
+            isOneToOne: false
+            referencedRelation: "v_chain_with_media"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "chain_reactions_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
@@ -103,6 +117,7 @@ export type Database = {
           collective_id: string | null
           content: string
           created_at: string
+          dislike_count: number
           id: string
           like_count: number
           link_preview: Json | null
@@ -121,6 +136,7 @@ export type Database = {
           collective_id?: string | null
           content: string
           created_at?: string
+          dislike_count?: number
           id?: string
           like_count?: number
           link_preview?: Json | null
@@ -139,6 +155,7 @@ export type Database = {
           collective_id?: string | null
           content?: string
           created_at?: string
+          dislike_count?: number
           id?: string
           like_count?: number
           link_preview?: Json | null
@@ -174,10 +191,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "chains_parent_chain_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "v_chain_with_media"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "chains_thread_root_fkey"
             columns: ["thread_root"]
             isOneToOne: false
             referencedRelation: "chains"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chains_thread_root_fkey"
+            columns: ["thread_root"]
+            isOneToOne: false
+            referencedRelation: "v_chain_with_media"
             referencedColumns: ["id"]
           },
         ]
@@ -1055,54 +1086,80 @@ export type Database = {
       }
       media: {
         Row: {
+          allow_download: boolean
           alt_text: string | null
+          blurhash: string | null
           bytes: number | null
+          chain_id: string | null
           checksum: string | null
           created_at: string
           duration_ms: number | null
           height: number | null
           id: string
           ordinal: number
-          post_id: string
+          post_id: string | null
           poster_path: string | null
           storage_bucket: string
           storage_path: string
+          transform_path: string | null
           type: Database["public"]["Enums"]["media_type"]
           width: number | null
         }
         Insert: {
+          allow_download?: boolean
           alt_text?: string | null
+          blurhash?: string | null
           bytes?: number | null
+          chain_id?: string | null
           checksum?: string | null
           created_at?: string
           duration_ms?: number | null
           height?: number | null
           id?: string
           ordinal: number
-          post_id: string
+          post_id?: string | null
           poster_path?: string | null
           storage_bucket?: string
           storage_path: string
+          transform_path?: string | null
           type: Database["public"]["Enums"]["media_type"]
           width?: number | null
         }
         Update: {
+          allow_download?: boolean
           alt_text?: string | null
+          blurhash?: string | null
           bytes?: number | null
+          chain_id?: string | null
           checksum?: string | null
           created_at?: string
           duration_ms?: number | null
           height?: number | null
           id?: string
           ordinal?: number
-          post_id?: string
+          post_id?: string | null
           poster_path?: string | null
           storage_bucket?: string
           storage_path?: string
+          transform_path?: string | null
           type?: Database["public"]["Enums"]["media_type"]
           width?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "media_chain_id_fkey"
+            columns: ["chain_id"]
+            isOneToOne: false
+            referencedRelation: "chains"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "media_chain_id_fkey"
+            columns: ["chain_id"]
+            isOneToOne: false
+            referencedRelation: "v_chain_with_media"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "media_post_id_fkey"
             columns: ["post_id"]
@@ -2581,6 +2638,112 @@ export type Database = {
           },
         ]
       }
+      v_chain_with_media: {
+        Row: {
+          attachments: Json | null
+          author_id: string | null
+          collective_id: string | null
+          content: string | null
+          created_at: string | null
+          dislike_count: number | null
+          id: string | null
+          like_count: number | null
+          link_preview: Json | null
+          media: Json | null
+          meta: Json | null
+          parent_id: string | null
+          reply_count: number | null
+          status: Database["public"]["Enums"]["chain_status"] | null
+          thread_root: string | null
+          tsv: unknown | null
+          updated_at: string | null
+          visibility: Database["public"]["Enums"]["chain_visibility"] | null
+        }
+        Insert: {
+          attachments?: Json | null
+          author_id?: string | null
+          collective_id?: string | null
+          content?: string | null
+          created_at?: string | null
+          dislike_count?: number | null
+          id?: string | null
+          like_count?: number | null
+          link_preview?: Json | null
+          media?: never
+          meta?: Json | null
+          parent_id?: string | null
+          reply_count?: number | null
+          status?: Database["public"]["Enums"]["chain_status"] | null
+          thread_root?: string | null
+          tsv?: unknown | null
+          updated_at?: string | null
+          visibility?: Database["public"]["Enums"]["chain_visibility"] | null
+        }
+        Update: {
+          attachments?: Json | null
+          author_id?: string | null
+          collective_id?: string | null
+          content?: string | null
+          created_at?: string | null
+          dislike_count?: number | null
+          id?: string | null
+          like_count?: number | null
+          link_preview?: Json | null
+          media?: never
+          meta?: Json | null
+          parent_id?: string | null
+          reply_count?: number | null
+          status?: Database["public"]["Enums"]["chain_status"] | null
+          thread_root?: string | null
+          tsv?: unknown | null
+          updated_at?: string | null
+          visibility?: Database["public"]["Enums"]["chain_visibility"] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chains_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chains_collective_id_fkey"
+            columns: ["collective_id"]
+            isOneToOne: false
+            referencedRelation: "collectives"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chains_parent_chain_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "chains"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chains_parent_chain_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "v_chain_with_media"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chains_thread_root_fkey"
+            columns: ["thread_root"]
+            isOneToOne: false
+            referencedRelation: "chains"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chains_thread_root_fkey"
+            columns: ["thread_root"]
+            isOneToOne: false
+            referencedRelation: "v_chain_with_media"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       accept_collective_invite: {
@@ -3121,7 +3284,7 @@ export type Database = {
         | "membership_fee"
         | "ownership_transfer"
         | "other"
-      chain_reaction_type: "like" | "rechain"
+      chain_reaction_type: "like" | "rechain" | "dislike"
       chain_status: "active" | "deleted" | "shadow_hidden"
       chain_visibility: "public" | "followers" | "private" | "unlisted"
       collective_member_role: "admin" | "editor" | "author" | "owner"
@@ -3301,7 +3464,7 @@ export const Constants = {
         "ownership_transfer",
         "other",
       ],
-      chain_reaction_type: ["like", "rechain"],
+      chain_reaction_type: ["like", "rechain", "dislike"],
       chain_status: ["active", "deleted", "shadow_hidden"],
       chain_visibility: ["public", "followers", "private", "unlisted"],
       collective_member_role: ["admin", "editor", "author", "owner"],

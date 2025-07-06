@@ -1,8 +1,7 @@
 'use client';
- 
 
 import { useRouter } from 'next/navigation';
-import React from 'react';
+import React, { useMemo } from 'react';
 
 import ChainCard from './ChainCard';
 
@@ -26,24 +25,27 @@ export default function ChainCardRenderer({
     router.push(`?thread=${encodeURIComponent(item.thread_root)}`);
   };
 
-  const dummyInteractions: ChainCardInteractions = {
-    likedChains: new Set(),
-    dislikedChains: new Set(),
-    toggleLike: () => {},
-    toggleDislike: () => {},
-    getDeltas: () => ({ like: 0, dislike: 0 }),
-    startReply: () => {},
-    cancelReply: () => {},
-    replyingTo: undefined,
-    replyContent: '',
-    setReplyContent: () => {},
-    isPosting: false,
-    submitReply: () => {},
-    shareChain: () => {},
-  };
+  const dummyInteractions: ChainCardInteractions = useMemo(
+    () => ({
+      likedChains: new Set(),
+      dislikedChains: new Set(),
+      toggleLike: () => {},
+      toggleDislike: () => {},
+      getDeltas: () => ({ like: 0, dislike: 0 }),
+      startReply: () => {},
+      cancelReply: () => {},
+      replyingTo: undefined,
+      replyContent: '',
+      setReplyContent: () => {},
+      isPosting: false,
+      submitReply: () => {},
+      shareChain: () => {},
+    }),
+    [],
+  );
 
   return (
-    <div className="w-full text-left">
+    <div className="block w-full text-left">
       <ChainCard
         item={{
           id: item.id,
@@ -69,6 +71,7 @@ export default function ChainCardRenderer({
         currentUserId={currentUserId}
         onOpenThread={handleOpen}
         interactions={interactions ?? dummyInteractions}
+        media={item.media as unknown as import('./ChainCard').MediaItem[]}
       />
     </div>
   );

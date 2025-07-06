@@ -1,11 +1,14 @@
 'use client';
 
-import { Loader2, Smile, Image, Send } from 'lucide-react';
+import { encode } from 'blurhash';
+import imageCompression from 'browser-image-compression';
+import { Loader2, Smile, Image as ImageIcon, Send, X } from 'lucide-react';
 import React, { useCallback, useMemo, useState } from 'react';
+import { useDropzone } from 'react-dropzone';
 
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import { useToast } from '@/hooks/useToast';
 import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
 import { cn } from '@/lib/utils';
 import { extractFirstUrl } from '@/lib/utils/extractLinks';
@@ -20,6 +23,19 @@ type Json = Database['public']['Tables']['chains']['Row']['link_preview'];
 const CHARACTER_LIMIT = 180;
 const WARNING_THRESHOLD = 20;
 const MAX_INITIALS_LENGTH = 2;
+
+// Upload configuration
+const MAX_FILES = 4;
+const ACCEPTED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+
+interface SelectedImage {
+  file: File;
+  preview: string;
+  width: number;
+  height: number;
+  blurhash: string;
+  compressed: Blob;
+}
 
 export interface UserProfile {
   id: string;
@@ -50,7 +66,9 @@ export default function ChainComposer({
 }: ChainComposerProps): React.ReactElement {
   const [content, setContent] = useState('');
   const [isPosting, setIsPosting] = useState(false);
+  const [images, setImages] = useState<SelectedImage[]>([]);
   const supabase = useMemo(createSupabaseBrowserClient, []);
+  const { error: toastError } = useToast();
   const remainingChars = CHARACTER_LIMIT - content.length;
 
   const getUserInitials = useCallback((): string => {
@@ -71,6 +89,70 @@ export default function ChainComposer({
     return 'U';
   }, [profile, user.email]);
 
+  // ===== Drop-zone handling =====
+  const onDrop = useCallback(
+    async (accepted: File[]): Promise<void> => {
+      const next: SelectedImage[] = [];
+      for (const rawFile of accepted.slice(0, MAX_FILES - images.length)) {
+        try {
+          // Compress only JPG/PNG; skip others
+          const shouldCompress =
+            ACCEPTED_TYPES.includes(rawFile.type) && rawFile.size > 1_000_000; // >1MB
+          const compressed = shouldCompress
+            ? await imageCompression(rawFile, {
+                maxSizeMB: 1,
+                maxWidthOrHeight: 1920,
+              })
+            : rawFile;
+
+          // Read image dimensions via createImageBitmap
+          const bitmap = await createImageBitmap(compressed);
+          const {width} = bitmap;
+          const {height} = bitmap;
+
+          // Draw to canvas to get pixel data for blurhash (downscale for speed)
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+          if (ctx === null) throw new Error('Canvas ctx null');
+          const hashW = 32;
+          const hashH = Math.round((height / width) * 32);
+          canvas.width = hashW;
+          canvas.height = hashH;
+          ctx.drawImage(bitmap, 0, 0, hashW, hashH);
+          const imageData = ctx.getImageData(0, 0, hashW, hashH);
+          const blurhash = encode(imageData.data, hashW, hashH, 4, 4);
+
+          const preview = URL.createObjectURL(compressed);
+
+          next.push({
+            file: rawFile,
+            preview,
+            width,
+            height,
+            blurhash,
+            compressed,
+          });
+        } catch (err) {
+          console.error('Failed processing image', err);
+        }
+      }
+      setImages((prev) => [...prev, ...next]);
+    },
+    [images.length],
+  );
+
+  const { getRootProps, getInputProps, open } = useDropzone({
+    accept: {
+      'image/jpeg': ['.jpg', '.jpeg'],
+      'image/png': ['.png'],
+      'image/webp': ['.webp'],
+    },
+    maxFiles: MAX_FILES,
+    noClick: true,
+    noKeyboard: true,
+    onDrop,
+  });
+
   const handleSubmit = useCallback(
     async (e: React.FormEvent<HTMLFormElement>): Promise<void> => {
       e.preventDefault();
@@ -89,12 +171,12 @@ export default function ChainComposer({
             });
 
           if (unfurlErr === null && previewData !== null) {
-            // supabase-js returns raw text when content-type is application/json
-            // Convert string payload to object if necessary.
             preview =
               typeof previewData === 'string'
                 ? (JSON.parse(previewData) as Json)
                 : (previewData as Json);
+          } else {
+            toastError('Link preview failed to load');
           }
         }
         const insertPayload = {
@@ -108,54 +190,88 @@ export default function ChainComposer({
             : rootId
               ? { parent_id: rootId, thread_root: rootId }
               : { thread_root: id }),
+          ...(rootId === undefined && parentId !== undefined
+            ? { thread_root: parentId }
+            : {}),
           ...(preview ? { link_preview: preview } : {}),
         } as const;
 
-        const { data, error } = await supabase
+        const { error: insertErr } = await supabase
           .from('chains')
-          .insert(insertPayload)
-          .select(
-            `*,
-            author:users!author_id(id, username, full_name, avatar_url)
-          `,
-          )
+          .insert(insertPayload);
+
+        if (insertErr !== null) throw insertErr;
+
+        const chainId = insertPayload.id;
+
+        // ===== Upload images & create media rows =====
+        if (images.length > 0) {
+          const uploads = images.map(async (img, index) => {
+            const path = `${user.id}/${chainId}/${index + 1}.jpg`;
+            const { error: upErr } = await supabase.storage
+              .from('chain-images')
+              .upload(path, img.compressed, {
+                upsert: false,
+                contentType: 'image/jpeg',
+              });
+            if (upErr !== null) throw upErr;
+
+            const { error: mediaErr } = await supabase.from('media').insert({
+              chain_id: chainId,
+              ordinal: index + 1,
+              type: 'image',
+              storage_path: path,
+              width: img.width,
+              height: img.height,
+              blurhash: img.blurhash,
+              alt_text: null,
+              storage_bucket: 'chain-images',
+              allow_download: true,
+            });
+            if (mediaErr !== null) throw mediaErr;
+          });
+          await Promise.all(uploads);
+        }
+
+        // Re-fetch chain with media
+        const { data: chainWithMedia, error: fetchErr } = await supabase
+          .from('v_chain_with_media')
+          .select('*')
+          .eq('id', chainId)
           .single();
-        if (error === null && data !== null) {
-          setContent('');
-          onCreated?.(data as unknown as ChainWithAuthor);
+
+        setContent('');
+        setImages([]);
+        if (fetchErr === null && chainWithMedia !== null) {
+          onCreated?.(chainWithMedia as unknown as ChainWithAuthor);
         }
       } catch (err) {
         console.error('Error posting chain:', err);
+        toastError('Failed to post');
       } finally {
         setIsPosting(false);
       }
     },
-    [content, isPosting, supabase, user.id, onCreated, rootId, parentId],
+    [
+      content,
+      isPosting,
+      supabase,
+      user.id,
+      onCreated,
+      rootId,
+      parentId,
+      toastError,
+      images,
+    ],
   );
 
   return (
-    <div
-      className={cn(
-        'relative mb-6 mx-3 rounded-2xl p-5 transition-all',
-        'bg-transparent',
-      )}
-    >
+    <div className="mb-6 mx-3">
       <form onSubmit={handleSubmit} className="space-y-3">
-        <div className="flex gap-3">
-          <Avatar className="w-9 h-9 flex-shrink-0">
-            {profile?.avatar_url ? (
-              <AvatarImage
-                src={profile.avatar_url}
-                alt={profile.full_name ?? profile.username ?? 'User'}
-              />
-            ) : (
-              <AvatarFallback className="text-xs">
-                {getUserInitials()}
-              </AvatarFallback>
-            )}
-          </Avatar>
-
-          <div className="flex-1 space-y-3">
+        <div className="flex-1 space-y-3">
+          {/* Textarea doubles as drop-target */}
+          <div {...getRootProps({ className: 'relative' })}>
+            <input {...getInputProps()} />
             <Textarea
               value={content}
               onChange={(e): void => {
@@ -167,62 +283,93 @@ export default function ChainComposer({
               maxLength={CHARACTER_LIMIT}
               disabled={isPosting}
             />
+          </div>
 
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <button
-                  type="button"
-                  className="p-2 text-muted-foreground hover:text-accent hover:bg-accent/20 rounded-full transition-colors"
-                  title="Add emoji"
-                  disabled={isPosting}
-                >
-                  <Smile className="w-4 h-4" />
-                </button>
-                <button
-                  type="button"
-                  className="p-2 text-muted-foreground hover:text-accent hover:bg-accent/20 rounded-full transition-colors"
-                  title="Add image"
-                  disabled={isPosting}
-                >
-                  <Image className="w-4 h-4" />
-                </button>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <span
-                  className={cn(
-                    'text-xs font-medium',
-                    remainingChars < WARNING_THRESHOLD
-                      ? 'text-destructive'
-                      : 'text-muted-foreground',
-                  )}
-                >
-                  {remainingChars}
-                </span>
-                <Button
-                  type="submit"
-                  size="sm"
-                  disabled={
-                    content.trim().length === 0 ||
-                    isPosting ||
-                    remainingChars < 0
-                  }
-                  className="px-5 py-2 h-auto text-sm font-medium"
-                >
-                  {isPosting ? (
-                    <div className="flex items-center gap-2">
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      {rootId ? 'Replying...' : 'Posting...'}
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-2">
-                      <Send className="w-4 h-4" />
-                      Post
-                    </div>
-                  )}
-                </Button>
-              </div>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                className="p-2 text-muted-foreground hover:text-accent hover:bg-accent/20 rounded-full transition-colors"
+                title="Add emoji"
+                disabled={isPosting}
+              >
+                <Smile className="w-4 h-4" />
+              </button>
+              <button
+                type="button"
+                className="p-2 text-muted-foreground hover:text-accent hover:bg-accent/20 rounded-full transition-colors"
+                title="Add image"
+                onClick={open}
+                disabled={isPosting || images.length >= MAX_FILES}
+              >
+                <ImageIcon className="w-4 h-4" />
+              </button>
             </div>
+
+            <div className="flex items-center gap-3">
+              <span
+                className={cn(
+                  'text-xs font-medium',
+                  remainingChars < WARNING_THRESHOLD
+                    ? 'text-destructive'
+                    : 'text-muted-foreground',
+                )}
+              >
+                {remainingChars}
+              </span>
+              <Button
+                type="submit"
+                size="sm"
+                disabled={
+                  content.trim().length === 0 ||
+                  content.length > CHARACTER_LIMIT ||
+                  isPosting
+                }
+                className="px-5 py-2 h-auto text-sm font-medium"
+              >
+                {isPosting ? (
+                  <div className="flex items-center gap-2">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    {rootId ? 'Replying...' : 'Posting...'}
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <Send className="w-4 h-4" />
+                    Post
+                  </div>
+                )}
+              </Button>
+            </div>
+          </div>
+
+          {/* Image upload area */}
+          <div className="space-y-3">
+            {images.length > 0 && (
+              <div className="grid grid-cols-4 gap-2">
+                {images.map((img) => (
+                  <div key={img.preview} className="relative group">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={img.preview}
+                      alt="preview"
+                      className="w-full h-20 object-cover rounded-md"
+                    />
+                    <button
+                      type="button"
+                      onClick={(): void =>
+                        setImages((prev) =>
+                          prev.filter((i) => i.preview !== img.preview),
+                        )
+                      }
+                      className="absolute top-1 right-1 bg-black/60 rounded-full p-0.5 text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                      aria-label="Remove image"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </form>

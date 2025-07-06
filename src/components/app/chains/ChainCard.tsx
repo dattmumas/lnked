@@ -21,6 +21,8 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 
+import ChainCarousel from './ChainCarousel';
+
 // Character limit matching composer
 const CHARACTER_LIMIT = 280;
 
@@ -58,6 +60,17 @@ export interface ChainItem {
   } | null;
 }
 
+export interface MediaItem {
+  id: string;
+  storage_path: string;
+  width: number | null;
+  height: number | null;
+  blurhash: string | null;
+  alt_text: string | null;
+  type: string;
+  ordinal: number;
+}
+
 export interface ChainCardInteractions {
   likedChains: Set<string>;
   dislikedChains: Set<string>;
@@ -81,6 +94,7 @@ export interface ChainCardProps {
   onDelete?: (id: string) => void;
   /** Optional handler that opens the full thread view. If provided, a small link will appear in the action bar. */
   onOpenThread?: () => void;
+  media?: MediaItem[];
 }
 
 export default function ChainCard({
@@ -89,6 +103,7 @@ export default function ChainCard({
   interactions,
   onDelete,
   onOpenThread,
+  media,
 }: ChainCardProps): React.ReactElement {
   const handleToggleLike = useCallback((): void => {
     interactions.toggleLike(item.id);
@@ -157,6 +172,13 @@ export default function ChainCard({
           <p className="text-sm text-foreground mb-2.5 leading-relaxed break-words">
             {item.content}
           </p>
+
+          {/* Image carousel */}
+          {media && media.length > 0 && (
+            <div className="mb-3">
+              <ChainCarousel media={media} />
+            </div>
+          )}
 
           {/* Link preview */}
           {item.link_preview && (

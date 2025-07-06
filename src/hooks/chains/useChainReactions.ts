@@ -36,6 +36,8 @@ export function useChainReactions(userId: string | undefined): ChainReactions {
   // Initial fetch of reaction state
   useEffect(() => {
     if (!userId || state.initialized) return;
+    // Mark initialized early to avoid duplicate fetches
+    setState((prev) => ({ ...prev, initialized: true }));
     let mounted = true;
 
     const load = async (): Promise<void> => {
@@ -89,9 +91,11 @@ export function useChainReactions(userId: string | undefined): ChainReactions {
       setState((prev) => {
         const liked = new Set(prev.liked);
         const disliked = new Set(prev.disliked);
-        if (isLiked) liked.delete(id);
+        const likedBefore = liked.has(id);
+        const dislikedBefore = disliked.has(id);
+        if (likedBefore) liked.delete(id);
         else liked.add(id);
-        if (isDisliked) disliked.delete(id);
+        if (dislikedBefore) disliked.delete(id);
         return { ...prev, liked, disliked };
       });
       // delta adjustments
@@ -117,9 +121,15 @@ export function useChainReactions(userId: string | undefined): ChainReactions {
         }
       } catch (err) {
         console.error('[useChainReactions] toggleLike', err);
+        // rollback UI on error
+        setState((prev) => ({
+          ...prev,
+          liked: new Set(state.liked),
+          disliked: new Set(state.disliked),
+        }));
       }
     },
-    [userId, state.liked, state.disliked, supabase, mutateDelta],
+    [userId, supabase, mutateDelta, state.liked, state.disliked],
   );
 
   const toggleDislike = useCallback(
@@ -130,9 +140,11 @@ export function useChainReactions(userId: string | undefined): ChainReactions {
       setState((prev) => {
         const liked = new Set(prev.liked);
         const disliked = new Set(prev.disliked);
-        if (isDisliked) disliked.delete(id);
+        const likedBefore = liked.has(id);
+        const dislikedBefore = disliked.has(id);
+        if (dislikedBefore) disliked.delete(id);
         else disliked.add(id);
-        if (isLiked) liked.delete(id);
+        if (likedBefore) liked.delete(id);
         return { ...prev, liked, disliked };
       });
       // delta adjustments
@@ -158,9 +170,15 @@ export function useChainReactions(userId: string | undefined): ChainReactions {
         }
       } catch (err) {
         console.error('[useChainReactions] toggleDislike', err);
+        // rollback UI on error
+        setState((prev) => ({
+          ...prev,
+          liked: new Set(state.liked),
+          disliked: new Set(state.disliked),
+        }));
       }
     },
-    [userId, state.liked, state.disliked, supabase, mutateDelta],
+    [userId, supabase, mutateDelta, state.liked, state.disliked],
   );
 
   const getDeltas = useCallback(
