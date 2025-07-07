@@ -1,6 +1,12 @@
 'use client';
 
-import { ThumbsUp, ThumbsDown, Share2, MessageSquare } from 'lucide-react';
+import {
+  ThumbsUp,
+  ThumbsDown,
+  Share2,
+  MessageSquare,
+  Check,
+} from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import React, { useCallback, useState, useTransition } from 'react';
 
@@ -49,6 +55,7 @@ export default function PostCardFooter({
 }: PostCardFooterProps): React.ReactElement {
   const [isPending, startTransition] = useTransition();
   const [shareMenuOpen, setShareMenuOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
   const router = useRouter();
 
   const postUrl =
@@ -106,6 +113,8 @@ export default function PostCardFooter({
       }
 
       setShareMenuOpen(false);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
     },
     [postUrl, postTitle],
   );
@@ -204,11 +213,16 @@ export default function PostCardFooter({
           />
           <button
             type="button"
-            className="p-2 hover:bg-muted rounded-full transition-colors"
+            className="p-2 hover:bg-muted rounded-full transition-colors disabled:pointer-events-auto"
             onClick={handleNativeShare}
+            disabled={copied}
           >
-            <Share2 className="h-4 w-4" />
-            <span className="sr-only">Share</span>
+            {copied ? (
+              <Check className="h-4 w-4 text-green-600" />
+            ) : (
+              <Share2 className="h-4 w-4" />
+            )}
+            <span className="sr-only">{copied ? 'Copied' : 'Share'}</span>
           </button>
         </div>
       </CardFooter>

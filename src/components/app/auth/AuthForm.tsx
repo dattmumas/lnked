@@ -40,6 +40,10 @@ interface AuthFormFieldsProps {
   onFullNameChange?: (_value: string) => void;
   username?: string;
   onUsernameChange?: (_value: string) => void;
+  emailError?: boolean;
+  usernameError?: boolean;
+  passwordError?: boolean;
+  fullNameError?: boolean;
 }
 
 interface AuthFormHeaderProps {
@@ -76,6 +80,10 @@ const AuthFormFieldsComponent: React.FC<AuthFormFieldsProps> = ({
   onFullNameChange,
   username,
   onUsernameChange,
+  emailError,
+  usernameError,
+  passwordError,
+  fullNameError,
 }) => {
   const handleEmailChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>): void => {
@@ -125,6 +133,8 @@ const AuthFormFieldsComponent: React.FC<AuthFormFieldsProps> = ({
             maxLength={100}
             title="Full name must be 2-100 characters long"
             autoComplete="name"
+            spellCheck={false}
+            {...(fullNameError ? { 'aria-invalid': true } : {})}
           />
         </div>
       )}
@@ -144,6 +154,8 @@ const AuthFormFieldsComponent: React.FC<AuthFormFieldsProps> = ({
             maxLength={20}
             title="Username must be 3-20 characters long and contain only lowercase letters, numbers, and underscores"
             autoComplete="username"
+            spellCheck={false}
+            {...(usernameError ? { 'aria-invalid': true } : {})}
           />
           <p className="text-xs text-muted-foreground">
             3-20 characters, lowercase letters, numbers, and underscores only
@@ -161,6 +173,8 @@ const AuthFormFieldsComponent: React.FC<AuthFormFieldsProps> = ({
           onChange={handleEmailChange}
           disabled={isLoading}
           autoComplete="email"
+          spellCheck={false}
+          {...(emailError ? { 'aria-invalid': true } : {})}
         />
       </div>
       <div className="space-y-2">
@@ -175,6 +189,8 @@ const AuthFormFieldsComponent: React.FC<AuthFormFieldsProps> = ({
           onChange={handlePasswordChange}
           disabled={isLoading}
           autoComplete={mode === 'signUp' ? 'new-password' : 'current-password'}
+          spellCheck={false}
+          {...(passwordError ? { 'aria-invalid': true } : {})}
         />
       </div>
     </>
@@ -260,6 +276,13 @@ export default function AuthForm({
     [handleSubmit],
   );
 
+  // Field error mapping
+  const lowerError = error?.toLowerCase() ?? '';
+  const emailErrorFlag = lowerError.includes('email');
+  const usernameErrorFlag = lowerError.includes('username');
+  const passwordErrorFlag = lowerError.includes('password');
+  const fullNameErrorFlag = lowerError.includes('name');
+
   return (
     <div className="flex items-center justify-center p-4 md:p-6 bg-muted/40 min-h-full">
       <Card className="w-full max-w-sm">
@@ -280,6 +303,10 @@ export default function AuthForm({
               {...(mode === 'signUp' ? { onUsernameChange: setUsername } : {})}
               {...(mode === 'signUp' ? { fullName } : {})}
               {...(mode === 'signUp' ? { onFullNameChange: setFullName } : {})}
+              emailError={emailErrorFlag}
+              usernameError={usernameErrorFlag}
+              passwordError={passwordErrorFlag}
+              fullNameError={fullNameErrorFlag}
             />
             {error !== undefined && error !== '' && (
               <Alert variant="destructive" className="mt-4">

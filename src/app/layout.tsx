@@ -65,8 +65,9 @@ export default async function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
+        {/* Favicon */}
+        <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
         {/* Adobe Fonts Kit */}
-        {}
         <link rel="stylesheet" href="https://use.typekit.net/znz3akr.css" />
       </head>
       <body className="min-h-screen bg-background font-sans">

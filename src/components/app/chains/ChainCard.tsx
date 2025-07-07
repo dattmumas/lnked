@@ -136,7 +136,7 @@ export default function ChainCard({
       className={cn(
         'relative mb-4 mx-3 rounded-2xl p-5 transition-all',
         'bg-white/5 dark:bg-white/10 bg-clip-padding backdrop-filter',
-        'backdrop-blur-xl backdrop-saturate-200',
+        'backdrop-blur-md backdrop-saturate-150',
         'border border-white/20 dark:border-white/10',
         'ring-1 ring-inset ring-white/10 dark:ring-white/5',
         'shadow-md hover:shadow-lg',
@@ -175,7 +175,7 @@ export default function ChainCard({
 
           {/* Image carousel */}
           {media && media.length > 0 && (
-            <div className="mb-3">
+            <div className="mb-3 -ml-[3rem] md:-ml-[3rem]">
               <ChainCarousel media={media} />
             </div>
           )}

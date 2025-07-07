@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils';
 const buttonVariants = cva(
   // Base button styling with enhanced design tokens
   [
-    'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium',
+    'inline-flex items-center justify-center gap-2 whitespace-nowrap select-none rounded-md text-sm font-medium',
     'transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
     'focus-visible:ring-offset-2 focus-visible:ring-offset-background',
     'disabled:pointer-events-none disabled:opacity-50 [&_svg]:size-4',
@@ -129,7 +129,10 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
             xmlns="http://www.w3.org/2000/svg"
             fill="none"
             viewBox="0 0 24 24"
+            role="img"
+            aria-labelledby="loading-title"
           >
+            <title id="loading-title">Loading</title>
             <circle
               className="opacity-25"
               cx="12"

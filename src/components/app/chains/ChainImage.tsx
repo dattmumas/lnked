@@ -32,7 +32,7 @@ export default function ChainImage({
             blurDataURL: `data:image/jpeg;base64,${blurhash}`,
           }
         : {})}
-      className="object-contain max-h-[70vh] mx-auto"
+      className="object-contain max-h-full mx-auto"
     />
   );
 }

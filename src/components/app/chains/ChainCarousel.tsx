@@ -56,14 +56,18 @@ export default function ChainCarousel({
 
   return (
     <div className="relative">
-      <div ref={emblaRef} className="embla overflow-hidden rounded-lg">
-        <div className="embla__container flex">
+      <div
+        ref={emblaRef}
+        className="embla overflow-hidden rounded-lg w-full aspect-[4/5]"
+        style={{ touchAction: 'pan-y' }}
+      >
+        <div className="embla__container flex h-full">
           {media.map((m, idx) => {
             const isVisible = Math.abs(idx - selectedIndex) <= 2;
             return (
               <div
                 key={m.id}
-                className="embla__slide flex-[0_0_100%] px-2 box-border"
+                className="embla__slide flex items-center justify-center flex-[0_0_100%] box-border"
               >
                 {isVisible ? (
                   <ChainImage

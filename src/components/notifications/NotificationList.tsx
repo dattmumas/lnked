@@ -37,6 +37,8 @@ interface NotificationListProps {
   className?: string;
 }
 
+const SKELETON_KEYS = ['s1', 's2', 's3', 's4', 's5'];
+
 export function NotificationList({
   initialNotifications,
   initialUnreadCount,
@@ -350,9 +352,9 @@ export function NotificationList({
             <div className="p-4 space-y-2">
               {isLoading && notifications.length === 0 ? (
                 // Loading skeleton
-                Array.from({ length: 5 }).map((_, i) => (
+                SKELETON_KEYS.map((k) => (
                   <div
-                    key={i}
+                    key={k}
                     className="flex items-start gap-3 p-4 rounded-lg border"
                   >
                     <Skeleton className="w-8 h-8 rounded-full" />
@@ -366,14 +368,21 @@ export function NotificationList({
                 ))
               ) : filteredNotifications.length === 0 ? (
                 // Empty state
-                <div className="text-center py-12">
-                  <Bell className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                  <h3 className="text-lg font-medium mb-2">No notifications</h3>
-                  <p className="text-muted-foreground">
-                    {activeFilter === 'unread'
-                      ? "You're all caught up! No unread notifications."
-                      : "You don't have any notifications yet."}
-                  </p>
+                <div className="text-center py-12 flex flex-col items-center gap-4">
+                  <Bell className="h-12 w-12 mx-auto text-muted-foreground" />
+                  <div>
+                    <h3 className="text-lg font-medium mb-2">
+                      No notifications
+                    </h3>
+                    <p className="text-muted-foreground">
+                      {activeFilter === 'unread'
+                        ? "You're all caught up! No unread notifications."
+                        : "You don't have any notifications yet."}
+                    </p>
+                  </div>
+                  <a href="/discover" className="inline-block">
+                    <Button variant="default">Discover content</Button>
+                  </a>
                 </div>
               ) : (
                 // Notifications list

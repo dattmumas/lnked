@@ -59,7 +59,7 @@
 
     /* Refined transition timing */
     --transition-fast: 150ms;
-    --transition-normal: 250ms;
+    --transition-normal: 200ms;
     --transition-slow: 400ms;
 
     /* Premium shadow system */
@@ -289,7 +289,8 @@
     animation: shimmer 1.5s infinite;
   }
 
-  SVG Icon Optimization for High Fidelity svg {
+  /* SVG Icon Optimization for High Fidelity */
+  svg {
     /* Enable geometric precision for crisp edges */
     shape-rendering: geometricPrecision;
 
@@ -931,4 +932,10 @@ img[data-uploading='true']::after {
 }
 .no-scrollbar::-webkit-scrollbar {
   display: none; /* Safari and Chrome */
+}
+
+/* Disable default iOS tap highlight on interactive elements */
+a,
+button {
+  -webkit-tap-highlight-color: transparent;
 }

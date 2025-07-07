@@ -218,6 +218,7 @@ export default function VideoCard({
                   : {})}
                 autoPlay
                 muted
+                playsInline
                 className="w-full h-full object-cover"
                 onEnded={handleVideoEnded}
                 onPause={handleVideoPause}

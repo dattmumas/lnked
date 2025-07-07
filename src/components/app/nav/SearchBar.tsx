@@ -3,6 +3,7 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, X } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import React, { useCallback, useState, useRef, useEffect } from 'react';
 
 import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
@@ -31,10 +32,12 @@ export default function SearchBar({
   const [query, setQuery] = useState('');
   const [isOpen, setIsOpen] = useState(false);
   const [results, setResults] = useState<SearchResult[]>([]);
+  const [activeIndex, setActiveIndex] = useState<number>(-1);
   const [isLoading, setIsLoading] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const supabase = createSupabaseBrowserClient();
+  const router = useRouter();
 
   // Real search function using Supabase
   const performSearch = useCallback(
@@ -186,20 +189,39 @@ export default function SearchBar({
     setIsOpen(true);
   }, []);
 
-  const handleEnterPress = useCallback(
+  const handleKeyDown = useCallback(
     (e: React.KeyboardEvent): void => {
-      if (
-        e.key === 'Enter' &&
-        query !== undefined &&
-        query !== null &&
-        query.trim().length > 0
-      ) {
-        // Enter key now just keeps the dropdown open with current results
-        // Could be extended to show more results in the future
-        e.preventDefault();
+      if (results.length === 0) return;
+
+      switch (e.key) {
+        case 'ArrowDown':
+          e.preventDefault();
+          setActiveIndex((prev) => (prev + 1) % results.length);
+          break;
+        case 'ArrowUp':
+          e.preventDefault();
+          setActiveIndex((prev) =>
+            prev === -1
+              ? results.length - 1
+              : (prev - 1 + results.length) % results.length,
+          );
+          break;
+        case 'Enter': {
+          if (activeIndex >= 0 && activeIndex < results.length) {
+            e.preventDefault();
+            const target = results[activeIndex]?.href;
+            if (target) {
+              void router.push(target);
+            }
+            setIsOpen(false);
+          }
+          break;
+        }
+        default:
+          break;
       }
     },
-    [query],
+    [results, activeIndex, router],
   );
 
   const handleResultClick = useCallback((): void => {
@@ -260,7 +282,7 @@ export default function SearchBar({
           value={query}
           onChange={handleInputChange}
           onFocus={handleInputFocus}
-          onKeyDown={handleEnterPress}
+          onKeyDown={handleKeyDown}
           className="
             w-full pl-10 pr-10 py-2.5 text-sm
             bg-background/60 backdrop-blur-md border border-border/60 rounded-xl
@@ -306,12 +328,16 @@ export default function SearchBar({
 
                   {results.length > 0 ? (
                     <div className="space-y-1">
-                      {results.map((result) => (
+                      {results.map((result, idx) => (
                         <Link
                           key={result.id}
                           href={result.href}
                           onClick={handleResultClick}
-                          className="block p-2 rounded-lg hover:bg-accent/20 transition-colors duration-150"
+                          className={`block p-2 rounded-lg transition-colors duration-150 ${
+                            idx === activeIndex
+                              ? 'bg-accent/20'
+                              : 'hover:bg-accent/10'
+                          }`}
                         >
                           <div className="flex items-center gap-3">
                             <span className="text-lg">
