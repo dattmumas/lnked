@@ -448,6 +448,20 @@ export type Database = {
             referencedRelation: "posts"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "collectives_pinned_post_id_fkey"
+            columns: ["pinned_post_id"]
+            isOneToOne: false
+            referencedRelation: "posts_enriched"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "collectives_pinned_post_id_fkey"
+            columns: ["pinned_post_id"]
+            isOneToOne: false
+            referencedRelation: "v_user_visible_posts"
+            referencedColumns: ["id"]
+          },
         ]
       }
       comment_pins: {
@@ -959,6 +973,20 @@ export type Database = {
             referencedRelation: "posts"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "featured_posts_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "posts_enriched"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "featured_posts_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "v_user_visible_posts"
+            referencedColumns: ["id"]
+          },
         ]
       }
       follows: {
@@ -1165,6 +1193,20 @@ export type Database = {
             columns: ["post_id"]
             isOneToOne: false
             referencedRelation: "posts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "media_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "posts_enriched"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "media_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "v_user_visible_posts"
             referencedColumns: ["id"]
           },
         ]
@@ -1494,6 +1536,20 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "post_bookmarks_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "posts_enriched"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "post_bookmarks_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "v_user_visible_posts"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "post_bookmarks_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
@@ -1549,6 +1605,20 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "post_collectives_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "posts_enriched"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "post_collectives_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "v_user_visible_posts"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "post_collectives_shared_by_fkey"
             columns: ["shared_by"]
             isOneToOne: false
@@ -1585,6 +1655,20 @@ export type Database = {
             columns: ["post_id"]
             isOneToOne: false
             referencedRelation: "posts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "likes_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "posts_enriched"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "likes_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "v_user_visible_posts"
             referencedColumns: ["id"]
           },
           {
@@ -1640,6 +1724,20 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "post_slug_history_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "posts_enriched"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "post_slug_history_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "v_user_visible_posts"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "post_slug_history_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
@@ -1673,6 +1771,20 @@ export type Database = {
             columns: ["post_id"]
             isOneToOne: false
             referencedRelation: "posts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "post_views_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "posts_enriched"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "post_views_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "v_user_visible_posts"
             referencedColumns: ["id"]
           },
           {
@@ -2294,6 +2406,20 @@ export type Database = {
             referencedRelation: "posts"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "users_pinned_post_id_fkey"
+            columns: ["pinned_post_id"]
+            isOneToOne: false
+            referencedRelation: "posts_enriched"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "users_pinned_post_id_fkey"
+            columns: ["pinned_post_id"]
+            isOneToOne: false
+            referencedRelation: "v_user_visible_posts"
+            referencedColumns: ["id"]
+          },
         ]
       }
       video_analytics: {
@@ -2449,6 +2575,20 @@ export type Database = {
             referencedRelation: "posts"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "video_assets_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "posts_enriched"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "video_assets_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "v_user_visible_posts"
+            referencedColumns: ["id"]
+          },
         ]
       }
     }
@@ -2566,10 +2706,84 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "likes_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "posts_enriched"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "likes_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "v_user_visible_posts"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "likes_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      posts_enriched: {
+        Row: {
+          author: string | null
+          author_id: string | null
+          collective_id: string | null
+          content: string | null
+          created_at: string | null
+          dislike_count: number | null
+          id: string | null
+          is_public: boolean | null
+          like_count: number | null
+          meta_description: string | null
+          metadata: Json | null
+          post_type: Database["public"]["Enums"]["post_type_enum"] | null
+          published_at: string | null
+          seo_title: string | null
+          sharing_settings: Json | null
+          slug: string | null
+          status: Database["public"]["Enums"]["post_status_type"] | null
+          subtitle: string | null
+          tenant: Json | null
+          tenant_id: string | null
+          thumbnail_url: string | null
+          title: string | null
+          tsv: unknown | null
+          updated_at: string | null
+          video_id: string | null
+          view_count: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "posts_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "posts_collective_id_fkey"
+            columns: ["collective_id"]
+            isOneToOne: false
+            referencedRelation: "collectives"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "posts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "posts_video_id_fkey"
+            columns: ["video_id"]
+            isOneToOne: false
+            referencedRelation: "video_assets"
             referencedColumns: ["id"]
           },
         ]
@@ -2740,6 +2954,65 @@ export type Database = {
             columns: ["thread_root"]
             isOneToOne: false
             referencedRelation: "v_chain_with_media"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      v_user_visible_posts: {
+        Row: {
+          author: string | null
+          author_id: string | null
+          collective_id: string | null
+          content: string | null
+          created_at: string | null
+          dislike_count: number | null
+          id: string | null
+          is_public: boolean | null
+          like_count: number | null
+          meta_description: string | null
+          metadata: Json | null
+          post_type: Database["public"]["Enums"]["post_type_enum"] | null
+          published_at: string | null
+          seo_title: string | null
+          sharing_settings: Json | null
+          slug: string | null
+          status: Database["public"]["Enums"]["post_status_type"] | null
+          subtitle: string | null
+          tenant_id: string | null
+          thumbnail_url: string | null
+          title: string | null
+          tsv: unknown | null
+          updated_at: string | null
+          video_id: string | null
+          view_count: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "posts_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "posts_collective_id_fkey"
+            columns: ["collective_id"]
+            isOneToOne: false
+            referencedRelation: "collectives"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "posts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "posts_video_id_fkey"
+            columns: ["video_id"]
+            isOneToOne: false
+            referencedRelation: "video_assets"
             referencedColumns: ["id"]
           },
         ]
@@ -3151,20 +3424,35 @@ export type Database = {
         }[]
       }
       get_user_feed: {
-        Args: { p_user_id: string; p_limit?: number; p_offset?: number }
+        Args:
+          | { p_limit?: number; p_cursor?: string }
+          | { p_user_id: string; p_limit?: number; p_offset?: number }
         Returns: {
-          id: string
-          title: string
-          content: string
-          created_at: string
-          published_at: string
-          is_public: boolean
-          author_id: string
-          author_full_name: string
-          collective_id: string
-          collective_name: string
-          collective_slug: string
-          like_count: number
+          author: string | null
+          author_id: string | null
+          collective_id: string | null
+          content: string | null
+          created_at: string | null
+          dislike_count: number | null
+          id: string | null
+          is_public: boolean | null
+          like_count: number | null
+          meta_description: string | null
+          metadata: Json | null
+          post_type: Database["public"]["Enums"]["post_type_enum"] | null
+          published_at: string | null
+          seo_title: string | null
+          sharing_settings: Json | null
+          slug: string | null
+          status: Database["public"]["Enums"]["post_status_type"] | null
+          subtitle: string | null
+          tenant_id: string | null
+          thumbnail_url: string | null
+          title: string | null
+          tsv: unknown | null
+          updated_at: string | null
+          video_id: string | null
+          view_count: number | null
         }[]
       }
       get_user_personal_tenant: {

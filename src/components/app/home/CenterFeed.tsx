@@ -11,7 +11,7 @@ import { useTenantFeed } from '@/hooks/home/useTenantFeed';
 import { useVideoStatusRealtime } from '@/hooks/video/useVideoStatusRealtime';
 import { useTenant } from '@/providers/TenantProvider';
 
-import { PostCardWrapper } from './PostCardWrapper';
+import { FeedVirtuoso } from './FeedVirtuoso';
 
 import type { FeedItem } from '@/types/home/types';
 import type { User } from '@supabase/supabase-js';
@@ -37,6 +37,7 @@ export function CenterFeed({
     useTenantFeed({
       includeCollectives,
       includeFollowed: true,
+      ...(initialFeedItems ? { initialData: initialFeedItems } : {}),
     });
 
   const interactions = usePostFeedInteractions(user.id);
@@ -187,27 +188,15 @@ export function CenterFeed({
         </div>
       )}
 
-      {/* Feed Items */}
-      {feedItems.map((item, index) => (
-        <PostCardWrapper
-          key={item.id}
-          item={item}
-          interactions={interactions}
-          index={index}
-        />
-      ))}
+      {/* Feed Items (virtualized) */}
+      <FeedVirtuoso
+        items={feedItems}
+        interactions={interactions}
+        loadMore={loadMore}
+        hasMore={hasMore}
+      />
 
-      {/* Load More Button */}
-      {hasMore && (
-        <div className="flex justify-center py-4">
-          <Button variant="outline" onClick={loadMore} disabled={isLoading}>
-            {isLoading ? (
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-            ) : null}
-            Load More
-          </Button>
-        </div>
-      )}
+      {/* The virtuoso endReached handler triggers loadMore, so button removed */}
     </div>
   );
 }

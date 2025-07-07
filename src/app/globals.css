@@ -93,6 +93,9 @@
     --border-subtle: 220 13% 91%;
     --border-default: 220 13% 86%;
     --border-strong: 220 13% 76%;
+
+    /* Custom fonts */
+    --font-serif: 'kepler-std-semicondensed-dis', serif;
   }
 
   .dark {
@@ -919,4 +922,13 @@ img[data-uploading='true']::after {
 
 .article-content em {
   font-style: italic;
+}
+
+/* Hide scrollbars utility */
+.no-scrollbar {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE 10+ */
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none; /* Safari and Chrome */
 }

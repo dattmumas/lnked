@@ -11,7 +11,7 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import React from 'react';
 
-import PostRow from '@/app/(app)/posts/PostRow';
+import PostRow from '@/app/(app_nochains)/posts/PostRow';
 import { Button } from '@/components/ui/button';
 import {
   Card,

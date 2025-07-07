@@ -66,38 +66,13 @@ export default function VideoPostCreationClient({
   const currentStepIndex = STEPS.findIndex((step) => step.key === currentStep);
   const progress = ((currentStepIndex + 1) / STEPS.length) * 100;
 
-  const handleVideoUploadComplete = useCallback((uploadedVideoId: string) => {
-    setVideoId(uploadedVideoId);
-    setCurrentStep('details');
-  }, []);
-
-  const handleBackToUpload = useCallback(() => {
-    setCurrentStep('upload');
-    setVideoId(null); // Reset video ID when going back
-  }, []);
-
-  const handleNext = useCallback(() => {
-    if (currentStep === 'details') {
-      setCurrentStep('settings');
-    } else if (currentStep === 'settings') {
-      handleCreatePost();
-    }
-  }, [currentStep]);
-
-  const handleBack = useCallback(() => {
-    if (currentStep === 'settings') {
-      setCurrentStep('details');
-    } else if (currentStep === 'details') {
-      setCurrentStep('upload');
-    }
-  }, [currentStep]);
-
+  // Create Post handler defined first so it can be referenced later
   const handleCreatePost = useCallback(async () => {
     if (!videoId) return;
 
     setIsCreatingPost(true);
     try {
-      // First, update the video metadata
+      // Update video metadata
       const videoUpdateResponse = await fetch(`/api/videos/${videoId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -111,7 +86,7 @@ export default function VideoPostCreationClient({
         throw new Error('Failed to update video metadata');
       }
 
-      // Then, create the post using the same title and description
+      // Create the post
       const postResponse = await fetch('/api/posts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -131,18 +106,42 @@ export default function VideoPostCreationClient({
       const result = await postResponse.json();
       if (result.success) {
         setCurrentStep('complete');
-        // Redirect after a short delay
         setTimeout(() => {
           router.push('/posts');
         }, 2000);
       }
     } catch (error) {
       console.error('Error creating video post:', error);
-      // TODO: Show error toast
     } finally {
       setIsCreatingPost(false);
     }
   }, [videoId, postData, router]);
+
+  const handleVideoUploadComplete = useCallback((uploadedVideoId: string) => {
+    setVideoId(uploadedVideoId);
+    setCurrentStep('details');
+  }, []);
+
+  const handleBackToUpload = useCallback(() => {
+    setCurrentStep('upload');
+    setVideoId(null); // Reset video ID when going back
+  }, []);
+
+  const handleNext = useCallback(() => {
+    if (currentStep === 'details') {
+      setCurrentStep('settings');
+    } else if (currentStep === 'settings') {
+      handleCreatePost();
+    }
+  }, [currentStep, handleCreatePost]);
+
+  const handleBack = useCallback(() => {
+    if (currentStep === 'settings') {
+      setCurrentStep('details');
+    } else if (currentStep === 'details') {
+      setCurrentStep('upload');
+    }
+  }, [currentStep]);
 
   const handleCollectiveSelectionChange = useCallback(
     (collectiveIds: string[]) => {

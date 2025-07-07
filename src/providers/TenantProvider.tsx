@@ -65,6 +65,11 @@ const TenantContext = createContext<TenantContextType | null>(null);
 interface TenantProviderProps {
   children: React.ReactNode;
   initialTenantId?: string;
+  /**
+   * Server-side fetched tenants array. When provided we hydrate the provider
+   * immediately and skip the first network round-trip on mount.
+   */
+  initialTenants?: TenantType[];
 }
 
 // Define proper types for global cache
@@ -113,15 +118,35 @@ console.log(
 export function TenantProvider({
   children,
   initialTenantId,
+  initialTenants,
 }: TenantProviderProps): React.JSX.Element {
+  // ----------------------- initial state -----------------------------------
+  const hydratedTenants = initialTenants ?? [];
+
   const [currentTenantId, setCurrentTenantId] = useState<string | null>(
-    initialTenantId ?? globalThis[globalCacheKey]?.currentTenantId ?? null,
+    initialTenantId ??
+      // fall back to cached tenant id from previous navigations (client-only)
+      globalThis[globalCacheKey]?.currentTenantId ??
+      null,
   );
+
   const [currentTenant, setCurrentTenant] = useState<TenantContext | null>(
     null,
   );
-  const [userTenants, setUserTenants] = useState<TenantType[]>([]);
-  const [personalTenant, setPersonalTenant] = useState<TenantType | null>(null);
+
+  const [userTenants, setUserTenants] = useState<TenantType[]>(hydratedTenants);
+
+  // If we already have tenants, derive the personal tenant right away
+  const initialPersonal = useMemo(
+    () => hydratedTenants.find((t) => t.type === 'personal') || null,
+    [hydratedTenants],
+  );
+
+  const [personalTenant, setPersonalTenant] = useState<TenantType | null>(
+    initialPersonal,
+  );
+
+  // Keep loading until we have both tenant list & current tenant context
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const hasInitialized = useRef(false);
@@ -339,6 +364,8 @@ export function TenantProvider({
         if (inflightPromises) {
           inflightPromises.currentTenant = null;
         }
+        // Now that tenant context is available we can mark loading complete
+        setIsLoading(false);
         // eslint-disable-next-line no-console
         console.log('[TenantProvider] refreshCurrentTenant() END');
       }
@@ -413,23 +440,25 @@ export function TenantProvider({
   useEffect(() => {
     // eslint-disable-next-line no-console
     console.log('[TenantProvider] initialiseTenants effect fired');
+
     if (hasInitialized.current) {
       // eslint-disable-next-line no-console
       console.log('[TenantProvider] already initialised – skipping');
       return;
     }
 
-    const initializeTenants = (): void => {
-      // eslint-disable-next-line no-console
-      console.log('[TenantProvider] initializeTenants() START');
-      hasInitialized.current = true;
-      void refreshTenants();
-      // eslint-disable-next-line no-console
-      console.log('[TenantProvider] initializeTenants() FINISH');
-    };
+    hasInitialized.current = true;
 
-    initializeTenants();
-  }, [refreshTenants]);
+    // If we didn't get initialTenants, fetch them now.
+    if (!initialTenants || initialTenants.length === 0) {
+      // eslint-disable-next-line no-console
+      console.log('[TenantProvider] fetching tenants – no hydration');
+      void refreshTenants();
+    } else {
+      // We still need to fetch current tenant context
+      void refreshCurrentTenant();
+    }
+  }, [refreshTenants, refreshCurrentTenant, initialTenants]);
 
   // Listen for auth state changes to refresh tenants
   useEffect(() => {

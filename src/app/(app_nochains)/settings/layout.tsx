@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation';
 import React from 'react';
 
-import SettingsSidebar from '@/app/(app)/settings/SettingsSidebar';
+import SettingsSidebar from '@/app/(app_nochains)/settings/SettingsSidebar';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 
 export default async function SettingsLayout({

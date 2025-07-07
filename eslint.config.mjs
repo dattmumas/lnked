@@ -112,6 +112,10 @@ const eslintConfig = [
       '**/*.otf',
 
       // Deprecated files
+      'jest.env.js',
+
+      // Tailwind config file
+      'tailwind.config.mjs',
     ],
   },
   {
@@ -365,6 +369,21 @@ const eslintConfig = [
       '@typescript-eslint/strict-boolean-expressions': 'off',
       '@typescript-eslint/explicit-function-return-type': 'off',
       '@typescript-eslint/await-thenable': 'off',
+      '@typescript-eslint/no-array-delete': 'off',
+    },
+  },
+
+  // ------------------------------------------------------------
+  // CONFIG / JS FILES OVERRIDE – disable type-aware TS rules
+  // ------------------------------------------------------------
+  {
+    files: ['*.js', '*.cjs', '*.mjs'],
+    languageOptions: {
+      parserOptions: {
+        project: null,
+      },
+    },
+    rules: {
       '@typescript-eslint/no-array-delete': 'off',
     },
   },

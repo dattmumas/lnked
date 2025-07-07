@@ -3,10 +3,11 @@
 import { X, CheckCircle2 } from 'lucide-react';
 import React, { useCallback, useState, useEffect } from 'react';
 
-import { Badge } from '@/components/ui/badge';
+
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useCollectiveMemberships } from '@/hooks/posts/useCollectiveMemberships';
+import { cn } from '@/lib/utils';
 
 import {
   CollectiveSelectionCard,
@@ -102,26 +103,33 @@ export function CollectiveSelectionModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50">
-      <div className="bg-background rounded-lg max-w-2xl w-full max-h-[80vh] flex flex-col shadow-xl border">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      {/* Gradient overlay */}
+      <div className="absolute inset-0 bg-gradient-to-br from-slate-900/80 via-purple-900/20 to-slate-900/80 backdrop-blur-md" />
+
+      {/* Glass modal */}
+      <div className="relative bg-white/10 dark:bg-black/20 backdrop-blur-xl rounded-2xl max-w-2xl w-full max-h-[85vh] flex flex-col shadow-2xl ring-1 ring-white/20 dark:ring-white/10 border border-white/20 dark:border-white/10">
         {/* Header */}
-        <div className="p-6 border-b">
+        <div className="px-6 py-5 border-b border-white/10 dark:border-white/5">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-xl font-semibold text-foreground">{title}</h2>
-              <p className="text-sm text-muted-foreground mt-1">
-                {description}
-              </p>
+              <h2 className="text-xl font-semibold text-white">{title}</h2>
+              <p className="text-sm text-white/70 mt-1">{description}</p>
             </div>
             <div className="flex items-center gap-3">
-              <Badge variant="secondary">
+              <div className="px-3 py-1 text-white/90 text-sm font-medium whitespace-nowrap">
                 {selectedCount} selected
                 {maxSelections !== undefined &&
                   maxSelections !== null &&
                   maxSelections > 0 &&
                   ` / ${maxSelections}`}
-              </Badge>
-              <Button variant="ghost" size="sm" onClick={onClose}>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={onClose}
+                className="text-white/70 hover:text-white hover:bg-white/10"
+              >
                 <X className="w-4 h-4" />
               </Button>
             </div>
@@ -129,8 +137,8 @@ export function CollectiveSelectionModal({
         </div>
 
         {/* Content */}
-        <div className="flex-1 min-h-0 p-6">
-          <ScrollArea className="h-full">
+        <div className="flex-1 min-h-0 p-6 overflow-hidden">
+          <ScrollArea className="h-full pr-4">
             {isLoading ? (
               <div className="space-y-3">
                 {Array.from({ length: 4 }).map((_, i) => (
@@ -138,11 +146,11 @@ export function CollectiveSelectionModal({
                 ))}
               </div>
             ) : error ? (
-              <div className="flex items-center justify-center py-8 text-destructive">
+              <div className="flex items-center justify-center py-8 text-red-400">
                 <span>Failed to load collectives. Please try again.</span>
               </div>
             ) : postableCollectives.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
+              <div className="flex flex-col items-center justify-center py-8 text-white/60">
                 <p className="text-center">
                   You don't have posting permissions in any collectives yet.
                 </p>
@@ -170,12 +178,12 @@ export function CollectiveSelectionModal({
         </div>
 
         {/* Footer */}
-        <div className="p-6 border-t bg-muted/20">
+        <div className="px-6 py-4 border-t border-white/10 dark:border-white/5 bg-gradient-to-r from-white/5 to-white/10 backdrop-blur-sm rounded-b-2xl">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <div className="flex items-center gap-2 text-sm text-white/60">
               {selectedCount > 0 && (
                 <>
-                  <CheckCircle2 className="w-4 h-4 text-green-600" />
+                  <CheckCircle2 className="w-4 h-4 text-green-400" />
                   <span>
                     {selectedCount} collective{selectedCount !== 1 ? 's' : ''}{' '}
                     selected
@@ -185,13 +193,20 @@ export function CollectiveSelectionModal({
             </div>
 
             <div className="flex gap-2">
-              <Button variant="outline" onClick={handleCancel}>
+              <Button
+                variant="outline"
+                onClick={handleCancel}
+                className="border-white/20 text-white/90 hover:bg-white/10 hover:text-white"
+              >
                 Cancel
               </Button>
               <Button
                 onClick={handleSave}
                 disabled={!hasChanges}
-                className={selectedCount > 0 ? 'bg-primary' : ''}
+                className={cn(
+                  'bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white border-0',
+                  !hasChanges && 'opacity-50 cursor-not-allowed',
+                )}
               >
                 Save Selection ({selectedCount})
               </Button>
