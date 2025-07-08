@@ -6,7 +6,10 @@ import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { recordAPIMetrics, createMetricsTimer } from '@/lib/utils/metrics';
 import { createAPILogger } from '@/lib/utils/structured-logger';
 
-import type { NotificationFilters, NotificationType } from '@/types/notifications';
+import type {
+  NotificationFilters,
+  NotificationType,
+} from '@/types/notifications';
 
 /**
  * Enhanced notifications API with enterprise-grade security and performance
@@ -49,15 +52,15 @@ export async function GET(request: NextRequest): Promise<Response> {
         duration,
         error: 'Authentication failed',
       });
-      
+
       logger.warn('Unauthorized notification access attempt', {
         statusCode: HttpStatusCode.Unauthorized,
         ...(authError?.message ? { error: authError.message } : {}),
       });
-      
+
       return NextResponse.json(
         { error: 'User not authenticated' },
-        { status: HttpStatusCode.Unauthorized }
+        { status: HttpStatusCode.Unauthorized },
       );
     }
 
@@ -73,18 +76,28 @@ export async function GET(request: NextRequest): Promise<Response> {
     // Convert and validate parameters
     const limit = limitParam !== null ? parseInt(limitParam, 10) : undefined;
     const offset = offsetParam !== null ? parseInt(offsetParam, 10) : undefined;
-    
+
     // Validate type parameter against allowed notification types
     const validTypes: NotificationType[] = [
-      'follow', 'unfollow', 'post_like', 'post_comment', 'comment_reply', 
-      'comment_like', 'post_published', 'collective_invite', 'collective_join', 
-      'collective_leave', 'subscription_created', 'subscription_cancelled', 
-      'mention', 'post_bookmark', 'featured_post'
+      'follow',
+      'unfollow',
+      'post_like',
+      'post_published',
+      'collective_invite',
+      'collective_join',
+      'collective_leave',
+      'subscription_created',
+      'subscription_cancelled',
+      'mention',
+      'post_bookmark',
+      'featured_post',
     ];
-    const type: NotificationType | undefined = typeParam !== null && validTypes.includes(typeParam as NotificationType) 
-      ? typeParam as NotificationType 
-      : undefined;
-    
+
+    const type: NotificationType | undefined =
+      typeParam !== null && validTypes.includes(typeParam as NotificationType)
+        ? (typeParam as NotificationType)
+        : undefined;
+
     let read: boolean | undefined;
 
     if (readParam !== null) {
@@ -97,8 +110,10 @@ export async function GET(request: NextRequest): Promise<Response> {
     }
 
     // Validate numeric parameters
-    if ((limitParam !== null && (isNaN(limit ?? 0) || (limit ?? 0) < 0)) ||
-        (offsetParam !== null && (isNaN(offset ?? 0) || (offset ?? 0) < 0))) {
+    if (
+      (limitParam !== null && (isNaN(limit ?? 0) || (limit ?? 0) < 0)) ||
+      (offsetParam !== null && (isNaN(offset ?? 0) || (offset ?? 0) < 0))
+    ) {
       const duration = timer();
       recordAPIMetrics({
         endpoint: ENDPOINT_NAME,
@@ -117,7 +132,7 @@ export async function GET(request: NextRequest): Promise<Response> {
 
       return NextResponse.json(
         { error: 'Invalid limit or offset parameter' },
-        { status: HttpStatusCode.BadRequest }
+        { status: HttpStatusCode.BadRequest },
       );
     }
 
@@ -176,7 +191,7 @@ export async function GET(request: NextRequest): Promise<Response> {
 
     return NextResponse.json(
       { error: 'Failed to fetch notifications' },
-      { status: HttpStatusCode.InternalServerError }
+      { status: HttpStatusCode.InternalServerError },
     );
   }
 }
@@ -214,7 +229,7 @@ export async function PATCH(request: NextRequest): Promise<Response> {
 
       return NextResponse.json(
         { error: 'User not authenticated' },
-        { status: HttpStatusCode.Unauthorized }
+        { status: HttpStatusCode.Unauthorized },
       );
     }
 
@@ -244,11 +259,15 @@ export async function PATCH(request: NextRequest): Promise<Response> {
 
         return NextResponse.json(
           { error: 'notification_ids must be an array' },
-          { status: HttpStatusCode.BadRequest }
+          { status: HttpStatusCode.BadRequest },
         );
       }
 
-      if (notification_ids.some(id => typeof id !== 'string' || id.trim() === '')) {
+      if (
+        notification_ids.some(
+          (id) => typeof id !== 'string' || id.trim() === '',
+        )
+      ) {
         const duration = timer();
         recordAPIMetrics({
           endpoint: ENDPOINT_NAME,
@@ -267,7 +286,7 @@ export async function PATCH(request: NextRequest): Promise<Response> {
 
         return NextResponse.json(
           { error: 'All notification IDs must be non-empty strings' },
-          { status: HttpStatusCode.BadRequest }
+          { status: HttpStatusCode.BadRequest },
         );
       }
     }
@@ -277,9 +296,12 @@ export async function PATCH(request: NextRequest): Promise<Response> {
 
     if (!result.success) {
       // 11. Distinguish between 404 (not found) and 400 (bad request)
-      const statusCode = result.error !== null && result.error !== undefined && result.error.includes('not found') 
-        ? HttpStatusCode.NotFound 
-        : HttpStatusCode.BadRequest;
+      const statusCode =
+        result.error !== null &&
+        result.error !== undefined &&
+        result.error.includes('not found')
+          ? HttpStatusCode.NotFound
+          : HttpStatusCode.BadRequest;
 
       const duration = timer();
       recordAPIMetrics({
@@ -301,10 +323,10 @@ export async function PATCH(request: NextRequest): Promise<Response> {
       });
 
       return NextResponse.json(
-        { 
+        {
           error: result.error,
         },
-        { status: statusCode }
+        { status: statusCode },
       );
     }
 
@@ -347,7 +369,7 @@ export async function PATCH(request: NextRequest): Promise<Response> {
 
     return NextResponse.json(
       { error: 'Failed to mark notifications as read' },
-      { status: HttpStatusCode.InternalServerError }
+      { status: HttpStatusCode.InternalServerError },
     );
   }
 }
@@ -380,7 +402,7 @@ export async function DELETE(request: NextRequest): Promise<Response> {
 
       return NextResponse.json(
         { error: 'User not authenticated' },
-        { status: HttpStatusCode.Unauthorized }
+        { status: HttpStatusCode.Unauthorized },
       );
     }
 
@@ -409,11 +431,13 @@ export async function DELETE(request: NextRequest): Promise<Response> {
 
       return NextResponse.json(
         { error: 'notification_ids array is required and cannot be empty' },
-        { status: HttpStatusCode.BadRequest }
+        { status: HttpStatusCode.BadRequest },
       );
     }
 
-    if (notification_ids.some(id => typeof id !== 'string' || id.trim() === '')) {
+    if (
+      notification_ids.some((id) => typeof id !== 'string' || id.trim() === '')
+    ) {
       const duration = timer();
       recordAPIMetrics({
         endpoint: ENDPOINT_NAME,
@@ -432,17 +456,21 @@ export async function DELETE(request: NextRequest): Promise<Response> {
 
       return NextResponse.json(
         { error: 'All notification IDs must be non-empty strings' },
-        { status: HttpStatusCode.BadRequest }
+        { status: HttpStatusCode.BadRequest },
       );
     }
 
     const notificationService = createNotificationService();
-    const result = await notificationService.deleteNotifications(notification_ids);
+    const result =
+      await notificationService.deleteNotifications(notification_ids);
 
     if (!result.success) {
-      const statusCode = result.error !== null && result.error !== undefined && result.error.includes('not found') 
-        ? HttpStatusCode.NotFound 
-        : HttpStatusCode.BadRequest;
+      const statusCode =
+        result.error !== null &&
+        result.error !== undefined &&
+        result.error.includes('not found')
+          ? HttpStatusCode.NotFound
+          : HttpStatusCode.BadRequest;
 
       const duration = timer();
       recordAPIMetrics({
@@ -455,10 +483,10 @@ export async function DELETE(request: NextRequest): Promise<Response> {
       });
 
       return NextResponse.json(
-        { 
+        {
           error: result.error,
         },
-        { status: statusCode }
+        { status: statusCode },
       );
     }
 
@@ -501,7 +529,7 @@ export async function DELETE(request: NextRequest): Promise<Response> {
 
     return NextResponse.json(
       { error: 'Failed to delete notifications' },
-      { status: HttpStatusCode.InternalServerError }
+      { status: HttpStatusCode.InternalServerError },
     );
   }
-} 
+}

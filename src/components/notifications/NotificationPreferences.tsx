@@ -37,6 +37,39 @@ interface PreferenceState {
   in_app_enabled: boolean;
 }
 
+export const notificationGroupMap: Record<string, NotificationType[]> = {
+  social: [
+    'follow',
+    'unfollow',
+    'post_like',
+    'mention',
+    'post_bookmark',
+    'featured_post',
+  ],
+  communication: [
+    'post_published',
+    'collective_invite',
+    'collective_join',
+    'collective_leave',
+  ],
+  billing: ['subscription_created', 'subscription_cancelled'],
+};
+
+export const notificationTypeToGroup: Record<NotificationType, string> = {
+  follow: 'social',
+  unfollow: 'social',
+  post_like: 'social',
+  mention: 'social',
+  post_bookmark: 'social',
+  featured_post: 'social',
+  post_published: 'communication',
+  collective_invite: 'communication',
+  collective_join: 'communication',
+  collective_leave: 'communication',
+  subscription_created: 'billing',
+  subscription_cancelled: 'billing',
+} as Record<NotificationType, string>;
+
 export function NotificationPreferences({
   className,
 }: NotificationPreferencesProps): React.JSX.Element {
@@ -151,9 +184,6 @@ export function NotificationPreferences({
       follow: 'New Followers',
       unfollow: 'Unfollows',
       post_like: 'Post Likes',
-      post_comment: 'Post Comments',
-      comment_reply: 'Comment Replies',
-      comment_like: 'Comment Likes',
       post_published: 'Post Published',
       collective_invite: 'Collective Invites',
       collective_join: 'Collective Joins',
@@ -172,9 +202,6 @@ export function NotificationPreferences({
       follow: 'When someone starts following you',
       unfollow: 'When someone unfollows you',
       post_like: 'When someone likes your posts',
-      post_comment: 'When someone comments on your posts',
-      comment_reply: 'When someone replies to your comments',
-      comment_like: 'When someone likes your comments',
       post_published: 'When you publish a new post',
       collective_invite: 'When you receive collective invitations',
       collective_join: 'When someone joins your collective',

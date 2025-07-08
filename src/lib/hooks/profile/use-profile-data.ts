@@ -81,21 +81,7 @@ async function fetchProfile(username: string): Promise<Profile> {
   const { data, error } = await supabase
     .from('users')
     .select(
-      `
-      id,
-      username,
-      full_name,
-      bio,
-      avatar_url,
-      cover_image_url,
-      social_links,
-      is_profile_public,
-      show_comments,
-      show_followers,
-      show_subscriptions,
-      tags,
-      updated_at
-    `,
+      'id, username, full_name, bio, avatar_url, cover_image_url, social_links, is_profile_public, show_followers, show_subscriptions, tags, updated_at',
     )
     .eq('username', username)
     .single();
@@ -133,7 +119,6 @@ async function fetchProfile(username: string): Promise<Profile> {
     coverImageUrl: data.cover_image_url,
     socialLinks: data.social_links as SocialLinks | null,
     isProfilePublic: data.is_profile_public ?? true,
-    showComments: data.show_comments ?? true,
     showFollowers: data.show_followers ?? true,
     showSubscriptions: data.show_subscriptions ?? true,
     tags: data.tags,

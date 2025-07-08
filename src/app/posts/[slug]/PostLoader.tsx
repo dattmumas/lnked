@@ -66,12 +66,5 @@ export default function PostLoader({
     [post],
   );
 
-  return (
-    <PostViewer
-      post={post}
-      viewer={viewer}
-      viewModel={viewModel}
-      initialCommentCount={commentCount}
-    />
-  );
+  return <PostViewer post={post} viewer={viewer} viewModel={viewModel} />;
 }

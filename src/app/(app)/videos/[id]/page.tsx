@@ -1,10 +1,8 @@
 import { notFound } from 'next/navigation';
 import React, { Suspense } from 'react';
 
-import { CommentSection } from '@/components/app/comments';
 import VideoDetailsServer from '@/components/app/video/VideoDetailsServer';
 import VideoPlayerClient from '@/components/app/video/VideoPlayerClient';
-import { CommentsSkeleton } from '@/components/ui/CommentsSkeleton';
 import { VideoPlayerSkeleton } from '@/components/ui/VideoPlayerSkeleton';
 import {
   VideoAssetSchema,
@@ -88,16 +86,6 @@ export default async function VideoPlayerPage({
             title: videoAsset.title ?? undefined,
             mux_playback_id: videoAsset.mux_playback_id ?? undefined,
           }}
-        />
-      </Suspense>
-
-      {/* Comments section - now using universal comment system */}
-      <Suspense fallback={<CommentsSkeleton />}>
-        <CommentSection
-          entityType="video"
-          entityId={videoAsset.id}
-          initialCommentsCount={videoAsset.comment_count ?? 0}
-          className="w-full max-w-4xl mt-8"
         />
       </Suspense>
     </main>

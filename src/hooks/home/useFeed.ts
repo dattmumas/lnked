@@ -109,23 +109,6 @@ export function useFeed(): UseFeedReturn {
         }
       });
 
-      // Comment counts
-      const { data: comments } = await supabase
-        .from('comments')
-        .select('entity_id')
-        .eq('entity_type', 'post')
-        .in('entity_id', postIds);
-
-      const commentCounts: Record<string, number> = {};
-      postIds.forEach((id) => {
-        commentCounts[id] = 0;
-      });
-      comments?.forEach((c) => {
-        if (c.entity_id !== null && c.entity_id !== undefined) {
-          commentCounts[c.entity_id] = (commentCounts[c.entity_id] ?? 0) + 1;
-        }
-      });
-
       const items: FeedItem[] = postRows.map((post) => {
         // Get reaction data from Map and destructure
         const reactionEntry = reactionCounts.get(post.id) ?? {
@@ -133,7 +116,6 @@ export function useFeed(): UseFeedReturn {
           dislikes: 0,
         };
         const { likes, dislikes } = reactionEntry;
-        const commentsCount = commentCounts[post.id] ?? 0;
 
         // Get video data if available
         const video =
@@ -156,7 +138,7 @@ export function useFeed(): UseFeedReturn {
           stats: {
             likes,
             dislikes,
-            comments: commentsCount,
+            comments: 0,
           },
         };
 
@@ -219,8 +201,7 @@ export function useFeed(): UseFeedReturn {
 
   useEffect(() => {
     void fetchFeed();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [fetchFeed]);
 
   const refetch = useCallback((): void => {
     setLoading(true);

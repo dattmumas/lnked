@@ -100,38 +100,26 @@ export class TenantAwareRepository {
   }
 
   /**
-   * Insert into comments with automatic tenant_id injection
-   */
-  async insertComment(data: Omit<Tables['comments']['Insert'], 'tenant_id'>) {
-    if (!this.tenantId) {
-      throw new Error('Tenant context required for comments');
-    }
-
-    return this.supabase.from('comments').insert({
-      ...data,
-      tenant_id: this.tenantId,
-    });
-  }
-
-  /**
    * Insert into post_bookmarks with automatic tenant_id injection
    */
-  async insertPostBookmark(data: { user_id: string; post_id: string }) {
+  async insertPostBookmark(
+    data: Omit<Tables['post_bookmarks']['Insert'], 'tenant_id'>,
+  ) {
     if (!this.tenantId) {
       throw new Error('Tenant context required for bookmarks');
     }
 
-    return this.supabase.from('post_bookmarks').insert({
-      ...data,
-      tenant_id: this.tenantId,
-    });
+    return this.supabase.from('post_bookmarks').insert(data);
   }
 
   /**
    * Delete from post_bookmarks
    */
-  async deletePostBookmark(data: { user_id: string; post_id: string }) {
-    return this.supabase.from('post_bookmarks').delete().match(data);
+  async deletePostBookmark(postId: string, userId: string) {
+    return this.supabase
+      .from('post_bookmarks')
+      .delete()
+      .match({ post_id: postId, user_id: userId });
   }
 }
 

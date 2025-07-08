@@ -11,7 +11,6 @@ export interface Profile {
   coverImageUrl: string | null;
   socialLinks: SocialLinks | null;
   isProfilePublic: boolean;
-  showComments: boolean;
   showFollowers: boolean;
   showSubscriptions: boolean;
   tags: string[] | null;
@@ -287,7 +286,9 @@ export interface FollowMutationVariables {
 
 export interface UpdateProfileVariables {
   username: string;
-  updates: Partial<Pick<Profile, 'fullName' | 'bio' | 'avatarUrl' | 'socialLinks'>>;
+  updates: Partial<
+    Pick<Profile, 'fullName' | 'bio' | 'avatarUrl' | 'socialLinks'>
+  >;
 }
 
 // -----------------------------------------------------------------------------
@@ -298,7 +299,7 @@ export class ProfileError extends HttpError {
   constructor(
     message: string,
     public code: string,
-    status: HttpStatusCode
+    status: HttpStatusCode,
   ) {
     super(status, message);
     this.name = 'ProfileError';

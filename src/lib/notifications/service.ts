@@ -53,8 +53,15 @@ export class NotificationService {
   // ---------------------------------------------------------------------
 
   /** Fetch notifications for current user with filters & pagination */
-  async getNotifications(filters: NotificationFilters = {}): Promise<NotificationResponse> {
-    const { limit = DEFAULT_LIMIT, offset = DEFAULT_OFFSET, type, read } = filters;
+  async getNotifications(
+    filters: NotificationFilters = {},
+  ): Promise<NotificationResponse> {
+    const {
+      limit = DEFAULT_LIMIT,
+      offset = DEFAULT_OFFSET,
+      type,
+      read,
+    } = filters;
 
     const supabase = await this.client();
 
@@ -69,7 +76,9 @@ export class NotificationService {
     }
 
     if (read !== undefined) {
-      query = read ? query.not('read_at', 'is', null) : query.is('read_at', null);
+      query = read
+        ? query.not('read_at', 'is', null)
+        : query.is('read_at', null);
     }
 
     const { data, error, count } = await query;
@@ -118,7 +127,10 @@ export class NotificationService {
   /** Mark specific notifications (or all) as read */
   async markAsRead(ids?: string[]): Promise<NotificationActionResult> {
     const supabase = await this.client();
-    const { data: { user }, error: authErr } = await supabase.auth.getUser();
+    const {
+      data: { user },
+      error: authErr,
+    } = await supabase.auth.getUser();
 
     if (isDefined(authErr) || user === null) {
       return { success: false, error: 'User not authenticated' };
@@ -151,7 +163,10 @@ export class NotificationService {
     }
 
     const supabase = await this.client();
-    const { data: { user }, error: authErr } = await supabase.auth.getUser();
+    const {
+      data: { user },
+      error: authErr,
+    } = await supabase.auth.getUser();
     if (isDefined(authErr) || user === null) {
       return { success: false, error: 'User not authenticated' };
     }
@@ -169,11 +184,15 @@ export class NotificationService {
   }
 
   /** Create a notification via RPC */
-  async createNotification(params: CreateNotificationParams): Promise<NotificationActionResult> {
+  async createNotification(
+    params: CreateNotificationParams,
+  ): Promise<NotificationActionResult> {
     const supabase = await this.client();
     const { error } = await supabase.rpc('create_notification', {
       p_recipient_id: params.recipient_id,
-      ...(params.actor_id !== null ? { p_actor_id: params.actor_id } : { p_actor_id: '' }),
+      ...(params.actor_id !== null
+        ? { p_actor_id: params.actor_id }
+        : { p_actor_id: '' }),
       p_type: params.type,
       p_title: params.title,
       p_message: params.message,
@@ -204,13 +223,18 @@ export class NotificationService {
   }
 
   /** Update notification preferences */
-  async updatePreferences(updates: NotificationPreferencesUpdate[]): Promise<NotificationActionResult> {
+  async updatePreferences(
+    updates: NotificationPreferencesUpdate[],
+  ): Promise<NotificationActionResult> {
     if (updates.length === 0) {
       return { success: true };
     }
 
     const supabase = await this.client();
-    const { data: { user }, error: authErr } = await supabase.auth.getUser();
+    const {
+      data: { user },
+      error: authErr,
+    } = await supabase.auth.getUser();
     if (isDefined(authErr) || user === null) {
       return { success: false, error: 'User not authenticated' };
     }
@@ -218,16 +242,14 @@ export class NotificationService {
     const updatedAt = nowIso();
 
     for (const pref of updates) {
-      const { error } = await supabase
-        .from('notification_preferences')
-        .upsert({
-          user_id: user.id,
-          notification_type: pref.notification_type,
-          email_enabled: pref.email_enabled ?? true,
-          push_enabled: pref.push_enabled ?? true,
-          in_app_enabled: pref.in_app_enabled ?? true,
-          updated_at: updatedAt,
-        });
+      const { error } = await supabase.from('notification_preferences').upsert({
+        user_id: user.id,
+        notification_type: pref.notification_type,
+        email_enabled: pref.email_enabled ?? true,
+        push_enabled: pref.push_enabled ?? true,
+        in_app_enabled: pref.in_app_enabled ?? true,
+        updated_at: updatedAt,
+      });
 
       if (isDefined(error)) {
         return { success: false, error: error.message };
@@ -249,31 +271,36 @@ export class NotificationService {
     const supabase = supabaseBrowser;
     const channel = supabase
       .channel(`notifications:${userId}`)
-      .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'notifications',
-        filter: `recipient_id=eq.${userId}`,
-      }, async (payload) => {
-        const { data } = await supabase
-          .from('notifications')
-          .select(`*`)  
-          .eq('id', String((payload.new as { id: string }).id))
-          .single();
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'notifications',
+          filter: `recipient_id=eq.${userId}`,
+        },
+        async (payload) => {
+          const { data } = await supabase
+            .from('notifications')
+            .select(`*`)
+            .eq('id', String((payload.new as { id: string }).id))
+            .single();
 
-        if (data !== null) {
-          const { created_at, updated_at, entity_type, metadata, ...rest } = data;
-          const notification: Notification = {
-            ...rest,
-            created_at: created_at ?? nowIso(),
-            updated_at: updated_at ?? nowIso(),
-            entity_type: (entity_type ?? null) as EntityType | null,
-            metadata: (metadata as Record<string, Json>) ?? {},
-          };
-          
-          handler(notification);
-        }
-      })
+          if (data !== null) {
+            const { created_at, updated_at, entity_type, metadata, ...rest } =
+              data;
+            const notification: Notification = {
+              ...rest,
+              created_at: created_at ?? nowIso(),
+              updated_at: updated_at ?? nowIso(),
+              entity_type: (entity_type ?? null) as EntityType | null,
+              metadata: (metadata as Record<string, Json>) ?? {},
+            };
+
+            handler(notification);
+          }
+        },
+      )
       .subscribe();
 
     return () => {
@@ -297,7 +324,8 @@ export class NotificationService {
 // ---------------------------------------------------------------------------
 // Factory
 // ---------------------------------------------------------------------------
-export const createNotificationService = (): NotificationService => new NotificationService();
+export const createNotificationService = (): NotificationService =>
+  new NotificationService();
 
 // ---------------------------------------------------------------------------
 // High-level helper shortcuts (re-exported for compatibility)
@@ -338,25 +366,6 @@ export function createPostLikeNotification(
   });
 }
 
-export function createCommentNotification(
-  userId: string,
-  commentId: string,
-  postId: string,
-): Promise<NotificationActionResult> {
-  const service = createNotificationService();
-
-  return service.createNotification({
-    recipient_id: userId,
-    actor_id: userId,
-    type: 'post_comment',
-    title: 'New comment',
-    message: 'Your post received a comment',
-    entity_type: 'comment',
-    entity_id: commentId,
-    metadata: { postId },
-  });
-}
-
 export async function getNotificationsForUser(
   userId: string,
   limit = 10,
@@ -393,4 +402,4 @@ export async function getUnreadNotificationCount(
   }
 
   return count ?? 0;
-} 
+}

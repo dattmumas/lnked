@@ -20,7 +20,6 @@ export interface VideoAsset {
   is_public: boolean | null;
   collective_id: string | null;
   post_id: string | null;
-  comment_count: number;
   view_count?: number;
   like_count?: number;
   post?: {

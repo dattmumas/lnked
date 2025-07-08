@@ -118,7 +118,6 @@ jest.mock('lucide-react', () => ({
 
 describe('NotificationItem', () => {
   const mockOnMarkAsRead = jest.fn();
-  const mockOnDelete = jest.fn();
 
   const baseNotification: Notification = {
     id: 'notification-123',
@@ -129,16 +128,15 @@ describe('NotificationItem', () => {
     message: 'Alice liked your post "Amazing Article"',
     entity_type: 'post',
     entity_id: 'post-123',
-    metadata: { post_title: 'Amazing Article' },
+    metadata: {
+      post_title: 'Amazing Article',
+      actorUsername: 'alice',
+      actorFullName: 'Alice Smith',
+      actorAvatarUrl: 'https://example.com/alice.jpg',
+    },
     read_at: null,
     created_at: '2025-01-21T12:00:00Z',
     updated_at: '2025-01-21T12:00:00Z',
-    actor: {
-      id: 'user-456',
-      full_name: 'Alice Smith',
-      username: 'alice',
-      avatar_url: 'https://example.com/alice.jpg',
-    },
   };
 
   beforeEach(() => {
@@ -151,7 +149,6 @@ describe('NotificationItem', () => {
         <NotificationItem
           notification={baseNotification}
           onMarkAsRead={mockOnMarkAsRead}
-          onDelete={mockOnDelete}
         />,
       );
 
@@ -169,7 +166,6 @@ describe('NotificationItem', () => {
         <NotificationItem
           notification={baseNotification}
           onMarkAsRead={mockOnMarkAsRead}
-          onDelete={mockOnDelete}
         />,
       );
 
@@ -187,14 +183,19 @@ describe('NotificationItem', () => {
     it('should render without actor information', () => {
       const notificationWithoutActor = {
         ...baseNotification,
-        actor: null,
+        actor_id: null,
+        metadata: {
+          ...baseNotification.metadata,
+          actorUsername: undefined,
+          actorFullName: undefined,
+          actorAvatarUrl: undefined,
+        },
       };
 
       render(
         <NotificationItem
           notification={notificationWithoutActor}
           onMarkAsRead={mockOnMarkAsRead}
-          onDelete={mockOnDelete}
         />,
       );
 
@@ -207,7 +208,6 @@ describe('NotificationItem', () => {
         <NotificationItem
           notification={baseNotification}
           onMarkAsRead={mockOnMarkAsRead}
-          onDelete={mockOnDelete}
         />,
       );
 
@@ -225,7 +225,6 @@ describe('NotificationItem', () => {
         <NotificationItem
           notification={readNotification}
           onMarkAsRead={mockOnMarkAsRead}
-          onDelete={mockOnDelete}
         />,
       );
 
@@ -243,7 +242,6 @@ describe('NotificationItem', () => {
         <NotificationItem
           notification={urgentNotification}
           onMarkAsRead={mockOnMarkAsRead}
-          onDelete={mockOnDelete}
         />,
       );
 
@@ -261,7 +259,6 @@ describe('NotificationItem', () => {
         <NotificationItem
           notification={baseNotification}
           onMarkAsRead={mockOnMarkAsRead}
-          onDelete={mockOnDelete}
         />,
       );
 
@@ -282,7 +279,6 @@ describe('NotificationItem', () => {
         <NotificationItem
           notification={userNotification}
           onMarkAsRead={mockOnMarkAsRead}
-          onDelete={mockOnDelete}
         />,
       );
 
@@ -303,7 +299,6 @@ describe('NotificationItem', () => {
         <NotificationItem
           notification={collectiveNotification}
           onMarkAsRead={mockOnMarkAsRead}
-          onDelete={mockOnDelete}
         />,
       );
 
@@ -313,31 +308,6 @@ describe('NotificationItem', () => {
       expect(externalLinkButton).toHaveAttribute(
         'href',
         '/collectives/collective-456',
-      );
-    });
-
-    it('should generate correct link for comment notification', () => {
-      const commentNotification = {
-        ...baseNotification,
-        entity_type: 'comment' as const,
-        entity_id: 'comment-789',
-        metadata: { post_id: 'post-456' },
-      };
-
-      render(
-        <NotificationItem
-          notification={commentNotification}
-          onMarkAsRead={mockOnMarkAsRead}
-          onDelete={mockOnDelete}
-        />,
-      );
-
-      const externalLinkButton = screen
-        .getByTestId('external-link-icon')
-        .closest('a');
-      expect(externalLinkButton).toHaveAttribute(
-        'href',
-        '/posts/post-456#comment-comment-789',
       );
     });
 
@@ -352,7 +322,6 @@ describe('NotificationItem', () => {
         <NotificationItem
           notification={notificationWithoutEntity}
           onMarkAsRead={mockOnMarkAsRead}
-          onDelete={mockOnDelete}
         />,
       );
 
@@ -370,7 +339,6 @@ describe('NotificationItem', () => {
         <NotificationItem
           notification={baseNotification}
           onMarkAsRead={mockOnMarkAsRead}
-          onDelete={mockOnDelete}
         />,
       );
 
@@ -391,7 +359,6 @@ describe('NotificationItem', () => {
         <NotificationItem
           notification={readNotification}
           onMarkAsRead={mockOnMarkAsRead}
-          onDelete={mockOnDelete}
         />,
       );
 
@@ -401,60 +368,35 @@ describe('NotificationItem', () => {
       expect(mockPush).toHaveBeenCalledWith('/posts/post-123');
     });
 
-    it('should call onDelete when clicking delete button', async () => {
+    it('should handle clicking on the notification body', async () => {
       const user = userEvent.setup();
 
       render(
         <NotificationItem
           notification={baseNotification}
           onMarkAsRead={mockOnMarkAsRead}
-          onDelete={mockOnDelete}
         />,
       );
 
-      const deleteButton = screen.getByTestId('x-icon').closest('button');
-      await user.click(deleteButton!);
+      await user.click(screen.getByText('Post liked'));
 
-      expect(mockOnDelete).toHaveBeenCalledWith('notification-123');
+      expect(mockOnMarkAsRead).toHaveBeenCalledWith('notification-123');
     });
 
-    it('should not navigate when clicking action buttons', async () => {
+    it('should handle missing onMarkAsRead callback', async () => {
       const user = userEvent.setup();
 
       render(
         <NotificationItem
           notification={baseNotification}
-          onMarkAsRead={mockOnMarkAsRead}
-          onDelete={mockOnDelete}
+          onMarkAsRead={jest.fn()}
         />,
       );
 
-      const deleteButton = screen.getByTestId('x-icon').closest('button');
-      await user.click(deleteButton!);
+      // Should not throw when clicking
+      await user.click(screen.getByRole('button'));
 
-      expect(mockPush).not.toHaveBeenCalled();
-    });
-
-    it('should handle delete button disabled state', async () => {
-      const user = userEvent.setup();
-
-      render(
-        <NotificationItem
-          notification={baseNotification}
-          onMarkAsRead={mockOnMarkAsRead}
-          onDelete={mockOnDelete}
-        />,
-      );
-
-      const deleteButton = screen.getByTestId('x-icon').closest('button');
-
-      // Simulate deleting state by clicking once
-      await user.click(deleteButton!);
-
-      // Wait for potential state update
-      await waitFor(() => {
-        expect(mockOnDelete).toHaveBeenCalledWith('notification-123');
-      });
+      expect(mockPush).toHaveBeenCalledWith('/posts/post-123');
     });
   });
 
@@ -466,7 +408,6 @@ describe('NotificationItem', () => {
         <NotificationItem
           notification={baseNotification}
           onMarkAsRead={mockOnMarkAsRead}
-          onDelete={mockOnDelete}
         />,
       );
 
@@ -484,7 +425,6 @@ describe('NotificationItem', () => {
         <NotificationItem
           notification={baseNotification}
           onMarkAsRead={mockOnMarkAsRead}
-          onDelete={mockOnDelete}
         />,
       );
 
@@ -502,7 +442,6 @@ describe('NotificationItem', () => {
         <NotificationItem
           notification={baseNotification}
           onMarkAsRead={mockOnMarkAsRead}
-          onDelete={mockOnDelete}
         />,
       );
 
@@ -516,12 +455,10 @@ describe('NotificationItem', () => {
         <NotificationItem
           notification={baseNotification}
           onMarkAsRead={mockOnMarkAsRead}
-          onDelete={mockOnDelete}
         />,
       );
 
       expect(screen.getByText('View')).toHaveClass('sr-only');
-      expect(screen.getByText('Delete')).toHaveClass('sr-only');
     });
 
     it('should suppress hydration warnings for time-sensitive content', () => {
@@ -529,7 +466,6 @@ describe('NotificationItem', () => {
         <NotificationItem
           notification={baseNotification}
           onMarkAsRead={mockOnMarkAsRead}
-          onDelete={mockOnDelete}
         />,
       );
 
@@ -539,42 +475,6 @@ describe('NotificationItem', () => {
   });
 
   describe('error handling', () => {
-    it('should handle missing onMarkAsRead callback', async () => {
-      const user = userEvent.setup();
-
-      render(
-        <NotificationItem
-          notification={baseNotification}
-          onDelete={mockOnDelete}
-        />,
-      );
-
-      // Should not throw when clicking
-      await user.click(screen.getByRole('button'));
-
-      expect(mockPush).toHaveBeenCalledWith('/posts/post-123');
-    });
-
-    it('should handle missing onDelete callback', async () => {
-      const user = userEvent.setup();
-
-      render(
-        <NotificationItem
-          notification={baseNotification}
-          onMarkAsRead={mockOnMarkAsRead}
-        />,
-      );
-
-      const deleteButton = screen.getByTestId('x-icon').closest('button');
-
-      // Should not throw when clicking delete
-      await user.click(deleteButton!);
-
-      // Should still call markAsRead for main click
-      await user.click(screen.getByRole('button'));
-      expect(mockOnMarkAsRead).toHaveBeenCalledWith('notification-123');
-    });
-
     it('should handle navigation without entity link', async () => {
       const user = userEvent.setup();
       const notificationWithoutEntity = {
@@ -587,7 +487,6 @@ describe('NotificationItem', () => {
         <NotificationItem
           notification={notificationWithoutEntity}
           onMarkAsRead={mockOnMarkAsRead}
-          onDelete={mockOnDelete}
         />,
       );
 
@@ -604,7 +503,6 @@ describe('NotificationItem', () => {
         <NotificationItem
           notification={baseNotification}
           onMarkAsRead={mockOnMarkAsRead}
-          onDelete={mockOnDelete}
           className="custom-notification"
         />,
       );

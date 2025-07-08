@@ -91,46 +91,34 @@ jest.mock('../NotificationItem', () => ({
 global.fetch = jest.fn();
 
 describe('NotificationList', () => {
-  const sampleNotifications: Notification[] = [
+  const mockNotifications: Notification[] = [
     {
-      id: 'notification-1',
+      id: '1',
       recipient_id: 'user-123',
       actor_id: 'user-456',
+      type: 'follow',
+      title: 'New follower',
+      message: 'Alice started following you',
+      entity_type: 'user',
+      entity_id: 'user-456',
+      metadata: { actorUsername: 'alice' },
+      read_at: null,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    },
+    {
+      id: '2',
+      recipient_id: 'user-123',
+      actor_id: 'user-789',
       type: 'post_like',
-      title: 'Post liked',
+      title: 'Post Liked',
       message: 'Alice liked your post',
       entity_type: 'post',
       entity_id: 'post-123',
-      metadata: {},
+      metadata: { postSlug: 'my-post' },
       read_at: null,
-      created_at: '2025-01-21T12:00:00Z',
-      updated_at: '2025-01-21T12:00:00Z',
-      actor: {
-        id: 'user-456',
-        full_name: 'Alice Smith',
-        username: 'alice',
-        avatar_url: 'https://example.com/alice.jpg',
-      },
-    },
-    {
-      id: 'notification-2',
-      recipient_id: 'user-123',
-      actor_id: 'user-789',
-      type: 'post_comment',
-      title: 'New comment',
-      message: 'Bob commented on your post',
-      entity_type: 'post',
-      entity_id: 'post-456',
-      metadata: {},
-      read_at: '2025-01-21T11:00:00Z',
-      created_at: '2025-01-21T11:00:00Z',
-      updated_at: '2025-01-21T11:00:00Z',
-      actor: {
-        id: 'user-789',
-        full_name: 'Bob Johnson',
-        username: 'bob',
-        avatar_url: null,
-      },
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
     },
   ];
 
@@ -143,21 +131,21 @@ describe('NotificationList', () => {
     it('should render with initial notifications', () => {
       render(
         <NotificationList
-          initialNotifications={sampleNotifications}
+          initialNotifications={mockNotifications}
           initialUnreadCount={1}
         />,
       );
 
       expect(screen.getByText('Notifications')).toBeInTheDocument();
       expect(screen.getAllByTestId('notification-item')).toHaveLength(2);
-      expect(screen.getByText('Post liked')).toBeInTheDocument();
-      expect(screen.getByText('New comment')).toBeInTheDocument();
+      expect(screen.getByText('New follower')).toBeInTheDocument();
+      expect(screen.getByText('Post Liked')).toBeInTheDocument();
     });
 
     it('should show unread count badge', () => {
       render(
         <NotificationList
-          initialNotifications={sampleNotifications}
+          initialNotifications={mockNotifications}
           initialUnreadCount={3}
         />,
       );
@@ -170,7 +158,7 @@ describe('NotificationList', () => {
     it('should not show unread badge when count is 0', () => {
       render(
         <NotificationList
-          initialNotifications={sampleNotifications}
+          initialNotifications={mockNotifications}
           initialUnreadCount={0}
         />,
       );
@@ -181,7 +169,7 @@ describe('NotificationList', () => {
     it('should show mark all read button when there are unread notifications', () => {
       render(
         <NotificationList
-          initialNotifications={sampleNotifications}
+          initialNotifications={mockNotifications}
           initialUnreadCount={2}
         />,
       );
@@ -192,7 +180,7 @@ describe('NotificationList', () => {
     it('should not show mark all read button when no unread notifications', () => {
       render(
         <NotificationList
-          initialNotifications={sampleNotifications}
+          initialNotifications={mockNotifications}
           initialUnreadCount={0}
         />,
       );
@@ -225,7 +213,7 @@ describe('NotificationList', () => {
     it('should render filter tabs', () => {
       render(
         <NotificationList
-          initialNotifications={sampleNotifications}
+          initialNotifications={mockNotifications}
           initialUnreadCount={1}
         />,
       );
@@ -239,7 +227,7 @@ describe('NotificationList', () => {
     it('should show unread count in unread tab', () => {
       render(
         <NotificationList
-          initialNotifications={sampleNotifications}
+          initialNotifications={mockNotifications}
           initialUnreadCount={3}
         />,
       );
@@ -250,7 +238,7 @@ describe('NotificationList', () => {
     it('should not show count in unread tab when count is 0', () => {
       render(
         <NotificationList
-          initialNotifications={sampleNotifications}
+          initialNotifications={mockNotifications}
           initialUnreadCount={0}
         />,
       );
@@ -266,7 +254,7 @@ describe('NotificationList', () => {
       (fetch as jest.Mock).mockResolvedValueOnce({
         ok: true,
         json: async () => ({
-          notifications: sampleNotifications,
+          notifications: mockNotifications,
           unread_count: 2,
           has_more: false,
         }),
@@ -326,7 +314,7 @@ describe('NotificationList', () => {
       (fetch as jest.Mock).mockResolvedValueOnce({
         ok: true,
         json: async () => ({
-          notifications: sampleNotifications,
+          notifications: mockNotifications,
           unread_count: 2,
           has_more: true,
         }),
@@ -343,7 +331,7 @@ describe('NotificationList', () => {
       (fetch as jest.Mock).mockResolvedValueOnce({
         ok: true,
         json: async () => ({
-          notifications: sampleNotifications,
+          notifications: mockNotifications,
           unread_count: 2,
           has_more: false,
         }),
@@ -363,7 +351,7 @@ describe('NotificationList', () => {
       (fetch as jest.Mock).mockResolvedValueOnce({
         ok: true,
         json: async () => ({
-          notifications: sampleNotifications,
+          notifications: mockNotifications,
           unread_count: 2,
           has_more: true,
         }),
@@ -373,7 +361,7 @@ describe('NotificationList', () => {
       (fetch as jest.Mock).mockResolvedValueOnce({
         ok: true,
         json: async () => ({
-          notifications: [{ ...sampleNotifications[0], id: 'notification-3' }],
+          notifications: [{ ...mockNotifications[0], id: 'notification-3' }],
           unread_count: 2,
           has_more: false,
         }),
@@ -406,7 +394,7 @@ describe('NotificationList', () => {
 
       render(
         <NotificationList
-          initialNotifications={sampleNotifications}
+          initialNotifications={mockNotifications}
           initialUnreadCount={2}
         />,
       );
@@ -421,7 +409,7 @@ describe('NotificationList', () => {
     it('should have proper heading structure', () => {
       render(
         <NotificationList
-          initialNotifications={sampleNotifications}
+          initialNotifications={mockNotifications}
           initialUnreadCount={1}
         />,
       );
@@ -434,7 +422,7 @@ describe('NotificationList', () => {
     it('should use proper ARIA structure for tabs', () => {
       render(
         <NotificationList
-          initialNotifications={sampleNotifications}
+          initialNotifications={mockNotifications}
           initialUnreadCount={1}
         />,
       );
@@ -448,12 +436,33 @@ describe('NotificationList', () => {
     it('should apply custom className', () => {
       const { container } = render(
         <NotificationList
-          initialNotifications={sampleNotifications}
+          initialNotifications={mockNotifications}
           className="custom-notification-list"
         />,
       );
 
       expect(container.firstChild).toHaveClass('custom-notification-list');
     });
+  });
+
+  it('filters notifications by type', async () => {
+    const user = userEvent.setup();
+
+    expect(screen.getByText('New follower')).toBeInTheDocument();
+    expect(screen.queryByText('Post Liked')).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('radio', { name: 'post_like' }));
+    expect(screen.getByText('Post Liked')).toBeInTheDocument();
+    expect(screen.queryByText('New follower')).not.toBeInTheDocument();
+
+    await user.click(screen.getByText('Follows'));
+    await waitFor(() => {
+      expect(fetch).toHaveBeenCalledWith('/api/notifications?type=follow');
+    });
+  });
+
+  it('shows only unread notifications when filter is "unread"', async () => {
+    expect(screen.getByText('New follower')).toBeInTheDocument();
+    expect(screen.getByText('Post Liked')).toBeInTheDocument();
   });
 });

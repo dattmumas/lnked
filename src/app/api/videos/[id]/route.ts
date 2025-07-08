@@ -236,11 +236,9 @@ function generateETag(video: VideoAsset): string {
   const hashableFields = {
     id: video.id,
     updated_at: video.updated_at,
-    comment_count: video.comment_count,
     playback_policy: video.playback_policy,
     is_public: video.is_public,
     mux_playback_id: video.mux_playback_id,
-    status: video.status,
   };
 
   const hash = createHash('sha1')

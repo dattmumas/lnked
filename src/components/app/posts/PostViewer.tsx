@@ -5,16 +5,14 @@ import DOMPurify from 'isomorphic-dompurify';
 import { Edit, Share2, MoreHorizontal } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Suspense, useMemo } from 'react';
+import { useMemo } from 'react';
 
-import { CommentSection } from '@/components/app/comments';
 import BookmarkButton from '@/components/app/posts/molecules/BookmarkButton';
 import PostReactionButtons from '@/components/app/posts/molecules/PostReactionButtons';
 import PostViewTracker from '@/components/app/posts/molecules/PostViewTracker';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import BackButton from '@/components/ui/BackButton';
 import { Button } from '@/components/ui/button';
-import { CommentsSkeleton } from '@/components/ui/CommentsSkeleton';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -40,14 +38,12 @@ interface PostViewerProps {
     hasCollective: boolean;
     isPublished: boolean;
   };
-  initialCommentCount: number;
 }
 
 export default function PostViewer({
   post,
   viewer,
   viewModel,
-  initialCommentCount,
 }: PostViewerProps) {
   // Safe fallbacks for data
   const authorName = post.author?.full_name || 'Anonymous';
@@ -207,20 +203,6 @@ export default function PostViewer({
             ) : (
               <p className="text-muted-foreground">*(No content)*</p>
             )}
-          </div>
-
-          {/* Comments Section */}
-          <div className="mt-16 pt-8 border-t">
-            <h2 className="text-2xl font-bold mb-8">
-              Comments ({initialCommentCount})
-            </h2>
-            <Suspense fallback={<CommentsSkeleton />}>
-              <CommentSection
-                entityType="post"
-                entityId={post.id}
-                initialCommentsCount={initialCommentCount}
-              />
-            </Suspense>
           </div>
         </div>
       </article>

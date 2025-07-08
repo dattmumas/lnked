@@ -18,6 +18,9 @@ interface PostReactionButtonsProps {
   initialDislikeCount: number;
   initialUserReaction: 'like' | 'dislike' | null;
   disabled?: boolean;
+  size?: 'sm' | 'md' | 'lg';
+  showCounts?: boolean;
+  className?: string;
 }
 
 export default function PostReactionButtons({
@@ -26,6 +29,9 @@ export default function PostReactionButtons({
   initialDislikeCount,
   initialUserReaction,
   disabled = false,
+  size = 'md',
+  showCounts = true,
+  className = '',
 }: PostReactionButtonsProps): React.ReactElement {
   // Create reaction handler for posts using the existing API pattern
   const handlePostReaction = useCallback(
@@ -77,10 +83,9 @@ export default function PostReactionButtons({
       initialUserReaction={initialUserReaction}
       reactionHandler={handlePostReaction}
       disabled={disabled}
-      size="md"
-      variant="default"
-      showCounts
-      className=""
+      size={size}
+      showCounts={showCounts}
+      className={className}
     />
   );
 }

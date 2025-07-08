@@ -32,7 +32,9 @@ export class VideoRepository {
 
     const { data, error } = await this.supabase
       .from('video_assets')
-      .insert(dbVideo)
+      .insert(
+        dbVideo as unknown as Database['public']['Tables']['video_assets']['Insert'],
+      )
       .select()
       .single();
 
@@ -212,18 +214,6 @@ export class VideoRepository {
       'incrementViewCount not implemented - view_count column missing',
     );
     return true;
-  }
-
-  /**
-   * Update comment count
-   */
-  async updateCommentCount(id: string, count: number): Promise<boolean> {
-    const { error } = await this.supabase
-      .from('video_assets')
-      .update({ comment_count: count })
-      .eq('id', id);
-
-    return error === undefined;
   }
 
   /**

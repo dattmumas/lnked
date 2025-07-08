@@ -127,12 +127,6 @@ export async function fetchPost(
     bookmarkData = userBookmark;
   }
 
-  // Get comment count
-  const { data: commentCount } = await supabase.rpc('get_comment_count', {
-    p_entity_type: 'post',
-    p_entity_id: postId,
-  });
-
   // Determine viewer permissions
   const isOwner = Boolean(viewerId && viewerId === postData.author_id);
   const isPublished = Boolean(
@@ -170,7 +164,7 @@ export async function fetchPost(
   return {
     post,
     viewer,
-    commentCount: commentCount ?? 0,
+    commentCount: 0,
   };
 }
 

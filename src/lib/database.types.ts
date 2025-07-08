@@ -7,6 +7,11 @@ export type Json =
   | Json[]
 
 export type Database = {
+  // Allows to automatically instanciate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+  __InternalSupabase: {
+    PostgrestVersion: "12.2.3 (519615d)"
+  }
   public: {
     Tables: {
       api_cache: {
@@ -460,221 +465,6 @@ export type Database = {
             columns: ["pinned_post_id"]
             isOneToOne: false
             referencedRelation: "v_user_visible_posts"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      comment_pins: {
-        Row: {
-          comment_id: string
-          created_at: string | null
-          entity_id: string
-          entity_type: Database["public"]["Enums"]["comment_entity_type"]
-          id: string
-          pin_order: number | null
-          pinned_by: string
-        }
-        Insert: {
-          comment_id: string
-          created_at?: string | null
-          entity_id: string
-          entity_type: Database["public"]["Enums"]["comment_entity_type"]
-          id?: string
-          pin_order?: number | null
-          pinned_by: string
-        }
-        Update: {
-          comment_id?: string
-          created_at?: string | null
-          entity_id?: string
-          entity_type?: Database["public"]["Enums"]["comment_entity_type"]
-          id?: string
-          pin_order?: number | null
-          pinned_by?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "comment_pins_pinned_by_fkey"
-            columns: ["pinned_by"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "comment_pins_v2_comment_id_fkey"
-            columns: ["comment_id"]
-            isOneToOne: false
-            referencedRelation: "comments"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      comment_reactions: {
-        Row: {
-          comment_id: string
-          created_at: string | null
-          id: string
-          reaction_type: Database["public"]["Enums"]["reaction_type"]
-          user_id: string
-        }
-        Insert: {
-          comment_id: string
-          created_at?: string | null
-          id?: string
-          reaction_type: Database["public"]["Enums"]["reaction_type"]
-          user_id: string
-        }
-        Update: {
-          comment_id?: string
-          created_at?: string | null
-          id?: string
-          reaction_type?: Database["public"]["Enums"]["reaction_type"]
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "comment_reactions_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "comment_reactions_v2_comment_id_fkey"
-            columns: ["comment_id"]
-            isOneToOne: false
-            referencedRelation: "comments"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      comment_reports: {
-        Row: {
-          comment_id: string
-          created_at: string | null
-          details: string | null
-          id: string
-          moderator_id: string | null
-          reason: string
-          reporter_id: string
-          resolved_at: string | null
-          status: Database["public"]["Enums"]["report_status"] | null
-        }
-        Insert: {
-          comment_id: string
-          created_at?: string | null
-          details?: string | null
-          id?: string
-          moderator_id?: string | null
-          reason: string
-          reporter_id: string
-          resolved_at?: string | null
-          status?: Database["public"]["Enums"]["report_status"] | null
-        }
-        Update: {
-          comment_id?: string
-          created_at?: string | null
-          details?: string | null
-          id?: string
-          moderator_id?: string | null
-          reason?: string
-          reporter_id?: string
-          resolved_at?: string | null
-          status?: Database["public"]["Enums"]["report_status"] | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "comment_reports_moderator_id_fkey"
-            columns: ["moderator_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "comment_reports_reporter_id_fkey"
-            columns: ["reporter_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "comment_reports_v2_comment_id_fkey"
-            columns: ["comment_id"]
-            isOneToOne: false
-            referencedRelation: "comments"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      comments: {
-        Row: {
-          author_id: string
-          content: string
-          created_at: string | null
-          deleted_at: string | null
-          entity_id: string
-          entity_type: Database["public"]["Enums"]["comment_entity_type"]
-          id: string
-          is_pinned: boolean | null
-          metadata: Json | null
-          parent_id: string | null
-          reply_count: number | null
-          tenant_id: string
-          thread_depth: number | null
-          updated_at: string | null
-        }
-        Insert: {
-          author_id: string
-          content: string
-          created_at?: string | null
-          deleted_at?: string | null
-          entity_id: string
-          entity_type: Database["public"]["Enums"]["comment_entity_type"]
-          id?: string
-          is_pinned?: boolean | null
-          metadata?: Json | null
-          parent_id?: string | null
-          reply_count?: number | null
-          tenant_id: string
-          thread_depth?: number | null
-          updated_at?: string | null
-        }
-        Update: {
-          author_id?: string
-          content?: string
-          created_at?: string | null
-          deleted_at?: string | null
-          entity_id?: string
-          entity_type?: Database["public"]["Enums"]["comment_entity_type"]
-          id?: string
-          is_pinned?: boolean | null
-          metadata?: Json | null
-          parent_id?: string | null
-          reply_count?: number | null
-          tenant_id?: string
-          thread_depth?: number | null
-          updated_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "comments_author_id_fkey"
-            columns: ["author_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "comments_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "comments_v2_parent_id_fkey"
-            columns: ["parent_id"]
-            isOneToOne: false
-            referencedRelation: "comments"
             referencedColumns: ["id"]
           },
         ]
@@ -2331,7 +2121,6 @@ export type Database = {
           pinned_post_id: string | null
           post_count: number | null
           role: string | null
-          show_comments: boolean | null
           show_followers: boolean | null
           show_subscriptions: boolean | null
           social_links: Json | null
@@ -2358,7 +2147,6 @@ export type Database = {
           pinned_post_id?: string | null
           post_count?: number | null
           role?: string | null
-          show_comments?: boolean | null
           show_followers?: boolean | null
           show_subscriptions?: boolean | null
           social_links?: Json | null
@@ -2385,7 +2173,6 @@ export type Database = {
           pinned_post_id?: string | null
           post_count?: number | null
           role?: string | null
-          show_comments?: boolean | null
           show_followers?: boolean | null
           show_subscriptions?: boolean | null
           social_links?: Json | null
@@ -2490,7 +2277,6 @@ export type Database = {
         Row: {
           aspect_ratio: string | null
           collective_id: string | null
-          comment_count: number
           created_at: string | null
           created_by: string | null
           deleted_at: string | null
@@ -2512,7 +2298,6 @@ export type Database = {
         Insert: {
           aspect_ratio?: string | null
           collective_id?: string | null
-          comment_count?: number
           created_at?: string | null
           created_by?: string | null
           deleted_at?: string | null
@@ -2534,7 +2319,6 @@ export type Database = {
         Update: {
           aspect_ratio?: string | null
           collective_id?: string | null
-          comment_count?: number
           created_at?: string | null
           created_by?: string | null
           deleted_at?: string | null
@@ -3029,19 +2813,6 @@ export type Database = {
           role_granted: string
         }[]
       }
-      add_comment: {
-        Args: {
-          p_entity_type: Database["public"]["Enums"]["comment_entity_type"]
-          p_entity_id: string
-          p_author_id: string
-          p_content: string
-          p_parent_id?: string
-        }
-        Returns: {
-          comment_id: string
-          thread_depth: number
-        }[]
-      }
       check_collective_subscription_permission: {
         Args: { p_user_id: string; p_collective_id: string }
         Returns: {
@@ -3172,7 +2943,6 @@ export type Database = {
         Returns: {
           aspect_ratio: string | null
           collective_id: string | null
-          comment_count: number
           created_at: string | null
           created_by: string | null
           deleted_at: string | null
@@ -3257,55 +3027,6 @@ export type Database = {
         Args: { collective_uuid: string }
         Returns: string
       }
-      get_comment_count: {
-        Args: {
-          p_entity_type: Database["public"]["Enums"]["comment_entity_type"]
-          p_entity_id: string
-        }
-        Returns: number
-      }
-      get_comment_replies: {
-        Args: { p_parent_id: string; p_limit?: number; p_offset?: number }
-        Returns: {
-          comment_data: Json
-        }[]
-      }
-      get_comment_replies_with_reactions: {
-        Args: {
-          p_parent_id: string
-          p_limit?: number
-          p_cursor?: string
-          p_user_id?: string
-        }
-        Returns: {
-          id: string
-          entity_type: string
-          entity_id: string
-          user_id: string
-          content: string
-          parent_id: string
-          thread_depth: number
-          reply_count: number
-          metadata: Json
-          created_at: string
-          updated_at: string
-          deleted_at: string
-          author: Json
-          reaction_counts: Json
-          user_reactions: string[]
-        }[]
-      }
-      get_comment_thread: {
-        Args: {
-          p_entity_type: Database["public"]["Enums"]["comment_entity_type"]
-          p_entity_id: string
-          p_limit?: number
-          p_offset?: number
-        }
-        Returns: {
-          comment_data: Json
-        }[]
-      }
       get_direct_conversations_with_participants: {
         Args: { p_user_id: string; limit_count?: number }
         Returns: {
@@ -3316,34 +3037,6 @@ export type Database = {
           other_user_username: string
           other_user_full_name: string
           other_user_avatar_url: string
-        }[]
-      }
-      get_entity_comments_with_reactions: {
-        Args: {
-          p_entity_type: string
-          p_entity_id: string
-          p_limit?: number
-          p_cursor?: string
-          p_created_before?: string
-          p_user_id?: string
-          p_include_reactions?: boolean
-        }
-        Returns: {
-          id: string
-          entity_type: string
-          entity_id: string
-          user_id: string
-          content: string
-          parent_id: string
-          thread_depth: number
-          reply_count: number
-          metadata: Json
-          created_at: string
-          updated_at: string
-          deleted_at: string
-          author: Json
-          reaction_counts: Json
-          user_reactions: string[]
         }[]
       }
       get_follow_status: {
@@ -3533,17 +3226,6 @@ export type Database = {
         Args: { tenant_uuid: string }
         Returns: boolean
       }
-      toggle_comment_reaction: {
-        Args: {
-          p_comment_id: string
-          p_user_id: string
-          p_reaction_type: Database["public"]["Enums"]["reaction_type"]
-        }
-        Returns: {
-          action_taken: string
-          reaction_counts: Json
-        }[]
-      }
       user_has_tenant_access: {
         Args: {
           target_tenant_id: string
@@ -3576,7 +3258,6 @@ export type Database = {
       chain_status: "active" | "deleted" | "shadow_hidden"
       chain_visibility: "public" | "followers" | "private" | "unlisted"
       collective_member_role: "admin" | "editor" | "author" | "owner"
-      comment_entity_type: "video" | "post" | "collective" | "profile"
       conversation_type: "channel" | "group" | "direct"
       interaction_entity_type: "collective" | "post" | "user" | "chain"
       interaction_type:
@@ -3593,9 +3274,6 @@ export type Database = {
         | "follow"
         | "unfollow"
         | "post_like"
-        | "post_comment"
-        | "comment_reply"
-        | "comment_like"
         | "post_published"
         | "collective_invite"
         | "collective_join"
@@ -3609,14 +3287,6 @@ export type Database = {
       post_type_enum: "text" | "video"
       price_interval: "month" | "year" | "week" | "day"
       price_type: "recurring" | "one_time"
-      reaction_type:
-        | "like"
-        | "heart"
-        | "laugh"
-        | "angry"
-        | "sad"
-        | "wow"
-        | "dislike"
       report_status: "pending" | "reviewed" | "resolved" | "dismissed"
       subscription_status:
         | "trialing"
@@ -3636,21 +3306,25 @@ export type Database = {
   }
 }
 
-type DefaultSchema = Database[Extract<keyof Database, "public">]
+type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
+
+type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
 
 export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
-    | { schema: keyof Database },
+    | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof Database
+    schema: keyof DatabaseWithoutInternals
   }
-    ? keyof (Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
-        Database[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
+    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
     : never = never,
-> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
-  ? (Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
-      Database[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
       Row: infer R
     }
     ? R
@@ -3668,14 +3342,16 @@ export type Tables<
 export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
-    | { schema: keyof Database },
+    | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof Database
+    schema: keyof DatabaseWithoutInternals
   }
-    ? keyof Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
     : never = never,
-> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
-  ? Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
       Insert: infer I
     }
     ? I
@@ -3691,14 +3367,16 @@ export type TablesInsert<
 export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
-    | { schema: keyof Database },
+    | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof Database
+    schema: keyof DatabaseWithoutInternals
   }
-    ? keyof Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
     : never = never,
-> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
-  ? Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
       Update: infer U
     }
     ? U
@@ -3714,14 +3392,16 @@ export type TablesUpdate<
 export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
-    | { schema: keyof Database },
+    | { schema: keyof DatabaseWithoutInternals },
   EnumName extends DefaultSchemaEnumNameOrOptions extends {
-    schema: keyof Database
+    schema: keyof DatabaseWithoutInternals
   }
-    ? keyof Database[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
+    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
     : never = never,
-> = DefaultSchemaEnumNameOrOptions extends { schema: keyof Database }
-  ? Database[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
+> = DefaultSchemaEnumNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
   : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
     ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
     : never
@@ -3729,14 +3409,16 @@ export type Enums<
 export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
-    | { schema: keyof Database },
+    | { schema: keyof DatabaseWithoutInternals },
   CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
-    schema: keyof Database
+    schema: keyof DatabaseWithoutInternals
   }
-    ? keyof Database[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
+    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
     : never = never,
-> = PublicCompositeTypeNameOrOptions extends { schema: keyof Database }
-  ? Database[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
+> = PublicCompositeTypeNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
   : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
     ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
     : never
@@ -3756,7 +3438,6 @@ export const Constants = {
       chain_status: ["active", "deleted", "shadow_hidden"],
       chain_visibility: ["public", "followers", "private", "unlisted"],
       collective_member_role: ["admin", "editor", "author", "owner"],
-      comment_entity_type: ["video", "post", "collective", "profile"],
       conversation_type: ["channel", "group", "direct"],
       interaction_entity_type: ["collective", "post", "user", "chain"],
       interaction_type: [
@@ -3774,9 +3455,6 @@ export const Constants = {
         "follow",
         "unfollow",
         "post_like",
-        "post_comment",
-        "comment_reply",
-        "comment_like",
         "post_published",
         "collective_invite",
         "collective_join",
@@ -3791,15 +3469,6 @@ export const Constants = {
       post_type_enum: ["text", "video"],
       price_interval: ["month", "year", "week", "day"],
       price_type: ["recurring", "one_time"],
-      reaction_type: [
-        "like",
-        "heart",
-        "laugh",
-        "angry",
-        "sad",
-        "wow",
-        "dislike",
-      ],
       report_status: ["pending", "reviewed", "resolved", "dismissed"],
       subscription_status: [
         "trialing",

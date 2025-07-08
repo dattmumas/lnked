@@ -3,7 +3,6 @@
 import { ThumbsUp, ThumbsDown } from 'lucide-react';
 import { useState, useTransition, useCallback } from 'react';
 
-
 import { Button } from '@/components/ui/button';
 import {
   toggleReactionState,
@@ -37,8 +36,6 @@ export interface ReactionButtonsProps {
   disabled?: boolean;
   /** Size variant for the buttons */
   size?: 'sm' | 'md' | 'lg';
-  /** Style variant - 'default' for posts, 'comment' for comments */
-  variant?: 'default' | 'comment';
   /** Whether to show count numbers */
   showCounts?: boolean;
   /** Additional CSS classes */
@@ -53,7 +50,6 @@ export default function ReactionButtons({
   reactionHandler,
   disabled = false,
   size = 'md',
-  variant = 'default',
   showCounts = true,
   className = '',
 }: ReactionButtonsProps): ReactElement {
@@ -99,14 +95,11 @@ export default function ReactionButtons({
         } catch (error: unknown) {
           // Rollback optimistic update on error
           setCurrentState(previousState);
-          handleReactionError(
-            error,
-            variant === 'comment' ? 'comment' : 'post',
-          );
+          handleReactionError(error, 'post');
         }
       });
     },
-    [disabled, isPending, currentState, reactionHandler, id, variant],
+    [disabled, isPending, currentState, reactionHandler, id],
   );
 
   const handleLikeClick = useCallback(() => {
@@ -146,29 +139,15 @@ export default function ReactionButtons({
     reactionType: 'like' | 'dislike',
     isActive: boolean,
   ): string => {
-    if (variant === 'comment') {
-      // Comment style - more subtle
-      const baseStyles = `${config.button} rounded-full transition-all duration-200 hover:bg-accent/50`;
+    const baseStyles = `${config.button} rounded-full`;
 
-      if (reactionType === 'like' && isActive) {
-        return `${baseStyles} text-blue-600 bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/20 dark:hover:bg-blue-900/30`;
-      } else if (reactionType === 'dislike' && isActive) {
-        return `${baseStyles} text-red-600 bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:hover:bg-red-900/30`;
-      } else {
-        return `${baseStyles} text-muted-foreground hover:text-foreground`;
-      }
-    } else {
-      // Default post style - more prominent
-      const baseStyles = `${config.button} rounded-full`;
-
-      if (reactionType === 'like' && isActive) {
-        return `${baseStyles} bg-primary text-primary-foreground hover:bg-primary/90`;
-      } else if (reactionType === 'dislike' && isActive) {
-        return `${baseStyles} bg-destructive text-destructive-foreground hover:bg-destructive/90`;
-      } else {
-        return `${baseStyles} bg-secondary text-secondary-foreground hover:bg-secondary/80`;
-      }
+    if (reactionType === 'like' && isActive) {
+      return `${baseStyles} bg-primary text-primary-foreground hover:bg-primary/90`;
     }
+    if (reactionType === 'dislike' && isActive) {
+      return `${baseStyles} bg-destructive text-destructive-foreground hover:bg-destructive/90`;
+    }
+    return `${baseStyles} bg-secondary text-secondary-foreground hover:bg-secondary/80`;
   };
 
   return (

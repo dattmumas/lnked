@@ -2,9 +2,8 @@
 
 import parse from 'html-react-parser';
 import DOMPurify from 'isomorphic-dompurify';
-import { Suspense, useMemo } from 'react';
+import { useMemo } from 'react';
 
-import { CommentSection } from '@/components/app/comments';
 import BookmarkButton from '@/components/app/posts/molecules/BookmarkButton';
 import PostReactionButtons from '@/components/app/posts/molecules/PostReactionButtons';
 import PostViewTracker from '@/components/app/posts/molecules/PostViewTracker';
@@ -27,16 +26,10 @@ interface Props {
     hasCollective: boolean;
     isPublished: boolean;
   };
-  initialCommentCount: number;
 }
 
 // Overlay variant drops the internal navbar/header; rest identical to PostViewer
-export default function OverlayPostViewer({
-  post,
-  viewer,
-  viewModel,
-  initialCommentCount,
-}: Props) {
+export default function OverlayPostViewer({ post, viewer, viewModel }: Props) {
   const authorName = post.author?.full_name || 'Anonymous';
   const authorUsername = post.author?.username || post.author?.id || 'unknown';
 
@@ -116,20 +109,6 @@ export default function OverlayPostViewer({
             ) : (
               <p className="text-muted-foreground">*(No content)*</p>
             )}
-          </div>
-
-          {/* Comments Section */}
-          <div className="mt-16 pt-8 border-t">
-            <h2 className="text-2xl font-bold mb-8">
-              Comments ({initialCommentCount})
-            </h2>
-            <Suspense fallback={<div>Loading comments…</div>}>
-              <CommentSection
-                entityType="post"
-                entityId={post.id}
-                initialCommentsCount={initialCommentCount}
-              />
-            </Suspense>
           </div>
         </div>
       </article>

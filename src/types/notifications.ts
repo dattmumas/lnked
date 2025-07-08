@@ -2,9 +2,6 @@ export type NotificationType =
   | 'follow'
   | 'unfollow'
   | 'post_like'
-  | 'post_comment'
-  | 'comment_reply'
-  | 'comment_like'
   | 'post_published'
   | 'collective_invite'
   | 'collective_join'
@@ -113,24 +110,6 @@ export const NOTIFICATION_CONFIGS: Record<
   post_like: {
     icon: '❤️',
     color: 'bg-red-500',
-    priority: 'low',
-    groupable: true,
-  },
-  post_comment: {
-    icon: '💬',
-    color: 'bg-green-500',
-    priority: 'medium',
-    groupable: false,
-  },
-  comment_reply: {
-    icon: '↩️',
-    color: 'bg-purple-500',
-    priority: 'high',
-    groupable: false,
-  },
-  comment_like: {
-    icon: '❤️',
-    color: 'bg-pink-500',
     priority: 'low',
     groupable: true,
   },

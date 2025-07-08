@@ -11,7 +11,6 @@ interface PostInteractions {
   isBookmarked: boolean;
   likeCount: number;
   dislikeCount: number;
-  commentCount: number;
   viewCount?: number;
 }
 
@@ -41,27 +40,33 @@ export function usePostInteractions({
     isBookmarked: false,
     likeCount: 0,
     dislikeCount: 0,
-    commentCount: 0,
     viewCount: 0,
     ...initialInteractions,
   });
-  
+
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | undefined>(undefined);
   const [initialized, setInitialized] = useState(false);
-  
+
   const client = supabase;
 
   // Initialize user interactions
   useEffect((): void => {
-    if (userId === undefined || userId === null || userId.length === 0 || 
-        postId === undefined || postId === null || postId.length === 0 || 
-        initialized) return;
+    if (
+      userId === undefined ||
+      userId === null ||
+      userId.length === 0 ||
+      postId === undefined ||
+      postId === null ||
+      postId.length === 0 ||
+      initialized
+    )
+      return;
 
     const initializeInteractions = async (): Promise<void> => {
       try {
         setIsLoading(true);
-        
+
         // Fetch user's reactions for this post
         const { data: userReactions } = await client
           .from('post_reactions')
@@ -83,30 +88,28 @@ export function usePostInteractions({
           .select('type')
           .eq('post_id', postId);
 
-        // Fetch comment count
-        const { data: commentCount } = await client
-          .from('comments')
-          .select('id', { count: 'exact' })
-          .eq('post_id', postId);
-
         // Process the data
         const userReaction = userReactions?.[0]?.type;
-        const likesCount = reactionCounts?.filter(r => r.type === 'like').length !== undefined && 
-          reactionCounts?.filter(r => r.type === 'like').length !== null ? 
-          reactionCounts.filter(r => r.type === 'like').length : 0;
-        const dislikesCount = reactionCounts?.filter(r => r.type === 'dislike').length !== undefined && 
-          reactionCounts?.filter(r => r.type === 'dislike').length !== null ? 
-          reactionCounts.filter(r => r.type === 'dislike').length : 0;
+        const likesCount =
+          reactionCounts?.filter((r) => r.type === 'like').length !==
+            undefined &&
+          reactionCounts?.filter((r) => r.type === 'like').length !== null
+            ? reactionCounts.filter((r) => r.type === 'like').length
+            : 0;
+        const dislikesCount =
+          reactionCounts?.filter((r) => r.type === 'dislike').length !==
+            undefined &&
+          reactionCounts?.filter((r) => r.type === 'dislike').length !== null
+            ? reactionCounts.filter((r) => r.type === 'dislike').length
+            : 0;
 
-        setInteractions(prev => ({
+        setInteractions((prev) => ({
           ...prev,
           isLiked: userReaction === 'like',
           isDisliked: userReaction === 'dislike',
           isBookmarked: Boolean(userBookmark),
           likeCount: likesCount,
           dislikeCount: dislikesCount,
-          commentCount: commentCount?.length !== undefined && commentCount?.length !== null ? 
-            commentCount.length : 0,
         }));
 
         setInitialized(true);
@@ -122,13 +125,19 @@ export function usePostInteractions({
   }, [userId, postId, initialized, client]);
 
   const toggleLike = useCallback(async (): Promise<void> => {
-    if (userId === undefined || userId === null || userId.length === 0 || isLoading) return;
+    if (
+      userId === undefined ||
+      userId === null ||
+      userId.length === 0 ||
+      isLoading
+    )
+      return;
 
     const wasLiked = interactions.isLiked;
     const wasDisliked = interactions.isDisliked;
 
     // Optimistic update
-    setInteractions(prev => ({
+    setInteractions((prev) => ({
       ...prev,
       isLiked: !wasLiked,
       isDisliked: false, // Remove dislike if present
@@ -159,9 +168,9 @@ export function usePostInteractions({
     } catch (err: unknown) {
       console.error('Error toggling like:', err);
       setError('Failed to update like');
-      
+
       // Revert optimistic update
-      setInteractions(prev => ({
+      setInteractions((prev) => ({
         ...prev,
         isLiked: wasLiked,
         isDisliked: wasDisliked,
@@ -171,16 +180,29 @@ export function usePostInteractions({
     } finally {
       setIsLoading(false);
     }
-  }, [userId, postId, interactions.isLiked, interactions.isDisliked, isLoading, client]);
+  }, [
+    userId,
+    postId,
+    interactions.isLiked,
+    interactions.isDisliked,
+    isLoading,
+    client,
+  ]);
 
   const toggleDislike = useCallback(async (): Promise<void> => {
-    if (userId === undefined || userId === null || userId.length === 0 || isLoading) return;
+    if (
+      userId === undefined ||
+      userId === null ||
+      userId.length === 0 ||
+      isLoading
+    )
+      return;
 
     const wasLiked = interactions.isLiked;
     const wasDisliked = interactions.isDisliked;
 
     // Optimistic update
-    setInteractions(prev => ({
+    setInteractions((prev) => ({
       ...prev,
       isLiked: false, // Remove like if present
       isDisliked: !wasDisliked,
@@ -211,27 +233,42 @@ export function usePostInteractions({
     } catch (err: unknown) {
       console.error('Error toggling dislike:', err);
       setError('Failed to update dislike');
-      
+
       // Revert optimistic update
-      setInteractions(prev => ({
+      setInteractions((prev) => ({
         ...prev,
         isLiked: wasLiked,
         isDisliked: wasDisliked,
         likeCount: wasLiked ? prev.likeCount + 1 : prev.likeCount,
-        dislikeCount: wasDisliked ? prev.dislikeCount + 1 : prev.dislikeCount - 1,
+        dislikeCount: wasDisliked
+          ? prev.dislikeCount + 1
+          : prev.dislikeCount - 1,
       }));
     } finally {
       setIsLoading(false);
     }
-  }, [userId, postId, interactions.isLiked, interactions.isDisliked, isLoading, client]);
+  }, [
+    userId,
+    postId,
+    interactions.isLiked,
+    interactions.isDisliked,
+    isLoading,
+    client,
+  ]);
 
   const toggleBookmark = useCallback(async (): Promise<void> => {
-    if (userId === undefined || userId === null || userId.length === 0 || isLoading) return;
+    if (
+      userId === undefined ||
+      userId === null ||
+      userId.length === 0 ||
+      isLoading
+    )
+      return;
 
     const wasBookmarked = interactions.isBookmarked;
 
     // Optimistic update
-    setInteractions(prev => ({
+    setInteractions((prev) => ({
       ...prev,
       isBookmarked: !wasBookmarked,
     }));
@@ -249,19 +286,17 @@ export function usePostInteractions({
           .eq('post_id', postId);
       } else {
         // Add bookmark
-        await client
-          .from('post_bookmarks')
-          .insert({
-            user_id: userId,
-            post_id: postId,
-          });
+        await client.from('post_bookmarks').insert({
+          user_id: userId,
+          post_id: postId,
+        });
       }
     } catch (err: unknown) {
       console.error('Error toggling bookmark:', err);
       setError('Failed to update bookmark');
-      
+
       // Revert optimistic update
-      setInteractions(prev => ({
+      setInteractions((prev) => ({
         ...prev,
         isBookmarked: wasBookmarked,
       }));
@@ -278,4 +313,4 @@ export function usePostInteractions({
     isLoading,
     error,
   };
-} 
+}

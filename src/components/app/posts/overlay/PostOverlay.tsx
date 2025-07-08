@@ -85,11 +85,6 @@ export default function PostOverlay({ postId }: Props): React.ReactElement {
     return <p className="p-4 text-destructive">Failed to load</p>;
 
   return (
-    <OverlayPostViewer
-      post={post}
-      viewer={data.viewer}
-      viewModel={viewModel}
-      initialCommentCount={data.commentCount}
-    />
+    <OverlayPostViewer post={post} viewer={data.viewer} viewModel={viewModel} />
   );
 }
