@@ -149,7 +149,7 @@ export default function ThreadFeedClient({
   );
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full pt-2">
       {rootId && (
         <button
           type="button"
