@@ -243,7 +243,6 @@ export async function loadUserFeed(
         stats: {
           likes: post.like_count || 0,
           dislikes: post.dislike_count || 0,
-          comments: 0, // TODO: Add comment count
           views: post.view_count || 0,
         },
         thumbnail_url: post.thumbnail_url ?? null,

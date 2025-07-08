@@ -1,6 +1,6 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import React, { useMemo } from 'react';
 
 import { getLinkPreview } from '@/lib/utils/chain-helpers';
@@ -19,44 +19,33 @@ interface LinkPreview {
 }
 
 interface Props {
-  item: ChainWithAuthor;
+  item: ChainWithAuthor | undefined;
   currentUserId: string;
-  interactions?: ChainCardInteractions;
+  interactions: ChainCardInteractions;
   onDelete?: (id: string) => void;
 }
 
-export default function ChainCardRenderer({
+export default function ChainDataAdapter({
   item,
   currentUserId,
   interactions,
   onDelete,
 }: Props): React.ReactElement {
   const router = useRouter();
+  const searchParams = useSearchParams();
 
-  const handleOpen = (): void => {
-    router.push(`?thread=${encodeURIComponent(item.thread_root)}`);
-  };
-
-  const dummyInteractions: ChainCardInteractions = useMemo(
-    () => ({
-      likedChains: new Set(),
-      dislikedChains: new Set(),
-      toggleLike: () => {},
-      toggleDislike: () => {},
-      getDeltas: () => ({ like: 0, dislike: 0 }),
-      startReply: () => {},
-      cancelReply: () => {},
-      replyingTo: undefined,
-      replyContent: '',
-      setReplyContent: () => {},
-      isPosting: false,
-      submitReply: () => {},
-      shareChain: () => {},
-    }),
-    [],
+  const linkPreview = useMemo(
+    () => (item ? getLinkPreview(item) : null),
+    [item],
   );
 
-  const linkPreview = useMemo(() => getLinkPreview(item), [item]);
+  if (!item) return <></>;
+
+  const handleOpen = (): void => {
+    const params = new URLSearchParams(searchParams);
+    params.set('thread', item.thread_root);
+    router.push(`?${params.toString()}`);
+  };
 
   return (
     <div className="block w-full text-left">
@@ -86,7 +75,7 @@ export default function ChainCardRenderer({
         }}
         currentUserId={currentUserId}
         onOpenThread={handleOpen}
-        interactions={interactions ?? dummyInteractions}
+        interactions={interactions}
         media={item.media as unknown as import('./ChainCard').MediaItem[]}
         {...(onDelete && { onDelete })}
       />

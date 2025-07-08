@@ -17,7 +17,6 @@ export type PostWithMetrics = {
   likes?: PostLikeInfo[] | null;
   post_reactions?: PostReactionInfo[] | null;
   view_count?: number | null;
-  comments?: unknown[] | null;
 };
 
 /**
@@ -77,13 +76,4 @@ export function getLikeCount(post: PostWithMetrics): number {
  */
 export function getViewCount(post: PostWithMetrics): number {
   return post.view_count ?? 0;
-}
-
-/**
- * Safely calculates the total comment count for a post.
- * @param post - The post object.
- * @returns The total number of comments.
- */
-export function getCommentCount(post: PostWithMetrics): number {
-  return post.comments?.length ?? 0;
 }

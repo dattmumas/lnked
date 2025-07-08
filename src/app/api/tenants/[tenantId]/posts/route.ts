@@ -276,8 +276,6 @@ export async function GET(
           : (p.author ?? null),
         video,
         tenant: safeTenant,
-        // Add comment_count (defaulting to 0 for now)
-        comment_count: 0,
       };
     });
 

@@ -27,6 +27,13 @@ export type PostWithAuthorAndCollective = {
     name: string;
     slug: string;
   } | null;
+  video_asset?: {
+    id: string;
+    mux_playback_id: string | null;
+    status: string | null;
+    duration: number | null;
+    is_public: boolean | null;
+  } | null;
   user_reaction?: {
     reaction_type: string;
   };
@@ -50,7 +57,6 @@ export type PostViewer = {
 export type PostResult = {
   post: PostWithAuthorAndCollective;
   viewer: PostViewer;
-  commentCount: number;
 };
 
 export async function fetchPost(
@@ -89,8 +95,8 @@ export async function fetchPost(
   // Use the actual post ID for all subsequent queries
   const postId = postData.id;
 
-  // Get real like/dislike counts from post_reactions table
-  const [{ count: likeCount }, { count: dislikeCount }] = await Promise.all([
+  // Prepare parallel queries
+  const queries = [
     supabase
       .from('post_reactions')
       .select('*', { count: 'exact', head: true })
@@ -101,10 +107,26 @@ export async function fetchPost(
       .select('*', { count: 'exact', head: true })
       .eq('post_id', postId)
       .eq('type', 'dislike'),
-  ]);
+  ];
+
+  // If this is a video post, fetch video asset data
+  let videoAssetPromise = null;
+  if (postData.post_type === 'video' && postData.video_id) {
+    videoAssetPromise = supabase
+      .from('video_assets')
+      .select('id, mux_playback_id, status, duration, is_public')
+      .eq('id', postData.video_id)
+      .single();
+  }
+
+  // Execute reaction count queries
+  const [likeResult, dislikeResult] = await Promise.all(queries);
+  const likeCount = likeResult?.count ?? 0;
+  const dislikeCount = dislikeResult?.count ?? 0;
 
   let reactionData = undefined;
   let bookmarkData = undefined;
+  let videoAssetData = null;
 
   // If we have a viewer, fetch their specific reaction and bookmark data
   if (viewerId) {
@@ -125,6 +147,12 @@ export async function fetchPost(
 
     reactionData = userReaction;
     bookmarkData = userBookmark;
+  }
+
+  // Fetch video asset data if this is a video post
+  if (videoAssetPromise) {
+    const { data: videoAsset } = await videoAssetPromise;
+    videoAssetData = videoAsset;
   }
 
   // Determine viewer permissions
@@ -157,6 +185,7 @@ export async function fetchPost(
       ? { user_reaction: { reaction_type: reactionData.type } }
       : {}),
     ...(bookmarkData ? { user_bookmark: { id: bookmarkData.post_id } } : {}),
+    ...(videoAssetData ? { video_asset: videoAssetData } : {}),
     real_like_count: likeCount ?? 0,
     real_dislike_count: dislikeCount ?? 0,
   };
@@ -164,7 +193,6 @@ export async function fetchPost(
   return {
     post,
     viewer,
-    commentCount: 0,
   };
 }
 

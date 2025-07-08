@@ -3,7 +3,6 @@ import React from 'react';
 
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 
-
 interface Params {
   postId: string;
 }
@@ -32,7 +31,6 @@ export default async function PostPage({
     <article className="prose prose-neutral dark:prose-invert mx-auto max-w-3xl py-10">
       <h1>{data.title}</h1>
       {data.post_type === 'video' && data.video_assets?.mux_playback_id && (
-        // eslint-disable-next-line @next/next/no-img-element
         <img
           src={`https://image.mux.com/${data.video_assets.mux_playback_id}/thumbnail.jpg`}
           alt={data.title ?? 'Video thumbnail'}

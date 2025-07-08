@@ -65,12 +65,12 @@ function HomeContent({
       {/* Center feed – scrollable */}
       <main
         id="center-feed-scroll-container"
-        className="flex-1 w-0 min-w-0 overflow-y-auto min-h-screen"
+        className="flex-1 w-0 min-w-0 overflow-y-auto min-h-screen no-scrollbar"
       >
         {isChains ? (
           <RightSidebarFeed user={{ id: user?.id ?? '' }} profile={null} />
         ) : (
-          <div className="max-w-3xl mx-auto px-6 py-6">
+          <div className="max-w-4xl mx-auto px-6 py-6">
             {user && (
               <CenterFeedWrapper
                 user={user}

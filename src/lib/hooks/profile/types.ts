@@ -78,7 +78,7 @@ export type SocialFeedType = 'activity' | 'likes' | 'following';
 
 export interface ActivityFeedItem {
   id: string;
-  type: 'post_published' | 'post_liked' | 'user_followed' | 'post_commented';
+  type: 'post_published' | 'post_liked' | 'user_followed';
   createdAt: string;
   actor: {
     id: string;

@@ -107,15 +107,6 @@ interface PostUpdate {
   updated_at: string;
 }
 
-interface CommentUpdate {
-  id: string;
-  entity_type: string;
-  entity_id: string;
-  content?: string;
-  deleted_at?: string;
-  created_at?: string;
-}
-
 interface RealtimeErrorEvent {
   reason?: string;
   status?: string;
@@ -134,8 +125,6 @@ export class RealtimeService {
     (_update: VideoStatusUpdate) => void
   > = new Map();
   private postUpdateHandlers: Map<string, (_update: PostUpdate) => void> =
-    new Map();
-  private commentUpdateHandlers: Map<string, (_update: CommentUpdate) => void> =
     new Map();
   private typingTimeout: Map<string, NodeJS.Timeout> = new Map();
   private subscriptionDebounce: Map<string, NodeJS.Timeout> = new Map();
@@ -1144,7 +1133,7 @@ export class RealtimeService {
   }
 
   // ---------------------------------------------------------------------------
-  // Post / Video / Comment update channels (feed + video processing)
+  // Post / Video update channels (feed + video processing)
   // ---------------------------------------------------------------------------
 
   /** Subscribe to video processing status updates for a user */
@@ -1691,157 +1680,7 @@ export class RealtimeService {
     this.postUpdateHandlers.delete(tenantId);
     await this.releaseRef(channelName);
   }
-
-  /** Subscribe to comment UPDATEs for an entity */
-  async subscribeToCommentUpdates(
-    entityType: string,
-    entityId: string,
-    callback: (_update: CommentUpdate) => void,
-  ): Promise<RealtimeChannel | undefined> {
-    const channelName = `comments:${entityType}:${entityId}`;
-
-    const last = this.lastJoinAt.get(channelName) ?? 0;
-    if (Date.now() - last < MIN_JOIN_INTERVAL_MS) {
-      console.warn(`⚠️ Throttled rejoin attempt for ${channelName}`);
-      return this.channels.get(channelName);
-    }
-
-    if (this.channelPromises.has(channelName)) {
-      return this.channelPromises.get(channelName);
-    }
-    if (
-      this.pendingSubscriptions.has(channelName) ||
-      this.activeSubscriptionAttempts.has(channelName)
-    ) {
-      return this.channels.get(channelName);
-    }
-    this.activeSubscriptionAttempts.add(channelName);
-
-    const existingDebounce = this.subscriptionDebounce.get(channelName);
-    if (existingDebounce) {
-      clearTimeout(existingDebounce);
-    }
-    if (process.env.NODE_ENV === 'development') {
-      await new Promise((resolve) => {
-        const t = setTimeout(resolve, 100);
-        this.subscriptionDebounce.set(channelName, t);
-      });
-      this.subscriptionDebounce.delete(channelName);
-    }
-
-    // Re-use existing channel when alive
-    const existing = this.channels.get(channelName);
-    if (existing && GOOD_STATES.has(String(existing.state) as never)) {
-      this.commentUpdateHandlers.set(channelName, callback);
-      this.addRef(channelName);
-      return existing;
-    }
-    if (existing) {
-      await this.releaseRef(channelName);
-      this.commentUpdateHandlers.delete(channelName);
-    }
-
-    this.pendingSubscriptions.add(channelName);
-
-    const subscribePromise = (async () => {
-      this.cleanupCachedChannel(channelName);
-
-      const channel = this.supabase
-        .channel(channelName)
-        .on(
-          'postgres_changes',
-          {
-            event: '*',
-            schema: 'public',
-            table: 'comments',
-            filter: `entity_type=eq.${entityType},entity_id=eq.${entityId}`,
-          },
-          (
-            payload: RealtimePostgresChangesPayload<Record<string, unknown>>,
-          ) => {
-            if (payload.new) callback(payload.new as unknown as CommentUpdate);
-          },
-        )
-        .on('system', { event: 'error' }, (error: { reason?: string }) => {
-          const reason = error?.reason ?? 'unknown';
-
-          // Filter out success messages that are incorrectly sent to error handler
-          const errorData = error as RealtimeErrorEvent;
-          if (
-            errorData?.status === 'ok' &&
-            errorData?.message?.includes('Subscribed')
-          ) {
-            console.log(
-              `✅ [COMMENT-UPDATES] Subscription confirmation for ${channelName}:`,
-              error,
-            );
-            return; // This is actually a success message, not an error
-          }
-
-          console.error(`❌ CommentUpdates channel error: ${reason}`);
-          if (
-            reason === 'too_many_channels' ||
-            reason === 'too_many_joins' ||
-            reason === 'too_many_connections' ||
-            reason === 'unknown'
-          ) {
-            const backoff =
-              this.backoffMs.get(channelName) ?? BACKOFF_INITIAL_MS;
-            console.warn(`🔄 Retrying ${channelName} in ${backoff}ms`);
-
-            // Clean up failed channel before retry
-            void this.releaseRef(channelName).catch(console.error);
-
-            setTimeout(() => {
-              void this.subscribeToCommentUpdates(
-                entityType,
-                entityId,
-                callback,
-              ).catch(console.error);
-            }, backoff);
-            this.backoffMs.set(
-              channelName,
-              Math.min(backoff * 2, BACKOFF_MAX_MS),
-            );
-          }
-        })
-        .on('system', { event: 'close' }, () => {
-          this.channels.delete(channelName);
-          this.commentUpdateHandlers.delete(channelName);
-          this.channelRefCounts.delete(channelName);
-        });
-
-      this.channels.set(channelName, channel);
-      this.channelRefCounts.set(channelName, 1);
-      this.lastJoinAt.set(channelName, Date.now());
-      this.backoffMs.set(channelName, BACKOFF_INITIAL_MS);
-      this.commentUpdateHandlers.set(channelName, callback);
-      await channel.subscribe();
-
-      return channel;
-    })();
-
-    this.channelPromises.set(channelName, subscribePromise);
-
-    try {
-      return await subscribePromise;
-    } finally {
-      this.pendingSubscriptions.delete(channelName);
-      this.activeSubscriptionAttempts.delete(channelName);
-      this.channelPromises.delete(channelName);
-    }
-  }
-
-  async unsubscribeFromCommentUpdates(
-    entityType: string,
-    entityId: string,
-  ): Promise<void> {
-    const channelName = `comments:${entityType}:${entityId}`;
-    this.commentUpdateHandlers.delete(channelName);
-    await this.releaseRef(channelName);
-  }
 }
-
 // ---------------------------------------------------------------------------
 // Singleton export so every module shares the same instance (no duplicate WS)
 // ---------------------------------------------------------------------------

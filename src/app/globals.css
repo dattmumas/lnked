@@ -12,7 +12,7 @@
 @layer theme {
   :root {
     /* High-Contrast Black & White Light Theme */
-    --background: 0 0% 100%;
+    --background: 0 0% 94%;
     --foreground: 224 71% 4%; /* Dark Blue/Black for text */
 
     --muted: 220 14% 96%;

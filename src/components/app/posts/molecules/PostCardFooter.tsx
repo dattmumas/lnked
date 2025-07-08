@@ -1,12 +1,6 @@
 'use client';
 
-import {
-  ThumbsUp,
-  ThumbsDown,
-  Share2,
-  MessageSquare,
-  Check,
-} from 'lucide-react';
+import { ThumbsUp, ThumbsDown, Share2, Check } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import React, { useCallback, useState, useTransition } from 'react';
 
@@ -26,7 +20,6 @@ interface PostInteractions {
   isBookmarked: boolean;
   likeCount: number;
   dislikeCount: number;
-  commentCount: number;
   viewCount?: number;
 }
 
@@ -85,10 +78,6 @@ export default function PostCardFooter({
       onToggleBookmark();
     });
   }, [disabled, isPending, onToggleBookmark]);
-
-  const handleCommentsClick = useCallback((): void => {
-    void router.push(`${postUrl}#comments`);
-  }, [router, postUrl]);
 
   const handleShare = useCallback(
     async (method: 'copy' | 'native'): Promise<void> => {
@@ -185,16 +174,6 @@ export default function PostCardFooter({
           >
             <ThumbsDown className="h-4 w-4" />
             <span>{formatCount(interactions.dislikeCount)}</span>
-          </button>
-
-          {/* Comment Button */}
-          <button
-            type="button"
-            className="flex items-center gap-1.5 text-muted-foreground hover:text-primary transition-colors"
-            onClick={handleCommentsClick}
-          >
-            <MessageSquare className="h-4 w-4" />
-            <span>{formatCount(interactions.commentCount)}</span>
           </button>
         </div>
 

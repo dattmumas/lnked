@@ -138,7 +138,6 @@ export function useFeed(): UseFeedReturn {
           stats: {
             likes,
             dislikes,
-            comments: 0,
           },
         };
 

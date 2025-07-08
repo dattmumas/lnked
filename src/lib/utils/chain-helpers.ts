@@ -10,14 +10,14 @@ type ChainRow = Database['public']['Tables']['chains']['Row'];
  *  2. Nested JSON key `meta.link_preview` (new canonical spot)
  */
 export function getLinkPreview(
-  chain: Partial<Pick<ChainRow, 'link_preview' | 'meta'>>,
+  chain: Partial<Pick<ChainRow, 'link_preview' | 'meta'>> | null | undefined,
 ): ChainRow['link_preview'] {
+  if (!chain) return null;
   const metaPreview =
     chain.meta !== undefined &&
     chain.meta !== null &&
     typeof chain.meta === 'object'
-      ?  
-        ((chain.meta as Record<string, unknown>)[
+      ? ((chain.meta as Record<string, unknown>)[
           'link_preview'
         ] as ChainRow['link_preview'])
       : null;

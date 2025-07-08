@@ -92,7 +92,7 @@ export default async function TenantAdvancedPage({
               <div className="space-y-2">
                 <h4 className="font-medium">Content Export</h4>
                 <p className="text-sm text-muted-foreground">
-                  Export all posts, comments, and media files
+                  Export all posts and media files
                 </p>
                 <Button variant="outline" className="w-full">
                   <Archive className="h-4 w-4 mr-2" />

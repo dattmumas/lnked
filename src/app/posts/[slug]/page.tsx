@@ -18,15 +18,9 @@ export default async function PostPage({
   const supabase = await createServerSupabaseClient();
 
   try {
-    const { post, viewer, commentCount } = await fetchPost(
-      supabase,
-      slug,
-      viewerId,
-    );
+    const { post, viewer } = await fetchPost(supabase, slug, viewerId);
 
-    return (
-      <PostLoader post={post} viewer={viewer} commentCount={commentCount} />
-    );
+    return <PostLoader post={post} viewer={viewer} />;
   } catch (error) {
     if (
       error instanceof Error &&

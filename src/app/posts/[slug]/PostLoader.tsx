@@ -12,7 +12,6 @@ import type {
 interface PostLoaderProps {
   post: PostWithAuthorAndCollective;
   viewer: PostViewerType;
-  commentCount: number;
 }
 
 // Helper to calculate reading time
@@ -45,11 +44,7 @@ function formatViewCount(count: number | null): string {
   return `${(count / 1000000).toFixed(1)}M views`;
 }
 
-export default function PostLoader({
-  post,
-  viewer,
-  commentCount,
-}: PostLoaderProps) {
+export default function PostLoader({ post, viewer }: PostLoaderProps) {
   // Compute derived values once
   const viewModel = useMemo(
     () => ({

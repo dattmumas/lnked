@@ -13,15 +13,15 @@ interface MentionData {
   username?: string;
 }
 
-interface ChainBodyRendererProps {
+interface ChainContentParserProps {
   content: string;
   mentions: MentionData[];
 }
 
-export default function ChainBodyRenderer({
+export default function ChainContentParser({
   content,
   mentions,
-}: ChainBodyRendererProps) {
+}: ChainContentParserProps) {
   const router = useRouter();
 
   if (!mentions || mentions.length === 0) {

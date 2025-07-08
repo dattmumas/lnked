@@ -15,7 +15,6 @@ export interface ChainStats {
   likes: number;
   dislikes: number;
   views: number;
-  comments: number;
   replies: number;
   shares: number;
 }

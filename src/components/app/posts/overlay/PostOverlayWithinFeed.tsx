@@ -7,7 +7,6 @@ import React, { Suspense, useEffect, useLayoutEffect, useState } from 'react';
 
 import { CenteredSpinner } from '@/components/ui/CenteredSpinner';
 
-
 const PostOverlay = dynamic(() => import('./PostOverlay'));
 
 interface Props {
@@ -38,12 +37,19 @@ export default function PostOverlayWithinFeed({ postId, onClose }: Props) {
     // This function will be called whenever the target's size changes.
     const calculateStyle = () => {
       const rect = targetElement.getBoundingClientRect();
-      const availableHeight = window.innerHeight - rect.top;
+
+      // Ensure overlay never goes above the navbar (64px height)
+      const navbarHeight = 64;
+      const minTop = navbarHeight;
+      const actualTop = Math.max(rect.top, minTop);
+
+      // Calculate available height from the adjusted top position
+      const availableHeight = window.innerHeight - actualTop;
 
       setStyle({
         left: rect.left,
         width: rect.width,
-        top: rect.top,
+        top: actualTop,
         height: availableHeight,
         opacity: 1,
         transition: 'opacity 0.1s ease-in, left 0.1s, width 0.1s', // Smoother transition
@@ -77,7 +83,7 @@ export default function PostOverlayWithinFeed({ postId, onClose }: Props) {
           type="button"
           onClick={onClose}
           aria-label="Close overlay"
-          className="absolute top-3 right-3 z-50 p-2 rounded-full bg-background/80 hover:bg-background transition-colors"
+          className="absolute top-3 left-3 z-50 p-2 rounded-full transition-colors bg-red-500/10 hover:bg-red-500/20 focus:outline-none focus:ring-2 focus:ring-red-500/50 focus:ring-offset-2 disabled:pointer-events-none"
         >
           <X className="h-4 w-4 text-foreground" />
         </button>

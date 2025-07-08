@@ -41,8 +41,6 @@ const MAX_FILES = 4;
 const ACCEPTED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
 // Dynamically create Web Worker (bundled by Next.js)
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-ignore
 const blurWorker: Worker | null =
   typeof window !== 'undefined' && typeof Worker !== 'undefined'
     ? new Worker(
@@ -129,11 +127,26 @@ function LinkPreviewCard({
   if (!isLinkPreview(preview)) return null;
 
   return (
-    <div className="relative mt-2 rounded-lg border overflow-hidden">
+    <div
+      className={cn(
+        'rounded-2xl overflow-hidden group',
+        'border border-white/[0.08] dark:border-white/[0.06]',
+        'bg-white/[0.02] backdrop-blur-sm',
+        'hover:bg-white/[0.04] dark:hover:bg-white/[0.03]',
+        'hover:border-white/[0.12] dark:hover:border-white/[0.08]',
+        'transition-all duration-200',
+      )}
+    >
       <button
         type="button"
         onClick={onRemove}
-        className="absolute top-1 right-1 bg-black/60 rounded-full p-0.5 text-white z-10"
+        className={cn(
+          'top-2 right-2 p-1.5 rounded-full z-10',
+          'bg-black/60 backdrop-blur-sm text-white',
+          'opacity-0 group-hover:opacity-100',
+          'transition-all duration-200',
+          'hover:bg-black/80 hover:scale-110',
+        )}
         aria-label="Remove link preview"
       >
         <X className="w-4 h-4" />
@@ -143,16 +156,18 @@ function LinkPreviewCard({
           <img
             src={preview.image}
             alt={preview.title || 'Link preview'}
-            className="w-full max-h-48 object-cover"
+            className="w-full h-48 object-cover group-hover:scale-[1.02] transition-transform duration-300"
           />
         )}
-        <div className="p-3">
-          <p className="font-medium text-sm truncate">
+        <div className="p-4 space-y-2">
+          <h4 className="font-semibold text-sm leading-snug line-clamp-2 text-foreground group-hover:text-accent transition-colors">
             {preview.title || preview.url}
-          </p>
-          <p className="text-xs text-muted-foreground line-clamp-2">
-            {preview.description}
-          </p>
+          </h4>
+          {preview.description && (
+            <p className="text-sm text-muted-foreground/80 line-clamp-2 leading-relaxed">
+              {preview.description}
+            </p>
+          )}
         </div>
       </a>
     </div>
@@ -495,100 +510,406 @@ export default function ChainComposer({
 
   return (
     <div
-      className="mb-6 mx-3"
-      style={{
-        boxShadow: '0 0 20px 5px hsl(var(--foreground) / 0.05)',
-      }}
+      className={cn(
+        // Base layout and spacing - matching ChainCard exactly
+        'relative mb-4 mr-4',
+
+        // Modern card styling with enhanced contrast
+        'rounded-3xl bg-white/[0.02] backdrop-blur-xl',
+        'border border-white/[0.08] dark:border-white/[0.06]',
+
+        // Elevated appearance with sophisticated shadows
+        'shadow-md',
+        'dark:shadow-md',
+
+        // Interactive states
+        'hover:shadow-lg',
+        'dark:hover:shadow-lg',
+        'hover:border-white/[0.12] dark:hover:border-white/[0.1]',
+        'transition-all duration-300 ease-out',
+
+        // Subtle gradient overlay
+        'before:absolute before:inset-0 before:rounded-3xl',
+        'before:bg-gradient-to-br before:from-white/[0.03] before:to-transparent',
+        'before:pointer-events-none',
+      )}
     >
-      <div className="">
-        <AnimatePresence initial={false}>
+      <div className="relative overflow-hidden">
+        <AnimatePresence mode="wait" initial={false}>
           {!isExpanded ? (
-            <button
+            <motion.button
+              key="collapsed"
               type="button"
               onClick={handleExpand}
-              className="w-full text-left bg-surface-elevated-1 hover:bg-surface-elevated-2 px-4 py-3 text-sm text-muted-foreground transition-colors"
+              layout
+              initial={{ opacity: 1 }}
+              exit={{
+                opacity: 0,
+                scale: 0.98,
+                transition: {
+                  duration: 0.15,
+                  ease: [0.4, 0.0, 1, 1],
+                },
+              }}
+              whileHover={{
+                scale: 1.005,
+                transition: {
+                  type: 'spring',
+                  stiffness: 400,
+                  damping: 25,
+                },
+              }}
+              whileTap={{
+                scale: 0.995,
+                transition: {
+                  type: 'spring',
+                  stiffness: 600,
+                  damping: 35,
+                },
+              }}
+              className={cn(
+                'w-full text-left p-6 rounded-3xl',
+                'text-base text-muted-foreground/80 font-medium',
+                'hover:text-foreground/90 transition-colors duration-200',
+                'focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/50',
+                'hover:bg-white/[0.02] dark:hover:bg-white/[0.01]',
+              )}
             >
-              {parentId || rootId ? `Reply...` : 'Thoughts?'}
-            </button>
+              <motion.span
+                layout
+                initial={{ opacity: 0.8 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.2 }}
+              >
+                {parentId || rootId
+                  ? `Reply to this chain...`
+                  : 'Share your thoughts...'}
+              </motion.span>
+            </motion.button>
           ) : (
             <motion.div
+              key="expanded"
               ref={composerRef}
-              style={{ transformOrigin: 'top' }}
-              initial={{ scaleY: 0, opacity: 0, height: 0 }}
-              animate={{ scaleY: 1, opacity: 1, height: 'auto' }}
-              exit={{ scaleY: 0, opacity: 0, height: 0 }}
-              transition={{ duration: 0.2, ease: 'easeOut' }}
+              layout
+              initial={{
+                opacity: 0,
+                scale: 0.96,
+                y: -8,
+                filter: 'blur(4px)',
+              }}
+              animate={{
+                opacity: 1,
+                scale: 1,
+                y: 0,
+                filter: 'blur(0px)',
+              }}
+              exit={{
+                opacity: 0,
+                scale: 0.98,
+                y: -4,
+                filter: 'blur(2px)',
+                transition: {
+                  duration: 0.2,
+                  ease: [0.4, 0.0, 1, 1],
+                },
+              }}
+              transition={{
+                layout: {
+                  type: 'spring',
+                  stiffness: 300,
+                  damping: 35,
+                  mass: 1,
+                },
+                opacity: {
+                  duration: 0.4,
+                  ease: [0.0, 0.0, 0.2, 1],
+                  delay: 0.1,
+                },
+                scale: {
+                  type: 'spring',
+                  stiffness: 400,
+                  damping: 30,
+                  delay: 0.05,
+                },
+                y: {
+                  type: 'spring',
+                  stiffness: 500,
+                  damping: 40,
+                  delay: 0.08,
+                },
+                filter: {
+                  duration: 0.3,
+                  ease: [0.0, 0.0, 0.2, 1],
+                  delay: 0.1,
+                },
+              }}
+              className="overflow-hidden"
             >
-              <div className="p-2">
-                <form onSubmit={handleSubmit} className="space-y-3">
-                  <div className="flex-1 space-y-3">
-                    {/* Textarea doubles as drop-target */}
-                    <div {...getRootProps({ className: 'relative' })}>
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{
+                  duration: 0.4,
+                  ease: [0.0, 0.0, 0.2, 1],
+                  delay: 0.2,
+                }}
+                className="p-6"
+              >
+                <form onSubmit={handleSubmit} className="space-y-6">
+                  <div className="space-y-4">
+                    {/* Textarea with enhanced styling and staggered animation */}
+                    <motion.div
+                      initial={{ opacity: 0, y: 10, scale: 0.99 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      transition={{
+                        type: 'spring',
+                        stiffness: 400,
+                        damping: 35,
+                        delay: 0.25,
+                      }}
+                      {...getRootProps({ className: 'relative' })}
+                    >
                       <input {...getInputProps()} />
                       <Textarea
                         ref={textareaRef}
                         value={content}
                         onChange={handleContentChange}
                         placeholder={
-                          parentId || rootId ? `Reply...` : 'Thoughts?'
+                          parentId || rootId
+                            ? `Reply to this chain...`
+                            : 'Share your thoughts...'
                         }
-                        className="min-h-[90px] resize-none text-sm placeholder:text-muted-foreground focus-visible:ring-0 focus-visible:ring-offset-0"
+                        className={cn(
+                          'min-h-[120px] resize-none text-base leading-relaxed',
+                          'rounded-2xl border-white/[0.08] dark:border-white/[0.06]',
+                          'bg-white/[0.02] backdrop-blur-sm',
+                          'focus:border-accent/50 focus:ring-accent/20',
+                          'placeholder:text-muted-foreground/60 placeholder:font-medium',
+                          'transition-all duration-200',
+                          'disabled:opacity-50 disabled:cursor-not-allowed',
+                        )}
                         maxLength={CHARACTER_LIMIT}
                         disabled={isPosting}
                       />
+                    </motion.div>
+
+                    {/* Mention Typeahead with enhanced styling */}
+                    {mentionQuery !== null && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        transition={{ duration: 0.2, ease: [0.4, 0.0, 0.2, 1] }}
+                      >
+                        <MentionTypeahead
+                          query={mentionQuery}
+                          onSelect={handleMentionSelect}
+                        />
+                      </motion.div>
+                    )}
+
+                    {/* Link Preview with enhanced styling */}
+                    <AnimatePresence>
+                      {isFetchingPreview && (
+                        <motion.div
+                          initial={{ opacity: 0, scale: 0.95 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          exit={{ opacity: 0, scale: 0.95 }}
+                          transition={{ duration: 0.2 }}
+                        >
+                          <Skeleton className="h-24 w-full rounded-2xl bg-white/[0.04]" />
+                        </motion.div>
+                      )}
+                      {linkPreview && !isFetchingPreview && (
+                        <motion.div
+                          initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                          animate={{ opacity: 1, scale: 1, y: 0 }}
+                          exit={{ opacity: 0, scale: 0.95, y: -10 }}
+                          transition={{
+                            duration: 0.3,
+                            ease: [0.4, 0.0, 0.2, 1],
+                          }}
+                        >
+                          <LinkPreviewCard
+                            preview={linkPreview}
+                            onRemove={() => setLinkPreview(null)}
+                          />
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+
+                    {/* Image upload area with enhanced styling */}
+                    <AnimatePresence>
+                      {images.length > 0 && (
+                        <motion.div
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: 'auto' }}
+                          exit={{ opacity: 0, height: 0 }}
+                          transition={{
+                            duration: 0.3,
+                            ease: [0.4, 0.0, 0.2, 1],
+                          }}
+                          className="space-y-3"
+                        >
+                          <div className="grid grid-cols-2 gap-4">
+                            {images.map((img, idx) => (
+                              <motion.div
+                                key={img.preview}
+                                initial={{ opacity: 0, scale: 0.8 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                exit={{ opacity: 0, scale: 0.8 }}
+                                transition={{
+                                  duration: 0.2,
+                                  delay: idx * 0.05,
+                                }}
+                                className="relative group space-y-3"
+                              >
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img
+                                  src={img.preview}
+                                  alt="preview"
+                                  className={cn(
+                                    'w-full h-32 object-cover rounded-2xl',
+                                    'ring-1 ring-white/[0.08] dark:ring-white/[0.06]',
+                                    'group-hover:ring-white/[0.12] transition-all duration-200',
+                                  )}
+                                />
+                                <button
+                                  type="button"
+                                  onClick={(): void =>
+                                    setImages((prev) =>
+                                      prev.filter(
+                                        (i) => i.preview !== img.preview,
+                                      ),
+                                    )
+                                  }
+                                  className={cn(
+                                    'absolute top-2 right-2 p-1.5 rounded-full',
+                                    'bg-black/60 backdrop-blur-sm text-white',
+                                    'opacity-0 group-hover:opacity-100',
+                                    'transition-all duration-200',
+                                    'hover:bg-black/80 hover:scale-110',
+                                  )}
+                                  aria-label="Remove image"
+                                >
+                                  <X className="w-4 h-4" />
+                                </button>
+                                <input
+                                  type="text"
+                                  value={img.altText ?? ''}
+                                  onChange={(e): void => {
+                                    const val = e.target.value.slice(0, 120);
+                                    setImages((prev) =>
+                                      prev.map((p, i) =>
+                                        i === idx ? { ...p, altText: val } : p,
+                                      ),
+                                    );
+                                  }}
+                                  placeholder="Alt text (optional)"
+                                  className={cn(
+                                    'w-full p-3 rounded-xl text-sm',
+                                    'bg-white/[0.02] backdrop-blur-sm',
+                                    'border border-white/[0.08] dark:border-white/[0.06]',
+                                    'focus:border-accent/50 focus:ring-accent/20',
+                                    'placeholder:text-muted-foreground/60',
+                                    'transition-all duration-200',
+                                  )}
+                                />
+                              </motion.div>
+                            ))}
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+
+                  {/* Action bar with enhanced styling */}
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{
+                      type: 'spring',
+                      stiffness: 400,
+                      damping: 35,
+                      delay: 0.35,
+                    }}
+                    className="flex items-center justify-between pt-4 border-t border-white/[0.06] dark:border-white/[0.04]"
+                  >
+                    <div className="flex items-center gap-2">
+                      <motion.button
+                        type="button"
+                        whileHover={{ scale: 1.1 }}
+                        whileTap={{ scale: 0.95 }}
+                        transition={{
+                          type: 'spring',
+                          stiffness: 400,
+                          damping: 25,
+                        }}
+                        className={cn(
+                          'p-3 rounded-full transition-all duration-200',
+                          'text-muted-foreground/60 hover:text-accent',
+                          'hover:bg-accent/10 dark:hover:bg-accent/10',
+                          'focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/50',
+                          'disabled:opacity-50 disabled:cursor-not-allowed',
+                        )}
+                        title="Add emoji"
+                        disabled={isPosting}
+                      >
+                        <Smile className="w-5 h-5" />
+                      </motion.button>
+                      <motion.button
+                        type="button"
+                        whileHover={{ scale: 1.1 }}
+                        whileTap={{ scale: 0.95 }}
+                        transition={{
+                          type: 'spring',
+                          stiffness: 400,
+                          damping: 25,
+                        }}
+                        className={cn(
+                          'p-3 rounded-full transition-all duration-200',
+                          'text-muted-foreground/60 hover:text-accent',
+                          'hover:bg-accent/10 dark:hover:bg-accent/10',
+                          'focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/50',
+                          'disabled:opacity-50 disabled:cursor-not-allowed',
+                        )}
+                        title="Add image"
+                        onClick={open}
+                        disabled={isPosting || images.length >= MAX_FILES}
+                      >
+                        <ImageIcon className="w-5 h-5" />
+                      </motion.button>
                     </div>
 
-                    {/* Mention Typeahead */}
-                    {mentionQuery !== null && (
-                      <MentionTypeahead
-                        query={mentionQuery}
-                        onSelect={handleMentionSelect}
-                      />
-                    )}
-
-                    {/* Link Preview */}
-                    {isFetchingPreview && (
-                      <Skeleton className="h-24 w-full mt-2" />
-                    )}
-                    {linkPreview && !isFetchingPreview && (
-                      <LinkPreviewCard
-                        preview={linkPreview}
-                        onRemove={() => setLinkPreview(null)}
-                      />
-                    )}
-
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <button
-                          type="button"
-                          className="p-2 text-muted-foreground hover:text-accent hover:bg-accent/20 rounded-full transition-colors"
-                          title="Add emoji"
-                          disabled={isPosting}
-                        >
-                          <Smile className="w-4 h-4" />
-                        </button>
-                        <button
-                          type="button"
-                          className="p-2 text-muted-foreground hover:text-accent hover:bg-accent/20 rounded-full transition-colors"
-                          title="Add image"
-                          onClick={open}
-                          disabled={isPosting || images.length >= MAX_FILES}
-                        >
-                          <ImageIcon className="w-4 h-4" />
-                        </button>
-                      </div>
-
-                      <div className="flex items-center gap-3">
-                        <span
-                          className={cn(
-                            'text-xs font-medium',
-                            remainingChars < WARNING_THRESHOLD
-                              ? 'text-destructive'
-                              : 'text-muted-foreground',
-                          )}
-                        >
-                          {remainingChars}
-                        </span>
+                    <div className="flex items-center gap-4">
+                      <motion.span
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{
+                          type: 'spring',
+                          stiffness: 400,
+                          damping: 25,
+                          delay: 0.4,
+                        }}
+                        className={cn(
+                          'text-sm font-medium transition-colors duration-200',
+                          remainingChars < WARNING_THRESHOLD
+                            ? 'text-destructive'
+                            : 'text-muted-foreground/70',
+                        )}
+                      >
+                        {remainingChars}
+                      </motion.span>
+                      <motion.div
+                        initial={{ opacity: 0, scale: 0.9, x: 10 }}
+                        animate={{ opacity: 1, scale: 1, x: 0 }}
+                        transition={{
+                          type: 'spring',
+                          stiffness: 400,
+                          damping: 25,
+                          delay: 0.45,
+                        }}
+                      >
                         <Button
                           type="submit"
                           size="sm"
@@ -597,74 +918,41 @@ export default function ChainComposer({
                             content.length > CHARACTER_LIMIT ||
                             isPosting
                           }
-                          className="px-5 py-2 h-auto text-sm font-medium"
+                          className={cn(
+                            'px-6 py-3 h-auto text-sm font-semibold rounded-full',
+                            'bg-accent hover:bg-accent/90 text-accent-foreground',
+                            'disabled:opacity-50 disabled:cursor-not-allowed',
+                            'transition-all duration-200',
+                            'hover:scale-105 active:scale-95',
+                            'shadow-lg hover:shadow-xl',
+                          )}
                         >
                           {isPosting ? (
-                            <div className="flex items-center gap-2">
+                            <motion.div
+                              className="flex items-center gap-2"
+                              initial={{ opacity: 0 }}
+                              animate={{ opacity: 1 }}
+                              transition={{ duration: 0.2 }}
+                            >
                               <Loader2 className="w-4 h-4 animate-spin" />
                               {rootId ? 'Replying...' : 'Posting...'}
-                            </div>
+                            </motion.div>
                           ) : (
-                            <div className="flex items-center gap-2">
+                            <motion.div
+                              className="flex items-center gap-2"
+                              whileHover={{ scale: 1.02 }}
+                              whileTap={{ scale: 0.98 }}
+                            >
                               <Send className="w-4 h-4" />
                               Post
-                            </div>
+                            </motion.div>
                           )}
                         </Button>
-                      </div>
+                      </motion.div>
                     </div>
-
-                    {/* Image upload area */}
-                    <div className="space-y-3">
-                      {images.length > 0 && (
-                        <div className="grid grid-cols-4 gap-2">
-                          {images.map((img, idx) => (
-                            <div
-                              key={img.preview}
-                              className="relative group space-y-1"
-                            >
-                              {/* eslint-disable-next-line @next/next/no-img-element */}
-                              <img
-                                src={img.preview}
-                                alt="preview"
-                                className="w-full h-20 object-cover rounded-md"
-                              />
-                              <button
-                                type="button"
-                                onClick={(): void =>
-                                  setImages((prev) =>
-                                    prev.filter(
-                                      (i) => i.preview !== img.preview,
-                                    ),
-                                  )
-                                }
-                                className="absolute top-1 right-1 bg-black/60 rounded-full p-0.5 text-white opacity-0 group-hover:opacity-100 transition-opacity"
-                                aria-label="Remove image"
-                              >
-                                <X className="w-4 h-4" />
-                              </button>
-                              <input
-                                type="text"
-                                value={img.altText ?? ''}
-                                onChange={(e): void => {
-                                  const val = e.target.value.slice(0, 120);
-                                  setImages((prev) =>
-                                    prev.map((p, i) =>
-                                      i === idx ? { ...p, altText: val } : p,
-                                    ),
-                                  );
-                                }}
-                                placeholder="Alt text (optional)"
-                                className="w-full p-1 rounded-md bg-background/60 text-xs focus:outline-none focus:ring-1 focus:ring-accent/50"
-                              />
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </div>
+                  </motion.div>
                 </form>
-              </div>
+              </motion.div>
             </motion.div>
           )}
         </AnimatePresence>

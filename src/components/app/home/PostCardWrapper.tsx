@@ -83,7 +83,6 @@ export function PostCardWrapper({
         isBookmarked: interactions.bookmarkedPosts.has(item.id),
         likeCount: item.stats.likes,
         dislikeCount: item.stats.dislikes,
-        commentCount: item.stats.comments,
         ...(item.stats.views !== undefined
           ? { viewCount: item.stats.views }
           : {}),

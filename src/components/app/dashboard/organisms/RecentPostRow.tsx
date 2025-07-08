@@ -1,6 +1,6 @@
 'use client'; // If any interactivity is planned, otherwise can be server component if props are simple
 
-import { Eye, MessageSquare, Heart } from 'lucide-react';
+import { Eye, Heart } from 'lucide-react';
 import Link from 'next/link';
 import React from 'react';
 
@@ -13,7 +13,6 @@ export interface RecentPostRowProps {
   date: string;
   stats?: {
     views?: number;
-    comments?: number;
     likes?: number;
   };
   className?: string;
@@ -63,12 +62,6 @@ function RecentPostRow({
             <div className="flex items-center gap-1 text-xs text-muted-foreground">
               <Eye className="size-3" aria-hidden="true" />
               <span>{stats.views}</span>
-            </div>
-          )}
-          {stats.comments !== undefined && (
-            <div className="flex items-center gap-1 text-xs text-muted-foreground">
-              <MessageSquare className="size-3" aria-hidden="true" />
-              <span>{stats.comments}</span>
             </div>
           )}
           {stats.likes !== undefined && (

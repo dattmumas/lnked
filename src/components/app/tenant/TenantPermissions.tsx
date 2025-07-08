@@ -97,19 +97,19 @@ export function TenantPermissions({
               icon={Eye}
               label="View content"
               granted={permissions.canRead}
-              description="See posts, comments, and discussions"
+              description="See posts and discussions"
             />
             <PermissionItem
               icon={Edit}
               label="Create content"
               granted={permissions.canWrite}
-              description="Create posts, comments, and replies"
+              description="Create posts and replies"
             />
             <PermissionItem
               icon={Trash2}
               label="Delete content"
               granted={permissions.canDelete}
-              description="Delete your own posts and comments"
+              description="Delete your own posts"
             />
           </div>
         </div>

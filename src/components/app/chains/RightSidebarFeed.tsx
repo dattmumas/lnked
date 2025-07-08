@@ -37,7 +37,7 @@ export default function RightSidebarFeed({
   }
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="h-full flex flex-col" data-sidebar="true">
       <div className="flex-1 min-h-0 overflow-y-hidden">
         <ThreadFeedClient
           rootId={rootId ?? ''}

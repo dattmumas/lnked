@@ -6,7 +6,6 @@ import {
   ExternalLink,
   Eye,
   Heart,
-  MessageSquare,
   MoreHorizontal,
   Trash2,
   Users,
@@ -28,7 +27,6 @@ import { formatDate } from '@/lib/utils/date-helpers';
 import {
   getLikeCount,
   getViewCount,
-  getCommentCount,
   getStatusLabel,
   getStatusVariant,
   PostWithMetrics,
@@ -67,7 +65,6 @@ export default function PostCard({
 }: PostCardProps): React.ReactElement {
   const likes = getLikeCount(post);
   const views = getViewCount(post);
-  const comments = getCommentCount(post);
 
   const postViewUrl = post.video
     ? `/videos/${post.video.id}`
@@ -140,7 +137,7 @@ export default function PostCard({
               </div>
 
               {/* Engagement metrics */}
-              {(views > 0 || likes > 0 || comments > 0) && (
+              {(views > 0 || likes > 0) && (
                 <div className="flex items-center gap-component text-xs text-content-secondary border-t border-border-subtle pt-component">
                   {views > 0 && (
                     <div className="flex items-center gap-1">
@@ -152,12 +149,6 @@ export default function PostCard({
                     <div className="flex items-center gap-1">
                       <Heart className="h-3 w-3" />
                       {likes.toLocaleString()} likes
-                    </div>
-                  )}
-                  {comments > 0 && (
-                    <div className="flex items-center gap-1">
-                      <MessageSquare className="h-3 w-3" />
-                      {comments.toLocaleString()} comments
                     </div>
                   )}
                 </div>

@@ -1,14 +1,16 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 
-import type { SupabaseClient , User } from '@supabase/supabase-js';
+import type { SupabaseClient, User } from '@supabase/supabase-js';
 
 // Standardized error messages (Issue #18)
 export const ERROR_MESSAGES = {
   AUTH_REQUIRED: 'Authentication required. Please sign in to continue.',
-  FORBIDDEN: 'Access denied. You do not have permission to perform this action.',
+  FORBIDDEN:
+    'Access denied. You do not have permission to perform this action.',
   NOT_FOUND: 'The requested resource was not found.',
   ALREADY_EXISTS: 'This resource already exists.',
-  INVALID_INPUT: 'Invalid input provided. Please check your data and try again.',
+  INVALID_INPUT:
+    'Invalid input provided. Please check your data and try again.',
   INTERNAL_ERROR: 'An internal error occurred. Please try again later.',
   RATE_LIMITED: 'Too many requests. Please wait and try again.',
 } as const;
@@ -61,10 +63,10 @@ export async function requireUser(): Promise<AuthResult> {
 export function createActionResult<T = void>(
   success: boolean,
   data?: T,
-  error?: string
+  error?: string,
 ): ActionResult<T> {
-  return { 
-    success, 
+  return {
+    success,
     ...(data !== undefined ? { data } : {}),
     ...(error !== undefined ? { error } : {}),
   };
@@ -90,17 +92,19 @@ export function createErrorResult(error: string): ActionResult {
 export function validateOwnership(
   resourceOwnerId: string,
   currentUserId: string,
-  resourceType: string = 'resource'
+  resourceType: string = 'resource',
 ): ActionResult {
   if (resourceOwnerId !== currentUserId) {
-    return createErrorResult(`${ERROR_MESSAGES.FORBIDDEN} You can only modify your own ${resourceType}.`);
+    return createErrorResult(
+      `${ERROR_MESSAGES.FORBIDDEN} You can only modify your own ${resourceType}.`,
+    );
   }
   return createSuccessResult();
 }
 
 /**
  * Generic reaction toggle helper (Issue #9)
- * Handles toggle logic for posts, comments, or any entity type
+ * Handles toggle logic for posts or any entity type
  */
 export async function toggleReaction(
   supabase: SupabaseClient,
@@ -111,9 +115,10 @@ export async function toggleReaction(
     userId: string;
     reactionType: string;
     tenantId?: string;
-  }
+  },
 ): Promise<ActionResult<{ isLiked: boolean; newCount: number }>> {
-  const { tableName, entityIdField, entityId, userId, reactionType, tenantId } = config;
+  const { tableName, entityIdField, entityId, userId, reactionType, tenantId } =
+    config;
 
   try {
     // Check for existing reaction
@@ -128,7 +133,8 @@ export async function toggleReaction(
       existingQuery = existingQuery.eq('tenant_id', tenantId);
     }
 
-    const { data: existingReaction, error: checkError } = await existingQuery.maybeSingle();
+    const { data: existingReaction, error: checkError } =
+      await existingQuery.maybeSingle();
 
     if (checkError) {
       console.error(`Error checking existing ${reactionType}:`, checkError);
@@ -203,12 +209,10 @@ export async function toggleReaction(
       data: {
         isLiked,
         newCount: count ?? 0,
-      }
+      },
     };
   } catch (error) {
     console.error(`Error toggling ${reactionType}:`, error);
     return { success: false, error: ERROR_MESSAGES.INTERNAL_ERROR };
   }
 }
-
- 

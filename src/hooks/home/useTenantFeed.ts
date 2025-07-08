@@ -149,7 +149,6 @@ function transformPostToFeedItem(post: RawPost): FeedItem {
     stats: {
       likes: getNumber('like_count') ?? 0,
       dislikes: getNumber('dislike_count') ?? 0,
-      comments: getNumber('comment_count') ?? 0,
       views: getNumber('view_count') ?? 0,
     },
     thumbnail_url: getString('thumbnail_url') ?? null,

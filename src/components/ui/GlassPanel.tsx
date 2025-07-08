@@ -1,3 +1,4 @@
+import { X } from 'lucide-react';
 import * as Dialog from '@radix-ui/react-dialog';
 import { motion, Variants } from 'framer-motion';
 import React, { ReactNode } from 'react';
@@ -18,7 +19,14 @@ export default function GlassPanel({ children, onClose }: GlassPanelProps) {
     <Dialog.Root open modal={false} onOpenChange={() => onClose?.()}>
       <Dialog.Portal>
         <Dialog.Overlay className="bg-background" />
-        <Dialog.Content asChild>
+        <Dialog.Content
+          asChild
+          onPointerDownOutside={(e) => {
+            if ((e.target as HTMLElement).closest('[data-sidebar="true"]')) {
+              e.preventDefault();
+            }
+          }}
+        >
           <motion.div
             variants={panelVariants}
             initial="hidden"
@@ -26,6 +34,16 @@ export default function GlassPanel({ children, onClose }: GlassPanelProps) {
             exit="exit"
             className="fixed inset-0 z-50 overflow-y-auto subtle-scrollbar"
           >
+            <Dialog.Close asChild>
+              <button
+                type="button"
+                className="fixed top-4 left-4 z-50 rounded-full p-2 text-red-500/80 transition-colors bg-red"
+                aria-label="Close"
+                onClick={onClose}
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </Dialog.Close>
             <Dialog.Title className="sr-only">Post Overlay</Dialog.Title>
             <div className="relative max-w-3xl mx-auto px-6 py-12">
               {children}

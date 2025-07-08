@@ -1,9 +1,11 @@
 'use client';
 
 import MuxPlayer from '@mux/mux-player-react';
-import { useRouter } from 'next/navigation';
+import { Maximize2 } from 'lucide-react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import React, { useCallback, useState, useRef } from 'react';
 
+import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 
@@ -33,7 +35,6 @@ interface PostInteractions {
   isBookmarked: boolean;
   likeCount: number;
   dislikeCount: number;
-  commentCount: number;
   viewCount?: number;
 }
 
@@ -86,6 +87,7 @@ export default function VideoCard({
   index,
 }: VideoCardProps): React.ReactElement {
   const router = useRouter();
+  const search = useSearchParams();
 
   // Add comprehensive logging for video metadata
   // VideoCard rendering
@@ -180,14 +182,25 @@ export default function VideoCard({
     void router.push(postUrl);
   }, [router, postUrl]);
 
+  const openOverlay = useCallback((): void => {
+    const params = new URLSearchParams(search);
+    params.set('post', post.id);
+    router.push(`?${params.toString()}`, { scroll: false });
+  }, [search, post.id, router]);
+
   return (
     <Card
       className={cn(
-        'overflow-hidden rounded-none bg-transparent shadow-none p-0 border-b border-border last:border-none',
+        // Modern card styling matching ChainCard exactly
+        'overflow-hidden rounded-3xl bg-white/[0.02] backdrop-blur-xl',
+        'border border-white/[0.08] dark:border-white/[0.06]',
+        'shadow-sm hover:shadow-md',
+        'transition-all duration-200 ease-out',
+        'mx-4 mb-6',
         className,
       )}
     >
-      <div className="p-4">
+      <div className="p-6 pb-4">
         <PostCardHeader
           author={post.author}
           timestamp={post.created_at}
@@ -199,11 +212,22 @@ export default function VideoCard({
         />
 
         {/* Title */}
-        <h2 className="text-xl font-bold leading-snug mt-2">
-          <a href={postUrl} className="hover:underline">
-            {post.title}
-          </a>
-        </h2>
+        <div className="flex items-start justify-between gap-2 mt-4">
+          <h2 className="text-xl font-bold leading-snug flex-1 min-w-0">
+            <a href={postUrl} className="hover:underline">
+              {post.title}
+            </a>
+          </h2>
+          <Button
+            size="icon"
+            variant="ghost"
+            onClick={openOverlay}
+            aria-label="Open overlay"
+            className="flex-shrink-0"
+          >
+            <Maximize2 className="h-4 w-4" />
+          </Button>
+        </div>
 
         {/* Video Player or Thumbnail */}
         {isPlaying && canPlayInline === true ? (
@@ -260,7 +284,7 @@ export default function VideoCard({
             }
             aria-label="Play video"
           >
-            <div className="relative aspect-video w-full overflow-hidden rounded-lg bg-muted group">
+            <div className="relative aspect-video w-full overflow-hidden rounded-2xl bg-muted group">
               <VideoThumbnail
                 {...(post.thumbnail_url
                   ? { thumbnailUrl: post.thumbnail_url }
@@ -280,26 +304,28 @@ export default function VideoCard({
           </button>
         )}
 
-        <div className="mt-2 space-y-2">
-          {description && (
-            <p className="text-sm leading-relaxed text-muted-foreground line-clamp-3">
-              {description}
-            </p>
-          )}
+        {(description || isProcessing || hasError) && (
+          <div className="mt-4 space-y-2">
+            {description && (
+              <p className="text-sm leading-relaxed text-muted-foreground line-clamp-3">
+                {description}
+              </p>
+            )}
 
-          {/* Video Status Indicators */}
-          {isProcessing && (
-            <p className="text-sm text-yellow-600 font-medium">
-              Video is processing...
-            </p>
-          )}
+            {/* Video Status Indicators */}
+            {isProcessing && (
+              <p className="text-sm text-yellow-600 font-medium">
+                Video is processing...
+              </p>
+            )}
 
-          {hasError && (
-            <p className="text-sm text-destructive font-medium">
-              Video processing failed
-            </p>
-          )}
-        </div>
+            {hasError && (
+              <p className="text-sm text-destructive font-medium">
+                Video processing failed
+              </p>
+            )}
+          </div>
+        )}
       </div>
 
       <PostCardFooter

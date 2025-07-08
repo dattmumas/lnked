@@ -2,6 +2,7 @@
 
 import parse from 'html-react-parser';
 import DOMPurify from 'isomorphic-dompurify';
+import dynamic from 'next/dynamic';
 import { useMemo } from 'react';
 
 import BookmarkButton from '@/components/app/posts/molecules/BookmarkButton';
@@ -9,6 +10,19 @@ import PostReactionButtons from '@/components/app/posts/molecules/PostReactionBu
 import PostViewTracker from '@/components/app/posts/molecules/PostViewTracker';
 import { formatPostDate } from '@/lib/posts';
 import { transformImageUrls } from '@/lib/utils/transform-image-urls';
+
+// Dynamically import MuxVideoPlayer to avoid SSR issues
+const MuxVideoPlayerEnhanced = dynamic(
+  () => import('@/components/app/video/MuxVideoPlayerEnhanced'),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="aspect-video bg-black rounded-lg animate-pulse flex items-center justify-center">
+        <div className="text-white">Loading video...</div>
+      </div>
+    ),
+  },
+);
 
 import type {
   PostWithAuthorAndCollective,
@@ -53,63 +67,104 @@ export default function OverlayPostViewer({ post, viewer, viewModel }: Props) {
 
       {/* Main Content without sticky header */}
       <article className="min-h-screen bg-background">
-        <div className="max-w-4xl mx-auto px-6 py-12">
-          {/* Thumbnail Hero */}
-          {post.thumbnail_url && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={post.thumbnail_url}
-              alt={post.title || 'Post thumbnail'}
-              className="w-full h-auto mb-12 rounded-lg object-cover"
-            />
+        <div
+          className={`mx-auto px-6 py-12 ${post.post_type === 'video' ? 'max-w-6xl' : 'max-w-4xl'}`}
+        >
+          {/* Video Player for video posts - 90% width for maximum screen usage */}
+          {post.post_type === 'video' && post.video_asset?.mux_playback_id && (
+            <div className="mb-12 flex justify-center">
+              <div className="w-[90%]">
+                <MuxVideoPlayerEnhanced
+                  playbackId={post.video_asset.mux_playback_id}
+                  title={post.title || 'Video'}
+                  className="w-full aspect-video rounded-lg"
+                  isPrivate={post.video_asset.is_public === false}
+                  videoId={post.video_asset.id}
+                />
+              </div>
+            </div>
           )}
 
-          {/* Title Section (simplified) */}
+          {/* Thumbnail Hero for non-video posts or videos without playback ID */}
+          {(post.post_type !== 'video' || !post.video_asset?.mux_playback_id) &&
+            post.thumbnail_url && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={post.thumbnail_url}
+                alt={post.title || 'Post thumbnail'}
+                className="w-full h-auto mb-12 rounded-lg object-cover"
+              />
+            )}
+
+          {/* Enhanced Title & Metadata Section */}
           <header className="mb-8">
-            <h1 className="text-4xl font-bold mb-4 text-foreground">
+            <h1 className="text-3xl md:text-4xl font-bold mb-6 text-foreground leading-tight">
               {post.title || 'Untitled Post'}
             </h1>
-            <div className="text-sm text-muted-foreground flex items-center gap-2">
-              <span>
-                {formatPostDate(post.published_at || post.created_at)}
-              </span>
-              <span>·</span>
-              <span>{viewModel.readingTime}</span>
-              <span>·</span>
-              <span>{viewModel.formattedViewCount}</span>
+
+            {/* Metadata card with glassmorphism styling */}
+            <div className="bg-white/[0.02] backdrop-blur-xl border border-white/[0.08] dark:border-white/[0.06] rounded-2xl p-6 mb-6">
+              <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                  <span className="font-medium">
+                    {formatPostDate(post.published_at || post.created_at)}
+                  </span>
+                </div>
+                <span className="text-white/20">•</span>
+                <span>{viewModel.readingTime}</span>
+                <span className="text-white/20">•</span>
+                <span className="font-medium">
+                  {viewModel.formattedViewCount}
+                </span>
+              </div>
+            </div>
+
+            {/* Enhanced Reaction Bar */}
+            <div className="bg-white/[0.02] backdrop-blur-xl border border-white/[0.08] dark:border-white/[0.06] rounded-2xl p-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <PostReactionButtons
+                    id={post.id}
+                    initialLikeCount={initialLikeCount}
+                    initialDislikeCount={initialDislikeCount}
+                    initialUserReaction={initialUserReaction}
+                    disabled={!viewer.canReact}
+                  />
+                </div>
+                <div className="flex items-center gap-4">
+                  <BookmarkButton
+                    postId={post.id}
+                    initialBookmarked={initialBookmarked}
+                    disabled={!viewer.canReact}
+                  />
+                </div>
+              </div>
             </div>
           </header>
 
-          {/* Reaction Bar */}
-          <div className="border-y py-4 mb-8">
-            <PostReactionButtons
-              id={post.id}
-              initialLikeCount={initialLikeCount}
-              initialDislikeCount={initialDislikeCount}
-              initialUserReaction={initialUserReaction}
-              disabled={!viewer.canReact}
-            />
-            <div className="ml-4 inline-block">
-              <BookmarkButton
-                postId={post.id}
-                initialBookmarked={initialBookmarked}
-                disabled={!viewer.canReact}
-              />
-            </div>
-          </div>
+          {/* Enhanced Content Section */}
+          {post.content && (
+            <section className="bg-white/[0.02] backdrop-blur-xl border border-white/[0.08] dark:border-white/[0.06] rounded-2xl p-8">
+              <div className="prose prose-lg dark:prose-invert max-w-none">
+                <div className="text-base leading-relaxed text-foreground/90">
+                  {post.content.includes('<') && post.content.includes('>') ? (
+                    parse(sanitizedHtml)
+                  ) : (
+                    <div className="whitespace-pre-wrap">{post.content}</div>
+                  )}
+                </div>
+              </div>
+            </section>
+          )}
 
-          {/* Post Content */}
-          <div className="article-content">
-            {post.content ? (
-              post.content.includes('<') && post.content.includes('>') ? (
-                parse(sanitizedHtml)
-              ) : (
-                <div className="whitespace-pre-wrap">{post.content}</div>
-              )
-            ) : (
-              <p className="text-muted-foreground">*(No content)*</p>
-            )}
-          </div>
+          {!post.content && (
+            <section className="bg-white/[0.02] backdrop-blur-xl border border-white/[0.08] dark:border-white/[0.06] rounded-2xl p-8">
+              <p className="text-muted-foreground text-center italic">
+                No description provided
+              </p>
+            </section>
+          )}
         </div>
       </article>
     </>

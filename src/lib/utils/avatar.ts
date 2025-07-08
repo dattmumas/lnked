@@ -290,7 +290,7 @@ export function getResponsiveAvatarUrls(avatarUrl: string | undefined):
   if (avatarUrl === undefined || avatarUrl === '') return undefined;
 
   return {
-    // Small avatars (32px) - for comments, mentions
+    // Small avatars (32px) - for mentions
     small: getOptimizedAvatarUrl(avatarUrl, {
       width: 32,
       height: 32,

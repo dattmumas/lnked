@@ -12,12 +12,7 @@ export type NotificationType =
   | 'post_bookmark'
   | 'featured_post';
 
-export type EntityType =
-  | 'post'
-  | 'comment'
-  | 'user'
-  | 'collective'
-  | 'subscription';
+export type EntityType = 'post' | 'user' | 'collective' | 'subscription';
 
 export interface Notification {
   id: string;

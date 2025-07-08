@@ -27,7 +27,6 @@ export interface FeedItem {
   stats: {
     likes: number;
     dislikes: number;
-    comments: number;
     views?: number;
   };
   userInteraction?: {

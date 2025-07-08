@@ -11,13 +11,14 @@ import {
 } from 'react';
 import { Virtuoso } from 'react-virtuoso';
 
+import { replyToChain } from '@/app/actions/chainActions';
 import { loadOlder, fetchChainsByIds } from '@/app/actions/threadActions';
 import { Button } from '@/components/ui/button';
 import { useChainReactions } from '@/hooks/chains/useChainReactions';
 import { useRealtimeChain } from '@/hooks/chains/useRealtimeChain';
 
-import ChainCardRenderer from './ChainCardRenderer';
 import ChainComposer from './ChainComposer';
+import ChainDataAdapter from './ChainDataAdapter';
 
 import type { ChainCardInteractions } from './ChainCard';
 import type { UserProfile } from './ChainComposer';
@@ -39,14 +40,30 @@ function createItemRenderer(
   interactions: ChainCardInteractions,
   onDelete?: (id: string) => void,
 ): (_index: number, item: ChainWithAuthor) => ReactElement {
-  const Renderer = (_index: number, item: ChainWithAuthor): ReactElement => (
-    <ChainCardRenderer
-      item={item}
-      currentUserId={uid}
-      interactions={interactions}
-      {...(onDelete && { onDelete })}
-    />
-  );
+  const Renderer = (_index: number, raw?: ChainWithAuthor): ReactElement => {
+    if (!raw || raw.id === undefined) return <></>;
+
+    // Provide default stats when missing to prevent runtime errors
+    const withStats = {
+      ...raw,
+      stats: {
+        likes: raw.like_count ?? 0,
+        dislikes: raw.dislike_count ?? 0,
+        replies: raw.reply_count ?? 0,
+      },
+    } as ChainWithAuthor & {
+      stats: { likes: number; dislikes: number; replies: number };
+    };
+
+    return (
+      <ChainDataAdapter
+        item={withStats as unknown as ChainWithAuthor}
+        currentUserId={uid}
+        interactions={interactions}
+        {...(onDelete && { onDelete })}
+      />
+    );
+  };
   Renderer.displayName = 'ChainItemRenderer';
   return Renderer;
 }
@@ -63,6 +80,7 @@ export default function ThreadFeedClient({
   const [items, setItems] = useState<ChainWithAuthor[]>(initialSorted);
   const [liveBuffer, setLiveBuffer] = useState<ChainWithAuthor[]>([]);
   const [isLoadingNew, setIsLoadingNew] = useState(false);
+  const [isPosting, setIsPosting] = useState(false);
   const [replyingTo, setReplyingTo] = useState<string | undefined>(undefined);
   const [replyContent, setReplyContent] = useState('');
   const router = useRouter();
@@ -180,13 +198,45 @@ export default function ThreadFeedClient({
     [isThread],
   );
 
+  const submitReply = useCallback(async (): Promise<void> => {
+    if (!replyingTo || !replyContent.trim() || isPosting) return;
+
+    const parent = items.find((item) => item.id === replyingTo);
+    if (!parent) return;
+
+    setIsPosting(true);
+    try {
+      const fd = new FormData();
+      fd.append('parent', JSON.stringify(parent));
+      fd.append('uid', currentUserId);
+      fd.append('body', replyContent);
+
+      const newReply = await replyToChain(fd);
+      handleCreated(newReply as ChainWithAuthor);
+    } catch (error) {
+      console.error('Failed to submit reply:', error);
+      // Optionally, show an error toast to the user
+    } finally {
+      setIsPosting(false);
+    }
+  }, [
+    replyingTo,
+    replyContent,
+    isPosting,
+    items,
+    currentUserId,
+    handleCreated,
+  ]);
+
   // interactions for ChainCards
   const interactionsFactory = useMemo(() => {
     return {
       likedChains: reactions.likedChains,
       dislikedChains: reactions.dislikedChains,
+      rechainedChains: reactions.rechainedChains,
       toggleLike: reactions.toggleLike,
       toggleDislike: reactions.toggleDislike,
+      toggleRechain: reactions.toggleRechain,
       getDeltas: reactions.getDeltas,
       startReply: (id: string): void => setReplyingTo(id),
       cancelReply: (): void => {
@@ -196,11 +246,11 @@ export default function ThreadFeedClient({
       replyingTo,
       replyContent,
       setReplyContent,
-      isPosting: false,
-      submitReply: () => {},
+      isPosting,
+      submitReply,
       shareChain: () => {},
     } as ChainCardInteractions;
-  }, [reactions, replyingTo, replyContent]);
+  }, [reactions, replyingTo, replyContent, isPosting, submitReply]);
 
   // Stable item renderer generated once per user id
   const itemContent = useMemo(
@@ -209,7 +259,7 @@ export default function ThreadFeedClient({
   );
 
   return (
-    <div className="flex flex-col h-full pt-4 bg-[radial-gradient(circle_at_top,hsl(var(--muted)/0.1),transparent_50%)]">
+    <div className="flex flex-col h-full pt-4">
       {/* Floating Composer at the top */}
       <div className="px-3 pb-2 ">
         <ChainComposer

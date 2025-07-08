@@ -83,31 +83,8 @@ export interface PostWithTenant extends TenantScopedContent {
   published_at: string | null;
   is_public: boolean;
   like_count: number | null;
-  comment_count: number | null;
+  dislike_count: number | null;
   view_count: number | null;
-
-  // Enhanced fields
-  tenant: Tenant;
-  author: {
-    id: string;
-    username: string | null;
-    full_name: string | null;
-    avatar_url: string | null;
-  };
-}
-
-// Enhanced comment with tenant information
-export interface CommentWithTenant extends TenantScopedContent {
-  // Comment fields
-  id: string;
-  content: string;
-  user_id: string;
-  entity_id: string;
-  entity_type: string;
-  parent_id: string | null;
-  created_at: string | null;
-  updated_at: string | null;
-  deleted_at: string | null;
 
   // Enhanced fields
   tenant: Tenant;

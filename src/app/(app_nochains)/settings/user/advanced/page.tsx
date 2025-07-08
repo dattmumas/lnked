@@ -40,8 +40,8 @@ export default async function AdvancedSettingsPage() {
               <CardTitle>Export Your Data</CardTitle>
             </div>
             <CardDescription>
-              Download a copy of all your data including posts, comments, and
-              profile information.
+              Download a copy of all your data including posts, and profile
+              information.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -52,7 +52,7 @@ export default async function AdvancedSettingsPage() {
               <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1">
                 <li>Profile information</li>
                 <li>Posts and drafts</li>
-                <li>Comments and reactions</li>
+                <li>Reactions</li>
                 <li>Followers and following lists</li>
                 <li>Settings and preferences</li>
               </ul>

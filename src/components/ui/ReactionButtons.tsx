@@ -13,7 +13,7 @@ import {
 import type { ReactElement } from 'react';
 
 export interface ReactionButtonsProps {
-  /** The ID of the item (post ID or comment ID) */
+  /** The ID of the item (post ID) */
   id: string;
   /** Initial like count */
   initialLikeCount: number;
@@ -21,7 +21,7 @@ export interface ReactionButtonsProps {
   initialDislikeCount: number;
   /** User's initial reaction state */
   initialUserReaction: 'like' | 'dislike' | null;
-  /** The type of reaction handler (comment or post) */
+  /** The type of reaction handler (post) */
   reactionHandler: (
     id: string,
     type: 'like' | 'dislike',

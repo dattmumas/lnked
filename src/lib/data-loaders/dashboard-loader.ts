@@ -50,7 +50,7 @@ export interface DashboardData {
   recent_posts: DashboardPost[];
   owned_collectives: DashboardCollective[];
   recent_activity?: Array<{
-    type: 'post' | 'comment' | 'follow' | 'like';
+    type: 'post' | 'follow' | 'like';
     timestamp: string;
     details: string;
   }>;

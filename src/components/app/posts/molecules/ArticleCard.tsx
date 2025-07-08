@@ -33,7 +33,6 @@ interface PostInteractions {
   isBookmarked: boolean;
   likeCount: number;
   dislikeCount: number;
-  commentCount: number;
   viewCount?: number;
 }
 
@@ -109,59 +108,66 @@ export default function ArticleCard({
   return (
     <Card
       className={cn(
-        'overflow-hidden rounded-none bg-transparent shadow-none',
+        // Modern card styling matching ChainCard exactly
+        'overflow-hidden rounded-3xl bg-white/[0.02] backdrop-blur-xl',
+        'border border-white/[0.08] dark:border-white/[0.06]',
+        'shadow-sm hover:shadow-md',
+        'transition-all duration-200 ease-out',
+        'mx-4 mb-6',
         className,
       )}
     >
-      <PostCardHeader
-        author={post.author}
-        timestamp={post.created_at}
-        {...(post.collective ? { collective: post.collective } : {})}
-        showFollowButton={showFollowButton}
-        {...(currentUserId ? { currentUserId } : {})}
-        {...(onFollow ? { onFollow } : {})}
-      />
+      <div className="p-6 pb-4">
+        <PostCardHeader
+          author={post.author}
+          timestamp={post.created_at}
+          {...(post.collective ? { collective: post.collective } : {})}
+          showFollowButton={showFollowButton}
+          {...(currentUserId ? { currentUserId } : {})}
+          {...(onFollow ? { onFollow } : {})}
+        />
 
-      {/* Title */}
-      <div className="flex items-start justify-between gap-2 mt-2">
-        <h2 className="text-xl font-bold leading-snug flex-1 min-w-0">
-          <Link href={postUrl} className="hover:underline">
-            {post.title}
+        {/* Title */}
+        <div className="flex items-start justify-between gap-2 mt-4">
+          <h2 className="text-xl font-bold leading-snug flex-1 min-w-0">
+            <Link href={postUrl} className="hover:underline">
+              {post.title}
+            </Link>
+          </h2>
+          <Button
+            size="icon"
+            variant="ghost"
+            onClick={openOverlay}
+            aria-label="Open overlay"
+            className="flex-shrink-0"
+          >
+            <Maximize2 className="h-4 w-4" />
+          </Button>
+        </div>
+
+        {post.thumbnail_url && (
+          <Link href={postUrl} className="mt-4 block">
+            <div className="relative aspect-video w-full overflow-hidden rounded-2xl bg-muted">
+              <Image
+                src={post.thumbnail_url}
+                alt={post.title}
+                fill
+                priority={priority}
+                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                className="object-cover transition-transform duration-300 group-hover:scale-105"
+                placeholder="blur"
+                blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCdABmX/9k="
+              />
+            </div>
           </Link>
-        </h2>
-        <Button
-          size="icon"
-          variant="ghost"
-          onClick={openOverlay}
-          aria-label="Open overlay"
-          className="flex-shrink-0"
-        >
-          <Maximize2 className="h-4 w-4" />
-        </Button>
-      </div>
+        )}
 
-      {post.thumbnail_url && (
-        <Link href={postUrl} className="mt-2 block">
-          <div className="relative aspect-video w-full overflow-hidden bg-muted">
-            <Image
-              src={post.thumbnail_url}
-              alt={post.title}
-              fill
-              priority={priority}
-              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-              className="object-cover transition-transform duration-300 group-hover:scale-105"
-              placeholder="blur"
-              blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCdABmX/9k="
-            />
-          </div>
-        </Link>
-      )}
-
-      <div className="p-4 pt-3 space-y-2">
         {excerpt && (
-          <p className="text-sm leading-relaxed text-muted-foreground line-clamp-3">
-            {excerpt}
-          </p>
+          <div className="mt-4">
+            <p className="text-sm leading-relaxed text-muted-foreground line-clamp-3">
+              {excerpt}
+            </p>
+          </div>
         )}
       </div>
 

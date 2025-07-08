@@ -25,7 +25,6 @@ interface PostInteractions {
   isBookmarked: boolean;
   likeCount: number;
   dislikeCount: number;
-  commentCount: number;
   viewCount?: number;
 }
 

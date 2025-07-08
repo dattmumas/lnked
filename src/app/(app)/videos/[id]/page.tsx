@@ -54,7 +54,7 @@ export default async function VideoPlayerPage({
     notFound();
   }
 
-  // Use the video data directly (includes comment_count)
+  // Use the video data directly
   const videoAsset = video;
 
   // Fetch user and profile for RightSidebar

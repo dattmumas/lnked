@@ -1,6 +1,6 @@
 /**
  * Shared utilities for handling like/dislike reaction state management
- * Used by both comment and post reaction components
+ * Used by post reaction components
  */
 
 export interface ReactionState {
@@ -18,17 +18,17 @@ export interface ReactionToggleResult {
 /**
  * Calculates the new reaction state when a user toggles a like/dislike
  * Handles optimistic UI updates consistently across components
- * 
+ *
  * @param currentState Current reaction state
  * @param toggleType The type of reaction being toggled ('like' | 'dislike')
  * @returns New reaction state after the toggle
  */
 export function toggleReactionState(
   currentState: ReactionState,
-  toggleType: 'like' | 'dislike'
+  toggleType: 'like' | 'dislike',
 ): ReactionToggleResult {
   const { likeCount, dislikeCount, userReaction } = currentState;
-  
+
   let newLikeCount = likeCount;
   let newDislikeCount = dislikeCount;
   let newUserReaction: 'like' | 'dislike' | undefined;
@@ -47,7 +47,8 @@ export function toggleReactionState(
         newDislikeCount -= 1;
       }
     }
-  } else { // toggleType === 'dislike'
+  } else {
+    // toggleType === 'dislike'
     if (userReaction === 'dislike') {
       // User is removing their dislike
       newDislikeCount -= 1;
@@ -80,10 +81,7 @@ export function isValidReactionType(type: string): type is 'like' | 'dislike' {
 /**
  * Common error handler for reaction API calls
  */
-export function handleReactionError(
-  error: unknown,
-  context: 'comment' | 'post'
-): string {
+export function handleReactionError(error: unknown, context: 'post'): string {
   console.error(`Error handling ${context} reaction:`, error);
   return `Failed to update ${context} reaction. Please try again.`;
-} 
+}
