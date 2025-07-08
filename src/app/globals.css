@@ -11,13 +11,12 @@
 
 @layer theme {
   :root {
-    /* Enhanced Light Theme - More sophisticated color palette */
+    /* High-Contrast Black & White Light Theme */
     --background: 0 0% 100%;
-    --foreground: 224 71% 4%;
+    --foreground: 224 71% 4%; /* Dark Blue/Black for text */
 
-    /* Refined neutral scale */
     --muted: 220 14% 96%;
-    --muted-foreground: 220 9% 46%;
+    --muted-foreground: 220 9% 46%; /* Mid-grey for less important text */
 
     --popover: 0 0% 100%;
     --popover-foreground: 224 71% 4%;
@@ -25,22 +24,20 @@
     --card: 0 0% 100%;
     --card-foreground: 224 71% 4%;
 
-    /* Softer, more elegant borders */
     --border: 220 13% 91%;
     --input: 220 13% 91%;
 
-    /* Sophisticated primary colors */
-    --primary: 220 70% 50%;
-    --primary-foreground: 210 40% 98%;
+    /* --- High-contrast neutrals for actions --- */
+    --primary: 224 71% 10%; /* Dark, near-black for primary buttons */
+    --primary-foreground: 0 0% 98%; /* White text on primary buttons */
 
-    /* Vibrant accent with better contrast */
-    --accent: 217 91% 60%;
-    --accent-foreground: 0 0% 100%;
+    --accent: 224 71% 10%; /* Use the same dark color for links/accents */
+    --accent-foreground: 0 0% 98%; /* Text on accented elements */
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 98%;
 
-    --ring: 217 91% 60%;
+    --ring: 220 13% 85%; /* A slightly darker ring for focus */
 
     /* Refined radius system */
     --radius: 0.75rem;
@@ -99,32 +96,33 @@
   }
 
   .dark {
-    /* Premium Dark Theme */
-    --background: 224 71% 4%;
-    --foreground: 210 40% 98%;
+    /* High-Contrast Black & White Dark Theme */
+    --background: 224 0% 8.6%; /* #161616 */
+    --foreground: 0 0% 92.5%; /* #ECECEC */
 
-    --muted: 217 33% 17%;
-    --muted-foreground: 215 20% 65%;
+    --muted: 217 33% 17%; /* Keeping this for less important elements */
+    --muted-foreground: 0 0% 62.4%; /* #9F9F9F */
 
-    --popover: 224 71% 4%;
-    --popover-foreground: 210 40% 98%;
+    --popover: 224 0% 8.6%; /* #161616 */
+    --popover-foreground: 0 0% 92.5%; /* #ECECEC */
 
-    --card: 224 71% 4%;
-    --card-foreground: 210 40% 98%;
+    --card: 224 0% 8.6%; /* #161616 */
+    --card-foreground: 0 0% 92.5%; /* #ECECEC */
 
     --border: 217 33% 17%;
     --input: 217 33% 17%;
 
-    --primary: 217 91% 60%;
-    --primary-foreground: 224 71% 4%;
+    /* --- High-contrast neutrals for actions --- */
+    --primary: 0 0% 92.5%; /* #ECECEC */
+    --primary-foreground: 224 0% 8.6%; /* #161616 */
 
-    --accent: 217 91% 60%;
-    --accent-foreground: 224 71% 4%;
+    --accent: 0 0% 92.5%; /* #ECECEC */
+    --accent-foreground: 224 0% 8.6%; /* #161616 */
 
     --destructive: 0 63% 31%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive-foreground: 0 0% 92.5%; /* #ECECEC */
 
-    --ring: 217 91% 60%;
+    --ring: 217 33% 25%;
 
     /* Dark theme shadows */
     --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.3);
@@ -137,10 +135,10 @@
       0 20px 25px -5px rgb(0 0 0 / 0.4), 0 8px 10px -6px rgb(0 0 0 / 0.3);
 
     /* Dark surface elevation */
-    --surface-base: 224 71% 4%;
-    --surface-elevated-1: 224 71% 6%;
-    --surface-elevated-2: 224 71% 8%;
-    --surface-elevated-3: 224 71% 10%;
+    --surface-base: 0 0% 8%;
+    --surface-elevated-1: 0 0% 12%;
+    --surface-elevated-2: 0 0% 16%;
+    --surface-elevated-3: 0 0% 20%;
 
     /* Dark interaction states */
     --interaction-hover: 217 33% 20%;
@@ -946,4 +944,21 @@ body.center-feed-overlay-open #center-feed-scroll-container {
 a,
 button {
   -webkit-tap-highlight-color: transparent;
+}
+
+@layer utilities {
+  .subtle-scrollbar::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  .subtle-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .subtle-scrollbar::-webkit-scrollbar-thumb {
+    background: hsl(var(--muted-foreground) / 0.2);
+    border-radius: 3px;
+  }
+  .subtle-scrollbar:hover::-webkit-scrollbar-thumb {
+    background: hsl(var(--muted-foreground) / 0.4);
+  }
 }

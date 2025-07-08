@@ -30,3 +30,11 @@ export async function fetchInitialChains(
   }
   return repo.getChainsWithAuthors(limit);
 }
+
+export async function fetchChainsByIds(
+  ids: string[],
+): Promise<ChainWithAuthor[]> {
+  const supabase = await createServerSupabaseClient();
+  const repo = new ChainRepository(supabase);
+  return repo.getChainsByIds(ids);
+}

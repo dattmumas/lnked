@@ -3,21 +3,33 @@
 import { useRouter } from 'next/navigation';
 import React, { useMemo } from 'react';
 
+import { getLinkPreview } from '@/lib/utils/chain-helpers';
+
 import ChainCard from './ChainCard';
 
 import type { ChainCardInteractions } from './ChainCard';
 import type { ChainWithAuthor } from '@/lib/data-access/schemas/chain.schema';
 
+interface LinkPreview {
+  url: string;
+  title?: string | null;
+  description?: string | null;
+  image?: string | null;
+  site?: string | null;
+}
+
 interface Props {
   item: ChainWithAuthor;
   currentUserId: string;
   interactions?: ChainCardInteractions;
+  onDelete?: (id: string) => void;
 }
 
 export default function ChainCardRenderer({
   item,
   currentUserId,
   interactions,
+  onDelete,
 }: Props): React.ReactElement {
   const router = useRouter();
 
@@ -44,6 +56,8 @@ export default function ChainCardRenderer({
     [],
   );
 
+  const linkPreview = useMemo(() => getLinkPreview(item), [item]);
+
   return (
     <div className="block w-full text-left">
       <ChainCard
@@ -60,18 +74,21 @@ export default function ChainCardRenderer({
           content: item.content,
           timestamp: new Date(item.created_at).toLocaleString(),
           type: 'post',
-          link_preview: item.link_preview ?? null,
+          // Type assertion to narrow down the JSON type to LinkPreview
+          link_preview: linkPreview as LinkPreview | null,
           stats: {
             likes: item.like_count,
             dislikes: item.dislike_count ?? 0,
             replies: item.reply_count,
             shares: 0,
           },
+          meta: item.meta,
         }}
         currentUserId={currentUserId}
         onOpenThread={handleOpen}
         interactions={interactions ?? dummyInteractions}
         media={item.media as unknown as import('./ChainCard').MediaItem[]}
+        {...(onDelete && { onDelete })}
       />
     </div>
   );

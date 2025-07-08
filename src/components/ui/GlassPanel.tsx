@@ -24,9 +24,12 @@ export default function GlassPanel({ children, onClose }: GlassPanelProps) {
             initial="hidden"
             animate="visible"
             exit="exit"
+            className="fixed inset-0 z-50 overflow-y-auto subtle-scrollbar"
           >
             <Dialog.Title className="sr-only">Post Overlay</Dialog.Title>
-            <div className="max-w-3xl mx-auto px-6 py-6">{children}</div>
+            <div className="relative max-w-3xl mx-auto px-6 py-12">
+              {children}
+            </div>
           </motion.div>
         </Dialog.Content>
       </Dialog.Portal>

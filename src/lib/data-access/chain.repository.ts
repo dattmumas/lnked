@@ -333,6 +333,34 @@ export class ChainRepository {
 
     return parseChainsWithAuthor((data ?? []) as unknown[]);
   }
+
+  /**
+   * Get a specific set of chains by their IDs
+   */
+  async getChainsByIds(ids: string[]): Promise<ChainWithAuthor[]> {
+    if (ids.length === 0) return [];
+
+    const BASE_SELECT = `*,
+      author:users!author_id (
+        id,
+        username,
+        full_name,
+        avatar_url
+      )`;
+
+    const { data, error } = await this.supabase
+      .from('v_chain_with_media')
+      .select(BASE_SELECT)
+      .in('id', ids)
+      .eq('status', 'active');
+
+    if (error) {
+      console.error('Error fetching chains by IDs:', error);
+      return [];
+    }
+
+    return parseChainsWithAuthor((data ?? []) as unknown[]);
+  }
 }
 
 // ---------------------------------------------------------------------------

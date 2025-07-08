@@ -21,6 +21,7 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 
+import ChainBodyRenderer from './ChainBodyRenderer';
 import ChainCarousel from './ChainCarousel';
 
 // Character limit matching composer
@@ -57,6 +58,15 @@ export interface ChainItem {
     description?: string | null;
     image?: string | null;
     site?: string | null;
+  } | null;
+  meta?: {
+    references?: {
+      type: 'user' | 'post';
+      id: string;
+      text: string;
+      offset: number;
+      length: number;
+    }[];
   } | null;
 }
 
@@ -95,6 +105,15 @@ export interface ChainCardProps {
   /** Optional handler that opens the full thread view. If provided, a small link will appear in the action bar. */
   onOpenThread?: () => void;
   media?: MediaItem[];
+  meta?: {
+    references?: {
+      type: 'user' | 'post';
+      id: string;
+      text: string;
+      offset: number;
+      length: number;
+    }[];
+  } | null;
 }
 
 export default function ChainCard({
@@ -134,15 +153,13 @@ export default function ChainCard({
   return (
     <div
       className={cn(
-        'relative mb-4 mx-3 rounded-2xl p-5 transition-all',
-        'bg-white/5 dark:bg-white/10 bg-clip-padding backdrop-filter',
-        'backdrop-blur-md backdrop-saturate-150',
-        'border border-white/20 dark:border-white/10',
-        'ring-1 ring-inset ring-white/10 dark:ring-white/5',
+        'relative mb-4 mx-3 rounded-2xl p-3 transition-shadow duration-300',
+        'bg-gradient-to-b from-surface-elevated-1 to-surface-elevated-2',
+        'ring-1 ring-inset ring-white/8 dark:ring-white/6',
         'shadow-md hover:shadow-lg',
       )}
     >
-      <div className="flex gap-3">
+      <div className="flex pb-3 mb-3 border-b border-white/8 dark:border-white/5">
         <Avatar className="w-9 h-9 flex-shrink-0">
           {item.user.avatar_url ? (
             <AvatarImage src={item.user.avatar_url} alt={item.user.name} />
@@ -169,19 +186,20 @@ export default function ChainCard({
               {item.timestamp}
             </span>
           </div>
-          <p className="text-sm text-foreground mb-2.5 leading-relaxed break-words">
-            {item.content}
-          </p>
+          <ChainBodyRenderer
+            content={item.content}
+            mentions={item.meta?.references ?? []}
+          />
 
           {/* Image carousel */}
           {media && media.length > 0 && (
-            <div className="mb-3 -ml-[3rem] md:-ml-[3rem]">
+            <div className="mb-3 md:-ml-[3rem]">
               <ChainCarousel media={media} />
             </div>
           )}
 
           {/* Link preview */}
-          {item.link_preview && (
+          {item.link_preview && (!media || media.length === 0) && (
             <a
               href={item.link_preview.url}
               target="_blank"
@@ -214,7 +232,7 @@ export default function ChainCard({
           )}
 
           {/* Action bar */}
-          <div className="flex items-center gap-5">
+          <div className="flex items-center gap-5 pt-3 mt-3 border-t border-white/8 dark:border-white/5">
             <button
               type="button"
               onClick={handleToggleLike}
