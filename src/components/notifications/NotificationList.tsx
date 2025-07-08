@@ -1,6 +1,7 @@
 'use client';
 
 import { Bell, CheckCheck, Trash2 } from 'lucide-react';
+import Link from 'next/link';
 import { useState, useEffect, useCallback } from 'react';
 
 import {
@@ -380,9 +381,9 @@ export function NotificationList({
                         : "You don't have any notifications yet."}
                     </p>
                   </div>
-                  <a href="/discover" className="inline-block">
+                  <Link href="/discover">
                     <Button variant="default">Discover content</Button>
-                  </a>
+                  </Link>
                 </div>
               ) : (
                 // Notifications list

@@ -381,6 +381,9 @@ importers:
       jest-environment-jsdom:
         specifier: ^29.7.0
         version: 29.7.0
+      jsdom:
+        specifier: ^26.1.0
+        version: 26.1.0
       node-fetch:
         specifier: '2'
         version: 2.7.0

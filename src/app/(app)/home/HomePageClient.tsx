@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import RightSidebarFeed from '@/components/app/chains/RightSidebarFeed';
 import { CenterFeed } from '@/components/app/home/CenterFeed';
 import { FloatingCreateButton } from '@/components/app/home/FloatingCreateButton';
+import PostOverlayWithinFeed from '@/components/app/posts/overlay/PostOverlayWithinFeed';
 import { useUser } from '@/providers/UserContext';
 
 import type { FeedItem } from '@/types/home/types';
@@ -57,10 +58,15 @@ function HomeContent({
 }: HomeContentProps): React.JSX.Element {
   const searchParams = useSearchParams();
   const isChains = searchParams.get('tab') === 'chains';
+  const postId = searchParams.get('post'); // Get postId from search params
+
   return (
     <div className="relative flex h-full">
       {/* Center feed – scrollable */}
-      <main className="flex-1 w-0 min-w-0 overflow-y-auto min-h-screen">
+      <main
+        id="center-feed-scroll-container"
+        className="flex-1 w-0 min-w-0 overflow-y-auto min-h-screen"
+      >
         {isChains ? (
           <RightSidebarFeed user={{ id: user?.id ?? '' }} profile={null} />
         ) : (
@@ -73,10 +79,20 @@ function HomeContent({
             )}
           </div>
         )}
+        {postId && (
+          <PostOverlayWithinFeed
+            postId={postId}
+            onClose={() => history.back()}
+          />
+        )}
       </main>
 
-      {/* Floating action button (mobile only) */}
-      {!isChains && <FloatingCreateButton />}
+      {/* Mobile-only floating create button */}
+      {user && (
+        <div className="md:hidden">
+          <FloatingCreateButton />
+        </div>
+      )}
     </div>
   );
 }

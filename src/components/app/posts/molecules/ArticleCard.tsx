@@ -1,7 +1,10 @@
+import { Maximize2 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
 import React from 'react';
 
+import { Button } from '@/components/primitives/Button';
 import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 
@@ -87,6 +90,9 @@ export default function ArticleCard({
   className,
   priority = false,
 }: ArticleCardProps): React.ReactElement {
+  const router = useRouter();
+  const search = useSearchParams();
+
   const postUrl =
     post.slug !== undefined && post.slug !== null && post.slug.length > 0
       ? `/posts/${post.slug}`
@@ -94,10 +100,16 @@ export default function ArticleCard({
 
   const excerpt = post.meta_description ?? getPostExcerpt(post.content ?? null);
 
+  function openOverlay() {
+    const params = new URLSearchParams(search);
+    params.set('post', post.id);
+    router.push(`?${params.toString()}`, { scroll: false });
+  }
+
   return (
     <Card
       className={cn(
-        'overflow-hidden rounded-none bg-transparent shadow-none p-0 border-b border-border last:border-none',
+        'overflow-hidden rounded-none bg-transparent shadow-none',
         className,
       )}
     >
@@ -111,11 +123,22 @@ export default function ArticleCard({
       />
 
       {/* Title */}
-      <h2 className="text-xl font-bold leading-snug mt-2">
-        <Link href={postUrl} className="hover:underline">
-          {post.title}
-        </Link>
-      </h2>
+      <div className="flex items-start justify-between gap-2 mt-2">
+        <h2 className="text-xl font-bold leading-snug flex-1 min-w-0">
+          <Link href={postUrl} className="hover:underline">
+            {post.title}
+          </Link>
+        </h2>
+        <Button
+          size="icon"
+          variant="ghost"
+          onClick={openOverlay}
+          aria-label="Open overlay"
+          className="flex-shrink-0"
+        >
+          <Maximize2 className="h-4 w-4" />
+        </Button>
+      </div>
 
       {post.thumbnail_url && (
         <Link href={postUrl} className="mt-2 block">

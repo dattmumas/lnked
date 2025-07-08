@@ -934,6 +934,14 @@ img[data-uploading='true']::after {
   display: none; /* Safari and Chrome */
 }
 
+/* 
+  When the post overlay is open within the center feed,
+  prevent the underlying feed from scrolling.
+*/
+body.center-feed-overlay-open #center-feed-scroll-container {
+  overflow: hidden;
+}
+
 /* Disable default iOS tap highlight on interactive elements */
 a,
 button {
