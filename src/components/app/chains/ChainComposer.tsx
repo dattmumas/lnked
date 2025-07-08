@@ -3,8 +3,15 @@
 import { encode } from 'blurhash';
 import imageCompression from 'browser-image-compression';
 import { Loader2, Smile, Image as ImageIcon, Send, X } from 'lucide-react';
-import React, { useCallback, useMemo, useState, useEffect } from 'react';
+import React, {
+  useCallback,
+  useMemo,
+  useState,
+  useEffect,
+  useRef,
+} from 'react';
 import { useDropzone } from 'react-dropzone';
+import { AnimatePresence, motion } from 'framer-motion';
 
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -12,6 +19,7 @@ import { useToast } from '@/hooks/useToast';
 import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
 import { cn } from '@/lib/utils';
 import { extractFirstUrl } from '@/lib/utils/extractLinks';
+import { useClickOutside } from '@/hooks/useClickOutside';
 
 import type { ChainWithAuthor } from '@/lib/data-access/schemas/chain.schema';
 import type { Database } from '@/lib/database.types';
@@ -99,10 +107,19 @@ export default function ChainComposer({
 }: ChainComposerProps): React.ReactElement {
   const [content, setContent] = useState('');
   const [isPosting, setIsPosting] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
   const [images, setImages] = useState<SelectedImage[]>([]);
   const supabase = useMemo(createSupabaseBrowserClient, []);
   const { error: toastError } = useToast();
   const remainingChars = CHARACTER_LIMIT - content.length;
+  const composerRef = useRef<HTMLDivElement>(null);
+
+  // Collapse when clicking outside
+  useClickOutside(composerRef, () => {
+    if (isExpanded) {
+      setIsExpanded(false);
+    }
+  });
 
   const getUserInitials = useCallback((): string => {
     if (profile?.full_name) {
@@ -281,6 +298,7 @@ export default function ChainComposer({
         toastError('Failed to post');
       } finally {
         setIsPosting(false);
+        setIsExpanded(false);
       }
     },
     [
@@ -303,127 +321,152 @@ export default function ChainComposer({
   }, [images]);
 
   return (
-    <div className="mb-6 mx-3">
-      <form onSubmit={handleSubmit} className="space-y-3">
-        <div className="flex-1 space-y-3">
-          {/* Textarea doubles as drop-target */}
-          <div {...getRootProps({ className: 'relative' })}>
-            <input {...getInputProps()} />
-            <Textarea
-              value={content}
-              onChange={(e): void => {
-                const val = e.target.value.slice(0, CHARACTER_LIMIT);
-                setContent(val);
-              }}
-              placeholder={parentId || rootId ? `Reply...` : 'Thoughts?'}
-              className="min-h-[90px] resize-none text-sm placeholder:text-muted-foreground focus-visible:ring-0 focus-visible:ring-offset-0"
-              maxLength={CHARACTER_LIMIT}
-              disabled={isPosting}
-            />
-          </div>
-
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <button
-                type="button"
-                className="p-2 text-muted-foreground hover:text-accent hover:bg-accent/20 rounded-full transition-colors"
-                title="Add emoji"
-                disabled={isPosting}
-              >
-                <Smile className="w-4 h-4" />
-              </button>
-              <button
-                type="button"
-                className="p-2 text-muted-foreground hover:text-accent hover:bg-accent/20 rounded-full transition-colors"
-                title="Add image"
-                onClick={open}
-                disabled={isPosting || images.length >= MAX_FILES}
-              >
-                <ImageIcon className="w-4 h-4" />
-              </button>
-            </div>
-
-            <div className="flex items-center gap-3">
-              <span
-                className={cn(
-                  'text-xs font-medium',
-                  remainingChars < WARNING_THRESHOLD
-                    ? 'text-destructive'
-                    : 'text-muted-foreground',
-                )}
-              >
-                {remainingChars}
-              </span>
-              <Button
-                type="submit"
-                size="sm"
-                disabled={
-                  content.trim().length === 0 ||
-                  content.length > CHARACTER_LIMIT ||
-                  isPosting
-                }
-                className="px-5 py-2 h-auto text-sm font-medium"
-              >
-                {isPosting ? (
-                  <div className="flex items-center gap-2">
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    {rootId ? 'Replying...' : 'Posting...'}
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-2">
-                    <Send className="w-4 h-4" />
-                    Post
-                  </div>
-                )}
-              </Button>
-            </div>
-          </div>
-
-          {/* Image upload area */}
-          <div className="space-y-3">
-            {images.length > 0 && (
-              <div className="grid grid-cols-4 gap-2">
-                {images.map((img, idx) => (
-                  <div key={img.preview} className="relative group space-y-1">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={img.preview}
-                      alt="preview"
-                      className="w-full h-20 object-cover rounded-md"
-                    />
-                    <button
-                      type="button"
-                      onClick={(): void =>
-                        setImages((prev) =>
-                          prev.filter((i) => i.preview !== img.preview),
-                        )
-                      }
-                      className="absolute top-1 right-1 bg-black/60 rounded-full p-0.5 text-white opacity-0 group-hover:opacity-100 transition-opacity"
-                      aria-label="Remove image"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                    <input
-                      type="text"
-                      value={img.altText ?? ''}
-                      onChange={(e): void => {
-                        const val = e.target.value.slice(0, 120);
-                        setImages((prev) =>
-                          prev.map((p, i) =>
-                            i === idx ? { ...p, altText: val } : p,
-                          ),
-                        );
-                      }}
-                      placeholder="Alt text (optional)"
-                      className="w-full p-1 rounded-md bg-background/60 text-xs focus:outline-none focus:ring-1 focus:ring-accent/50"
-                    />
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+    <AnimatePresence initial={false}>
+      {!isExpanded ? (
+        <div className="mb-6 mx-3 pt-2 mt-2 border-t">
+          <button
+            type="button"
+            onClick={() => setIsExpanded(true)}
+            className="w-full text-left bg-surface-elevated-1 hover:bg-surface-elevated-2 px-4 py-3 rounded-lg text-sm text-muted-foreground transition-colors"
+          >
+            {parentId || rootId ? `Reply...` : 'Thoughts?'}
+          </button>
         </div>
-      </form>
-    </div>
+      ) : (
+        <motion.div
+          ref={composerRef}
+          className="mb-6 mx-3 pt-2 mt-2 border-t"
+          style={{ transformOrigin: 'top' }}
+          initial={{ scaleY: 0, opacity: 0, height: 0 }}
+          animate={{ scaleY: 1, opacity: 1, height: 'auto' }}
+          exit={{ scaleY: 0, opacity: 0, height: 0 }}
+          transition={{ duration: 0.2, ease: 'easeOut' }}
+        >
+          <form onSubmit={handleSubmit} className="space-y-3">
+            <div className="flex-1 space-y-3">
+              {/* Textarea doubles as drop-target */}
+              <div {...getRootProps({ className: 'relative' })}>
+                <input {...getInputProps()} />
+                <Textarea
+                  value={content}
+                  onChange={(e): void => {
+                    const val = e.target.value.slice(0, CHARACTER_LIMIT);
+                    setContent(val);
+                  }}
+                  placeholder={parentId || rootId ? `Reply...` : 'Thoughts?'}
+                  className="min-h-[90px] resize-none text-sm placeholder:text-muted-foreground focus-visible:ring-0 focus-visible:ring-offset-0"
+                  maxLength={CHARACTER_LIMIT}
+                  disabled={isPosting}
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    className="p-2 text-muted-foreground hover:text-accent hover:bg-accent/20 rounded-full transition-colors"
+                    title="Add emoji"
+                    disabled={isPosting}
+                  >
+                    <Smile className="w-4 h-4" />
+                  </button>
+                  <button
+                    type="button"
+                    className="p-2 text-muted-foreground hover:text-accent hover:bg-accent/20 rounded-full transition-colors"
+                    title="Add image"
+                    onClick={open}
+                    disabled={isPosting || images.length >= MAX_FILES}
+                  >
+                    <ImageIcon className="w-4 h-4" />
+                  </button>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <span
+                    className={cn(
+                      'text-xs font-medium',
+                      remainingChars < WARNING_THRESHOLD
+                        ? 'text-destructive'
+                        : 'text-muted-foreground',
+                    )}
+                  >
+                    {remainingChars}
+                  </span>
+                  <Button
+                    type="submit"
+                    size="sm"
+                    disabled={
+                      content.trim().length === 0 ||
+                      content.length > CHARACTER_LIMIT ||
+                      isPosting
+                    }
+                    className="px-5 py-2 h-auto text-sm font-medium"
+                  >
+                    {isPosting ? (
+                      <div className="flex items-center gap-2">
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        {rootId ? 'Replying...' : 'Posting...'}
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <Send className="w-4 h-4" />
+                        Post
+                      </div>
+                    )}
+                  </Button>
+                </div>
+              </div>
+
+              {/* Image upload area */}
+              <div className="space-y-3">
+                {images.length > 0 && (
+                  <div className="grid grid-cols-4 gap-2">
+                    {images.map((img, idx) => (
+                      <div
+                        key={img.preview}
+                        className="relative group space-y-1"
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={img.preview}
+                          alt="preview"
+                          className="w-full h-20 object-cover rounded-md"
+                        />
+                        <button
+                          type="button"
+                          onClick={(): void =>
+                            setImages((prev) =>
+                              prev.filter((i) => i.preview !== img.preview),
+                            )
+                          }
+                          className="absolute top-1 right-1 bg-black/60 rounded-full p-0.5 text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                          aria-label="Remove image"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                        <input
+                          type="text"
+                          value={img.altText ?? ''}
+                          onChange={(e): void => {
+                            const val = e.target.value.slice(0, 120);
+                            setImages((prev) =>
+                              prev.map((p, i) =>
+                                i === idx ? { ...p, altText: val } : p,
+                              ),
+                            );
+                          }}
+                          placeholder="Alt text (optional)"
+                          className="w-full p-1 rounded-md bg-background/60 text-xs focus:outline-none focus:ring-1 focus:ring-accent/50"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </form>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 }
