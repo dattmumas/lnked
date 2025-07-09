@@ -17,8 +17,8 @@ type TenantRpcRow =
   Database['public']['Functions']['get_user_tenants']['Returns'][number];
 
 export const metadata: Metadata = {
-  title: 'Lnked - Collaborative Newsletters',
-  description: 'Create, share, and subscribe to newsletters together.',
+  title: 'Newpaper',
+  description: 'Open Source News',
 };
 
 export default async function RootLayout({
