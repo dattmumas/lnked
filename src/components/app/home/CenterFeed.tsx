@@ -10,6 +10,7 @@ import { usePostFeedInteractions } from '@/hooks/home/usePostFeedInteractions';
 import { useTenantFeed } from '@/hooks/home/useTenantFeed';
 import { useVideoStatusRealtime } from '@/hooks/video/useVideoStatusRealtime';
 import { useTenant } from '@/providers/TenantProvider';
+import { useTenantStore } from '@/stores/tenant-store';
 
 import { FeedVirtuoso } from './FeedVirtuoso';
 
@@ -33,12 +34,13 @@ export function CenterFeed({
   } = useTenant();
   const [includeCollectives] = useState(true);
 
-  const { feedItems, isLoading, error, refetch, loadMore, hasMore } =
-    useTenantFeed({
-      includeCollectives,
-      includeFollowed: true,
-      ...(initialFeedItems ? { initialData: initialFeedItems } : {}),
-    });
+  // Get feed scope from tenant store
+  const feedScope = useTenantStore((s) => s.feedScope);
+
+  const { feedItems, isLoading, error, hasMore, loadMore } = useTenantFeed({
+    limit: 20,
+    ...(initialFeedItems ? { initialData: initialFeedItems } : {}),
+  });
 
   const interactions = usePostFeedInteractions(user.id);
 
@@ -183,20 +185,21 @@ export function CenterFeed({
             className="bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100"
           >
             <RefreshCw className="w-4 h-4 mr-2" />
-            {newPostsCount} new post{newPostsCount !== 1 ? 's' : ''} available
+            {newPostsCount} new post{newPostsCount !== 1 ? 's' : ''}
           </Button>
         </div>
       )}
 
-      {/* Feed Items (virtualized) */}
-      <FeedVirtuoso
-        items={feedItems}
-        interactions={interactions}
-        loadMore={loadMore}
-        hasMore={hasMore}
-      />
-
-      {/* The virtuoso endReached handler triggers loadMore, so button removed */}
+      {/* Feed Content */}
+      <div className="">
+        <FeedVirtuoso
+          items={feedItems}
+          interactions={interactions}
+          loadMore={loadMore}
+          hasMore={hasMore}
+          windowScroll={true}
+        />
+      </div>
     </div>
   );
 }

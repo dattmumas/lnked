@@ -14,7 +14,6 @@ import {
 } from 'lucide-react';
 import React, { useState } from 'react';
 
-
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import {
@@ -32,8 +31,8 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
-import { useTenant } from '@/hooks/useTenant';
 import { useTenantMembers } from '@/hooks/useTenantMembers';
+import { useTenantActions } from '@/providers/TenantProvider';
 
 import { RoleBadge } from './TenantPermissions';
 
@@ -60,7 +59,7 @@ export function TenantMembers({
     updateMemberRole,
     removeMember,
   } = useTenantMembers(tenantId);
-  const { permissions } = useTenant(tenantId);
+  const { canPerformAction } = useTenantActions();
   const [searchQuery, setSearchQuery] = useState('');
   const [showInviteForm, setShowInviteForm] = useState(false);
 
@@ -103,16 +102,30 @@ export function TenantMembers({
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {[...Array(3)].map((_, i) => (
-              <div key={i} className="flex items-center gap-3">
-                <div className="h-10 w-10 bg-gray-200 rounded-full" />
-                <div className="flex-1 space-y-1">
-                  <div className="h-4 bg-gray-200 rounded w-1/2" />
-                  <div className="h-3 bg-gray-200 rounded w-1/3" />
-                </div>
-                <div className="h-6 w-16 bg-gray-200 rounded" />
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 bg-gray-200 rounded-full" />
+              <div className="flex-1 space-y-1">
+                <div className="h-4 bg-gray-200 rounded w-1/2" />
+                <div className="h-3 bg-gray-200 rounded w-1/3" />
               </div>
-            ))}
+              <div className="h-6 w-16 bg-gray-200 rounded" />
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 bg-gray-200 rounded-full" />
+              <div className="flex-1 space-y-1">
+                <div className="h-4 bg-gray-200 rounded w-1/2" />
+                <div className="h-3 bg-gray-200 rounded w-1/3" />
+              </div>
+              <div className="h-6 w-16 bg-gray-200 rounded" />
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 bg-gray-200 rounded-full" />
+              <div className="flex-1 space-y-1">
+                <div className="h-4 bg-gray-200 rounded w-1/2" />
+                <div className="h-3 bg-gray-200 rounded w-1/3" />
+              </div>
+              <div className="h-6 w-16 bg-gray-200 rounded" />
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -141,7 +154,7 @@ export function TenantMembers({
               {members.length} member{members.length !== 1 ? 's' : ''}
             </CardDescription>
           </div>
-          {showInvite && permissions.canManageMembers && (
+          {showInvite && canPerformAction('admin') && (
             <Button
               variant="outline"
               size="sm"
@@ -179,7 +192,7 @@ export function TenantMembers({
             <MemberItem
               key={member.id}
               member={member}
-              canManage={permissions.canManageMembers}
+              canManage={canPerformAction('admin')}
               onRoleChange={(newRole) => handleRoleChange(member.id, newRole)}
               onRemove={() => handleRemoveMember(member.id)}
             />

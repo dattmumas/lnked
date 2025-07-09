@@ -6,8 +6,8 @@ import React from 'react';
 
 import { NewPostButton } from '@/components/app/nav/NewPostButton';
 import SearchBar from '@/components/app/nav/SearchBar';
+import TenantContextSwitcher from '@/components/app/nav/TenantContextSwitcher';
 import { UserNav } from '@/components/app/nav/UserNav';
-import TenantSwitcher from '@/components/app/tenant/TenantSwitcher';
 import { NotificationDropdown } from '@/components/notifications/NotificationDropdown';
 import { NavIcon } from '@/components/ui/icon';
 import { useUser } from '@/hooks/useUser';
@@ -20,7 +20,7 @@ export default function ModernNavbar(): React.ReactElement {
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 shadow-sm">
       <div className="mx-auto flex h-16 max-w-7xl items-center gap-6 px-4 md:px-6 lg:px-8">
-        {/* Left: Navigation icons */}
+        {/* Left: Navigation icons + Context */}
         <div className="flex items-center gap-3">
           {user && (
             <Link
@@ -41,6 +41,13 @@ export default function ModernNavbar(): React.ReactElement {
               <NavIcon icon={MessageCircle} />
             </Link>
           )}
+
+          {/* Context Switcher - logically grouped with navigation */}
+          {user && (
+            <div className="hidden md:block">
+              <TenantContextSwitcher />
+            </div>
+          )}
         </div>
 
         {/* Center: Search bar - takes available space */}
@@ -53,7 +60,6 @@ export default function ModernNavbar(): React.ReactElement {
           {user && <NewPostButton size="sm" />}
           <ModeToggle />
           <NotificationDropdown />
-          {user && <TenantSwitcher />}
           <UserNav />
         </div>
       </div>

@@ -1,7 +1,7 @@
 'use client';
 import { Heart } from 'lucide-react';
 import Link from 'next/link';
-import React, { useState, useMemo, useTransition } from 'react';
+import React, { useState, useMemo, useTransition, useCallback } from 'react';
 
 import { truncateText } from '@/components/app/posts/molecules/PostCard';
 import { Badge } from '@/components/ui/badge';
@@ -131,7 +131,7 @@ export default function ProfileFeed({
 }: ProfileFeedProps): React.ReactElement {
   const [activeTab, setActiveTab] = useState('all');
 
-  const classifyPost = (p: PostWithLikes): ContentType => {
+  const classifyPost = useCallback((p: PostWithLikes): ContentType => {
     if (
       p.content !== undefined &&
       p.content !== null &&
@@ -147,7 +147,7 @@ export default function ProfileFeed({
     )
       return 'videos';
     return 'articles';
-  };
+  }, []);
 
   const combinedPosts = useMemo(
     () => (pinnedPost ? [pinnedPost, ...posts] : posts),
@@ -156,7 +156,7 @@ export default function ProfileFeed({
 
   const categorized = useMemo(() => {
     return combinedPosts.map((p) => ({ ...p, contentType: classifyPost(p) }));
-  }, [combinedPosts]);
+  }, [combinedPosts, classifyPost]);
 
   const pinned = pinnedPost ? categorized[0] : undefined;
   const rest = pinnedPost ? categorized.slice(1) : categorized;

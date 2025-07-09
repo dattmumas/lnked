@@ -46,14 +46,16 @@ export function FeedVirtuoso({
     <div className={windowScroll ? '' : 'no-scrollbar h-full overflow-y-auto'}>
       <Virtuoso
         data={items}
-        itemContent={(index, item) => renderPostRow(index, item, interactions)}
+        itemContent={(index, item) => {
+          return renderPostRow(index, item, interactions);
+        }}
         style={windowScroll ? undefined : { height: '100%' }}
         useWindowScroll={windowScroll}
         overscan={100}
         // Prefetch when the user is within the last 5 items
         rangeChanged={(range) => {
           if (hasMore && range.endIndex >= items.length - 5) {
-            loadMore();
+            void loadMore();
           }
         }}
       />

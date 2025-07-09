@@ -47,8 +47,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { useTenantSettings } from '@/hooks/useTenantSettings';
 import { useToast } from '@/hooks/useToast';
+import { useTenantActions } from '@/providers/TenantProvider';
 
-import { TenantPermissions, PermissionGate } from './TenantPermissions';
+import {
+  TenantPermissionsDisplay as TenantPermissions,
+  PermissionGate,
+} from './TenantPermissions';
 
 import type { TenantSettingsFormData } from '@/types/tenant.types';
 
@@ -113,6 +117,8 @@ export function TenantSettings({
     updatePrivacySettings,
     deleteTenant,
   } = useTenantSettings(tenantId);
+
+  const isPersonalTenant = settings?.type === 'personal';
 
   // General settings form
   const generalForm = useForm<GeneralSettingsForm>({
@@ -285,8 +291,6 @@ export function TenantSettings({
     );
   }
 
-  const isPersonalTenant = settings.type === 'personal';
-
   return (
     <div className={className}>
       <div className="space-y-6">
@@ -323,10 +327,12 @@ export function TenantSettings({
               <Shield className="w-4 h-4" />
               Privacy
             </TabsTrigger>
-            <TabsTrigger value="members" className="flex items-center gap-2">
-              <Users className="w-4 h-4" />
-              Members
-            </TabsTrigger>
+            {!isPersonalTenant && (
+              <TabsTrigger value="members" className="flex items-center gap-2">
+                <Users className="w-4 h-4" />
+                Members
+              </TabsTrigger>
+            )}
           </TabsList>
 
           {/* General Settings */}
@@ -449,174 +455,179 @@ export function TenantSettings({
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <Form {...notificationForm}>
-                  <form
-                    onSubmit={notificationForm.handleSubmit(
-                      handleNotificationSubmit,
-                    )}
-                    className="space-y-6"
-                  >
-                    <div className="space-y-4">
-                      <FormField
-                        control={notificationForm.control}
-                        name="email_notifications"
-                        render={({ field }) => (
-                          <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                            <div className="space-y-0.5">
-                              <FormLabel className="text-base">
-                                Email Notifications
-                              </FormLabel>
-                              <FormDescription>
-                                Receive notifications via email.
-                              </FormDescription>
-                            </div>
-                            <FormControl>
-                              <Switch
-                                checked={field.value}
-                                onCheckedChange={field.onChange}
-                              />
-                            </FormControl>
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={notificationForm.control}
-                        name="push_notifications"
-                        render={({ field }) => (
-                          <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                            <div className="space-y-0.5">
-                              <FormLabel className="text-base">
-                                Push Notifications
-                              </FormLabel>
-                              <FormDescription>
-                                Receive push notifications in your browser.
-                              </FormDescription>
-                            </div>
-                            <FormControl>
-                              <Switch
-                                checked={field.value}
-                                onCheckedChange={field.onChange}
-                              />
-                            </FormControl>
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={notificationForm.control}
-                        name="mention_notifications"
-                        render={({ field }) => (
-                          <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                            <div className="space-y-0.5">
-                              <FormLabel className="text-base">
-                                Mention Notifications
-                              </FormLabel>
-                              <FormDescription>
-                                Get notified when someone mentions you.
-                              </FormDescription>
-                            </div>
-                            <FormControl>
-                              <Switch
-                                checked={field.value}
-                                onCheckedChange={field.onChange}
-                              />
-                            </FormControl>
-                          </FormItem>
-                        )}
-                      />
-
-                      {!isPersonalTenant && (
-                        <>
-                          <FormField
-                            control={notificationForm.control}
-                            name="new_member_notifications"
-                            render={({ field }) => (
-                              <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                                <div className="space-y-0.5">
-                                  <FormLabel className="text-base">
-                                    New Member Notifications
-                                  </FormLabel>
-                                  <FormDescription>
-                                    Get notified when new members join.
-                                  </FormDescription>
-                                </div>
-                                <FormControl>
-                                  <Switch
-                                    checked={field.value}
-                                    onCheckedChange={field.onChange}
-                                  />
-                                </FormControl>
-                              </FormItem>
-                            )}
-                          />
-
-                          <FormField
-                            control={notificationForm.control}
-                            name="channel_activity_notifications"
-                            render={({ field }) => (
-                              <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                                <div className="space-y-0.5">
-                                  <FormLabel className="text-base">
-                                    Channel Activity
-                                  </FormLabel>
-                                  <FormDescription>
-                                    Get notified about activity in channels.
-                                  </FormDescription>
-                                </div>
-                                <FormControl>
-                                  <Switch
-                                    checked={field.value}
-                                    onCheckedChange={field.onChange}
-                                  />
-                                </FormControl>
-                              </FormItem>
-                            )}
-                          />
-                        </>
+                <PermissionGate
+                  tenantId={settings.id}
+                  requiredPermission="canManageSettings"
+                >
+                  <Form {...notificationForm}>
+                    <form
+                      onSubmit={notificationForm.handleSubmit(
+                        handleNotificationSubmit,
                       )}
-
-                      <FormField
-                        control={notificationForm.control}
-                        name="digest_frequency"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Email Digest Frequency</FormLabel>
-                            <Select
-                              onValueChange={field.onChange}
-                              defaultValue={field.value}
-                            >
+                      className="space-y-6"
+                    >
+                      <div className="space-y-4">
+                        <FormField
+                          control={notificationForm.control}
+                          name="email_notifications"
+                          render={({ field }) => (
+                            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                              <div className="space-y-0.5">
+                                <FormLabel className="text-base">
+                                  Email Notifications
+                                </FormLabel>
+                                <FormDescription>
+                                  Receive notifications via email.
+                                </FormDescription>
+                              </div>
                               <FormControl>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Select frequency" />
-                                </SelectTrigger>
+                                <Switch
+                                  checked={field.value}
+                                  onCheckedChange={field.onChange}
+                                />
                               </FormControl>
-                              <SelectContent>
-                                <SelectItem value="never">Never</SelectItem>
-                                <SelectItem value="daily">Daily</SelectItem>
-                                <SelectItem value="weekly">Weekly</SelectItem>
-                              </SelectContent>
-                            </Select>
-                            <FormDescription>
-                              How often you want to receive email digests.
-                            </FormDescription>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
+                            </FormItem>
+                          )}
+                        />
 
-                    <div className="flex justify-end">
-                      <Button
-                        type="submit"
-                        disabled={!notificationForm.formState.isDirty}
-                      >
-                        <Save className="w-4 h-4 mr-2" />
-                        Save Changes
-                      </Button>
-                    </div>
-                  </form>
-                </Form>
+                        <FormField
+                          control={notificationForm.control}
+                          name="push_notifications"
+                          render={({ field }) => (
+                            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                              <div className="space-y-0.5">
+                                <FormLabel className="text-base">
+                                  Push Notifications
+                                </FormLabel>
+                                <FormDescription>
+                                  Receive push notifications in your browser.
+                                </FormDescription>
+                              </div>
+                              <FormControl>
+                                <Switch
+                                  checked={field.value}
+                                  onCheckedChange={field.onChange}
+                                />
+                              </FormControl>
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={notificationForm.control}
+                          name="mention_notifications"
+                          render={({ field }) => (
+                            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                              <div className="space-y-0.5">
+                                <FormLabel className="text-base">
+                                  Mention Notifications
+                                </FormLabel>
+                                <FormDescription>
+                                  Get notified when someone mentions you.
+                                </FormDescription>
+                              </div>
+                              <FormControl>
+                                <Switch
+                                  checked={field.value}
+                                  onCheckedChange={field.onChange}
+                                />
+                              </FormControl>
+                            </FormItem>
+                          )}
+                        />
+
+                        {!isPersonalTenant && (
+                          <>
+                            <FormField
+                              control={notificationForm.control}
+                              name="new_member_notifications"
+                              render={({ field }) => (
+                                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                                  <div className="space-y-0.5">
+                                    <FormLabel className="text-base">
+                                      New Member Notifications
+                                    </FormLabel>
+                                    <FormDescription>
+                                      Get notified when new members join.
+                                    </FormDescription>
+                                  </div>
+                                  <FormControl>
+                                    <Switch
+                                      checked={field.value}
+                                      onCheckedChange={field.onChange}
+                                    />
+                                  </FormControl>
+                                </FormItem>
+                              )}
+                            />
+
+                            <FormField
+                              control={notificationForm.control}
+                              name="channel_activity_notifications"
+                              render={({ field }) => (
+                                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                                  <div className="space-y-0.5">
+                                    <FormLabel className="text-base">
+                                      Channel Activity
+                                    </FormLabel>
+                                    <FormDescription>
+                                      Get notified about activity in channels.
+                                    </FormDescription>
+                                  </div>
+                                  <FormControl>
+                                    <Switch
+                                      checked={field.value}
+                                      onCheckedChange={field.onChange}
+                                    />
+                                  </FormControl>
+                                </FormItem>
+                              )}
+                            />
+                          </>
+                        )}
+
+                        <FormField
+                          control={notificationForm.control}
+                          name="digest_frequency"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Email Digest Frequency</FormLabel>
+                              <Select
+                                onValueChange={field.onChange}
+                                defaultValue={field.value}
+                              >
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select frequency" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  <SelectItem value="never">Never</SelectItem>
+                                  <SelectItem value="daily">Daily</SelectItem>
+                                  <SelectItem value="weekly">Weekly</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              <FormDescription>
+                                How often you want to receive email digests.
+                              </FormDescription>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+
+                      <div className="flex justify-end">
+                        <Button
+                          type="submit"
+                          disabled={!notificationForm.formState.isDirty}
+                        >
+                          <Save className="w-4 h-4 mr-2" />
+                          Save Changes
+                        </Button>
+                      </div>
+                    </form>
+                  </Form>
+                </PermissionGate>
               </CardContent>
             </Card>
           </TabsContent>
@@ -807,22 +818,24 @@ export function TenantSettings({
           </TabsContent>
 
           {/* Members Tab */}
-          <TabsContent value="members">
-            <Card>
-              <CardHeader>
-                <CardTitle>Member Management</CardTitle>
-                <CardDescription>
-                  Manage members and their permissions.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {/* This would integrate with the existing TenantMembers component */}
-                <div className="text-center py-8 text-muted-foreground">
-                  Member management interface would be integrated here.
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
+          {!isPersonalTenant && (
+            <TabsContent value="members">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Member Management</CardTitle>
+                  <CardDescription>
+                    Manage members and their permissions.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {/* This would integrate with the existing TenantMembers component */}
+                  <div className="text-center py-8 text-muted-foreground">
+                    Member management interface would be integrated here.
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          )}
         </Tabs>
 
         {/* Danger Zone */}

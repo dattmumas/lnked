@@ -15,7 +15,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { useTenant } from '@/hooks/useTenant';
+import { useTenant, useTenantActions } from '@/providers/TenantProvider';
 
 import type { MemberRole, TenantPermissions } from '@/types/tenant.types';
 
@@ -25,13 +25,13 @@ interface TenantPermissionsProps {
   className?: string;
 }
 
-export function TenantPermissions({
+export function TenantPermissionsDisplay({
   tenantId,
   showActions = true,
   className = '',
 }: TenantPermissionsProps): React.JSX.Element {
-  const { tenant, userRole, permissions, isLoading, error } =
-    useTenant(tenantId);
+  const { currentTenant: tenant, isLoading, error } = useTenant();
+  const { isPersonalTenant, canPerformAction } = useTenantActions();
 
   if (isLoading) {
     return (
@@ -44,9 +44,10 @@ export function TenantPermissions({
         </CardHeader>
         <CardContent>
           <div className="animate-pulse space-y-3">
-            {[...Array(4)].map((_, i) => (
-              <div key={i} className="h-10 bg-gray-200 rounded" />
-            ))}
+            <div className="h-10 bg-gray-200 rounded" />
+            <div className="h-10 bg-gray-200 rounded" />
+            <div className="h-10 bg-gray-200 rounded" />
+            <div className="h-10 bg-gray-200 rounded" />
           </div>
         </CardContent>
       </Card>
@@ -76,10 +77,10 @@ export function TenantPermissions({
               Permissions in {tenant.name}
             </CardTitle>
             <CardDescription>
-              Your role: <RoleBadge role={userRole} />
+              Your role: <RoleBadge role={tenant.user_role} />
             </CardDescription>
           </div>
-          {showActions && permissions.canManageMembers && (
+          {showActions && canPerformAction('manage') && (
             <Button variant="outline" size="sm">
               <Settings className="h-4 w-4 mr-2" />
               Manage
@@ -96,32 +97,32 @@ export function TenantPermissions({
             <PermissionItem
               icon={Eye}
               label="View content"
-              granted={permissions.canRead}
+              granted={canPerformAction('read')}
               description="See posts and discussions"
             />
             <PermissionItem
               icon={Edit}
               label="Create content"
-              granted={permissions.canWrite}
+              granted={canPerformAction('write')}
               description="Create posts and replies"
             />
             <PermissionItem
               icon={Trash2}
               label="Delete content"
-              granted={permissions.canDelete}
+              granted={canPerformAction('admin')}
               description="Delete your own posts"
             />
           </div>
         </div>
 
         {/* Management Permissions */}
-        {(permissions.canManageMembers || permissions.canManageSettings) && (
+        {(canPerformAction('manage') || canPerformAction('admin')) && (
           <div className="space-y-3">
             <h4 className="text-sm font-medium text-muted-foreground">
               Management
             </h4>
             <div className="grid gap-2">
-              {permissions.canManageMembers && (
+              {canPerformAction('admin') && (
                 <PermissionItem
                   icon={Users}
                   label="Manage members"
@@ -129,7 +130,7 @@ export function TenantPermissions({
                   description="Invite, remove, and change member roles"
                 />
               )}
-              {permissions.canManageSettings && (
+              {canPerformAction('manage') && (
                 <PermissionItem
                   icon={Settings}
                   label="Manage settings"
@@ -145,13 +146,13 @@ export function TenantPermissions({
         {showActions && (
           <div className="pt-4 border-t">
             <div className="flex gap-2 flex-wrap">
-              {permissions.canWrite && (
+              {canPerformAction('write') && (
                 <Button variant="outline" size="sm">
                   <Plus className="h-4 w-4 mr-2" />
                   Create Post
                 </Button>
               )}
-              {permissions.canManageMembers && (
+              {canPerformAction('admin') && (
                 <Button variant="outline" size="sm">
                   <Users className="h-4 w-4 mr-2" />
                   Invite Members
@@ -268,9 +269,9 @@ export function PermissionGate({
   children,
   fallback = null,
 }: PermissionGateProps): React.JSX.Element {
-  const { permissions } = useTenant(tenantId);
+  const { canPerformAction } = useTenantActions();
 
-  if (permissions[requiredPermission]) {
+  if (canPerformAction(requiredPermission as any)) {
     return <>{children}</>;
   }
 

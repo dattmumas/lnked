@@ -15,7 +15,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { useTenant } from '@/providers/TenantProvider';
+import { useTenantStore } from '@/stores/tenant-store';
 
 import type { Database } from '@/lib/database.types';
 
@@ -31,8 +31,8 @@ interface TenantSwitcherProps {
 function TenantSwitcher({
   compact = false,
 }: TenantSwitcherProps): React.JSX.Element {
-  const { currentTenant, personalTenant, collectiveTenants, switchTenant } =
-    useTenant();
+  const { currentTenant, personalTenant, collectiveTenants, actions } =
+    useTenantStore();
 
   const getDisplayName = React.useCallback((tenant: TenantType): string => {
     if (tenant.type === 'personal') {
@@ -90,7 +90,7 @@ function TenantSwitcher({
                 console.error('Cannot switch to tenant: missing slug');
                 return;
               }
-              void switchTenant(personalTenant.id);
+              void actions.switchTenant(personalTenant.id);
             }}
           >
             <Avatar className="h-6 w-6">
@@ -120,7 +120,7 @@ function TenantSwitcher({
                     console.error('Cannot switch to tenant: missing slug');
                     return;
                   }
-                  void switchTenant(tenant.id);
+                  void actions.switchTenant(tenant.id);
                 }}
                 className="flex items-center space-x-2 cursor-pointer"
               >

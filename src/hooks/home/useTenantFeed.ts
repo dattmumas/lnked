@@ -5,9 +5,10 @@
 'use client';
 
 import { useInfiniteQuery } from '@tanstack/react-query';
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useEffect, useRef } from 'react';
 
-import { useTenant } from '@/providers/TenantProvider';
+import { useTenantStore } from '@/stores/tenant-store';
+import { shallow } from 'zustand/shallow';
 
 import type { FeedItem } from '@/types/home/types';
 
@@ -174,7 +175,8 @@ const isFeedPage = (value: unknown): value is FeedPage =>
 export function useTenantFeed(
   options: TenantFeedOptions = {},
 ): UseTenantFeedReturn {
-  const { currentTenant } = useTenant();
+  const currentTenant = useTenantStore((state) => state.currentTenant);
+  const feedScope = useTenantStore((state) => state.feedScope);
   const { limit = 20, initialData } = options;
 
   // ---------------------------------------------------------------------------
@@ -183,34 +185,41 @@ export function useTenantFeed(
 
   const fetchFeedPage = useCallback(
     async ({ pageParam = 0 }: { pageParam?: number }): Promise<FeedPage> => {
+      const tenantId =
+        feedScope === 'tenant' && currentTenant?.id ? currentTenant.id : null;
+
       const params = new URLSearchParams({
-        limit: limit.toString(),
-        offset: pageParam.toString(),
+        limit: String(limit),
+        offset: String(pageParam),
       });
 
-      const res = await fetch(`/api/feed/unified?${params.toString()}`);
-      if (!res.ok) {
-        if (res.status === 401) {
-          const empty: FeedItem[] = [];
-          return { items: empty, nextCursor: null };
-        }
-        throw new Error('Failed to fetch feed');
+      if (tenantId) {
+        params.set('tenantId', tenantId);
       }
 
-      const json = (await res.json()) as {
-        items?: RawPost[];
-        nextCursor: string | null;
-      };
+      const url = `/api/feed/unified?${params.toString()}`;
+      const response = await fetch(url);
 
+      if (!response.ok) {
+        throw new Error(`Failed to fetch feed: ${response.statusText}`);
+      }
+
+      const json = await response.json();
       const rawItems = Array.isArray(json.items) ? json.items : [];
-      const feedItems = rawItems.map((p) => transformPostToFeedItem(p));
+      const feedItems = rawItems.map((p: RawPost) =>
+        transformPostToFeedItem(p),
+      );
 
       // Compute next offset: if we received fewer than limit, no more pages
       const nextOffset =
         feedItems.length === limit ? pageParam + limit : undefined;
-      return { items: feedItems, nextCursor: nextOffset?.toString() ?? null };
+
+      return {
+        items: feedItems,
+        nextCursor: nextOffset ? String(nextOffset) : null,
+      };
     },
-    [limit],
+    [feedScope, currentTenant, limit],
   );
 
   const {
@@ -222,12 +231,24 @@ export function useTenantFeed(
     hasNextPage,
     refetch,
   } = useInfiniteQuery({
-    queryKey: ['unified-feed', limit],
+    queryKey: [
+      'unified-feed',
+      feedScope,
+      feedScope === 'tenant' ? currentTenant?.id : 'global',
+      limit,
+    ],
     queryFn: ({ pageParam = 0 }) => fetchFeedPage({ pageParam }),
-    getNextPageParam: (_last, pages) => pages.length * limit,
-    enabled: Boolean(currentTenant),
+    getNextPageParam: (lastPage) => {
+      // If we got fewer items than requested, no more pages
+      if (!lastPage || lastPage.items.length < limit) return undefined;
+      // Return the next offset
+      return lastPage.nextCursor ? Number(lastPage.nextCursor) : undefined;
+    },
+    enabled: !!currentTenant?.id, // Only run when we have a valid tenant ID
     initialPageParam: 0,
-    ...(initialData
+    refetchOnMount: false, // Don't automatically refetch on mount
+    refetchOnWindowFocus: false,
+    ...(initialData && feedScope === 'global' // Only use initial data for global scope
       ? {
           initialData: {
             pages: [
@@ -244,7 +265,7 @@ export function useTenantFeed(
           },
         }
       : {}),
-    staleTime: 1000 * 60 * 5, // 5 minutes
+    staleTime: 1000 * 60 * 2, // 2 minutes - allow some caching but not too much
     gcTime: 1000 * 60 * 30, // 30 minutes
   });
 
@@ -253,7 +274,8 @@ export function useTenantFeed(
       return [];
     }
 
-    return data.pages.filter(isFeedPage).flatMap((p) => p.items);
+    const items = data.pages.filter(isFeedPage).flatMap((p) => p.items);
+    return items;
   }, [data]);
 
   // Actions -------------------------------------------------------------------
@@ -288,7 +310,7 @@ export function useTenantFeed(
       ? {
           id: currentTenant.id,
           name: currentTenant.name,
-          type: currentTenant.is_personal ? 'personal' : 'collective',
+          type: currentTenant.type,
         }
       : null,
   };

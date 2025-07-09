@@ -7,6 +7,7 @@ import { CenterFeed } from '@/components/app/home/CenterFeed';
 import { FloatingCreateButton } from '@/components/app/home/FloatingCreateButton';
 import PostOverlayWithinFeed from '@/components/app/posts/overlay/PostOverlayWithinFeed';
 import { useUser } from '@/providers/UserContext';
+import { useTenantFeed } from '@/hooks/home/useTenantFeed';
 
 import type { FeedItem } from '@/types/home/types';
 import type { User } from '@supabase/supabase-js';
@@ -61,38 +62,40 @@ function HomeContent({
   const postId = searchParams.get('post'); // Get postId from search params
 
   return (
-    <div className="relative flex h-full">
-      {/* Center feed – scrollable */}
-      <main
-        id="center-feed-scroll-container"
-        className="flex-1 w-0 min-w-0 overflow-y-auto min-h-screen no-scrollbar"
-      >
-        {isChains ? (
-          <RightSidebarFeed user={{ id: user?.id ?? '' }} profile={null} />
-        ) : (
-          <div className="max-w-4xl mx-auto px-6 py-6">
-            {user && (
-              <CenterFeedWrapper
-                user={user}
-                {...(initialFeedItems ? { initialFeedItems } : {})}
-              />
-            )}
+    <div className="flex flex-col h-full">
+      {/* Main Content */}
+      <div className="relative flex flex-1 min-h-0">
+        <main
+          id="center-feed-scroll-container"
+          className="flex-1 w-0 min-w-0 overflow-y-auto no-scrollbar"
+        >
+          {isChains ? (
+            <RightSidebarFeed user={{ id: user?.id ?? '' }} profile={null} />
+          ) : (
+            <div className="max-w-4xl mx-auto px-6 py-6">
+              {user && (
+                <CenterFeedWrapper
+                  user={user}
+                  {...(initialFeedItems ? { initialFeedItems } : {})}
+                />
+              )}
+            </div>
+          )}
+          {postId && (
+            <PostOverlayWithinFeed
+              postId={postId}
+              onClose={() => history.back()}
+            />
+          )}
+        </main>
+
+        {/* Mobile-only floating create button */}
+        {user && (
+          <div className="md:hidden">
+            <FloatingCreateButton />
           </div>
         )}
-        {postId && (
-          <PostOverlayWithinFeed
-            postId={postId}
-            onClose={() => history.back()}
-          />
-        )}
-      </main>
-
-      {/* Mobile-only floating create button */}
-      {user && (
-        <div className="md:hidden">
-          <FloatingCreateButton />
-        </div>
-      )}
+      </div>
     </div>
   );
 }

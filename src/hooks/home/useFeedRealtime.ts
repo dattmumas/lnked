@@ -2,15 +2,12 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useCallback, useState, useRef } from 'react';
 
 import { realtimeService } from '@/lib/chat/realtime-service';
+import { Database } from '@/lib/database.types';
 
-interface PostUpdate {
-  id: string;
-  title?: string;
-  content?: string;
-  status?: string;
-  updated_at: string;
-}
-
+type PostUpdate = Pick<
+  Database['public']['Tables']['posts']['Row'],
+  'id' | 'title' | 'content' | 'status' | 'updated_at'
+>;
 interface UseFeedRealtimeOptions {
   tenantId: string;
   enabled?: boolean;
@@ -37,14 +34,17 @@ export function useFeedRealtime({
   const [hasNewPosts, setHasNewPosts] = useState(false);
   const cleanupRef = useRef<(() => void) | null>(null);
 
+  // Use refs for callbacks to keep them stable and prevent re-renders
+  const onPostUpdateRef = useRef(onPostUpdate);
+  const onNewPostsAvailableRef = useRef(onNewPostsAvailable);
+  useEffect(() => {
+    onPostUpdateRef.current = onPostUpdate;
+    onNewPostsAvailableRef.current = onNewPostsAvailable;
+  });
+
   // Handle post updates
   const handlePostUpdate = useCallback(
     (update: PostUpdate) => {
-      // Only log critical status changes to reduce console spam
-      if (update.status === 'published' || update.status === 'deleted') {
-        console.log(`📝 Post ${update.status}: ${update.id}`);
-      }
-
       // Update React Query cache for specific post
       queryClient.setQueryData(['post', update.id], (oldData: unknown) => {
         if (oldData && typeof oldData === 'object') {
@@ -63,27 +63,30 @@ export function useFeedRealtime({
       });
 
       // For published posts, indicate new content is available
-      if (update.status === 'published') {
-        setNewPostsCount((prev) => prev + 1);
+      if (update.status === 'active') {
+        setNewPostsCount((prevCount) => {
+          const newCount = prevCount + 1;
+          if (onNewPostsAvailableRef.current) {
+            onNewPostsAvailableRef.current(newCount);
+          }
+          return newCount;
+        });
         setHasNewPosts(true);
-
-        if (onNewPostsAvailable) {
-          onNewPostsAvailable(newPostsCount + 1);
-        }
       }
 
       // Call custom callback if provided
-      if (onPostUpdate) {
-        onPostUpdate(update);
+      if (onPostUpdateRef.current) {
+        onPostUpdateRef.current(update);
       }
     },
-    [queryClient, onPostUpdate, onNewPostsAvailable, newPostsCount],
+    [queryClient],
   );
 
   // Function to refresh feed and clear new posts indicator
   const refreshFeed = useCallback(() => {
-    queryClient.invalidateQueries({ queryKey: ['tenant-feed'] });
-    queryClient.invalidateQueries({ queryKey: ['feed'] });
+    queryClient.invalidateQueries({ queryKey: ['unified-feed'] });
+    queryClient.invalidateQueries({ queryKey: ['tenant-feed'] }); // Keep for backward compatibility
+    queryClient.invalidateQueries({ queryKey: ['feed'] }); // Keep for backward compatibility
     setNewPostsCount(0);
     setHasNewPosts(false);
   }, [queryClient]);
@@ -103,16 +106,10 @@ export function useFeedRealtime({
 
     const setupRealtime = async () => {
       try {
-        await realtimeService.subscribeToPostUpdates(tenantId, (update) => {
-          // Only log critical updates to reduce console spam
-          if (update.status === 'published' || update.status === 'deleted') {
-            console.log(`📝 Post ${update.status}: ${update.id}`);
-          }
-          // Invalidate relevant queries when posts are updated
-          void queryClient.invalidateQueries({
-            queryKey: ['posts'],
-          });
-        });
+        await realtimeService.subscribeToPostUpdates(
+          tenantId,
+          handlePostUpdate,
+        );
 
         // Store cleanup function
         cleanupRef.current = () => {
@@ -120,29 +117,14 @@ export function useFeedRealtime({
           void realtimeService.unsubscribeFromPostUpdates(tenantId);
         };
       } catch (error) {
-        const errorMessage =
-          error instanceof Error ? error.message : String(error);
-
-        // Handle specific "subscribe multiple times" error
-        if (
-          errorMessage.includes('subscribe multiple times') ||
-          errorMessage.includes('subscribe can only be called a single time')
-        ) {
-          console.warn(
-            `📝 [WARNING] Channel already subscribed for tenant ${tenantId}, this is expected during development. Ignoring error.`,
-          );
-          // Don't remove from active subscriptions - the subscription might still be working
-          return;
-        }
-
-        console.error(`📝 [ERROR] Failed to set up feed realtime:`, error);
-        activeFeedSubscriptions.delete(tenantId);
+        console.error('Failed to setup realtime feed:', error);
+        activeFeedSubscriptions.delete(tenantId); // Clear on error
       }
     };
 
     void setupRealtime();
 
-    // Cleanup function
+    // Cleanup on unmount
     return () => {
       // Remove from active set IMMEDIATELY when effect cleans up
       activeFeedSubscriptions.delete(tenantId);
@@ -152,7 +134,7 @@ export function useFeedRealtime({
         cleanupRef.current = null;
       }
     };
-  }, [enabled, tenantId, queryClient]);
+  }, [enabled, tenantId, handlePostUpdate]);
 
   return {
     newPostsCount,

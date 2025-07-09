@@ -15,6 +15,7 @@ import type {
   RealtimeChannel,
   RealtimePostgresChangesPayload,
 } from '@supabase/supabase-js';
+import { Database } from '@/lib/database.types';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -57,9 +58,9 @@ function debugLog(
   ...args: unknown[]
 ): void {
   if (level === 'critical' && DEBUG_LOGGING.CRITICAL_ONLY) {
-    console.log(message, ...args);
+    // console.log(message, ...args);
   } else if (level === 'verbose' && DEBUG_LOGGING.ENABLED) {
-    console.log(message, ...args);
+    // console.log(message, ...args);
   }
 }
 
@@ -99,13 +100,10 @@ interface VideoStatusUpdate {
   updated_at: string;
 }
 
-interface PostUpdate {
-  id: string;
-  title?: string;
-  content?: string;
-  status?: string;
-  updated_at: string;
-}
+type PostUpdate = Pick<
+  Database['public']['Tables']['posts']['Row'],
+  'id' | 'title' | 'content' | 'status' | 'updated_at'
+>;
 
 interface RealtimeErrorEvent {
   reason?: string;
@@ -220,7 +218,7 @@ export class RealtimeService {
 
     // DEV helper: log raw phoenix replies to spot quota errors
     // Attach PHX reply logger (types may not expose APIs – ignore TS for dev aid)
-    if (process.env.NODE_ENV === 'development') {
+    /* if (process.env.NODE_ENV === 'development') {
       // @ts-expect-error onOpen not typed in supabase-js
       this.supabase.realtime.onOpen?.(() => {
         this.supabase.getChannels().forEach((ch) => {
@@ -231,7 +229,7 @@ export class RealtimeService {
           });
         });
       });
-    }
+    } */
   }
 
   /**
@@ -240,12 +238,12 @@ export class RealtimeService {
   private setupAuthRefreshHandler(): void {
     this.supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === 'SIGNED_OUT') {
-        console.log('🔒 User signed out, cleaning up all subscriptions');
+        // console.log('🔒 User signed out, cleaning up all subscriptions');
         this.unsubscribeFromAll();
         // Reset the chat UI store to clear all state
         useChatUIStore.getState().reset();
       } else if (event === 'TOKEN_REFRESHED') {
-        console.log('🔄 Token refreshed, re-subscribing to channels');
+        // console.log('🔄 Token refreshed, re-subscribing to channels');
         await this.refreshAllChannels();
       }
     });
@@ -325,8 +323,8 @@ export class RealtimeService {
     // Ensure no orphaned Supabase channel remains from a previous Fast-Refresh.
     this.cleanupCachedChannel(channelName);
 
-    console.log(`🔍 [ENTER] subscribeToConversation(${conversationId})`);
-    console.log(
+    // console.log(`🔍 [ENTER] subscribeToConversation(${conversationId})`);
+    /* console.log(
       '  pendingSubscriptions:',
       Array.from(this.pendingSubscriptions),
     );
@@ -334,16 +332,16 @@ export class RealtimeService {
       '  activeSubscriptionAttempts:',
       Array.from(this.activeSubscriptionAttempts),
     );
-    console.log('  channels:', Array.from(this.channels.keys()));
+    console.log('  channels:', Array.from(this.channels.keys())); */
 
     // Prevent multiple simultaneous subscriptions to the same conversation
     if (
       this.pendingSubscriptions.has(conversationId) ||
       this.activeSubscriptionAttempts.has(conversationId)
     ) {
-      console.log(
+      /* console.log(
         `⏳ [GUARD] Subscription already pending or in progress for ${conversationId}`,
-      );
+      ); */
       return this.channels.get(conversationId);
     }
 
@@ -362,8 +360,8 @@ export class RealtimeService {
     } finally {
       // Note: We DON'T delete the singleton here - it stays until explicitly cleared
       this.activeSubscriptionAttempts.delete(conversationId);
-      console.log(`🔚 [EXIT] subscribeToConversation(${conversationId})`);
-      console.log(
+      // console.log(`🔚 [EXIT] subscribeToConversation(${conversationId})`);
+      /* console.log(
         '  pendingSubscriptions:',
         Array.from(this.pendingSubscriptions),
       );
@@ -371,7 +369,7 @@ export class RealtimeService {
         '  activeSubscriptionAttempts:',
         Array.from(this.activeSubscriptionAttempts),
       );
-      console.log('  channels:', Array.from(this.channels.keys()));
+      console.log('  channels:', Array.from(this.channels.keys())); */
     }
   }
 
@@ -408,15 +406,15 @@ export class RealtimeService {
       const existingChannel = this.channels.get(conversationId);
       if (existingChannel) {
         const s = String(existingChannel.state);
-        console.log(
+        /* console.log(
           `🔍 [REUSE] Found existing channel for ${conversationId} in state: ${s}`,
-        );
+        ); */
         if (GOOD_STATES.has(s as never)) {
           // channel already live (or closing) → reuse, don't resubscribe
           // refresh handler references
-          console.log(
+          /* console.log(
             `♻️ [REUSE] Reusing existing channel for ${conversationId}`,
-          );
+          ); */
           if (callbacks.onMessage)
             this.messageHandlers.set(conversationId, callbacks.onMessage);
           if (callbacks.onTyping)
@@ -428,9 +426,9 @@ export class RealtimeService {
           s === String(CHANNEL_STATES.CLOSED) ||
           s === String(CHANNEL_STATES.CLOSED_LOWERCASE)
         ) {
-          console.log(
+          /* console.log(
             `🗑️ [DROP] Removing closed channel for ${conversationId}`,
-          );
+          ); */
           this.channels.delete(conversationId);
         }
       }
@@ -467,12 +465,12 @@ export class RealtimeService {
 
       // Mark subscription as pending
       this.pendingSubscriptions.add(conversationId);
-      console.log(
+      /* console.log(
         `📝 [PENDING] Marked ${conversationId} as pending subscription`,
-      );
+      ); */
 
       // Create new channel following Supabase patterns
-      console.log(`🆕 [CREATE] Creating new channel for ${conversationId}`);
+      // console.log(`🆕 [CREATE] Creating new channel for ${conversationId}`);
       const channel = this.supabase
         .channel(channelName, {
           config: {
@@ -674,10 +672,10 @@ export class RealtimeService {
             errorData?.status === 'ok' &&
             errorData?.message?.includes('Subscribed')
           ) {
-            console.log(
+            /* console.log(
               `✅ RealtimeService: Success message for ${conversationId}:`,
               errorData.message,
-            );
+            ); */
             return;
           }
 
@@ -692,23 +690,23 @@ export class RealtimeService {
             // Auto-retry with exponential backoff (production only)
             setTimeout(() => {
               if (this.channels.has(conversationId)) {
-                console.warn(
+                /* console.warn(
                   `🔄 RealtimeService: Retrying subscription to ${conversationId} after error`,
-                );
+                ); */
                 void this.subscribeToConversation(conversationId, callbacks);
               }
             }, CHANNEL_RETRY_DELAY_MS);
           } else {
-            console.warn(
+            /* console.warn(
               `🚫 RealtimeService: Auto-retry disabled in development for ${conversationId}`,
-            );
+            ); */
           }
         })
 
         .on('system', { event: 'close' }, () => {
-          console.warn(
+          /* console.warn(
             `🔒 RealtimeService: Channel closed for ${conversationId}`,
-          );
+          ); */
           this.pendingSubscriptions.delete(conversationId);
           this.channels.delete(conversationId);
           this.messageHandlers.delete(conversationId);
@@ -717,19 +715,19 @@ export class RealtimeService {
 
       // Subscribe to the channel with enhanced error handling
       try {
-        console.log(`[CALL] channel.subscribe() for ${conversationId}`);
+        // console.log(`[CALL] channel.subscribe() for ${conversationId}`);
         await channel.subscribe((status) => {
           // Type-safe status checking
           const statusString = String(status);
-          console.log(
+          /* console.log(
             `📡 [STATUS] Subscription status for ${conversationId}: ${statusString}`,
-          );
+          ); */
 
           switch (statusString) {
             case CHANNEL_STATES.SUBSCRIBED:
-              console.log(
+              /* console.log(
                 `✅ RealtimeService: Successfully subscribed to ${conversationId}`,
-              );
+              ); */
               this.pendingSubscriptions.delete(conversationId);
               if (typeof callbacks.onUserJoin === 'function') {
                 void this.broadcastUserJoin(conversationId);
@@ -745,9 +743,9 @@ export class RealtimeService {
                 // Auto-retry after a delay to prevent infinite retry loops (production only)
                 setTimeout(() => {
                   if (this.channels.has(conversationId)) {
-                    console.warn(
+                    /* console.warn(
                       `🔄 Retrying subscription to conversation ${conversationId}`,
-                    );
+                    ); */
                     void this.subscribeToConversation(
                       conversationId,
                       callbacks,
@@ -755,9 +753,9 @@ export class RealtimeService {
                   }
                 }, CHANNEL_RETRY_DELAY_MS);
               } else {
-                console.warn(
+                /* console.warn(
                   `🚫 Auto-retry disabled in development for ${conversationId}`,
-                );
+                ); */
               }
               break;
             case CHANNEL_STATES.TIMED_OUT:
@@ -770,22 +768,22 @@ export class RealtimeService {
               // Disable auto-retry in development to prevent Fast Refresh issues
               if (process.env.NODE_ENV !== 'development') {
                 setTimeout(() => {
-                  console.warn(
+                  /* console.warn(
                     `🔄 Retrying subscription after timeout: ${conversationId}`,
-                  );
+                  ); */
                   void this.subscribeToConversation(conversationId, callbacks);
                 }, TIMEOUT_RETRY_DELAY_MS);
               } else {
-                console.warn(
+                /* console.warn(
                   `🚫 Timeout auto-retry disabled in development for ${conversationId}`,
-                );
+                ); */
               }
               break;
             case CHANNEL_STATES.CLOSED:
             case CHANNEL_STATES.CLOSED_LOWERCASE:
-              console.log(
+              /* console.log(
                 `🔒 RealtimeService: Channel closed for ${conversationId}`,
-              );
+              ); */
               this.pendingSubscriptions.delete(conversationId);
               this.channels.delete(conversationId);
               this.messageHandlers.delete(conversationId);
@@ -812,7 +810,7 @@ export class RealtimeService {
       this.channelRefCounts.set(conversationId, 1);
       this.lastJoinAt.set(conversationId, Date.now());
       this.backoffMs.set(conversationId, BACKOFF_INITIAL_MS);
-      console.log(`💾 [STORE] Stored channel for ${conversationId}`);
+      // console.log(`💾 [STORE] Stored channel for ${conversationId}`);
 
       // Store callbacks for cleanup
       if (callbacks.onMessage) {
@@ -837,35 +835,35 @@ export class RealtimeService {
    * Unsubscribe from a conversation
    */
   async unsubscribeFromConversation(conversationId: string): Promise<void> {
-    console.log(`🔌 [ENTER] unsubscribeFromConversation(${conversationId})`);
+    // console.log(`🔌 [ENTER] unsubscribeFromConversation(${conversationId})`);
     // Clear any active subscription attempts
     this.activeSubscriptionAttempts.delete(conversationId);
 
     const channel = this.channels.get(conversationId);
     if (channel) {
-      console.log(
+      /* console.log(
         `📤 [FOUND] Found channel to unsubscribe for ${conversationId}`,
-      );
+      ); */
       // mark as leaving; actual removal happens in CLOSED status handler
 
       // Announce user leaving before unsubscribing (only if channel is active)
       const channelState = String(channel.state);
-      console.log(
+      /* console.log(
         `🔍 [STATE] Channel state for ${conversationId}: ${channelState}`,
-      );
+      ); */
       if (channelState === CHANNEL_STATES.JOINED) {
         await this.broadcastUserLeave(conversationId);
       }
 
       // Only unsubscribe if channel is not already closed
       if (channelState !== CHANNEL_STATES.CLOSED_LOWERCASE) {
-        console.log(`📤 [CALL] Calling unsubscribe for ${conversationId}`);
+        // console.log(`📤 [CALL] Calling unsubscribe for ${conversationId}`);
         // CRITICAL FIX: Await the unsubscribe to prevent race conditions
         await channel.unsubscribe();
       } else {
-        console.log(
+        /* console.log(
           `⏭️ [SKIP] Skipping unsubscribe for already closed channel ${conversationId}`,
-        );
+        ); */
       }
 
       // Clear typing timeout
@@ -885,14 +883,14 @@ export class RealtimeService {
       // Clean up localStorage typing data to prevent accumulation
       localStorage.removeItem(`typing:${conversationId}`);
     } else {
-      console.log(
+      /* console.log(
         `❌ [NOTFOUND] No channel found to unsubscribe for ${conversationId}`,
-      );
+      ); */
       // Still clean up pending state even if no channel exists
       this.pendingSubscriptions.delete(conversationId);
     }
-    console.log(`🔚 [EXIT] unsubscribeFromConversation(${conversationId})`);
-    console.log(
+    // console.log(`🔚 [EXIT] unsubscribeFromConversation(${conversationId})`);
+    /* console.log(
       '  pendingSubscriptions:',
       Array.from(this.pendingSubscriptions),
     );
@@ -900,7 +898,7 @@ export class RealtimeService {
       '  activeSubscriptionAttempts:',
       Array.from(this.activeSubscriptionAttempts),
     );
-    console.log('  channels:', Array.from(this.channels.keys()));
+    console.log('  channels:', Array.from(this.channels.keys())); */
   }
 
   /**
@@ -923,10 +921,10 @@ export class RealtimeService {
     if (!user) return;
 
     // Log every outbound typing_start event for easier mount tracing
-    console.log('[RealtimeService] Sending typing_start payload', {
+    /* console.log('[RealtimeService] Sending typing_start payload', {
       user_id: user.id,
       conversation_id: conversationId,
-    });
+    }); */
 
     void channel.send({
       type: 'broadcast',
@@ -969,10 +967,10 @@ export class RealtimeService {
     if (!user) return;
 
     // Log every outbound typing_stop event for easier mount tracing
-    console.log('[RealtimeService] Sending typing_stop payload', {
+    /* console.log('[RealtimeService] Sending typing_stop payload', {
       user_id: user.id,
       conversation_id: conversationId,
-    });
+    }); */
 
     void channel.send({
       type: 'broadcast',
@@ -1142,6 +1140,7 @@ export class RealtimeService {
     callback: (_update: VideoStatusUpdate) => void,
   ): Promise<RealtimeChannel | undefined> {
     const channelName = `video_status:${userId}`;
+    // console.log(`[RealtimeService] ==> SUBSCRIBE ${channelName}`);
 
     debugLog(
       'critical',
@@ -1270,10 +1269,10 @@ export class RealtimeService {
           (
             payload: RealtimePostgresChangesPayload<Record<string, unknown>>,
           ) => {
-            console.log(
+            /* console.log(
               `🎬 [VIDEO-STATUS] Received postgres change for ${channelName}:`,
               payload.new,
-            );
+            ); */
             if (payload.new)
               callback(payload.new as unknown as VideoStatusUpdate);
           },
@@ -1302,9 +1301,9 @@ export class RealtimeService {
             errorMessage.includes('subscribe multiple times') ||
             errorMessage.includes('subscribe can only be called a single time')
           ) {
-            console.warn(
+            /* console.warn(
               `🎥 [WARNING] Channel already subscribed for ${channelName}, this is expected during fast navigation. Ignoring error.`,
-            );
+            ); */
             return;
           }
 
@@ -1323,18 +1322,18 @@ export class RealtimeService {
           ) {
             const backoff =
               this.backoffMs.get(channelName) ?? BACKOFF_INITIAL_MS;
-            console.warn(`🔄 Retrying ${channelName} in ${backoff}ms`);
-            console.log(
+            // console.warn(`🔄 Retrying ${channelName} in ${backoff}ms`);
+            /* console.log(
               `🎬 [VIDEO-STATUS] Starting retry logic for ${channelName} with backoff ${backoff}ms`,
-            );
+            ); */
 
             // Clean up failed channel before retry
             void this.releaseRef(channelName).catch(console.error);
 
             setTimeout(() => {
-              console.log(
+              /* console.log(
                 `🎬 [VIDEO-STATUS] Executing retry for ${channelName}`,
-              );
+              ); */
               void this.subscribeToVideoStatus(userId, callback).catch(
                 console.error,
               );
@@ -1343,20 +1342,22 @@ export class RealtimeService {
               channelName,
               Math.min(backoff * 2, BACKOFF_MAX_MS),
             );
-            console.log(
-              `🎬 [VIDEO-STATUS] Updated backoff for ${channelName} to ${this.backoffMs.get(channelName)}ms`,
-            );
+            /* console.log(
+              `🎬 [VIDEO-STATUS] Updated backoff for ${channelName} to ${this.backoffMs.get(
+                channelName,
+              )}ms`,
+            ); */
           }
         })
         .on('system', { event: 'close' }, () => {
-          console.log(`🎬 [VIDEO-STATUS] Channel closed for ${channelName}`);
+          // console.log(`🎬 [VIDEO-STATUS] Channel closed for ${channelName}`);
           this.channels.delete(channelName);
           this.videoStatusHandlers.delete(userId);
           this.channelRefCounts.delete(channelName);
           this.channelPromises.delete(channelName);
-          console.log(
+          /* console.log(
             `🎬 [VIDEO-STATUS] Cleaned up all data for ${channelName}`,
-          );
+          ); */
         });
 
       // Expose channel early
@@ -1414,6 +1415,7 @@ export class RealtimeService {
 
   async unsubscribeFromVideoStatus(userId: string): Promise<void> {
     const channelName = `video_status:${userId}`;
+    // console.log(`[RealtimeService] <== UNSUBSCRIBE ${channelName}`);
     this.videoStatusHandlers.delete(userId);
     await this.releaseRef(channelName);
   }
@@ -1424,6 +1426,7 @@ export class RealtimeService {
     callback: (_update: PostUpdate) => void,
   ): Promise<RealtimeChannel | undefined> {
     const channelName = `posts:${tenantId}`;
+    // console.log(`[RealtimeService] ==> SUBSCRIBE ${channelName}`);
     debugLog(
       'critical',
       `📝 [POST-UPDATES] Starting subscription for ${channelName}`,
@@ -1435,7 +1438,7 @@ export class RealtimeService {
       `📝 [POST-UPDATES] Last join for ${channelName}: ${last}, current: ${Date.now()}, diff: ${Date.now() - last}ms`,
     );
     if (Date.now() - last < MIN_JOIN_INTERVAL_MS) {
-      debugLog('verbose', `⚠️ Throttled rejoin attempt for ${channelName}`);
+      // debugLog('verbose', `⚠️ Throttled rejoin attempt for ${channelName}`);
       return this.channels.get(channelName);
     }
 
@@ -1461,37 +1464,37 @@ export class RealtimeService {
       return this.channels.get(channelName);
     }
     this.activeSubscriptionAttempts.add(channelName);
-    debugLog(
+    /* debugLog(
       'verbose',
       `📝 [POST-UPDATES] Added ${channelName} to active attempts`,
-    );
+    ); */
 
     const existingDebounce = this.subscriptionDebounce.get(channelName);
-    console.log(
+    /* console.log(
       `📝 [POST-UPDATES] Debounce check for ${channelName}:`,
       Boolean(existingDebounce),
-    );
+    ); */
     if (existingDebounce) {
       clearTimeout(existingDebounce);
-      console.log(
+      /* console.log(
         `📝 [POST-UPDATES] Cleared existing debounce for ${channelName}`,
-      );
+      ); */
     }
-    if (process.env.NODE_ENV === 'development') {
-      console.log(
+    /* if (process.env.NODE_ENV === 'development') {
+      /* console.log(
         `📝 [POST-UPDATES] Starting 100ms debounce for ${channelName}`,
-      );
-      await new Promise((resolve) => {
+      ); */
+    /* await new Promise((resolve) => {
         const t = setTimeout(resolve, 100);
         this.subscriptionDebounce.set(channelName, t);
       });
       this.subscriptionDebounce.delete(channelName);
-      console.log(`📝 [POST-UPDATES] Debounce completed for ${channelName}`);
-    }
+      // console.log(`📝 [POST-UPDATES] Debounce completed for ${channelName}`);
+    } */
 
     // Re-use existing channel when alive
     const existing = this.channels.get(channelName);
-    console.log(
+    /* console.log(
       `📝 [POST-UPDATES] Existing channel for ${channelName}:`,
       existing
         ? {
@@ -1499,37 +1502,37 @@ export class RealtimeService {
             isGood: GOOD_STATES.has(String(existing.state) as never),
           }
         : 'none',
-    );
+    ); */
     if (existing && GOOD_STATES.has(String(existing.state) as never)) {
-      console.log(
+      /* console.log(
         `📝 [POST-UPDATES] Reusing healthy existing channel for ${channelName}`,
-      );
+      ); */
       this.postUpdateHandlers.set(tenantId, callback);
       this.addRef(channelName);
       return existing;
     }
     if (existing) {
-      console.log(
+      /* console.log(
         `📝 [POST-UPDATES] Cleaning up unhealthy existing channel for ${channelName}`,
-      );
+      ); */
       await this.releaseRef(channelName);
       this.postUpdateHandlers.delete(tenantId);
     }
 
     this.pendingSubscriptions.add(channelName);
-    console.log(
+    /* console.log(
       `📝 [POST-UPDATES] Added ${channelName} to pending. Current pending:`,
       Array.from(this.pendingSubscriptions),
-    );
+    ); */
 
     const subscribePromise = (async () => {
-      console.log(
+      /* console.log(
         `📝 [POST-UPDATES] Starting actual subscription for ${channelName}`,
-      );
+      ); */
       this.cleanupCachedChannel(channelName);
-      console.log(
+      /* console.log(
         `📝 [POST-UPDATES] Cleaned cached channel for ${channelName}`,
-      );
+      ); */
 
       const channel = this.supabase
         .channel(channelName)
@@ -1544,10 +1547,10 @@ export class RealtimeService {
           (
             payload: RealtimePostgresChangesPayload<Record<string, unknown>>,
           ) => {
-            console.log(
+            /* console.log(
               `📝 [POST-UPDATES] Received postgres change for ${channelName}:`,
               payload.new,
-            );
+            ); */
             if (payload.new) callback(payload.new as unknown as PostUpdate);
           },
         )
@@ -1560,11 +1563,11 @@ export class RealtimeService {
             errorData?.status === 'ok' &&
             errorData?.message?.includes('Subscribed')
           ) {
-            debugLog(
+            /* debugLog(
               'critical',
               `✅ [POST-UPDATES] Subscription confirmation for ${channelName}:`,
               error,
-            );
+            ); */
             return; // This is actually a success message, not an error
           }
 
@@ -1575,9 +1578,9 @@ export class RealtimeService {
             errorMessage.includes('subscribe multiple times') ||
             errorMessage.includes('subscribe can only be called a single time')
           ) {
-            console.warn(
+            /* console.warn(
               `📝 [WARNING] Channel already subscribed for ${channelName}, this is expected during fast navigation. Ignoring error.`,
-            );
+            ); */
             return;
           }
 
@@ -1595,18 +1598,18 @@ export class RealtimeService {
           ) {
             const backoff =
               this.backoffMs.get(channelName) ?? BACKOFF_INITIAL_MS;
-            console.warn(`🔄 Retrying ${channelName} in ${backoff}ms`);
-            console.log(
+            // console.warn(`🔄 Retrying ${channelName} in ${backoff}ms`);
+            /* console.log(
               `📝 [POST-UPDATES] Starting retry logic for ${channelName} with backoff ${backoff}ms`,
-            );
+            ); */
 
             // Clean up failed channel before retry
             void this.releaseRef(channelName).catch(console.error);
 
             setTimeout(() => {
-              console.log(
+              /* console.log(
                 `📝 [POST-UPDATES] Executing retry for ${channelName}`,
-              );
+              ); */
               void this.subscribeToPostUpdates(tenantId, callback).catch(
                 console.error,
               );
@@ -1615,68 +1618,71 @@ export class RealtimeService {
               channelName,
               Math.min(backoff * 2, BACKOFF_MAX_MS),
             );
-            console.log(
-              `📝 [POST-UPDATES] Updated backoff for ${channelName} to ${this.backoffMs.get(channelName)}ms`,
-            );
+            /* console.log(
+              `📝 [POST-UPDATES] Updated backoff for ${channelName} to ${this.backoffMs.get(
+                channelName,
+              )}ms`,
+            ); */
           }
         })
         .on('system', { event: 'close' }, () => {
-          console.log(`📝 [POST-UPDATES] Channel closed for ${channelName}`);
+          // console.log(`📝 [POST-UPDATES] Channel closed for ${channelName}`);
           this.channels.delete(channelName);
           this.postUpdateHandlers.delete(tenantId);
           this.channelRefCounts.delete(channelName);
-          console.log(
+          /* console.log(
             `📝 [POST-UPDATES] Cleaned up all data for ${channelName}`,
-          );
+          ); */
         });
 
-      console.log(
+      /* console.log(
         `📝 [POST-UPDATES] Setting up channel maps for ${channelName}`,
-      );
+      ); */
       this.channels.set(channelName, channel);
       this.channelRefCounts.set(channelName, 1);
       this.lastJoinAt.set(channelName, Date.now());
       this.backoffMs.set(channelName, BACKOFF_INITIAL_MS);
       this.postUpdateHandlers.set(tenantId, callback);
-      console.log(
+      /* console.log(
         `📝 [POST-UPDATES] Calling channel.subscribe() for ${channelName}`,
-      );
+      ); */
       await channel.subscribe();
-      console.log(
+      /* console.log(
         `📝 [POST-UPDATES] Channel.subscribe() completed for ${channelName}. State:`,
         channel.state,
       );
 
       console.log(
         `📝 [POST-UPDATES] Successfully subscribed to ${channelName}`,
-      );
+      ); */
       return channel;
     })();
 
     this.channelPromises.set(channelName, subscribePromise);
-    console.log(`📝 [POST-UPDATES] Set promise for ${channelName}`);
+    // console.log(`📝 [POST-UPDATES] Set promise for ${channelName}`);
 
     try {
-      console.log(
+      /* console.log(
         `📝 [POST-UPDATES] Awaiting subscription promise for ${channelName}`,
-      );
+      ); */
       return await subscribePromise;
     } finally {
-      console.log(
+      /* console.log(
         `📝 [POST-UPDATES] Cleaning up subscription attempt for ${channelName}`,
-      );
+      ); */
       this.pendingSubscriptions.delete(channelName);
       this.activeSubscriptionAttempts.delete(channelName);
       this.channelPromises.delete(channelName);
-      console.log(
+      /* console.log(
         `📝 [POST-UPDATES] Cleanup completed for ${channelName}. Remaining attempts:`,
         Array.from(this.activeSubscriptionAttempts),
-      );
+      ); */
     }
   }
 
   async unsubscribeFromPostUpdates(tenantId: string): Promise<void> {
     const channelName = `posts:${tenantId}`;
+    // console.log(`[RealtimeService] <== UNSUBSCRIBE ${channelName}`);
     this.postUpdateHandlers.delete(tenantId);
     await this.releaseRef(channelName);
   }

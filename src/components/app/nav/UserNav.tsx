@@ -46,6 +46,8 @@ export function UserNav(): React.ReactElement {
 
   const handleSignOut = useCallback(async (): Promise<void> => {
     await supabase.auth.signOut();
+    // Manually clear the persisted tenant ID on logout (sessionStorage)
+    sessionStorage.removeItem('lnked.active-tenant-id');
     router.push('/');
   }, [router]);
 

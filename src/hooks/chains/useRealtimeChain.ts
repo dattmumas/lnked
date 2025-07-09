@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useRef, useCallback } from 'react';
 
 import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
 
@@ -17,6 +17,12 @@ export function useRealtimeChain(
   id: string | null, // thread_root for thread mode, null for timeline
   onDelta: (payload: unknown) => void,
 ): void {
+  const onDeltaRef = useRef(onDelta);
+
+  useEffect(() => {
+    onDeltaRef.current = onDelta;
+  });
+
   useEffect(() => {
     const supabase = createSupabaseBrowserClient();
     let channel: ReturnType<typeof supabase.channel> | null = null;
@@ -33,7 +39,7 @@ export function useRealtimeChain(
             filter: `thread_root=eq.${id}`,
           },
           (payload) => {
-            if (payload.new) onDelta(payload.new as ChainRow);
+            if (payload.new) onDeltaRef.current(payload.new as ChainRow);
           },
         )
         .subscribe();
@@ -41,7 +47,7 @@ export function useRealtimeChain(
       channel = supabase
         .channel('new_public_chains')
         .on('broadcast', { event: 'new_chain' }, (payload) => {
-          onDelta(payload);
+          onDeltaRef.current(payload);
         })
         .subscribe();
     }
@@ -51,5 +57,5 @@ export function useRealtimeChain(
         void supabase.removeChannel(channel);
       }
     };
-  }, [mode, id, onDelta]);
+  }, [mode, id]);
 }
