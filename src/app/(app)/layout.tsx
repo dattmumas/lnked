@@ -1,7 +1,6 @@
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import { redirect } from 'next/navigation';
 import React from 'react';
-// import PostOverlaySwitcher from '@/components/app/posts/overlay/PostOverlaySwitcher';
 
 import { ConditionalRightSidebar } from '@/components/app/layout/ConditionalRightSidebar';
 import { GlobalSidebar } from '@/components/app/nav/GlobalSidebar';

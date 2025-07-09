@@ -75,22 +75,32 @@ export default function PostOverlayWithinFeed({ postId, onClose }: Props) {
       style={style}
       className="fixed z-50 p-2 pointer-events-none flex justify-center"
     >
-      <div
-        className="relative pointer-events-auto w-full h-full overflow-y-auto 
-                   bg-surface-elevated-2 shadow-xl rounded-lg border border-border"
-      >
+      {/* overlay shell -- provides relative anchor for the button */}
+      <div className="relative w-full h-full shadow-xl shadow-[inset_0_6px_8px_-6px_rgba(0,0,0,0.15)] rounded-lg border border-border bg-surface-elevated-2">
+        {/* 1️⃣ close button stays pinned to the shell */}
         <button
           type="button"
           onClick={onClose}
           aria-label="Close overlay"
-          className="absolute top-3 left-3 z-50 p-2 rounded-full transition-colors bg-red-500/10 hover:bg-red-500/20 focus:outline-none focus:ring-2 focus:ring-red-500/50 focus:ring-offset-2 disabled:pointer-events-none"
+          className="absolute top-3 left-3 z-10 p-2 rounded-full transition-colors bg-red-500/10 hover:bg-red-500/20 focus:outline-none focus:ring-2 focus:ring-red-500/50 pointer-events-auto"
         >
-          <X className="h-4 w-4 text-foreground" />
+          <X className="h-4 w-4 text-red-700" />
         </button>
 
-        <Suspense fallback={<CenteredSpinner />}>
-          <PostOverlay postId={postId} />
-        </Suspense>
+        {/* scrolling content lives in its own div */}
+        <div
+          className="h-full overflow-y-auto pointer-events-auto pt-2"
+          style={{
+            WebkitMaskImage:
+              'linear-gradient(to bottom, transparent 0, #000 12px, #000 calc(100% - 12px), transparent 100%)',
+            maskImage:
+              'linear-gradient(to bottom, transparent 0, #000 12px, #000 calc(100% - 12px), transparent 100%)',
+          }}
+        >
+          <Suspense fallback={<CenteredSpinner />}>
+            <PostOverlay postId={postId} />
+          </Suspense>
+        </div>
       </div>
     </div>
   );
