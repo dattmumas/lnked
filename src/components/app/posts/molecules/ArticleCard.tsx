@@ -1,12 +1,15 @@
+import parse from 'html-react-parser';
+import DOMPurify from 'isomorphic-dompurify';
 import { Maximize2 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import React from 'react';
+import React, { useMemo } from 'react';
 
 import { Button } from '@/components/primitives/Button';
 import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
+import { transformImageUrls } from '@/lib/utils/transform-image-urls';
 
 import PostCardFooter from './PostCardFooter';
 import PostCardHeader from './PostCardHeader';
@@ -62,18 +65,41 @@ interface ArticleCardProps {
   priority?: boolean;
 }
 
-// Utility function to extract text from content
-function getPostExcerpt(content: string | undefined | null): string {
+// Utility function to extract text from content for plain text excerpt
+function getPlainTextExcerpt(content: string | undefined | null): string {
   if (!content) {
     return '';
   }
 
-  // For now, just truncate the content
-  // When TipTap is implemented, this will handle its format
-  const plainText = content.replace(/<[^>]*>/g, ''); // Remove any HTML tags
+  // Remove HTML tags and truncate
+  const plainText = content.replace(/<[^>]*>/g, '');
   return plainText.length > 200
     ? `${plainText.substring(0, 200)}...`
     : plainText;
+}
+
+// Utility function to truncate HTML content while preserving some formatting
+function getTruncatedHtmlContent(
+  content: string,
+  maxLength: number = 300,
+): string {
+  if (!content) return '';
+
+  // For HTML content, we'll truncate more conservatively to avoid breaking tags
+  if (content.length <= maxLength) return content;
+
+  // Find a good breaking point (end of sentence or paragraph)
+  const truncated = content.substring(0, maxLength);
+  const lastSentence = truncated.lastIndexOf('.');
+  const lastParagraph = truncated.lastIndexOf('</p>');
+
+  if (lastParagraph > lastSentence && lastParagraph > maxLength * 0.6) {
+    return content.substring(0, lastParagraph + 4); // Include the </p>
+  } else if (lastSentence > maxLength * 0.6) {
+    return content.substring(0, lastSentence + 1);
+  } else {
+    return `${truncated}...`;
+  }
 }
 
 export default function ArticleCard({
@@ -97,7 +123,20 @@ export default function ArticleCard({
       ? `/posts/${post.slug}`
       : `/posts/${post.id}`;
 
-  const excerpt = post.meta_description ?? getPostExcerpt(post.content ?? null);
+  // Process content for display
+  const hasHtmlContent =
+    post.content?.includes('<') && post.content?.includes('>');
+  const excerpt =
+    post.meta_description ?? getPlainTextExcerpt(post.content ?? null);
+
+  // Sanitize and prepare content for rich display if it contains HTML
+  const sanitizedHtml = useMemo(() => {
+    if (!post.content || !hasHtmlContent) return null;
+    return DOMPurify.sanitize(
+      transformImageUrls(getTruncatedHtmlContent(post.content)),
+      { USE_PROFILES: { html: true } },
+    );
+  }, [post.content, hasHtmlContent]);
 
   function openOverlay() {
     const params = new URLSearchParams(search);
@@ -162,11 +201,19 @@ export default function ArticleCard({
           </Link>
         )}
 
-        {excerpt && (
+        {(excerpt || sanitizedHtml) && (
           <div className="mt-4">
-            <p className="text-sm leading-relaxed text-muted-foreground line-clamp-3">
-              {excerpt}
-            </p>
+            {hasHtmlContent && sanitizedHtml ? (
+              <div className="prose prose-sm dark:prose-invert max-w-none">
+                <div className="text-sm leading-relaxed text-foreground/90 line-clamp-3">
+                  {parse(sanitizedHtml)}
+                </div>
+              </div>
+            ) : excerpt ? (
+              <p className="text-sm leading-relaxed text-muted-foreground line-clamp-3">
+                {excerpt}
+              </p>
+            ) : null}
           </div>
         )}
       </div>

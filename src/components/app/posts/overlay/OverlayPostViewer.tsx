@@ -1,15 +1,12 @@
 'use client';
 
-import parse from 'html-react-parser';
-import DOMPurify from 'isomorphic-dompurify';
 import dynamic from 'next/dynamic';
-import { useMemo } from 'react';
 
 import BookmarkButton from '@/components/app/posts/molecules/BookmarkButton';
+import PostContentRenderer from '@/components/app/posts/molecules/PostContentRenderer';
 import PostReactionButtons from '@/components/app/posts/molecules/PostReactionButtons';
 import PostViewTracker from '@/components/app/posts/molecules/PostViewTracker';
 import { formatPostDate } from '@/lib/posts';
-import { transformImageUrls } from '@/lib/utils/transform-image-urls';
 
 // Dynamically import MuxVideoPlayer to avoid SSR issues
 const MuxVideoPlayerEnhanced = dynamic(
@@ -52,14 +49,6 @@ export default function OverlayPostViewer({ post, viewer, viewModel }: Props) {
   const initialUserReaction =
     (viewer.userReaction as 'like' | 'dislike' | null) ?? null;
   const initialBookmarked = viewer.isBookmarked;
-
-  const sanitizedHtml = useMemo(
-    () =>
-      DOMPurify.sanitize(transformImageUrls(post.content ?? ''), {
-        USE_PROFILES: { html: true },
-      }),
-    [post.content],
-  );
 
   return (
     <>
@@ -143,27 +132,20 @@ export default function OverlayPostViewer({ post, viewer, viewModel }: Props) {
             </div>
           </header>
 
-          {/* Enhanced Content Section */}
-          {post.content && (
-            <section className="bg-white/[0.02] backdrop-blur-xl border border-white/[0.08] dark:border-white/[0.06] rounded-2xl p-8">
-              <div className="prose prose-lg dark:prose-invert max-w-none">
-                <div className="text-base leading-relaxed text-foreground/90">
-                  {post.content.includes('<') && post.content.includes('>') ? (
-                    parse(sanitizedHtml)
-                  ) : (
-                    <div className="whitespace-pre-wrap">{post.content}</div>
-                  )}
-                </div>
-              </div>
-            </section>
-          )}
-
-          {!post.content && (
-            <section className="bg-white/[0.02] backdrop-blur-xl border border-white/[0.08] dark:border-white/[0.06] rounded-2xl p-8">
-              <p className="text-muted-foreground text-center italic">
-                No description provided
-              </p>
-            </section>
+          {/* Content Section - Different styling for video vs text posts */}
+          {post.post_type === 'video' ? (
+            // Video posts: Enhanced glassmorphism styling for content below video
+            post.content && (
+              <section className="bg-white/[0.02] backdrop-blur-xl border border-white/[0.08] dark:border-white/[0.06] rounded-2xl p-8">
+                <PostContentRenderer
+                  content={post.content}
+                  className="prose prose-lg dark:prose-invert max-w-none prose-headings:text-foreground prose-p:text-foreground/90 prose-strong:text-foreground prose-em:text-foreground/80"
+                />
+              </section>
+            )
+          ) : (
+            // Text posts: Use same rendering as dedicated post pages
+            <PostContentRenderer content={post.content} />
           )}
         </div>
       </article>

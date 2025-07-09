@@ -25,7 +25,7 @@ export default function ChainContentParser({
   const router = useRouter();
 
   if (!mentions || mentions.length === 0) {
-    return <p className="whitespace-pre-wrap">{content}</p>;
+    return <p className="whitespace-pre-wrap break-words">{content}</p>;
   }
 
   const sortedMentions = [...mentions].sort((a, b) => a.offset - b.offset);
@@ -86,5 +86,5 @@ export default function ChainContentParser({
     );
   }
 
-  return <p className="whitespace-pre-wrap">{parts}</p>;
+  return <p className="whitespace-pre-wrap break-words">{parts}</p>;
 }

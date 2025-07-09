@@ -1,13 +1,11 @@
 'use client';
 
-import parse from 'html-react-parser';
-import DOMPurify from 'isomorphic-dompurify';
 import { Edit, Share2, MoreHorizontal } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useMemo } from 'react';
 
 import BookmarkButton from '@/components/app/posts/molecules/BookmarkButton';
+import PostContentRenderer from '@/components/app/posts/molecules/PostContentRenderer';
 import PostReactionButtons from '@/components/app/posts/molecules/PostReactionButtons';
 import PostViewTracker from '@/components/app/posts/molecules/PostViewTracker';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -20,7 +18,6 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { formatPostDate } from '@/lib/posts';
-import { transformImageUrls } from '@/lib/utils/transform-image-urls';
 
 import type {
   PostWithAuthorAndCollective,
@@ -54,14 +51,6 @@ export default function PostViewer({
   const initialUserReaction =
     (viewer.userReaction as 'like' | 'dislike' | null) ?? null;
   const initialBookmarked = viewer.isBookmarked;
-
-  const sanitizedHtml = useMemo(
-    () =>
-      DOMPurify.sanitize(transformImageUrls(post.content ?? ''), {
-        USE_PROFILES: { html: true },
-      }),
-    [post.content],
-  );
 
   return (
     <>
@@ -191,19 +180,7 @@ export default function PostViewer({
           </header>
 
           {/* Post Content */}
-          <div className="article-content">
-            {post.content ? (
-              // Check if content contains HTML tags
-              post.content.includes('<') && post.content.includes('>') ? (
-                parse(sanitizedHtml)
-              ) : (
-                // Render plain text with preserved line breaks
-                <div className="whitespace-pre-wrap">{post.content}</div>
-              )
-            ) : (
-              <p className="text-muted-foreground">*(No content)*</p>
-            )}
-          </div>
+          <PostContentRenderer content={post.content} />
         </div>
       </article>
     </>

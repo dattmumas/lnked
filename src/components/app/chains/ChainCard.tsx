@@ -119,6 +119,42 @@ export interface ChainCardProps {
   } | null;
 }
 
+// Format timestamp to compact format (Mon 15 2:30pm)
+function formatCompactTimestamp(timestamp: string): string {
+  try {
+    const date = new Date(timestamp);
+    const now = new Date();
+    const isToday = date.toDateString() === now.toDateString();
+
+    if (isToday) {
+      // For today, just show time (2:30pm)
+      return date
+        .toLocaleTimeString('en-US', {
+          hour: 'numeric',
+          minute: '2-digit',
+          hour12: true,
+        })
+        .toLowerCase();
+    } else {
+      // For other days, show Mon 15 2:30pm
+      const month = date.toLocaleDateString('en-US', { month: 'short' });
+      const day = date.getDate();
+      const time = date
+        .toLocaleTimeString('en-US', {
+          hour: 'numeric',
+          minute: '2-digit',
+          hour12: true,
+        })
+        .toLowerCase();
+
+      return `${month} ${day} ${time}`;
+    }
+  } catch {
+    // Fallback to original timestamp if parsing fails
+    return timestamp;
+  }
+}
+
 export default function ChainCard({
   item,
   currentUserId,
@@ -231,18 +267,18 @@ export default function ChainCard({
           {/* User info and metadata */}
           <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-3 min-w-0">
-                <h3 className="font-semibold text-base text-foreground truncate max-w-[180px]">
+              <div className="flex items-center gap-3 min-w-0 flex-1">
+                <h3 className="font-semibold text-base text-foreground truncate flex-shrink min-w-0">
                   {item.user.name}
                 </h3>
-                <span className="text-sm text-muted-foreground/80 truncate max-w-[120px]">
+                <span className="text-sm text-muted-foreground/80 truncate flex-shrink min-w-0">
                   @{item.user.username}
                 </span>
               </div>
 
-              <div className="flex items-center gap-3">
-                <time className="text-sm text-muted-foreground/70 font-medium">
-                  {item.timestamp}
+              <div className="flex items-center gap-3 flex-shrink-0">
+                <time className="text-xs text-muted-foreground/60 font-medium whitespace-nowrap">
+                  {formatCompactTimestamp(item.timestamp)}
                 </time>
 
                 {/* More menu with enhanced positioning */}
@@ -315,16 +351,18 @@ export default function ChainCard({
       <section className="px-6 pb-4">
         {/* Media carousel with enhanced styling - now above text */}
         {media && media.length > 0 && (
-          <div className="mb-4 -mx-2 overflow-hidden rounded-2xl">
+          <div className="mb-4 -mx-2 overflow-hidden rounded-2xl min-w-0">
             <ChainCarousel media={media} />
           </div>
         )}
 
-        <div className="prose prose-sm max-w-none">
-          <ChainContentParser
-            content={item.content}
-            mentions={item.meta?.references ?? []}
-          />
+        <div className="prose prose-sm dark:prose-invert max-w-none break-words overflow-hidden">
+          <div className="text-sm leading-relaxed text-foreground/90">
+            <ChainContentParser
+              content={item.content}
+              mentions={item.meta?.references ?? []}
+            />
+          </div>
         </div>
 
         {/* Link preview with modern design - remains below text */}
@@ -350,16 +388,16 @@ export default function ChainCard({
                 className="w-full h-48 object-cover group-hover:scale-[1.02] transition-transform duration-300"
               />
             )}
-            <div className="p-4 space-y-2">
-              <h4 className="font-semibold text-sm leading-snug line-clamp-2 text-foreground group-hover:text-accent transition-colors">
+            <div className="p-4 space-y-2 min-w-0">
+              <h4 className="font-semibold text-sm leading-snug line-clamp-2 text-foreground group-hover:text-accent transition-colors break-words">
                 {item.link_preview.title}
               </h4>
               {item.link_preview.description && (
-                <p className="text-sm text-muted-foreground/80 line-clamp-2 leading-relaxed">
+                <p className="text-sm text-muted-foreground/80 line-clamp-2 leading-relaxed break-words">
                   {item.link_preview.description}
                 </p>
               )}
-              <span className="text-xs text-muted-foreground/60 font-medium">
+              <span className="text-xs text-muted-foreground/60 font-medium truncate block">
                 {item.link_preview.site ??
                   new URL(item.link_preview.url).hostname}
               </span>
@@ -370,22 +408,27 @@ export default function ChainCard({
 
       {/* Action Bar with enhanced design */}
       <footer className="px-6 py-4 border-t border-white/[0.06] dark:border-white/[0.04]">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between min-w-0">
           {/* Primary actions */}
-          <div className="flex items-center gap-6">
+          <div className="flex items-center gap-1 sm:gap-2 md:gap-4 min-w-0 flex-1">
             <button
               type="button"
               onClick={handleToggleLike}
               className={cn(
-                'flex items-center gap-2 px-3 py-2 rounded-full transition-all duration-200',
+                'flex items-center gap-1 px-1.5 sm:px-2 md:px-3 py-1.5 rounded-full transition-all duration-200 min-w-0',
                 'hover:bg-accent/10 dark:hover:bg-accent/10',
                 isLiked
                   ? 'text-accent bg-accent/10'
                   : 'text-muted-foreground hover:text-accent',
               )}
             >
-              <ThumbsUp className={cn('w-4 h-4', isLiked && 'fill-current')} />
-              <span className="text-sm font-medium">
+              <ThumbsUp
+                className={cn(
+                  'w-3.5 sm:w-4 h-3.5 sm:h-4 flex-shrink-0',
+                  isLiked && 'fill-current',
+                )}
+              />
+              <span className="text-xs font-medium min-w-0 truncate">
                 {item.stats.likes + delta.like}
               </span>
             </button>
@@ -394,7 +437,7 @@ export default function ChainCard({
               type="button"
               onClick={handleToggleDislike}
               className={cn(
-                'flex items-center gap-2 px-3 py-2 rounded-full transition-all duration-200',
+                'flex items-center gap-1 px-1.5 sm:px-2 md:px-3 py-1.5 rounded-full transition-all duration-200 min-w-0',
                 'hover:bg-destructive/10 dark:hover:bg-destructive/10',
                 isDisliked
                   ? 'text-destructive bg-destructive/10'
@@ -402,9 +445,12 @@ export default function ChainCard({
               )}
             >
               <ThumbsDown
-                className={cn('w-4 h-4', isDisliked && 'fill-current')}
+                className={cn(
+                  'w-3.5 sm:w-4 h-3.5 sm:h-4 flex-shrink-0',
+                  isDisliked && 'fill-current',
+                )}
               />
-              <span className="text-sm font-medium">
+              <span className="text-xs font-medium min-w-0 truncate">
                 {item.stats.dislikes + delta.dislike}
               </span>
             </button>
@@ -413,7 +459,7 @@ export default function ChainCard({
               type="button"
               onClick={handleToggleRechain}
               className={cn(
-                'flex items-center gap-2 px-3 py-2 rounded-full transition-all duration-200',
+                'flex items-center gap-1 px-1.5 sm:px-2 md:px-3 py-1.5 rounded-full transition-all duration-200 min-w-0',
                 'hover:bg-green-500/10 dark:hover:bg-green-500/10',
                 isRechained
                   ? 'text-green-500 bg-green-500/10'
@@ -421,9 +467,12 @@ export default function ChainCard({
               )}
             >
               <Repeat
-                className={cn('w-4 h-4', isRechained && 'fill-current')}
+                className={cn(
+                  'w-3.5 sm:w-4 h-3.5 sm:h-4 flex-shrink-0',
+                  isRechained && 'fill-current',
+                )}
               />
-              <span className="text-sm font-medium">
+              <span className="text-xs font-medium min-w-0 truncate">
                 {item.stats.shares + delta.rechain}
               </span>
             </button>
@@ -432,18 +481,20 @@ export default function ChainCard({
               type="button"
               onClick={handleStartReply}
               className={cn(
-                'flex items-center gap-2 px-3 py-2 rounded-full transition-all duration-200',
+                'flex items-center gap-1 px-1.5 sm:px-2 md:px-3 py-1.5 rounded-full transition-all duration-200 min-w-0',
                 'text-muted-foreground hover:text-accent',
                 'hover:bg-accent/10 dark:hover:bg-accent/10',
               )}
             >
-              <Reply className="w-4 h-4" />
-              <span className="text-sm font-medium">{item.stats.replies}</span>
+              <Reply className="w-3.5 sm:w-4 h-3.5 sm:h-4 flex-shrink-0" />
+              <span className="text-xs font-medium min-w-0 truncate">
+                {item.stats.replies}
+              </span>
             </button>
           </div>
 
           {/* Secondary actions */}
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0 ml-2">
             {onOpenThread && (
               <button
                 type="button"
@@ -452,12 +503,14 @@ export default function ChainCard({
                   onOpenThread();
                 }}
                 className={cn(
-                  'text-sm font-medium text-accent hover:text-accent/80',
+                  'text-xs font-medium text-accent hover:text-accent/80',
                   'underline underline-offset-2 transition-colors duration-150',
                   'focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/50 rounded-sm',
+                  'whitespace-nowrap px-1',
                 )}
               >
-                View Thread
+                <span className="hidden md:inline">View Thread</span>
+                <span className="md:hidden">Thread</span>
               </button>
             )}
 
@@ -465,13 +518,15 @@ export default function ChainCard({
               type="button"
               onClick={handleShare}
               className={cn(
-                'flex items-center gap-2 px-3 py-2 rounded-full transition-all duration-200',
+                'flex items-center gap-1 px-1.5 sm:px-2 py-1.5 rounded-full transition-all duration-200 min-w-0',
                 'text-muted-foreground hover:text-accent',
                 'hover:bg-accent/10 dark:hover:bg-accent/10',
               )}
             >
-              <Share2 className="w-4 h-4" />
-              <span className="text-sm font-medium">{item.stats.shares}</span>
+              <Share2 className="w-3.5 sm:w-4 h-3.5 sm:h-4 flex-shrink-0" />
+              <span className="text-xs font-medium min-w-0 truncate">
+                {item.stats.shares}
+              </span>
             </button>
           </div>
         </div>
