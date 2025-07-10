@@ -487,18 +487,23 @@ export async function createPost(
 
     // Create post-collective associations with conflict handling
     if (selected_collectives.length > 0) {
-      const postCollectiveInserts = selected_collectives.map(
-        (collectiveId) => ({
-          post_id: newPost.id,
-          collective_id: collectiveId,
-          shared_by: user.id,
-          status:
-            dbStatus === 'active' ? ('published' as const) : ('draft' as const),
-          shared_at: new Date().toISOString(),
-          display_order: 0,
-          metadata: {},
-        }),
-      );
+      const postCollectiveInserts: Array<{
+        post_id: string;
+        collective_id: string;
+        shared_by: string;
+        status: 'published' | 'pending_approval' | 'rejected';
+        shared_at: string;
+        display_order: number;
+        metadata: Record<string, never>;
+      }> = validCollectives.map((collective, index) => ({
+        post_id: newPost.id,
+        collective_id: collective.id,
+        shared_by: user.id,
+        status: 'published' as const,
+        shared_at: new Date().toISOString(),
+        display_order: index + 1,
+        metadata: {},
+      }));
 
       const { error: associationError } = await supabase
         .from('post_collectives')

@@ -54,17 +54,18 @@ The main layout uses a flexbox container to arrange its children. The `GlobalSid
 
 ---
 
-## 3. The Global Sidebar (`GlobalSidebar.tsx`)
+## 3. The Contextual Global Sidebar (`ContextualGlobalSidebar.tsx`)
 
-- **File**: `src/components/app/nav/GlobalSidebar.tsx`
+- **File**: `src/components/app/nav/ContextualGlobalSidebar.tsx`
 - **Role**: A highly interactive, expandable primary navigation menu that provides access to all major sections of the application. It is hidden on mobile and on the dedicated `/chat` route.
 
 ### Key Features:
 
 - **Expand on Hover**: The sidebar is collapsed by default, showing only icons. On mouse enter, it expands smoothly to reveal text labels, improving usability without permanently taking up screen real estate. This is managed with `useState` and `setTimeout` for a delayed collapse.
-- **Dynamic Content**:
-  - **Collectives Section**: It asynchronously fetches the user's collective memberships using the `useCollectiveMemberships` hook. It displays a list of the user's collectives and includes a link to create a new one. An "All Collectives" button opens a `CollectivesTableModal` for managing all memberships.
-  - **Active Route Highlighting**: Uses the `usePathname` hook to determine the current route and applies an "active" style to the corresponding navigation link.
+- **Context-Aware Navigation**: The sidebar is subscribed to the `useTenantStore` to be aware of the user's active tenant.
+  - The "Profile" link will point to the collective's public page (`/collectives/[slug]`) if a collective tenant is active, or to the user's own profile (`/profile`) if a personal tenant is active.
+  - Similarly, the "Settings" link will dynamically point to the collective's settings (`/settings/collectives/[slug]`) or the user's personal settings (`/settings/user`).
+- **Active Route Highlighting**: Uses the `usePathname` hook to determine the current route and applies an "active" style to the corresponding navigation link. This logic has been updated to correctly handle the dynamic nature of the Profile and Settings links.
 - **Primary Actions**: Includes prominent "Write Post" and "Video Post" buttons at the bottom for easy access to content creation.
 
 ---

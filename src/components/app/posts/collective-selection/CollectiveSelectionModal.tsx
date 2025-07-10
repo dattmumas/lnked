@@ -3,7 +3,6 @@
 import { X, CheckCircle2 } from 'lucide-react';
 import React, { useCallback, useState, useEffect } from 'react';
 
-
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useCollectiveMemberships } from '@/hooks/posts/useCollectiveMemberships';

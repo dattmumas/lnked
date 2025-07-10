@@ -314,6 +314,9 @@ async function fetchProfilePosts(
         id,
         name,
         slug
+      ),
+      video_assets:video_assets!posts_video_id_fkey (
+        mux_playback_id
       )
     `,
     )
@@ -344,6 +347,14 @@ async function fetchProfilePosts(
   }
 
   const posts: ProfilePost[] = (Array.isArray(data) ? data : []).map((post) => {
+    const videoAsset = Array.isArray(post.video_assets)
+      ? post.video_assets[0]
+      : post.video_assets;
+    const thumbnailUrl =
+      post.post_type === 'video' && videoAsset?.mux_playback_id
+        ? `https://image.mux.com/${videoAsset.mux_playback_id}/thumbnail.jpg`
+        : post.thumbnail_url;
+
     const readTime =
       exists(post.content) &&
       typeof post.content === 'string' &&
@@ -359,7 +370,7 @@ async function fetchProfilePosts(
       title: post.title,
       content: post.content,
       subtitle: post.subtitle,
-      thumbnailUrl: post.thumbnail_url,
+      thumbnailUrl,
       postType: post.post_type,
       status: post.status,
       isPublic: post.is_public,
@@ -560,12 +571,12 @@ export function useProfilePosts(
     },
     staleTime: POSTS_STALE_MS,
     gcTime: POSTS_GC_MS,
-    enabled: exists(username),
+    enabled: Boolean(username),
     retry: (failureCount, error) => {
       // Don't retry on certain errors
       if (error instanceof NotFoundError || error instanceof ProfileError) {
         if (
-          exists(error.message) &&
+          error.message &&
           (error.message.includes('MISSING_USERNAME') ||
             error.message.includes('USER_LOOKUP_FAILED'))
         ) {
@@ -576,17 +587,20 @@ export function useProfilePosts(
     },
   });
 
+  // Flatten the pages into a single array of posts
+  const posts = query.data?.pages.flatMap((page) => page.data) ?? [];
+
   return {
-    data: query.data?.pages?.[0], // For now, return first page
+    data: posts,
     fetchNextPage: () => {
       query.fetchNextPage().catch((error) => {
         console.error('Failed to fetch next page:', error);
       });
     },
-    hasNextPage: query.hasNextPage,
+    hasNextPage: query.hasNextPage ?? false,
     isFetchingNextPage: query.isFetchingNextPage,
     isLoading: query.isLoading,
-    error: query.error ?? undefined,
+    error: query.error ?? null,
   };
 }
 

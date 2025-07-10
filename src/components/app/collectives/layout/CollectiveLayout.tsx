@@ -13,43 +13,42 @@ import type {
 } from '@/lib/data-loaders/collective-loader';
 
 // 🎓 Import Shared Types: Use the exported interfaces from components
-
-// 🎓 Data Transformation: Convert server data to component-specific formats
-// This demonstrates how SSR data flows through the component hierarchy
-
-// Transform CollectivePost to TransformedPost (for FeaturedMedia)
-function transformToFeaturedPost(post: CollectivePost): TransformedPost {
-  return {
-    id: post.id,
-    title: post.title,
-    subtitle: post.subtitle,
-    thumbnail_url: post.thumbnail_url,
-    post_type: post.post_type,
-    published_at: post.published_at,
-    author:
-      post.author_profile?.full_name || post.author_profile?.username || null,
-  };
-}
-
-// Transform CollectivePost to ArticlePost (for ArticleList)
-function transformToArticlePost(post: CollectivePost): ArticlePost {
-  return {
-    id: post.id,
-    title: post.title,
-    subtitle: post.subtitle,
-    published_at: post.published_at,
-    post_type: post.post_type,
-    like_count: post.like_count,
-    view_count: post.view_count,
-    author:
-      post.author_profile?.full_name || post.author_profile?.username || null,
-  };
-}
-
+// for better maintainability.
 interface CollectiveLayoutProps {
   collectiveSlug: string;
   initialData?: CollectivePageData;
 }
+
+/**
+ * Transforms a CollectivePost from the data loader into an ArticlePost
+ * suitable for the ArticleList component.
+ */
+const transformToArticlePost = (post: CollectivePost): ArticlePost => ({
+  id: post.id,
+  title: post.title,
+  subtitle: post.subtitle,
+  published_at: post.published_at,
+  post_type: post.post_type,
+  like_count: post.like_count,
+  view_count: post.view_count,
+  author:
+    post.author_profile?.full_name || post.author_profile?.username || null,
+});
+
+/**
+ * Transforms a CollectivePost from the data loader into a TransformedPost
+ * suitable for the FeaturedMedia component.
+ */
+const transformToFeaturedPost = (post: CollectivePost): TransformedPost => ({
+  id: post.id,
+  title: post.title,
+  subtitle: post.subtitle,
+  thumbnail_url: post.thumbnail_url,
+  post_type: post.post_type,
+  published_at: post.published_at,
+  author:
+    post.author_profile?.full_name || post.author_profile?.username || null,
+});
 
 export function CollectiveLayout({
   collectiveSlug,
@@ -86,23 +85,21 @@ export function CollectiveLayout({
       </div>
 
       {/* Right Column - 60% on desktop */}
-      <div className="content-column space-y-6">
-        {/* 🎓 Future Enhancement: AuthorCarousel can get server data */}
+      <div className="main-content-column space-y-6">
+        {/* 🎓 SSR: FeaturedMedia for mobile (different position in grid) */}
+        <FeaturedMedia
+          collectiveSlug={collectiveSlug}
+          initialFeaturedPosts={transformedFeaturedPosts}
+          className="lg:hidden"
+        />
+
+        {/* 🎓 SSR: AuthorCarousel gets member data from server */}
         <AuthorCarousel collectiveSlug={collectiveSlug} />
 
         {/* 🎓 SSR: ArticleList gets recent posts from server */}
         <ArticleList
           collectiveSlug={collectiveSlug}
           initialPosts={transformedRecentPosts}
-        />
-      </div>
-
-      {/* Mobile Featured Media - Shows below carousel on smaller screens */}
-      <div className="mobile-featured lg:hidden col-span-1">
-        {/* 🎓 SSR: Same featured posts data for mobile */}
-        <FeaturedMedia
-          collectiveSlug={collectiveSlug}
-          initialFeaturedPosts={transformedFeaturedPosts}
         />
       </div>
     </div>

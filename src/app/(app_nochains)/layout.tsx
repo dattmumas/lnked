@@ -1,59 +1,43 @@
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import { redirect } from 'next/navigation';
 import React from 'react';
+import { Toaster } from 'sonner';
 
-import { GlobalSidebar } from '@/components/app/nav/GlobalSidebar';
+import { ContextualGlobalSidebar } from '@/components/app/nav/ContextualGlobalSidebar';
 import ModernNavbar from '@/components/ModernNavbar';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { UserProvider, UserProfile } from '@/providers/UserContext';
 
-// TODO: Build out the shared authenticated layout here.
-// 1. Fetch `user` & `profile` with `createServerSupabaseClient`.
-// 2. Render global chrome (navbar, GlobalSidebar, RightSidebar).
-// 3. Expose `user` / `profile` via context or props.
-// 4. Wrap children appropriately.
-
-export default async function AppLayout({
+export default async function AppNoChainsLayout({
   children,
 }: {
   children: React.ReactNode;
-}): Promise<React.ReactElement> {
+}) {
   const supabase = await createServerSupabaseClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // Redirect unauthenticated visitors to sign-in
-  if (user === null) {
-    redirect('/sign-in?redirect=/');
+  if (!user) {
+    redirect('/sign-in');
   }
 
-  let profile: UserProfile | null = null;
-  if (user !== null) {
-    const { data } = await supabase
-      .from('users')
-      .select('id, username, full_name, avatar_url, bio')
-      .eq('id', user.id)
-      .single();
-    profile = (data ?? null) as UserProfile | null;
-  }
+  const { data: profile } = await supabase
+    .from('users')
+    .select('*')
+    .eq('id', user.id)
+    .single();
 
   return (
-    <UserProvider user={user} profile={profile}>
-      <SpeedInsights />
-      <div className="flex min-h-screen flex-col">
-        {/* Global navbar (desktop & tablet) */}
-        <header className="hidden md:block shrink-0 sticky top-0 z-50 bg-background backdrop-blur-md border-b border-border/50">
-          <ModernNavbar />
-        </header>
-
-        <div className="flex flex-1">
-          {/* Global sidebar is fixed ‑ no space in normal flow. Offset main content */}
-          <GlobalSidebar />
-
-          {/* Main content area – push right by collapsed sidebar width on md+ */}
-          <main className="flex-1 md:ml-16 lg:ml-16 xl:ml-16">{children}</main>
-        </div>
+    <UserProvider user={user} profile={profile as UserProfile | null}>
+      <div className="min-h-screen bg-background font-sans antialiased">
+        <ModernNavbar />
+        <main className="flex">
+          <ContextualGlobalSidebar />
+          <div className="flex-1 md:ml-16">{children}</div>
+        </main>
+        <Toaster />
+        <SpeedInsights />
       </div>
     </UserProvider>
   );

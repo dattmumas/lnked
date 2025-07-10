@@ -96,7 +96,7 @@ export function TenantContextSwitcher({
 
         <DropdownMenuContent align="start" className="w-72">
           <DropdownMenuLabel className="text-xs text-muted-foreground uppercase tracking-wide">
-            🔄 Switch Space
+            Collectives
           </DropdownMenuLabel>
 
           {/* Current Tenant (highlighted) */}

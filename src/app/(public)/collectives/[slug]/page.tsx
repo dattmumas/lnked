@@ -1,21 +1,37 @@
-import { CollectiveLayout } from '@/components/app/collectives/layout/CollectiveLayout';
-import { loadCollectiveData } from '@/lib/data-loaders/collective-loader';
+import { notFound } from 'next/navigation';
+import React from 'react';
 
-// Enable ISR with 10-minute revalidation for collective pages
-// Collective data changes less frequently than general content
-export const revalidate = 600; // 10 minutes
+import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { CollectiveProvider } from '@/providers/CollectiveProvider';
+
+import { CollectivePageClient } from './CollectivePageClient';
+
+export const revalidate = 600; // Revalidate every 10 minutes
 
 export default async function Page({
   params,
 }: {
   params: Promise<{ slug: string }>;
-}): Promise<React.JSX.Element> {
+}): Promise<React.ReactElement> {
   const { slug } = await params;
+  const supabase = await createServerSupabaseClient();
 
-  // Load collective data server-side
-  const collectiveData = await loadCollectiveData(slug);
+  // Verify collective exists
+  const { data: collective } = await supabase
+    .from('collectives')
+    .select('id')
+    .eq('slug', slug)
+    .single();
+
+  if (!collective) {
+    notFound();
+  }
 
   return (
-    <CollectiveLayout collectiveSlug={slug} initialData={collectiveData} />
+    <CollectiveProvider slug={slug}>
+      <main className="min-h-screen bg-background text-foreground">
+        <CollectivePageClient slug={slug} />
+      </main>
+    </CollectiveProvider>
   );
 }

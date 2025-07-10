@@ -1,192 +1,103 @@
-'use client';
-
+import { Users, Newspaper, Heart, Eye } from 'lucide-react';
 import Image from 'next/image';
-import React, { useCallback, useEffect, useState } from 'react';
+import Link from 'next/link';
+import React from 'react';
 
 import FollowCollectiveButton from '@/components/FollowCollectiveButton';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import {
-  useCollectiveData,
-  useCollectiveStats,
-} from '@/hooks/collectives/useCollectiveData';
-import supabase from '@/lib/supabase/browser';
+import { createServerSupabaseClient } from '@/lib/supabase/server';
 
 import type { CollectiveData } from '@/lib/data-loaders/collective-loader';
-
-// Constants
-const MAX_TAGS_DISPLAY = 3;
 
 interface CollectiveHeroProps {
   collectiveSlug: string;
   initialData: CollectiveData | null;
 }
 
-export function CollectiveHero({
-  collectiveSlug,
+export async function CollectiveHero({
   initialData,
-}: CollectiveHeroProps): React.ReactElement {
-  const { data: collective, isLoading } = useCollectiveData(
-    collectiveSlug,
-    initialData ? { initialData } : undefined,
-  );
-  const { data: stats } = useCollectiveStats(collective?.id ?? '', {
-    enabled: Boolean(collective?.id),
-    ...(initialData
-      ? {
-          initialData: {
-            memberCount: initialData.member_count,
-            followerCount: 0,
-          },
-        }
-      : {}),
-  }) as { data: { memberCount: number; followerCount: number } | undefined };
-  const [currentUser, setCurrentUser] = useState<{ id: string } | undefined>(
-    undefined,
-  );
-  const [isLoadingUser, setIsLoadingUser] = useState(true);
-
-  const fetchUser = useCallback(async (): Promise<void> => {
-    const client = supabase;
-    const {
-      data: { user },
-    } = await client.auth.getUser();
-    setCurrentUser(user ?? undefined);
-    setIsLoadingUser(false);
-  }, []);
-
-  useEffect((): void => {
-    void fetchUser();
-  }, [fetchUser]);
-
-  if (isLoading && !initialData) {
-    return (
-      <div className="collective-meta-card rounded-lg border bg-card text-card-foreground shadow-sm p-6 animate-pulse">
-        <div className="flex flex-col items-center text-center space-y-4">
-          <div className="w-32 h-32 rounded-full bg-muted"></div>
-          <div className="space-y-2">
-            <div className="h-8 w-48 bg-muted rounded"></div>
-            <div className="h-4 w-32 bg-muted rounded"></div>
-          </div>
-        </div>
-      </div>
-    );
+}: CollectiveHeroProps): Promise<React.ReactElement> {
+  if (!initialData) {
+    return <div>Collective not found</div>;
   }
 
-  if (!collective) {
-    return (
-      <div className="collective-meta-card rounded-lg border bg-card text-card-foreground shadow-sm p-6">
-        <div className="text-center text-muted-foreground">
-          Collective not found
-        </div>
-      </div>
-    );
+  const supabase = await createServerSupabaseClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  let userRole: string | null = null;
+  if (user) {
+    const { data: member } = await supabase
+      .from('collective_members')
+      .select('role')
+      .eq('collective_id', initialData.id)
+      .eq('member_id', user.id)
+      .single();
+    userRole = member?.role || null;
   }
 
-  const isOwner = currentUser?.id === collective.owner_id;
+  const canManage = userRole === 'owner' || userRole === 'admin';
+
+  const stats = [
+    {
+      icon: Users,
+      label: 'Members',
+      value: initialData.member_count || 0,
+    },
+    {
+      icon: Newspaper,
+      label: 'Posts',
+      value: initialData.post_count || 0,
+    },
+    { icon: Heart, label: 'Likes', value: 'N/A' }, // Placeholder
+    { icon: Eye, label: 'Views', value: 'N/A' }, // Placeholder
+  ];
 
   return (
-    <div className="collective-meta-card rounded-lg border bg-card text-card-foreground shadow-sm p-6">
-      <div className="flex flex-col items-center text-center space-y-4">
-        {/* Logo */}
-        <div className="w-32 h-32 rounded-full overflow-hidden border-2 border-accent/20">
-          {collective.logo_url !== undefined &&
-          collective.logo_url !== null &&
-          collective.logo_url.length > 0 ? (
+    <div className="collective-hero bg-card p-6 rounded-lg shadow-md">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center space-x-4">
+          {initialData.logo_url && (
             <Image
-              src={collective.logo_url}
-              alt={`${collective.name} logo`}
-              width={128}
-              height={128}
-              className="w-full h-full object-cover"
+              src={initialData.logo_url}
+              alt={`${initialData.name} logo`}
+              width={80}
+              height={80}
+              className="rounded-full"
             />
-          ) : (
-            <div className="w-full h-full bg-muted flex items-center justify-center">
-              <span className="text-4xl">🤝</span>
-            </div>
           )}
-        </div>
-
-        {/* Name and Tagline */}
-        <div className="space-y-2">
-          <h1 className="text-3xl font-bold tracking-tight text-foreground font-serif">
-            {collective.name}
-            <span className="text-accent">.</span>
-          </h1>
-
-          {collective.description !== undefined &&
-            collective.description !== null &&
-            collective.description.length > 0 && (
-              <p className="text-muted-foreground max-w-sm text-sm leading-relaxed">
-                {collective.description}
-              </p>
-            )}
-
-          {/* Owner info */}
-          {collective.owner?.full_name !== undefined &&
-            collective.owner?.full_name !== null &&
-            collective.owner.full_name.length > 0 && (
-              <p className="text-xs text-muted-foreground">
-                by {collective.owner.full_name}
-              </p>
-            )}
-        </div>
-
-        {/* Stats */}
-        <div className="flex items-center gap-4 text-sm text-muted-foreground">
-          <span>
-            {stats?.followerCount !== undefined &&
-            stats.followerCount !== null &&
-            stats.followerCount >= 0
-              ? stats.followerCount
-              : 0}{' '}
-            followers
-          </span>
-          <span>•</span>
-          <span>
-            {stats?.memberCount !== undefined &&
-            stats.memberCount !== null &&
-            stats.memberCount >= 0
-              ? stats.memberCount
-              : 0}{' '}
-            members
-          </span>
-        </div>
-
-        {/* Tags */}
-        {collective.tags !== undefined &&
-          collective.tags !== null &&
-          collective.tags.length > 0 && (
-            <div className="flex flex-wrap justify-center gap-2 max-w-sm">
-              {collective.tags.slice(0, MAX_TAGS_DISPLAY).map((tag) => (
-                <Badge key={tag} variant="secondary" className="text-xs">
-                  #{tag}
-                </Badge>
-              ))}
-            </div>
-          )}
-
-        {/* Actions */}
-        {!isLoadingUser && (
-          <div className="flex flex-col gap-2 w-full max-w-xs">
-            {!isOwner && currentUser !== undefined && (
-              <FollowCollectiveButton
-                targetCollectiveId={collective.id}
-                targetCollectiveName={collective.name}
-                initialIsFollowing={false}
-                currentUserId={currentUser.id}
-              />
-            )}
-
-            {isOwner && (
-              <Button variant="outline" size="sm" asChild>
-                <a href={`/collectives/${collective.slug}/settings`}>
-                  Manage Collective
-                </a>
-              </Button>
-            )}
+          <div>
+            <h1 className="text-2xl font-bold">{initialData.name}</h1>
+            <p className="text-sm text-muted-foreground">@{initialData.slug}</p>
           </div>
-        )}
+        </div>
+        <div className="flex space-x-2">
+          {canManage ? (
+            <Link href={`/settings/collectives/${initialData.slug}`}>
+              <Button>Manage</Button>
+            </Link>
+          ) : (
+            user && (
+              <FollowCollectiveButton
+                targetCollectiveId={initialData.id}
+                targetCollectiveName={initialData.name}
+                initialIsFollowing={false} // This should be fetched ideally
+                currentUserId={user.id}
+              />
+            )
+          )}
+        </div>
+      </div>
+      <p className="text-muted-foreground mb-4">{initialData.description}</p>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {stats.map((stat) => (
+          <div key={stat.label} className="text-center">
+            <stat.icon className="mx-auto h-6 w-6 mb-1" />
+            <p className="font-semibold">{stat.value}</p>
+            <p className="text-xs text-muted-foreground">{stat.label}</p>
+          </div>
+        ))}
       </div>
     </div>
   );

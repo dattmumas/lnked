@@ -17,6 +17,7 @@ interface FollowButtonProps {
   targetUserName: string;
   initialIsFollowing: boolean;
   currentUserId?: string | undefined;
+  targetType?: 'user' | 'collective';
 }
 
 export default function FollowButton({
@@ -24,6 +25,7 @@ export default function FollowButton({
   targetUserName,
   initialIsFollowing,
   currentUserId: initialCurrentUserId,
+  targetType = 'user',
 }: FollowButtonProps): React.ReactElement | undefined {
   const router = useRouter();
   const pathname = usePathname();
@@ -86,7 +88,7 @@ export default function FollowButton({
       const { data: rpcData, error } = await supabase.rpc('is_following', {
         follower_user_id: actualCurrentUserId,
         target_id: targetUserId,
-        target_type: 'user',
+        target_type: targetType,
       });
 
       if (error !== undefined && error !== null) {
@@ -107,7 +109,7 @@ export default function FollowButton({
     } catch (err: unknown) {
       console.error('Error in verifyFollowStatus:', err);
     }
-  }, [actualCurrentUserId, targetUserId, isFollowing, supabase]);
+  }, [actualCurrentUserId, targetUserId, isFollowing, supabase, targetType]);
 
   const handleVerifyFollowStatus = useCallback((): void => {
     void verifyFollowStatus();

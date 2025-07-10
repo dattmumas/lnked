@@ -28,6 +28,23 @@ export interface SocialLinks {
   location?: string;
 }
 
+export interface Collective {
+  id: string;
+  name: string;
+  slug: string;
+  description: string | null;
+  logo_url: string | null;
+  cover_image_url: string | null;
+  is_public: boolean;
+  created_at: string;
+  follower_count?: number;
+}
+
+export interface CollectiveMetrics {
+  memberCount: number;
+  postCount: number;
+}
+
 // Profile metrics and counts
 export interface ProfileMetrics {
   followerCount: number;
@@ -254,6 +271,12 @@ export interface UseProfileMetricsReturn {
   error: Error | undefined;
 }
 
+export interface UseCollectiveMetricsReturn {
+  data: CollectiveMetrics | undefined;
+  isLoading: boolean;
+  error: Error | null;
+}
+
 export interface UseFollowStatusReturn {
   data: { isFollowing: boolean } | undefined;
   isLoading: boolean;
@@ -261,12 +284,12 @@ export interface UseFollowStatusReturn {
 }
 
 export interface UseProfilePostsReturn {
-  data: PaginatedResponse<ProfilePost> | undefined;
+  data: ProfilePost[];
   fetchNextPage: () => void;
   hasNextPage: boolean;
   isFetchingNextPage: boolean;
   isLoading: boolean;
-  error: Error | undefined;
+  error: Error | null;
 }
 
 export interface UseSocialFeedReturn {

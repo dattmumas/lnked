@@ -1,227 +1,43 @@
 import { notFound } from 'next/navigation';
 
-import { ContentArea } from '@/components/app/profile/content/ContentArea';
-import { ProfileHero } from '@/components/app/profile/hero/ProfileHero';
-import {
-  ProfileLayout,
-  ProfileContentGrid,
-  ProfileHeroContainer,
-  SocialSidebarContainer,
-  ContentAreaContainer,
-} from '@/components/app/profile/layout/ProfileLayout';
-import { SocialSidebar } from '@/components/app/profile/social/SocialSidebar';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
+
+import { ProfilePageClient } from './ProfilePageClient';
 
 import type { Database } from '@/lib/database.types';
 
 type PostRow = Database['public']['Tables']['posts']['Row'];
 
-// Enable ISR with 5-minute revalidation for profile pages
-// Profile data may change more frequently than collective data
 export const revalidate = 300; // 5 minutes
 
 export default async function ProfilePage({
   params,
-  searchParams,
 }: {
   params: Promise<{ username: string }>;
-  searchParams: Promise<{ q?: string }>;
 }): Promise<React.JSX.Element> {
   const { username } = await params;
-  const { q } = await searchParams;
   const supabase = await createServerSupabaseClient();
 
-  // Server-side user verification for basic access control
   const {
     data: { user: authUser },
   } = await supabase.auth.getUser();
 
-  // Basic profile existence check
-  let profile;
-  if (username !== null && username !== undefined) {
-    const { data: profileData } = await supabase
-      .from('users')
-      .select('id, username, full_name, bio, avatar_url, tags')
-      .eq('username', username)
-      .single();
+  const { data: profileData } = await supabase
+    .from('users')
+    .select('id')
+    .eq('username', username)
+    .single();
 
-    if (profileData !== null) {
-      profile = profileData;
-    } else {
-      // If username lookup failed, try by ID (backward compatibility)
-      const { data: idProfileData, error: idError } = await supabase
-        .from('users')
-        .select('id, username, full_name, bio, avatar_url, tags')
-        .eq('id', username)
-        .single();
-
-      profile = idProfileData;
-      if (idError !== null || profile === null) {
-        notFound();
-      }
-    }
-  }
-
-  if (profile === null || profile === undefined) {
+  if (!profileData) {
     notFound();
   }
 
-  // Get follower and subscriber counts using optimized queries
-  const [
-    { count: _followerCount }, // eslint-disable-line @typescript-eslint/no-unused-vars
-    { count: _subscriberCount }, // eslint-disable-line @typescript-eslint/no-unused-vars
-    { data: followData },
-  ] = await Promise.all([
-    // Get follower count using the updated table structure
-    supabase
-      .from('follows')
-      .select('*', { count: 'exact', head: true })
-      .eq('following_id', profile.id)
-      .eq('following_type', 'user'),
-    // Get subscriber count
-    supabase
-      .from('subscriptions')
-      .select('*', { count: 'exact', head: true })
-      .eq('target_entity_type', 'user')
-      .eq('target_entity_id', profile.id)
-      .eq('status', 'active'),
-    // Check if current user is following this profile (only if authenticated)
-    authUser !== null && authUser !== undefined
-      ? supabase
-          .from('follows')
-          .select('*')
-          .eq('follower_id', authUser.id)
-          .eq('following_id', profile.id)
-          .eq('following_type', 'user')
-          .maybeSingle()
-      : Promise.resolve({ data: undefined }),
-  ]);
-
-  const _isFollowing = Boolean(followData); // eslint-disable-line no-underscore-dangle, @typescript-eslint/no-unused-vars
-
-  let postsQuery = supabase
-    .from('posts')
-    .select('*')
-    .eq('author_id', profile.id)
-    .order('published_at', { ascending: false });
-
-  const { data: featuredData } = await supabase
-    .from('featured_posts')
-    .select('post_id')
-    .eq('owner_id', profile.id)
-    .eq('owner_type', 'user')
-    .maybeSingle();
-
-  let pinnedPost: PostRow | undefined = undefined;
-  if (featuredData?.post_id !== null && featuredData?.post_id !== undefined) {
-    const { data } = await supabase
-      .from('posts')
-      .select('*')
-      .eq('id', featuredData.post_id)
-      .maybeSingle<PostRow>();
-    if (data !== null) pinnedPost = data;
-    postsQuery = postsQuery.neq('id', featuredData.post_id);
-  }
-
-  const isOwner = authUser?.id === profile.id;
-  // TODO: Fix subscription status check for user profiles
-  // const subscriptionStatus = await getSubscriptionStatus('user', profile.id);
-  // const isSubscribed = subscriptionStatus?.isSubscribed;
-  const isSubscribed = false; // Temporarily disabled
-
-  if (isOwner) {
-    // Owners can see all their posts
-  } else if (isSubscribed) {
-    postsQuery = postsQuery.not('published_at', 'is', null);
-  } else {
-    postsQuery = postsQuery
-      .eq('is_public', true)
-      .not('published_at', 'is', null);
-  }
-
-  if (q !== null && q !== undefined && q.trim().length > 0) {
-    postsQuery = postsQuery.textSearch('tsv', q, {
-      type: 'websearch',
-    });
-  }
-
-  const { data: postsData, error: postsError } = (await postsQuery) as {
-    data: PostRow[] | null;
-    error: unknown;
-  };
-
-  if (
-    postsError !== null &&
-    typeof postsError === 'object' &&
-    'message' in postsError
-  ) {
-    console.error(
-      'Error fetching posts for user',
-      username,
-      (postsError as { message: string }).message,
-    );
-  }
-
-  const _posts = // eslint-disable-line no-underscore-dangle, @typescript-eslint/no-unused-vars
-    postsData?.map((p) => ({
-      ...p,
-      like_count: p.like_count ?? 0,
-      dislike_count: p.dislike_count ?? 0,
-      status: p.status ?? 'draft',
-      tsv: p.tsv ?? undefined,
-      view_count: p.view_count ?? 0,
-      published_at: p.published_at ?? undefined,
-      current_user_has_liked: undefined,
-    })) ?? [];
-
-  const _pinned = pinnedPost !== null && // eslint-disable-line no-underscore-dangle, @typescript-eslint/no-unused-vars
-    pinnedPost !== undefined && {
-      ...pinnedPost,
-      like_count: pinnedPost.like_count ?? 0,
-      dislike_count: pinnedPost.dislike_count ?? 0,
-      status: pinnedPost.status ?? 'draft',
-      tsv: pinnedPost.tsv ?? undefined,
-      view_count: pinnedPost.view_count ?? 0,
-      published_at: pinnedPost.published_at ?? undefined,
-      current_user_has_liked: undefined,
-    };
-
-  type SubscriptionTier = Database['public']['Tables']['prices']['Row'];
-  let _tiers: SubscriptionTier[] = []; // eslint-disable-line no-underscore-dangle
-  const defaultPriceId = process.env['NEXT_PUBLIC_STRIPE_DEFAULT_PRICE_ID'];
-  if (defaultPriceId !== null && defaultPriceId !== undefined) {
-    const { data: price } = (await supabase
-      .from('prices')
-      .select('id, unit_amount, currency, interval, description')
-      .eq('id', defaultPriceId)
-      .maybeSingle()) as { data: SubscriptionTier | null };
-    if (price !== null) _tiers = [price]; // eslint-disable-line @typescript-eslint/no-unused-vars
-  }
-
   return (
-    <ProfileLayout
-      username={
-        profile.username !== null && profile.username !== undefined
-          ? profile.username
-          : username
-      }
-    >
-      <ProfileContentGrid>
-        {/* Profile Hero Section - 65% width on desktop */}
-        <ProfileHeroContainer>
-          <ProfileHero />
-        </ProfileHeroContainer>
-
-        {/* Social Sidebar - 35% width on desktop */}
-        <SocialSidebarContainer>
-          <SocialSidebar />
-        </SocialSidebarContainer>
-
-        {/* Content Area - Full width below hero and sidebar */}
-        <ContentAreaContainer>
-          <ContentArea />
-        </ContentAreaContainer>
-      </ProfileContentGrid>
-    </ProfileLayout>
+    <main className="min-h-screen bg-background text-foreground">
+      <ProfilePageClient
+        username={username}
+        {...(authUser?.id && { currentUserId: authUser.id })}
+      />
+    </main>
   );
 }

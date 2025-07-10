@@ -1,23 +1,18 @@
 import React from 'react';
 
-// TODO: Implement fetching and applying collective-specific theme values (Rule 5.2)
-// Example: Fetch collective data by slug, extract theme (e.g., primaryColor, coverImageUrl)
-// and apply them as CSS variables to a wrapper div or via a <style> tag.
+// This layout will serve as the root for the new collective profile design.
+// It ensures that the styles and structure we define here do not leak into
+// other parts of the application.
 
-export default async function CollectiveLayout({
+export default function CollectiveProfileLayout({
   children,
-  params,
 }: {
   children: React.ReactNode;
-  params: Promise<{ slug: string }>;
-}): Promise<React.ReactNode> {
-  // Extract slug parameter (for future theme implementation)
-  await params;
-
-  // TODO: Log to proper logging service instead of console
-  // if (process.env.NODE_ENV === 'development') {
-  //   console.info('Rendering layout for collective slug:', slug);
-  // }
-
-  return children;
+}): React.ReactElement {
+  return (
+    <div className="bg-background text-foreground">
+      {/* The new design will be built within this container */}
+      {children}
+    </div>
+  );
 }

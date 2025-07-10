@@ -11,6 +11,8 @@ export type CollectiveData = CollectiveRow & {
   member_count: number;
   post_count: number;
   owner?: Partial<UserRow> | null;
+  // Add the current user's role
+  currentUserRole?: 'owner' | 'admin' | 'editor' | 'author' | null;
 };
 
 export type CollectivePost = PostRow & {
@@ -101,6 +103,23 @@ export async function loadCollectiveData(
           totalLikes: 0,
         },
       };
+    }
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    let currentUserRole: 'owner' | 'admin' | 'editor' | 'author' | null = null;
+    if (user && collective) {
+      const { data: memberRole } = await supabase
+        .from('collective_members')
+        .select('role')
+        .eq('collective_id', collective.id)
+        .eq('member_id', user.id)
+        .single();
+      if (memberRole) {
+        currentUserRole = memberRole.role;
+      }
     }
 
     // Get counts separately for better error handling
@@ -233,6 +252,7 @@ export async function loadCollectiveData(
       member_count: memberCount,
       post_count: postCount,
       owner: collective.owner,
+      currentUserRole,
     };
 
     return {

@@ -382,7 +382,9 @@ export type Database = {
           slug: string
           stripe_account_id: string | null
           stripe_account_type: string | null
+          stripe_charges_enabled: boolean | null
           stripe_customer_id: string | null
+          stripe_payouts_enabled: boolean | null
           tags: string[] | null
           tsv: unknown | null
           updated_at: string | null
@@ -404,7 +406,9 @@ export type Database = {
           slug: string
           stripe_account_id?: string | null
           stripe_account_type?: string | null
+          stripe_charges_enabled?: boolean | null
           stripe_customer_id?: string | null
+          stripe_payouts_enabled?: boolean | null
           tags?: string[] | null
           tsv?: unknown | null
           updated_at?: string | null
@@ -426,7 +430,9 @@ export type Database = {
           slug?: string
           stripe_account_id?: string | null
           stripe_account_type?: string | null
+          stripe_charges_enabled?: boolean | null
           stripe_customer_id?: string | null
+          stripe_payouts_enabled?: boolean | null
           tags?: string[] | null
           tsv?: unknown | null
           updated_at?: string | null
@@ -1357,7 +1363,7 @@ export type Database = {
           post_id: string
           shared_at: string | null
           shared_by: string
-          status: string | null
+          status: Database["public"]["Enums"]["post_publication_status"]
         }
         Insert: {
           collective_id: string
@@ -1367,7 +1373,7 @@ export type Database = {
           post_id: string
           shared_at?: string | null
           shared_by: string
-          status?: string | null
+          status?: Database["public"]["Enums"]["post_publication_status"]
         }
         Update: {
           collective_id?: string
@@ -1377,7 +1383,7 @@ export type Database = {
           post_id?: string
           shared_at?: string | null
           shared_by?: string
-          status?: string | null
+          status?: Database["public"]["Enums"]["post_publication_status"]
         }
         Relationships: [
           {
@@ -3019,6 +3025,10 @@ export type Database = {
           inviter_avatar_url: string
         }[]
       }
+      get_collective_member_role: {
+        Args: { collective_id: string; user_id: string }
+        Returns: string
+      }
       get_collective_stats: {
         Args: { collective_id: string }
         Returns: Json
@@ -3188,6 +3198,10 @@ export type Database = {
           weight: number
         }[]
       }
+      get_user_role_in_collective: {
+        Args: { p_collective_id: string; p_user_id: string }
+        Returns: string
+      }
       get_user_tenant_role: {
         Args: { target_tenant_id: string; target_user_id?: string }
         Returns: Database["public"]["Enums"]["member_role"]
@@ -3239,6 +3253,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_owner_of_collective: {
+        Args: { p_collective_id: string; p_user_id: string }
+        Returns: boolean
+      }
       is_participant_of: {
         Args: { p_conversation_id: string; p_user_id: string }
         Returns: boolean
@@ -3286,7 +3304,7 @@ export type Database = {
       chain_reaction_type: "like" | "rechain" | "dislike"
       chain_status: "active" | "deleted" | "shadow_hidden"
       chain_visibility: "public" | "followers" | "private" | "unlisted"
-      collective_member_role: "admin" | "editor" | "author" | "owner"
+      collective_member_role: "owner" | "admin" | "editor" | "author"
       conversation_type: "channel" | "group" | "direct"
       interaction_entity_type: "collective" | "post" | "user" | "chain"
       interaction_type:
@@ -3312,6 +3330,7 @@ export type Database = {
         | "mention"
         | "post_bookmark"
         | "featured_post"
+      post_publication_status: "published" | "pending_approval" | "rejected"
       post_status_type: "draft" | "active" | "removed"
       post_type_enum: "text" | "video"
       price_interval: "month" | "year" | "week" | "day"
@@ -3466,7 +3485,7 @@ export const Constants = {
       chain_reaction_type: ["like", "rechain", "dislike"],
       chain_status: ["active", "deleted", "shadow_hidden"],
       chain_visibility: ["public", "followers", "private", "unlisted"],
-      collective_member_role: ["admin", "editor", "author", "owner"],
+      collective_member_role: ["owner", "admin", "editor", "author"],
       conversation_type: ["channel", "group", "direct"],
       interaction_entity_type: ["collective", "post", "user", "chain"],
       interaction_type: [
@@ -3494,6 +3513,7 @@ export const Constants = {
         "post_bookmark",
         "featured_post",
       ],
+      post_publication_status: ["published", "pending_approval", "rejected"],
       post_status_type: ["draft", "active", "removed"],
       post_type_enum: ["text", "video"],
       price_interval: ["month", "year", "week", "day"],

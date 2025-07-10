@@ -141,16 +141,45 @@ export const useAutoSavePost = (): UseMutationResult<
         Array.isArray(data.selected_collectives) &&
         data.selected_collectives.length > 0
       ) {
+        // Fetch governance models for all selected collectives
+        const { data: collectives, error: collectivesError } = await supabase
+          .from('collectives')
+          .select('id, governance_model')
+          .in('id', data.selected_collectives);
+
+        if (collectivesError) {
+          console.warn(
+            'Could not fetch collective governance models:',
+            collectivesError.message,
+          );
+        }
+        const governanceMap = new Map(
+          collectives?.map((c) => [c.id, c.governance_model]),
+        );
+
         const rows: PostCollectiveInsert[] = data.selected_collectives.map(
-          (cid) => ({
-            post_id: post.id,
-            collective_id: cid,
-            shared_by: data.author_id,
-            status: data.status === 'active' ? 'published' : 'draft',
-            shared_at: new Date().toISOString(),
-            display_order: 0,
-            metadata: {},
-          }),
+          (cid) => {
+            const isModerated = governanceMap.get(cid) === 'moderated';
+            let status: 'published' | 'pending_approval' | 'rejected' =
+              'published';
+
+            if (data.status !== 'active') {
+              // If the main post is a draft, it should be pending in the collective
+              status = 'pending_approval';
+            } else if (isModerated) {
+              status = 'pending_approval';
+            }
+
+            return {
+              post_id: post.id,
+              collective_id: cid,
+              shared_by: data.author_id,
+              status,
+              shared_at: new Date().toISOString(),
+              display_order: 0,
+              metadata: {},
+            };
+          },
         );
 
         const { error: pcError } = await supabase

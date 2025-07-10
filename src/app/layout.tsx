@@ -1,8 +1,9 @@
+import { Analytics } from '@vercel/analytics/react';
 import { ThemeProvider } from 'next-themes';
 import React from 'react';
 
 import QueryProvider from '@/components/providers/query-provider';
-import { ToastContainer } from '@/components/ui/toast';
+import { Toaster } from '@/components/ui/sonner';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { TenantProvider } from '@/providers/TenantProvider';
 
@@ -34,7 +35,6 @@ export default async function RootLayout({
   } = await supabase.auth.getUser();
 
   let initialTenants: TenantType[] | undefined;
-  let initialTenantId: string | undefined;
 
   if (user) {
     // Fetch user tenants via RPC
@@ -56,9 +56,6 @@ export default async function RootLayout({
           updated_at: (extras['updated_at'] as string | null) ?? null,
         } satisfies TenantType;
       });
-
-      const personal = initialTenants.find((tt) => tt.type === 'personal');
-      if (personal) initialTenantId = personal.id;
     }
   }
 
@@ -77,27 +74,21 @@ export default async function RootLayout({
         >
           Skip to main content
         </a>
-        <QueryProvider>
-          <ThemeProvider
-            attribute="class"
-            defaultTheme="system"
-            enableSystem
-            disableTransitionOnChange
-          >
-            <TenantProvider
-              {...(initialTenantId ? { initialTenantId } : {})}
-              {...(initialTenants ? { initialTenants } : {})}
-            >
-              {/* Main application content (route-group layouts add chrome) */}
-              <main id="main-content" className="min-h-screen">
-                {children}
-              </main>
-
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <TenantProvider {...(initialTenants ? { initialTenants } : {})}>
+            <QueryProvider>
+              {children}
               {/* Global toast notifications */}
-              <ToastContainer />
-            </TenantProvider>
-          </ThemeProvider>
-        </QueryProvider>
+              <Analytics />
+              <Toaster />
+            </QueryProvider>
+          </TenantProvider>
+        </ThemeProvider>
       </body>
     </html>
   );
