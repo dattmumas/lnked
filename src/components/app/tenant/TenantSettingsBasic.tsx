@@ -20,7 +20,7 @@ import { useTenantSettings } from '@/hooks/useTenantSettings';
 import { useToast } from '@/hooks/useToast';
 import { useTenant } from '@/providers/TenantProvider';
 
-import { TenantPermissions, PermissionGate } from './TenantPermissions';
+import { TenantPermissionsDisplay, PermissionGate } from './TenantPermissions';
 
 interface TenantSettingsProps {
   tenantId?: string;
@@ -154,7 +154,10 @@ export function TenantSettings({
               {isPersonalTenant && ' (Personal)'}
             </p>
           </div>
-          <TenantPermissions tenantId={settings.id} showActions={false} />
+          <TenantPermissionsDisplay
+            tenantId={settings.id}
+            showActions={false}
+          />
         </div>
 
         <Tabs
@@ -193,7 +196,7 @@ export function TenantSettings({
               <CardContent>
                 <PermissionGate
                   tenantId={settings.id}
-                  requiredPermission="canManageSettings"
+                  requiredPermission="manage"
                 >
                   <form onSubmit={handleGeneralSubmit} className="space-y-6">
                     <div className="space-y-4">

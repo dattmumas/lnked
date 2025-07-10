@@ -11,7 +11,7 @@ import { usePostEditor } from '@/hooks/posts/usePostEditor';
 import { useUser } from '@/hooks/useUser';
 import { draftService } from '@/lib/services/draft-service';
 import { usePostEditorStore } from '@/lib/stores/post-editor-v2-store';
-import { useTenant } from '@/providers/TenantProvider';
+import { useTenant, useTenantActions } from '@/providers/TenantProvider';
 
 // Load the rich text editor dynamically to avoid SSR issues
 const RichTextEditor = dynamic(
@@ -25,7 +25,8 @@ export default function NewPostEditorPage(): React.ReactElement {
   const { formData, updateFormData, publishPost, autoSaveStatus } =
     usePostEditor();
   const { user } = useUser();
-  const { currentTenant, isPersonalTenant } = useTenant();
+  const { currentTenant } = useTenant();
+  const { isPersonalTenant } = useTenantActions();
   const postEditorStore = usePostEditorStore();
 
   // Only render the editor once we have attempted to restore any draft
@@ -91,9 +92,9 @@ export default function NewPostEditorPage(): React.ReactElement {
   }, [
     currentTenant,
     isPersonalTenant,
+    postEditorStore.selectedCollectives,
     postEditorStore.addCollective,
     postEditorStore.setLegacyCollectiveId,
-    postEditorStore.selectedCollectives.length,
   ]);
 
   // Title changes are now autosaved through the unified editor autosave pipeline

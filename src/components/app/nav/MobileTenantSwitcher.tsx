@@ -19,7 +19,7 @@ import { useUser } from '@/providers/UserContext';
  */
 export default function MobileTenantSwitcher(): React.ReactElement {
   const { profile } = useUser();
-  const { personalTenant, collectiveTenants, switchTenant } = useTenant();
+  const { personalTenant, collectiveTenants, actions } = useTenant();
 
   // Derive avatar src / fallback
   const avatarSrc = profile?.avatar_url ?? undefined;
@@ -55,7 +55,7 @@ export default function MobileTenantSwitcher(): React.ReactElement {
         {personalTenant && (
           <DropdownMenuItem
             onClick={() => {
-              void switchTenant(personalTenant.id);
+              void actions.switchTenant(personalTenant.id);
             }}
             className="cursor-pointer"
           >
@@ -68,7 +68,7 @@ export default function MobileTenantSwitcher(): React.ReactElement {
               <DropdownMenuItem
                 key={tenant.id}
                 onClick={() => {
-                  void switchTenant(tenant.id);
+                  void actions.switchTenant(tenant.id);
                 }}
                 className="cursor-pointer"
               >

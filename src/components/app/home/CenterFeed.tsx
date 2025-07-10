@@ -53,9 +53,6 @@ export function CenterFeed({
     userId: user.id,
     enabled: true,
     onStatusUpdate: (update) => {
-      console.log(
-        `🎥 [FEED] Video status updated: ${update.id} -> ${update.status}`,
-      );
       // The hook automatically updates React Query cache, which will trigger feed refresh
     },
   });
@@ -65,7 +62,7 @@ export function CenterFeed({
     tenantId: currentTenant?.tenant_id || '',
     enabled: Boolean(currentTenant?.tenant_id),
     onNewPostsAvailable: (count) => {
-      console.log(`📝 New posts available: ${count}`);
+      // New posts are available, user can refresh to see them
     },
   });
 
@@ -197,7 +194,7 @@ export function CenterFeed({
           interactions={interactions}
           loadMore={loadMore}
           hasMore={hasMore}
-          windowScroll={true}
+          windowScroll
         />
       </div>
     </div>

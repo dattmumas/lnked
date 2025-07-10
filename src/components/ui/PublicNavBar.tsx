@@ -16,6 +16,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useTenantStore } from '@/stores/tenant-store';
 import { getOptimizedAvatarUrl } from '@/lib/utils/avatar';
 import { useUser } from '@/providers/UserContext';
 import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
@@ -23,14 +24,14 @@ import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
 export default function PublicNavBar(): React.ReactElement {
   const { user, profile } = useUser();
   const router = useRouter();
+  const clearTenantState = useTenantStore((state) => state.actions.clear);
 
   const handleSignOut = useCallback(async (): Promise<void> => {
     const supabase = createSupabaseBrowserClient();
     await supabase.auth.signOut();
-    // Manually clear the persisted tenant ID on logout (sessionStorage)
-    sessionStorage.removeItem('lnked.active-tenant-id');
+    await clearTenantState();
     router.push('/');
-  }, [router]);
+  }, [router, clearTenantState]);
 
   // 🎓 Context-Aware Navigation: Shows different content based on auth state
   // This eliminates the "logged out" appearance on public pages when user is authenticated

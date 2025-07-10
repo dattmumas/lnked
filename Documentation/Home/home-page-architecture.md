@@ -73,46 +73,84 @@ The main layout uses a flexbox container to arrange its children. The `GlobalSid
 
 This is the default view of the home page, designed for displaying long-form content like articles and video posts.
 
-### Data Flow Diagram
+### Data Flow Architecture
 
-![Home Page Post Feed Data Flow](https://raw.githubusercontent.com/matthew-dumas/lnked-docs/main/diagrams/home-posts-feed.svg)
+The posts feed uses a unified data fetching approach through a single server function and API endpoint:
 
-> **Note**  
-> The diagram illustrates the complete journey: React component ➜ React-Query ➜ `/api/feed/unified` ➜ RPC (`get_user_feed`/`get_tenant_feed`) ➜ PostgreSQL. It also annotates the real-time path from Supabase Realtime back to `useFeedRealtime`.
+1. **State Management (`useTenantStore`)**: Manages the global `feedScope` (`'global'` vs. `'tenant'`) and the `currentTenant`. This is the single source of truth for the feed's context.
 
-### Detailed Breakdown
+2. **UI (`CenterFeed.tsx`)**:
 
-1.  **State Management (`useTenantStore`)**: Manages the global `feedScope` (`'global'` vs. `'tenant'`) and the `currentTenant`. This is the single source of truth for the feed's context.
+   - Calls `useTenantFeed` to fetch post data based on the current state from `useTenantStore`.
+   - Uses `FeedVirtuoso` to efficiently render a potentially infinite list of posts without performance degradation. Window-scrolling virtualization ensures that only visible items are rendered to the DOM, keeping the application fast even with thousands of posts.
+   - Calls `useFeedRealtime` to listen for live updates.
+   - Sets up real-time video status updates via `useVideoStatusRealtime` to automatically update video processing status in the feed.
 
-2.  **UI (`CenterFeed.tsx`)**:
+3. **Data Fetching (`useTenantFeed.tsx`)**:
 
-    - Calls `useTenantFeed` to fetch post data based on the current state from `useTenantStore`.
-    - Uses `FeedVirtuoso` to efficiently render a potentially infinite list of posts without performance degradation. Window-scrolling virtualization ensures that only visible items are rendered to the DOM, keeping the application fast even with thousands of posts.
-    - Calls `useFeedRealtime` to listen for live updates.
+   - Uses `useInfiniteQuery` from TanStack React Query.
+   - Constructs a unique **Query Key**: `['unified-feed', feedScope, tenantIdOrGlobal, limit]` to ensure data is refetched when the context changes and to prevent cache collisions.
+   - Calls the `/actions/feedActions` server action endpoint.
+   - **Performance**: `staleTime` is set to 2 minutes, and `refetchOnMount` is `false` to prevent unnecessary refetches while still keeping data relatively fresh.
 
-3.  **Data Transformation (`transformPostToFeedItem`)**: This helper function within `useTenantFeed.ts` acts as an **Adapter**, converting the raw data shape from the database into a consistent `FeedItem` object required by the UI. This decouples the frontend components from the backend schema, making the system more maintainable.
+4. **Server Action (`/actions/feedActions/route.ts`)**:
 
-4.  **Data Fetching (`useTenantFeed.tsx`)**:
+   - A unified endpoint that handles both global and tenant-specific feeds.
+   - Creates a server-scoped Supabase client with proper authentication context.
+   - Calls `fetchUnifiedFeed` from the server utilities with appropriate scope parameters.
+   - Returns properly formatted feed data with comprehensive error handling.
 
-    - Uses `useInfiniteQuery` from TanStack React Query.
-    - Constructs a unique **Query Key**: `['unified-feed', feedScope, tenantIdOrGlobal, limit]` to ensure data is refetched when the context changes and to prevent cache collisions.
-    - Calls the `/api/feed/unified` endpoint.
-    - **Performance Note**: `staleTime` is set to 2 minutes, and `refetchOnMount` is `false` to prevent unnecessary refetches while still keeping data relatively fresh.
+5. **Unified Feed Function (`fetchUnifiedFeed`)**:
 
-5.  **API Endpoint (`/api/feed/unified/route.ts`)**:
+   - **File**: `src/lib/server/fetchUnifiedFeed.ts`
+   - Validates input parameters using Zod schemas for type safety.
+   - Calls the `get_unified_feed` PostgreSQL function with user context and tenant parameters.
+   - Transforms database rows into properly typed `FeedItem` objects.
+   - Handles video metadata extraction and author information mapping.
 
-    - A single, unified endpoint for all post feed data.
-    - If a `tenantId` is provided, it calls the `get_tenant_feed` database function.
-    - Otherwise, it calls `get_user_feed` for the global feed.
+6. **Database Function (`get_unified_feed`)**:
 
-6.  **Database Functions (`get_tenant_feed` & `get_user_feed`)**:
+   - A single PostgreSQL function that handles both global and tenant-specific feed logic.
+   - **Security**: Runs with `SECURITY DEFINER` and embeds row-level security checks.
+   - **Data Selection**: Retrieves all necessary fields including:
+     - Post content (`title`, `content`, `created_at`, `published_at`, `is_public`)
+     - Author information (`author_id`, `author_full_name`, `author_username`, `author_avatar_url`)
+     - Collective data (`collective_id`, `collective_name`, `collective_slug`)
+     - Video metadata (`video_id`, `mux_playback_id`, `status`, `duration`)
+     - Tenant context (`tenant_id`, `tenant_name`, `tenant_type`)
+     - Engagement metrics (`like_count`)
+     - Media assets (`thumbnail_url`, `post_type`)
+   - **Video Metadata**: Automatically constructs comprehensive metadata JSON for video posts including:
+     - `playbackId`: Mux playback identifier for video streaming
+     - `status`: Current video processing status (`ready`, `processing`, `error`)
+     - `videoAssetId`: Internal video asset reference
+     - `duration`: Video length in seconds
+   - **Tenant Filtering**: When `p_tenant_id` is provided, filters posts to only include those from the specified tenant context.
 
-    - These PostgreSQL functions contain the core security and data retrieval logic.
-    - They have been updated to **select all necessary fields**, including `thumbnail_url`, `post_type`, `video_id`, `metadata`, and tenant details, ensuring the UI receives the complete data model for rendering.
+7. **Real-Time Updates (`useFeedRealtime.ts`)**:
+   - Subscribes to Supabase's real-time channel for the `posts` table.
+   - Monitors for INSERT, UPDATE, and DELETE operations on posts.
+   - On receiving updates, invalidates React Query caches using `queryClient.invalidateQueries({ queryKey: ['unified-feed'] })`.
+   - Provides `hasNewPosts` and `newPostsCount` state for UI indicators.
+   - Includes `refreshFeed` function for manual feed refresh.
 
-7.  **Real-Time (`useFeedRealtime.ts`)**:
-    - Subscribes to Supabase's real-time channel for the `posts` table.
-    - On receiving an update, it calls `queryClient.invalidateQueries({ queryKey: ['unified-feed'] })`. This is a robust pattern that simply tells React Query that the data is stale, prompting an automatic and efficient refetch to get the latest posts.
+### Video Support Architecture
+
+The feed includes comprehensive video support with real-time status updates:
+
+- **Video Metadata**: All video posts include complete metadata with Mux playback IDs, processing status, and duration information.
+- **Real-time Processing Updates**: `useVideoStatusRealtime` automatically updates video status as processing completes.
+- **Inline Video Players**: Video posts render with `VideoCard` components that support inline playback using Mux player technology.
+- **Thumbnail Management**: Video thumbnails are automatically generated and stored in Supabase Storage with public access policies.
+
+### Storage and Media Access
+
+- **Public Storage Policies**: All media assets (thumbnails, images, avatars) use simple public read access policies to ensure browser image requests work without authentication headers.
+- **Bucket Organization**:
+  - `avatars`: User profile images with public read access
+  - `post-thumbnails`: Post thumbnail images with public read access
+  - `post-images`: Post content images with public read access
+- **Security**: Upload and delete operations remain restricted to authenticated users in their own folders.
 
 ---
 
@@ -127,31 +165,31 @@ The Chains feed is a separate, real-time micro-blogging or "thread" view, archit
 
 ### Component Breakdown
 
-1.  **Entry Point (`RightSidebarFeed.tsx`)**:
+1. **Entry Point (`RightSidebarFeed.tsx`)**:
 
-    - The top-level component for the chains feed.
-    - It calls the `fetchInitialChains` server action in a `useEffect` hook to get the initial batch of chains.
-    - It then passes this initial data to the `ThreadFeedClient`.
+   - The top-level component for the chains feed.
+   - It calls the `fetchInitialChains` server action in a `useEffect` hook to get the initial batch of chains.
+   - It then passes this initial data to the `ThreadFeedClient`.
 
-2.  **Core UI & Logic (`ThreadFeedClient.tsx`)**:
-    - This is where the main logic resides.
-    - **State Management**: Uses `useState` to manage the list of `items` (chains) and the `liveBuffer`.
-    - **Rendering**: Uses `react-virtuoso` for efficient rendering of the chain list.
-    - **Data Actions**:
-      - `loadOlderBatch`: A function passed to Virtuoso's `endReached` prop to prepend older chains for infinite scrolling in thread view.
-      - `showNewChains`: Fetches the full data for chains in the `liveBuffer` and prepends them to the main feed.
-      - `submitReply`: Uses the `replyToChain` server action to add new replies.
-    - **Real-Time (`useRealtimeChain.ts`)**:
-      - Subscribes to a Supabase channel for "chains".
-      - The `handleDelta` callback receives new chain data.
-      - Instead of immediately adding it to the main feed, it adds a lightweight placeholder to the `liveBuffer` and displays the "Show X new chains" button. This prevents the UI from shifting unexpectedly while the user is reading.
-    - **Adapter Pattern (`ChainDataAdapter.tsx`)**: The `ThreadFeedClient` uses a `ChainDataAdapter` component. This component acts as a bridge, taking the raw `ChainWithAuthor` data object and mapping its properties to the specific props required by the `ChainCard` UI component. This is a clean architecture pattern that separates data shape concerns from presentation logic.
+2. **Core UI & Logic (`ThreadFeedClient.tsx`)**:
+   - This is where the main logic resides.
+   - **State Management**: Uses `useState` to manage the list of `items` (chains) and the `liveBuffer`.
+   - **Rendering**: Uses `react-virtuoso` for efficient rendering of the chain list.
+   - **Data Actions**:
+     - `loadOlderBatch`: A function passed to Virtuoso's `endReached` prop to prepend older chains for infinite scrolling in thread view.
+     - `showNewChains`: Fetches the full data for chains in the `liveBuffer` and prepends them to the main feed.
+     - `submitReply`: Uses the `replyToChain` server action to add new replies.
+   - **Real-Time (`useRealtimeChain.ts`)**:
+     - Subscribes to a Supabase channel for "chains".
+     - The `handleDelta` callback receives new chain data.
+     - Instead of immediately adding it to the main feed, it adds a lightweight placeholder to the `liveBuffer` and displays the "Show X new chains" button. This prevents the UI from shifting unexpectedly while the user is reading.
+   - **Adapter Pattern (`ChainDataAdapter.tsx`)**: The `ThreadFeedClient` uses a `ChainDataAdapter` component. This component acts as a bridge, taking the raw `ChainWithAuthor` data object and mapping its properties to the specific props required by the `ChainCard` UI component. This is a clean architecture pattern that separates data shape concerns from presentation logic.
 
 This dual-feed architecture allows the home page to serve two distinct purposes—long-form content consumption and real-time micro-blogging—using patterns and technologies best suited for each use case.
 
 #### Sidebar Resizing
 
-`ConditionalRightSidebar` wraps its children in **`ResizableSidebarClient`**. This client component injects `--rsb-width` as an inline CSS variable and registers a drag-handle allowing users to resize the sidebar (min 320 px – max 720 px, default 640 px). The width is persisted in `localStorage` so subsequent page loads honour the user’s preference.
+`ConditionalRightSidebar` wraps its children in **`ResizableSidebarClient`**. This client component injects `--rsb-width` as an inline CSS variable and registers a drag-handle allowing users to resize the sidebar (min 320 px – max 720 px, default 640 px). The width is persisted in `localStorage` so subsequent page loads honour the user's preference.
 
 #### Floating Create Button (Mobile-only)
 
@@ -175,30 +213,48 @@ The chains feed relies on **`useChainReactions.ts`** which maintains three `Set<
 
 #### RLS & Security
 
-All RPC functions (`get_user_feed`, `get_tenant_feed`, `fetchInitialChains`, …) run **`SECURITY DEFINER`** and embed row-level-policy checks. `get_user_feed` enforces `p_user_id` visibility rules while `get_tenant_feed` defers to policy on `posts.tenant_id = current_setting('app.current_tenant')`.
+All database functions (`get_unified_feed`, `fetchInitialChains`, etc.) run **`SECURITY DEFINER`** and embed row-level-policy checks. `get_unified_feed` enforces user visibility rules and tenant access controls while maintaining proper data isolation.
 
 #### Performance & Monitoring
 
-`(app)/layout.tsx` imports **`<SpeedInsights />`** from Vercel which automatically instruments the page for Core-Web-Vitals and navigational timings. A custom `reportWebVitals` sends this data to Supabase’s `performance_logs` table for later analysis.
+`(app)/layout.tsx` imports **`<SpeedInsights />`** from Vercel which automatically instruments the page for Core-Web-Vitals and navigational timings. A custom `reportWebVitals` sends this data to Supabase's `performance_logs` table for later analysis.
 
 ---
 
 ## 6. Additional Implementation Notes
 
-| Area                              | File / Hook                                          | Purpose                                                                                                                                                                                                     |
-| --------------------------------- | ---------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Video Status Updates**          | `useVideoStatusRealtime.ts`                          | Subscribes to `video_assets` updates and invalidates React-Query caches so that video thumbnails and durations update in-place while a user watches the feed.                                               |
-| **Optimistic Post Interactions**  | `usePostFeedInteractions.ts`                         | Wraps mutations for likes / dislikes / bookmarks with React-Query `setQueryData` for immediate UI feedback and roll-back on error.                                                                          |
-| **Virtual Scrolling**             | `FeedVirtuoso.tsx` (wrapper around `react-virtuoso`) | Sets `overscan={200}` and implements an intersection observer to auto-load the next page when the scroll pointer reaches 85 % viewport height.                                                              |
-| **Server Actions – Chains**       | `src/app/actions/threadActions.ts`                   | Houses `fetchInitialChains`, `loadOlder`, and `fetchChainsByIds`. These are marked `use server` so the client bundles remain lean.                                                                          |
-| **Server Actions – Posts**        | `src/app/actions/postActions.ts` (planned)           | Pattern parity: future work will migrate post mutations (create, update, delete) to server actions.                                                                                                         |
-| **Mode Toggle**                   | `ModeToggle.tsx`                                     | Uses `next-themes` and stores the preference in `localStorage` keyed to `lnked.theme`. All Tailwind theme-aware classes respond instantly without page reload.                                              |
-| **Search Index**                  | `v_user_visible_posts` view                          | Materialised view denormalising `posts`, `collectives`, and `users` for full-text search (GIST index on `tsv`). The SearchBar RPC delegates to this view for high-performance look-ups.                     |
-| **URL State Management**          | `useSearchParams` + shallow routing                  | All feed / thread switches (`?tab=chains`, `?thread=<id>`, `?post=<id>`) use Next.js shallow routing so navigating back/forward keeps scroll position and avoids full reloads.                              |
-| **Error Boundaries**              | `src/app/error.tsx`                                  | Global app-level error boundary renders a user-friendly page if any React component throws during SSR or CSR hydration.                                                                                     |
-| **Supabase Storage – Thumbnails** | `public.post-thumbnails` bucket                      | Thumbnails are uploaded via the `upload-thumbnail` API route and the signed public URL (`thumbnail_url`) is stored on the `posts` row. The feed picks this URL directly – no transformation proxy required. |
+| Area                             | File / Hook                                          | Purpose                                                                                                                                                                                                    |
+| -------------------------------- | ---------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Video Status Updates**         | `useVideoStatusRealtime.ts`                          | Subscribes to `video_assets` updates and invalidates React-Query caches so that video thumbnails and durations update in-place while a user watches the feed.                                              |
+| **Optimistic Post Interactions** | `usePostFeedInteractions.ts`                         | Wraps mutations for likes / dislikes / bookmarks with React-Query `setQueryData` for immediate UI feedback and roll-back on error.                                                                         |
+| **Virtual Scrolling**            | `FeedVirtuoso.tsx` (wrapper around `react-virtuoso`) | Sets `overscan={200}` and implements an intersection observer to auto-load the next page when the scroll pointer reaches 85% viewport height.                                                              |
+| **Server Actions – Chains**      | `src/app/actions/chainActions.ts`                    | Houses `fetchInitialChains`, `loadOlder`, and `fetchChainsByIds`. These are marked `use server` so the client bundles remain lean.                                                                         |
+| **Server Actions – Feed**        | `src/app/actions/feedActions/route.ts`               | Unified feed endpoint that handles both global and tenant-specific feed requests through server actions.                                                                                                   |
+| **Mode Toggle**                  | `ModeToggle.tsx`                                     | Uses `next-themes` and stores the preference in `localStorage` keyed to `lnked.theme`. All Tailwind theme-aware classes respond instantly without page reload.                                             |
+| **Search Index**                 | `v_user_visible_posts` view                          | Materialised view denormalising `posts`, `collectives`, and `users` for full-text search (GIST index on `tsv`). The SearchBar RPC delegates to this view for high-performance look-ups.                    |
+| **URL State Management**         | `useSearchParams` + shallow routing                  | All feed / thread switches (`?tab=chains`, `?thread=<id>`, `?post=<id>`) use Next.js shallow routing so navigating back/forward keeps scroll position and avoids full reloads.                             |
+| **Error Boundaries**             | `src/app/error.tsx`                                  | Global app-level error boundary renders a user-friendly page if any React component throws during SSR or CSR hydration.                                                                                    |
+| **Supabase Storage – Media**     | Multiple public buckets                              | Media assets are stored in public buckets (`post-thumbnails`, `post-images`, `avatars`) with simple public read policies to ensure browser compatibility. Upload/delete operations remain user-restricted. |
+| **Database Type Generation**     | `src/lib/database.types.ts`                          | TypeScript types are automatically generated from the Supabase schema using MCP tools, ensuring type safety across the application.                                                                        |
+| **Feed Data Transformation**     | `src/lib/server/fetchUnifiedFeed.ts`                 | Transforms raw database rows into properly typed `FeedItem` objects with comprehensive video metadata and author information.                                                                              |
 
-> **Future Enhancements**  
-> • Implement Suspense + Streaming for the initial feed load to improve LCP.  
-> • Introduce skeleton loaders for chains and posts to reduce perceived latency.  
-> • Add edge caching (`revalidate = 60`) for read-only public collectives feed while keeping personal feeds dynamic.
+### Database Function Details
+
+The `get_unified_feed` PostgreSQL function is the core of the feed system:
+
+```sql
+-- Returns comprehensive post data with author, collective, video, and tenant information
+-- Handles both global feeds (all visible posts) and tenant-specific feeds
+-- Includes proper RLS enforcement and video metadata construction
+-- Supports pagination with limit/offset parameters
+-- Automatically constructs video metadata JSON from video_assets table
+```
+
+Key features:
+
+- **Unified Data Model**: Single function handles all feed scenarios
+- **Complete Video Support**: Automatically includes Mux playback IDs and processing status
+- **Author Information**: Includes usernames, full names, and avatar URLs
+- **Tenant Context**: Proper filtering and tenant information for multi-tenant support
+- **Performance Optimized**: Efficient joins and proper indexing for fast queries
+- **Security**: Row-level security enforcement for data access control

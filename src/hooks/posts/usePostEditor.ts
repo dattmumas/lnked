@@ -8,7 +8,8 @@ import {
   type PostEditorFormData,
   CollectiveSharingSettings,
 } from '@/lib/stores/post-editor-v2-store';
-import createBrowserSupabaseClient from '@/lib/supabase/browser';
+import supabase from '@/lib/supabase/browser';
+import { useTenantStore } from '@/stores/tenant-store';
 
 import type { UseMutationResult, UseQueryResult } from '@tanstack/react-query';
 
@@ -29,13 +30,17 @@ export const useAutoSavePost = (): UseMutationResult<
   const queryClient = useQueryClient();
   const store = usePostEditorStore();
   const { markSaving, markSaved, markError, updateFormData } = store;
+  const personalTenant = useTenantStore((state) => state.personalTenant);
 
   return useMutation({
     retry: false,
     mutationFn: async (
       data: PostEditorFormData & { author_id: string },
     ): Promise<PostEditorFormData> => {
-      const supabase = createBrowserSupabaseClient;
+      // Use the singleton Supabase client instance
+      // captured at module scope to avoid recreating connections.
+      // The previous implementation incorrectly referenced the factory
+      // function instead of the client instance, leading to runtime errors.
 
       // Validate required fields - for autosave, we only need author_id and at least some content
       if (
@@ -49,10 +54,30 @@ export const useAutoSavePost = (): UseMutationResult<
       // ------------------------------
       // Determine tenant / collective
       // ------------------------------
-      const primaryCollective =
+      const selectedCollectiveId =
         data.collective_id || data.selected_collectives?.[0] || null;
 
-      const tenant_id = primaryCollective ?? data.author_id; // personal fallback
+      // Ensure a valid personal tenant ID exists for personal posts
+      if (!selectedCollectiveId && !personalTenant?.id) {
+        throw new Error(
+          'Cannot save post: No collective selected and no personal tenant found.',
+        );
+      }
+
+      // tenant_id always comes from the current tenant context
+      const tenant_id = personalTenant!.id;
+
+      // collective_id is only set if posting to a specific collective
+      const collective_id = selectedCollectiveId;
+
+      // Debug logging to help diagnose tenant access issues
+      console.log('Auto-save debug:', {
+        selectedCollectiveId,
+        personalTenantId: personalTenant?.id,
+        finalTenantId: tenant_id,
+        finalCollectiveId: collective_id,
+        authorId: data.author_id,
+      });
 
       // Use client-side UUID for slug temporarily to avoid collisions
       // The slug will be properly generated when the post is published
@@ -83,7 +108,7 @@ export const useAutoSavePost = (): UseMutationResult<
         } as unknown as Database['public']['Tables']['posts']['Row']['metadata'],
         is_public: data.is_public,
         status: data.status,
-        collective_id: primaryCollective, // legacy single-collective field
+        collective_id, // legacy single-collective field
         published_at: data.published_at || null,
       };
 
@@ -95,8 +120,14 @@ export const useAutoSavePost = (): UseMutationResult<
         .single();
 
       if (error) {
-        console.error('Auto-save failed:', error);
-        throw new Error(`Failed to save post: ${error.message}`);
+        console.error('Auto-save failed:', {
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          code: error.code,
+        });
+        markError();
+        throw error;
       }
 
       if (!post) {
@@ -163,7 +194,7 @@ export const usePostData = (
     queryFn: async (): Promise<PostEditorFormData | null> => {
       if (!postId) return null;
 
-      const supabase = createBrowserSupabaseClient;
+      // Use the singleton Supabase client instance imported at module scope.
 
       // Check if postId is a UUID or a slug
       const isUuid =

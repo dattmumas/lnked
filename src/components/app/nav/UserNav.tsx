@@ -19,6 +19,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useUser } from '@/hooks/useUser';
 import supabase from '@/lib/supabase/browser';
 import { getOptimizedAvatarUrl } from '@/lib/utils/avatar';
+import { useTenantStore } from '@/stores/tenant-store';
 
 import type { Database } from '@/lib/database.types';
 
@@ -29,6 +30,7 @@ export function UserNav(): React.ReactElement {
   const { user, loading } = useUser();
   const [profile, setProfile] = useState<UserRow | null>(null);
   const router = useRouter();
+  const clearTenantState = useTenantStore((state) => state.actions.clear);
 
   useEffect(() => {
     if (user) {
@@ -46,10 +48,9 @@ export function UserNav(): React.ReactElement {
 
   const handleSignOut = useCallback(async (): Promise<void> => {
     await supabase.auth.signOut();
-    // Manually clear the persisted tenant ID on logout (sessionStorage)
-    sessionStorage.removeItem('lnked.active-tenant-id');
+    await clearTenantState();
     router.push('/');
-  }, [router]);
+  }, [router, clearTenantState]);
 
   if (loading) {
     return <Skeleton className="h-10 w-10 rounded-full" />;

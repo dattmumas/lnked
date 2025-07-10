@@ -5,12 +5,26 @@
 'use client';
 
 import { useInfiniteQuery } from '@tanstack/react-query';
-import { useCallback, useMemo, useEffect, useRef } from 'react';
+import { useCallback, useMemo } from 'react';
 
 import { useTenantStore } from '@/stores/tenant-store';
-import { shallow } from 'zustand/shallow';
 
 import type { FeedItem } from '@/types/home/types';
+
+// =============================================================================
+// QUERY KEY FACTORY
+// =============================================================================
+
+export const getTenantFeedQueryKey = (
+  feedScope: 'global' | 'tenant',
+  tenantId: string | undefined,
+  limit: number,
+): (string | number | undefined)[] => [
+  'unified-feed',
+  feedScope,
+  feedScope === 'tenant' ? tenantId : 'global',
+  limit,
+];
 
 // =============================================================================
 // TYPES
@@ -59,111 +73,10 @@ export interface UseTenantFeedReturn {
 }
 
 // =============================================================================
-// HELPER – Transform raw post record into UI-friendly FeedItem
-// =============================================================================
-
-type RawPost = Record<string, unknown>;
-
-function transformPostToFeedItem(post: RawPost): FeedItem {
-  // Safe helpers to read unknown record keys
-  const getString = (key: string): string | undefined => {
-    const val = post[key];
-    return typeof val === 'string' && val.trim() !== '' ? val : undefined;
-  };
-
-  const getNumber = (key: string): number | undefined => {
-    const val = post[key];
-    return typeof val === 'number' ? val : undefined;
-  };
-
-  // Author details
-  const authorName =
-    getString('author_full_name') ?? getString('author_name') ?? 'Unknown';
-  const authorUsername = getString('author_username') ?? 'unknown';
-  const avatarUrl = getString('author_avatar_url');
-
-  // Video metadata (optional)
-  const isVideo = getString('post_type') === 'video';
-
-  const videoAssetId = getString('video_asset_id');
-  const videoDuration = getNumber('video_duration');
-  const videoPlaybackId = getString('video_playback_id');
-  const videoStatus = getString('video_status');
-
-  const videoMeta =
-    isVideo && videoAssetId
-      ? {
-          ...(videoDuration !== undefined
-            ? { duration: videoDuration.toString() }
-            : {}),
-          metadata: {
-            ...(videoPlaybackId ? { playbackId: videoPlaybackId } : {}),
-            status: videoStatus ?? 'preparing',
-            videoAssetId,
-          },
-        }
-      : {};
-
-  // Collective details (optional)
-  const collectiveName = getString('collective_name');
-  const collectiveSlug = getString('collective_slug');
-
-  const collectiveMeta = collectiveName
-    ? {
-        collective: {
-          name: collectiveName,
-          slug: collectiveSlug ?? collectiveName.toLowerCase(),
-        },
-      }
-    : {};
-
-  // Tenant context (always available in the unified view)
-  const tenantId = getString('tenant_id');
-  const tenantName = getString('tenant_name');
-  const tenantType = getString('tenant_type') as
-    | 'personal'
-    | 'collective'
-    | undefined;
-
-  const tenantMeta =
-    tenantId && tenantName && tenantType
-      ? {
-          tenant: {
-            id: tenantId,
-            name: tenantName,
-            type: tenantType,
-          },
-        }
-      : {};
-
-  return {
-    id: getString('id') ?? '',
-    type: isVideo ? 'video' : 'post',
-    title: getString('title') ?? '',
-    content: getString('content') ?? '',
-    author: {
-      name: authorName,
-      username: authorUsername,
-      ...(avatarUrl ? { avatar_url: avatarUrl } : {}),
-    },
-    published_at: getString('published_at') ?? getString('created_at') ?? '',
-    stats: {
-      likes: getNumber('like_count') ?? 0,
-      dislikes: getNumber('dislike_count') ?? 0,
-      views: getNumber('view_count') ?? 0,
-    },
-    thumbnail_url: getString('thumbnail_url') ?? null,
-    ...videoMeta,
-    ...collectiveMeta,
-    ...tenantMeta,
-  } as FeedItem;
-}
-
-// =============================================================================
 // RUNTIME TYPE GUARD
 // =============================================================================
 
-type FeedPage = { items: FeedItem[]; nextCursor: string | null };
+type FeedPage = { items: FeedItem[]; nextCursor: number | null };
 
 const isFeedPage = (value: unknown): value is FeedPage =>
   typeof value === 'object' && value !== null && 'items' in value;
@@ -197,7 +110,9 @@ export function useTenantFeed(
         params.set('tenantId', tenantId);
       }
 
-      const url = `/api/feed/unified?${params.toString()}`;
+      const base = '/actions/feedActions';
+      params.set('scope', tenantId ? 'tenant' : 'global');
+      const url = `${base}?${params.toString()}`;
       const response = await fetch(url);
 
       if (!response.ok) {
@@ -205,10 +120,9 @@ export function useTenantFeed(
       }
 
       const json = await response.json();
-      const rawItems = Array.isArray(json.items) ? json.items : [];
-      const feedItems = rawItems.map((p: RawPost) =>
-        transformPostToFeedItem(p),
-      );
+      const feedItems = Array.isArray(json.items)
+        ? (json.items as FeedItem[])
+        : [];
 
       // Compute next offset: if we received fewer than limit, no more pages
       const nextOffset =
@@ -216,7 +130,7 @@ export function useTenantFeed(
 
       return {
         items: feedItems,
-        nextCursor: nextOffset ? String(nextOffset) : null,
+        nextCursor: nextOffset ? nextOffset : null,
       };
     },
     [feedScope, currentTenant, limit],
@@ -231,20 +145,15 @@ export function useTenantFeed(
     hasNextPage,
     refetch,
   } = useInfiniteQuery({
-    queryKey: [
-      'unified-feed',
-      feedScope,
-      feedScope === 'tenant' ? currentTenant?.id : 'global',
-      limit,
-    ],
+    queryKey: getTenantFeedQueryKey(feedScope, currentTenant?.id, limit),
     queryFn: ({ pageParam = 0 }) => fetchFeedPage({ pageParam }),
     getNextPageParam: (lastPage) => {
       // If we got fewer items than requested, no more pages
       if (!lastPage || lastPage.items.length < limit) return undefined;
       // Return the next offset
-      return lastPage.nextCursor ? Number(lastPage.nextCursor) : undefined;
+      return lastPage.nextCursor ? lastPage.nextCursor : undefined;
     },
-    enabled: !!currentTenant?.id, // Only run when we have a valid tenant ID
+    enabled: Boolean(currentTenant), // Only run when we have a tenant context
     initialPageParam: 0,
     refetchOnMount: false, // Don't automatically refetch on mount
     refetchOnWindowFocus: false,
@@ -254,11 +163,8 @@ export function useTenantFeed(
             pages: [
               {
                 items: initialData,
-                nextCursor: (() => {
-                  if (!initialData || initialData.length === 0) return null;
-                  const last = initialData[initialData.length - 1];
-                  return last ? last.published_at : null;
-                })(),
+                nextCursor:
+                  initialData.length === limit ? initialData.length : null,
               },
             ],
             pageParams: [0],

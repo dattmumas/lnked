@@ -152,24 +152,16 @@ export default function TenantChatInterface({
       subscriptionRef.current.conversationId === activeChannel.id ||
       subscriptionRef.current.isSubscribing
     ) {
-      console.log(
-        `🔄 Already subscribed/subscribing to ${activeChannel.id}, skipping`,
-      );
       return;
     }
 
     // Clean up previous subscription if switching channels
     if (subscriptionRef.current.unsubscribe) {
-      console.log(
-        `🧹 Cleaning up previous subscription for ${subscriptionRef.current.conversationId}`,
-      );
       subscriptionRef.current.unsubscribe();
     }
 
     const setupSubscription = async () => {
       try {
-        console.log(`🎯 Setting up new subscription for ${activeChannel.id}`);
-
         subscriptionRef.current = {
           conversationId: activeChannel.id,
           unsubscribe: null,
@@ -235,9 +227,6 @@ export default function TenantChatInterface({
   useEffect(() => {
     return () => {
       if (subscriptionRef.current.unsubscribe) {
-        console.log(
-          `🧹 Component unmount: cleaning up subscription for ${subscriptionRef.current.conversationId}`,
-        );
         subscriptionRef.current.unsubscribe();
         subscriptionRef.current = {
           conversationId: null,

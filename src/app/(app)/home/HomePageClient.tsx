@@ -7,7 +7,6 @@ import { CenterFeed } from '@/components/app/home/CenterFeed';
 import { FloatingCreateButton } from '@/components/app/home/FloatingCreateButton';
 import PostOverlayWithinFeed from '@/components/app/posts/overlay/PostOverlayWithinFeed';
 import { useUser } from '@/providers/UserContext';
-import { useTenantFeed } from '@/hooks/home/useTenantFeed';
 
 import type { FeedItem } from '@/types/home/types';
 import type { User } from '@supabase/supabase-js';

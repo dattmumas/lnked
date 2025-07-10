@@ -3,7 +3,6 @@
 import { Check, ChevronDown, LayoutGrid, User, Building } from 'lucide-react';
 import React from 'react';
 
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,

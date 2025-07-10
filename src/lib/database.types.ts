@@ -3076,12 +3076,16 @@ export type Database = {
           updated_at: string
         }[]
       }
-      get_tenant_feed: {
+      get_total_unread_message_count: {
+        Args: { p_user_id: string }
+        Returns: number
+      }
+      get_unified_feed: {
         Args: {
           p_user_id: string
-          p_tenant_id?: string
           p_limit?: number
           p_offset?: number
+          p_tenant_id?: string
         }
         Returns: {
           id: string
@@ -3092,6 +3096,8 @@ export type Database = {
           is_public: boolean
           author_id: string
           author_full_name: string
+          author_username: string
+          author_avatar_url: string
           collective_id: string
           collective_name: string
           collective_slug: string
@@ -3104,10 +3110,6 @@ export type Database = {
           tenant_name: string
           tenant_type: string
         }[]
-      }
-      get_total_unread_message_count: {
-        Args: { p_user_id: string }
-        Returns: number
       }
       get_unread_message_count: {
         Args: { p_user_id: string; p_conversation_id: string }
@@ -3146,29 +3148,33 @@ export type Database = {
         }[]
       }
       get_user_feed: {
-        Args:
-          | { p_limit?: number; p_cursor?: string }
-          | { p_user_id: string; p_limit?: number; p_offset?: number }
+        Args: { p_limit?: number; p_cursor?: string }
         Returns: {
-          id: string
-          title: string
-          content: string
-          created_at: string
-          published_at: string
-          is_public: boolean
-          author_id: string
-          author_full_name: string
-          collective_id: string
-          collective_name: string
-          collective_slug: string
-          like_count: number
-          post_type: string
-          thumbnail_url: string
-          video_id: string
-          metadata: Json
-          tenant_id: string
-          tenant_name: string
-          tenant_type: string
+          author: string | null
+          author_id: string | null
+          collective_id: string | null
+          content: string | null
+          created_at: string | null
+          dislike_count: number | null
+          id: string | null
+          is_public: boolean | null
+          like_count: number | null
+          meta_description: string | null
+          metadata: Json | null
+          post_type: Database["public"]["Enums"]["post_type_enum"] | null
+          published_at: string | null
+          seo_title: string | null
+          sharing_settings: Json | null
+          slug: string | null
+          status: Database["public"]["Enums"]["post_status_type"] | null
+          subtitle: string | null
+          tenant_id: string | null
+          thumbnail_url: string | null
+          title: string | null
+          tsv: unknown | null
+          updated_at: string | null
+          video_id: string | null
+          view_count: number | null
         }[]
       }
       get_user_personal_tenant: {

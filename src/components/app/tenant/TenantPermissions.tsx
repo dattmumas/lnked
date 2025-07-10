@@ -17,7 +17,7 @@ import {
 } from '@/components/ui/card';
 import { useTenant, useTenantActions } from '@/providers/TenantProvider';
 
-import type { MemberRole, TenantPermissions } from '@/types/tenant.types';
+import type { MemberRole } from '@/types/tenant.types';
 
 interface TenantPermissionsProps {
   tenantId: string;
@@ -258,7 +258,7 @@ function RoleBadge({
 // Utility component for checking permissions inline
 interface PermissionGateProps {
   tenantId: string;
-  requiredPermission: keyof TenantPermissions;
+  requiredPermission: 'read' | 'write' | 'admin' | 'manage';
   children: React.ReactNode;
   fallback?: React.ReactNode;
 }
@@ -271,7 +271,7 @@ export function PermissionGate({
 }: PermissionGateProps): React.JSX.Element {
   const { canPerformAction } = useTenantActions();
 
-  if (canPerformAction(requiredPermission as any)) {
+  if (canPerformAction(requiredPermission)) {
     return <>{children}</>;
   }
 

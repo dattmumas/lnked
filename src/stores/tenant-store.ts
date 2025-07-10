@@ -1,7 +1,10 @@
 // src/stores/tenant-store.ts
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
+
 import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
+import { clearTenantPersistence } from '@/lib/utils/clearTenantPersistence';
+
 import type { Database } from '@/lib/database.types';
 
 type Tenant = Database['public']['Tables']['tenants']['Row'];
@@ -23,21 +26,36 @@ interface TenantContext {
   member_count?: number;
 }
 
-interface TenantState {
+interface TenantStateData {
   currentTenantId: string | null;
   currentTenant: TenantContext | null;
-  feedScope: 'tenant' | 'global'; // <-- New state for feed scope
+  feedScope: 'tenant' | 'global';
   userTenants: Tenant[];
   personalTenant: Tenant | null;
   collectiveTenants: Tenant[];
   isLoading: boolean;
   error: string | null;
+}
+
+const initialState: TenantStateData = {
+  currentTenantId: null,
+  currentTenant: null,
+  feedScope: 'tenant',
+  userTenants: [],
+  personalTenant: null,
+  collectiveTenants: [],
+  isLoading: true,
+  error: null,
+};
+
+interface TenantState extends TenantStateData {
   actions: {
     init: (initialTenants?: Tenant[]) => Promise<void>;
     switchTenant: (tenantId: string) => Promise<void>;
-    setFeedScope: (scope: 'tenant' | 'global') => void; // <-- New action
+    setFeedScope: (scope: 'tenant' | 'global') => void;
     refreshTenants: () => Promise<void>;
     refreshCurrentTenant: () => Promise<void>;
+    clear: () => Promise<void>;
     _setCurrentTenantId: (tenantId: string | null) => void;
   };
 }
@@ -47,23 +65,16 @@ const supabase = createSupabaseBrowserClient();
 export const useTenantStore = create<TenantState>()(
   persist(
     (set, get) => ({
-      currentTenantId: null,
-      currentTenant: null,
-      feedScope: 'tenant', // <-- Default to tenant-scoped
-      userTenants: [],
-      personalTenant: null,
-      collectiveTenants: [],
-      isLoading: true,
-      error: null,
+      ...initialState,
       actions: {
         _setCurrentTenantId: (tenantId) => set({ currentTenantId: tenantId }),
-        setFeedScope: (scope) => set({ feedScope: scope }), // <-- New action implementation
+        setFeedScope: (scope) => set({ feedScope: scope }),
+        clear: async () => {
+          set(initialState);
+          await useTenantStore.persist.clearStorage();
+          clearTenantPersistence();
+        },
         init: async (initialTenants) => {
-          // When initial tenants are supplied (e.g., from server-side props) we can skip the RPC
-          // round-trip and populate the store immediately. We still need to derive
-          // personal/collective slices and establish a currentTenantId so that
-          // `refreshCurrentTenant` can succeed.
-
           if (initialTenants && initialTenants.length > 0) {
             const personal =
               initialTenants.find((t) => t.type === 'personal') ?? null;
@@ -71,9 +82,13 @@ export const useTenantStore = create<TenantState>()(
               (t) => t.type === 'collective',
             );
 
-            // If we don't already have a persisted tenant selection, default to personal
-            // or the first available tenant.
             const { currentTenantId } = get();
+
+            // Security Gate: If the persisted tenant ID is not in the user's list, invalidate it.
+            const isValidPersistedId =
+              currentTenantId &&
+              initialTenants.some((t) => t.id === currentTenantId);
+
             const fallbackTenantId =
               personal?.id ?? initialTenants[0]?.id ?? null;
 
@@ -81,13 +96,14 @@ export const useTenantStore = create<TenantState>()(
               userTenants: initialTenants,
               personalTenant: personal,
               collectiveTenants: collectives,
-              currentTenantId: currentTenantId ?? fallbackTenantId,
+              currentTenantId: isValidPersistedId
+                ? currentTenantId
+                : fallbackTenantId,
               isLoading: false,
             });
 
             await get().actions.refreshCurrentTenant();
           } else {
-            // No initial list provided – fetch from Supabase instead
             await get().actions.refreshTenants();
           }
         },
@@ -111,17 +127,27 @@ export const useTenantStore = create<TenantState>()(
               await supabase.rpc('get_user_tenants');
             if (error) throw error;
 
-            const transformedTenants: Tenant[] = tenants.map((t: any) => ({
-              id: t.tenant_id,
-              name: t.tenant_name,
-              slug: t.tenant_slug,
-              type: t.tenant_type,
-              description: t.tenant_description ?? null,
-              is_public: t.is_public,
-              created_at: '', // Placeholder
-              updated_at: '', // Placeholder
-              member_count: t.member_count ?? 0,
-            }));
+            const transformedTenants: Tenant[] = tenants.map(
+              (t: {
+                tenant_id: string;
+                tenant_name: string;
+                tenant_slug: string;
+                tenant_type: 'personal' | 'collective';
+                tenant_description?: string;
+                is_public: boolean;
+                member_count?: number;
+              }) => ({
+                id: t.tenant_id,
+                name: t.tenant_name,
+                slug: t.tenant_slug,
+                type: t.tenant_type,
+                description: t.tenant_description ?? null,
+                is_public: t.is_public,
+                created_at: '', // Placeholder
+                updated_at: '', // Placeholder
+                member_count: t.member_count ?? 0,
+              }),
+            );
 
             const personal =
               transformedTenants.find((t) => t.type === 'personal') || null;
@@ -139,8 +165,10 @@ export const useTenantStore = create<TenantState>()(
               set({ currentTenantId: personal.id });
             }
             await get().actions.refreshCurrentTenant();
-          } catch (e: any) {
-            set({ error: e.message });
+          } catch (e: unknown) {
+            const errorMessage =
+              e instanceof Error ? e.message : 'Unknown error';
+            set({ error: errorMessage });
           } finally {
             set({ isLoading: false });
           }
@@ -159,7 +187,16 @@ export const useTenantStore = create<TenantState>()(
             });
             if (error) throw error;
 
-            const tenantData = data as any;
+            const tenantData = data as {
+              tenant_id: string;
+              name: string;
+              slug: string;
+              type: 'personal' | 'collective';
+              is_public: boolean;
+              user_role: UserRole;
+              member_count: number;
+              description?: string;
+            };
             const context: TenantContext = {
               id: tenantData.tenant_id,
               tenant_id: tenantData.tenant_id,
@@ -173,11 +210,15 @@ export const useTenantStore = create<TenantState>()(
               is_personal: tenantData.type === 'personal',
               user_role: tenantData.user_role,
               member_count: tenantData.member_count,
-              description: tenantData.description,
+              ...(tenantData.description
+                ? { description: tenantData.description }
+                : {}),
             };
             set({ currentTenant: context });
-          } catch (e: any) {
-            set({ error: e.message });
+          } catch (e: unknown) {
+            const errorMessage =
+              e instanceof Error ? e.message : 'Unknown error';
+            set({ error: errorMessage });
           } finally {
             set({ isLoading: false });
           }
@@ -185,11 +226,11 @@ export const useTenantStore = create<TenantState>()(
       },
     }),
     {
-      name: 'lnked.active-tenant', // <-- Renamed for clarity
+      name: 'lnked.active-tenant',
       storage: createJSONStorage(() => sessionStorage),
       partialize: (state) => ({
         currentTenantId: state.currentTenantId,
-        feedScope: state.feedScope, // <-- Persist the new state
+        feedScope: state.feedScope,
       }),
     },
   ),

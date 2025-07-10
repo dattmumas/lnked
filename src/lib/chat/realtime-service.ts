@@ -1,5 +1,6 @@
 'use client';
 
+import { Database } from '@/lib/database.types';
 import { useChatUIStore } from '@/lib/stores/chat-ui-store';
 import supabase from '@/lib/supabase/browser';
 
@@ -15,7 +16,6 @@ import type {
   RealtimeChannel,
   RealtimePostgresChangesPayload,
 } from '@supabase/supabase-js';
-import { Database } from '@/lib/database.types';
 
 // ---------------------------------------------------------------------------
 // Constants

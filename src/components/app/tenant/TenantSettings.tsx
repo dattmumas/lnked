@@ -47,7 +47,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { useTenantSettings } from '@/hooks/useTenantSettings';
 import { useToast } from '@/hooks/useToast';
-import { useTenantActions } from '@/providers/TenantProvider';
 
 import {
   TenantPermissionsDisplay as TenantPermissions,
@@ -348,7 +347,7 @@ export function TenantSettings({
               <CardContent>
                 <PermissionGate
                   tenantId={settings.id}
-                  requiredPermission="canManageSettings"
+                  requiredPermission="manage"
                 >
                   <Form {...generalForm}>
                     <form
@@ -457,7 +456,7 @@ export function TenantSettings({
               <CardContent>
                 <PermissionGate
                   tenantId={settings.id}
-                  requiredPermission="canManageSettings"
+                  requiredPermission="manage"
                 >
                   <Form {...notificationForm}>
                     <form
@@ -645,7 +644,7 @@ export function TenantSettings({
               <CardContent>
                 <PermissionGate
                   tenantId={settings.id}
-                  requiredPermission="canManageSettings"
+                  requiredPermission="manage"
                 >
                   <Form {...privacyForm}>
                     <form
@@ -842,10 +841,7 @@ export function TenantSettings({
         {!isPersonalTenant && (
           <>
             <Separator />
-            <PermissionGate
-              tenantId={settings.id}
-              requiredPermission="canDelete"
-            >
+            <PermissionGate tenantId={settings.id} requiredPermission="admin">
               <Card className="border-destructive">
                 <CardHeader>
                   <CardTitle className="text-destructive">

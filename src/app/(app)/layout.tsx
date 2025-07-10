@@ -4,6 +4,7 @@ import React from 'react';
 
 import { ConditionalRightSidebar } from '@/components/app/layout/ConditionalRightSidebar';
 import { GlobalSidebar } from '@/components/app/nav/GlobalSidebar';
+import { AuthChangeListener } from '@/components/auth/AuthChangeListener';
 import ModernNavbar from '@/components/ModernNavbar';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { UserProvider, UserProfile } from '@/providers/UserContext';
@@ -50,6 +51,7 @@ export default async function AppLayout({
 
   return (
     <UserProvider user={user} profile={profile}>
+      <AuthChangeListener />
       <SpeedInsights />
       <div className="flex min-h-screen flex-col">
         {/* Global navbar (desktop & tablet) */}

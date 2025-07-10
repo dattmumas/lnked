@@ -1,7 +1,9 @@
 'use client';
 
-import React, { useEffect, createContext, useContext } from 'react';
+import React, { useEffect, createContext, useContext, useMemo, useCallback } from 'react';
+
 import { useTenantStore } from '@/stores/tenant-store';
+
 // Note: `shallow` equality function import removed after refactor.
 import type { Database } from '@/lib/database.types';
 
@@ -30,12 +32,12 @@ export function TenantProvider({
     void init(initialTenants);
     /*
      * We intentionally wrap the init call in `void` to explicitly ignore the returned
-     * Promise. The store’s internal state management handles resolution, and awaiting
+     * Promise. The store's internal state management handles resolution, and awaiting
      * here would cause an unnecessary micro-task → render cycle.
      */
   }, [init, initialTenants]);
 
-  const canPerformAction = (
+  const canPerformAction = useCallback((
     action: 'read' | 'write' | 'admin' | 'manage',
   ): boolean => {
     if (!currentTenant) return false;
@@ -52,14 +54,14 @@ export function TenantProvider({
       default:
         return false;
     }
-  };
+  }, [currentTenant]);
 
-  const isPersonalTenant = !!currentTenant && currentTenant.type === 'personal';
+  const isPersonalTenant = Boolean(currentTenant && currentTenant.type === 'personal');
 
-  const contextValue = {
+  const contextValue = useMemo(() => ({
     canPerformAction,
     isPersonalTenant,
-  };
+  }), [canPerformAction, isPersonalTenant]);
 
   return (
     <TenantActionContext.Provider value={contextValue}>

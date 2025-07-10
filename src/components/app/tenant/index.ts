@@ -5,7 +5,7 @@
 export { default as TenantSwitcher } from './TenantSwitcher';
 export { TenantSettings } from './TenantSettings';
 export { TenantMembers } from './TenantMembers';
-export { TenantPermissions, PermissionGate } from './TenantPermissions';
+export { TenantPermissionsDisplay, PermissionGate } from './TenantPermissions';
 
 // Types (re-export for convenience)
 export type {
@@ -17,4 +17,4 @@ export type {
   UserTenantsResponse,
   UseTenantReturn,
   UseTenantMembersReturn,
-} from '@/types/tenant.types'; 
+} from '@/types/tenant.types';
