@@ -188,13 +188,13 @@ export function CenterFeed({
       )}
 
       {/* Feed Content */}
-      <div className="">
+      <div className="flex-1 h-[calc(100vh+4rem)] overflow-hidden">
         <FeedVirtuoso
           items={feedItems}
           interactions={interactions}
           loadMore={loadMore}
           hasMore={hasMore}
-          windowScroll
+          windowScroll={false}
         />
       </div>
     </div>

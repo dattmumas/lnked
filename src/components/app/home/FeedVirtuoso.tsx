@@ -6,18 +6,32 @@ import { PostCardWrapper } from './PostCardWrapper';
 import type { PostFeedInteractions } from '@/hooks/home/usePostFeedInteractions';
 import type { FeedItem } from '@/types/home/types';
 
+// Custom scroller component with hidden scrollbar
+const CustomScroller = React.forwardRef<
+  HTMLDivElement,
+  React.HTMLProps<HTMLDivElement>
+>(function CustomScroller(props, ref) {
+  return (
+    <div
+      {...props}
+      ref={ref}
+      style={{
+        ...props.style,
+        scrollbarWidth: 'none',
+        msOverflowStyle: 'none',
+      }}
+      className="[&::-webkit-scrollbar]:hidden"
+    />
+  );
+});
+
 function renderPostRow(
   index: number,
   item: FeedItem,
   interactions: PostFeedInteractions,
 ): React.JSX.Element {
   return (
-    <PostCardWrapper
-      key={item.id}
-      item={item}
-      interactions={interactions}
-      index={index}
-    />
+    <PostCardWrapper item={item} interactions={interactions} index={index} />
   );
 }
 
@@ -43,20 +57,29 @@ export function FeedVirtuoso({
   windowScroll = true,
 }: FeedVirtuosoProps): React.JSX.Element {
   return (
-    <div className={windowScroll ? '' : 'no-scrollbar h-full overflow-y-auto'}>
+    <div className={windowScroll ? '' : 'h-full overflow-hidden'}>
       <Virtuoso
         data={items}
         itemContent={(index, item) => {
           return renderPostRow(index, item, interactions);
         }}
-        style={windowScroll ? undefined : { height: '100%' }}
+        computeItemKey={(_index, item) => item.id}
+        style={
+          windowScroll
+            ? undefined
+            : {
+                height: '100%',
+                scrollbarWidth: 'none',
+                msOverflowStyle: 'none',
+              }
+        }
+        components={{
+          Scroller: CustomScroller,
+        }}
         useWindowScroll={windowScroll}
         overscan={100}
-        // Prefetch when the user is within the last 5 items
-        rangeChanged={(range) => {
-          if (hasMore && range.endIndex >= items.length - 5) {
-            void loadMore();
-          }
+        endReached={() => {
+          if (hasMore) void loadMore();
         }}
       />
     </div>

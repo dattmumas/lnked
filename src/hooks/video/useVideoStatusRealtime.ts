@@ -33,10 +33,18 @@ export function useVideoStatusRealtime({
 }: UseVideoStatusRealtimeOptions) {
   const queryClient = useQueryClient();
   const cleanupRef = useRef<(() => void) | null>(null);
+  const pendingUpdatesRef = useRef<VideoStatusUpdate[]>([]);
+  const batchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Handle video status updates
-  const handleVideoStatusUpdate = useCallback(
-    (update: VideoStatusUpdate) => {
+  // Batch cache updates to reduce render frequency
+  const processBatchedUpdates = useCallback(() => {
+    if (pendingUpdatesRef.current.length === 0) return;
+
+    const updates = [...pendingUpdatesRef.current];
+    pendingUpdatesRef.current = [];
+
+    // Process all updates in batch
+    updates.forEach((update) => {
       // Only log critical status changes to reduce console spam
       if (update.status === 'ready' || update.status === 'error') {
         console.log(`🎥 [REALTIME] Video ${update.status}:`, update.id);
@@ -63,22 +71,39 @@ export function useVideoStatusRealtime({
         return oldData;
       });
 
-      // Invalidate video list queries to refresh lists
-      queryClient.invalidateQueries({ queryKey: ['videos'] });
-      queryClient.invalidateQueries({ queryKey: ['video-stats'] });
-
-      // Invalidate feed queries if video is ready (for immediate feed updates)
-      if (update.status === 'ready') {
-        queryClient.invalidateQueries({ queryKey: ['tenant-feed'] });
-        queryClient.invalidateQueries({ queryKey: ['feed'] });
-      }
-
       // Call custom callback if provided
       if (onStatusUpdate) {
         onStatusUpdate(update);
       }
+    });
+
+    // Batch invalidate queries once
+    queryClient.invalidateQueries({ queryKey: ['videos'] });
+    queryClient.invalidateQueries({ queryKey: ['video-stats'] });
+
+    // Check if any videos became ready for feed invalidation
+    const hasReadyVideos = updates.some((u) => u.status === 'ready');
+    if (hasReadyVideos) {
+      queryClient.invalidateQueries({ queryKey: ['tenant-feed'] });
+      queryClient.invalidateQueries({ queryKey: ['feed'] });
+    }
+  }, [queryClient, onStatusUpdate]);
+
+  // Handle video status updates
+  const handleVideoStatusUpdate = useCallback(
+    (update: VideoStatusUpdate) => {
+      // Add to pending updates
+      pendingUpdatesRef.current.push(update);
+
+      // Clear existing timeout and set new one
+      if (batchTimeoutRef.current) {
+        clearTimeout(batchTimeoutRef.current);
+      }
+
+      // Process batch after 300ms of inactivity
+      batchTimeoutRef.current = setTimeout(processBatchedUpdates, 300);
     },
-    [queryClient, onStatusUpdate],
+    [processBatchedUpdates],
   );
 
   useEffect(() => {
@@ -140,6 +165,12 @@ export function useVideoStatusRealtime({
     // Cleanup function
     return () => {
       activeVideoStatusSubscriptions.delete(userId);
+
+      // Clear any pending batch timeout
+      if (batchTimeoutRef.current) {
+        clearTimeout(batchTimeoutRef.current);
+        batchTimeoutRef.current = null;
+      }
 
       if (cleanupRef.current) {
         cleanupRef.current();

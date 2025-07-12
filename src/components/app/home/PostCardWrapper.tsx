@@ -13,84 +13,88 @@ interface Props {
   index?: number;
 }
 
-export function PostCardWrapper({
-  item,
-  interactions,
-  index,
-}: Props): React.JSX.Element {
-  const handleLike = useCallback((): void => {
-    void interactions.toggleLike(item.id);
-  }, [interactions, item.id]);
+export const PostCardWrapper = React.memo(
+  function PostCardWrapper({
+    item,
+    interactions,
+    index,
+  }: Props): React.JSX.Element {
+    const handleLike = useCallback((): void => {
+      void interactions.toggleLike(item.id);
+    }, [interactions, item.id]);
 
-  const handleDislike = useCallback((): void => {
-    void interactions.toggleDislike(item.id);
-  }, [interactions, item.id]);
+    const handleDislike = useCallback((): void => {
+      void interactions.toggleDislike(item.id);
+    }, [interactions, item.id]);
 
-  const handleBookmark = useCallback((): void => {
-    void interactions.toggleBookmark(item.id);
-  }, [interactions, item.id]);
+    const handleBookmark = useCallback((): void => {
+      void interactions.toggleBookmark(item.id);
+    }, [interactions, item.id]);
 
-  const unifiedPost = {
-    id: item.id,
-    title: item.title,
-    content: item.content ?? null,
-    meta_description: null,
-    thumbnail_url: item.thumbnail_url ?? null,
-    slug: null,
-    created_at: item.published_at,
-    post_type: item.type === 'video' ? ('video' as const) : ('text' as const),
-    metadata: {
-      ...(item.duration !== undefined &&
-      item.duration !== null &&
-      item.duration.length > 0
-        ? { duration: item.duration }
-        : {}),
-      // Include video metadata if available
-      ...(item.metadata
-        ? {
-            playbackId: item.metadata.playbackId,
-            status: item.metadata.status,
-            videoAssetId: item.metadata.videoAssetId,
-          }
-        : {}),
-      // Add tenant information to metadata for access in components
-      ...(item.tenant && {
-        tenant: {
-          id: item.tenant.id,
-          name: item.tenant.name,
-          type: item.tenant.type,
-        },
-      }),
-    },
-    author: {
-      id: '',
-      username: item.author.username,
-      full_name: item.author.name,
-      avatar_url: item.author.avatar_url ?? null,
-    },
-    collective:
-      item.collective !== undefined && item.collective !== null
-        ? { id: '', ...item.collective }
-        : null,
-  };
-
-  return (
-    <PostCard
-      post={unifiedPost}
-      interactions={{
-        isLiked: interactions.likedPosts.has(item.id),
-        isDisliked: interactions.dislikedPosts.has(item.id),
-        isBookmarked: interactions.bookmarkedPosts.has(item.id),
-        likeCount: item.stats.likes,
-        dislikeCount: item.stats.dislikes,
-        ...(item.stats.views !== undefined
-          ? { viewCount: item.stats.views }
+    const unifiedPost = {
+      id: item.id,
+      title: item.title,
+      content: item.content ?? null,
+      meta_description: null,
+      thumbnail_url: item.thumbnail_url ?? null,
+      slug: null,
+      created_at: item.published_at,
+      post_type: item.type === 'video' ? ('video' as const) : ('text' as const),
+      metadata: {
+        ...(item.duration !== undefined &&
+        item.duration !== null &&
+        item.duration.length > 0
+          ? { duration: item.duration }
           : {}),
-      }}
-      onToggleLike={handleLike}
-      onToggleDislike={handleDislike}
-      onToggleBookmark={handleBookmark}
-      {...(index !== undefined ? { index } : {})}
-    />
-  );
-}
+        // Include video metadata if available
+        ...(item.metadata
+          ? {
+              playbackId: item.metadata.playbackId,
+              status: item.metadata.status,
+              videoAssetId: item.metadata.videoAssetId,
+            }
+          : {}),
+        // Add tenant information to metadata for access in components
+        ...(item.tenant && {
+          tenant: {
+            id: item.tenant.id,
+            name: item.tenant.name,
+            type: item.tenant.type,
+          },
+        }),
+      },
+      author: {
+        id: '',
+        username: item.author.username,
+        full_name: item.author.name,
+        avatar_url: item.author.avatar_url ?? null,
+      },
+      collective:
+        item.collective !== undefined && item.collective !== null
+          ? { id: '', ...item.collective }
+          : null,
+    };
+
+    return (
+      <PostCard
+        post={unifiedPost}
+        interactions={{
+          isLiked: interactions.likedPosts.has(item.id),
+          isDisliked: interactions.dislikedPosts.has(item.id),
+          isBookmarked: interactions.bookmarkedPosts.has(item.id),
+          likeCount: item.stats.likes,
+          dislikeCount: item.stats.dislikes,
+          ...(item.stats.views !== undefined
+            ? { viewCount: item.stats.views }
+            : {}),
+        }}
+        onToggleLike={handleLike}
+        onToggleDislike={handleDislike}
+        onToggleBookmark={handleBookmark}
+        {...(index !== undefined ? { index } : {})}
+      />
+    );
+  },
+  (prev, next) =>
+    prev.item === next.item && prev.interactions === next.interactions,
+);

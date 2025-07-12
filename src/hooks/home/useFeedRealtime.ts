@@ -33,6 +33,8 @@ export function useFeedRealtime({
   const [newPostsCount, setNewPostsCount] = useState(0);
   const [hasNewPosts, setHasNewPosts] = useState(false);
   const cleanupRef = useRef<(() => void) | null>(null);
+  const pendingUpdatesRef = useRef<PostUpdate[]>([]);
+  const batchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Use refs for callbacks to keep them stable and prevent re-renders
   const onPostUpdateRef = useRef(onPostUpdate);
@@ -42,9 +44,15 @@ export function useFeedRealtime({
     onNewPostsAvailableRef.current = onNewPostsAvailable;
   });
 
-  // Handle post updates
-  const handlePostUpdate = useCallback(
-    (update: PostUpdate) => {
+  // Batch cache updates to reduce render frequency
+  const processBatchedUpdates = useCallback(() => {
+    if (pendingUpdatesRef.current.length === 0) return;
+
+    const updates = [...pendingUpdatesRef.current];
+    pendingUpdatesRef.current = [];
+
+    // Process all updates in batch
+    updates.forEach((update) => {
       // Update React Query cache for specific post
       queryClient.setQueryData(['post', update.id], (oldData: unknown) => {
         if (oldData && typeof oldData === 'object') {
@@ -62,24 +70,43 @@ export function useFeedRealtime({
         return oldData;
       });
 
-      // For published posts, indicate new content is available
-      if (update.status === 'active') {
-        setNewPostsCount((prevCount) => {
-          const newCount = prevCount + 1;
-          if (onNewPostsAvailableRef.current) {
-            onNewPostsAvailableRef.current(newCount);
-          }
-          return newCount;
-        });
-        setHasNewPosts(true);
-      }
-
       // Call custom callback if provided
       if (onPostUpdateRef.current) {
         onPostUpdateRef.current(update);
       }
+    });
+
+    // Count new posts and update state once
+    const newPublishedPosts = updates.filter(
+      (u) => u.status === 'active',
+    ).length;
+    if (newPublishedPosts > 0) {
+      setNewPostsCount((prevCount) => {
+        const newCount = prevCount + newPublishedPosts;
+        if (onNewPostsAvailableRef.current) {
+          onNewPostsAvailableRef.current(newCount);
+        }
+        return newCount;
+      });
+      setHasNewPosts(true);
+    }
+  }, [queryClient]);
+
+  // Handle post updates with batching
+  const handlePostUpdate = useCallback(
+    (update: PostUpdate) => {
+      // Add to pending updates
+      pendingUpdatesRef.current.push(update);
+
+      // Clear existing timeout and set new one
+      if (batchTimeoutRef.current) {
+        clearTimeout(batchTimeoutRef.current);
+      }
+
+      // Process batch after 300ms of inactivity
+      batchTimeoutRef.current = setTimeout(processBatchedUpdates, 300);
     },
-    [queryClient],
+    [processBatchedUpdates],
   );
 
   // Function to refresh feed and clear new posts indicator
@@ -128,6 +155,12 @@ export function useFeedRealtime({
     return () => {
       // Remove from active set IMMEDIATELY when effect cleans up
       activeFeedSubscriptions.delete(tenantId);
+
+      // Clear any pending batch timeout
+      if (batchTimeoutRef.current) {
+        clearTimeout(batchTimeoutRef.current);
+        batchTimeoutRef.current = null;
+      }
 
       if (cleanupRef.current) {
         cleanupRef.current();

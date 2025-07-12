@@ -12,7 +12,7 @@ export default async function AppLayout({
   children,
 }: {
   children: React.ReactNode;
-}) {
+}): Promise<React.ReactElement> {
   const supabase = await createServerSupabaseClient();
   const {
     data: { user },
@@ -31,14 +31,14 @@ export default async function AppLayout({
     <UserProvider user={user} profile={profile as UserProfile | null}>
       <div className="min-h-screen bg-background font-sans antialiased">
         <ModernNavbar />
-        <main className="flex">
+        <div className="relative flex min-h-[calc(100vh-4rem)]">
           <ContextualGlobalSidebar />
-          <div className="flex-1 md:ml-16">
+          <div className="flex-1 transition-all duration-200 ease-in-out md:ml-16">
             <ConditionalRightSidebar user={user} profile={profile}>
               {children}
             </ConditionalRightSidebar>
           </div>
-        </main>
+        </div>
         <Toaster />
         <SpeedInsights />
       </div>
