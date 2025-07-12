@@ -219,11 +219,13 @@ function LoadMoreButton({
  * A skeleton loader for the content grid.
  */
 function ContentGridSkeleton(): React.ReactElement {
+  const skeletonIds = Array.from({ length: 6 }, () => crypto.randomUUID());
+
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-      {Array.from({ length: 6 }).map((_, i) => (
+      {skeletonIds.map((id) => (
         <div
-          key={`skeleton-${i}`}
+          key={id}
           className="bg-card rounded-lg border overflow-hidden animate-pulse"
         >
           <div className="aspect-video bg-muted" />
