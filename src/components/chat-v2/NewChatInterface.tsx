@@ -1,7 +1,8 @@
 'use client';
 
+import { motion, AnimatePresence } from 'framer-motion';
 import { AlertCircle } from 'lucide-react';
-import { Suspense, useCallback } from 'react';
+import { Suspense, useCallback, useEffect, useState } from 'react';
 
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { useConversationMessages } from '@/hooks/chat-v2/useConversationMessages';
@@ -24,6 +25,30 @@ export function NewChatInterface({
   initialConversation,
 }: NewChatInterfaceProps): React.JSX.Element {
   const { currentTenant, isLoading: tenantLoading } = useTenantStore();
+  const [isSwitchingTenant, setIsSwitchingTenant] = useState(false);
+  const [previousTenantId, setPreviousTenantId] = useState<string | null>(null);
+
+  // Detect tenant switching for smooth animations
+  useEffect(() => {
+    if (
+      currentTenant?.id &&
+      previousTenantId &&
+      currentTenant.id !== previousTenantId
+    ) {
+      setIsSwitchingTenant(true);
+
+      // Reset switching state after a short delay
+      const timer = setTimeout(() => {
+        setIsSwitchingTenant(false);
+      }, 500);
+
+      return () => clearTimeout(timer);
+    }
+
+    if (currentTenant?.id) {
+      setPreviousTenantId(currentTenant.id);
+    }
+  }, [currentTenant?.id, previousTenantId]);
 
   const {
     data: conversationsData,
@@ -81,6 +106,23 @@ export function NewChatInterface({
 
   return (
     <div className="flex h-screen bg-background">
+      {/* Tenant Switching Indicator */}
+      <AnimatePresence>
+        {isSwitchingTenant && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 bg-primary text-primary-foreground px-4 py-2 rounded-lg shadow-lg flex items-center gap-2"
+          >
+            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            <span className="text-sm font-medium">
+              Switching to {currentTenant?.name}...
+            </span>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Conversation Sidebar */}
       <div className="w-80 border-r border-border bg-card">
         <div className="p-4 border-b border-border">
@@ -95,14 +137,21 @@ export function NewChatInterface({
         <Suspense
           fallback={<div className="p-4">Loading conversations...</div>}
         >
-          <ConversationSidebar
-            conversations={conversationsData?.conversations ?? []}
-            currentConversationId={conversationId}
-            isLoading={conversationsLoading}
-            error={conversationsError}
-            onSelectConversation={handleSelectConversation}
-            isExpanded
-          />
+          <motion.div
+            key={currentTenant?.id} // Re-animate when tenant changes
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.3, ease: 'easeOut' }}
+          >
+            <ConversationSidebar
+              conversations={conversationsData?.conversations ?? []}
+              currentConversationId={conversationId}
+              isLoading={conversationsLoading}
+              error={conversationsError}
+              onSelectConversation={handleSelectConversation}
+              isExpanded
+            />
+          </motion.div>
         </Suspense>
       </div>
 

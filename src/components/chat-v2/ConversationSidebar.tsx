@@ -34,6 +34,18 @@ const UserSearchDialog = dynamic(
   },
 );
 
+// Lazy load the ChannelCreationDialog for collective tenants
+const ChannelCreationDialog = dynamic(
+  () =>
+    import('./ChannelCreationDialog').then((mod) => ({
+      default: mod.ChannelCreationDialog,
+    })),
+  {
+    loading: () => null, // No loading state needed for dialog
+    ssr: false,
+  },
+);
+
 interface ConversationSidebarProps {
   conversations: ChatConversation[];
   currentConversationId: string;
@@ -54,6 +66,7 @@ export function ConversationSidebar({
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
   const [isUserSearchOpen, setIsUserSearchOpen] = useState(false);
+  const [isChannelCreationOpen, setIsChannelCreationOpen] = useState(false);
 
   const { currentTenant } = useTenantStore();
 
@@ -64,18 +77,32 @@ export function ConversationSidebar({
       currentTenant?.type === 'personal',
   );
 
-  // Filter conversations based on search query
+  // Filter conversations based on tenant type and search query
   const filteredConversations = useMemo(() => {
-    if (!searchQuery.trim()) return conversations;
+    // First filter by tenant type
+    let typeFiltered = conversations;
 
-    return conversations.filter(
+    if (isPersonalTenant) {
+      // Personal tenants: only show direct messages
+      typeFiltered = conversations.filter((conv) => conv.type === 'direct');
+    } else {
+      // Collective tenants: only show channels and groups
+      typeFiltered = conversations.filter(
+        (conv) => conv.type === 'channel' || conv.type === 'group',
+      );
+    }
+
+    // Then apply search filter
+    if (!searchQuery.trim()) return typeFiltered;
+
+    return typeFiltered.filter(
       (conv) =>
         conv.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         conv.last_message?.content
           ?.toLowerCase()
           .includes(searchQuery.toLowerCase()),
     );
-  }, [conversations, searchQuery]);
+  }, [conversations, searchQuery, isPersonalTenant]);
 
   const handleConversationClick = (conversationId: string): void => {
     if (conversationId !== currentConversationId) {
@@ -88,15 +115,19 @@ export function ConversationSidebar({
       // For personal tenants, open user search dialog to create direct messages
       setIsUserSearchOpen(true);
     } else {
-      // For collective tenants, we'll implement channel creation later
-      // For now, show a placeholder
-      console.log('Channel creation for collective tenants - coming soon!');
+      // For collective tenants, open channel creation dialog
+      setIsChannelCreationOpen(true);
     }
   };
 
   const handleConversationCreated = (conversationId: string): void => {
     // Navigate to the newly created conversation
     onSelectConversation(conversationId);
+  };
+
+  const handleChannelCreated = (channelId: string): void => {
+    // Navigate to the newly created channel
+    onSelectConversation(channelId);
   };
 
   const getConversationIcon = (
@@ -114,20 +145,34 @@ export function ConversationSidebar({
               alt={conversation.title || 'Avatar'}
             />
           ) : (
-            <AvatarFallback>{initials}</AvatarFallback>
+            <AvatarFallback className="text-xs font-medium">
+              {initials}
+            </AvatarFallback>
           )}
         </Avatar>
       );
     }
 
-    // Channel or group icons
+    // Channel or group icons with better styling
     switch (conversation.type) {
       case 'channel':
-        return <Hash className="h-4 w-4" />;
+        return (
+          <div className="w-6 h-6 rounded-md bg-primary/10 flex items-center justify-center">
+            <Hash className="h-3.5 w-3.5 text-primary" />
+          </div>
+        );
       case 'group':
-        return <Users className="h-4 w-4" />;
+        return (
+          <div className="w-6 h-6 rounded-md bg-blue-500/10 flex items-center justify-center">
+            <Users className="h-3.5 w-3.5 text-blue-600" />
+          </div>
+        );
       default:
-        return <MessageSquare className="h-4 w-4" />;
+        return (
+          <div className="w-6 h-6 rounded-md bg-muted flex items-center justify-center">
+            <MessageSquare className="h-3.5 w-3.5 text-muted-foreground" />
+          </div>
+        );
     }
   };
 
@@ -196,6 +241,13 @@ export function ConversationSidebar({
         onConversationCreated={handleConversationCreated}
       />
 
+      {/* Channel Creation Dialog for Collective Tenants */}
+      <ChannelCreationDialog
+        open={isChannelCreationOpen}
+        onOpenChange={setIsChannelCreationOpen}
+        onChannelCreated={handleChannelCreated}
+      />
+
       {/* Conversations List */}
       <ScrollArea className="flex-1">
         {isLoading ? (
@@ -227,7 +279,11 @@ export function ConversationSidebar({
               ) : (
                 <>
                   <MessageSquare className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                  <p className="text-sm">No conversations yet</p>
+                  <p className="text-sm">
+                    {isPersonalTenant
+                      ? 'No direct messages'
+                      : 'No channels yet'}
+                  </p>
                   <p className="text-xs mt-1">
                     {isPersonalTenant
                       ? 'Start a direct message to begin chatting'

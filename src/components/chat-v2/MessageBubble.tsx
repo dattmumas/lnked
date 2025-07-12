@@ -4,7 +4,9 @@ import Linkify from 'linkify-react';
 import { useMemo, useState, useCallback, useRef } from 'react';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { useUserRole } from '@/hooks/useUserRole';
 import { cn } from '@/lib/utils';
+import { useTenantStore } from '@/stores/tenant-store';
 import { ChatMessage } from '@/types/chat-v2';
 
 interface MessageBubbleProps {
@@ -22,6 +24,13 @@ export function MessageBubble({
 }: MessageBubbleProps): React.JSX.Element {
   const [showTimestamp, setShowTimestamp] = useState(false);
   const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const { currentTenant } = useTenantStore();
+
+  // Fetch user role for collective channels
+  const { data: userRole } = useUserRole(
+    message.sender?.id || null,
+    currentTenant?.type === 'collective' ? currentTenant.id : null,
+  );
 
   // Get user initials for avatar fallback
   const userInitials = useMemo(() => {
@@ -147,6 +156,25 @@ export function MessageBubble({
       {!showAvatar && <div className="w-8" />}
 
       <div className={cn('flex-1 max-w-lg relative')}>
+        {/* Sender info for collective channels */}
+        {showAvatar &&
+          !isGrouped &&
+          currentTenant?.type === 'collective' &&
+          !isOwn && (
+            <div className="flex items-center gap-2 mb-1 px-3">
+              <span className="text-xs font-medium text-foreground">
+                {currentTenant.name}
+                {userRole && ` • ${userRole}`}
+              </span>
+              <span className="text-xs text-muted-foreground">
+                -{' '}
+                {message.sender?.full_name ||
+                  message.sender?.username ||
+                  'Unknown'}
+              </span>
+            </div>
+          )}
+
         <button
           type="button"
           className={cn(

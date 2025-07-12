@@ -60,10 +60,25 @@ export function UserSearchDialog({
   // Ensure users is always an array
   const users = Array.isArray(usersData) ? usersData : [];
 
+  // Get tenant context for validation
+  const { currentTenant } = useTenant();
+  const isPersonalTenant = Boolean(
+    currentTenant?.is_personal === true ||
+      currentTenant?.tenant_type === 'personal' ||
+      currentTenant?.type === 'personal',
+  );
+
   const createConversationMutation = useMutation({
     mutationFn: async (userId: string) => {
       if (!currentTenantId) {
         throw new Error('No tenant selected');
+      }
+
+      // Validate that we're creating appropriate conversation type for tenant
+      if (!isPersonalTenant) {
+        throw new Error(
+          'Direct messages are only available in personal context',
+        );
       }
 
       const response = await fetch(
@@ -238,6 +253,7 @@ export function UserSearchDialog({
             {users.map((user) => (
               <button
                 key={user.id}
+                type="button"
                 onClick={() => handleUserSelect(user)}
                 disabled={createConversationMutation.isPending}
                 className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-muted transition-colors disabled:opacity-50"
@@ -283,6 +299,7 @@ export function UserSearchDialog({
                 stroke="currentColor"
                 viewBox="0 0 24 24"
               >
+                <title>Search icon</title>
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"

@@ -20,6 +20,7 @@ import { Textarea } from '@/components/ui/textarea';
 import supabase from '@/lib/supabase/browser';
 import { cn } from '@/lib/utils';
 import { useUser } from '@/providers/UserContext';
+import { useTenantStore } from '@/stores/tenant-store';
 import { ChatMessage, MessagesResponse } from '@/types/chat-v2';
 
 const messageSchema = z.object({
@@ -55,6 +56,7 @@ export function MessageComposer({
   const [isTyping, setIsTyping] = useState(false);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const { user, profile } = useUser();
+  const { currentTenant } = useTenantStore();
 
   const form = useForm<MessageFormData>({
     resolver: zodResolver(messageSchema),
@@ -118,6 +120,11 @@ export function MessageComposer({
     }) => {
       if (!user?.id) {
         throw new Error('User not authenticated');
+      }
+
+      // Validate tenant context exists
+      if (!tenantId) {
+        throw new Error('No tenant context available');
       }
 
       const { data, error } = await supabase
@@ -323,6 +330,27 @@ export function MessageComposer({
   return (
     <div className="border-t border-border bg-background">
       <div className="p-4">
+        {/* Tenant Context Indicator */}
+        {currentTenant && (
+          <div className="flex items-center gap-2 text-xs text-muted-foreground mb-3 px-1">
+            <div className="w-2 h-2 bg-primary rounded-full" />
+            <span>
+              <span className="font-medium">{currentTenant.name}</span>
+              {currentTenant.type === 'collective' &&
+                currentTenant.user_role && (
+                  <span className="text-muted-foreground/70">
+                    {' '}
+                    • {currentTenant.user_role}
+                  </span>
+                )}
+              {' - '}
+              <span className="font-medium">
+                {profile?.full_name || profile?.username || 'You'}
+              </span>
+            </span>
+          </div>
+        )}
+
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3">
             <div className="flex items-end gap-3">

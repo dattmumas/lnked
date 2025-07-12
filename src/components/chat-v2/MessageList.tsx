@@ -99,11 +99,14 @@ export function MessageList({
     };
   }, [resizeObserver]);
 
-  // Reset measurements when conversation changes
+  // Reset measurements when conversation changes (detected by messages changing)
   useEffect(() => {
-    measuredHeights.current = [];
-    lastMessageCountRef.current = 0;
-  }, [activeConversationId]);
+    // Only reset if we have a different conversation (new set of messages)
+    if (allMessages.length === 0 || lastMessageCountRef.current === 0) {
+      measuredHeights.current = [];
+      lastMessageCountRef.current = 0;
+    }
+  }, [allMessages.length]);
 
   useEffect(() => {
     const messageCount = allMessages.length;

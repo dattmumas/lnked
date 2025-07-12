@@ -94,7 +94,7 @@ export default function ResizableSidebarClient({
   }, [minWidth, maxWidth, applyWidthNow, initialWidth]);
 
   return (
-    <aside className="relative hidden xl:block flex-shrink-0 sticky top-16 h-[calc(100vh_-_4rem)] overflow-y-auto">
+    <aside className="relative hidden xl:block flex-shrink-0 sticky top-16 h-[calc(100vh_-_4rem)] overflow-y-auto bg-background/[0.92] border-l border-border/30">
       {children}
       {/* Drag handle */}
       <div
