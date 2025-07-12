@@ -1,8 +1,8 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useCallback, useState, useRef } from 'react';
 
-import { realtimeService } from '@/lib/chat/realtime-service';
 import { Database } from '@/lib/database.types';
+import { realtimeService } from '@/lib/realtime/realtime-service';
 
 type PostUpdate = Pick<
   Database['public']['Tables']['posts']['Row'],

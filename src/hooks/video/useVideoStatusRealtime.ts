@@ -1,7 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useCallback, useRef } from 'react';
 
-import { realtimeService } from '@/lib/chat/realtime-service';
+import { realtimeService } from '@/lib/realtime/realtime-service';
 
 interface VideoStatusUpdate {
   id: string;

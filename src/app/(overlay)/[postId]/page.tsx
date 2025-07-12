@@ -13,14 +13,15 @@ export const revalidate = 60; // 1 min
 export default async function PostPage({
   params,
 }: {
-  params: Params;
+  params: Promise<Params>;
 }): Promise<React.ReactElement> {
+  const resolvedParams = await params;
   const supabase = await createServerSupabaseClient();
 
   const { data, error } = await supabase
     .from('v_user_visible_posts')
     .select(`*, video_assets(id, mux_playback_id, status)`)
-    .eq('id', params.postId)
+    .eq('id', resolvedParams.postId)
     .single();
 
   if (error || !data) {

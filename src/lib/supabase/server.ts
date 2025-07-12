@@ -56,6 +56,29 @@ export const createServerSupabaseClient = cache(
   },
 );
 
+/**
+ * Create a Supabase client for use inside unstable_cache functions
+ * This version does not access cookies and should be used with explicit user context
+ */
+export const createServerSupabaseCacheClient = (): SupabaseClient<Database> => {
+  const url = process.env['NEXT_PUBLIC_SUPABASE_URL']!;
+  const key = process.env['NEXT_PUBLIC_SUPABASE_ANON_KEY']!;
+
+  return createServerClient<Database>(url, key, {
+    cookies: {
+      get() {
+        return undefined;
+      },
+      set() {
+        // No-op for cached functions
+      },
+      remove() {
+        // No-op for cached functions
+      },
+    },
+  });
+};
+
 // Create a service role client for admin operations
 export const createServerSupabaseAdminClient = cache(
   async (): Promise<SupabaseClient<Database>> => {

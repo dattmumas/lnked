@@ -1,7 +1,6 @@
 // Server-Side Tenant Context Caching
 // Reduces redundant database queries by caching tenant context, membership, and access data
 
-import { unstable_cache } from 'next/cache';
 import { cache } from 'react';
 
 import { createServerSupabaseClient } from '@/lib/supabase/server';
@@ -9,34 +8,14 @@ import { createServerSupabaseClient } from '@/lib/supabase/server';
 import type { Database } from '@/lib/database.types';
 
 // =============================================================================
-// CACHE CONFIGURATION
+// TYPE DEFINITIONS
 // =============================================================================
 
-// Cache durations (in seconds)
-const TENANT_CONTEXT_CACHE_TTL = 60 * 5; // 5 minutes
-const USER_TENANTS_CACHE_TTL = 60 * 10; // 10 minutes
-const TENANT_ACCESS_CACHE_TTL = 60 * 3; // 3 minutes
-
-// Cache tags for invalidation
-export const CACHE_TAGS = {
-  TENANT_CONTEXT: (tenantId: string, userId: string) =>
-    `tenant-context:${tenantId}:${userId}`,
-  USER_TENANTS: (userId: string) => `user-tenants:${userId}`,
-  TENANT_ACCESS: (tenantId: string, userId: string) =>
-    `tenant-access:${tenantId}:${userId}`,
-  TENANT_MEMBERSHIP: (tenantId: string) => `tenant-membership:${tenantId}`,
-  USER_ALL: (userId: string) => `user-all:${userId}`, // For bulk invalidation
-} as const;
-
-// =============================================================================
-// TYPES (Aligned with database.types.ts)
-// =============================================================================
-
-// Type aliases for cleaner code
+// Extract types from the Database schema
 type MemberRoleEnum = Database['public']['Enums']['member_role']; // 'owner' | 'admin' | 'editor' | 'member'
 type TenantTypeEnum = Database['public']['Enums']['tenant_type']; // 'personal' | 'collective'
 
-// Cached tenant context - matches get_tenant_context RPC return
+// Cached tenant context (what we store in cache)
 export interface CachedTenantContext {
   tenant_id: string;
   name: string;
@@ -49,7 +28,7 @@ export interface CachedTenantContext {
   created_at: string;
 }
 
-// Cached user tenant - matches get_user_tenants RPC return structure
+// Cached user tenant (what we store for user's tenant list)
 export interface CachedUserTenant {
   tenant_id: string;
   tenant_type: TenantTypeEnum;
@@ -61,7 +40,7 @@ export interface CachedUserTenant {
   is_public: boolean;
 }
 
-// Cached tenant access result
+// Cached tenant access (what we store for access checks)
 export interface CachedTenantAccess {
   hasAccess: boolean;
   userRole: MemberRoleEnum | null;
@@ -69,14 +48,14 @@ export interface CachedTenantAccess {
 }
 
 // =============================================================================
-// CORE CACHING FUNCTIONS
+// REQUEST-SCOPED CACHING FUNCTIONS (Using React cache)
 // =============================================================================
 
 /**
- * Cached function to get tenant context for a user
- * Uses Next.js unstable_cache for persistence across requests
+ * Request-scoped cached function to get tenant context for a user
+ * Uses React's cache for request-level deduplication
  */
-export const getCachedTenantContext = unstable_cache(
+export const getCachedTenantContext = cache(
   async (
     tenantId: string,
     userId: string,
@@ -94,17 +73,13 @@ export const getCachedTenantContext = unstable_cache(
 
     return context as unknown as CachedTenantContext;
   },
-  ['tenant-context'],
-  {
-    revalidate: TENANT_CONTEXT_CACHE_TTL,
-  },
 );
 
 /**
- * Cached function to get all tenants for a user
- * Uses Next.js unstable_cache for persistence across requests
+ * Request-scoped cached function to get all tenants for a user
+ * Uses React's cache for request-level deduplication
  */
-export const getCachedUserTenants = unstable_cache(
+export const getCachedUserTenants = cache(
   async (userId: string): Promise<CachedUserTenant[]> => {
     const supabase = await createServerSupabaseClient();
 
@@ -129,17 +104,13 @@ export const getCachedUserTenants = unstable_cache(
       is_public: tenant.is_public,
     }));
   },
-  ['user-tenants'],
-  {
-    revalidate: USER_TENANTS_CACHE_TTL,
-  },
 );
 
 /**
- * Cached function to check tenant access for a user
- * Uses Next.js unstable_cache for persistence across requests
+ * Request-scoped cached function to check tenant access for a user
+ * Uses React's cache for request-level deduplication
  */
-export const getCachedTenantAccess = unstable_cache(
+export const getCachedTenantAccess = cache(
   async (
     tenantId: string,
     userId: string,
@@ -201,14 +172,10 @@ export const getCachedTenantAccess = unstable_cache(
       };
     }
   },
-  ['tenant-access'],
-  {
-    revalidate: TENANT_ACCESS_CACHE_TTL,
-  },
 );
 
 /**
- * In-request cache for tenant membership (using React cache)
+ * Request-scoped cache for tenant membership (using React cache)
  * This is lighter weight for data that doesn't need to persist across requests
  */
 export const getCachedTenantMembership = cache(
@@ -300,99 +267,6 @@ export const getUserCurrentTenantContext = async (
     personalTenant,
   };
 };
-
-// =============================================================================
-// CACHE INVALIDATION
-// =============================================================================
-
-/**
- * Invalidate all tenant-related cache for a user
- * Call this when user's tenant membership changes
- */
-export async function invalidateUserTenantCache(userId: string): Promise<void> {
-  const { revalidateTag } = await import('next/cache');
-
-  // Invalidate all user-related tenant cache
-  revalidateTag(CACHE_TAGS.USER_ALL(userId));
-  revalidateTag(CACHE_TAGS.USER_TENANTS(userId));
-}
-
-/**
- * Invalidate tenant context cache for a specific tenant
- * Call this when tenant settings/info changes
- */
-export async function invalidateTenantContextCache(
-  tenantId: string,
-): Promise<void> {
-  const { revalidateTag } = await import('next/cache');
-
-  revalidateTag(CACHE_TAGS.TENANT_MEMBERSHIP(tenantId));
-
-  // Note: We'd need to track which users have access to this tenant
-  // to invalidate their specific context cache. For simplicity,
-  // we could add a global tenant cache tag that gets invalidated
-}
-
-/**
- * Invalidate tenant access cache for a user-tenant pair
- * Call this when user's role in a tenant changes
- */
-export async function invalidateTenantAccessCache(
-  tenantId: string,
-  userId: string,
-): Promise<void> {
-  const { revalidateTag } = await import('next/cache');
-
-  revalidateTag(CACHE_TAGS.TENANT_ACCESS(tenantId, userId));
-  revalidateTag(CACHE_TAGS.TENANT_CONTEXT(tenantId, userId));
-}
-
-/**
- * Invalidate all caches when a user joins or leaves a tenant
- * This is the most comprehensive invalidation for membership changes
- */
-export async function invalidateTenantMembershipChange(
-  tenantId: string,
-  userId: string,
-): Promise<void> {
-  await Promise.all([
-    invalidateUserTenantCache(userId),
-    invalidateTenantAccessCache(tenantId, userId),
-    invalidateTenantContextCache(tenantId),
-  ]);
-}
-
-// =============================================================================
-// CACHE WARMING
-// =============================================================================
-
-/**
- * Pre-warm cache for a user's tenant context
- * Call this after login or when user switches tenants
- */
-export async function warmUserTenantCache(userId: string): Promise<void> {
-  try {
-    // Pre-fetch user's tenants
-    const tenants = await getCachedUserTenants(userId);
-
-    // Pre-fetch context for personal tenant
-    const personalTenant = tenants.find((t) => t.is_personal);
-    if (personalTenant) {
-      await getCachedTenantContext(personalTenant.tenant_id, userId);
-    }
-
-    // Pre-fetch access for active tenants (limit to avoid overload)
-    const activeTenants = tenants.slice(0, 3); // Warm top 3 tenants
-    await Promise.all(
-      activeTenants.map((tenant) =>
-        getCachedTenantAccess(tenant.tenant_id, userId, 'member'),
-      ),
-    );
-  } catch (error) {
-    // Cache warming is best-effort, don't throw
-    console.warn('Failed to warm tenant cache for user:', userId, error);
-  }
-}
 
 // =============================================================================
 // CACHED WRAPPER FUNCTIONS (Compatible with tenant-helpers.ts)
@@ -594,5 +468,3 @@ export async function checkTenantMembershipCached(
     };
   }
 }
-
-// Functions are exported inline above

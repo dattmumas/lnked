@@ -1,10 +1,7 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 
-import type {
-  ConversationWithParticipants,
-  MessageWithSender,
-} from '@/lib/chat/types';
 import type { Database } from '@/lib/database.types';
+import type { ChatConversation as ConversationWithParticipants } from '@/types/chat-v2';
 
 type ConversationRow = Database['public']['Tables']['conversations']['Row'];
 type UserRow = Database['public']['Tables']['users']['Row'];
@@ -58,8 +55,8 @@ export function chatConversationToConversationWithParticipants(
     },
   }));
 
-  // Transform last_message to MessageWithSender format
-  const last_message: MessageWithSender | null = chatConv.last_message
+  // Transform last_message to ChatMessage format
+  const last_message: ChatMessage | null = chatConv.last_message
     ? {
         id: chatConv.last_message.id,
         conversation_id: chatConv.id,
