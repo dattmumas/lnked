@@ -2,6 +2,7 @@
 
 import React from 'react';
 
+import SubscribeButton from '@/components/app/profile/subscription/SubscribeButton';
 import FollowButton from '@/components/FollowButton';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -114,15 +115,21 @@ export function ProfileHero({
         </div>
       </div>
 
-      <div className="mt-6">
+      <div className="mt-6 flex gap-3">
         {isOwner ? (
           <Button variant="outline">Edit Profile</Button>
         ) : (
-          <FollowButton
-            targetUserId={profile.id}
-            targetUserName={profile.username ?? ''}
-            initialIsFollowing={isFollowing}
-          />
+          <>
+            <FollowButton
+              targetUserId={profile.id}
+              targetUserName={profile.username ?? ''}
+              initialIsFollowing={isFollowing}
+            />
+            <SubscribeButton
+              targetUserId={profile.id}
+              targetName={profile.username ?? ''}
+            />
+          </>
         )}
       </div>
     </header>

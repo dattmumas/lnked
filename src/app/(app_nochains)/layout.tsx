@@ -32,7 +32,7 @@ export default async function AppNoChainsLayout({
     <UserProvider user={user} profile={profile as UserProfile | null}>
       <div className="h-screen bg-background font-sans antialiased flex flex-col">
         <ModernNavbar />
-        <main className="flex flex-1 min-h-0">
+        <main className="flex flex-1 md:ml-16 min-h-0">
           <ContextualGlobalSidebar />
           <div className="flex-1 min-h-0">{children}</div>
         </main>

@@ -11,7 +11,8 @@ import {
   extractStoragePathFromUrl,
 } from '@/lib/utils/branding';
 
-import type { TablesUpdate } from '@/lib/database.types';
+import type { Json, TablesUpdate } from '@/lib/database.types';
+import type Stripe from 'stripe';
 
 interface CollectiveActionError {
   error: string;
@@ -216,7 +217,7 @@ export async function getOrCreateStripeConnectAccount(
   // Verify ownership
   const { data: collective, error: fetchError } = await supabase
     .from('collectives')
-    .select('owner_id, stripe_account_id')
+    .select('owner_id')
     .eq('id', collectiveId)
     .single();
 
@@ -244,7 +245,17 @@ export async function getOrCreateStripeConnectAccount(
     };
   }
 
-  let accountId = collective.stripe_account_id;
+  const {
+    stripe_account_id: existingAccountId,
+    stripe_charges_enabled,
+    stripe_payouts_enabled,
+  } = (user as unknown as {
+    stripe_account_id?: string | null;
+    stripe_charges_enabled?: boolean | null;
+    stripe_payouts_enabled?: boolean | null;
+  }) ?? {};
+
+  let accountId = existingAccountId ?? undefined;
 
   if (!accountId) {
     const account = await stripe.accounts.create({
@@ -254,9 +265,9 @@ export async function getOrCreateStripeConnectAccount(
     accountId = account.id;
 
     const { error: updateError } = await supabase
-      .from('collectives')
+      .from('users')
       .update({ stripe_account_id: accountId })
-      .eq('id', collectiveId);
+      .eq('id', user.id);
 
     if (updateError) {
       return { success: false, error: 'Failed to save Stripe account.' };
@@ -288,18 +299,22 @@ export async function createPriceTier(payload: {
     return { error: 'User not authenticated.' };
   }
 
-  // Verify ownership & get Stripe account ID
   const { data: collective } = await supabase
     .from('collectives')
-    .select('owner_id, stripe_account_id')
+    .select('owner_id')
     .eq('id', collectiveId)
     .single();
 
   if (!collective || collective.owner_id !== user.id) {
     return { error: 'You do not have permission to manage this collective.' };
   }
-  if (!collective.stripe_account_id) {
-    return { error: 'Collective is not connected to Stripe.' };
+
+  const { stripe_account_id: stripeAccountId } = user as unknown as {
+    stripe_account_id?: string | null;
+  };
+
+  if (!stripeAccountId) {
+    return { error: 'Stripe account not connected.' };
   }
 
   const stripe = getStripe();
@@ -307,53 +322,45 @@ export async function createPriceTier(payload: {
     return { error: 'Stripe is not configured.' };
   }
 
+  let stripePrice: Stripe.Price;
   try {
-    // Find or create a Stripe Product for this collective
-    const { data: product } = await supabase
-      .from('products')
-      .select('id')
-      .eq('collective_id', collectiveId)
-      .single();
-
-    let productId: string;
-
-    if (product) {
-      productId = product.id;
-    } else {
-      const stripeProduct = await stripe.products.create({
-        name: `Subscription for collective ${collectiveId}`,
-      });
-      productId = stripeProduct.id;
-      await supabase
-        .from('products')
-        .insert({ id: productId, collective_id: collectiveId, active: true });
-    }
-
-    // Create the Stripe Price
-    const stripePrice = await stripe.prices.create({
-      product: productId,
-      unit_amount: amount * 100, // Convert to cents
-      currency: 'usd',
-      recurring: { interval },
-    });
-
-    // Save the price to our local DB
-    await supabase.from('prices').insert({
-      id: stripePrice.id,
-      product_id: productId,
-      active: true,
-      unit_amount: amount * 100,
-      currency: 'usd',
-      type: 'recurring',
-      interval,
-    });
-
-    revalidatePath(`/settings/collectives/${collectiveId}/monetization`);
-    return { success: true };
+    stripePrice = await stripe.prices.create(
+      {
+        unit_amount: amount * 100, // cents
+        currency: 'usd',
+        recurring: { interval },
+        product_data: {
+          name: `Subscription for collective ${collectiveId}`,
+          metadata: { collectiveId },
+        },
+        metadata: { collectiveId },
+      },
+      { stripeAccount: stripeAccountId },
+    );
   } catch (e: unknown) {
-    const error = e as Error;
-    return { error: error.message };
+    const msg = (e as Error).message;
+    console.error('Stripe price creation failed:', msg);
+    return { error: msg };
   }
+
+  const { error: insertErr } = await supabase
+    .from('subscription_plans')
+    .insert({
+      owner_id: collectiveId,
+      owner_type: 'collective',
+      collective_id: collectiveId,
+      stripe_price_id: stripePrice.id,
+      price_snapshot: stripePrice as unknown as Json,
+      active: true,
+    });
+
+  if (insertErr) {
+    console.error('Failed to save subscription plan:', insertErr);
+    return { error: 'Failed to save plan.' };
+  }
+
+  revalidatePath(`/settings/collectives/${collectiveId}/monetization`);
+  return { success: true };
 }
 
 export async function updateRevenueShares(payload: {
@@ -422,14 +429,13 @@ export async function subscribeToCollective(
     return { error: 'User not authenticated.' };
   }
 
-  const { data: collective, error: collectiveError } = await supabase
-    .from('collectives')
-    .select('stripe_customer_id')
-    .eq('id', collectiveId)
-    .single();
+  const { stripe_customer_id } =
+    (user as unknown as {
+      stripe_customer_id?: string | null;
+    }) ?? {};
 
-  if (collectiveError || !collective) {
-    return { error: 'Collective not found.' };
+  if (!stripe_customer_id) {
+    return { error: 'Stripe customer not found for user.' };
   }
 
   const stripe = getStripe();
@@ -438,7 +444,7 @@ export async function subscribeToCollective(
   }
 
   const { id: subscriptionId } = await stripe.subscriptions.create({
-    customer: collective.stripe_customer_id!,
+    customer: stripe_customer_id,
     items: [{ price: planId }],
     expand: ['latest_invoice.payment_intent'],
   });
@@ -455,28 +461,33 @@ export async function getCollectiveStripeStatus(collectiveId: string): Promise<{
 }> {
   const supabase = await createServerSupabaseClient();
 
-  const { data: collective, error } = await supabase
+  // Determine status based on owner's user record
+  const { data: collectiveOwner } = await supabase
     .from('collectives')
-    .select('stripe_account_id, stripe_charges_enabled, stripe_payouts_enabled')
+    .select('owner_id')
     .eq('id', collectiveId)
     .single();
 
-  if (error || !collective) {
+  if (!collectiveOwner) {
     return { status: 'none' };
   }
 
-  if (!collective.stripe_account_id) {
+  const { data: ownerUser } = await supabase
+    .from('users')
+    .select('stripe_account_id, stripe_charges_enabled, stripe_payouts_enabled')
+    .eq('id', collectiveOwner.owner_id)
+    .single();
+
+  if (!ownerUser || !ownerUser.stripe_account_id) {
     return { status: 'none' };
   }
 
-  const { stripe_account_id, stripe_charges_enabled, stripe_payouts_enabled } =
-    collective;
-
-  const isActive = stripe_charges_enabled && stripe_payouts_enabled;
+  const isActive =
+    ownerUser.stripe_charges_enabled && ownerUser.stripe_payouts_enabled;
 
   return {
     status: isActive ? 'active' : 'pending',
-    stripe_account_id,
+    stripe_account_id: ownerUser.stripe_account_id,
   };
 }
 

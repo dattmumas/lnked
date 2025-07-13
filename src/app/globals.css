@@ -9,153 +9,149 @@
   A polished, sophisticated design system with attention to detail
 */
 
-@layer theme {
-  :root {
-    /* High-Contrast Black & White Light Theme */
-    --background: 0 0% 94%;
-    --foreground: 224 71% 4%; /* Dark Blue/Black for text */
+:root {
+  /* High-Contrast Black & White Light Theme */
+  --background: 0 0% 94%;
+  --foreground: 224 71% 4%; /* Dark Blue/Black for text */
 
-    --muted: 220 14% 96%;
-    --muted-foreground: 220 9% 46%; /* Mid-grey for less important text */
+  --muted: 220 14% 96%;
+  --muted-foreground: 220 9% 46%; /* Mid-grey for less important text */
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 224 71% 4%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 224 71% 4%;
 
-    --card: 0 0% 100%;
-    --card-foreground: 224 71% 4%;
+  --card: 0 0% 100%;
+  --card-foreground: 224 71% 4%;
 
-    --border: 220 13% 91%;
-    --input: 220 13% 91%;
+  --border: 220 13% 91%;
+  --input: 220 13% 91%;
 
-    /* --- High-contrast neutrals for actions --- */
-    --primary: 224 71% 10%; /* Dark, near-black for primary buttons */
-    --primary-foreground: 0 0% 98%; /* White text on primary buttons */
+  /* --- High-contrast neutrals for actions --- */
+  --primary: 224 71% 10%; /* Dark, near-black for primary buttons */
+  --primary-foreground: 0 0% 98%; /* White text on primary buttons */
 
-    --accent: 224 71% 10%; /* Use the same dark color for links/accents */
-    --accent-foreground: 0 0% 98%; /* Text on accented elements */
+  --accent: 224 71% 10%; /* Use the same dark color for links/accents */
+  --accent-foreground: 0 0% 98%; /* Text on accented elements */
 
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 0 0% 98%;
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 0 0% 98%;
 
-    --ring: 220 13% 85%; /* A slightly darker ring for focus */
+  --ring: 220 13% 85%; /* A slightly darker ring for focus */
 
-    /* Refined radius system */
-    --radius: 0.75rem;
-    --radius-sm: 0.5rem;
-    --radius-lg: 1rem;
-    --radius-xl: 1.5rem;
+  /* Refined radius system */
+  --radius: 0.75rem;
+  --radius-sm: 0.5rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.5rem;
 
-    /* Enhanced spacing system */
-    --component-gap: 0.75rem;
-    --section-gap: 1.5rem;
-    --page-gap: 2.5rem;
+  /* Enhanced spacing system */
+  --component-gap: 0.75rem;
+  --section-gap: 1.5rem;
+  --page-gap: 2.5rem;
 
-    --card-padding-sm: 1rem;
-    --card-padding-md: 1.5rem;
-    --card-padding-lg: 2rem;
+  --card-padding-sm: 1rem;
+  --card-padding-md: 1.5rem;
+  --card-padding-lg: 2rem;
 
-    /* Refined transition timing */
-    --transition-fast: 150ms;
-    --transition-normal: 200ms;
-    --transition-slow: 400ms;
+  /* Refined transition timing */
+  --transition-fast: 150ms;
+  --transition-normal: 200ms;
+  --transition-slow: 400ms;
 
-    /* Premium shadow system */
-    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-    --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
-    --shadow-md:
-      0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-    --shadow-lg:
-      0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
-    --shadow-xl:
-      0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+  /* Premium shadow system */
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --shadow-lg:
+    0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  --shadow-xl:
+    0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
 
-    /* Surface elevation system */
-    --surface-base: 0 0% 100%;
-    --surface-elevated-1: 220 14% 99%;
-    --surface-elevated-2: 220 14% 98%;
-    --surface-elevated-3: 220 14% 97%;
+  /* Surface elevation system */
+  --surface-base: 0 0% 100%;
+  --surface-elevated-1: 220 14% 99%;
+  --surface-elevated-2: 220 14% 98%;
+  --surface-elevated-3: 220 14% 97%;
 
-    /* Enhanced interaction states */
-    --interaction-hover: 220 14% 95%;
-    --interaction-active: 217 91% 60%;
-    --interaction-focus: 217 91% 60%;
+  /* Enhanced interaction states */
+  --interaction-hover: 220 14% 95%;
+  --interaction-active: 217 91% 60%;
+  --interaction-focus: 217 91% 60%;
 
-    /* Content hierarchy */
-    --content-primary: 224 71% 4%;
-    --content-secondary: 220 9% 46%;
-    --content-tertiary: 220 9% 66%;
-    --content-accent: 217 91% 60%;
+  /* Content hierarchy */
+  --content-primary: 224 71% 4%;
+  --content-secondary: 220 9% 46%;
+  --content-tertiary: 220 9% 66%;
+  --content-accent: 217 91% 60%;
 
-    /* Border hierarchy */
-    --border-subtle: 220 13% 91%;
-    --border-default: 220 13% 86%;
-    --border-strong: 220 13% 76%;
+  /* Border hierarchy */
+  --border-subtle: 220 13% 91%;
+  --border-default: 220 13% 86%;
+  --border-strong: 220 13% 76%;
 
-    /* Custom fonts */
-    --font-serif: 'kepler-std-semicondensed-dis', serif;
-  }
+  /* Custom fonts */
+  --font-serif: 'kepler-std-semicondensed-dis', serif;
+}
 
-  .dark {
-    /* High-Contrast Black & White Dark Theme */
-    --background: 224 0% 8.6%; /* #161616 */
-    --foreground: 0 0% 92.5%; /* #ECECEC */
+.dark {
+  /* High-Contrast Black & White Dark Theme */
+  --background: 224 0% 8.6%; /* #161616 */
+  --foreground: 0 0% 92.5%; /* #ECECEC */
 
-    --muted: 217 33% 17%; /* Keeping this for less important elements */
-    --muted-foreground: 0 0% 62.4%; /* #9F9F9F */
+  --muted: 217 33% 17%; /* Keeping this for less important elements */
+  --muted-foreground: 0 0% 62.4%; /* #9F9F9F */
 
-    --popover: 224 0% 8.6%; /* #161616 */
-    --popover-foreground: 0 0% 92.5%; /* #ECECEC */
+  --popover: 224 0% 8.6%; /* #161616 */
+  --popover-foreground: 0 0% 92.5%; /* #ECECEC */
 
-    --card: 224 0% 8.6%; /* #161616 */
-    --card-foreground: 0 0% 92.5%; /* #ECECEC */
+  --card: 224 0% 8.6%; /* #161616 */
+  --card-foreground: 0 0% 92.5%; /* #ECECEC */
 
-    --border: 217 33% 17%;
-    --input: 217 33% 17%;
+  --border: 217 33% 17%;
+  --input: 217 33% 17%;
 
-    /* --- High-contrast neutrals for actions --- */
-    --primary: 0 0% 92.5%; /* #ECECEC */
-    --primary-foreground: 224 0% 8.6%; /* #161616 */
+  /* --- High-contrast neutrals for actions --- */
+  --primary: 0 0% 92.5%; /* #ECECEC */
+  --primary-foreground: 224 0% 8.6%; /* #161616 */
 
-    --accent: 0 0% 92.5%; /* #ECECEC */
-    --accent-foreground: 224 0% 8.6%; /* #161616 */
+  --accent: 0 0% 92.5%; /* #ECECEC */
+  --accent-foreground: 224 0% 8.6%; /* #161616 */
 
-    --destructive: 0 63% 31%;
-    --destructive-foreground: 0 0% 92.5%; /* #ECECEC */
+  --destructive: 0 63% 31%;
+  --destructive-foreground: 0 0% 92.5%; /* #ECECEC */
 
-    --ring: 217 33% 25%;
+  --ring: 217 33% 25%;
 
-    /* Dark theme shadows */
-    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.3);
-    --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.4), 0 1px 2px -1px rgb(0 0 0 / 0.3);
-    --shadow-md:
-      0 4px 6px -1px rgb(0 0 0 / 0.4), 0 2px 4px -2px rgb(0 0 0 / 0.3);
-    --shadow-lg:
-      0 10px 15px -3px rgb(0 0 0 / 0.4), 0 4px 6px -4px rgb(0 0 0 / 0.3);
-    --shadow-xl:
-      0 20px 25px -5px rgb(0 0 0 / 0.4), 0 8px 10px -6px rgb(0 0 0 / 0.3);
+  /* Dark theme shadows */
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.3);
+  --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.4), 0 1px 2px -1px rgb(0 0 0 / 0.3);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.4), 0 2px 4px -2px rgb(0 0 0 / 0.3);
+  --shadow-lg:
+    0 10px 15px -3px rgb(0 0 0 / 0.4), 0 4px 6px -4px rgb(0 0 0 / 0.3);
+  --shadow-xl:
+    0 20px 25px -5px rgb(0 0 0 / 0.4), 0 8px 10px -6px rgb(0 0 0 / 0.3);
 
-    /* Dark surface elevation */
-    --surface-base: 0 0% 8%;
-    --surface-elevated-1: 0 0% 12%;
-    --surface-elevated-2: 0 0% 16%;
-    --surface-elevated-3: 0 0% 20%;
+  /* Dark surface elevation */
+  --surface-base: 0 0% 8%;
+  --surface-elevated-1: 0 0% 12%;
+  --surface-elevated-2: 0 0% 16%;
+  --surface-elevated-3: 0 0% 20%;
 
-    /* Dark interaction states */
-    --interaction-hover: 217 33% 20%;
-    --interaction-active: 217 91% 60%;
-    --interaction-focus: 217 91% 60%;
+  /* Dark interaction states */
+  --interaction-hover: 217 33% 20%;
+  --interaction-active: 217 91% 60%;
+  --interaction-focus: 217 91% 60%;
 
-    /* Dark content hierarchy */
-    --content-primary: 210 40% 98%;
-    --content-secondary: 215 20% 65%;
-    --content-tertiary: 215 20% 45%;
-    --content-accent: 217 91% 60%;
+  /* Dark content hierarchy */
+  --content-primary: 210 40% 98%;
+  --content-secondary: 215 20% 65%;
+  --content-tertiary: 215 20% 45%;
+  --content-accent: 217 91% 60%;
 
-    /* Dark border hierarchy */
-    --border-subtle: 217 33% 17%;
-    --border-default: 217 33% 22%;
-    --border-strong: 217 33% 27%;
-  }
+  /* Dark border hierarchy */
+  --border-subtle: 217 33% 17%;
+  --border-default: 217 33% 22%;
+  --border-strong: 217 33% 27%;
 }
 
 @layer base {

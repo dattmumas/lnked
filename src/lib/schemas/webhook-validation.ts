@@ -17,33 +17,40 @@ const ACCOUNT_ID_REDACTION_LENGTH = 6;
 const uuidSchema = z.string().uuid('Invalid UUID format');
 
 // Subscription target type enum from database
-const subscriptionTargetTypeSchema = z.enum(['platform', 'collective'] as const);
+const subscriptionTargetTypeSchema = z.enum([
+  'platform',
+  'collective',
+  'user',
+] as const);
 
 /**
  * Checkout session metadata validation
  */
-export const checkoutSessionMetadataSchema = z.object({
-  userId: uuidSchema,
-  targetEntityType: subscriptionTargetTypeSchema,
-  targetEntityId: uuidSchema,
-}).strict();
+export const checkoutSessionMetadataSchema = z
+  .object({
+    userId: uuidSchema,
+    targetEntityType: subscriptionTargetTypeSchema,
+    targetEntityId: uuidSchema,
+  })
+  .passthrough();
 
 /**
  * Subscription metadata validation
  */
-export const subscriptionMetadataSchema = z.object({
-  userId: uuidSchema,
-  targetEntityType: subscriptionTargetTypeSchema,
-  targetEntityId: uuidSchema,
-}).strict();
+export const subscriptionMetadataSchema = checkoutSessionMetadataSchema.extend({
+  // Allow additional optional metadata keys like createdVia
+  createdVia: z.string().optional(),
+});
 
 /**
  * Stripe signature header parsing
  */
-export const parseStripeSignature = (signature: string): { t?: number; v1?: string } => {
+export const parseStripeSignature = (
+  signature: string,
+): { t?: number; v1?: string } => {
   const parts = signature.split(',');
   const parsedSig: { t?: number; v1?: string } = {};
-  
+
   for (const part of parts) {
     const [key, value] = part.split('=');
     if (key === 't' && value) {
@@ -55,7 +62,7 @@ export const parseStripeSignature = (signature: string): { t?: number; v1?: stri
       parsedSig.v1 = value;
     }
   }
-  
+
   return parsedSig;
 };
 
@@ -64,18 +71,18 @@ export const parseStripeSignature = (signature: string): { t?: number; v1?: stri
  */
 export const validateWebhookTimestamp = (
   timestamp: number,
-  maxAgeSeconds: number = DEFAULT_MAX_AGE_SECONDS
+  maxAgeSeconds: number = DEFAULT_MAX_AGE_SECONDS,
 ): { valid: boolean; error?: string } => {
   const now = Math.floor(Date.now() / MILLISECONDS_PER_SECOND);
   const age = Math.abs(now - timestamp);
-  
+
   if (age > maxAgeSeconds) {
     return {
       valid: false,
-      error: `Webhook timestamp too old: ${age}s (max: ${maxAgeSeconds}s)`
+      error: `Webhook timestamp too old: ${age}s (max: ${maxAgeSeconds}s)`,
     };
   }
-  
+
   return { valid: true };
 };
 
@@ -95,7 +102,11 @@ export const WEBHOOK_VALIDATION_CONSTANTS = {
 } as const;
 
 // Type exports for use in webhook handlers
-export type CheckoutSessionMetadata = z.infer<typeof checkoutSessionMetadataSchema>;
+export type CheckoutSessionMetadata = z.infer<
+  typeof checkoutSessionMetadataSchema
+>;
 export type SubscriptionMetadata = z.infer<typeof subscriptionMetadataSchema>;
-export type SubscriptionTargetType = Database['public']['Enums']['subscription_target_type'];
-export type SubscriptionStatus = Database['public']['Enums']['subscription_status']; 
+export type SubscriptionTargetType =
+  Database['public']['Enums']['subscription_target_type'];
+export type SubscriptionStatus =
+  Database['public']['Enums']['subscription_status'];

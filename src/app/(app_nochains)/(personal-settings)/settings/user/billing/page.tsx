@@ -7,8 +7,9 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import { redirect } from 'next/navigation';
+import Stripe from 'stripe';
 
-import { Badge } from '@/components/ui/badge';
+import ManageBillingButton from '@/components/stripe/ManageBillingButton';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -17,7 +18,14 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import * as stripeUtil from '@/lib/stripe';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { supabaseAdmin } from '@/lib/supabaseAdmin';
+
+import ActiveSubscriptionsClient from './ActiveSubscriptionsClient';
+import ConnectStripePrompt from './ConnectStripePrompt';
+import PaymentMethodsClient from './PaymentMethodsClient';
+import PersonalSubscriptionPlansClient from './PersonalSubscriptionPlansClient';
 
 export default async function BillingSettingsPage() {
   const supabase = await createServerSupabaseClient();
@@ -29,15 +37,210 @@ export default async function BillingSettingsPage() {
     redirect('/sign-in');
   }
 
-  // Fetch subscription data if available
-  const { data: subscriptions } = await supabase
+  // Fetch active subscription for the current user
+  const { data: subscription } = await supabase
     .from('subscriptions')
     .select('*')
     .eq('user_id', user.id)
     .eq('status', 'active')
-    .limit(1);
+    .single();
 
-  const subscription = subscriptions?.[0];
+  // Initialize Stripe SDK client early so it can be used throughout the
+  // component. By declaring it here, we avoid temporal dead-zone issues when
+  // retrieving the current plan details below.
+  const stripe = stripeUtil.getStripe();
+
+  // Fetch Stripe Price & Product details directly from Stripe API (legacy local
+  // `prices` table has been deprecated).
+  let productName = 'Current Plan';
+  let priceInterval: string | null = null;
+  let priceUnitAmount: number | null = null;
+  let priceCurrency: string | null = null;
+
+  if (subscription?.stripe_price_id && stripe) {
+    try {
+      const price = (await stripe.prices.retrieve(
+        subscription.stripe_price_id,
+        {
+          expand: ['product'],
+        },
+      )) as Stripe.Price;
+
+      const {
+        unit_amount: unitAmount,
+        currency: currencyCode,
+        recurring,
+        product: priceProduct,
+      } = price;
+
+      priceUnitAmount = unitAmount;
+      priceCurrency = currencyCode;
+      priceInterval = recurring?.interval ?? null;
+
+      if (priceProduct && typeof priceProduct !== 'string') {
+        const prod = priceProduct as Stripe.Product;
+        if (!('deleted' in prod && prod.deleted)) {
+          productName = prod.name ?? productName;
+        }
+      }
+    } catch (err) {
+      console.error('Failed to retrieve Stripe price:', err);
+    }
+  }
+
+  // ----- Stripe Integration (payment methods & invoices) -----
+
+  // Fetch creator payout readiness flags
+  const { data: creatorFlags } = await supabase
+    .from('users')
+    .select('stripe_account_id, stripe_charges_enabled, stripe_payouts_enabled')
+    .eq('id', user.id)
+    .single();
+
+  const {
+    stripe_account_id: creatorStripeAccount,
+    stripe_charges_enabled: chargesEnabled,
+    stripe_payouts_enabled: payoutsEnabled,
+  } = creatorFlags ?? {};
+
+  const payoutReady = creatorStripeAccount && chargesEnabled && payoutsEnabled;
+
+  let paymentMethods: Stripe.PaymentMethod[] = [];
+  let invoices: Stripe.Invoice[] = [];
+
+  // Determine the Stripe customer ID – prefer users.stripe_customer_id, fallback to customers table
+  const { stripe_customer_id: authStripeCustomer } = user as unknown as {
+    stripe_customer_id?: string | null;
+  };
+
+  let stripeCustomerId: string | undefined = authStripeCustomer ?? undefined;
+
+  if (!stripeCustomerId) {
+    const { data: customerRecord } = await supabase
+      .from('customers')
+      .select('stripe_customer_id')
+      .eq('id', user.id)
+      .maybeSingle();
+
+    const { stripe_customer_id: fallbackCustomer } =
+      customerRecord ?? ({} as { stripe_customer_id?: string | null });
+    stripeCustomerId = fallbackCustomer ?? undefined;
+  }
+
+  let defaultPaymentMethodId: string | undefined;
+
+  if (stripe && stripeCustomerId) {
+    const [pmRes, invRes, custRes] = await Promise.all([
+      stripe.paymentMethods.list({ customer: stripeCustomerId, type: 'card' }),
+      stripe.invoices.list({ customer: stripeCustomerId, limit: 3 }),
+      stripe.customers.retrieve(stripeCustomerId) as Promise<Stripe.Customer>,
+    ]);
+
+    paymentMethods = pmRes.data;
+    invoices = invRes.data;
+    const defaultRaw = custRes.invoice_settings?.default_payment_method as
+      | string
+      | Stripe.PaymentMethod
+      | undefined;
+    defaultPaymentMethodId =
+      typeof defaultRaw === 'string' ? defaultRaw : defaultRaw?.id;
+  }
+
+  // -----------------------------------------------------------
+  // Active Subscriptions (viewer)
+  // -----------------------------------------------------------
+  const { data: activeSubsRaw } = await supabase
+    .from('subscriptions')
+    .select(
+      'id, stripe_price_id, target_entity_type, target_entity_id, current_period_end, status',
+    )
+    .eq('user_id', user.id)
+    .in('status', ['active', 'trialing', 'past_due']);
+
+  let activeSubscriptions: {
+    dbId: string;
+    stripeSubscriptionId: string;
+    creatorName: string;
+    planName: string;
+    amount: number | null;
+    currency: string | null;
+    interval: string | null;
+    renewalDate: string;
+    targetEntityType: 'user' | 'collective';
+    targetEntityId: string;
+  }[] = [];
+
+  if (activeSubsRaw && activeSubsRaw.length > 0) {
+    // Resolve names & price details in parallel
+    activeSubscriptions = await Promise.all(
+      activeSubsRaw.map(async (sub) => {
+        // Creator name lookup
+        let creatorName = '';
+        if (sub.target_entity_type === 'collective') {
+          const { data } = await supabaseAdmin
+            .from('collectives')
+            .select('name')
+            .eq('id', sub.target_entity_id)
+            .maybeSingle();
+          creatorName = data?.name ?? 'Unknown';
+        } else {
+          const { data } = await supabaseAdmin
+            .from('users')
+            .select('full_name, username')
+            .eq('id', sub.target_entity_id)
+            .maybeSingle();
+          creatorName = data?.full_name ?? data?.username ?? 'Unknown';
+        }
+
+        // Plan / price details
+        let planName = 'Plan';
+        let amount: number | null = null;
+        let currency: string | null = null;
+        let interval: string | null = null;
+
+        if (sub.stripe_price_id && stripe) {
+          try {
+            const price = (await stripe.prices.retrieve(sub.stripe_price_id, {
+              expand: ['product'],
+            })) as Stripe.Price;
+            const {
+              unit_amount: unitAmount,
+              currency: currencyCode,
+              recurring,
+              product: priceProduct,
+            } = price;
+
+            amount = unitAmount;
+            currency = currencyCode;
+            interval = recurring?.interval ?? null;
+            if (priceProduct && typeof priceProduct !== 'string') {
+              const prod = priceProduct as Stripe.Product;
+              if (!('deleted' in prod && prod.deleted)) {
+                planName = prod.name ?? planName;
+              }
+            }
+          } catch (err) {
+            console.error('[billing] Failed to retrieve price', err);
+          }
+        }
+
+        return {
+          dbId: sub.id,
+          stripeSubscriptionId: sub.id, // db id mirrors stripe id in schema
+          creatorName,
+          planName,
+          amount,
+          currency,
+          interval,
+          renewalDate: sub.current_period_end
+            ? new Date(sub.current_period_end).toLocaleDateString()
+            : 'N/A',
+          targetEntityType: sub.target_entity_type,
+          targetEntityId: sub.target_entity_id,
+        };
+      }),
+    );
+  }
 
   return (
     <>
@@ -49,70 +252,19 @@ export default async function BillingSettingsPage() {
       </header>
 
       <div className="space-y-6">
-        {/* Current Plan */}
+        {/* Active Subscriptions */}
         <Card>
           <CardHeader>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Package className="h-5 w-5" />
-                <CardTitle>Current Plan</CardTitle>
-              </div>
-              {subscription && <Badge variant="default">Active</Badge>}
+            <div className="flex items-center gap-2">
+              <Package className="h-5 w-5" />
+              <CardTitle>Active Subscriptions</CardTitle>
             </div>
             <CardDescription>
-              Your subscription details and usage
+              Manage the subscriptions you’re paying for
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {subscription ? (
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="font-semibold text-lg">Pro Plan</h4>
-                    <p className="text-sm text-muted-foreground">
-                      Active Subscription
-                    </p>
-                  </div>
-                  <Button variant="outline">Change Plan</Button>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4 pt-4 border-t">
-                  <div>
-                    <p className="text-sm text-muted-foreground">
-                      Next billing date
-                    </p>
-                    <p className="font-medium">
-                      {subscription.current_period_end !== null &&
-                      subscription.current_period_end !== undefined
-                        ? new Date(
-                            subscription.current_period_end,
-                          ).toLocaleDateString()
-                        : 'N/A'}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">
-                      Member since
-                    </p>
-                    <p className="font-medium">
-                      {subscription.created !== null &&
-                      subscription.created !== undefined
-                        ? new Date(subscription.created).toLocaleDateString()
-                        : 'N/A'}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="text-center py-8">
-                <Package className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                <h4 className="font-medium mb-2">No Active Subscription</h4>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Upgrade to unlock premium features
-                </p>
-                <Button>View Plans</Button>
-              </div>
-            )}
+            <ActiveSubscriptionsClient subscriptions={activeSubscriptions} />
           </CardContent>
         </Card>
 
@@ -129,23 +281,41 @@ export default async function BillingSettingsPage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              <div className="flex items-center justify-between p-3 rounded-lg border">
-                <div className="flex items-center gap-3">
-                  <CreditCard className="h-5 w-5 text-muted-foreground" />
-                  <div>
-                    <p className="font-medium">•••• •••• •••• 4242</p>
-                    <p className="text-sm text-muted-foreground">
-                      Expires 12/24
-                    </p>
-                  </div>
-                </div>
-                <Badge variant="secondary">Default</Badge>
-              </div>
-
-              <Button variant="outline" className="w-full">
-                Add Payment Method
-              </Button>
+              {/* Client-side component for listing & adding cards */}
+              <PaymentMethodsClient
+                methods={paymentMethods.map((pm) => {
+                  const card = pm.card as Stripe.PaymentMethod.Card;
+                  return {
+                    id: pm.id,
+                    brand: card.brand,
+                    last4: card.last4,
+                    exp_month: card.exp_month,
+                    exp_year: card.exp_year,
+                    isDefault: pm.id === defaultPaymentMethodId,
+                  };
+                })}
+              />
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Personal Subscription Plans */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <Package className="h-5 w-5" />
+              <CardTitle>My Subscription Plans</CardTitle>
+            </div>
+            <CardDescription>
+              Create and manage the plans your followers can subscribe to.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {payoutReady ? (
+              <PersonalSubscriptionPlansClient />
+            ) : (
+              <ConnectStripePrompt />
+            )}
           </CardContent>
         </Card>
 
@@ -162,34 +332,58 @@ export default async function BillingSettingsPage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {[1, 2, 3].map((i) => (
+              {invoices.length === 0 && (
+                <p className="text-sm text-muted-foreground">
+                  No invoices found
+                </p>
+              )}
+
+              {invoices.map((invoice) => (
                 <div
-                  key={i}
+                  key={invoice.id}
                   className="flex items-center justify-between p-3 rounded-lg border"
                 >
                   <div className="flex items-center gap-3">
                     <Calendar className="h-4 w-4 text-muted-foreground" />
                     <div>
                       <p className="font-medium">
-                        {new Date(
-                          Date.now() - i * 30 * 24 * 60 * 60 * 1000,
-                        ).toLocaleDateString('en-US', {
-                          month: 'long',
-                          year: 'numeric',
-                        })}
+                        {new Date(invoice.created * 1000).toLocaleDateString(
+                          'en-US',
+                          {
+                            month: 'long',
+                            year: 'numeric',
+                          },
+                        )}
                       </p>
-                      <p className="text-sm text-muted-foreground">$29.00</p>
+                      <p className="text-sm text-muted-foreground">
+                        {(() => {
+                          const amount = invoice.amount_paid;
+                          return typeof amount === 'number'
+                            ? (amount / 100).toFixed(2)
+                            : '0.00';
+                        })()}{' '}
+                        {invoice.currency ? invoice.currency.toUpperCase() : ''}
+                      </p>
                     </div>
                   </div>
-                  <Button variant="ghost" size="sm">
-                    <Download className="h-4 w-4" />
-                  </Button>
+                  {invoice.invoice_pdf && (
+                    <Button variant="ghost" size="sm" asChild>
+                      <a
+                        href={invoice.invoice_pdf}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <Download className="h-4 w-4" />
+                      </a>
+                    </Button>
+                  )}
                 </div>
               ))}
 
               <Button variant="outline" className="w-full">
                 View All Invoices
               </Button>
+              <ManageBillingButton className="w-full mt-2" />
             </div>
           </CardContent>
         </Card>

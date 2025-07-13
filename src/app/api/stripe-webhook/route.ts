@@ -177,43 +177,7 @@ async function upsertCustomerSafely(
   return { error };
 }
 
-/**
- * Update collective Stripe status with proper constraints
- */
-async function updateCollectiveStripeStatus(
-  accountId: string,
-  accountData: AccountUpdateData,
-): Promise<{ error: unknown; updated: boolean }> {
-  // Use limit(1) to prevent multiple row updates
-  const { data: collective, error: fetchError } = await supabaseAdmin
-    .from('collectives')
-    .select('id, stripe_account_id')
-    .eq('stripe_account_id', accountId)
-    .limit(1)
-    .maybeSingle();
-
-  if (fetchError !== null) {
-    return { error: fetchError, updated: false };
-  }
-
-  if (collective === null) {
-    return { error: null, updated: false };
-  }
-
-  const { error: updateError } = await supabaseAdmin
-    .from('collectives')
-    .update({
-      stripe_charges_enabled: accountData.charges_enabled,
-      stripe_payouts_enabled: accountData.payouts_enabled,
-      stripe_details_submitted: accountData.details_submitted,
-      stripe_requirements: accountData.requirements,
-      stripe_account_type: accountData.type,
-      stripe_account_email: accountData.email,
-    })
-    .eq('id', collective.id);
-
-  return { error: updateError, updated: true };
-}
+// -- Removed legacy collective Stripe updater --
 
 export async function POST(req: Request): Promise<NextResponse> {
   const timer = createWebhookTimer();
@@ -570,27 +534,46 @@ export async function POST(req: Request): Promise<NextResponse> {
 
         case 'account.updated': {
           const account = event.data.object;
-          const accountId = account.id;
 
-          const updates = {
-            stripe_charges_enabled: account.charges_enabled,
-            stripe_payouts_enabled: account.payouts_enabled,
-          };
+          const {
+            id: accountId,
+            charges_enabled,
+            payouts_enabled,
+            type,
+          } = account;
 
-          const { error } = await supabaseAdmin
-            .from('collectives')
-            .update(updates)
+          const { error: updateErr } = await supabaseAdmin
+            .from('users')
+            .update({
+              stripe_charges_enabled: charges_enabled,
+              stripe_payouts_enabled: payouts_enabled,
+              stripe_account_type: type,
+            } as never)
             .eq('stripe_account_id', accountId);
 
-          if (error) {
-            console.error(
-              `[Stripe Webhook] Failed to update collective for account ${accountId}`,
-              error,
+          if (updateErr) {
+            webhookLogger.error(
+              'Failed to update user stripe flags',
+              updateErr,
+              {
+                accountId,
+              },
+            );
+            return NextResponse.json(
+              { error: 'Failed to update user flags' },
+              { status: HttpStatusCode.InternalServerError },
             );
           }
+
+          timer.endAndLog('Account flags updated', {
+            accountId,
+            charges_enabled,
+            payouts_enabled,
+          });
           break;
         }
 
+        // account.updated no longer relevant – collectives do not have Stripe accounts
         default:
           webhookLogger.warn('Unhandled webhook event type', {
             eventId: event.id,

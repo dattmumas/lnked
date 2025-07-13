@@ -2,9 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { getStripe } from '@/lib/stripe';
 import { createRequestScopedSupabaseClient } from '@/lib/supabase/request-scoped';
+import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import { createMetricsTimer, recordAPIMetrics } from '@/lib/utils/metrics';
 import { createAPILogger } from '@/lib/utils/structured-logger';
 
+import type { Json } from '@/lib/database.types';
 import type Stripe from 'stripe';
 
 // HTTP status codes
@@ -131,7 +133,6 @@ function validatePlanRequest(body: PlanRequestBody): {
 interface CollectiveData {
   id: string;
   owner_id: string;
-  stripe_account_id: string | null;
 }
 
 // Enhanced ownership check supporting admin roles
@@ -148,8 +149,7 @@ async function validateCollectiveAccess(
       role,
       collective:collectives!inner(
         id,
-        owner_id,
-        stripe_account_id
+        owner_id
       )
     `,
     )
@@ -162,7 +162,7 @@ async function validateCollectiveAccess(
     // Fallback to direct owner check
     const { data: collectiveData, error: collectiveError } = await supabase
       .from('collectives')
-      .select('id, owner_id, stripe_account_id')
+      .select('id, owner_id')
       .eq('id', collectiveId)
       .eq('owner_id', userId)
       .single();
@@ -300,12 +300,14 @@ export async function POST(
       return NextResponse.json({ error: errorMessage }, { status: statusCode });
     }
 
-    // Check Stripe onboarding status
-    if (
-      collective.stripe_account_id === null ||
-      collective.stripe_account_id === undefined ||
-      collective.stripe_account_id === ''
-    ) {
+    // Determine creator-owned Stripe account (from user flags)
+    const { data: creatorFlags } = await supabase
+      .from('users')
+      .select('stripe_account_id')
+      .eq('id', user.id)
+      .single();
+
+    if (!creatorFlags || !creatorFlags.stripe_account_id) {
       const duration = timer();
       recordAPIMetrics({
         endpoint: '/api/collectives/[collectiveId]/plans',
@@ -317,10 +319,12 @@ export async function POST(
       });
 
       return NextResponse.json(
-        { error: 'Collective not onboarded to Stripe' },
+        { error: 'Creator not onboarded to Stripe' },
         { status: HTTP_STATUS.BAD_REQUEST },
       );
     }
+
+    const stripeAccountId = creatorFlags.stripe_account_id;
 
     // Initialize Stripe
     const stripe = getStripe();
@@ -372,15 +376,26 @@ export async function POST(
 
     const validatedData = validation.data;
 
-    // 1. Fetch or create the Stripe Product for this collective
-    let product: Stripe.Product;
-    const { data: existingProduct, error: fetchProdErr } = await supabase
-      .from('products')
-      .select('id')
-      .eq('collective_id', collectiveId)
-      .maybeSingle();
-
-    if (fetchProdErr !== null) {
+    // --- Create Stripe Price directly (connected account) ---
+    let price: Stripe.Price;
+    try {
+      price = await stripe.prices.create(
+        {
+          unit_amount: validatedData.amount,
+          currency: validatedData.currency,
+          recurring: { interval: validatedData.interval },
+          product_data: {
+            name: validatedData.name,
+            ...(validatedData.description
+              ? { description: validatedData.description }
+              : {}),
+            metadata: { collectiveId },
+          },
+          metadata: { collectiveId },
+        },
+        { stripeAccount: stripeAccountId },
+      );
+    } catch (err) {
       const duration = timer();
       recordAPIMetrics({
         endpoint: '/api/collectives/[collectiveId]/plans',
@@ -388,95 +403,35 @@ export async function POST(
         statusCode: HTTP_STATUS.INTERNAL_SERVER_ERROR,
         duration,
         userId,
-        error: 'Database lookup failed',
+        error: 'Stripe price creation failed',
       });
 
-      logger.error('Failed to lookup existing product', {
+      logger.error('Stripe price creation failed', {
         userId,
         statusCode: HTTP_STATUS.INTERNAL_SERVER_ERROR,
-        error: fetchProdErr,
-        metadata: {
-          collectiveId,
-        },
+        error: err instanceof Error ? err : new Error(String(err)),
       });
 
       return NextResponse.json(
-        { error: 'Failed to lookup existing product' },
+        { error: 'Failed to create Stripe price' },
         { status: HTTP_STATUS.INTERNAL_SERVER_ERROR },
       );
     }
 
-    if (existingProduct !== null) {
-      // Reuse existing product so new prices become tiers under it
-      product = await stripe.products.retrieve(existingProduct.id);
-    } else {
-      product = await stripe.products.create({
-        name: validatedData.name,
-        ...(validatedData.description
-          ? { description: validatedData.description }
-          : {}),
-        metadata: { collectiveId },
-      });
-
-      const { error: productErr } = await supabase.from('products').insert({
-        id: product.id,
-        name: product.name,
-        description: product.description,
+    // --- Persist to subscription_plans ---
+    const { error: planErr } = await supabaseAdmin
+      .from('subscription_plans')
+      .insert({
+        owner_id: collectiveId,
+        owner_type: 'collective',
         collective_id: collectiveId,
+        stripe_price_id: price.id,
+        price_snapshot: price as unknown as Json,
+        benefits: null,
         active: true,
       });
 
-      if (productErr !== null) {
-        const duration = timer();
-        recordAPIMetrics({
-          endpoint: '/api/collectives/[collectiveId]/plans',
-          method: 'POST',
-          statusCode: HTTP_STATUS.INTERNAL_SERVER_ERROR,
-          duration,
-          userId,
-          error: 'Product save failed',
-        });
-
-        logger.error('Failed to save product', {
-          userId,
-          statusCode: HTTP_STATUS.INTERNAL_SERVER_ERROR,
-          error: productErr,
-          metadata: {
-            collectiveId,
-            productId: product.id,
-          },
-        });
-
-        return NextResponse.json(
-          { error: 'Failed to save product' },
-          { status: HTTP_STATUS.INTERNAL_SERVER_ERROR },
-        );
-      }
-    }
-
-    // 2. Create Stripe Price (recurring)
-    const price = await stripe.prices.create({
-      product: product.id,
-      unit_amount: validatedData.amount,
-      currency: validatedData.currency,
-      recurring: { interval: validatedData.interval },
-      metadata: { collectiveId },
-    });
-
-    // 3. Store the new price in our database
-    const { error: priceErr } = await supabase.from('prices').insert({
-      id: price.id,
-      product_id: product.id,
-      unit_amount: price.unit_amount,
-      currency: price.currency,
-      ...(price.recurring?.interval
-        ? { interval: price.recurring.interval }
-        : {}),
-      trial_period_days: validatedData.trial_period_days,
-      active: true,
-    });
-
-    if (priceErr !== null) {
+    if (planErr) {
       const duration = timer();
       recordAPIMetrics({
         endpoint: '/api/collectives/[collectiveId]/plans',
@@ -484,22 +439,17 @@ export async function POST(
         statusCode: HTTP_STATUS.INTERNAL_SERVER_ERROR,
         duration,
         userId,
-        error: 'Price save failed',
+        error: 'Plan save failed',
       });
 
-      logger.error('Failed to save price', {
+      logger.error('Failed to save plan', {
         userId,
         statusCode: HTTP_STATUS.INTERNAL_SERVER_ERROR,
-        error: priceErr,
-        metadata: {
-          collectiveId,
-          productId: product.id,
-          priceId: price.id,
-        },
+        error: planErr,
       });
 
       return NextResponse.json(
-        { error: 'Failed to save price' },
+        { error: 'Failed to save subscription plan' },
         { status: HTTP_STATUS.INTERNAL_SERVER_ERROR },
       );
     }
@@ -519,7 +469,6 @@ export async function POST(
       duration,
       metadata: {
         collectiveId,
-        productId: product.id,
         priceId: price.id,
         amount: validatedData.amount,
         currency: validatedData.currency,
@@ -527,7 +476,7 @@ export async function POST(
       },
     });
 
-    return NextResponse.json({ product, price });
+    return NextResponse.json({ price });
   } catch (error: unknown) {
     const duration = timer();
     recordAPIMetrics({

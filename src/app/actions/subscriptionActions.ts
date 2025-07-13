@@ -6,13 +6,13 @@ import { getStripe } from '@/lib/stripe';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 
-import type { Database } from '@/lib/database.types';
+import type { Database, Json } from '@/lib/database.types';
+import type Stripe from 'stripe';
 
 // Type aliases for cleaner code
 type SubscriptionStatus = Database['public']['Enums']['subscription_status'];
 type SubscriptionTargetType =
   Database['public']['Enums']['subscription_target_type'];
-type PriceInterval = Database['public']['Enums']['price_interval'];
 
 interface SubscriptionStatusResult {
   isSubscribed: boolean;
@@ -182,6 +182,7 @@ export async function createPriceTier({
     .select('owner_id')
     .eq('id', collectiveId)
     .single();
+
   if (collError || collective === null) {
     return { success: false, error: 'Collective not found.' };
   }
@@ -189,63 +190,70 @@ export async function createPriceTier({
     return { success: false, error: 'Only the owner can manage tiers.' };
   }
 
-  const stripe = getStripe();
-  if (stripe === null || stripe === undefined)
-    return { success: false, error: 'Stripe not configured.' };
+  // after verifying owner, fetch creator's stripe account id
+  const { stripe_account_id: stripeAccountId } = user as unknown as {
+    stripe_account_id?: string | null;
+  };
 
-  const { data: existingProduct } = await supabase
-    .from('products')
-    .select('id')
-    .eq('collective_id', collectiveId)
-    .maybeSingle();
-
-  let productId: string;
-  if (
-    existingProduct !== null &&
-    existingProduct.id !== null &&
-    existingProduct.id !== undefined &&
-    existingProduct.id !== ''
-  ) {
-    productId = existingProduct.id;
-  } else {
-    const product = await stripe.products.create({
-      name:
-        tierName !== null && tierName !== undefined && tierName !== ''
-          ? tierName
-          : 'Subscription',
-      metadata: { collectiveId },
-    });
-    productId = product.id;
-    await supabaseAdmin.from('products').insert({
-      id: product.id,
-      name: product.name,
-      description: product.description,
-      collective_id: collectiveId,
-      active: true,
-    });
+  if (!stripeAccountId) {
+    return {
+      success: false,
+      error: 'Stripe account not connected. Please complete onboarding.',
+    };
   }
 
-  const price = await stripe.prices.create({
-    product: productId,
-    unit_amount: amount,
-    currency: 'usd',
-    ...(tierName ? { nickname: tierName } : {}),
-    recurring: { interval },
-    metadata: { collectiveId },
-  });
+  const stripe = getStripe();
+  if (!stripe) {
+    return { success: false, error: 'Stripe not configured.' };
+  }
 
-  await supabaseAdmin.from('prices').insert({
-    id: price.id,
-    product_id: productId,
-    unit_amount: price.unit_amount,
-    currency: price.currency,
-    interval: price.recurring?.interval as PriceInterval | null,
-    description:
-      tierName !== null && tierName !== undefined && tierName !== ''
-        ? tierName
-        : null,
-    active: true,
-  });
+  // Create a recurring price within the creator's connected account. We can
+  // use product_data directly so we don't have to manage a separate Product
+  // object in our DB.
+  let createdPrice: Stripe.Price;
+  try {
+    createdPrice = await stripe.prices.create(
+      {
+        unit_amount: amount,
+        currency: 'usd',
+        recurring: { interval },
+        product_data: {
+          name:
+            tierName && tierName.trim().length > 0
+              ? tierName.trim()
+              : 'Subscription',
+          metadata: { collectiveId },
+        },
+        metadata: { collectiveId },
+      },
+      {
+        stripeAccount: stripeAccountId,
+      },
+    );
+  } catch (err) {
+    const message =
+      err instanceof Error ? err.message : 'Stripe price creation failed';
+    console.error('[createPriceTier] Stripe error:', err);
+    return { success: false, error: message };
+  }
+
+  // Persist to subscription_plans (lean schema)
+  const { error: insertErr } = await supabaseAdmin
+    .from('subscription_plans')
+    .insert({
+      owner_id: collectiveId,
+      owner_type: 'collective',
+      collective_id: collectiveId,
+      stripe_price_id: createdPrice.id,
+      price_snapshot: createdPrice as unknown as Json,
+      active: true,
+      benefits: null,
+    });
+
+  if (insertErr) {
+    console.error('Failed to insert subscription_plan:', insertErr);
+    return { success: false, error: 'Failed to save plan.' };
+  }
 
   revalidatePath(`/dashboard/collectives/${collectiveId}/settings`);
   return { success: true };
@@ -277,15 +285,37 @@ export async function deactivatePriceTier({
   }
 
   const stripe = getStripe();
-  if (stripe === null || stripe === undefined)
-    return { success: false, error: 'Stripe not configured.' };
+  if (!stripe) return { success: false, error: 'Stripe not configured.' };
 
-  await stripe.prices.update(priceId, { active: false });
+  const { stripe_account_id: stripeAccountId } = user as unknown as {
+    stripe_account_id?: string | null;
+  };
 
+  if (!stripeAccountId) {
+    return {
+      success: false,
+      error: 'Stripe account not connected.',
+    };
+  }
+
+  // Deactivate on Stripe (creator account context not needed for platform-side
+  // price clones – we only store creator price IDs here)
+  try {
+    await stripe.prices.update(
+      priceId,
+      { active: false },
+      { stripeAccount: stripeAccountId },
+    );
+  } catch (err) {
+    console.error('Stripe deactivate price error:', err);
+  }
+
+  // Mark plan inactive in DB
   await supabaseAdmin
-    .from('prices')
+    .from('subscription_plans')
     .update({ active: false })
-    .eq('id', priceId);
+    .eq('stripe_price_id', priceId)
+    .eq('owner_id', collectiveId);
 
   revalidatePath(`/dashboard/collectives/${collectiveId}/settings`);
   return { success: true };
