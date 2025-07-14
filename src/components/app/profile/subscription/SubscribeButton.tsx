@@ -14,6 +14,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
 
 type Plan = {
   id: string;
@@ -41,6 +42,7 @@ export default function SubscribeButton({
         stripePriceId: string | null;
       };
     },
+    staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
   const plansQuery = useQuery({
@@ -52,10 +54,12 @@ export default function SubscribeButton({
       if (json.error) throw new Error(json.error);
       return json.plans ?? [];
     },
+    staleTime: 5 * 60 * 1000,
   });
 
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
+  const [coupon, setCoupon] = useState('');
 
   const subscribed = statusQuery.data?.subscribed ?? false;
   const plans = plansQuery.data ?? [];
@@ -70,6 +74,7 @@ export default function SubscribeButton({
           targetEntityType: 'user',
           targetEntityId: targetUserId,
           redirectPath: window.location.pathname,
+          ...(coupon.trim().length > 0 ? { coupon: coupon.trim() } : {}),
         }),
       });
       const json: { url?: string; subscriptionId?: string; error?: string } =
@@ -79,7 +84,10 @@ export default function SubscribeButton({
         router.push(json.url);
       } else if (json.subscriptionId) {
         toast.success('Subscribed!');
-        router.refresh();
+        await statusQuery.refetch();
+        setLoading(false);
+        // After refetch, the component will render the Manage Subscription button
+        return;
       } else {
         toast.error(json.error ?? 'Failed to initiate checkout');
         setLoading(false);
@@ -151,31 +159,41 @@ export default function SubscribeButton({
       </Button>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-xl rounded-2xl shadow-xl bg-white dark:bg-zinc-900 backdrop-blur supports-[backdrop-filter]:bg-white/70 dark:supports-[backdrop-filter]:bg-zinc-900/80 p-6 sm:p-8">
+        <DialogContent className="max-w-xl rounded-2xl text-white shadow-xl bg-gray-700 backdrop-blur p-6 sm:p-8">
           <DialogHeader>
-            <DialogTitle>Subscribe to {targetName ?? 'creator'}</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="text-white">
+              Subscribe to {targetName ?? 'creator'}
+            </DialogTitle>
+            <DialogDescription className="text-white">
               Choose a plan to support this creator and access subscriber-only
               benefits.
             </DialogDescription>
           </DialogHeader>
 
+          <Input
+            placeholder="Coupon code (optional)"
+            value={coupon}
+            onChange={(e) => setCoupon(e.target.value)}
+            className="mb-4" // spacing before plan list
+          />
+
           <div className="grid gap-2 py-2 divide-y divide-border">
             {plans.map((p) => (
               <div
                 key={p.id}
-                className="flex items-center justify-between p-4 first:rounded-t-lg last:rounded-b-lg hover:bg-muted/50 transition-colors"
+                className="flex items-center justify-between p-4 border border-border first:rounded-t-lg last:rounded-b-lg hover:bg-muted/50 transition-colors"
               >
                 <div className="flex flex-col">
                   <span className="font-medium">{p.name}</span>
                   <span className="text-sm text-muted-foreground">
-                    ${Number(p.monthlyCost).toFixed(2)}/month
+                    ${Number(p.monthlyCost).toFixed(2)} / month
                   </span>
                 </div>
                 <Button
                   size="sm"
                   variant="default"
                   disabled={loading}
+                  className="border border-border hover:bg-primary/10 hover:border-primary transition-colors"
                   onClick={() => {
                     setOpen(false);
                     void startCheckout(p.stripe_price_id);

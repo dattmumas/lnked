@@ -1,37 +1,25 @@
-import {
-  BookOpen,
-  Rss,
-  Plus,
-  AlertCircle,
-  Info,
-  List,
-  Video,
-} from 'lucide-react';
+import dynamicImport from 'next/dynamic';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import React from 'react';
 
-import { default as RecentPostRowComponent } from '@/components/app/dashboard/organisms/RecentPostRow';
-import StatsRow from '@/components/app/dashboard/organisms/StatsRow';
-import { Button } from '@/components/primitives/Button';
 import { Card } from '@/components/primitives/Card';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { loadDashboardData } from '@/lib/data-loaders/dashboard-loader';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 
-const MAX_RECENT_PERSONAL_POSTS_DISPLAY = 3;
-
-// Enable ISR with 5-minute revalidation for dashboard data
-// Dashboard data changes moderately, 5 minutes provides good balance
-export const revalidate = 300;
-
-// Dynamic rendering for personalized content
+export const revalidate = 300; // 5-minute ISR
 export const dynamic = 'force-dynamic';
 
-export default async function DashboardManagementPage(): Promise<React.ReactElement> {
-  const supabase = await createServerSupabaseClient();
+interface MonthlyDatum {
+  month: string;
+  gross: number;
+  net: number;
+  fee: number;
+  followers: number;
+  subscribers: number;
+}
 
-  // Get session to retrieve user reliably
+export default async function CreatorAnalyticsDashboard(): Promise<React.ReactElement> {
+  const supabase = await createServerSupabaseClient();
   const {
     data: { session },
   } = await supabase.auth.getSession();
@@ -40,243 +28,206 @@ export default async function DashboardManagementPage(): Promise<React.ReactElem
     redirect('/sign-in?redirect=/dashboard');
   }
 
-  // Load all dashboard data using the optimized loader
-  const dashboardData = await loadDashboardData(session.user.id);
+  const { data: earningsRows, error } = await supabase
+    .from('creator_earnings')
+    .select('amount_gross, net_amount, created_at, currency')
+    .eq('creator_id', session.user.id)
+    .order('created_at', { ascending: false });
 
-  const {
-    profile,
-    stats,
-    recent_posts: personalPosts,
-    owned_collectives: ownedCollectives,
-  } = dashboardData;
+  if (error) {
+    throw new Error('Failed to load earnings');
+  }
 
-  const username =
-    (profile?.username ?? '').trim().length > 0
-      ? (profile?.username ?? '')
-      : '';
+  let totalGross = 0;
+  let totalNet = 0;
+  let totalFees = 0;
+  const monthlyMap: Record<
+    string,
+    {
+      gross: number;
+      net: number;
+      fee: number;
+      followers: number;
+      subscribers: number;
+    }
+  > = {};
+
+  earningsRows.forEach((r) => {
+    totalGross += r.amount_gross;
+    totalNet += r.net_amount;
+    totalFees += r.amount_gross - r.net_amount;
+    const monthKey = new Date(r.created_at as string).toISOString().slice(0, 7);
+    monthlyMap[monthKey] ||= {
+      gross: 0,
+      net: 0,
+      fee: 0,
+      followers: 0,
+      subscribers: 0,
+    };
+    monthlyMap[monthKey].gross += r.amount_gross;
+    monthlyMap[monthKey].net += r.net_amount;
+    monthlyMap[monthKey].fee += r.amount_gross - r.net_amount;
+  });
+
+  // Fetch followers created_at
+  const { data: followerRows } = await supabase
+    .from('follows')
+    .select('created_at')
+    .eq('following_id', session.user.id)
+    .eq('following_type', 'user');
+
+  followerRows?.forEach((f) => {
+    const monthKey = new Date(f.created_at).toISOString().slice(0, 7);
+    monthlyMap[monthKey] ||= {
+      gross: 0,
+      net: 0,
+      fee: 0,
+      followers: 0,
+      subscribers: 0,
+    };
+    monthlyMap[monthKey].followers += 1;
+  });
+
+  // Fetch subscriptions created_at
+  const { data: subRows } = await supabase
+    .from('subscriptions')
+    .select('created')
+    .eq('target_entity_type', 'user')
+    .eq('target_entity_id', session.user.id);
+
+  subRows?.forEach((s) => {
+    const monthKey = new Date(s.created).toISOString().slice(0, 7);
+    monthlyMap[monthKey] ||= {
+      gross: 0,
+      net: 0,
+      fee: 0,
+      followers: 0,
+      subscribers: 0,
+    };
+    monthlyMap[monthKey].subscribers += 1;
+  });
+
+  const monthly: MonthlyDatum[] = Object.entries(monthlyMap)
+    .map(([month, v]) => ({
+      month,
+      gross: v.gross,
+      net: v.net,
+      fee: v.fee,
+      followers: v.followers,
+      subscribers: v.subscribers,
+    }))
+    .sort((a, b) => (a.month < b.month ? -1 : 1));
+
+  const currency = earningsRows[0]?.currency?.toUpperCase() ?? 'USD';
+
+  const EarningsChart = dynamicImport(
+    () => import('@/components/charts/EarningsChart.client'),
+  );
+
+  // Fetch active subscriber count
+  const { count: subscriberCount } = await supabase
+    .from('subscriptions')
+    .select('id', { count: 'exact', head: true })
+    .eq('target_entity_type', 'user')
+    .eq('target_entity_id', session.user.id)
+    .in('status', ['active', 'trialing']);
+
+  // Check for past_due subscriptions in grace period
+  const { data: pastDueRow } = await supabase
+    .from('subscriptions')
+    .select('grace_period_expires_at')
+    .eq('target_entity_type', 'user')
+    .eq('target_entity_id', session.user.id)
+    .eq('status', 'past_due')
+    .gt('grace_period_expires_at', new Date().toISOString())
+    .order('grace_period_expires_at', { ascending: true })
+    .limit(1)
+    .maybeSingle();
+
+  const graceDeadline = pastDueRow?.grace_period_expires_at ?? null;
 
   return (
-    <div className="pattern-stack gap-section">
-      {/* Enhanced Stats Row with design system integration */}
-      <StatsRow
-        subscriberCount={stats.subscriber_count}
-        followerCount={stats.follower_count}
-        totalPosts={stats.total_posts}
-        collectiveCount={stats.collective_count}
-        totalViews={stats.total_views}
-        totalLikes={stats.total_likes}
-        monthlyRevenue={stats.monthly_revenue}
-        pendingPayout={stats.pending_payout}
-        openRate="0%" // TODO: Implement when email tracking is ready
-        publishedThisMonth={stats.published_this_month}
-      />
+    <div className="max-w-4xl mx-auto py-10 space-y-8">
+      <h1 className="text-3xl font-semibold">Creator Dashboard</h1>
 
-      {/* Enhanced main content sections with improved grid */}
-      <div className="content-grid-dashboard">
-        {/* Individual Newsletter - Enhanced with design tokens */}
-        <Card size="lg" className="pattern-card micro-interaction">
-          <div className="pattern-stack">
-            {/* Enhanced header with better typography */}
-            <div className="flex items-center gap-component">
-              <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-surface-elevated-2 border border-border-subtle">
-                <Rss className="h-5 w-5 text-content-accent" />
-              </div>
-              <div>
-                <h2 className="text-content-primary font-semibold text-lg tracking-tight">
-                  My Content
-                </h2>
-                <p className="text-content-secondary text-sm">
-                  Personal posts and articles
-                </p>
-              </div>
-            </div>
+      {graceDeadline && (
+        <div className="p-4 border border-destructive text-destructive rounded-md bg-destructive/10">
+          <p className="font-medium">
+            Payment failed – update your payment method before{' '}
+            {new Date(graceDeadline).toLocaleDateString()} to avoid subscription
+            cancellation.
+          </p>
+          <Link
+            href="/settings/user/billing"
+            className="underline text-destructive hover:text-destructive/80"
+          >
+            Manage Billing
+          </Link>
+        </div>
+      )}
 
-            {/* Enhanced action buttons with improved spacing */}
-            <div className="flex flex-wrap gap-component">
-              <Button
-                variant="default"
-                size="sm"
-                leftIcon={<Plus className="h-4 w-4" />}
-                className="micro-interaction btn-scale"
-                asChild
-              >
-                <Link href="/posts/new">Write New Post</Link>
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                leftIcon={<Video className="h-4 w-4" />}
-                className="micro-interaction nav-hover"
-                asChild
-              >
-                <Link href="/videos">Video Management</Link>
-              </Button>
-              {username.trim().length > 0 && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="micro-interaction nav-hover"
-                  asChild
-                >
-                  <Link href={`/profile/${username}`}>View Profile</Link>
-                </Button>
-              )}
-              <Button
-                variant="ghost"
-                size="sm"
-                className="micro-interaction nav-hover"
-                asChild
-              >
-                <Link href="/dashboard/my-newsletter/subscribers">
-                  Subscribers
-                </Link>
-              </Button>
-            </div>
-
-            {/* Enhanced posts display */}
-            {personalPosts !== null &&
-            personalPosts !== undefined &&
-            Array.isArray(personalPosts) &&
-            personalPosts.length > 0 ? (
-              <Card
-                size="md"
-                className="pattern-card border border-border-subtle"
-              >
-                <div className="divide-y divide-border-subtle">
-                  {personalPosts
-                    .slice(0, MAX_RECENT_PERSONAL_POSTS_DISPLAY)
-                    .map((post) => (
-                      <RecentPostRowComponent
-                        key={post.id}
-                        id={post.id}
-                        title={post.title}
-                        status={post.is_public ? 'published' : 'draft'}
-                        date={post.published_at ?? post.created_at}
-                      />
-                    ))}
-                </div>
-              </Card>
-            ) : (
-              <Alert className="pattern-card border-border-subtle bg-surface-elevated-1">
-                <Info className="h-4 w-4 text-content-accent" />
-                <AlertTitle className="text-content-primary">
-                  No Personal Posts Yet
-                </AlertTitle>
-                <AlertDescription className="text-content-secondary">
-                  You haven&apos;t written any personal posts. Click &quot;Write
-                  New Post&quot; to get started!
-                </AlertDescription>
-              </Alert>
-            )}
-
-            {/* Enhanced view all button */}
-            {personalPosts !== null &&
-              personalPosts !== undefined &&
-              Array.isArray(personalPosts) &&
-              personalPosts.length > MAX_RECENT_PERSONAL_POSTS_DISPLAY && (
-                <div className="text-center">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    leftIcon={<List className="h-4 w-4" />}
-                    className="micro-interaction nav-hover"
-                    asChild
-                  >
-                    <Link href="/dashboard/posts">View All My Posts</Link>
-                  </Button>
-                </div>
-              )}
-          </div>
+      <div className="grid grid-cols-1 sm:grid-cols-4 gap-6">
+        <Card className="p-6 flex flex-col gap-2">
+          <span className="text-sm text-muted-foreground">Total Gross</span>
+          <span className="text-2xl font-bold">
+            {currency} {(totalGross / 100).toFixed(2)}
+          </span>
         </Card>
-
-        {/* Owned Collectives - Enhanced with design tokens */}
-        <Card size="lg" className="pattern-card micro-interaction">
-          <div className="pattern-stack">
-            {/* Enhanced header with better typography */}
-            <div className="flex items-center gap-component">
-              <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-surface-elevated-2 border border-border-subtle">
-                <BookOpen className="h-5 w-5 text-content-accent" />
-              </div>
-              <div>
-                <h2 className="text-content-primary font-semibold text-lg tracking-tight">
-                  My Owned Collectives
-                </h2>
-                <p className="text-content-secondary text-sm">
-                  Communities you manage
-                </p>
-              </div>
-            </div>
-
-            {/* Enhanced create button */}
-            <Button
-              variant="default"
-              size="sm"
-              leftIcon={<Plus className="h-4 w-4" />}
-              className="micro-interaction btn-scale w-fit"
-              asChild
-            >
-              <Link href="/collectives/new">Create Collective</Link>
-            </Button>
-
-            {/* Enhanced collectives display */}
-            {ownedCollectives !== null &&
-            ownedCollectives !== undefined &&
-            Array.isArray(ownedCollectives) &&
-            ownedCollectives.length > 0 ? (
-              <div className="dashboard-grid dashboard-grid-secondary">
-                {ownedCollectives.map((collective) => (
-                  <Card
-                    key={collective.id}
-                    size="md"
-                    className="pattern-card micro-interaction card-lift flex flex-col"
-                  >
-                    <div className="pattern-stack flex-1">
-                      <div>
-                        <h3 className="font-serif text-lg font-semibold text-content-primary truncate">
-                          {collective.name}
-                        </h3>
-                        <p className="text-content-secondary text-sm truncate mt-1">
-                          {collective.description !== null &&
-                          collective.description !== undefined &&
-                          collective.description.trim().length > 0
-                            ? collective.description
-                            : 'No description'}
-                        </p>
-                        {collective.member_count !== undefined && (
-                          <p className="text-xs text-content-tertiary mt-2">
-                            {collective.member_count} members •{' '}
-                            {collective.post_count || 0} posts
-                          </p>
-                        )}
-                      </div>
-                      <Button
-                        size="sm"
-                        className="w-full micro-interaction btn-scale mt-auto"
-                        asChild
-                      >
-                        <Link href={`/collectives/${collective.slug}`}>
-                          View Collective
-                        </Link>
-                      </Button>
-                    </div>
-                  </Card>
-                ))}
-              </div>
-            ) : (
-              <Alert className="pattern-card border-border-subtle bg-surface-elevated-1">
-                <AlertCircle className="h-4 w-4 text-content-accent" />
-                <AlertTitle className="text-content-primary">
-                  No Collectives Yet
-                </AlertTitle>
-                <AlertDescription className="text-content-secondary">
-                  You don&apos;t own any collectives. Click &quot;Create
-                  Collective&quot; to start one!
-                </AlertDescription>
-              </Alert>
-            )}
-          </div>
+        <Card className="p-6 flex flex-col gap-2">
+          <span className="text-sm text-muted-foreground">Total Net</span>
+          <span className="text-2xl font-bold">
+            {currency} {(totalNet / 100).toFixed(2)}
+          </span>
+        </Card>
+        <Card className="p-6 flex flex-col gap-2">
+          <span className="text-sm text-muted-foreground">
+            Active Subscribers
+          </span>
+          <span className="text-2xl font-bold">{subscriberCount ?? 0}</span>
+        </Card>
+        <Card className="p-6 flex flex-col gap-2">
+          <span className="text-sm text-muted-foreground">Total Fees</span>
+          <span className="text-2xl font-bold">
+            {currency} {(totalFees / 100).toFixed(2)}
+          </span>
         </Card>
       </div>
+
+      <Card className="p-6">
+        <h2 className="text-lg font-medium mb-4">Monthly Earnings</h2>
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="text-left text-muted-foreground border-b">
+              <th className="py-2">Month</th>
+              <th className="py-2">Gross</th>
+              <th className="py-2">Net</th>
+              <th className="py-2">Fees</th>
+            </tr>
+          </thead>
+          <tbody>
+            {monthly.map((m) => (
+              <tr key={m.month} className="border-b last:border-none">
+                <td className="py-2">{m.month}</td>
+                <td className="py-2">
+                  {(m.gross / 100).toFixed(2)} {currency}
+                </td>
+                <td className="py-2">
+                  {(m.net / 100).toFixed(2)} {currency}
+                </td>
+                <td className="py-2">
+                  {(m.fee / 100).toFixed(2)} {currency}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </Card>
+
+      {/* Chart */}
+      <Card className="p-6">
+        <h2 className="text-lg font-medium mb-4">Earnings Trend</h2>
+        <EarningsChart data={monthly} currency={currency} />
+      </Card>
     </div>
   );
 }

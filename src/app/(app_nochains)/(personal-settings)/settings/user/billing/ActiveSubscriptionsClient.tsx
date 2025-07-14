@@ -12,6 +12,26 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 
+// Change plan uses billing portal redirect
+function openBillingPortal(setLoading: (b: boolean) => void) {
+  setLoading(true);
+  fetch('/api/billing-portal', { method: 'POST' })
+    .then(async (res) => {
+      const json = (await res.json()) as { url?: string; error?: string };
+      if (json.url) {
+        window.location.href = json.url;
+      } else {
+        // eslint-disable-next-line no-alert -- simple fallback
+        alert(json.error ?? 'Failed to open billing portal');
+        setLoading(false);
+      }
+    })
+    .catch(() => {
+      alert('Network error');
+      setLoading(false);
+    });
+}
+
 interface SubscriptionInfo {
   dbId: string;
   stripeSubscriptionId: string;
@@ -33,6 +53,7 @@ export default function ActiveSubscriptionsClient({ subscriptions }: Props) {
   const [openId, setOpenId] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [loadingPortal, setLoadingPortal] = useState(false);
 
   const selected = subscriptions.find((s) => s.dbId === openId);
 
@@ -113,15 +134,28 @@ export default function ActiveSubscriptionsClient({ subscriptions }: Props) {
                   {error}
                 </div>
               )}
-              <Button
-                variant="destructive"
-                disabled={isPending}
-                onClick={handleCancel}
-                className="w-full"
-              >
-                {isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                Cancel Subscription
-              </Button>
+              <div className="space-y-2">
+                <Button
+                  variant="secondary"
+                  disabled={loadingPortal}
+                  onClick={() => openBillingPortal(setLoadingPortal)}
+                  className="w-full"
+                >
+                  Change Plan
+                </Button>
+
+                <Button
+                  variant="destructive"
+                  disabled={isPending}
+                  onClick={handleCancel}
+                  className="w-full"
+                >
+                  {isPending && (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  )}
+                  Cancel Subscription
+                </Button>
+              </div>
             </div>
           )}
         </DialogContent>

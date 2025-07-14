@@ -173,3 +173,80 @@ export async function listPersonalSubscriptionPlans(): Promise<
     }),
   };
 }
+
+// -----------------------------------------------------------------------------
+// Deactivate or reactivate a personal price tier
+// -----------------------------------------------------------------------------
+
+interface TogglePlanResult {
+  success: boolean;
+  error?: string;
+}
+
+async function togglePersonalPlanActive(
+  priceId: string,
+  activate: boolean,
+): Promise<TogglePlanResult> {
+  const supabase = await createServerSupabaseClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { success: false, error: 'User not authenticated.' };
+
+  // Ensure plan exists and belongs to user
+  const { data: planRow, error: planErr } = await supabaseAdmin
+    .from('subscription_plans')
+    .select('id')
+    .eq('stripe_price_id', priceId)
+    .eq('owner_id', user.id)
+    .eq('owner_type', 'user')
+    .maybeSingle();
+
+  if (planErr || planRow === null) {
+    return { success: false, error: 'Plan not found or permission denied.' };
+  }
+
+  const stripe = getStripe();
+  if (!stripe) return { success: false, error: 'Stripe not configured.' };
+
+  // Fetch user stripe account id
+  const { stripe_account_id: stripeAccountId } = user as unknown as {
+    stripe_account_id?: string | null;
+  };
+
+  if (!stripeAccountId) {
+    return { success: false, error: 'Stripe account not connected.' };
+  }
+
+  try {
+    await stripe.prices.update(
+      priceId,
+      { active: activate },
+      { stripeAccount: stripeAccountId },
+    );
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : 'Stripe error';
+    return { success: false, error: msg };
+  }
+
+  // Update DB
+  const { error: dbErr } = await supabaseAdmin
+    .from('subscription_plans')
+    .update({ active: activate })
+    .eq('stripe_price_id', priceId)
+    .eq('owner_id', user.id);
+
+  if (dbErr) {
+    return { success: false, error: dbErr.message };
+  }
+
+  return { success: true };
+}
+
+export async function deactivatePersonalSubscriptionPlan(priceId: string) {
+  return togglePersonalPlanActive(priceId, false);
+}
+
+export async function reactivatePersonalSubscriptionPlan(priceId: string) {
+  return togglePersonalPlanActive(priceId, true);
+}

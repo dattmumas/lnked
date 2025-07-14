@@ -7,6 +7,8 @@ import { z } from 'zod';
 import {
   createPersonalSubscriptionPlan,
   listPersonalSubscriptionPlans,
+  deactivatePersonalSubscriptionPlan,
+  reactivatePersonalSubscriptionPlan,
   type CreatePlanInput,
 } from '@/app/stripe-actions/subscription-plans';
 import { Alert } from '@/components/ui/alert';
@@ -15,6 +17,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
 import type React from 'react';
+
+type PlanItem = {
+  id: string;
+  name: string;
+  monthlyCost: number;
+  active: boolean;
+};
 
 const formSchema = z.object({
   name: z.string().min(1, 'Name is required'),
@@ -36,7 +45,7 @@ export default function PersonalSubscriptionPlansClient(): React.JSX.Element {
     queryFn: async () => {
       const res = await listPersonalSubscriptionPlans();
       if ('error' in res) throw new Error(res.error);
-      return res.plans;
+      return res.plans as PlanItem[];
     },
   });
 
@@ -49,6 +58,18 @@ export default function PersonalSubscriptionPlansClient(): React.JSX.Element {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['personalPlans'] });
       setForm({ name: '', monthlyCost: '' });
+    },
+  });
+
+  const toggleMutation = useMutation({
+    mutationFn: async (plan: PlanItem) => {
+      if (plan.active) {
+        return deactivatePersonalSubscriptionPlan(plan.id);
+      }
+      return reactivatePersonalSubscriptionPlan(plan.id);
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['personalPlans'] });
     },
   });
 
@@ -83,12 +104,31 @@ export default function PersonalSubscriptionPlansClient(): React.JSX.Element {
       ) : data && data.length > 0 ? (
         <ul className="space-y-2">
           {data.map((plan) => (
-            <li key={plan.id} className="rounded-md border p-4">
-              <p className="font-semibold">{plan.name}</p>
-              <p className="text-sm text-muted-foreground">
-                ${plan.monthlyCost.toFixed(2)} / month{' '}
-                {plan.active ? '' : '(inactive)'}
-              </p>
+            <li
+              key={plan.id}
+              className="rounded-md border p-4 flex items-center justify-between gap-4"
+            >
+              <div>
+                <p className="font-semibold">{plan.name}</p>
+                <p className="text-sm text-muted-foreground">
+                  ${plan.monthlyCost.toFixed(2)} / month{' '}
+                  {plan.active ? '' : '(inactive)'}
+                </p>
+              </div>
+              <Button
+                size="sm"
+                variant={plan.active ? 'destructive' : 'secondary'}
+                disabled={toggleMutation.isPending}
+                onClick={() => toggleMutation.mutate(plan)}
+              >
+                {toggleMutation.isPending &&
+                plan.id ===
+                  (toggleMutation.variables as PlanItem | undefined)?.id
+                  ? 'Saving…'
+                  : plan.active
+                    ? 'Deactivate'
+                    : 'Reactivate'}
+              </Button>
             </li>
           ))}
         </ul>

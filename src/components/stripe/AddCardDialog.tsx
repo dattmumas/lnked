@@ -14,6 +14,7 @@ import {
   createSetupIntent,
   setDefaultPaymentMethod,
 } from '@/app/stripe-actions/billing';
+import PaymentRequestButton from '@/components/stripe/PaymentRequestButton';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -35,6 +36,15 @@ interface InnerFormProps {
 }
 
 function AddCardForm({ clientSecret, onSuccess }: InnerFormProps) {
+  const handleWalletSuccess = async (paymentMethodId: string) => {
+    const res = await setDefaultPaymentMethod(paymentMethodId);
+    if ('success' in res) {
+      toast.success('Payment method added');
+      onSuccess();
+    } else {
+      toast.error(res.error);
+    }
+  };
   const stripe = useStripe();
   const elements = useElements();
   const [isSubmitting, setSubmitting] = useState(false);
@@ -74,6 +84,13 @@ function AddCardForm({ clientSecret, onSuccess }: InnerFormProps) {
 
   return (
     <div className="space-y-4">
+      {/* Wallets */}
+      <PaymentRequestButton
+        amount={0}
+        currency="usd"
+        onSuccess={handleWalletSuccess}
+      />
+
       <CardElement
         options={{ hidePostalCode: true }}
         className="p-2 border rounded-md"

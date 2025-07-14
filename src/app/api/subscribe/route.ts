@@ -2,12 +2,19 @@ import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { z } from 'zod';
 
+import {
+  MS_PER_SECOND,
+  SECONDS_PER_MINUTE,
+  MINUTES_PER_HOUR,
+} from '@/lib/constants/time';
+import { PLATFORM_FEE } from '@/lib/fees';
 import { getStripe } from '@/lib/stripe';
 import { fetchDefaultPaymentMethod } from '@/lib/stripe/customer-utils';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 
 import type { Database } from '@/lib/database.types';
 import type { SupabaseClient } from '@supabase/supabase-js';
+
 
 // Convenience alias for a resolved Supabase client instance
 type SBClient = SupabaseClient<Database>;
@@ -17,9 +24,6 @@ const INTERNAL_SERVER_ERROR_STATUS = 500;
 const TOO_MANY_REQUESTS_STATUS = 429;
 const UNAUTHORIZED_STATUS = 401;
 const BAD_REQUEST_STATUS = 400;
-const MINUTES_PER_HOUR = 60;
-const SECONDS_PER_MINUTE = 60;
-const MS_PER_SECOND = 1000;
 const DEFAULT_RATE_LIMIT_MAX = 10;
 const DEFAULT_IDEMPOTENCY_WINDOW_MINUTES = 5;
 const DEFAULT_PRICE_CACHE_MINUTES = 5;
@@ -46,7 +50,7 @@ const PRICE_CACHE_MINUTES = parseInt(
   10,
 );
 const PRICE_CACHE_MS = PRICE_CACHE_MINUTES * SECONDS_PER_MINUTE * MS_PER_SECOND;
-const MS_PER_SECOND_CONVERSION = 1000;
+const MS_PER_SECOND_CONVERSION = MS_PER_SECOND;
 
 // Enhanced payment method validation
 const SUPPORTED_PAYMENT_METHODS = new Set([
@@ -109,6 +113,13 @@ const SubscribeRequestSchema = z.object({
     }),
   }),
   targetEntityId: z.string().uuid('Target entity ID must be a valid UUID'),
+  trialDays: z
+    .number()
+    .int('Trial days must be an integer')
+    .min(1, 'Minimum 1 day')
+    .max(31, 'Maximum 31 days')
+    .optional(),
+  coupon: z.string().max(64, 'Coupon code too long').optional(),
 });
 
 // Structured logging utility with proper levels
@@ -814,8 +825,26 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     // Validate request body
     const rawBody: unknown = await request.json();
     const requestBody = SubscribeRequestSchema.parse(rawBody);
-    const { priceId, redirectPath, targetEntityType, targetEntityId } =
-      requestBody;
+    const {
+      priceId,
+      redirectPath,
+      targetEntityType,
+      targetEntityId,
+      trialDays,
+      coupon,
+    } = requestBody;
+
+    // Validate coupon if provided
+    if (coupon) {
+      try {
+        await validatedStripe.coupons.retrieve(coupon);
+      } catch (err: unknown) {
+        return NextResponse.json(
+          { error: 'Invalid or expired coupon code' },
+          { status: BAD_REQUEST_STATUS },
+        );
+      }
+    }
 
     // Idempotency check
     const idempotencyResult = await checkIdempotency(
@@ -992,6 +1021,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           },
         ],
         subscription_data: {
+          // Platform fee applies to initial charge and all renewals
+          application_fee_percent: PLATFORM_FEE,
           metadata: {
             userId: user.id,
             targetEntityType,
@@ -999,6 +1030,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
             createdVia: 'api_v2',
           },
           transfer_data: { destination: connectedAccountId },
+          ...(trialDays ? { trial_period_days: trialDays } : {}),
+          ...(coupon ? { coupon } : {}),
         },
         payment_method_collection: 'if_required',
         success_url: successUrl,
@@ -1011,6 +1044,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         // Add automatic tax collection for international sales
         automatic_tax: {
           enabled: process.env['STRIPE_AUTOMATIC_TAX_ENABLED'] === 'true',
+        },
+        tax_id_collection: {
+          enabled: process.env['STRIPE_TAX_ID_COLLECTION_ENABLED'] === 'true',
         },
         // Enhanced session metadata for webhook reconciliation
         metadata: {
@@ -1086,12 +1122,18 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         items: [{ price: platformPriceId }],
         payment_behavior: 'error_if_incomplete',
         transfer_data: { destination: connectedAccountId },
+        application_fee_percent: PLATFORM_FEE,
+        automatic_tax: {
+          enabled: process.env['STRIPE_AUTOMATIC_TAX_ENABLED'] === 'true',
+        },
         metadata: {
           userId: user.id,
           targetEntityType,
           targetEntityId,
           createdVia: 'api_v2',
         },
+        ...(trialDays ? { trial_period_days: trialDays } : {}),
+        ...(coupon ? { coupon } : {}),
       },
       { idempotencyKey: subIdemKey },
     );

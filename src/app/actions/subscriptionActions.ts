@@ -320,3 +320,95 @@ export async function deactivatePriceTier({
   revalidatePath(`/dashboard/collectives/${collectiveId}/settings`);
   return { success: true };
 }
+
+// ---------- Upgrade / Downgrade Subscription ----------
+
+interface ChangePlanResult {
+  success: boolean;
+  message?: string;
+}
+
+export async function changeSubscriptionPlan({
+  dbSubscriptionId,
+  stripeSubscriptionId,
+  newPriceId,
+  prorationBehavior = 'none',
+}: {
+  dbSubscriptionId: string; // ID from subscriptions table (same as Stripe ID)
+  stripeSubscriptionId: string; // explicit Stripe Subscription ID (redundant but convenient)
+  newPriceId: string; // target Stripe Price ID
+  prorationBehavior?: 'none' | 'create_prorations';
+}): Promise<ChangePlanResult> {
+  const supabase = await createServerSupabaseClient();
+
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+
+  if (authError || !user) {
+    return { success: false, message: 'User not authenticated.' };
+  }
+
+  // Verify the subscription belongs to the user
+  const { data: subRecord, error: subFetchError } = await supabase
+    .from('subscriptions')
+    .select('id, user_id')
+    .eq('id', dbSubscriptionId)
+    .eq('user_id', user.id)
+    .single();
+
+  if (subFetchError || subRecord === null) {
+    return {
+      success: false,
+      message: 'Subscription not found or permission denied.',
+    };
+  }
+
+  const stripe = getStripe();
+  if (!stripe) {
+    return { success: false, message: 'Stripe not configured.' };
+  }
+
+  try {
+    // Retrieve subscription to get the item ID
+    const subscription =
+      await stripe.subscriptions.retrieve(stripeSubscriptionId);
+
+    const item = subscription.items.data[0];
+    if (!item) {
+      return { success: false, message: 'Subscription has no items.' };
+    }
+
+    // Update subscription with new price
+    const updated = await stripe.subscriptions.update(stripeSubscriptionId, {
+      proration_behavior: prorationBehavior,
+      items: [
+        {
+          id: item.id,
+          price: newPriceId,
+        },
+      ],
+    });
+
+    // Immediately reflect change locally – webhooks will also sync
+    await supabaseAdmin
+      .from('subscriptions')
+      .update({
+        stripe_price_id: newPriceId,
+        updated_at: new Date().toISOString(),
+      } as never)
+      .eq('id', dbSubscriptionId);
+
+    // Revalidate relevant pages
+    revalidatePath('/');
+    revalidatePath('/dashboard');
+
+    return { success: true, message: 'Subscription plan updated.' };
+  } catch (err: unknown) {
+    const errorMessage =
+      err instanceof Error ? err.message : 'Unknown Stripe error';
+    console.error('[changeSubscriptionPlan] Stripe error:', err);
+    return { success: false, message: errorMessage };
+  }
+}

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { ZodError } from 'zod';
 
 import { HttpStatusCode, WEBHOOK_CONSTANTS } from '@/lib/constants/errors';
+import { sendPaymentFailedEmail } from '@/lib/email';
 import {
   checkoutSessionMetadataSchema,
   subscriptionMetadataSchema,
@@ -16,7 +17,17 @@ import { getStripe } from '@/lib/stripe';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import { webhookLogger, createWebhookTimer } from '@/lib/utils/webhook-logger';
 
+import type { Database } from '@/lib/database.types';
 import type Stripe from 'stripe';
+
+// Stripe typings may omit optional `subscription` on Invoice; extend locally.
+interface InvoiceWithSubscription extends Stripe.Invoice {
+  subscription?: string;
+}
+
+interface ChargeWithInvoice extends Stripe.Charge {
+  invoice?: string;
+}
 
 const relevantEvents = new Set([
   'checkout.session.completed',
@@ -24,6 +35,13 @@ const relevantEvents = new Set([
   'customer.subscription.updated',
   'customer.subscription.deleted',
   'account.updated',
+  // Dunning / payment events
+  'invoice.payment_failed',
+  'invoice.payment_succeeded',
+  // Refunds / chargebacks
+  'charge.refunded',
+  'charge.dispute.funds_withdrawn',
+  'payment_method.attached',
 ]);
 
 export const runtime = 'nodejs';
@@ -173,6 +191,21 @@ async function upsertCustomerSafely(
       ignoreDuplicates: false,
     },
   );
+
+  return { error };
+}
+
+/**
+ * Update only the status field of a subscription (used for dunning events).
+ */
+async function markSubscriptionStatus(
+  subscriptionId: string,
+  status: SubscriptionStatus,
+): Promise<{ error: unknown }> {
+  const { error } = await supabaseAdmin
+    .from('subscriptions')
+    .update({ status, updated_at: new Date().toISOString() } as never)
+    .eq('id', subscriptionId);
 
   return { error };
 }
@@ -361,6 +394,359 @@ export async function POST(req: Request): Promise<NextResponse> {
               hasMetadata: session.metadata !== null,
             });
           }
+          break;
+        }
+
+        // ---- DUNNING & PAYMENT STATUS EVENTS ----
+        case 'invoice.payment_failed':
+        case 'invoice.payment_succeeded': {
+          const invoice = event.data.object as InvoiceWithSubscription;
+
+          // We only care about subscription-origin invoices
+          if (
+            invoice.subscription === null ||
+            invoice.subscription === undefined ||
+            typeof invoice.subscription !== 'string'
+          ) {
+            webhookLogger.warn('Invoice missing subscription reference', {
+              eventId: event.id,
+              invoiceId: invoice.id,
+            });
+            break;
+          }
+
+          const subscriptionId = invoice.subscription;
+
+          const targetStatus: SubscriptionStatus =
+            event.type === 'invoice.payment_failed' ? 'past_due' : 'active';
+
+          const { error: statusErr } = await markSubscriptionStatus(
+            subscriptionId,
+            targetStatus,
+          );
+
+          // Notify user when payment fails
+          if (event.type === 'invoice.payment_failed') {
+            // set grace period 7 days
+            const graceExpires = new Date(
+              Date.now() + 7 * 24 * 60 * 60 * 1000,
+            ).toISOString();
+            await supabaseAdmin
+              .from('subscriptions')
+              .update({ grace_period_expires_at: graceExpires } as never)
+              .eq('id', subscriptionId);
+
+            // Mark subscription as past_due and set grace period (72h)
+            const GRACE_PERIOD_HOURS = parseInt(
+              process.env['PAST_DUE_GRACE_HOURS'] ?? '72',
+              10,
+            );
+            const graceExpiry = new Date(
+              Date.now() + GRACE_PERIOD_HOURS * 60 * 60 * 1000,
+            ).toISOString();
+
+            await supabaseAdmin
+              .from('subscriptions')
+              .update({
+                status: 'past_due',
+                grace_period_expires_at: graceExpiry,
+              } as never)
+              .eq('id', subscriptionId);
+
+            // Fetch subscription row to identify user
+            const { data: subRow } = await supabaseAdmin
+              .from('subscriptions')
+              .select('user_id')
+              .eq('id', subscriptionId)
+              .maybeSingle();
+
+            const recipientId = subRow?.user_id;
+
+            if (recipientId) {
+              await supabaseAdmin.rpc('create_notification', {
+                p_recipient_id: recipientId,
+                p_actor_id: '',
+                p_type: 'subscription_cancelled',
+                p_title: 'Payment Failed',
+                p_message:
+                  'Your payment failed. Please update your payment method to avoid cancellation.',
+                p_entity_type: 'subscription',
+                p_entity_id: subscriptionId,
+                p_metadata: {},
+              });
+
+              // Send dunning email
+              try {
+                // Lookup recipient email
+                const { data: userRow } = await supabaseAdmin
+                  .from('users')
+                  .select('email')
+                  .eq('id', recipientId)
+                  .maybeSingle();
+
+                const toEmail = (userRow as { email?: string } | null)?.email;
+
+                if (toEmail) {
+                  const siteUrl =
+                    process.env['NEXT_PUBLIC_SITE_URL'] ??
+                    'https://www.lnked.app';
+                  const manageBillingUrl = `${siteUrl}/settings/user/billing`;
+
+                  await sendPaymentFailedEmail({
+                    to: toEmail,
+                    gracePeriodEnd: graceExpires,
+                    manageBillingUrl,
+                  });
+                }
+              } catch (emailErr) {
+                webhookLogger.warn('dunning_email_failed', {
+                  error:
+                    emailErr instanceof Error
+                      ? emailErr.message
+                      : String(emailErr),
+                  userId: recipientId,
+                });
+              }
+            }
+          }
+
+          if (event.type === 'invoice.payment_succeeded') {
+            // clear grace period
+            await supabaseAdmin
+              .from('subscriptions')
+              .update({ grace_period_expires_at: null } as never)
+              .eq('id', subscriptionId);
+
+            // Record creator earnings
+            if (event.type === 'invoice.payment_succeeded') {
+              try {
+                // extract first line price id
+                const line = invoice.lines?.data?.[0] as unknown as {
+                  price?: { id?: string };
+                };
+                const priceId = line?.price?.id;
+
+                if (priceId) {
+                  // find plan to get creator id
+                  const { data: plan } = await supabaseAdmin
+                    .from('subscription_plans')
+                    .select('owner_type, owner_id')
+                    .eq('stripe_price_id', priceId)
+                    .maybeSingle();
+
+                  const creatorId =
+                    plan?.owner_type === 'user' ? plan.owner_id : null;
+
+                  if (creatorId) {
+                    const invTyped = invoice as Stripe.Invoice & {
+                      amount_paid?: number | null;
+                      application_fee_amount?: number | null;
+                    };
+                    const gross = invTyped.amount_paid ?? 0;
+                    const fee = invTyped.application_fee_amount ?? 0;
+                    const net = gross - fee;
+
+                    await supabaseAdmin.from('creator_earnings').insert({
+                      creator_id: creatorId,
+                      stripe_invoice_id: invoice.id,
+                      amount_gross: gross,
+                      application_fee: fee,
+                      net_amount: net,
+                      currency: invoice.currency,
+                    } as Database['public']['Tables']['creator_earnings']['Insert']);
+                  }
+                }
+              } catch (earnErr: unknown) {
+                webhookLogger.warn('creator_earnings_failed', {
+                  error:
+                    earnErr instanceof Error
+                      ? earnErr.message
+                      : String(earnErr),
+                });
+              }
+            }
+          }
+
+          if (statusErr !== null) {
+            webhookLogger.error(
+              'Failed to update subscription status',
+              statusErr,
+              {
+                eventId: event.id,
+                subscriptionId,
+                targetStatus,
+              },
+            );
+            return NextResponse.json(
+              { error: 'Subscription status update failed' },
+              { status: HttpStatusCode.InternalServerError },
+            );
+          }
+
+          timer.endAndLog('Subscription status updated via invoice event', {
+            eventId: event.id,
+            subscriptionId,
+            targetStatus,
+          });
+          break;
+        }
+
+        // ---- REFUNDS & CHARGEBACKS ----
+        case 'charge.refunded':
+        case 'charge.dispute.funds_withdrawn': {
+          const charge = event.data.object as ChargeWithInvoice;
+
+          // Attempt to derive subscription from linked invoice
+          if (
+            charge.invoice === null ||
+            charge.invoice === undefined ||
+            typeof charge.invoice !== 'string'
+          ) {
+            webhookLogger.warn('Charge event missing invoice reference', {
+              eventId: event.id,
+              chargeId: charge.id,
+            });
+            break; // Nothing to do
+          }
+
+          // We need the invoice to find the subscription ID
+          let subscriptionId: string | undefined;
+          try {
+            const invoice = (await stripe.invoices.retrieve(
+              charge.invoice,
+            )) as InvoiceWithSubscription;
+
+            if (
+              invoice.subscription !== null &&
+              invoice.subscription !== undefined &&
+              typeof invoice.subscription === 'string'
+            ) {
+              subscriptionId = invoice.subscription;
+            }
+          } catch (retrieveErr) {
+            webhookLogger.error(
+              'Failed to retrieve invoice for charge event',
+              retrieveErr,
+              {
+                eventId: event.id,
+                chargeId: charge.id,
+                invoiceId: charge.invoice,
+              },
+            );
+          }
+
+          if (subscriptionId === undefined) {
+            webhookLogger.warn('No subscription linked to charge event', {
+              eventId: event.id,
+              chargeId: charge.id,
+            });
+            break;
+          }
+
+          const newStatus: SubscriptionStatus = 'canceled';
+
+          const { error: cancelErr } = await markSubscriptionStatus(
+            subscriptionId,
+            newStatus,
+          );
+
+          if (cancelErr !== null) {
+            webhookLogger.error(
+              'Failed to cancel subscription after refund',
+              cancelErr,
+              {
+                eventId: event.id,
+                subscriptionId,
+              },
+            );
+            return NextResponse.json(
+              { error: 'Subscription cancellation failed' },
+              { status: HttpStatusCode.InternalServerError },
+            );
+          }
+
+          timer.endAndLog('Subscription canceled due to refund/chargeback', {
+            eventId: event.id,
+            subscriptionId,
+            chargeId: charge.id,
+            eventType: event.type,
+          });
+
+          // TODO: revoke entitlements, send notifications (stripe_refunds follow-up)
+          break;
+        }
+
+        case 'payment_method.attached': {
+          const paymentMethod = event.data.object;
+
+          const custId = paymentMethod.customer;
+          if (
+            custId === null ||
+            custId === undefined ||
+            typeof custId !== 'string'
+          ) {
+            break;
+          }
+
+          // Map to our user
+          const { data: custRow } = await supabaseAdmin
+            .from('customers')
+            .select('id')
+            .eq('stripe_customer_id', custId)
+            .maybeSingle();
+
+          const userId = custRow?.id;
+
+          try {
+            // Fetch customer to check current default
+            const stripeCustomer = await stripe.customers.retrieve(custId);
+            const defaultPm = (stripeCustomer as Stripe.Customer)
+              .invoice_settings?.default_payment_method;
+
+            if (!defaultPm) {
+              // Set new payment method as default
+              await stripe.customers.update(custId, {
+                invoice_settings: { default_payment_method: paymentMethod.id },
+              });
+
+              // Attempt to pay latest unpaid invoice
+              const invoices = await stripe.invoices.list({
+                customer: custId,
+                status: 'open',
+                limit: 1,
+              });
+
+              const invId = invoices.data[0]?.id;
+              if (invId) {
+                await stripe.invoices.pay(invId);
+              }
+
+              // Notify user of successful card addition
+              if (userId) {
+                await supabaseAdmin.rpc('create_notification', {
+                  p_recipient_id: userId,
+                  p_actor_id: '',
+                  p_type: 'subscription_created',
+                  p_title: 'Payment Method Updated',
+                  p_message:
+                    'Your new card was set as default and outstanding invoices were retried.',
+                  p_entity_type: 'user',
+                  p_entity_id: userId,
+                  p_metadata: {},
+                });
+              }
+            }
+          } catch (pmErr) {
+            webhookLogger.error(
+              'Error processing payment_method.attached',
+              pmErr,
+              {
+                eventId: event.id,
+                customerId: custId,
+              },
+            );
+          }
+
           break;
         }
 
