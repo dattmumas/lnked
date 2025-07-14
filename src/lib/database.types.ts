@@ -1218,39 +1218,6 @@ export type Database = {
           },
         ]
       }
-      mux_webhooks: {
-        Row: {
-          created_at: string | null
-          event_type: string
-          id: string
-          mux_asset_id: string | null
-          mux_stream_id: string | null
-          payload: Json | null
-          processed: boolean | null
-          processed_at: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          event_type: string
-          id?: string
-          mux_asset_id?: string | null
-          mux_stream_id?: string | null
-          payload?: Json | null
-          processed?: boolean | null
-          processed_at?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          event_type?: string
-          id?: string
-          mux_asset_id?: string | null
-          mux_stream_id?: string | null
-          payload?: Json | null
-          processed?: boolean | null
-          processed_at?: string | null
-        }
-        Relationships: []
-      }
       notification_preferences: {
         Row: {
           created_at: string | null

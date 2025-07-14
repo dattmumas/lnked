@@ -1,0 +1,3 @@
+export const PLATFORM_ACCOUNT_UUID: string =
+  process.env['PLATFORM_ACCOUNT_UUID'] ??
+  '00000000-0000-0000-0000-000000000000';

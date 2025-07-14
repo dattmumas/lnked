@@ -35,13 +35,21 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
-  // Fetch earnings rows (limit 1000 for now)
-  const { data: rows, error } = await supabase
-    .from('creator_earnings')
-    .select('amount_gross, net_amount, created_at, currency')
+  // Fetch aggregated monthly earnings from accounting view
+  interface EarningsRow {
+    month: string;
+    gross_cents: number;
+    net_cents: number;
+    currency: string;
+  }
+
+  const { data: rawRows, error } = await supabase
+    .from('accounting.v_monthly_creator_earnings' as unknown as never)
+    .select('month, gross_cents, net_cents, currency')
     .eq('creator_id', creatorId)
-    .order('created_at', { ascending: false })
-    .limit(1000);
+    .order('month', { ascending: false });
+
+  const rows: EarningsRow[] = (rawRows ?? []) as EarningsRow[];
 
   if (error) {
     return NextResponse.json(
@@ -50,30 +58,24 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     );
   }
 
-  // Aggregate totals & monthly breakdown
-  let totalGross = 0;
-  let totalNet = 0;
-  const monthly: Record<string, { gross: number; net: number }> = {};
-
-  for (const r of rows) {
-    totalGross += r.amount_gross;
-    totalNet += r.net_amount;
-    const monthKey = new Date(r.created_at as string).toISOString().slice(0, 7);
-    if (!monthly[monthKey]) {
-      monthly[monthKey] = { gross: 0, net: 0 };
-    }
-    monthly[monthKey].gross += r.amount_gross;
-    monthly[monthKey].net += r.net_amount;
-  }
+  // Aggregate totals from view rows
+  const totals = rows.reduce(
+    (acc, r) => {
+      acc.gross += r.gross_cents;
+      acc.net += r.net_cents;
+      return acc;
+    },
+    { gross: 0, net: 0 },
+  );
 
   return NextResponse.json({
-    totalGross,
-    totalNet,
+    totalGross: totals.gross,
+    totalNet: totals.net,
     currency: rows[0]?.currency ?? 'usd',
-    monthly: Object.entries(monthly).map(([month, data]) => ({
-      month,
-      gross: data.gross,
-      net: data.net,
+    monthly: rows.map((r) => ({
+      month: r.month,
+      gross: r.gross_cents,
+      net: r.net_cents,
     })),
   });
 }

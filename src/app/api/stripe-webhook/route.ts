@@ -1,8 +1,12 @@
 import { NextResponse } from 'next/server';
 import { ZodError } from 'zod';
 
+// External types
+
+// Internal utilities & constants
 import { HttpStatusCode, WEBHOOK_CONSTANTS } from '@/lib/constants/errors';
 import { sendPaymentFailedEmail } from '@/lib/email';
+import { processLedgerWrite } from '@/lib/ledger/ledger-service';
 import {
   checkoutSessionMetadataSchema,
   subscriptionMetadataSchema,
@@ -17,6 +21,13 @@ import { getStripe } from '@/lib/stripe';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import { webhookLogger, createWebhookTimer } from '@/lib/utils/webhook-logger';
 
+// Schemas & validation helpers
+
+// Ledger handling
+
+// Notifications / email helpers
+
+// Generated DB types
 import type { Database } from '@/lib/database.types';
 import type Stripe from 'stripe';
 
@@ -546,14 +557,28 @@ export async function POST(req: Request): Promise<NextResponse> {
                     const fee = invTyped.application_fee_amount ?? 0;
                     const net = gross - fee;
 
-                    await supabaseAdmin.from('creator_earnings').insert({
-                      creator_id: creatorId,
-                      stripe_invoice_id: invoice.id,
-                      amount_gross: gross,
-                      application_fee: fee,
-                      net_amount: net,
-                      currency: invoice.currency,
-                    } as Database['public']['Tables']['creator_earnings']['Insert']);
+                    // Ensure currency is a string for typing purposes.
+                    const currency: string = invoice.currency ?? 'usd';
+
+                    if (process.env['LEDGER_DUAL_WRITE'] !== 'only') {
+                      await supabaseAdmin.from('creator_earnings').insert({
+                        // creatorId is narrowed to string in the enclosing guard
+                        creator_id: creatorId,
+                        stripe_invoice_id: invoice.id,
+                        amount_gross: gross,
+                        application_fee: fee,
+                        net_amount: net,
+                        currency,
+                      } as Database['public']['Tables']['creator_earnings']['Insert']);
+                    }
+
+                    // --- Ledger dual-write (temporary feature flag) ---
+                    await processLedgerWrite({
+                      eventType: event.type,
+                      creatorId,
+                      invoice,
+                      context: { eventId: event.id, invoiceId: invoice.id },
+                    });
                   }
                 }
               } catch (earnErr: unknown) {
@@ -671,6 +696,58 @@ export async function POST(req: Request): Promise<NextResponse> {
             chargeId: charge.id,
             eventType: event.type,
           });
+
+          // --- Ledger dual-write via mapper ---
+          if (process.env['LEDGER_DUAL_WRITE']) {
+            try {
+              // Determine creatorId via invoice lookup as before
+              const invoice = (await stripe.invoices.retrieve(
+                charge.invoice,
+              )) as InvoiceWithSubscription;
+              const firstLine = invoice.lines?.data?.[0] as
+                | (Stripe.InvoiceLineItem & { price?: { id?: string } })
+                | undefined;
+              const priceId = firstLine?.price?.id;
+              if (!priceId) {
+                webhookLogger.warn('Unable to derive priceId from invoice', {
+                  eventId: event.id,
+                  invoiceId: invoice.id,
+                });
+                break;
+              }
+
+              const { data: plan } = await supabaseAdmin
+                .from('subscription_plans')
+                .select('owner_type, owner_id')
+                .eq('stripe_price_id', priceId)
+                .maybeSingle();
+              const creatorId =
+                plan?.owner_type === 'user' ? plan.owner_id : null;
+
+              const chargeForLedger = {
+                ...charge,
+                application_fee_amount:
+                  charge.application_fee_amount ?? undefined,
+                amount_refunded: charge.amount_refunded ?? undefined,
+              } as Stripe.Charge & {
+                amount_refunded?: number;
+                application_fee_amount?: number;
+              };
+
+              await processLedgerWrite({
+                eventType: event.type,
+                creatorId,
+                charge: chargeForLedger,
+                context: { eventId: event.id, chargeId: charge.id },
+              });
+            } catch (ledgerErr) {
+              webhookLogger.error('ledger_refund_insert_failed', ledgerErr, {
+                eventId: event.id,
+                chargeId: charge.id,
+              });
+              if (process.env['LEDGER_DUAL_WRITE'] === 'only') throw ledgerErr;
+            }
+          }
 
           // TODO: revoke entitlements, send notifications (stripe_refunds follow-up)
           break;

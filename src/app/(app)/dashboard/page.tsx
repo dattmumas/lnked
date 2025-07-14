@@ -28,11 +28,20 @@ export default async function CreatorAnalyticsDashboard(): Promise<React.ReactEl
     redirect('/sign-in?redirect=/dashboard');
   }
 
-  const { data: earningsRows, error } = await supabase
-    .from('creator_earnings')
-    .select('amount_gross, net_amount, created_at, currency')
+  interface EarningsRow {
+    month: string;
+    gross_cents: number;
+    net_cents: number;
+    currency: string;
+  }
+
+  const { data: rawEarningsRows, error } = await supabase
+    .from('accounting.v_monthly_creator_earnings' as unknown as never)
+    .select('month, gross_cents, net_cents, currency')
     .eq('creator_id', session.user.id)
-    .order('created_at', { ascending: false });
+    .order('month', { ascending: false });
+
+  const earningsRows: EarningsRow[] = (rawEarningsRows ?? []) as EarningsRow[];
 
   if (error) {
     throw new Error('Failed to load earnings');
@@ -41,32 +50,26 @@ export default async function CreatorAnalyticsDashboard(): Promise<React.ReactEl
   let totalGross = 0;
   let totalNet = 0;
   let totalFees = 0;
-  const monthlyMap: Record<
-    string,
-    {
-      gross: number;
-      net: number;
-      fee: number;
-      followers: number;
-      subscribers: number;
-    }
-  > = {};
+  const monthlyMap: Record<string, MonthlyDatum> = {};
 
   earningsRows.forEach((r) => {
-    totalGross += r.amount_gross;
-    totalNet += r.net_amount;
-    totalFees += r.amount_gross - r.net_amount;
-    const monthKey = new Date(r.created_at as string).toISOString().slice(0, 7);
-    monthlyMap[monthKey] ||= {
-      gross: 0,
-      net: 0,
-      fee: 0,
-      followers: 0,
-      subscribers: 0,
-    };
-    monthlyMap[monthKey].gross += r.amount_gross;
-    monthlyMap[monthKey].net += r.net_amount;
-    monthlyMap[monthKey].fee += r.amount_gross - r.net_amount;
+    totalGross += r.gross_cents;
+    totalNet += r.net_cents;
+    totalFees += r.gross_cents - r.net_cents;
+    const monthKey = r.month;
+    if (!monthlyMap[monthKey]) {
+      monthlyMap[monthKey] = {
+        month: monthKey,
+        gross: 0,
+        net: 0,
+        fee: 0,
+        followers: 0,
+        subscribers: 0,
+      };
+    }
+    monthlyMap[monthKey].gross += r.gross_cents;
+    monthlyMap[monthKey].net += r.net_cents;
+    monthlyMap[monthKey].fee += r.gross_cents - r.net_cents;
   });
 
   // Fetch followers created_at
@@ -78,13 +81,16 @@ export default async function CreatorAnalyticsDashboard(): Promise<React.ReactEl
 
   followerRows?.forEach((f) => {
     const monthKey = new Date(f.created_at).toISOString().slice(0, 7);
-    monthlyMap[monthKey] ||= {
-      gross: 0,
-      net: 0,
-      fee: 0,
-      followers: 0,
-      subscribers: 0,
-    };
+    if (!monthlyMap[monthKey]) {
+      monthlyMap[monthKey] = {
+        month: monthKey,
+        gross: 0,
+        net: 0,
+        fee: 0,
+        followers: 0,
+        subscribers: 0,
+      };
+    }
     monthlyMap[monthKey].followers += 1;
   });
 
@@ -97,13 +103,16 @@ export default async function CreatorAnalyticsDashboard(): Promise<React.ReactEl
 
   subRows?.forEach((s) => {
     const monthKey = new Date(s.created).toISOString().slice(0, 7);
-    monthlyMap[monthKey] ||= {
-      gross: 0,
-      net: 0,
-      fee: 0,
-      followers: 0,
-      subscribers: 0,
-    };
+    if (!monthlyMap[monthKey]) {
+      monthlyMap[monthKey] = {
+        month: monthKey,
+        gross: 0,
+        net: 0,
+        fee: 0,
+        followers: 0,
+        subscribers: 0,
+      };
+    }
     monthlyMap[monthKey].subscribers += 1;
   });
 
@@ -118,7 +127,7 @@ export default async function CreatorAnalyticsDashboard(): Promise<React.ReactEl
     }))
     .sort((a, b) => (a.month < b.month ? -1 : 1));
 
-  const currency = earningsRows[0]?.currency?.toUpperCase() ?? 'USD';
+  const currency = (earningsRows[0]?.currency ?? 'usd').toUpperCase();
 
   const EarningsChart = dynamicImport(
     () => import('@/components/charts/EarningsChart.client'),

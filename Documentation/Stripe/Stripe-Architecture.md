@@ -172,14 +172,45 @@ The integration has been expanded with several production-grade features:
 
 - Server actions `deactivatePersonalSubscriptionPlan` / `reactivatePersonalSubscriptionPlan` allow creators to toggle plan availability; UI buttons added in **PersonalSubscriptionPlansClient**.
 
-### 6. Creator Earnings Tracking & Dashboard Replacement
+### 6. Accounting Ledger & Dashboard Upgrade _(2025-07 refresh)_
 
-- New table `creator_earnings` stores gross, fee, and net amounts per paid invoice.
-- Webhook records earnings on every `invoice.payment_succeeded` event.
-- A replacement **Creator Earnings Dashboard** (`/dashboard`) displays:
-  - Total gross, total net, active subscribers
-  - Monthly gross/net table and a Recharts line graph (client-side component)
-- Documentation for wallet setup is in `Documentation/Stripe/Wallets-Setup.md`.
+The legacy `creator_earnings` table has been **deprecated** in favor of a fully normalised accounting ledger:
+
+- **`accounting.accounts`** – one row per money-holding entity (creator, collective, platform) with running `current_balance_cents`.
+- **`accounting.ledger_entries`** – immutable append-only money movements (signed `amount_cents`).
+
+Stripe webhook now dual-writes:
+
+| Event                                                | Creator Entry | Platform Entry |
+| ---------------------------------------------------- | ------------- | -------------- |
+| `invoice.payment_succeeded`                          | `+net`        | `+fee`         |
+| `charge.refunded` / `charge.dispute.funds_withdrawn` | `−net`        | `−fee`         |
+
+Aggregations are surfaced through materialised views:
+
+- `accounting.v_monthly_creator_earnings` – monthly `gross_cents`, `net_cents` per creator.
+- `accounting.v_creator_totals` – lifetime & current balances.
+
+The **Creator Dashboard** (`/dashboard`) and **`GET /api/creator/earnings`** now read exclusively from these views, guaranteeing consistency with ledger balances. A feature flag `LEDGER_DUAL_WRITE` controls migration phases:
+
+- `true` – write ledger **and** legacy table (staging)
+- `only` – write **ledger only**, UI fully migrated (production target)
+
+Wallet setup docs remain in `Documentation/Stripe/Wallets-Setup.md`.
+
+### 6.1 Ledger Automation Additions _(2025-07)_
+
+Recent backend ops improvements ensure ledger consistency and observability:
+
+| Item                          | Path                                                   | Notes                                                                |
+| ----------------------------- | ------------------------------------------------------ | -------------------------------------------------------------------- |
+| **Ledger mapper utility**     | `src/lib/ledger/stripe-event-mapper.ts`                | Maps Stripe events → `LedgerInsert[]`, eliminating duplicated logic. |
+| **Ledger service wrapper**    | `src/lib/ledger/ledger-service.ts`                     | Handles insert + telemetry + flag gating; called by webhook.         |
+| **Hourly view refresh**       | `pg_cron` migration `refresh_monthly_creator_earnings` | Keeps `accounting.v_monthly_creator_earnings` fresh for dashboards.  |
+| **Balance sanity Jest tests** | `__tests__/ledger/balanceSanity.test.ts`               | Verifies net-zero after refund/chargeback sequences.                 |
+| **GitHub Actions workflow**   | `.github/workflows/ledger-tests.yml`                   | Runs migrations & ledger test suite on every push / PR.              |
+
+These augment the Accounting Ledger & Dashboard Upgrade section, providing continuous correctness checks and near-real-time analytics.
 
 ### 7. Tax Compliance
 
